@@ -17,7 +17,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|
 | <a id="rv-1"></a>RV-1 | Show what happened after every note | Must | The result screen lists each created, changed and deleted task with a CREATED / UPDATED / DELETED badge and its meta; created and changed tasks open their details; created tasks with no date offer When? chips ([Q4](../08-project/open-questions.md#q4)) |
 | <a id="rv-2"></a>RV-2 | Undo a whole note in one tap | Must | Undo all removes created tasks, reverts changes and restores deleted tasks; the note is kept and marked Undone |
-| <a id="rv-3"></a>RV-3 | Resolve unclear notes | Must | "I couldn't find a task in this note." offers Keep as note or Make it a task |
+| <a id="rv-3"></a>RV-3 | Resolve unclear notes | Must | Return message "I couldn't find a task in this note.", offer an option to return and edit the note  |
 | <a id="rv-4"></a>RV-4 | Keep every note | Must | The Notes tab lists notes newest first with time, name, excerpt and task count; a card opens its result |
 | <a id="rv-5"></a>RV-5 | Edit a note to re-plan it ([Q1](../08-project/open-questions.md#q1)) | Must | Edit note opens the note's text in the editor; Make tasks undoes what the note applied and plans the new text under the same safety rules; the card shows Edited |
 
