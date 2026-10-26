@@ -1,5 +1,7 @@
 # Functional Requirements
 
+Generated from the module files in `docs/03-modules/`, which are the source. Priority: **Must** = v1 · **Should** = v1 if time allows, otherwise v1.1 · **Could** = later.
+
 ### Account & Access
 
 | ID | Requirement | Priority | Acceptance criteria |
@@ -26,8 +28,8 @@
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| NU-1 | Split a note into items and make one task per actionable item | Must | Items split on new lines, commas, semicolons, full stops and "then"; bullets are stripped |
-| NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules; anything not found is left empty |
+| NU-1 | Split a note into items and make one task per actionable item | Must | Items split on new lines, commas, semicolons, full stops and "then" ("rồi", "sau đó"); bullets are stripped |
+| NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
 | NU-5 | Ask before risky changes | Must | Any delete, or more than 5 changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
@@ -38,10 +40,11 @@
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| RV-1 | Show what happened after every note | Must | The result screen lists each created, changed and deleted task with a CREATED / CHANGED / DELETED badge and its meta; created and changed tasks open their details |
+| RV-1 | Show what happened after every note | Must | The result screen lists each created, changed and deleted task with a CREATED / UPDATED / DELETED badge and its meta; created and changed tasks open their details; created tasks with no date offer When? chips (Q4) |
 | RV-2 | Undo a whole note in one tap | Must | Undo all removes created tasks, reverts changes and restores deleted tasks; the note is kept and marked Undone |
 | RV-3 | Resolve unclear notes | Must | "I couldn't find a task in this note." offers Keep as note or Make it a task |
 | RV-4 | Keep every note | Must | The Notes tab lists notes newest first with time, name, excerpt and task count; a card opens its result |
+| RV-5 | Edit a note to re-plan it (Q1) | Must | Edit note opens the note's text in the editor; Make tasks undoes what the note applied and plans the new text under the same safety rules; the card shows Edited |
 
 ### Tasks
 
@@ -80,5 +83,4 @@
 | AP-2 | Work offline | Must | Every edit is saved on the device and syncs later; a "You're offline" banner shows on list screens |
 | AP-3 | Light and dark themes | Must | Follows the system setting; Dark mode can be switched in Account |
 | AP-4 | Consistent back navigation | Must | The in-app back button and the browser's Back both return to the previous screen |
-
-The rules for turning notes into tasks (splitting, extraction, commands, safety, naming) are in `docs/02-domain/business-rules.md`.
+| AP-5 | Choose week start and time format (Q6) | Must | Account has Week starts on (Monday / Sunday) and Time format (24-hour / 12-hour); every date picker, list and note phrase such as "next week" follows them |

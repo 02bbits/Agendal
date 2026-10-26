@@ -1,5 +1,6 @@
 ## Non-Functional Requirements
 
+From `docs/05-quality/nfr.md`, which is the source and also holds NF-13–21.
 
 | ID | Area | Requirement |
 |---|---|---|
@@ -11,7 +12,7 @@
 | NF-6 | Offline | All lists, task edits and note capture work offline; changes queue and sync on reconnect without loss; conflicts resolve last-write-wins per field |
 | NF-7 | Platform | Installable PWA (manifest, service worker, icons); supports the last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge |
 | NF-8 | Layout | Fluid from 320px to 480px wide (360px reference), centred column up to 600px, `100dvh` height, safe-area insets respected; no native status bar or keyboard drawn |
-| NF-9 | Privacy | Notes, attached files and tasks belong to the account holder only; files are used to extract text and are not kept after extraction unless the user saves them; no note content in analytics |
+| NF-9 | Privacy | Notes, attached files and tasks belong to the account holder only; files are used to extract text and are not kept after extraction; no note or task text in logs; outside services get only what ADR-008 (DeepSeek) and NC §2.4 (Google Cloud Vision) allow |
 | NF-10 | Security | Passwords hashed (never stored or logged in plain text); HTTPS only; sign-in lockout per AA-3; reset links single-use and expire in 60 minutes |
 | NF-11 | Reliability | No task change is lost: every applied note is stored with enough to undo it (before/after values) |
-| NF-12 | Content | Follows the theme guide's voice: sentence case, 24-hour times, short dates, no emoji |
+| NF-12 | Content | Follows the theme guide's voice: sentence case, 24-hour times by default (12-hour is a setting, AP-5), short dates, no emoji |

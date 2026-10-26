@@ -216,7 +216,7 @@ Accessibility minimums:
 - **Buttons are verbs** that name the result: Make tasks, Add, Save, Undo all, Keep as note. Safe exits: Cancel, Not now.
 - **Confirmations are questions** naming the item, plus one line of consequence: "Delete “Portfolio”?" / "It has 3 tasks. What should happen to them?"
 - **Errors say why and what next:** "Email or password is incorrect.", "Attach a file under 5 MB."
-- **Dates and times:** 24-hour time (16:00 – 17:00), short dates (Mon 26 Oct), and Today, Tomorrow, Yesterday as words.
+- **Dates and times:** 24-hour time by default (16:00 – 17:00; 12-hour is a user setting), short dates (Mon 26 Oct), and Today, Tomorrow, Yesterday as words.
 - **Punctuation:** "·" between meta items, curly quotes around task names, a real ellipsis in placeholders ("Write a note…").
 - **No emoji** in UI copy.
 
@@ -319,7 +319,7 @@ body { background: var(--bg); color: var(--ink); font: 400 16px/22px var(--font-
 
 ## Related
 
-- Product requirements: [product overview](product-overview.md) and the [module requirements](../03-modules/) — what each screen does and why; this guide covers how it looks
+- Product requirements: [product overview](overview.md) and the [module requirements](../03-modules/) — what each screen does and why; this guide covers how it looks
 
 ## Sources
 

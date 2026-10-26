@@ -1,0 +1,601 @@
+# Seed corpus. Default context unless a case overrides it:
+#   now 2026-10-23T08:12 (Friday), timezone Asia/Ho_Chi_Minh, projects SQL Course, Adv Web, HCI, Portfolio, Personal.
+# Rules: docs/02-domain/business-rules.md. Edge cases NU-E*: docs/03-modules/NU-note-understanding.md.
+
+- id: C-001
+  categories: [split.comma, date.weekday, date.relative, time.am_pm, time.word, priority.keyword, priority.default, project.keyword, reminder.exam, reminder.timed, naming.week]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "sql quiz monday 9am, email the group tonight, buy printer ink tomorrow"
+  expect:
+    status: done
+    name: This week
+    create:
+      - {title: SQL quiz, due: "2026-10-26", start: "09:00", priority: high, project: SQL Course, reminder: 1d}
+      - {title: Email the group, due: "2026-10-23", start: "20:00", priority: medium, reminder: 15m}
+      - {title: Buy printer ink, due: "2026-10-24", priority: low}
+
+- id: C-002
+  categories: [project.keyword, priority.default, naming.single]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "Call mum"
+  expect:
+    status: done
+    name: Call mum
+    create:
+      - {title: Call mum, priority: low, project: Personal}
+
+- id: C-003
+  categories: [date.weekday, edge.NU-E2, priority.keyword, project.literal, title.lead_in]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "submit HCI report by friday"
+  expect:
+    status: done
+    name: Submit HCI report
+    create:
+      - {title: Submit HCI report, due: "2026-10-30", priority: high, project: HCI}
+
+- id: C-004
+  categories: [repeat.weekday, time.am_pm, reminder.timed, project.keyword]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "gym every monday 7am"
+  expect:
+    status: done
+    name: Gym
+    create:
+      - {title: Gym, due: "2026-10-26", start: "07:00", priority: low, project: Personal, repeat: weekly, reminder: 15m}
+
+- id: C-005
+  categories: [repeat.daily, time.24h, priority.default, reminder.timed]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "stretch every day 21:00"
+  expect:
+    status: done
+    name: Stretch
+    create:
+      - {title: Stretch, due: "2026-10-23", start: "21:00", priority: medium, repeat: daily, reminder: 15m}
+
+- id: C-006
+  categories: [date.month_end]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "pay rent end of the month"
+  expect:
+    status: done
+    name: Pay rent
+    create:
+      - {title: Pay rent, due: "2026-10-31", priority: low}
+
+- id: C-007
+  categories: [date.relative]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "read chapter 5 in 3 days"
+  expect:
+    status: done
+    name: Read chapter 5
+    create:
+      - {title: Read chapter 5, due: "2026-10-26", priority: low}
+
+- id: C-008
+  categories: [date.relative, project.keyword, title.acronym]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "ER diagram draft tmr"
+  expect:
+    status: done
+    name: ER diagram draft
+    create:
+      - {title: ER diagram draft, due: "2026-10-24", priority: low, project: SQL Course}
+
+- id: C-009
+  categories: [title.lead_in, time.word, reminder.timed]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "remember to email the lecturer tonight"
+  expect:
+    status: done
+    name: Email the lecturer
+    create:
+      - {title: Email the lecturer, due: "2026-10-23", start: "20:00", priority: medium, reminder: 15m}
+
+- id: C-010
+  categories: [split.newline, split.bullets, title.acronym, naming.more]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "- buy milk\n- print CV\n- book dentist"
+  expect:
+    status: done
+    name: Buy milk + 2 more
+    create:
+      - {title: Buy milk, priority: low}
+      - {title: Print CV, priority: low}
+      - {title: Book dentist, priority: low}
+
+- id: C-011
+  categories: [split.then, naming.more]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "finish slides then send them to the group"
+  expect:
+    status: done
+    name: Finish slides + 1 more
+    create:
+      - {title: Finish slides, priority: low}
+      - {title: Send them to the group, priority: low}
+
+- id: C-012
+  categories: [split.digit_comma, edge.NU-E18, date.weekday]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "write 1,000 word essay by sunday"
+  expect:
+    status: done
+    name: Write 1,000 word essay
+    create:
+      - {title: Write 1,000 word essay, due: "2026-10-25", priority: low}
+
+- id: C-013
+  categories: [skip.idea, naming.nothing]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "idea: dark mode for portfolio site"
+  expect:
+    status: followup
+    name: "Idea: dark mode for portfolio site"
+    skipped:
+      - {text: "idea: dark mode for portfolio site", reason: skip}
+
+- id: C-014
+  categories: [skip.filler]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "ok thanks"
+  expect:
+    status: followup
+    name: Ok thanks
+    skipped:
+      - {text: "ok thanks", reason: skip}
+
+- id: C-015
+  categories: [skip.fyi, split.period, naming.single]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "fyi lab moved to room 3. buy printer ink"
+  expect:
+    status: done
+    name: Buy printer ink
+    create:
+      - {title: Buy printer ink, priority: low}
+    skipped:
+      - {text: "fyi lab moved to room 3", reason: skip}
+
+- id: C-016
+  categories: [command.complete, naming.update]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t1, title: Email the group, due: "2026-10-23"}
+  note: "done email the group"
+  expect:
+    status: done
+    name: "Update: Email the group"
+    update:
+      - {task: t1, done: true}
+
+- id: C-017
+  categories: [command.reschedule, naming.update]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t2, title: Renew gym membership, due: "2026-10-23"}
+  note: "move gym membership to sunday"
+  expect:
+    status: done
+    name: "Update: Renew gym membership"
+    update:
+      - {task: t2, due: "2026-10-25", label: "Due Sun 25 Oct (was today)"}
+
+- id: C-018
+  categories: [command.delete, safety.delete]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t3, title: Old reading list}
+  note: "delete old reading list"
+  expect:
+    status: confirm
+    name: "Update: Old reading list"
+    delete: [t3]
+
+- id: C-019
+  categories: [safety.many, split.comma, naming.more]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "buy milk, buy eggs, buy bread, buy rice, buy tea, buy soap"
+  expect:
+    status: confirm
+    name: Buy milk + 5 more
+    create:
+      - {title: Buy milk, priority: low}
+      - {title: Buy eggs, priority: low}
+      - {title: Buy bread, priority: low}
+      - {title: Buy rice, priority: low}
+      - {title: Buy tea, priority: low}
+      - {title: Buy soap, priority: low}
+
+- id: C-020
+  categories: [date.weekday, edge.NU-E2, priority.default]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "pitch practice this friday"
+  expect:
+    status: done
+    name: Pitch practice
+    create:
+      - {title: Pitch practice, due: "2026-10-23", priority: medium}
+
+- id: C-021
+  categories: [edge.NU-E1, time.word, project.keyword]
+  now: "2026-10-23T21:30"
+  timezone: Asia/Ho_Chi_Minh
+  note: "call mum tonight"
+  expect:
+    status: done
+    name: Call mum
+    create:
+      - {title: Call mum, due: "2026-10-23", priority: medium, project: Personal}
+
+- id: C-022
+  categories: [edge.NU-E5, time.am_pm, reminder.timed, project.keyword]
+  now: "2026-10-23T10:00"
+  timezone: Asia/Ho_Chi_Minh
+  note: "call mum 9am"
+  expect:
+    status: done
+    name: Call mum
+    create:
+      - {title: Call mum, due: "2026-10-24", start: "09:00", priority: low, project: Personal, reminder: 15m}
+
+- id: C-023
+  categories: [edge.NU-E4, date.explicit, date.passed, priority.keyword]
+  now: "2026-10-27T09:00"
+  timezone: Asia/Ho_Chi_Minh
+  note: "submit lab 26 Oct"
+  expect:
+    status: done
+    name: Submit lab
+    create:
+      - {title: Submit lab, due: "2026-10-26", priority: high}
+
+- id: C-024
+  categories: [edge.NU-E4, date.explicit, date.passed]
+  now: "2026-10-27T09:00"
+  timezone: Asia/Ho_Chi_Minh
+  note: "renew passport 1 Sep"
+  expect:
+    status: done
+    name: Renew passport
+    create:
+      - {title: Renew passport, due: "2027-09-01", priority: low}
+
+- id: C-025
+  categories: [edge.NU-E7, time.bare_hour, reminder.timed]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "meet tutor at 2 tomorrow"
+  expect:
+    status: done
+    name: Meet tutor
+    create:
+      - {title: Meet tutor, due: "2026-10-24", start: "14:00", priority: low, reminder: 15m}
+
+- id: C-026
+  categories: [edge.NU-E11, command.tie, safety.tie]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t4, title: Email Prof Lee, due: "2026-10-24"}
+    - {id: t5, title: Email Prof Kim, due: "2026-10-26"}
+  note: "done email prof"
+  expect:
+    status: confirm
+    name: "Update: Email Prof Lee"
+    update:
+      - {task: t4, done: true}
+    ambiguous:
+      - {candidates: [t4, t5], preselected: t4}
+
+- id: C-027
+  categories: [edge.NU-E12, command.complete]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    - {id: t6, title: Pay rent}
+  note: "done pay rent"
+  expect:
+    status: done
+    name: "Done pay rent"
+    skipped:
+      - {text: "done pay rent", reason: already_done}
+
+- id: C-028
+  categories: [edge.NU-E29, command.no_match]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "delete chemistry homework"
+  expect:
+    status: done
+    name: "Delete chemistry homework"
+    skipped:
+      - {text: "delete chemistry homework", reason: not_found}
+
+- id: C-029
+  categories: [command.no_match, command.reschedule, edge.NU-E29]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "move dentist to friday"
+  expect:
+    status: done
+    name: Dentist
+    create:
+      - {title: Dentist, due: "2026-10-30", priority: low}
+
+- id: C-030
+  categories: [limit.items, edge.NU-E14]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31"
+  expect:
+    status: error
+    error: note.too_many_items
+
+- id: C-031
+  categories: [edge.NU-E22, edge.NU-E21, project.literal]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "adv web database lab report"
+  expect:
+    status: done
+    name: Adv Web database lab report
+    create:
+      - {title: Adv Web database lab report, priority: low, project: Adv Web}
+
+- id: C-032
+  categories: [edge.NU-E24, priority.conflict]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "maybe urgent call bank"
+  expect:
+    status: done
+    name: Call bank
+    create:
+      - {title: Call bank, priority: high}
+
+- id: C-033
+  categories: [reminder.exam, edge.NU-E25, project.literal, date.weekday]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "HCI quiz wednesday"
+  expect:
+    status: done
+    name: HCI quiz
+    create:
+      - {title: HCI quiz, due: "2026-10-28", priority: high, project: HCI, reminder: 1d}
+
+- id: C-034
+  categories: [edge.NU-E25, reminder.past]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "exam tomorrow 8am"
+  expect:
+    status: done
+    name: Exam
+    create:
+      - {title: Exam, due: "2026-10-24", start: "08:00", priority: high}
+
+- id: C-035
+  categories: [offline.written_at, edge.NU-E26, time.word]
+  now: "2026-10-22T19:00"
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: "2026-10-23T08:00"
+  note: "buy ink tonight"
+  expect:
+    status: done
+    name: Buy ink
+    create:
+      - {title: Buy ink, due: "2026-10-22", start: "20:00", priority: medium, reminder: 15m}
+
+- id: C-036
+  categories: [edge.NU-E9, date.month_end, priority.keyword]
+  now: "2026-10-31T10:00"
+  timezone: Asia/Ho_Chi_Minh
+  note: "submit timesheet end of the month"
+  expect:
+    status: done
+    name: Submit timesheet
+    create:
+      - {title: Submit timesheet, due: "2026-10-31", priority: high}
+
+- id: C-037
+  categories: [naming.project, title.acronym, project.keyword]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "sql homework, sql reading, er diagram tmr"
+  expect:
+    status: done
+    name: SQL Course to-dos
+    create:
+      - {title: SQL homework, priority: low, project: SQL Course}
+      - {title: SQL reading, priority: low, project: SQL Course}
+      - {title: ER diagram, due: "2026-10-24", priority: low, project: SQL Course}
+
+- id: C-038
+  categories: [naming.day]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "buy ink tomorrow, call bank tomorrow"
+  expect:
+    status: done
+    name: Tomorrow's plan
+    create:
+      - {title: Buy ink, due: "2026-10-24", priority: low}
+      - {title: Call bank, due: "2026-10-24", priority: low}
+
+- id: C-039
+  categories: [naming.weekday]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "lab monday, gym monday"
+  expect:
+    status: done
+    name: Monday plan
+    create:
+      - {title: Lab, due: "2026-10-26", priority: low}
+      - {title: Gym, due: "2026-10-26", priority: low, project: Personal}
+
+- id: C-040
+  categories: [edge.NU-E19, split.period, time.dot]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "standup 9.30 tomorrow. bring laptop"
+  expect:
+    status: done
+    name: Standup + 1 more
+    create:
+      - {title: Standup, due: "2026-10-24", start: "09:30", priority: low, reminder: 15m}
+      - {title: Bring laptop, priority: low}
+
+- id: C-041
+  categories: [split.merge, edge.NU-E33]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "buy milk, eggs and bread"
+  expect:
+    status: done
+    name: "Buy milk, eggs and bread"
+    create:
+      - {title: "Buy milk, eggs and bread", priority: low}
+
+- id: C-042
+  categories: [split.merge, split.comma, edge.NU-E33]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "dentist, haircut"
+  expect:
+    status: done
+    name: Dentist + 1 more
+    create:
+      - {title: Dentist, priority: low}
+      - {title: Haircut, priority: low}
+
+- id: C-043
+  categories: [split.merge, split.comma, edge.NU-E33, date.weekday, project.keyword]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "buy ink, sql quiz monday"
+  expect:
+    status: done
+    name: Buy ink + 1 more
+    create:
+      - {title: Buy ink, priority: low}
+      - {title: SQL quiz, due: "2026-10-26", priority: high, project: SQL Course, reminder: 1d}
+
+# Vietnamese (Q3)
+
+- id: C-044
+  categories: [lang.vi, split.comma, date.relative, date.weekday, time.vi, priority.keyword, project.literal, reminder.timed, naming.week]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "mai 9h họp nhóm, nộp báo cáo HCI thứ 2"
+  expect:
+    status: done
+    name: This week
+    create:
+      - {title: Họp nhóm, due: "2026-10-24", start: "09:00", priority: low, reminder: 15m}
+      - {title: Nộp báo cáo HCI, due: "2026-10-26", priority: high, project: HCI}
+
+- id: C-045
+  categories: [lang.vi, date.weekday, time.vi, priority.keyword, project.keyword, reminder.exam, naming.single]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "kiểm tra SQL thứ 2 lúc 2 giờ chiều"
+  expect:
+    status: done
+    name: Kiểm tra SQL
+    create:
+      - {title: Kiểm tra SQL, due: "2026-10-26", start: "14:00", priority: high, project: SQL Course, reminder: 1d}
+
+- id: C-046
+  categories: [lang.vi, command.complete, edge.NU-E41]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t1, title: Bài tập SQL, due: "2026-10-23"}
+  note: "bài tập sql xong rồi"
+  expect:
+    status: done
+    name: "Update: Bài tập SQL"
+    update:
+      - {task: t1, done: true}
+
+- id: C-047
+  categories: [lang.vi, command.reschedule, date.weekday]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t1, title: Họp nhóm, due: "2026-10-24", start: "09:00"}
+  note: "dời họp nhóm sang thứ 3"
+  expect:
+    status: done
+    name: "Update: Họp nhóm"
+    update:
+      - {task: t1, due: "2026-10-27", start: "09:00", label: "Due Tue 27 Oct (was tomorrow)"}
+
+- id: C-048
+  categories: [lang.vi, command.delete, safety.delete]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    - {id: t1, title: Họp nhóm, due: "2026-10-24"}
+  note: "xóa họp nhóm"
+  expect:
+    status: confirm
+    delete: [t1]
+
+- id: C-049
+  categories: [lang.vi, skip.prefix, safety.followup]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "ý tưởng: làm app học từ vựng"
+  expect:
+    status: followup
+    skipped:
+      - {text: "ý tưởng: làm app học từ vựng", reason: skip}
+
+- id: C-050
+  categories: [lang.vi, edge.NU-E40]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "toi can mua sua"
+  expect:
+    status: done
+    name: Toi can mua sua
+    create:
+      - {title: Toi can mua sua, priority: low}
+
+- id: C-051
+  categories: [lang.vi, split.then, repeat.daily, time.vi, edge.NU-E5, naming.week]
+  now: "2026-10-23T08:12"
+  timezone: Asia/Ho_Chi_Minh
+  note: "chạy bộ mỗi ngày 6h rồi đi chợ chiều nay"
+  expect:
+    status: done
+    name: This week
+    create:
+      - {title: Chạy bộ, due: "2026-10-24", start: "06:00", priority: low, repeat: daily, reminder: 15m}
+      - {title: Đi chợ, due: "2026-10-23", start: "15:00", priority: medium, reminder: 15m}
