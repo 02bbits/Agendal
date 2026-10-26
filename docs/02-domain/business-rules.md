@@ -57,7 +57,7 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 | ID | Rule | Ref |
 |---|---|---|
 | <a id="br-01"></a>BR-01 | Any delete, or more than 5 changes across all notes (files edit, file add, each operation is counted as 1), needs Apply changes before anything happens | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
-| <a id="br-02"></a>BR-02 | A note with no actionable item gets one question: Keep as note, or Make it a task | [RV-3](../03-modules/RV-review-control.md#rv-3) |
+| <a id="br-02"></a>BR-02 | A note with no actionable item gets a notification that No actionable item found and offer user to edit the note | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | <a id="br-03"></a>BR-03 | Every applied note can be undone as a whole from its result screen | [RV-2](../03-modules/RV-review-control.md#rv-2), [NF-11](../05-quality/nfr.md#nf-11) |
 | <a id="br-04"></a>BR-04 | Offline notes wait. They are processed on reconnect, in order, under the same rules | [NC-6](../03-modules/NC-note-capture.md#nc-6) |
 
