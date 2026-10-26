@@ -1,13 +1,13 @@
 # Non-Functional Requirements
 
-Quality targets NFR-1–NFR-27, grouped by quality factor.
+Quality targets NF-1–NF-12 from the PRD, grouped by area.
 
-| File | NFRs |
+| File | Requirements |
 |---|---|
-| [performance.md](performance.md) | NFR-1–5 |
-| [security.md](security.md) | NFR-6–13 |
-| [usability.md](usability.md) | NFR-14–20 (incl. responsive / PWA) |
-| [reliability.md](reliability.md) | NFR-21–24 |
-| [maintainability.md](maintainability.md) | NFR-25–26 |
-| [observability.md](observability.md) | NFR-27 |
-| [deployment.md](deployment.md) | Runtime and delivery requirements (no NFR IDs assigned yet) |
+| [performance.md](performance.md) | NF-4, NF-5 |
+| [security.md](security.md) | NF-9 (privacy), NF-10, plus engineering NF-13–NF-21 |
+| [reliability.md](reliability.md) | NF-6 (offline), NF-11 |
+| [usability.md](usability.md) | NF-1–3 (accessibility), NF-8 (layout), NF-12 (content) |
+| [scalability.md](scalability.md) | Capacity model, SLOs, scaling rules, backups, load tests |
+| [observability.md](observability.md) | Analytics events behind the [success metrics](../01-product/goals-and-non-goals.md#success-metrics) |
+| [deployment.md](deployment.md) | NF-7 (platform) |

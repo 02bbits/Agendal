@@ -1,25 +1,26 @@
 # Product Overview
 
-Agendal is a mobile-first progressive web app (PWA) for personal task management, built around an AI assistant. Instead of filling in forms, users message the assistant in plain language, by typing or speaking, and it turns what they say into organised tasks.
+Agendal is a mobile web app (PWA) for students. You write or say whatever is on your mind, and Agendal turns it into dated, organised tasks that you can review and undo. Lists come second, and the note comes first.
 
-> *"I have a SQL quiz next Monday and need to email my group tonight"* → the assistant creates both tasks with suitable dates, times, priorities, and reminders.
+> *"sql quiz monday 9am, email the group tonight, buy printer ink tomorrow"* → three tasks: **SQL quiz** (Mon 09:00, High, SQL Course, reminder 1 day before), **Email the group** (today 20:00, Medium, reminder 15 minutes before), **Buy printer ink** (tomorrow, Low). The note is named "This week".
 
-## The three parts
+## How it works
 
-1. **Tasks**: actionable items, such as "finish an assignment". A task can belong to a project and have a priority, a due date, a scheduled time, and a reminder. Tasks can repeat.
-2. **AI assistant**: reads each message, recognises the tasks in it, and resolves dates such as "next Friday" or "end of the month". It can also move, update, or split tasks, find free time, and answer "What should I do next?".
-3. **Inbox View**: today's tasks, with overdue tasks first and the day's progress at the top. Upcoming tasks and projects have their own lists.
+1. **Write a note**: typed, dictated, or read from a file. No fields to fill in.
+2. **Agendal builds a plan**: the tasks to create, change or delete, and any text to skip ([note understanding rules](../02-domain/business-rules.md)).
+3. **Risky plans wait**: any delete, or more than 5 changes, needs *Apply changes* first. A note with nothing actionable gets one question.
+4. **The result screen** lists every change, and **Undo all** reverses the whole note.
 
-## Companion behaviour
+## What changed from the earlier concept
 
-The assistant shows short encouragement on completion, nudges users when tasks start to slip, and can send a morning summary. **Users stay in control:** every change the assistant makes can be reviewed, edited, or undone.
+| V1 (chat assistant) | V2 (notes) |
+|---|---|
+| A back-and-forth chat with an assistant, with conversation history | A note is written once and turned into tasks. History is the Notes tab |
+| The assistant also split tasks, found free time, answered "What should I do next?" | Not in v1. The assistant only creates, completes, reschedules and deletes tasks |
+| Encouragement, nudges and morning summary, each with a toggle | A completion toast with Undo. No nudges or morning summary |
+| Summary card per assistant reply | Note result screen with CREATED / CHANGED / DELETED badges |
+| Requirement IDs FR-01–FR-67, NFR-1–NFR-27 | AA/NC/NU/RV/TK/LV/PJ/AP (41) and NF-1–NF-12 |
 
-## Accounts
+## Design
 
-Each user has a private account, available on any device they log in from, with reminders and search across all tasks.
-
-## Core values
-
-- Create tasks **quickly**.
-- Show **what needs attention today**.
-- Act as a **companion** that motivates the user to finish tasks.
+The look is **Paper & ink**: a calm, flat notebook in light and dark. See the [theme guide](theme-guide.md), the [design system](https://claude.ai/artifact/1tqQg3Ugsmxm6qJWyXaYpu) and the [prototype](https://claude.ai/artifact/7uABDQJSswS3pUAeSFNag8) (sign in with example@gmail.com).

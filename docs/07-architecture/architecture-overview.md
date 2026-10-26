@@ -2,48 +2,55 @@
 
 ```mermaid
 flowchart TB
-    subgraph Client["Browser / installed PWA"]
-        FE["Next.js app (React, TypeScript, Tailwind, shadcn/ui)"]
-        SW["Service worker<br/>app shell cache, offline queue, push"]
+    subgraph Device["Phone browser / installed PWA"]
+        FE["Next.js app<br/>(React, TypeScript, Agendal design system)"]
+        SW["Service worker<br/>app shell cache, offline store, sync queue, push"]
+        IDB[(IndexedDB<br/>tasks, projects, pending notes, edit queue)]
     end
     subgraph Server
-        API["Laravel API /api/v1<br/>Sanctum, Policies, Services/Actions"]
-        Q["Queue workers"]
-        S["Scheduler"]
+        API["Laravel API /api/v1<br/>auth, policies, tasks, projects, notes"]
+        NP["Note processor<br/>split → extract → match → plan → safety check"]
+        Q["Queue workers + scheduler<br/>reminders, file extraction"]
         DB[(Relational DB)]
-        C[(Cache)]
     end
+    FE <--> SW
+    SW <--> IDB
     FE <--> API
     SW <--> API
+    API --> NP
     API --> DB
-    API --> C
     API --> Q
-    S --> Q
     Q --> DB
-    API --> AI[(AI provider)]
-    API --> STT[(Speech-to-text)]
-    Q --> P[(Web Push)]
-    API --> M[(Mail)]
 ```
 
 ## Containers
 
-| Container | Responsibility | Key NFRs |
+| Container | Responsibility | Requirements |
 |---|---|---|
-| **Next.js frontend** | Mobile-first UI. Server Components for data-heavy pages. Chat panel and voice recorder lazy-loaded with `next/dynamic` | NFR-3, NFR-19 |
-| **Service worker** | Caches the app shell, keeps loaded tasks readable offline, queues offline changes, receives push | NFR-4, NFR-20, NFR-24 |
-| **Laravel API** | REST under `/api/v1`. Auth (Sanctum), authorization (Policies), business logic in Services/Actions, assistant orchestration | NFR-7, NFR-11, NFR-25, NFR-26 |
-| **Assistant service** (inside the API) | Builds the minimal prompt context. Maps the model's tool calls to whitelisted actions. Validates and applies them in one transaction | NFR-12, NFR-13, NFR-21 |
-| **Queue workers + scheduler** | Reminders, nudges, morning summaries, next occurrences. 3 retries, then `failed_jobs` | NFR-5 |
-| **Cache** | Inbox, Upcoming, and project progress, invalidated on any task change | NFR-4 |
+| **Next.js app** | All screens ([screens](../01-product/screens-and-navigation.md)) built from the Agendal design system. Light and dark themes | AP-3, NF-1–3, NF-8, NF-12 |
+| **Service worker + IndexedDB** | Cached app shell (repeat load ≤ 1 s). Offline copy of lists. Queue of edits and pending notes, replayed in order on reconnect | AP-2, NC-6, NF-4, NF-6, NF-7 |
+| **Laravel API** | Auth with lockout and reset. Per-user authorization. CRUD for tasks and projects. Notes, plans, undo | AA, TK, PJ, LV, RV, NF-9–11 |
+| **Note processor** | Builds a plan with the [rules](../02-domain/business-rules.md). Applies it, or returns `confirm` / `followup` | NU-1–7, NF-5 |
+| **Queue workers + scheduler** | Reminder delivery. Text extraction from files | TK-6, NC-4 |
 
-## Cross-view real-time updates (FR-51)
+## Note processing
 
-Changes must appear in all open views without reload. The transport (WebSockets via Laravel Reverb/Pusher, SSE, or polling) is not decided yet. See [open questions](../08-project/open-questions.md).
+1. The client sends `POST /notes` with a client-generated id ([ADR-003](technical-decisions/ADR-003-offline-note-queue-and-idempotency.md)).
+2. The processor builds the plan ([ADR-001](technical-decisions/ADR-001-note-plan-contract.md)) and checks the safety rules.
+3. A safe plan is applied in one transaction. Each change is stored in `notes.applied` with its before values ([ADR-002](technical-decisions/ADR-002-undo-change-log.md)).
+4. The response carries the status, name and changes, and the result screen renders from it. Budget: ≤ 2 s p90 for 10 items (NF-5).
 
-## Assistant request flow
+## Offline
 
-1. The client sends `POST /api/v1/assistant/messages` with an `Idempotency-Key` ([ADR-002](technical-decisions/ADR-002-idempotency.md)).
-2. The API loads the relevant tasks and calls the AI provider with a fixed tool schema ([ADR-001](technical-decisions/ADR-001-assistant-action-whitelist.md)).
-3. The returned actions are validated and authorized, then applied in `DB::transaction()` and stored as a change set.
-4. The reply streams to the client. The summary card is rendered from the change set.
+Everything except note processing works on the device. Edits are queued as per-field patches with timestamps, and resolved last-write-wins per field ([ADR-004](technical-decisions/ADR-004-offline-sync-field-level-lww.md)). Notes written offline wait as `pending` and are processed in order on reconnect.
+
+## Deployment
+
+The PRD sets only NF-7. The following is carried over from V1 and needs confirming:
+
+| Item | Plan |
+|---|---|
+| Environments | Development, staging, production. HTTPS everywhere (service worker, push, NF-10) |
+| Processes | Next.js server, Laravel API, an always-on queue worker, and the scheduler (cron every minute) |
+| CI | Lint, type-check and tests on every pull request (GitHub Actions). The sample-note test set runs on any change to the rules |
+| Secrets | Server `.env` and CI secrets only (email, push keys, any model key) |

@@ -1,14 +1,41 @@
 # State Transitions
 
-| # | From | Event | To | Actor | Guard / Rule | Ref |
-|---|---|---|---|---|---|---|
-| T1 | — | Create | Open | User, Assistant | Title present | FR-09, FR-23 |
-| T2 | Open | Edit fields | Open | User, Assistant | Scheduled end > start (BR-01) | FR-14, FR-24, FR-30 |
-| T3 | Open | Complete | Completed | User, Assistant | — | FR-14, FR-27, FR-47 |
-| T4 | Completed | Reopen | Open | User | — | FR-28 |
-| T5 | Open / Completed | Delete | (removed) | User, Assistant | User confirms (BR-05) | FR-21, FR-26 |
-| T6 | Open | Split | (removed) + N × Open | Assistant | User asked to split | FR-15 |
-| T7 | Completed (repeating) | — | creates new Open occurrence | System | At most one per series + date (BR-08) | FR-41, NFR-23 |
-| T8 | any | Undo assistant reply | state before that reply | User | Whole change set, one transaction | FR-20, NFR-21 |
+## Note
 
-Every assistant-initiated transition goes through the same authorization and validation as a manual one (NFR-11, NFR-13).
+| Status | Meaning | Next |
+|---|---|---|
+| `pending` | Saved offline, not yet read | Processed on reconnect → `new` |
+| `new` | Being processed | `done`, `confirm` or `followup` |
+| `done` | Plan applied | `undone` (Undo all) |
+| `confirm` | Plan waits for Apply changes | `done` (Apply) or `kept` (Cancel) |
+| `followup` | Nothing actionable found | `kept` (Keep as note) or `done` (Make it a task) |
+| `kept` | Saved as a note only | — |
+| `undone` | Applied, then reversed | `done` (redo from the toast, within 10 s) |
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending : Save note (offline)
+    [*] --> new : Make tasks (online)
+    pending --> new : reconnect
+    new --> done : plan is safe
+    new --> confirm : any delete or > 5 changes
+    new --> followup : nothing actionable
+    confirm --> done : Apply changes
+    confirm --> kept : Cancel
+    followup --> done : Make it a task
+    followup --> kept : Keep as note
+    done --> undone : Undo all
+    undone --> done : redo (toast, 10 s)
+    kept --> [*]
+```
+
+## Task
+
+| # | From | Event | To | Actor | Guard / side effect | Ref |
+|---|---|---|---|---|---|---|
+| T1 | — | Create | open | User (+ sheet), assistant (note) | Title present | NC-7, NU-1 |
+| T2 | open | Edit | open | User, assistant (reschedule) | End later than start | TK-2, TK-3, NU-3 |
+| T3 | open | Complete | done | User (checkbox), assistant ("done X") | Toast with Undo. Progress updates. Repeating → next occurrence created | TK-1, TK-4, NU-3 |
+| T4 | done | Undo (toast) | open | User | — | TK-1 |
+| T5 | open / done | Delete | (removed) | User, assistant ("delete X") | User confirms. Repeating asks "This task only" or "This and all future" | TK-4, TK-5, NU-5 |
+| T6 | (removed) | Undo (toast or Undo all) | previous state | User | Restored from before values | TK-5, RV-2 |

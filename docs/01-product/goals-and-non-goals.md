@@ -2,23 +2,30 @@
 
 ## Goals
 
-| ID | Goal | Measured by |
+1. Capturing several tasks takes one note and under 15 seconds.
+2. The assistant is right often enough that people trust it. When it is wrong, fixing or undoing it takes one tap.
+3. People see what needs doing today at a glance, every time they open the app.
+4. It works offline and installs like an app on any modern phone.
+
+## Success metrics
+
+Proposed targets for the first 8 weeks after launch, to be confirmed before the beta. How each is measured: [observability](../05-non-functional-requirements/observability.md).
+
+| Metric | Definition | Target |
 |---|---|---|
-| G1 | Capture tasks with almost no effort | First task within one message or 3 taps (NFR-14); ≥ 90% extraction accuracy (NFR-15) |
-| G2 | Make today's priorities obvious | Inbox View as home screen, overdue first, progress shown (FR-43–48); loads ≤ 3 s (NFR-1) |
-| G3 | Stop tasks slipping | Reminders (FR-56–60), nudges and morning summary (FR-53–54) |
-| G4 | Help users plan *when* to work | Free-slot suggestions (FR-16), scheduling (FR-29) |
-| G5 | Keep users motivated | Encouragement on completion (FR-52), daily progress (FR-46) |
-| G6 | Keep users in control of the AI | Summary card, edit, single-action undo, confirmations (FR-18–21) |
-| G7 | Private, available on every device | Per-user accounts and authorization (FR-01–05, NFR-11), installable PWA (FR-65) |
+| Note-to-task share | Share of new tasks created from notes rather than the manual sheet | ≥ 70% |
+| Note acceptance | Share of processed notes not undone within 24 hours | ≥ 90% |
+| Edit rate | Share of assistant-made tasks edited within 24 hours | ≤ 20% |
+| Follow-up rate | Share of notes where the assistant had to ask what to do | ≤ 10% |
+| Time to capture | Median time from opening the note editor to Make tasks | ≤ 15 s |
+| Weekly retention | Users active in week 4 ÷ users active in week 1 | ≥ 40% |
+| Completion | Share of tasks due in a week that are completed by the end of that week | ≥ 60% |
+| Install rate | Signed-in users who install the PWA | ≥ 30% |
 
-## Non-goals
+## Non-goals for v1
 
-None of the following appears in the current requirements. Each would need a new FR before work starts.
-
-- Shared projects, collaboration, or assigning tasks to other people (Agendal is single-user).
-- Two-way sync with external calendars (Google Calendar, Outlook).
-- Native app-store apps (the PWA covers installation).
-- File attachments on tasks.
-- The assistant acting without showing what it changed (every data change gets a summary card).
-- Using the assistant while offline (FR-67 shows it as unavailable).
+- Shared lists, or assigning tasks to other people
+- Calendar sync
+- Chat with the assistant
+- A desktop-first layout
+- Native iOS or Android apps

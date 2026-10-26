@@ -1,22 +1,19 @@
 # Glossary
 
-Technical terms and acronyms. For domain terms (task, overdue, change set, …), see [terminology](../02-domain/terminology.md).
+Technical terms and acronyms. For domain terms (note, plan, change, …), see [terminology](../02-domain/terminology.md).
 
 | Term | Meaning |
 |---|---|
-| ADR | Architecture Decision Record |
-| BR | Business rule (`BR-nn`) |
-| FR / NFR | Functional / non-functional requirement |
-| LCP | Largest Contentful Paint, a page-load metric (NFR-1) |
-| LLM | Large language model, the AI behind the assistant |
-| PWA | Progressive Web App: a website installable like an app, with offline support |
-| Service worker | A browser background script for caching, offline use, and push |
-| Web Push | The browser standard for notifications when the app is closed |
-| Sanctum | Laravel's token/session authentication package |
-| Policy | Laravel's per-model authorization class |
-| Idempotency | Repeating a request has the same effect as sending it once |
-| Rate limiting | Capping requests per time window (HTTP 429 when exceeded) |
-| Prompt injection | Text that tries to make the AI ignore its instructions |
-| STT | Speech-to-text |
-| WCAG | Web Content Accessibility Guidelines |
-| WF / TS | Workflow / Test scenario |
+| AA, NC, NU, RV, TK, LV, PJ, AP | Requirement areas: Account and access, Note capture, Note understanding, Review, Tasks, Lists and search, Projects, App and platform |
+| NF | Non-functional requirement |
+| BR / WF / TS / ADR | Business rule / workflow / test scenario / architecture decision record |
+| Must / Should / Could | v1 / v1 if time allows (else v1.1) / later |
+| PWA | Progressive Web App: a website that installs like an app and works offline |
+| Service worker | A browser background script for caching, offline use and push |
+| IndexedDB | The browser's on-device database, used for offline data |
+| LWW | Last write wins: on conflict, the newest change is kept (per field here) |
+| Idempotency | Sending the same request twice has the same effect as once |
+| OCR | Reading text from a photo |
+| p90 | The 90th percentile: 9 out of 10 cases are at or under the value |
+| WCAG 2.2 AA | Web Content Accessibility Guidelines, level AA |
+| `100dvh` | CSS unit for the full dynamic viewport height on mobile |

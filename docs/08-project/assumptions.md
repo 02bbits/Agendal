@@ -2,9 +2,11 @@
 
 | # | Assumption | If wrong |
 |---|---|---|
-| A1 | Users have a modern browser that supports service workers and Web Push (iOS 16.4+ for installed PWAs) | Reminders fall back to in-app only |
-| A2 | A hosted LLM with tool/function calling is available and meets the 3 s / 10 s targets (NFR-2) | Revisit the model or provider. Manual flows still work |
-| A3 | A speech-to-text service can return text within 2 s (NFR-2) | Voice input becomes a Later feature |
-| A4 | One user = one person. No shared accounts or delegation | Collaboration needs new FRs and an authorization model |
-| A5 | The user's time zone comes from the device, and can be changed in their profile | Relative-date resolution (FR-10) is wrong when travelling |
-| A6 | AI usage cost per user stays acceptable under the rate limits in NFR-10 | Tighten limits or cache answers |
+| A1 | Students capture mostly on phones, in English | Wider layouts or more languages ([open questions](open-questions.md)) |
+| A2 | Rules cover the common phrases well enough for the MVP beta (note acceptance ≥ 85%) | Add a language model behind the same plan ([ADR-001](../07-architecture/technical-decisions/ADR-001-note-plan-contract.md)) |
+| A3 | Browsers on the support matrix provide service workers and IndexedDB (NF-7) | Offline (AP-2) degrades to online only |
+| A4 | Push on iPhone works only for installed PWAs on iOS 16.4+ | Reminders reach fewer iPhone users. Inbox still shows what is due |
+| A5 | Device clocks are roughly correct | Per-field LWW picks the wrong value. The server clamps future timestamps |
+| A6 | One account = one student. Nothing is shared | Shared projects need new requirements and an authorization model |
+| A7 | **Beta scale:** up to 5,000 registered students, ~2,000 weekly active, ~5,000 notes a day ([capacity model](../05-non-functional-requirements/scalability.md#capacity-model)) | Re-run the capacity model. The design holds to ~10× before the scaling steps listed there are needed |
+| A8 | Rules handle at least 80% of items. The LLM sees at most 20% | LLM cost and latency budgets in ADR-008 need revisiting |

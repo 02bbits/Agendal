@@ -2,27 +2,27 @@
 
 ```mermaid
 flowchart LR
-    U([User<br/>phone / desktop browser])
+    U([Student<br/>phone browser / installed PWA])
     A[Agendal]
-    AI[(AI / LLM provider)]
-    STT[(Speech-to-text service)]
-    M[(Mail service)]
+    M[(Email service)]
     P[(Web Push service)]
+    X[(Text extraction<br/>PDF, Word, photo OCR)]
+    L[(Language model<br/>optional, see ADR-001)]
 
-    U -- "messages, voice, task actions" --> A
-    A -- "replies, summary cards, views" --> U
-    A -- "message + relevant tasks + time zone" --> AI
-    A -- "voice recording (deleted after)" --> STT
+    U -- "notes, task edits" --> A
+    A -- "plans, results, lists" --> U
     A -- "password-reset links" --> M
-    A -- "reminders, nudges, morning summary" --> P
-    P -- "push notification" --> U
+    A -- "reminders (TK-6)" --> P --> U
+    A -- "attached file (discarded after)" --> X
+    A -. "note text, if a model is used" .-> L
 ```
 
-| External system | Failure impact (NFR-22) |
-|---|---|
-| AI provider (timeout 15 s) | Assistant unavailable. Manual task management keeps working |
-| Speech-to-text (timeout 10 s) | Voice unavailable. Typing still works (NFR-18) |
-| Mail (timeout 10 s) | Password reset delayed. Logged |
-| Web Push (timeout 10 s) | Notifications retried 3×, then `failed_jobs` (NFR-5) |
+| External system | Needed for | Failure impact |
+|---|---|---|
+| Email service | AA-4 | Reset delayed. Sign-in otherwise unaffected |
+| Web Push | TK-6 (Should) | No push reminders. Inbox still shows what is due |
+| Text extraction | NC-4 (Should) | Files can't be read. Typing still works |
+| Language model | Only if v1 adds one ([open question](../08-project/open-questions.md)) | Rules handle notes alone |
+| Speech recognition | NC-3 (Should). Possibly the browser's own Web Speech API | Dictation unavailable. Typing still works |
 
-The specific AI, speech, and push vendors are not chosen yet ([open questions](../08-project/open-questions.md)).
+Vendors are not chosen yet.

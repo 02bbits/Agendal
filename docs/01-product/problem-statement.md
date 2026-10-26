@@ -1,21 +1,13 @@
 # Problem Statement
 
-## Background
+## Problem
 
-Responsibilities come from many places: lectures, work, family, and personal goals. Deadlines arrive in messages, emails, and conversations, and users must copy each one into a to-do list by hand, filling in the title, date, time, and priority. This effort is the main reason many people abandon productivity apps within days.
+Students get tasks in bursts: a lecturer announces a quiz, a group chat agrees on a deadline, an errand comes up on the walk home. Most to-do apps make you stop and fill in a form for each one (title, date, time, project, priority). That friction means tasks end up in notes apps, chats or memory, and get missed.
 
-Routine commitments have to be re-entered by hand, items are forgotten without a timely reminder, and a specific task becomes hard to find as the list grows.
+## Opportunity
 
-Users often know **when a task is due** but not **when they will do it**. Without that time planned, work is left to the last minute, deadlines are missed, and daily priorities become unclear. Productivity tools record what is left to do but don't help users stay motivated, so progress stalls in busy periods such as exam weeks.
+Keep capture as cheap as writing a note. The person writes one line with several things in it, and Agendal splits it into tasks, finds the dates, times, projects and priorities, and shows exactly what it did. The person stays in control: every change is listed, editable and undoable.
 
-## Pain points
+## Why notes instead of chat
 
-| # | Pain point | Addressed by |
-|---|---|---|
-| P1 | Writing a task down takes too many steps, so people skip it and forget. | M02 AI Assistant, M03 quick manual capture |
-| P2 | Without a timely reminder, important tasks and events slip by. | M08 Reminders, M07 nudges |
-| P3 | To-do apps feel like extra work: users must keep checking and organising lists themselves. | M02 scheduling and Q&A, M06 Inbox View, M07 morning summary |
-
-## Solution statement
-
-An AI assistant that turns everyday language into organised, scheduled tasks. Users say what they need to do. The assistant sets it up, reminds them at the right time, and encourages them as they make progress.
+The earlier design had a chat with an assistant. A note is written once and turned into tasks, with no conversation to manage. The assistant asks a question only when a note is unclear or a change is risky.

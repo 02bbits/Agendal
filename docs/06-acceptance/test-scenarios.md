@@ -1,64 +1,121 @@
 # Test Scenarios
 
-Acceptance scenarios for the main flows. Add one `TS-nn` per requirement as it is implemented, and record it in the [traceability matrix](traceability-matrix.md).
+Example account: example@gmail.com, with projects SQL Course, Adv Web, HCI, Portfolio and Personal. "Today" is **Fri 23 Oct 2026**.
 
-### TS-01 — Multiple tasks from one message (FR-09, FR-10, FR-11)
-- **Given** a logged-in user in time zone Asia/Ho_Chi_Minh on Wednesday 2026-10-14
-- **When** they send *"I have a SQL quiz next Monday and need to email my group tonight"*
-- **Then** two tasks are created: "SQL quiz" due 2026-10-19, and "Email my group" due 2026-10-14 in the evening
-- **And** a summary card lists both tasks (FR-18)
+These are the narrative end-to-end scenarios. They no longer grow: detailed and edge-case tests live in section 12 of each [module spec](../03-modules/), and each scenario below lists the automated tests that implement it.
 
-### TS-02 — Unclear message (FR-13)
-- **Given** a logged-in user
-- **When** they send *"that thing"*
-- **Then** the assistant asks a follow-up question and no task is created
+### TS-01 — Several tasks from one note (NU-1, NU-2, NU-6, RV-1)
+- **When** the student submits *"sql quiz monday 9am, email the group tonight, buy printer ink tomorrow"*
+- **Then** three tasks are created:
+  - SQL quiz: Mon 26 Oct 09:00, High, SQL Course, reminder 1 day before
+  - Email the group: Fri 23 Oct 20:00, Medium, reminder 15 minutes before
+  - Buy printer ink: Sat 24 Oct, Low
+- **And** the note is named "This week", and the result shows 3 CREATED rows
+- **Tests:** C-001, T-NU-01–07, T-NU-10–16, T-NU-50, T-RV-01
 
-### TS-03 — Undo an assistant reply (FR-20, NFR-21)
-- **Given** an assistant reply that created 2 tasks and moved 1
-- **When** the user taps *Undo* on its summary card
-- **Then** both tasks are removed, the moved task returns to its original time, and the change happens in one transaction
+### TS-02 — Reschedule an existing task (NU-3)
+- **Given** an open task "Renew gym membership" due today
+- **When** the student submits *"move gym membership to sunday"*
+- **Then** its due date becomes Sun 25 Oct, the result shows CHANGED "Due Sun 25 Oct (was today)", and the note is named "Update: Renew gym membership"
+- **Tests:** C-017, T-NU-21, T-RV-02
 
-### TS-04 — Confirmation before large change (FR-21)
-- **Given** a user with 8 tasks this week
-- **When** they ask *"move everything this week to next week"*
-- **Then** the assistant asks for confirmation before changing anything
+### TS-03 — Command with no match (NU-3, M03 E29)
+- **Given** no open task matches ≥ 60% of the words in "done the CV draft"
+- **When** the student submits *"done the CV draft"*
+- **Then** nothing is created or completed, and the result lists it under "Not made into tasks" as "Couldn't find a task matching “the CV draft”"
+- **But** *"move dentist to friday"* with no match creates a new task "Dentist" due Fri 30 Oct
+- **Tests:** C-028, C-029, T-NU-129
 
-### TS-05 — Idempotent retry (NFR-23)
-- **Given** an assistant request with request ID X that created 1 task
-- **When** the same request ID X is sent again
-- **Then** no new task is created
+### TS-04 — Delete needs confirmation (NU-5, BR-01)
+- **Given** an open task "Old reading list"
+- **When** the student submits *"delete old reading list"*
+- **Then** "Check this first" lists the delete, and nothing changes yet
+- **When** they tap Cancel
+- **Then** the task still exists, and the note is kept
+- **Tests:** C-018, T-NU-40, T-RV-40
 
-### TS-06 — Invalid scheduled time (FR-30)
-- **Given** a task
-- **When** the user schedules it 14:00–13:00
-- **Then** the change is rejected with a clear error (NFR-17)
+### TS-05 — More than 5 changes needs confirmation (NU-5)
+- **When** a note produces 6 creates
+- **Then** "Check this first" shows, and Apply changes creates all 6
+- **Tests:** C-019, T-NU-41
 
-### TS-07 — Inbox ordering (FR-44, FR-45, FR-48)
-- **Given** one overdue task, plus today's tasks at 15:00 (Low) and 09:00 (High), and another at 09:00 (Low)
-- **When** the user opens the Inbox View
-- **Then** the overdue task is shown first in its own section, then 09:00 High, 09:00 Low, 15:00 Low
+### TS-06 — Nothing actionable (NU-4, RV-3)
+- **When** the student submits *"idea: dark mode for the portfolio site"*
+- **Then** "I couldn't find a task in this note." offers Keep as note / Make it a task
+- **When** they tap Keep as note
+- **Then** no task exists, and the note is named "Idea: dark mode for the portfolio" (its first 6 words)
+- **Tests:** C-013, T-NU-33, T-RV-20, T-RV-21
 
-### TS-08 — Repeating task completion (FR-41, NFR-23)
-- **Given** a weekly task due Monday 2026-10-19
-- **When** the user completes it (twice, e.g. via a retried request)
-- **Then** exactly one next occurrence exists, due 2026-10-26
+### TS-07 — Undo all (RV-2, NF-11)
+- **Given** a note that created 2 tasks, rescheduled 1 and (after confirmation) deleted 1
+- **When** the student taps Undo all
+- **Then** the 2 tasks are gone, the rescheduled task has its old date, the deleted task is back, and the note shows Undone
+- **Tests:** T-RV-10, T-RV-11, T-RV-13
 
-### TS-09 — Delete project, keep tasks (FR-35)
-- **Given** project "Thesis" with 3 tasks
-- **When** the user deletes it and chooses *move to No project*
-- **Then** the project is gone and the 3 tasks appear under *No project*
+### TS-08 — Offline note (NC-6, AP-2)
+- **Given** the device is offline
+- **When** the student writes a note
+- **Then** the button reads Save note, and the Notes tab shows the note as "Waiting for connection"
+- **When** the connection returns
+- **Then** the note is processed, and the toast says "Back online. 1 notes turned into N tasks."
+- **Tests:** OFF-03, OFF-04, T-NC-40, T-NC-41
 
-### TS-10 — Reminder push (FR-56, FR-57, FR-60)
-- **Given** a task scheduled at 10:00 with a "15 minutes before" reminder and notification permission granted
-- **When** the time reaches 09:45
-- **Then** one push notification is sent, and tapping it opens the task
+### TS-09 — Manual task with only a title (NC-7)
+- **When** the student opens New task, types "Call mum" and taps Add
+- **Then** the task exists with no date, and the toast says "Added “Call mum”"
+- **Tests:** T-NC-50–53
 
-### TS-11 — Authorization (NFR-11)
-- **Given** user A and a task owned by user B
-- **When** user A requests that task (directly or via the assistant)
-- **Then** the response is 403, and a non-existent task ID returns 404
+### TS-10 — Schedule validation (TK-3)
+- **When** a task's schedule is set to 14:00 – 13:00
+- **Then** "End time must be later than the start time." shows, and nothing is saved
+- **Tests:** T-TK-20–22
 
-### TS-12 — AI provider down (NFR-22)
-- **Given** the AI provider times out (> 15 s)
-- **When** the user sends a message
-- **Then** a clear error is shown, the message is kept for resend, and manual task creation still works
+### TS-11 — Repeating task (TK-4)
+- **Given** a weekly task "Weekly review" due Sun 25 Oct
+- **When** it is completed
+- **Then** a new "Weekly review" due Sun 1 Nov exists
+- **When** the student deletes one occurrence
+- **Then** they are asked "This task only" or "This and all future"
+- **Tests:** T-TK-30, T-TK-31, T-TK-103
+
+### TS-12 — Sign-in lockout (AA-3)
+- **When** 3 sign-in attempts fail
+- **Then** "Too many attempts" shows, and Sign in is disabled with a 60 s countdown
+- **Tests:** T-AA-20, T-AA-103, SEC-05
+
+### TS-13 — Password reset gives nothing away (AA-4)
+- **When** a reset is requested for an email with no account
+- **Then** the same confirmation shows as for an existing account
+- **And** a sent link stops working after 60 minutes or after one use
+- **Tests:** T-AA-30, T-AA-31, SEC-08, SEC-09
+
+### TS-14 — Inbox order and empty state (LV-1)
+- **Given** 1 overdue task and 3 tasks today, 1 of them done
+- **Then** Overdue (red, count 1) is above Today, and the summary shows 1 of 4 (overdue tasks count toward today, [M06 §2.1](../03-modules/M06-lists-search/spec.md#21-inbox-lv-1))
+- **When** every task for today is done
+- **Then** "Nothing left for today" links to Upcoming
+- **Tests:** T-LV-01, T-LV-02, T-LV-04
+
+### TS-15 — Search (LV-3)
+- **When** the student searches "quiz"
+- **Then** open and completed matches are listed, with All / Open / Completed counts
+- **When** they search "zzz"
+- **Then** "No tasks match “zzz”" shows
+- **Tests:** T-LV-20–22
+
+### TS-16 — Delete a project (PJ-4)
+- **Given** "Portfolio" with 3 tasks
+- **When** the student deletes it
+- **Then** they are asked to move the tasks to No project or delete them too, and the toast offers Undo
+- **Tests:** T-PJ-30, T-PJ-31
+
+### TS-17 — File too large (NC-4)
+- **When** a 6 MB PDF is attached
+- **Then** "Attach a file under 5 MB." shows, and nothing is extracted
+- **Tests:** T-NC-24, T-NC-25
+
+### TS-18 — Privacy (NF-9)
+- **Given** a note owned by another account
+- **When** it is requested by id
+- **Then** it is not returned, and no analytics event contains note or task text
+- **Tests:** SEC-12, SEC-44, SEC-61

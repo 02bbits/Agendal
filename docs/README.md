@@ -1,36 +1,47 @@
-# Agendal — Documentation
+# About
 
-Agendal is a mobile-first PWA for personal task management, built around an AI assistant that turns plain-language messages (typed or spoken) into organised, scheduled tasks.
+Agendal is a mobile web app (PWA) for students. You write or say whatever is on your mind, and Agendal turns it into dated, organised tasks that you can review and undo. **The note comes first; lists come second.**
 
-## Reading order
+> **V2 concept (Oct 23, 2026).** The earlier chat with an assistant is replaced by **notes**. A note is written once and turned into tasks; there is no back-and-forth conversation. The source PRD is `Agendal-PRD-V2.md`. The V1 docs are in git history (commit `5ad132a`).
+
+## Reading order (docs)
 
 | Folder | What it answers |
 |---|---|
-| [01-product](01-product/) | Why Agendal exists, for whom, and what is in scope |
-| [02-domain](02-domain/) | The vocabulary, the task model, its lifecycle, and the business rules |
-| [03-modules](03-modules/) | Functional requirements (FR-01–FR-67), one folder per module |
-| [04-workflows](04-workflows/) | End-to-end user flows that cross modules |
-| [05-non-functional-requirements](05-non-functional-requirements/) | Quality targets (NFR-1–NFR-27) |
-| [06-acceptance](06-acceptance/) | How requirements are verified and traced |
-| [07-architecture](07-architecture/) | System design and technical decisions (ADRs) |
-| [08-project](08-project/) | Assumptions, constraints, open questions, glossary |
+| [01-product](01-product/) | Why Agendal exists, for whom, goals and metrics, screens, scope, theme, [UX standards](01-product/ux-standards.md), [copy catalog](01-product/copy-catalog.md) |
+| [02-domain](02-domain/) | Vocabulary, the note and task models, note lifecycle, and the rules that turn notes into tasks |
+| [03-modules](03-modules/) | Functional requirements (41), one folder per area. Each has a `prd.md` (what) and a `spec.md` (how, in detail: states, edge cases, API, tests) |
+| [04-workflows](04-workflows/) | End-to-end flows that cross modules |
+| [05-non-functional-requirements](05-non-functional-requirements/) | Quality targets NF-1–NF-12 from the PRD, NF-13–21 added in the docs, scalability and SLOs, analytics |
+| [06-acceptance](06-acceptance/) | Test strategy, golden note corpus, ASVS checklist, scenarios, traceability |
+| [07-architecture](07-architecture/) | System design, data model, API, [threat model](07-architecture/threat-model.md), technical decisions (ADRs) |
+| [08-project](08-project/) | Assumptions, constraints, risks, open questions, glossary |
 
 ## Modules
 
-| ID | Module | FRs |
+| ID | Module | Requirements |
 |---|---|---|
-| M01 | [Identity & Access](03-modules/M01-identity-access/) | FR-01–06 |
-| M02 | [AI Assistant](03-modules/M02-ai-assistant/) | FR-07–22 |
-| M03 | [Task Management](03-modules/M03-task-management/) | FR-23–32 |
-| M04 | [Projects](03-modules/M04-projects/) | FR-33–38 |
-| M05 | [Recurrence](03-modules/M05-recurrence/) | FR-39–42 |
-| M06 | [Inbox & Views](03-modules/M06-inbox-and-views/) | FR-43–51 |
-| M07 | [Motivation](03-modules/M07-motivation/) | FR-52–55 |
-| M08 | [Reminders](03-modules/M08-reminders/) | FR-56–60 |
-| M09 | [Search & Filter](03-modules/M09-search-filter/) | FR-61–64 |
-| M10 | [PWA & Offline](03-modules/M10-pwa-offline/) | FR-65–67 |
+| M01 | [Account & Access](03-modules/M01-account-access/) | AA-1–5 |
+| M02 | [Note Capture](03-modules/M02-note-capture/) | NC-1–7 |
+| M03 | [Note Understanding](03-modules/M03-note-understanding/) | NU-1–7 |
+| M04 | [Review & Control](03-modules/M04-review-control/) | RV-1–4 |
+| M05 | [Tasks](03-modules/M05-tasks/) | TK-1–6 |
+| M06 | [Lists & Search](03-modules/M06-lists-search/) | LV-1–4 |
+| M07 | [Projects](03-modules/M07-projects/) | PJ-1–4 |
+| M08 | [App & Platform](03-modules/M08-app-platform/) | AP-1–4 |
+
+## Definition of Ready and Done
+
+**Ready to build:** the feature's module `spec.md` has every section of the [spec template](03-modules/_spec-template.md) filled (or marked "None" with a reason), every edge case has a decision and a test ID, every new string is in the copy catalog, and the open questions it depends on are closed.
+
+**Done:** see the [test strategy](06-acceptance/test-strategy.md#definition-of-done-per-feature). Every acceptance criterion, edge case and state has a passing test with its ID, the authorization-matrix rows pass, copy matches the catalog, axe is clean, and analytics carry no text.
 
 ## Conventions
 
-- IDs are stable: `FR-nn`, `NFR-n`, `BR-nn` (business rules), `WF-nn`, `TS-nn` (test scenarios), `ADR-nnn`. Never reuse a retired ID.
+- Requirement IDs come from the PRD: `AA`, `NC`, `NU`, `RV`, `TK`, `LV`, `PJ`, `AP` (functional) and `NF` (non-functional). Docs-only IDs: `BR-nn` (business rules), `WF-nn`, `TS-nn`, `ADR-nnn`. Never reuse a retired ID.
+- Spec and test IDs: `En` (edge case within a module spec), `UX-nn` (UX standards), `SC-nn` (security control), and test IDs `T-<AREA>-nn`, `SEC-nn`, `PERF-nn`, `A11Y-nn`, `OFF-nn`, `C-nnn` ([test strategy](06-acceptance/test-strategy.md#test-ids)). Edge case `En` in a module is tested by `T-<AREA>-1nn`.
 - Requirements live in exactly one place (the module `prd.md` or the NFR file); everything else links to them.
+- Example account in every doc: example@gmail.com ("example"), with projects SQL Course, Adv Web, HCI, Portfolio and Personal.
+
+# Collaboration
+%% To be filled %%

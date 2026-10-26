@@ -1,21 +1,19 @@
 # Product Scope
 
-## In scope
+## Release plan
 
-All ten modules in [03-modules](../03-modules/). Release priority follows the FR priority column:
+Three phases, each gated on its exit criteria. Dates are not set yet.
 
-| Release | Contents |
-|---|---|
-| **MVP** | Every **High** FR: accounts, assistant capture/manage/review, manual tasks, projects, recurrence basics, Inbox/Upcoming/Projects views, encouragement, reminders, search, installable PWA |
-| **Next** | **Medium** FRs: project matching, follow-up questions, splitting, free-slot suggestions, Q&A, nudges, morning summary, Inbox ordering |
-| **Later** | **Low** FRs: account deletion, conversation history, reopen, recurrence end date and per-occurrence edits, offline viewing, filters, notification deep links |
+| Phase | Scope | Exit criteria |
+|---|---|---|
+| **1. MVP** | Every **Must**: account and access, typed notes, note understanding with review and Undo all, tasks, Inbox / Upcoming / Search, projects, offline, install, light and dark | All Must acceptance criteria pass. Accessibility audit passes NF-1 to NF-3. Note acceptance ≥ 85% in a closed beta |
+| **2. v1.1** | **Should** items: voice notes (NC-3), files as notes (NC-4), note names (NU-6), assistant label (NU-7), reminders (TK-6), project rename and colour (PJ-3) | Metrics at or near the [targets](goals-and-non-goals.md#success-metrics) for 4 weeks |
+| **3. Later** | **Could** items (examples, NC-5) and candidates: calendar view, shared projects, editing a note to re-plan it, smarter project suggestions, desktop layout | Prioritised from beta feedback |
 
-FR-67 (offline sync) has no priority yet ([open questions](../08-project/open-questions.md)).
+## Out of scope for v1
 
-## Out of scope
-
-See [non-goals](goals-and-non-goals.md#non-goals).
+See [non-goals](goals-and-non-goals.md#non-goals-for-v1).
 
 ## Platforms
 
-Any modern browser. Designed for a 360 px phone first, then tablet and desktop (NFR-19). Installable on phone and computer (FR-65, NFR-20).
+Phones 320–480px wide (360px reference), with a centred column up to 600px (NF-8). The last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge (NF-7).

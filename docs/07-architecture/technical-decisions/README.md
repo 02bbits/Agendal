@@ -1,10 +1,16 @@
 # Technical Decisions (ADRs)
 
-One file per significant decision: `ADR-nnn-short-title.md`, with sections *Status, Context, Decision, Consequences*. Supersede an ADR with a new one instead of editing it.
+One file per significant decision: `ADR-nnn-short-title.md`, with sections *Status, Context, Decision, Consequences*. Supersede an ADR with a new one instead of editing it. The V1 ADRs (chat assistant) are retired with the concept change, and remain in git history.
 
 | ADR | Title | Status |
 |---|---|---|
-| [ADR-001](ADR-001-assistant-action-whitelist.md) | Assistant changes data only through whitelisted actions | Accepted |
-| [ADR-002](ADR-002-idempotency.md) | Idempotency for assistant requests, occurrences, reminders | Accepted |
-| [ADR-003](ADR-003-notification-processing.md) | Notifications and recurrence via queued jobs | Accepted |
-| [ADR-004](ADR-004-offline-sync-conflict-resolution.md) | Offline sync: last write wins | Accepted |
+| [ADR-001](ADR-001-note-plan-contract.md) | Every note produces a plan of one fixed shape | Accepted |
+| [ADR-002](ADR-002-undo-change-log.md) | Undo through a per-note change log | Accepted |
+| [ADR-003](ADR-003-offline-note-queue-and-idempotency.md) | Offline note queue with client ids | Accepted |
+| [ADR-004](ADR-004-offline-sync-field-level-lww.md) | Offline sync: last write wins per field | Accepted |
+| [ADR-005](ADR-005-sync-protocol.md) | Sync protocol: cursor pull plus field patches | Proposed |
+| [ADR-006](ADR-006-time-zones.md) | Time zones: floating local dates and times | Proposed |
+| [ADR-007](ADR-007-session-and-auth.md) | Session and authentication model | Proposed |
+| [ADR-008](ADR-008-llm-fallback.md) | Language-model fallback for note understanding | Proposed |
+
+*Proposed* ADRs are drafted from the production-readiness plan and need team approval.

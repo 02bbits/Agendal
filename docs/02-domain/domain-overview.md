@@ -1,27 +1,25 @@
 # Domain Overview
 
+Five records. Notes keep their plan and what was applied, so any note can be reviewed or undone later.
+
 ```mermaid
 erDiagram
     USER ||--o{ PROJECT : owns
     USER ||--o{ TASK : owns
-    USER ||--|| PREFERENCES : has
-    USER ||--o{ MESSAGE : "converses in"
+    USER ||--o{ NOTE : writes
     PROJECT |o--o{ TASK : groups
-    TASK }o--o| RECURRENCE_SERIES : "occurrence of"
-    TASK ||--o| REMINDER : has
-    MESSAGE ||--o| ASSISTANT_REPLY : "answered by"
-    ASSISTANT_REPLY ||--o{ TASK_CHANGE : records
-    TASK_CHANGE }o--|| TASK : affects
+    NOTE ||--o{ CHANGE : "applied (inside Note)"
+    CHANGE }o--|| TASK : affects
+    NOTE |o--o{ TASK : "source of"
 ```
 
-| Concept | Purpose |
-|---|---|
-| **Task** | The central entity, an actionable item. See [task-model.md](task-model.md). |
-| **Project** | A named, coloured group of tasks. Tasks without one belong to *No project*. |
-| **Recurrence series** | The repeat rule (daily/weekly/monthly/yearly, optional end date) that produces task occurrences. |
-| **Reminder** | When to notify the user about a task. |
-| **Message / Assistant reply** | The conversation. A reply that changes data carries a **change set** (shown as a summary card) that can be undone as one unit. |
-| **Notification** | A reminder, nudge, morning summary, or encouragement. |
-| **Preferences** | Theme, accent colour, week start, morning-summary time, default reminder, notification toggles (NFR-16, FR-55). |
+| Concept | Purpose | Detail |
+|---|---|---|
+| **Note** | What the student wrote, typed, dictated or from a file, plus the plan built from it and what was applied | [note-model.md](note-model.md) |
+| **Plan** | Tasks to create, change and delete, plus skipped text. Built once per note | [note-model.md](note-model.md#plan) |
+| **Change** | One applied create, change or delete, with before values so it can be undone | [note-model.md](note-model.md#change) |
+| **Task** | An actionable item. It can be made from a note or by hand | [task-model.md](task-model.md) |
+| **Project** | A named, coloured group of tasks. *No project* is the absence of a project, not a record | — |
+| **User** | The account holder. Owns everything above | — |
 
-Everything belongs to exactly one user. There is no shared data.
+Everything belongs to exactly one user. There is no shared data in v1.
