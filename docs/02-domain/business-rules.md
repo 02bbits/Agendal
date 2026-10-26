@@ -72,7 +72,7 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 | All tasks due the same day | Today's plan / Tomorrow's plan / weekday + plan | Monday plan |
 | All due within 7 days | This week | This week |
 | Anything else | First title + "+ N more" | Call mum + 1 more |
-| Nothing actionable | The note's first words (up to 6) | Ideas for the portfolio site |
+| Nothing actionable | Reject the note, pop up the notification and provide option to edit the note | (None) |
 
 The first row that matches wins. Names longer than 34 characters are cut at a word boundary with an ellipsis.
 
