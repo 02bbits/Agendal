@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\TaskLifecycleRequest;
 use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
@@ -12,7 +13,10 @@ use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
+use DateTimeZone;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
@@ -121,5 +125,68 @@ class TaskController extends Controller
         $updatedTask = $patcher->patch($task, $payload, $timezone);
 
         return new TaskResource($updatedTask);
+    }
+
+    public function complete(
+        TaskLifecycleRequest $request,
+        Task $task,
+        TaskPatcher $patcher,
+    ): JsonResponse {
+        $at = $request->has('at') && is_string($request->input('at')) ? $request->input('at') : null;
+        $updatedTask = $patcher->complete($task, $at);
+
+        return response()->json(['task' => new TaskResource($updatedTask)]);
+    }
+
+    public function reopen(
+        TaskLifecycleRequest $request,
+        Task $task,
+        TaskPatcher $patcher,
+    ): JsonResponse {
+        $at = $request->has('at') && is_string($request->input('at')) ? $request->input('at') : null;
+        $updatedTask = $patcher->reopen($task, $at);
+
+        return response()->json(['task' => new TaskResource($updatedTask)]);
+    }
+
+    public function destroy(
+        Request $request,
+        Task $task,
+        ClockInterface $clock,
+    ): Response {
+        if ($task->repeat !== 'never') {
+            $scope = $request->input('scope');
+            if ($scope !== 'one' && $scope !== 'future') {
+                throw ValidationException::withMessages([
+                    'scope' => ['Choose This task only or This and all future.'],
+                ]);
+            }
+        }
+
+        $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
+        /** @var array<string, string> $fieldUpdatedAt */
+        $fieldUpdatedAt = $task->field_updated_at ?? [];
+        $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
+        $task->field_updated_at = $fieldUpdatedAt;
+        $task->save();
+        $task->delete();
+
+        return response()->noContent();
+    }
+
+    public function restore(
+        Task $task,
+        ClockInterface $clock,
+    ): TaskResource {
+        if ($task->trashed()) {
+            $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
+            /** @var array<string, string> $fieldUpdatedAt */
+            $fieldUpdatedAt = $task->field_updated_at ?? [];
+            $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
+            $task->field_updated_at = $fieldUpdatedAt;
+            $task->restore();
+        }
+
+        return new TaskResource($task);
     }
 }

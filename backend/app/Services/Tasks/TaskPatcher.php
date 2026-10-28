@@ -34,15 +34,8 @@ class TaskPatcher
         }
 
         // 2. Parse & clamp "at" timestamp
-        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
-        $maxAhead = $now->modify('+5 minutes');
-
-        if (isset($payload['at']) && is_string($payload['at'])) {
-            $parsedAt = (new DateTimeImmutable($payload['at']))->setTimezone(new DateTimeZone('UTC'));
-            $effectiveAt = $parsedAt > $maxAhead ? $maxAhead : $parsedAt;
-        } else {
-            $effectiveAt = $now;
-        }
+        $atInput = isset($payload['at']) && is_string($payload['at']) ? $payload['at'] : null;
+        $effectiveAt = $this->resolveEffectiveAt($atInput);
         $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
 
         // 3. Extract patchable fields from payload
@@ -97,16 +90,8 @@ class TaskPatcher
             }
 
             $storedAtStr = $fieldUpdatedAt[$field] ?? null;
-            $storedAt = null;
-            if (is_string($storedAtStr) && $storedAtStr !== '') {
-                try {
-                    $storedAt = (new DateTimeImmutable($storedAtStr))->setTimezone(new DateTimeZone('UTC'));
-                } catch (Throwable) {
-                    $storedAt = null;
-                }
-            }
 
-            if ($storedAt === null || $effectiveAt > $storedAt) {
+            if ($this->isLaterThan($effectiveAt, $storedAtStr)) {
                 $merged[$field] = $value;
                 $fieldUpdatedAt[$field] = $effectiveAtIso;
                 $appliedFields[$field] = true;
@@ -222,6 +207,79 @@ class TaskPatcher
         $task->field_updated_at = $fieldUpdatedAt;
 
         if ($task->isDirty()) {
+            $task->save();
+        }
+
+        return $task;
+    }
+
+    public function resolveEffectiveAt(?string $at): DateTimeImmutable
+    {
+        $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+        $maxAhead = $now->modify('+5 minutes');
+
+        if ($at !== null && $at !== '') {
+            $parsedAt = (new DateTimeImmutable($at))->setTimezone(new DateTimeZone('UTC'));
+
+            return $parsedAt > $maxAhead ? $maxAhead : $parsedAt;
+        }
+
+        return $now;
+    }
+
+    public function isLaterThan(DateTimeImmutable $effectiveAt, ?string $storedAtStr): bool
+    {
+        if ($storedAtStr === null || $storedAtStr === '') {
+            return true;
+        }
+
+        try {
+            $storedAt = (new DateTimeImmutable($storedAtStr))->setTimezone(new DateTimeZone('UTC'));
+
+            return $effectiveAt > $storedAt;
+        } catch (Throwable) {
+            return true;
+        }
+    }
+
+    public function complete(Task $task, ?string $at): Task
+    {
+        if ($task->done) {
+            return $task;
+        }
+
+        $effectiveAt = $this->resolveEffectiveAt($at);
+        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+
+        /** @var array<string, string> $fieldUpdatedAt */
+        $fieldUpdatedAt = $task->field_updated_at ?? [];
+        $storedDoneAt = $fieldUpdatedAt['done'] ?? null;
+
+        if ($this->isLaterThan($effectiveAt, $storedDoneAt)) {
+            $task->done = true;
+            $task->done_at = $effectiveAtIso;
+            $fieldUpdatedAt['done'] = $effectiveAtIso;
+            $task->field_updated_at = $fieldUpdatedAt;
+            $task->save();
+        }
+
+        return $task;
+    }
+
+    public function reopen(Task $task, ?string $at): Task
+    {
+        $effectiveAt = $this->resolveEffectiveAt($at);
+        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+
+        /** @var array<string, string> $fieldUpdatedAt */
+        $fieldUpdatedAt = $task->field_updated_at ?? [];
+        $storedDoneAt = $fieldUpdatedAt['done'] ?? null;
+
+        if ($this->isLaterThan($effectiveAt, $storedDoneAt)) {
+            $task->done = false;
+            $task->done_at = null;
+            $fieldUpdatedAt['done'] = $effectiveAtIso;
+            $task->field_updated_at = $fieldUpdatedAt;
             $task->save();
         }
 

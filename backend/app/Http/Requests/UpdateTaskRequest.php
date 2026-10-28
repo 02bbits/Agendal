@@ -12,8 +12,6 @@ use Throwable;
 
 class UpdateTaskRequest extends FormRequest
 {
-    private const ISO_WITH_OFFSET = '/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/';
-
     public function authorize(): bool
     {
         return true;
@@ -56,7 +54,7 @@ class UpdateTaskRequest extends FormRequest
 
                 if ($this->has('at')) {
                     $at = $this->input('at');
-                    if (! is_string($at) || preg_match(self::ISO_WITH_OFFSET, $at) !== 1) {
+                    if (! is_string($at) || preg_match(TaskLifecycleRequest::ISO_WITH_OFFSET, $at) !== 1) {
                         $validator->errors()->add('at', 'The at field must be a valid ISO 8601 date-time.');
                     } else {
                         try {
