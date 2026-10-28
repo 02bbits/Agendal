@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agendal.app/schemas/project.schema.json",
+  "title": "Project",
+  "description": "A project as the API returns it (PJ §7). `open` and `done` task counts are included in GET /projects lists.",
+  "type": "object",
+  "required": ["id", "name", "colour"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "name": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "colour": { "enum": ["blue", "red", "orange", "yellow", "green", "teal", "purple", "gray"] },
+    "open": { "type": "integer", "minimum": 0 },
+    "done": { "type": "integer", "minimum": 0 }
+  }
+}

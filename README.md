@@ -21,7 +21,7 @@ cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed       # demo account: example@gmail.com / password
 
 cd ../frontend
 npm install
@@ -40,7 +40,15 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 
 ## Checks
 
+Tests run on the `agendal_test` database, created automatically with a new `db` volume. On a volume made before it existed, create it once:
+
 ```bash
-cd backend && ./vendor/bin/pint --test && php artisan test
-cd frontend && npm run format:check && npm run lint && npm run typecheck
+docker compose exec db psql -U agendal -c 'CREATE DATABASE agendal_test OWNER agendal'
+```
+
+GitHub Actions runs the same checks on every pull request ([ci.yml](.github/workflows/ci.yml)). Run them locally first:
+
+```bash
+cd backend && ./vendor/bin/pint --test && composer analyse && php artisan test
+cd frontend && npm run format:check && npm run lint && npm run typecheck && npm test
 ```
