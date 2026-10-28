@@ -1,0 +1,48 @@
+{
+  "note": {
+    "id": "n_01J9X5F7Y8Z9K1M2N3P4Q5R6S8",
+    "client_id": "9a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    "status": "confirm",
+    "name": "Update: Old reading list",
+    "text": "delete old reading list, done email prof",
+    "source_file_name": null,
+    "written_at": "2026-10-23T08:12:00+07:00",
+    "processed_at": "2026-10-23T08:12:01+07:00",
+    "engine": "rules"
+  },
+  "changes": [],
+  "plan": {
+    "create": [],
+    "update": [
+      {
+        "ref": "u1",
+        "task_id": "t_email_prof_lee",
+        "label": "Completed",
+        "done": true,
+        "due_date": null,
+        "start_time": null,
+        "end_time": null,
+        "priority": null,
+        "project_id": null,
+        "repeat": null,
+        "reminder": null,
+        "notes": null
+      }
+    ],
+    "delete": [
+      {
+        "ref": "d1",
+        "task_id": "t_old_reading_list",
+        "label": "Old reading list"
+      }
+    ]
+  },
+  "skipped": [],
+  "ambiguous": [
+    {
+      "ref": "u1",
+      "candidates": ["t_email_prof_lee", "t_email_prof_kim"],
+      "preselected": "t_email_prof_lee"
+    }
+  ]
+}

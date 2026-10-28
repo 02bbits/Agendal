@@ -1,0 +1,145 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agendal.app/schemas/note-result.schema.json",
+  "title": "NoteResult",
+  "description": "Standard response returned by POST /api/v1/notes (ADR-001, NU §7, RV §7)",
+  "type": "object",
+  "required": ["note", "changes", "plan", "skipped", "ambiguous"],
+  "additionalProperties": false,
+  "properties": {
+    "note": {
+      "type": "object",
+      "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string" },
+        "client_id": { "type": "string", "format": "uuid" },
+        "status": { "type": "string", "enum": ["done", "confirm", "followup"] },
+        "name": { "type": "string", "maxLength": 35 },
+        "text": { "type": "string" },
+        "source_file_name": { "type": ["string", "null"] },
+        "written_at": { "type": "string" },
+        "processed_at": { "type": "string" },
+        "engine": { "type": "string", "enum": ["rules", "rules_llm", "rules_fallback"] }
+      }
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "task", "label"],
+        "additionalProperties": false,
+        "properties": {
+          "kind": { "type": "string", "enum": ["created", "updated", "deleted"] },
+          "label": { "type": "string" },
+          "task": {
+            "type": "object",
+            "required": ["id", "title"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "due_date": { "type": ["string", "null"] },
+              "start_time": { "type": ["string", "null"] },
+              "end_time": { "type": ["string", "null"] },
+              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+              "project_id": { "type": ["string", "null"] },
+              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
+              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
+              "done": { "type": "boolean" },
+              "notes": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "plan": {
+      "type": ["object", "null"],
+      "required": ["create", "update", "delete"],
+      "additionalProperties": false,
+      "properties": {
+        "create": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref", "title", "due_date", "start_time", "end_time", "priority", "project_id", "repeat", "reminder", "notes", "duplicate_of"],
+            "additionalProperties": false,
+            "properties": {
+              "ref": { "type": "string" },
+              "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+              "due_date": { "type": ["string", "null"] },
+              "start_time": { "type": ["string", "null"] },
+              "end_time": { "type": ["string", "null"] },
+              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+              "project_id": { "type": ["string", "null"] },
+              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
+              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
+              "notes": { "type": ["string", "null"] },
+              "duplicate_of": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "update": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref", "task_id", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "ref": { "type": "string" },
+              "task_id": { "type": "string" },
+              "label": { "type": "string" },
+              "done": { "type": "boolean" },
+              "due_date": { "type": ["string", "null"] },
+              "start_time": { "type": ["string", "null"] },
+              "end_time": { "type": ["string", "null"] },
+              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
+              "project_id": { "type": ["string", "null"] },
+              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
+              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
+              "notes": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "delete": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref", "task_id", "label"],
+            "additionalProperties": false,
+            "properties": {
+              "ref": { "type": "string" },
+              "task_id": { "type": "string" },
+              "label": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "skipped": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "text", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string" },
+          "text": { "type": "string" },
+          "reason": { "type": "string", "enum": ["skip", "already_done", "not_found"] }
+        }
+      }
+    },
+    "ambiguous": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "candidates", "preselected"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string" },
+          "candidates": { "type": "array", "items": { "type": "string" } },
+          "preselected": { "type": "string" }
+        }
+      }
+    }
+  }
+}
