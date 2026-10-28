@@ -1,3 +1,4 @@
+import { addDays } from "./dates";
 import { inboxProgress, type Progress } from "./progress";
 import type { Task } from "./types";
 
@@ -71,5 +72,59 @@ export function buildInbox(
     ),
     progress: inboxProgress(tasks, today, opts.completedToday),
     empty: tasks.length === 0,
+  };
+}
+
+export type UpcomingFilter = "all" | "scheduled" | "due";
+
+export interface UpcomingPage {
+  days: Array<{ date: string; tasks: Task[] }>;
+  /** Where the next page starts, or null when nothing more is due. */
+  nextFrom: string | null;
+}
+
+/** Scheduled: has a start time. Due only: a due date and no start time (LV §2.2). */
+export function matchesFilter(task: Task, filter: UpcomingFilter): boolean {
+  if (filter === "scheduled") return !!task.start_time;
+  if (filter === "due") return !task.start_time;
+  return true;
+}
+
+/**
+ * One page of Upcoming (LV-2): open tasks due from `from` on, grouped by day,
+ * 14 days at a time. A long gap moves on to the next date with tasks; days with
+ * nothing due aren't shown. Completed tasks aren't shown.
+ */
+export function upcomingPage(
+  tasks: readonly Task[],
+  from: string,
+  filter: UpcomingFilter,
+  days = 14,
+  isSettling: (id: string) => boolean = () => false,
+): UpcomingPage {
+  const due = tasks
+    .filter(
+      (t) =>
+        (!t.done || isSettling(t.id)) &&
+        t.due_date &&
+        t.due_date >= from &&
+        matchesFilter(t, filter),
+    )
+    .sort((a, b) => a.due_date!.localeCompare(b.due_date!));
+  const first = due[0]?.due_date;
+  if (!first) return { days: [], nextFrom: null };
+  const last = addDays(first, days - 1);
+  const byDay = new Map<string, Task[]>();
+  for (const task of due) {
+    if (task.due_date! > last) break;
+    byDay.set(task.due_date!, [...(byDay.get(task.due_date!) ?? []), task]);
+  }
+  const later = due.find((t) => t.due_date! > last);
+  return {
+    days: [...byDay].map(([date, list]) => ({
+      date,
+      tasks: sortWithinDay(list),
+    })),
+    nextFrom: later ? later.due_date : null,
   };
 }
