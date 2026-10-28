@@ -18,7 +18,7 @@ export const DEFAULT_PROJECT_KEYWORDS = {
   'Adv Web': ['adv web', 'web'],
   'HCI': ['hci'],
   'Portfolio': ['portfolio'],
-  'Personal': ['gym', 'mum', 'groceries', 'bank', 'dentist', 'haircut', 'rent', 'passport', 'mẹ', 'chợ']
+  'Personal': ['gym', 'mum', 'groceries', 'mẹ', 'chợ']
 };
 
 function toDateStr(year, month, day) {
@@ -218,7 +218,7 @@ export function extractTaskItem(itemText, context = {}) {
       else if (period === 'trưa' && h === 12) h = 12;
 
       startTime = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      matchedPhrases.push(viComplexTime[0]);
+      matchedPhrases.push(viComplexTime[0].trim());
     } else if (enTime && (enTime[2] || enTime[3] || enTime[4] || enTime[0].toLowerCase().startsWith('at '))) {
       let h = parseInt(enTime[1], 10);
       let min = parseInt(enTime[2] || enTime[3] || '0', 10);
@@ -232,7 +232,7 @@ export function extractTaskItem(itemText, context = {}) {
       }
 
       startTime = `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-      matchedPhrases.push(enTime[0]);
+      matchedPhrases.push(enTime[0].trim());
     } else {
       // Time words
       if (/\b(morning|sáng)\b/i.test(remaining) && !startTime) {
@@ -298,8 +298,11 @@ export function extractTaskItem(itemText, context = {}) {
   if (pureHighRegex.test(remaining)) {
     priority = 'high';
     matchedPhrases.push(pureHighRegex);
-  } else if (pureLowRegex.test(remaining) && !priority) {
-    priority = 'low';
+  }
+  if (pureLowRegex.test(remaining)) {
+    if (!priority) {
+      priority = 'low';
+    }
     matchedPhrases.push(pureLowRegex);
   }
 
@@ -342,11 +345,19 @@ export function extractTaskItem(itemText, context = {}) {
   // --- 7. Title Cleanup ---
   let cleanedTitle = remaining;
 
+  // Sort matchedPhrases by length descending so longer composite phrases are removed first
+  matchedPhrases.sort((a, b) => {
+    const lenA = typeof a === 'string' ? a.length : (a.source?.length || 0);
+    const lenB = typeof b === 'string' ? b.length : (b.source?.length || 0);
+    return lenB - lenA;
+  });
+
   for (const p of matchedPhrases) {
     if (p instanceof RegExp) {
       cleanedTitle = cleanedTitle.replace(p, ' ');
-    } else if (typeof p === 'string') {
-      cleanedTitle = cleanedTitle.replace(new RegExp(`\\b${escapeRegExp(p)}\\b`, 'gi'), ' ');
+    } else if (typeof p === 'string' && p.trim()) {
+      const trimmedP = p.trim();
+      cleanedTitle = cleanedTitle.replace(new RegExp(`\\b${escapeRegExp(trimmedP)}\\b`, 'gi'), ' ');
     }
   }
 
@@ -358,7 +369,18 @@ export function extractTaskItem(itemText, context = {}) {
     cleanedTitle = cleanedTitle.replace(li, ' ');
   }
 
-  cleanedTitle = cleanedTitle.replace(/^[,\s;.-]+|[,\s;.-]+$/g, '').replace(/\s+/g, ' ').trim();
+  cleanedTitle = cleanedTitle
+    .replace(/^[,\s;.-]+|[,\s;.-]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  // Strip dangling prepositions left when date/time/repeat was removed
+  cleanedTitle = cleanedTitle
+    .replace(/\b(by|on|due|at|before|every|mỗi|vào|lúc|trước|sang|đến)\s*$/gi, '')
+    .replace(/^\s*\b(by|on|due|at|before|every|mỗi|vào|lúc|trước|sang|đến)\b/gi, '')
+    .replace(/^[,\s;.-]+|[,\s;.-]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 
   if (projectId) {
     const projRegex = new RegExp(`\\b${escapeRegExp(projectId)}\\b`, 'gi');

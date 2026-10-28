@@ -5,7 +5,8 @@
   "description": "Core Note Understanding Engine for Agendal (NU module, Phase 3)",
   "main": "./src/index.js",
   "scripts": {
-    "test": "node --test test/*.test.js"
+    "test": "node --test test/*.test.js",
+    "corpus": "node scripts/run-corpus.js"
   },
   "keywords": ["note", "parsing", "nlp", "agendal"],
   "author": "Agendal Team",

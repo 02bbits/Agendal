@@ -56,7 +56,32 @@ export function processNote(input, context = {}) {
   } = context;
 
   // 1-3. Normalise, Check length, Split
-  const items = splitNote(text);
+  let items;
+  try {
+    items = splitNote(text);
+  } catch (err) {
+    if (err.name === 'NoteSplitError' || err.code) {
+      return {
+        note: {
+          id: `n_${Date.now()}`,
+          client_id: clientId,
+          status: 'error',
+          error: err.code,
+          name: '',
+          text,
+          source_file_name: sourceFileName,
+          written_at: writtenAt,
+          processed_at: new Date().toISOString(),
+          engine: 'rules',
+        },
+        changes: [],
+        plan: null,
+        skipped: [],
+        ambiguous: [],
+      };
+    }
+    throw err;
+  }
 
   const rawCreates = [];
   const rawUpdates = [];
@@ -107,9 +132,11 @@ export function processNote(input, context = {}) {
             candidates: match.candidates,
             preselected: match.preselected,
           });
+          const preselectedTask = openTasks.find(t => t.id === match.preselected);
           rawUpdates.push({
             ref,
             task_id: match.preselected,
+            task_title: preselectedTask?.title || 'task',
             done: true,
             label: 'Completed',
           });

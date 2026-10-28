@@ -7,3 +7,4 @@ export * from './safety.js';
 export * from './namer.js';
 export * from './pipeline.js';
 export * from './llm-fallback.js';
+export * from './corpus-runner.js';

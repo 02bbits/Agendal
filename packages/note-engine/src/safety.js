@@ -116,6 +116,7 @@ export function validatePlan(rawPlan, userContext = {}) {
       validUpdate.push({
         ref: item.ref || `u${validUpdate.length + 1}`,
         task_id: taskId,
+        task_title: item.task_title || null,
         label: item.label || 'Completed',
         done: item.done !== undefined ? item.done : true,
         due_date: item.due_date || item.dueDate || null,
