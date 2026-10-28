@@ -1,10 +1,10 @@
 {
   "note": {
-    "id": "n_01J9X5F7Y8Z9K1M2N3P4Q5R6S7",
-    "client_id": "8f1c2b3a-4d5e-6f7a-8b9c-0d1e2f3a4b5c",
+    "id": "019a1c00-0000-7000-8000-000000000301",
+    "client_id": "6f1c2b3a-4d5e-4f7a-8b9c-0d1e2f3a4b01",
     "status": "done",
     "name": "This week",
-    "text": "sql quiz monday 9am, email the group tonight, fyi lab moved to room 3",
+    "text": "sql quiz monday 9am, move hci reading to friday, fyi lab moved to room 3",
     "source_file_name": null,
     "written_at": "2026-10-23T08:12:00+07:00",
     "processed_at": "2026-10-23T08:12:01+07:00",
@@ -15,34 +15,45 @@
       "kind": "created",
       "label": "Mon 26 Oct · 09:00 · SQL Course",
       "task": {
-        "id": "t_01J9X5G1A2B3C4D5E6F7G8H9J0",
+        "id": "019a1c00-0000-7000-8000-000000000201",
         "title": "SQL quiz",
         "due_date": "2026-10-26",
         "start_time": "09:00",
         "end_time": null,
         "priority": "high",
-        "project_id": "p_sql_course",
+        "project_id": "019a1c00-0000-7000-8000-000000000101",
         "repeat": "never",
         "reminder": "1d",
+        "notes": null,
         "done": false,
-        "notes": null
+        "done_at": null,
+        "created_by": "assistant",
+        "source_note_id": "019a1c00-0000-7000-8000-000000000301",
+        "created_at": "2026-10-23T08:12:00+07:00",
+        "updated_at": "2026-10-23T08:12:00+07:00"
       }
     },
     {
-      "kind": "created",
-      "label": "Today · 20:00",
+      "kind": "updated",
+      "label": "Fri 30 Oct · HCI",
+      "was": "Wed 28 Oct",
       "task": {
-        "id": "t_01J9X5G2A2B3C4D5E6F7G8H9J1",
-        "title": "Email the group",
-        "due_date": "2026-10-23",
-        "start_time": "20:00",
+        "id": "019a1c00-0000-7000-8000-000000000202",
+        "title": "HCI reading",
+        "due_date": "2026-10-30",
+        "start_time": null,
         "end_time": null,
-        "priority": "medium",
-        "project_id": null,
+        "priority": null,
+        "project_id": "019a1c00-0000-7000-8000-000000000103",
         "repeat": "never",
-        "reminder": "15m",
+        "reminder": "none",
+        "notes": null,
         "done": false,
-        "notes": null
+        "done_at": null,
+        "created_by": "user",
+        "source_note_id": null,
+        "created_at": "2026-10-23T08:12:00+07:00",
+        "updated_at": "2026-10-23T08:12:00+07:00"
       }
     }
   ],

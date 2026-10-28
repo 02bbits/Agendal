@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agendal.app/schemas/note-result.schema.json",
   "title": "NoteResult",
-  "description": "Standard response returned by POST /api/v1/notes (ADR-001, NU §7, RV §7)",
+  "description": "Returned by POST /notes, GET /notes/{id} and the note actions (ADR-001, NU §7, RV §7). `done`: `changes` lists what was applied, `plan` is null. `confirm`: `changes` is empty, `plan` holds the proposal. `followup`: nothing actionable.",
   "type": "object",
   "required": ["note", "changes", "plan", "skipped", "ambiguous"],
   "additionalProperties": false,
@@ -12,15 +12,16 @@
       "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine"],
       "additionalProperties": false,
       "properties": {
-        "id": { "type": "string" },
+        "id": { "type": "string", "format": "uuid" },
         "client_id": { "type": "string", "format": "uuid" },
-        "status": { "type": "string", "enum": ["done", "confirm", "followup"] },
-        "name": { "type": "string", "maxLength": 35 },
-        "text": { "type": "string" },
-        "source_file_name": { "type": ["string", "null"] },
-        "written_at": { "type": "string" },
-        "processed_at": { "type": "string" },
-        "engine": { "type": "string", "enum": ["rules", "rules_llm", "rules_fallback"] }
+        "status": { "enum": ["done", "confirm", "followup", "kept", "undone"] },
+        "name": { "type": ["string", "null"], "maxLength": 35 },
+        "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
+        "source_file_name": { "type": ["string", "null"], "maxLength": 255 },
+        "written_at": { "type": "string", "format": "date-time" },
+        "processed_at": { "type": "string", "format": "date-time" },
+        "edited_at": { "type": ["string", "null"], "format": "date-time" },
+        "engine": { "enum": ["rules", "rules_llm", "rules_fallback"] }
       }
     },
     "changes": {
@@ -30,90 +31,27 @@
         "required": ["kind", "task", "label"],
         "additionalProperties": false,
         "properties": {
-          "kind": { "type": "string", "enum": ["created", "updated", "deleted"] },
+          "kind": { "enum": ["created", "updated", "deleted"] },
+          "task": { "$ref": "task.schema.json" },
           "label": { "type": "string" },
-          "task": {
-            "type": "object",
-            "required": ["id", "title"],
-            "properties": {
-              "id": { "type": "string" },
-              "title": { "type": "string" },
-              "due_date": { "type": ["string", "null"] },
-              "start_time": { "type": ["string", "null"] },
-              "end_time": { "type": ["string", "null"] },
-              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-              "project_id": { "type": ["string", "null"] },
-              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
-              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
-              "done": { "type": "boolean" },
-              "notes": { "type": ["string", "null"] }
-            }
-          }
+          "was": { "type": "string", "description": "Previous value for an update, shown as \"was …\" (RV-1)" }
         }
       }
     },
     "plan": {
-      "type": ["object", "null"],
-      "required": ["create", "update", "delete"],
-      "additionalProperties": false,
-      "properties": {
-        "create": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["ref", "title", "due_date", "start_time", "end_time", "priority", "project_id", "repeat", "reminder", "notes", "duplicate_of"],
-            "additionalProperties": false,
-            "properties": {
-              "ref": { "type": "string" },
-              "title": { "type": "string", "minLength": 1, "maxLength": 200 },
-              "due_date": { "type": ["string", "null"] },
-              "start_time": { "type": ["string", "null"] },
-              "end_time": { "type": ["string", "null"] },
-              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-              "project_id": { "type": ["string", "null"] },
-              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
-              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
-              "notes": { "type": ["string", "null"] },
-              "duplicate_of": { "type": ["string", "null"] }
-            }
-          }
-        },
-        "update": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["ref", "task_id", "label"],
-            "additionalProperties": false,
-            "properties": {
-              "ref": { "type": "string" },
-              "task_id": { "type": "string" },
-              "label": { "type": "string" },
-              "done": { "type": "boolean" },
-              "due_date": { "type": ["string", "null"] },
-              "start_time": { "type": ["string", "null"] },
-              "end_time": { "type": ["string", "null"] },
-              "priority": { "type": "string", "enum": ["low", "medium", "high"] },
-              "project_id": { "type": ["string", "null"] },
-              "repeat": { "type": "string", "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
-              "reminder": { "type": "string", "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
-              "notes": { "type": ["string", "null"] }
-            }
-          }
-        },
-        "delete": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "required": ["ref", "task_id", "label"],
-            "additionalProperties": false,
-            "properties": {
-              "ref": { "type": "string" },
-              "task_id": { "type": "string" },
-              "label": { "type": "string" }
-            }
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "required": ["create", "update", "delete"],
+          "additionalProperties": false,
+          "properties": {
+            "create": { "type": "array", "items": { "$ref": "#/$defs/create" } },
+            "update": { "type": "array", "items": { "$ref": "#/$defs/update" } },
+            "delete": { "type": "array", "items": { "$ref": "#/$defs/delete" } }
           }
         }
-      }
+      ]
     },
     "skipped": {
       "type": "array",
@@ -124,7 +62,7 @@
         "properties": {
           "ref": { "type": "string" },
           "text": { "type": "string" },
-          "reason": { "type": "string", "enum": ["skip", "already_done", "not_found"] }
+          "reason": { "enum": ["skip", "already_done", "not_found"] }
         }
       }
     },
@@ -136,9 +74,62 @@
         "additionalProperties": false,
         "properties": {
           "ref": { "type": "string" },
-          "candidates": { "type": "array", "items": { "type": "string" } },
-          "preselected": { "type": "string" }
+          "candidates": { "type": "array", "items": { "type": "string", "format": "uuid" }, "minItems": 2 },
+          "preselected": { "type": "string", "format": "uuid" }
         }
+      }
+    },
+    "redo_until": { "type": "string", "format": "date-time", "description": "Only after Undo all: redo is allowed until undo + 10 s" }
+  },
+  "$defs": {
+    "create": {
+      "type": "object",
+      "required": ["ref", "title", "due_date", "start_time", "end_time", "priority", "project_id", "repeat", "reminder", "notes", "duplicate_of"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string" },
+        "title": { "$ref": "task.schema.json#/$defs/title" },
+        "due_date": { "$ref": "task.schema.json#/$defs/date" },
+        "start_time": { "$ref": "task.schema.json#/$defs/time" },
+        "end_time": { "$ref": "task.schema.json#/$defs/time" },
+        "priority": { "$ref": "task.schema.json#/$defs/priority" },
+        "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
+        "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
+        "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
+        "notes": { "$ref": "task.schema.json#/$defs/notes" },
+        "duplicate_of": { "$ref": "task.schema.json#/$defs/uuid_or_null" }
+      }
+    },
+    "update": {
+      "description": "A patch: only the fields that change are present.",
+      "type": "object",
+      "required": ["ref", "task_id", "label"],
+      "additionalProperties": false,
+      "minProperties": 4,
+      "properties": {
+        "ref": { "type": "string" },
+        "task_id": { "$ref": "task.schema.json#/$defs/uuid" },
+        "label": { "type": "string" },
+        "done": { "type": "boolean" },
+        "title": { "$ref": "task.schema.json#/$defs/title" },
+        "due_date": { "$ref": "task.schema.json#/$defs/date" },
+        "start_time": { "$ref": "task.schema.json#/$defs/time" },
+        "end_time": { "$ref": "task.schema.json#/$defs/time" },
+        "priority": { "$ref": "task.schema.json#/$defs/priority" },
+        "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
+        "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
+        "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
+        "notes": { "$ref": "task.schema.json#/$defs/notes" }
+      }
+    },
+    "delete": {
+      "type": "object",
+      "required": ["ref", "task_id", "label"],
+      "additionalProperties": false,
+      "properties": {
+        "ref": { "type": "string" },
+        "task_id": { "$ref": "task.schema.json#/$defs/uuid" },
+        "label": { "type": "string" }
       }
     }
   }

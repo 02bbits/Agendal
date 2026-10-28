@@ -1,7 +1,7 @@
 {
   "note": {
-    "id": "n_01J9X5F7Y8Z9K1M2N3P4Q5R6S8",
-    "client_id": "9a2b3c4d-5e6f-7a8b-9c0d-1e2f3a4b5c6d",
+    "id": "019a1c00-0000-7000-8000-000000000302",
+    "client_id": "6f1c2b3a-4d5e-4f7a-8b9c-0d1e2f3a4b02",
     "status": "confirm",
     "name": "Update: Old reading list",
     "text": "delete old reading list, done email prof",
@@ -16,7 +16,7 @@
     "update": [
       {
         "ref": "u1",
-        "task_id": "t_email_prof_lee",
+        "task_id": "019a1c00-0000-7000-8000-000000000203",
         "label": "Completed",
         "done": true
       }
@@ -24,7 +24,7 @@
     "delete": [
       {
         "ref": "d1",
-        "task_id": "t_old_reading_list",
+        "task_id": "019a1c00-0000-7000-8000-000000000205",
         "label": "Old reading list"
       }
     ]
@@ -34,10 +34,10 @@
     {
       "ref": "u1",
       "candidates": [
-        "t_email_prof_lee",
-        "t_email_prof_kim"
+        "019a1c00-0000-7000-8000-000000000203",
+        "019a1c00-0000-7000-8000-000000000204"
       ],
-      "preselected": "t_email_prof_lee"
+      "preselected": "019a1c00-0000-7000-8000-000000000203"
     }
   ]
 }
