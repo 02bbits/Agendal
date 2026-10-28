@@ -9,3 +9,4 @@ export * from "./repeat";
 export { uuidv7 } from "./uuid";
 export * from "./projects";
 export * from "./lists";
+export * from "./search";

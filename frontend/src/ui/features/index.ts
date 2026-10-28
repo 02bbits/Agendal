@@ -62,3 +62,9 @@ export {
   UpcomingScreen,
   type UpcomingScreenProps,
 } from "./lists/UpcomingScreen";
+export {
+  SearchScreen,
+  SEARCH_DEBOUNCE_MS,
+  SEARCH_PAGE,
+  type SearchScreenProps,
+} from "./lists/SearchScreen";

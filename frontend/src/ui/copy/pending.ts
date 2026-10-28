@@ -72,6 +72,7 @@ export const pending = {
   "list.section_count_other": "{section}, {count} tasks",
   "list.from_tomorrow": "From tomorrow",
   "list.load_more": "Show more days",
+  "search.load_more": "Show more results",
   "list.filter_label": "Show",
   "search.filter_label": "Status",
   "search.count_one": "1 result",
