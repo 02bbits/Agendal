@@ -30,7 +30,7 @@ test('FrozenClock advances time', function () {
 });
 
 test('reminder calculator matches ADR-006 expectations', function () {
-    $calculator = new ReminderCalculator();
+    $calculator = new ReminderCalculator;
 
     // 09:00 with 15m reminder in Asia/Ho_Chi_Minh (+07:00 = 02:00 UTC) -> 01:45 UTC
     $remind1 = $calculator->compute('2026-10-26', '09:00', '15m', 'Asia/Ho_Chi_Minh');
@@ -79,6 +79,6 @@ test('invalid floating dates and times are rejected', function (string $date, st
 ]);
 
 test('reminder offsets use elapsed UTC time across DST', function () {
-    expect((new ReminderCalculator())->compute('2026-03-08', '03:30', '1h', 'America/New_York'))
+    expect((new ReminderCalculator)->compute('2026-03-08', '03:30', '1h', 'America/New_York'))
         ->toBe('2026-03-08T06:30:00Z');
 });
