@@ -4,3 +4,5 @@ export * from './extractor.js';
 export * from './classifier.js';
 export * from './matcher.js';
 export * from './safety.js';
+export * from './namer.js';
+export * from './pipeline.js';
