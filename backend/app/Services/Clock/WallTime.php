@@ -30,10 +30,10 @@ final class WallTime
             $wallTimestamp - self::TRANSITION_WINDOW_SECONDS,
             $wallTimestamp + self::TRANSITION_WINDOW_SECONDS,
         );
-        $offsets = $transitions === false
-            ? [$zone->getOffset($wall)]
-            : array_unique(array_column($transitions, 'offset'));
-        $candidates = array_map(fn (int $offset): int => $wallTimestamp - $offset, $offsets);
+        $candidates = [$wallTimestamp - $zone->getOffset($wall)];
+        foreach ($transitions ?: [] as $transition) {
+            $candidates[] = $wallTimestamp - $transition['offset'];
+        }
         sort($candidates);
 
         foreach ($candidates as $candidate) {
