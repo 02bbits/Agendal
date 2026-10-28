@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Clock;
+namespace Tests\Support;
 
+use App\Services\Clock\ClockInterface;
 use DateTimeImmutable;
 use DateTimeZone;
-use InvalidArgumentException;
 
 /**
  * FrozenClock for unit tests with pinned, controllable time.
@@ -15,7 +15,7 @@ class FrozenClock implements ClockInterface
 {
     private DateTimeImmutable $currentTime;
 
-    public function __construct(string|DateTimeImmutable $initialTime = '2026-10-23T08:12:00+07:00')
+    public function __construct(string|DateTimeImmutable $initialTime)
     {
         if ($initialTime instanceof DateTimeImmutable) {
             $this->currentTime = $initialTime;
@@ -60,37 +60,5 @@ class FrozenClock implements ClockInterface
         } else {
             $this->currentTime = new DateTimeImmutable($time);
         }
-    }
-
-    public function computeRemindAtUtc(
-        string $dueDate,
-        ?string $startTime,
-        string $reminder,
-        string $timezone
-    ): ?string {
-        if ($reminder === 'none' || empty($reminder)) {
-            return null;
-        }
-
-        $offsets = [
-            '5m' => 5,
-            '15m' => 15,
-            '30m' => 30,
-            '1h' => 60,
-            '1d' => 1440,
-        ];
-
-        if (!isset($offsets[$reminder])) {
-            throw new InvalidArgumentException("Unknown reminder offset: {$reminder}");
-        }
-
-        $timeStr = $startTime ?: '09:00';
-        $tz = new DateTimeZone($timezone);
-        $localDateTime = new DateTimeImmutable("{$dueDate} {$timeStr}:00", $tz);
-
-        $offsetMinutes = $offsets[$reminder];
-        $remindAt = $localDateTime->modify("-{$offsetMinutes} minutes");
-
-        return $remindAt->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
     }
 }

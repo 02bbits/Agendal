@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from "next";
+import { ClockProvider } from "@/lib/clock/ClockProvider";
 import { AppFrame } from "./AppFrame";
 import "./globals.css";
 
@@ -14,16 +15,14 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // AppFrame sets data-theme on the client when Appearance isn't System
     <html lang="en" suppressHydrationWarning>
       <body>
-        <AppFrame>{children}</AppFrame>
+        <ClockProvider>
+          <AppFrame>{children}</AppFrame>
+        </ClockProvider>
       </body>
     </html>
   );
