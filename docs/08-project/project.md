@@ -32,7 +32,7 @@ Confirmed with the stack ([Q13](open-questions.md#q13)).
 
 | Area | Convention |
 |---|---|
-| Frontend | Next.js, React, TypeScript strict, ESLint and Prettier. Components from the Agendal design system |
+| Frontend | Next.js, React, TypeScript strict, ESLint and Prettier. Tailwind CSS with daisyUI, themed with the Paper & ink tokens. Components from the Agendal design system |
 | Backend | Laravel, policies for authorization, business logic in services/actions, PSR-12 (Pint) |
 | Database | PostgreSQL. Migrations in Laravel |
 | Tests | See the [test strategy](../06-testing/test-strategy.md) |
