@@ -18,15 +18,7 @@
         "ref": "u1",
         "task_id": "t_email_prof_lee",
         "label": "Completed",
-        "done": true,
-        "due_date": null,
-        "start_time": null,
-        "end_time": null,
-        "priority": null,
-        "project_id": null,
-        "repeat": null,
-        "reminder": null,
-        "notes": null
+        "done": true
       }
     ],
     "delete": [
@@ -41,7 +33,10 @@
   "ambiguous": [
     {
       "ref": "u1",
-      "candidates": ["t_email_prof_lee", "t_email_prof_kim"],
+      "candidates": [
+        "t_email_prof_lee",
+        "t_email_prof_kim"
+      ],
       "preselected": "t_email_prof_lee"
     }
   ]
