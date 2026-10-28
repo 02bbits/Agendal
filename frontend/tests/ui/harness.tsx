@@ -22,7 +22,7 @@ function StoreToast() {
 }
 
 export function setup(tasks: Task[]) {
-  const memory = createMemoryApi({ tasks, projects });
+  const memory = createMemoryApi({ tasks, projects }, { today: () => TODAY });
   const wrap = (ui: ReactNode) => (
     <TaskStoreProvider
       api={memory.api}

@@ -15,6 +15,7 @@ export function useModalFocus(
   titleRef: RefObject<HTMLElement | null>,
   open: boolean,
   onEscape: () => void,
+  initialFocusRef?: RefObject<HTMLElement | null>,
 ): void {
   useEffect(() => {
     if (!open) return;
@@ -26,7 +27,12 @@ export function useModalFocus(
         : null;
 
     const firstField = container.querySelector<HTMLElement>(FIELD);
-    (firstField ?? titleRef.current ?? container).focus();
+    (
+      initialFocusRef?.current ??
+      firstField ??
+      titleRef.current ??
+      container
+    ).focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -62,5 +68,5 @@ export function useModalFocus(
       container.removeEventListener("keydown", onKeyDown);
       if (opener && opener.isConnected) opener.focus();
     };
-  }, [open, containerRef, titleRef, onEscape]);
+  }, [open, containerRef, titleRef, onEscape, initialFocusRef]);
 }

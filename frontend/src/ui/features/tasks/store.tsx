@@ -11,7 +11,7 @@ import {
 import { t, type CopyKey } from "../../copy";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import type { TaskApi, TaskPatch } from "../../domain/api";
+import type { DeleteScope, TaskApi, TaskPatch } from "../../domain/api";
 import { normalizePatch, patchErrors } from "../../domain/edit";
 import { todayIn } from "../../domain/dates";
 import type { Project, Task, TimeFormat } from "../../domain/types";
@@ -48,6 +48,8 @@ export interface TaskStore {
     task: Task,
     patch: TaskPatch,
   ) => Partial<Record<keyof TaskPatch, CopyKey>>;
+  /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */
+  remove: (task: Task, scope?: DeleteScope) => void;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -223,6 +225,50 @@ export function TaskStoreProvider({
     [api, clock, today, applyLocal, showToast, saveFailed],
   );
 
+  const restore = useCallback(
+    (task: Task, madeNextId?: string) => {
+      const revert = applyLocal((list) => [
+        ...list.filter((x) => x.id !== madeNextId),
+        task,
+      ]);
+      api.restore(task.id).then(
+        (saved) =>
+          applyLocal((list) =>
+            list.map((x) => (x.id === saved.id ? saved : x)),
+          ),
+        () => {
+          revert();
+          saveFailed(() => restore(task, madeNextId));
+        },
+      );
+    },
+    [api, applyLocal, saveFailed],
+  );
+
+  const remove = useCallback(
+    (task: Task, scope?: DeleteScope) => {
+      const revert = applyLocal((list) => list.filter((x) => x.id !== task.id));
+      let madeNextId: string | undefined;
+      showToast({
+        message: t("task.deleted", { title: task.title }),
+        actionLabel: t("common.undo"),
+        onAction: () => restore(task, madeNextId),
+      });
+      api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
+        ({ next }) => {
+          if (!next) return;
+          madeNextId = next.id;
+          applyLocal((list) => [...list, next]);
+        },
+        () => {
+          revert();
+          saveFailed(() => remove(task, scope));
+        },
+      );
+    },
+    [api, applyLocal, showToast, restore, saveFailed],
+  );
+
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -247,6 +293,7 @@ export function TaskStoreProvider({
         todayIn(new Date(task.done_at), clock.timeZone) === today,
       toggle,
       update,
+      remove,
       applyLocal,
       setProjects,
       saveFailed,
@@ -264,6 +311,7 @@ export function TaskStoreProvider({
       settling,
       toggle,
       update,
+      remove,
       applyLocal,
       saveFailed,
     ],

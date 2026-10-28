@@ -33,4 +33,11 @@ export interface TaskApi {
   get(id: string): Promise<Task>;
   /** `PATCH /tasks/{id}` with only the changed fields, each stamped with `at` (ADR-004). */
   patch(id: string, patch: TaskPatch, at: string): Promise<Task>;
+  /**
+   * `DELETE /tasks/{id}?scope=one|future` (soft delete). For a repeating task,
+   * `one` deletes this occurrence and returns the next one so the series goes on.
+   */
+  remove(id: string, scope?: DeleteScope): Promise<{ next?: Task }>;
+  /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
+  restore(id: string): Promise<Task>;
 }

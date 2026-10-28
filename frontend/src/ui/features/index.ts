@@ -30,3 +30,7 @@ export {
   type ChoiceSheetProps,
   type Choice,
 } from "./tasks/ChoiceSheet";
+export {
+  RepeatScopeDialog,
+  type RepeatScopeDialogProps,
+} from "./tasks/RepeatScopeDialog";

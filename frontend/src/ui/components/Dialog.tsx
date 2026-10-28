@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { useModalFocus } from "./useModalFocus";
 
 export interface DialogProps {
@@ -11,6 +11,8 @@ export interface DialogProps {
   /** Stacked buttons; the safe exit (Cancel) goes last and destructive buttons are never the default. */
   actions: ReactNode;
   children?: ReactNode;
+  /** Where focus starts; defaults to the title. Scope dialogs start on Cancel (A11Y-42). */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export function Dialog({
@@ -20,12 +22,13 @@ export function Dialog({
   onClose,
   actions,
   children,
+  initialFocusRef,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  useModalFocus(dialogRef, titleRef, open, onClose);
+  useModalFocus(dialogRef, titleRef, open, onClose, initialFocusRef);
 
   if (!open) return null;
 
