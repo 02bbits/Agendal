@@ -46,8 +46,9 @@ Tests run on the `agendal_test` database, created automatically with a new `db` 
 docker compose exec db psql -U agendal -c 'CREATE DATABASE agendal_test OWNER agendal'
 ```
 
+GitHub Actions runs the same checks on every pull request ([ci.yml](.github/workflows/ci.yml)). Run them locally first:
 
 ```bash
-cd backend && ./vendor/bin/pint --test && php artisan test
-cd frontend && npm run format:check && npm run lint && npm run typecheck
+cd backend && ./vendor/bin/pint --test && composer analyse && php artisan test
+cd frontend && npm run format:check && npm run lint && npm run typecheck && npm test
 ```
