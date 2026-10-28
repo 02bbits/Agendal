@@ -11,10 +11,15 @@ import {
 import { t, type CopyKey } from "../../copy";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import type { DeleteScope, TaskApi, TaskPatch } from "../../domain/api";
+import type {
+  DeleteScope,
+  NewTask,
+  TaskApi,
+  TaskPatch,
+} from "../../domain/api";
 import { normalizePatch, patchErrors } from "../../domain/edit";
 import { todayIn } from "../../domain/dates";
-import type { Project, Task, TimeFormat } from "../../domain/types";
+import type { Project, Task, TimeFormat, WeekStart } from "../../domain/types";
 
 /** Injected clock (IM-05 / ADR-006): no screen reads the system time directly. */
 export interface Clock {
@@ -30,6 +35,7 @@ export interface TaskStore {
   projects: Project[];
   today: string;
   timeFormat: TimeFormat;
+  weekStart: WeekStart;
   clock: Clock;
   api: TaskApi;
   toast: ToastData | null;
@@ -50,6 +56,8 @@ export interface TaskStore {
   ) => Partial<Record<keyof TaskPatch, CopyKey>>;
   /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */
   remove: (task: Task, scope?: DeleteScope) => void;
+  /** Adds a task made by hand, with the "Added “…”" toast (NC-7). */
+  create: (input: NewTask) => void;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -70,6 +78,7 @@ export interface TaskStoreProviderProps {
   initialTasks: Task[];
   initialProjects: Project[];
   timeFormat?: TimeFormat;
+  weekStart?: WeekStart;
   children: ReactNode;
 }
 
@@ -79,6 +88,7 @@ export function TaskStoreProvider({
   initialTasks,
   initialProjects,
   timeFormat = "24h",
+  weekStart = "mon",
   children,
 }: TaskStoreProviderProps) {
   const [tasks, setTasks] = useState(initialTasks);
@@ -269,6 +279,41 @@ export function TaskStoreProvider({
     [api, applyLocal, showToast, restore, saveFailed],
   );
 
+  const create = useCallback(
+    (input: NewTask) => {
+      const now = clock.now().toISOString();
+      const draft: Task = {
+        due_date: null,
+        start_time: null,
+        end_time: null,
+        priority: "low",
+        project_id: null,
+        repeat: "never",
+        reminder: "none",
+        notes: null,
+        done: false,
+        done_at: null,
+        created_by: "user",
+        created_at: now,
+        ...input,
+      };
+      const revert = applyLocal((list) => [...list, draft]);
+      showToast({ message: t("task.added", { title: draft.title }) });
+      // The client id makes a retry safe: the server answers a replay with the same task (UX-06)
+      api.create(input).then(
+        (saved) =>
+          applyLocal((list) =>
+            list.map((x) => (x.id === saved.id ? saved : x)),
+          ),
+        () => {
+          revert();
+          saveFailed(() => create(input));
+        },
+      );
+    },
+    [api, clock, applyLocal, showToast, saveFailed],
+  );
+
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -280,6 +325,7 @@ export function TaskStoreProvider({
       projects,
       today,
       timeFormat,
+      weekStart,
       clock,
       api,
       toast,
@@ -294,6 +340,7 @@ export function TaskStoreProvider({
       toggle,
       update,
       remove,
+      create,
       applyLocal,
       setProjects,
       saveFailed,
@@ -303,6 +350,7 @@ export function TaskStoreProvider({
       projects,
       today,
       timeFormat,
+      weekStart,
       clock,
       api,
       toast,
@@ -312,6 +360,7 @@ export function TaskStoreProvider({
       toggle,
       update,
       remove,
+      create,
       applyLocal,
       saveFailed,
     ],

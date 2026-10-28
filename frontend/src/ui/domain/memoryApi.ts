@@ -38,6 +38,30 @@ export function createMemoryApi(
   };
 
   const api: TaskApi = {
+    async create(input) {
+      await guard();
+      const known = db.tasks.find((t) => t.id === input.id);
+      if (known) return { ...known };
+      const now = new Date().toISOString();
+      const task: Task = {
+        due_date: null,
+        start_time: null,
+        end_time: null,
+        priority: "low",
+        project_id: null,
+        repeat: "never",
+        reminder: "none",
+        notes: null,
+        done: false,
+        done_at: null,
+        created_by: "user",
+        created_at: now,
+        updated_at: now,
+        ...input,
+      };
+      db.tasks.push(task);
+      return { ...task };
+    },
     async complete(id, at) {
       await guard();
       const task = find(id);

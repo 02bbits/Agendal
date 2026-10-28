@@ -35,3 +35,10 @@ export {
   type RepeatScopeDialogProps,
 } from "./tasks/RepeatScopeDialog";
 export { DeleteTask, type DeleteTaskProps } from "./tasks/DeleteTask";
+export {
+  NewTaskSheet,
+  defaultsFor,
+  type NewTaskSheetProps,
+  type NewTaskOrigin,
+  type DueChoice,
+} from "./tasks/NewTaskSheet";

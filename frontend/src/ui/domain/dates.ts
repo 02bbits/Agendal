@@ -1,5 +1,5 @@
 import { t } from "../copy";
-import type { TimeFormat } from "./types";
+import type { TimeFormat, WeekStart } from "./types";
 
 // Floating local dates as `YYYY-MM-DD` strings. Arithmetic runs in UTC so no
 // time zone or DST can shift a day (ADR-006). "Today" always comes from the
@@ -103,4 +103,11 @@ export function todayIn(now: Date, timeZone: string): string {
     month: "2-digit",
     day: "2-digit",
   }).format(now);
+}
+
+/** First day of next week per the week-start setting (NU-E10): "Next week" in the New task sheet. */
+export function nextWeekStart(today: string, weekStart: WeekStart): string {
+  const first = weekStart === "mon" ? 1 : 0;
+  const offset = (weekday(today) - first + 7) % 7;
+  return addDays(today, 7 - offset);
 }
