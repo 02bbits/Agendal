@@ -38,6 +38,10 @@ cd frontend && npm run dev        # app on http://localhost:3000
 
 Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (local only).
 
+## Time
+
+Read the time only through the clock (ADR-006): `ClockInterface` on the server, `@/lib/clock` on the client. Tests pin it with `travelTo()` or `vi.setSystemTime()` plus a zone. A note's "now" is `ClientClock::fromWrittenAt()`: its `written_at`, clamped to server time. API calls go through `@/lib/api`, which sends `X-Timezone`.
+
 ## Checks
 
 Tests run on the `agendal_test` database, created automatically with a new `db` volume. On a volume made before it existed, create it once:

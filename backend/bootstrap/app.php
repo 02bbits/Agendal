@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SyncTimezone;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
@@ -26,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         // Sanctum SPA cookie sessions (ADR-007)
         $middleware->statefulApi();
+        $middleware->appendToGroup('api', SyncTimezone::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // SC-21: the database message repeats the row's values (note and task text), so log the SQL only
