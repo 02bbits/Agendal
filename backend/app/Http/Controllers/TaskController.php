@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreTaskRequest;
+use App\Http\Requests\UpdateTaskRequest;
 use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
+use App\Services\Tasks\TaskPatcher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Validation\ValidationException;
 
@@ -106,5 +108,18 @@ class TaskController extends Controller
     public function show(Task $task): TaskResource
     {
         return new TaskResource($task);
+    }
+
+    public function update(
+        UpdateTaskRequest $request,
+        Task $task,
+        TaskPatcher $patcher,
+    ): TaskResource {
+        $timezone = (string) $request->attributes->get('timezone', 'UTC');
+        $payload = $request->isJson() ? (array) $request->json()->all() : $request->all();
+
+        $updatedTask = $patcher->patch($task, $payload, $timezone);
+
+        return new TaskResource($updatedTask);
     }
 }

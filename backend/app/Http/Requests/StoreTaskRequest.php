@@ -32,12 +32,11 @@ class StoreTaskRequest extends FormRequest
     }
 
     /**
-     * @return array<string, mixed>
+     * @return array<string, list<mixed>>
      */
-    public function rules(): array
+    public static function fieldRules(): array
     {
         return [
-            'id' => ['required', 'uuid'],
             'title' => ['required', 'string', 'min:1', 'max:200'],
             'due_date' => ['nullable', 'date_format:Y-m-d'],
             'start_time' => ['nullable', 'date_format:H:i'],
@@ -47,6 +46,17 @@ class StoreTaskRequest extends FormRequest
             'repeat' => ['nullable', 'in:never,daily,weekly,monthly,yearly'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'project_id' => ['nullable', 'uuid'],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function rules(): array
+    {
+        return [
+            'id' => ['required', 'uuid'],
+            ...self::fieldRules(),
         ];
     }
 

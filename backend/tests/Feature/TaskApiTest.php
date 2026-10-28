@@ -327,3 +327,513 @@ it('replays a soft-deleted task with 200', function () {
         ->and($response->json('title'))->toBe('Deleted task');
     assertTaskSchema($response->json());
 });
+
+it('T-TK-11: patches each patchable field and updates its field_updated_at timestamp', function (
+    string $field,
+    mixed $initialValue,
+    mixed $patchValue,
+    mixed $expectedStoredValue,
+    bool $needsProject = false,
+    array $setup = [],
+) {
+    $user = User::factory()->create();
+    $project = null;
+    if ($needsProject) {
+        $project = Project::forceCreate([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'name' => 'Test Project',
+            'colour' => 'blue',
+        ]);
+    }
+
+    $actualField = $field === 'project_id null' || $field === 'project_id own project'
+        ? 'project_id'
+        : ($field === 'end_time with a start' ? 'end_time' : ($field === 'reminder with a due date' ? 'reminder' : $field));
+
+    $taskId = (string) Str::uuid();
+    $taskAttrs = [
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Initial title',
+        'field_updated_at' => [
+            $actualField => '2026-10-23T01:12:00Z',
+        ],
+    ];
+
+    if ($needsProject && $field === 'project_id null') {
+        $taskAttrs['project_id'] = $project->id;
+    }
+
+    foreach ($setup as $k => $v) {
+        $taskAttrs[$k] = $v;
+    }
+
+    if ($initialValue !== null && $field !== 'project_id null') {
+        $taskAttrs[$actualField] = $initialValue;
+    }
+
+    Task::forceCreate($taskAttrs);
+
+    $resolvedPatchValue = is_callable($patchValue) ? $patchValue($project) : $patchValue;
+    $resolvedExpectedValue = is_callable($expectedStoredValue) ? $expectedStoredValue($project) : $expectedStoredValue;
+
+    $at = '2026-10-23T01:15:00Z';
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        $actualField => $resolvedPatchValue,
+        'at' => $at,
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task)->not->toBeNull();
+
+    $storedVal = $task->{$actualField};
+    if ($storedVal !== null && ($actualField === 'start_time' || $actualField === 'end_time')) {
+        $storedVal = substr((string) $storedVal, 0, 5);
+    }
+    if ($storedVal !== null && $actualField === 'due_date') {
+        $storedVal = substr((string) $storedVal, 0, 10);
+    }
+
+    expect($storedVal)->toBe($resolvedExpectedValue)
+        ->and($task->field_updated_at[$actualField])->toBe($at);
+})->with([
+    'title' => ['title', 'Initial title', 'Updated title', 'Updated title', false, []],
+    'due_date' => ['due_date', null, '2026-11-01', '2026-11-01', false, []],
+    'start_time' => ['start_time', null, '10:00', '10:00', false, ['due_date' => '2026-11-01']],
+    'end_time with a start' => ['end_time with a start', null, '11:00', '11:00', false, ['due_date' => '2026-11-01', 'start_time' => '10:00']],
+    'priority' => ['priority', null, 'high', 'high', false, []],
+    'reminder with a due date' => ['reminder with a due date', 'none', '15m', '15m', false, ['due_date' => '2026-11-01']],
+    'repeat' => ['repeat', 'never', 'weekly', 'weekly', false, ['due_date' => '2026-11-01']],
+    'notes' => ['notes', null, 'Some new notes', 'Some new notes', false, []],
+    'project_id own project' => [
+        'project_id own project',
+        null,
+        fn ($p) => $p->id,
+        fn ($p) => $p->id,
+        true,
+        [],
+    ],
+    'project_id null' => [
+        'project_id null',
+        null,
+        null,
+        null,
+        true,
+        [],
+    ],
+]);
+
+it('stale write: PATCH title with at=T2, then title with at=T1 (older) → second one ignored, title stays T2 value; response is still 200', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Original title',
+        'field_updated_at' => [
+            'title' => '2026-10-23T01:12:00Z',
+        ],
+    ]);
+
+    $t2 = '2026-10-23T01:16:00Z';
+    $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Title T2',
+        'at' => $t2,
+    ])->assertStatus(200);
+
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Title T2')
+        ->and($task->field_updated_at['title'])->toBe($t2);
+
+    $t1 = '2026-10-23T01:14:00Z';
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Title T1',
+        'at' => $t1,
+    ])->assertStatus(200);
+
+    expect($response->json('title'))->toBe('Title T2');
+    assertTaskSchema($response->json());
+
+    $task->refresh();
+    expect($task->title)->toBe('Title T2')
+        ->and($task->field_updated_at['title'])->toBe($t2);
+});
+
+it('future at (now + 1 day) → stored timestamp is now + 5 minutes', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Original title',
+    ]);
+
+    $futureAt = '2026-10-24T01:12:00Z';
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Future title',
+        'at' => $futureAt,
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:17:00Z');
+});
+
+it('missing at → uses the pinned clock now', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Original title',
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Missing at title',
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:12:00Z');
+});
+
+it('unknown keys user_id, created_by, done → 422 with the message, nothing changed', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Untouched task',
+        'created_by' => 'user',
+        'done' => false,
+    ]);
+
+    // user_id
+    $respUserId = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'user_id' => 999,
+    ])->assertStatus(422);
+    expect($respUserId->json('error.code'))->toBe('error.invalid')
+        ->and($respUserId->json('error.fields.user_id'))->toContain("This field can't be changed.");
+
+    // created_by
+    $respCreatedBy = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'created_by' => 'assistant',
+    ])->assertStatus(422);
+    expect($respCreatedBy->json('error.code'))->toBe('error.invalid')
+        ->and($respCreatedBy->json('error.fields.created_by'))->toContain("This field can't be changed.");
+
+    // done
+    $respDone = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'done' => true,
+    ])->assertStatus(422);
+    expect($respDone->json('error.code'))->toBe('error.invalid')
+        ->and($respDone->json('error.fields.done'))->toContain("This field can't be changed.");
+
+    // id
+    $respId = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'id' => (string) Str::uuid(),
+    ])->assertStatus(422);
+    expect($respId->json('error.code'))->toBe('error.invalid')
+        ->and($respId->json('error.fields.id'))->toContain("This field can't be changed.");
+
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Untouched task')
+        ->and($task->user_id)->toBe($user->id)
+        ->and($task->created_by)->toBe('user')
+        ->and($task->done)->toBeFalse();
+});
+
+it('merged validation: task 10:00–11:00, PATCH end_time 09:00 → 422 end_before_start; PATCH reminder 1h on a task with no due date → 422', function () {
+    $user = User::factory()->create();
+
+    // 1. end_before_start
+    $task1Id = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $task1Id,
+        'user_id' => $user->id,
+        'title' => 'Scheduled task',
+        'due_date' => '2026-10-25',
+        'start_time' => '10:00',
+        'end_time' => '11:00',
+    ]);
+
+    $response1 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$task1Id}", [
+        'end_time' => '09:00',
+    ])->assertStatus(422);
+
+    expect($response1->json('error.code'))->toBe('error.invalid')
+        ->and($response1->json('error.fields.end_time'))->toContain('End time must be later than the start time.');
+
+    $task1 = Task::find($task1Id);
+    expect(substr((string) $task1->end_time, 0, 5))->toBe('11:00');
+
+    // 2. reminder on task with no due date
+    $task2Id = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $task2Id,
+        'user_id' => $user->id,
+        'title' => 'Undated task',
+        'due_date' => null,
+    ]);
+
+    $response2 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$task2Id}", [
+        'reminder' => '1h',
+    ])->assertStatus(422);
+
+    expect($response2->json('error.code'))->toBe('error.invalid')
+        ->and($response2->json('error.fields.reminder'))->toContain('Add a date to set a reminder.');
+
+    $task2 = Task::find($task2Id);
+    expect($task2->reminder)->toBe('none');
+});
+
+it('clearing due_date clears start, end, reminder and remind_at; clearing start_time clears end_time', function () {
+    $user = User::factory()->create();
+
+    // 1. Clearing due_date
+    $task1Id = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $task1Id,
+        'user_id' => $user->id,
+        'title' => 'Full task',
+        'due_date' => '2026-10-26',
+        'start_time' => '10:00',
+        'end_time' => '11:00',
+        'reminder' => '1h',
+        'remind_at' => Carbon::parse('2026-10-26 02:00:00'),
+    ]);
+
+    $response1 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$task1Id}", [
+        'due_date' => null,
+    ])->assertStatus(200);
+
+    assertTaskSchema($response1->json());
+
+    $task1 = Task::find($task1Id);
+    expect($task1->due_date)->toBeNull()
+        ->and($task1->start_time)->toBeNull()
+        ->and($task1->end_time)->toBeNull()
+        ->and($task1->reminder)->toBe('none')
+        ->and($task1->remind_at)->toBeNull();
+
+    // 2. Clearing start_time
+    $task2Id = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $task2Id,
+        'user_id' => $user->id,
+        'title' => 'Timed task',
+        'due_date' => '2026-10-26',
+        'start_time' => '10:00',
+        'end_time' => '11:00',
+    ]);
+
+    $response2 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$task2Id}", [
+        'start_time' => null,
+    ])->assertStatus(200);
+
+    assertTaskSchema($response2->json());
+
+    $task2 = Task::find($task2Id);
+    expect($task2->start_time)->toBeNull()
+        ->and($task2->end_time)->toBeNull();
+});
+
+it('setting start_time on an undated task sets due_date to today (2026-10-23 in Ho Chi Minh)', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Undated task',
+        'due_date' => null,
+        'start_time' => null,
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'start_time' => '14:00',
+    ])->assertStatus(200);
+
+    expect($response->json('due_date'))->toBe('2026-10-23');
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect(substr((string) $task->due_date, 0, 10))->toBe('2026-10-23')
+        ->and(substr((string) $task->start_time, 0, 5))->toBe('14:00');
+});
+
+it('remind_at recomputed: task due 2026-10-26 with reminder 1h, PATCH start_time 16:00 → remind_at 2026-10-26 08:00:00 UTC', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Meeting',
+        'due_date' => '2026-10-26',
+        'reminder' => '1h',
+        'start_time' => null,
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'start_time' => '16:00',
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = DB::table('tasks')->find($taskId);
+    expect($task)->not->toBeNull();
+    $remindAt = (new DateTimeImmutable($task->remind_at))->format('Y-m-d H:i:s');
+    expect($remindAt)->toBe('2026-10-26 08:00:00');
+});
+
+it('someone else\'s project_id → 404; someone else\'s task → 404; a soft-deleted task → 404', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    $otherProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'name' => 'Secret project',
+        'colour' => 'red',
+    ]);
+
+    $myTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'My task',
+    ]);
+
+    // 1. Someone else's project_id
+    $respProj = $this->actingAs($user)->patchJson("/api/v1/tasks/{$myTask->id}", [
+        'project_id' => $otherProject->id,
+    ])->assertStatus(404);
+    expect($respProj->json('error.code'))->toBe('error.not_found');
+
+    // 2. Someone else's task
+    $otherTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'title' => 'Other user task',
+    ]);
+
+    $respTask = $this->actingAs($user)->patchJson("/api/v1/tasks/{$otherTask->id}", [
+        'title' => 'Hacked title',
+    ])->assertStatus(404);
+    expect($respTask->json('error.code'))->toBe('error.not_found');
+
+    // 3. Soft-deleted task
+    $deletedTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Deleted task',
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    $respDel = $this->actingAs($user)->patchJson("/api/v1/tasks/{$deletedTask->id}", [
+        'title' => 'Revive attempt',
+    ])->assertStatus(404);
+    expect($respDel->json('error.code'))->toBe('error.not_found');
+});
+
+it('handles repeat anchor transitions correctly', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Recurring check',
+        'due_date' => '2026-10-25',
+        'repeat' => 'never',
+        'repeat_anchor' => null,
+    ]);
+
+    // 1. Repeat changes from never → repeat_anchor = due_date
+    $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'repeat' => 'weekly',
+        'at' => '2026-10-23T01:13:00Z',
+    ])->assertStatus(200);
+
+    $task = Task::find($taskId);
+    expect($task->repeat)->toBe('weekly')
+        ->and(substr((string) $task->repeat_anchor, 0, 10))->toBe('2026-10-25');
+
+    // 2. due_date changes while repeating → keep the anchor
+    $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'due_date' => '2026-11-01',
+        'at' => '2026-10-23T01:14:00Z',
+    ])->assertStatus(200);
+
+    $task->refresh();
+    expect(substr((string) $task->due_date, 0, 10))->toBe('2026-11-01')
+        ->and(substr((string) $task->repeat_anchor, 0, 10))->toBe('2026-10-25');
+
+    // 3. repeat becomes never → repeat_anchor = null
+    $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'repeat' => 'never',
+        'at' => '2026-10-23T01:15:00Z',
+    ])->assertStatus(200);
+
+    $task->refresh();
+    expect($task->repeat)->toBe('never')
+        ->and($task->repeat_anchor)->toBeNull();
+});
+
+it('TK-E16: same title as before (after trim) is not counted as changed', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+    $initialAt = '2026-10-23T01:12:00Z';
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Buy groceries',
+        'field_updated_at' => [
+            'title' => $initialAt,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => '  Buy groceries  ',
+        'at' => '2026-10-23T01:25:00Z',
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Buy groceries')
+        ->and($task->field_updated_at['title'])->toBe($initialAt);
+});
+
+it('rejects invalid at format with 422', function (string $invalidAt) {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Test task',
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'at' => $invalidAt,
+    ])->assertStatus(422);
+
+    expect($response->json('error.code'))->toBe('error.invalid')
+        ->and($response->json('error.fields'))->toHaveKey('at');
+})->with([
+    'not a date' => 'invalid-at',
+    'date without time' => '2026-10-23',
+    'date without offset' => '2026-10-23T08:12:00',
+    'invalid month' => '2026-13-01T08:12:00Z',
+]);
