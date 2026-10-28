@@ -21,7 +21,7 @@ cd backend
 composer install
 cp .env.example .env
 php artisan key:generate
-php artisan migrate
+php artisan migrate --seed       # demo account: example@gmail.com / password
 
 cd ../frontend
 npm install
@@ -39,6 +39,13 @@ cd frontend && npm run dev        # app on http://localhost:3000
 Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>.
 
 ## Checks
+
+Tests run on the `agendal_test` database, created automatically with a new `db` volume. On a volume made before it existed, create it once:
+
+```bash
+docker compose exec db psql -U agendal -c 'CREATE DATABASE agendal_test OWNER agendal'
+```
+
 
 ```bash
 cd backend && ./vendor/bin/pint --test && php artisan test
