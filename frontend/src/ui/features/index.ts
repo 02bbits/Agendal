@@ -34,3 +34,4 @@ export {
   RepeatScopeDialog,
   type RepeatScopeDialogProps,
 } from "./tasks/RepeatScopeDialog";
+export { DeleteTask, type DeleteTaskProps } from "./tasks/DeleteTask";
