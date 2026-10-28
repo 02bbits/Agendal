@@ -3,6 +3,7 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -18,7 +19,7 @@ import type {
   TaskApi,
   TaskPatch,
 } from "../../domain/api";
-import { normalizePatch, patchErrors } from "../../domain/edit";
+import { localDateTime, normalizePatch, patchErrors } from "../../domain/edit";
 import { todayIn } from "../../domain/dates";
 import type { Project, Task, TimeFormat, WeekStart } from "../../domain/types";
 
@@ -104,7 +105,26 @@ export function TaskStoreProvider({
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
 
+  const [, setTick] = useState(0);
   const today = todayIn(clock.now(), clock.timeZone);
+
+  // Lists recompute at local midnight while open, and when the tab comes back (LV-E1)
+  useEffect(() => {
+    const [h, m] = localDateTime(clock.now(), clock.timeZone)
+      .slice(11)
+      .split(":")
+      .map(Number) as [number, number];
+    const msToMidnight =
+      ((24 * 60 - (h * 60 + m)) * 60 - clock.now().getSeconds()) * 1000 + 500;
+    const timer = setTimeout(() => setTick((n) => n + 1), msToMidnight);
+    const onVisible = () =>
+      document.visibilityState === "visible" && setTick((n) => n + 1);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [clock, today]);
 
   const showToast = useCallback((data: Omit<ToastData, "id">) => {
     toastSeq.current += 1;

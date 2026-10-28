@@ -56,3 +56,5 @@ export {
   DeleteProjectDialog,
   type DeleteProjectDialogProps,
 } from "./projects/DeleteProjectDialog";
+export { InboxScreen, type InboxScreenProps } from "./lists/InboxScreen";
+export { Section, type SectionProps } from "./lists/Section";
