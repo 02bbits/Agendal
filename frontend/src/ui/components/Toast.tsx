@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 
 export const TOAST_DURATION_MS = 5000;
 
@@ -6,6 +12,8 @@ export interface ToastData {
   /** A new id replaces the current toast (one toast at a time, UX-04). */
   id: string | number;
   message: string;
+  /** Leading icon, e.g. a check for "Completed …". Decorative. */
+  icon?: ReactNode;
   /** Usually Undo or Retry, from the copy catalog. */
   actionLabel?: string;
   onAction?: () => void;
@@ -79,6 +87,11 @@ export function Toast({
               setPaused(false);
           }}
         >
+          {toast.icon && (
+            <span className="inline-flex shrink-0" aria-hidden="true">
+              {toast.icon}
+            </span>
+          )}
           <span className="flex-1 [overflow-wrap:anywhere]">
             {toast.message}
           </span>

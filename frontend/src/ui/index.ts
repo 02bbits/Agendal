@@ -18,7 +18,7 @@ export {
   type ToastData,
 } from "./components/Toast";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
-export { XIcon, PlusIcon, CheckIcon } from "./components/icons";
+export * from "./components/icons";
 
 /** The 8 project colours, in picker order (PJ-1). Use as `var(--project-<name>)`. */
 export const PROJECT_COLORS = [
