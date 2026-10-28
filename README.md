@@ -42,12 +42,19 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 
 ### Clock and time zones (IM-05)
 
-The clock belongs to each application, with no separate `packages/clock` install:
+This branch implements the server-side clock and timezone handling. There is no standalone clock package or frontend clock implementation.
 
-- Frontend: import `Clock`, `SystemClock` and the pure time/reminder helpers from `@/lib/clock`. Client components use `useClock` from `@/lib/clock/ClockProvider`; the root layout supplies the provider. Tests import `FakeClock` from `frontend/tests/support/FakeClock.ts` and pass `<ClockProvider clock={new FakeClock(pinnedInstant)}>`. Pass an explicit IANA zone to date calculations.
-- Backend: inject `App\Services\Clock\ClockInterface`; The existing `AppServiceProvider` binds it to a singleton `SystemClock`. Tests can replace it with `Tests\Support\FrozenClock` using `$this->app->instance(ClockInterface::class, $clock)`. `WallTime::toUtc()` resolves floating times, and `ReminderCalculator::compute()` calculates UTC reminders independently of the clock.
-- The clock is registered in each app. Reminder helpers are covered by the normal test suites; their production callers belong to the task/reminder features, which are not implemented on this branch.
-- Both implementations follow [ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md): first occurrence for a repeated minute, next valid minute for a skipped minute, and 09:00 for reminders without a start time. Pin both time and zone in date tests.
+- Inject `App\Services\Clock\ClockInterface`; the existing `AppServiceProvider` binds it to a singleton `SystemClock`. Tests replace it with `Tests\Support\FrozenClock`. `WallTime::toUtc()` resolves floating local times, and `ReminderCalculator::compute()` produces UTC reminders.
+- Clients supply a valid IANA zone in `X-Timezone`, for example `Asia/Ho_Chi_Minh`. Laravel's API middleware provides the effective zone as the request's `timezone` attribute. Missing or invalid headers use the signed-in user's stored zone, or UTC for a guest.
+- Changing the signed-in user's zone updates their stored timezone and recalculates active scheduled reminders in one transaction. Floating task dates and times stay unchanged. Completed/deleted tasks are excluded; their owning features must recalculate reminders when restoring or reopening them.
+- [ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md) resolves repeated minutes to the first occurrence and skipped minutes to the next valid minute. Date-only reminders use 09:00. Date tests pin time and timezone.
+- IM-05 supplies time calculations and server-side timezone handling. Notification delivery is the separate TK-6 feature. Signup and note submission can consume the validated request timezone; note capture/replay must retain the original `written_at` and `timezone` values. Those feature flows are implemented in their owning tasks.
+
+Run the clock and timezone tests from `backend/`:
+
+```bash
+php vendor/bin/pest tests/Unit/Services/ClockTest.php tests/Feature/ClockBindingTest.php tests/Feature/TimezoneTest.php
+```
 
 ### Running checks
 

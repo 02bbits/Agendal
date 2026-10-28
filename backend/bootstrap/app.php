@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\SyncTimezone;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -16,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // Sanctum SPA cookie sessions (ADR-007)
         $middleware->statefulApi();
+        $middleware->appendToGroup('api', SyncTimezone::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

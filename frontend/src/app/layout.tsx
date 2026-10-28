@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { ClockProvider } from "@/lib/clock/ClockProvider";
 import { AppFrame } from "./AppFrame";
 import "./globals.css";
 
@@ -20,9 +19,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // AppFrame sets data-theme on the client when Appearance isn't System
     <html lang="en" suppressHydrationWarning>
       <body>
-        <ClockProvider>
-          <AppFrame>{children}</AppFrame>
-        </ClockProvider>
+        <AppFrame>{children}</AppFrame>
       </body>
     </html>
   );
