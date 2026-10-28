@@ -7,9 +7,8 @@ const apiUrl = process.env.API_URL ?? "http://localhost:8000";
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
-  // NF-16 on every page. ponytail: no script-src yet. Next.js inlines its bootstrap
-  // scripts, so a strict policy needs a per-request nonce, and nonces turn off the
-  // static shells cacheComponents prerenders. Decide that before the IM-62 security pass.
+  // NF-16 on every page. No script allow-list: Next.js inlines its bootstrap scripts
+  // and a nonce would turn off the prerendered static pages (ASVS deviation 4).
   headers() {
     return Promise.resolve([
       {
