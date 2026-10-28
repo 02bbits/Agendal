@@ -1,4 +1,4 @@
-import type { Task } from "./types";
+import type { Project, Task } from "./types";
 
 // Client side of the task and project endpoints (TK §7, PJ §7). The Laravel
 // implementation (IM-20, IM-27) plugs in behind this; until then screens run
@@ -44,4 +44,13 @@ export interface TaskApi {
   remove(id: string, scope?: DeleteScope): Promise<{ next?: Task }>;
   /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
   restore(id: string): Promise<Task>;
+
+  /** `POST /projects` with a client UUID v7. */
+  createProject(
+    project: Pick<Project, "id" | "name" | "colour">,
+  ): Promise<Project>;
+  /** `DELETE /projects/{id}?tasks=move|delete`. */
+  removeProject(id: string, tasks: ProjectTaskAction): Promise<void>;
+  /** `POST /projects/{id}/restore`: the project, with moved tasks put back or deleted tasks restored. */
+  restoreProject(id: string): Promise<{ project: Project; tasks: Task[] }>;
 }

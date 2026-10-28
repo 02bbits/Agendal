@@ -14,6 +14,7 @@ import type { ToastData } from "../../components/Toast";
 import type {
   DeleteScope,
   NewTask,
+  ProjectTaskAction,
   TaskApi,
   TaskPatch,
 } from "../../domain/api";
@@ -58,6 +59,10 @@ export interface TaskStore {
   remove: (task: Task, scope?: DeleteScope) => void;
   /** Adds a task made by hand, with the "Added “…”" toast (NC-7). */
   create: (input: NewTask) => void;
+  /** Creates a project; the caller opens it, or returns to the picker with it selected (PJ-1). */
+  createProject: (input: Pick<Project, "id" | "name" | "colour">) => Project;
+  /** Deletes a project, moving its tasks to No project or deleting them, with Undo (PJ-4). */
+  removeProject: (project: Project, tasks: ProjectTaskAction) => void;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -314,6 +319,76 @@ export function TaskStoreProvider({
     [api, clock, applyLocal, showToast, saveFailed],
   );
 
+  const projectsRef = useRef(projects);
+  projectsRef.current = projects;
+
+  const createProject = useCallback(
+    (input: Pick<Project, "id" | "name" | "colour">) => {
+      const draft: Project = {
+        ...input,
+        name: input.name.trim(),
+        created_at: clock.now().toISOString(),
+      };
+      setProjects((list) => [...list, draft]);
+      api.createProject(draft).then(
+        (saved) =>
+          setProjects((list) =>
+            list.map((p) => (p.id === saved.id ? saved : p)),
+          ),
+        () => {
+          setProjects((list) => list.filter((p) => p.id !== draft.id));
+          saveFailed(() => createProject(input));
+        },
+      );
+      return draft;
+    },
+    [api, clock, saveFailed],
+  );
+
+  const restoreProject = useCallback(
+    (project: Project) => {
+      api.restoreProject(project.id).then(
+        ({ project: saved, tasks: restored }) => {
+          setProjects((list) => [
+            ...list.filter((p) => p.id !== saved.id),
+            saved,
+          ]);
+          applyLocal((list) => [
+            ...list.filter((x) => !restored.some((r) => r.id === x.id)),
+            ...restored,
+          ]);
+        },
+        () => saveFailed(() => restoreProject(project)),
+      );
+    },
+    [api, applyLocal, saveFailed],
+  );
+
+  const removeProject = useCallback(
+    (project: Project, action: ProjectTaskAction) => {
+      const beforeProjects = projectsRef.current;
+      setProjects((list) => list.filter((p) => p.id !== project.id));
+      const revertTasks = applyLocal((list) =>
+        action === "move"
+          ? list.map((x) =>
+              x.project_id === project.id ? { ...x, project_id: null } : x,
+            )
+          : list.filter((x) => x.project_id !== project.id),
+      );
+      showToast({
+        message: t("project.deleted", { name: project.name }),
+        actionLabel: t("common.undo"),
+        onAction: () => restoreProject(project),
+      });
+      api.removeProject(project.id, action).catch(() => {
+        setProjects(beforeProjects);
+        revertTasks();
+        saveFailed(() => removeProject(project, action));
+      });
+    },
+    [api, applyLocal, showToast, restoreProject, saveFailed],
+  );
+
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -341,6 +416,8 @@ export function TaskStoreProvider({
       update,
       remove,
       create,
+      createProject,
+      removeProject,
       applyLocal,
       setProjects,
       saveFailed,
@@ -361,6 +438,8 @@ export function TaskStoreProvider({
       update,
       remove,
       create,
+      createProject,
+      removeProject,
       applyLocal,
       saveFailed,
     ],

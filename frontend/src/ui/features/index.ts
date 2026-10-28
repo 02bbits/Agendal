@@ -42,3 +42,17 @@ export {
   type NewTaskOrigin,
   type DueChoice,
 } from "./tasks/NewTaskSheet";
+export {
+  ProjectsScreen,
+  type ProjectsScreenProps,
+} from "./projects/ProjectsScreen";
+export {
+  ProjectScreen,
+  COMPLETED_PAGE,
+  type ProjectScreenProps,
+} from "./projects/ProjectScreen";
+export { ProjectSheet, type ProjectSheetProps } from "./projects/ProjectSheet";
+export {
+  DeleteProjectDialog,
+  type DeleteProjectDialogProps,
+} from "./projects/DeleteProjectDialog";

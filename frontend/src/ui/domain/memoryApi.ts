@@ -23,6 +23,10 @@ export function createMemoryApi(
     projects: structuredClone(seed.projects ?? []),
   };
   const deleted = new Map<string, Task>();
+  const deletedProjects = new Map<
+    string,
+    { project: Project; taskIds: string[]; action: "move" | "delete" }
+  >();
   let failNext = false;
 
   const find = (id: string) => {
@@ -122,6 +126,70 @@ export function createMemoryApi(
       if (made >= 0) db.tasks.splice(made, 1);
       db.tasks.push(task);
       return { ...task };
+    },
+    async createProject(input) {
+      await guard();
+      const known = db.projects.find((p) => p.id === input.id);
+      if (known) return { ...known };
+      if (db.projects.length >= 50)
+        throw Object.assign(new Error("project.limit"), { status: 422 });
+      if (
+        db.projects.some(
+          (p) =>
+            p.name.trim().toLowerCase() === input.name.trim().toLowerCase(),
+        )
+      ) {
+        throw Object.assign(new Error("project.name_taken"), { status: 422 });
+      }
+      const project: Project = {
+        ...input,
+        created_at: new Date().toISOString(),
+      };
+      db.projects.push(project);
+      return { ...project };
+    },
+    async removeProject(id, action) {
+      await guard();
+      const project = db.projects.find((p) => p.id === id);
+      if (!project)
+        throw Object.assign(new Error("not found"), { status: 404 });
+      db.projects.splice(db.projects.indexOf(project), 1);
+      const mine = db.tasks.filter((t) => t.project_id === id);
+      for (const task of mine) {
+        if (action === "move") task.project_id = null;
+        else {
+          db.tasks.splice(db.tasks.indexOf(task), 1);
+          deleted.set(task.id, task);
+        }
+      }
+      deletedProjects.set(id, {
+        project,
+        taskIds: mine.map((t) => t.id),
+        action,
+      });
+    },
+    async restoreProject(id) {
+      await guard();
+      const entry = deletedProjects.get(id);
+      if (!entry)
+        throw Object.assign(new Error("project.purged"), { status: 409 });
+      deletedProjects.delete(id);
+      db.projects.push(entry.project);
+      const tasks: Task[] = [];
+      for (const taskId of entry.taskIds) {
+        const task =
+          entry.action === "move"
+            ? db.tasks.find((t) => t.id === taskId)
+            : deleted.get(taskId);
+        if (!task) continue;
+        task.project_id = id;
+        if (entry.action === "delete") {
+          deleted.delete(taskId);
+          db.tasks.push(task);
+        }
+        tasks.push({ ...task });
+      }
+      return { project: { ...entry.project }, tasks };
     },
     async get(id) {
       await guard();
