@@ -99,10 +99,11 @@ describe("TaskRow (LV-4)", () => {
     ).toBe("var(--color-project-gray)");
   });
 
-  const priorities: Array<[Priority, string | null]> = [
+  const priorities: Array<[Priority | null, string | null]> = [
     ["high", "danger"],
     ["medium", "warning"],
     ["low", null],
+    [null, null],
   ];
   it.each(priorities)("flags %s priority correctly", (priority, tone) => {
     const { container } = renderRow(
@@ -153,6 +154,13 @@ describe("TaskRow (LV-4)", () => {
       container.querySelectorAll('[data-slot="meta"] .text-error'),
     ).toHaveLength(2);
     expect(container.querySelector("li")!.className).toContain("is-overdue");
+  });
+
+  it("reads no priority when the API sends priority: null", () => {
+    renderRow(task({ title: "Call mum", priority: null }));
+    expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
+      "Call mum, No project",
+    );
   });
 
   it("has a full accessible name (A11Y-51)", () => {

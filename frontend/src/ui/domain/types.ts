@@ -31,7 +31,8 @@ export interface Task {
   due_date: string | null;
   start_time: string | null;
   end_time: string | null;
-  priority: Priority;
+  /** null when no priority was set (the API contract allows it); shown like Low. */
+  priority: Priority | null;
   project_id: string | null;
   repeat: Repeat;
   reminder: Reminder;
