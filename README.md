@@ -44,7 +44,7 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 
 This branch implements the server-side clock and timezone handling. There is no standalone clock package or frontend clock implementation.
 
-- Inject `App\Services\Clock\ClockInterface`; the existing `AppServiceProvider` binds it to a singleton `SystemClock`. Tests replace it with `Tests\Support\FrozenClock`. `WallTime::toUtc()` resolves floating local times, and `ReminderCalculator::compute()` produces UTC reminders.
+- Inject `App\Services\Clock\ClockInterface`; the existing `AppServiceProvider` binds it to a singleton `SystemClock`. Tests replace it with `Tests\Support\FrozenClock`. `WallTime::toUtc()` resolves floating local times, and `ReminderCalculator::compute()` produces UTC reminders. `ClientClock::fromWrittenAt()` is the client's "now" for a note: `written_at` (ISO 8601 with an offset) clamped to server time + 5 min, and older than 30 days → server time.
 - Clients supply a valid IANA zone in `X-Timezone`, for example `Asia/Ho_Chi_Minh`. Laravel's API middleware provides the effective zone as the request's `timezone` attribute. Missing or invalid headers use the signed-in user's stored zone, or UTC for a guest.
 - Changing the signed-in user's zone updates their stored timezone and recalculates active scheduled reminders in one transaction. Floating task dates and times stay unchanged. Completed/deleted tasks are excluded; their owning features must recalculate reminders when restoring or reopening them.
 - [ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md) resolves repeated minutes to the first occurrence and skipped minutes to the next valid minute. Date-only reminders use 09:00. Date tests pin time and timezone.

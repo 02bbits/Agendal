@@ -45,11 +45,15 @@ it('T-TK-111: updates the user zone and UTC reminders without moving floating ta
         ]);
     }
     $this->actingAs($user, 'web');
+    // Real Carbon time from here on: timestamps must come from the injected clock.
+    $this->travelBack();
 
     $this->getJson('/api/v1/user', ['X-Timezone' => 'Asia/Tokyo'])->assertOk()->assertJsonPath('timezone', 'Asia/Tokyo');
 
-    expect($user->fresh()->timezone)->toBe('Asia/Tokyo');
+    expect($user->fresh()->timezone)->toBe('Asia/Tokyo')
+        ->and($user->fresh()->updated_at->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-23T01:12:00Z');
     $task = DB::table('tasks')->find($taskId);
+    expect((new DateTimeImmutable($task->updated_at))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-23T01:12:00Z');
     expect($task->due_date)->toBe('2026-10-26')
         ->and($task->start_time)->toBe('09:00:00')
         ->and($task->end_time)->toBe('10:00:00')

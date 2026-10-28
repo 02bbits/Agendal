@@ -46,8 +46,11 @@ class SyncTimezone
                 return;
             }
 
-            $storedUser->timezone = $timezone;
-            $storedUser->save();
+            // Query update so updated_at comes from the injected clock, never Eloquent's Carbon::now().
+            User::query()->whereKey($storedUser->id)->update([
+                'timezone' => $timezone,
+                'updated_at' => $this->clock->now(),
+            ]);
 
             $tasks = DB::table('tasks')
                 ->where('user_id', $user->id)

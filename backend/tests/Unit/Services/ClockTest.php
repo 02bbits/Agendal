@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Services\Clock\ClientClock;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Clock\SystemClock;
 use App\Services\Clock\WallTime;
@@ -82,3 +83,27 @@ test('reminder offsets use elapsed UTC time across DST', function () {
     expect((new ReminderCalculator)->compute('2026-03-08', '03:30', '1h', 'America/New_York'))
         ->toBe('2026-03-08T06:30:00Z');
 });
+
+test('ClientClock pins now to written_at in the note zone', function () {
+    $clock = ClientClock::fromWrittenAt('2026-10-22T23:30:00+07:00', new FrozenClock('2026-10-23T08:00:00Z'));
+
+    expect($clock->now()->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-22T16:30:00Z')
+        ->and($clock->today('Asia/Ho_Chi_Minh'))->toBe('2026-10-22')
+        ->and($clock->time('Asia/Ho_Chi_Minh'))->toBe('23:30');
+});
+
+test('ClientClock clamps written_at to server time', function (string $writtenAt, string $expected) {
+    $clock = ClientClock::fromWrittenAt($writtenAt, new FrozenClock('2026-10-23T01:12:00Z'));
+
+    expect($clock->now()->format('Y-m-d\TH:i:s\Z'))->toBe($expected);
+})->with([
+    'within 5 min ahead' => ['2026-10-23T01:16:00Z', '2026-10-23T01:16:00Z'],
+    'too far ahead' => ['2026-10-24T08:00:00+07:00', '2026-10-23T01:17:00Z'],
+    'exactly 30 days old' => ['2026-09-23T01:12:00Z', '2026-09-23T01:12:00Z'],
+    'older than 30 days' => ['2026-09-23T01:11:00Z', '2026-10-23T01:12:00Z'],
+]);
+
+test('ClientClock rejects written_at without an offset', function (string $writtenAt) {
+    expect(fn () => ClientClock::fromWrittenAt($writtenAt, new FrozenClock('2026-10-23T01:12:00Z')))
+        ->toThrow(InvalidArgumentException::class);
+})->with(['2026-10-23T08:12:00', '2026-10-23', 'yesterday', '2026-13-01T08:12:00Z']);
