@@ -7,8 +7,8 @@ export interface CaptureBarProps {
   onWrite: () => void;
   /** Opens the editor with dictation; hidden when the browser can't dictate. */
   onDictate?: () => void;
-  /** Opens the New task sheet. */
-  onAdd: () => void;
+  /** Opens the New task sheet; the + is hidden until there is one (IM-26). */
+  onAdd?: () => void;
 }
 
 /** Floating "Write a note…" bar above the tabs, with the square + beside it. */
@@ -34,12 +34,14 @@ export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
           />
         )}
       </div>
-      <IconButton
-        className="rounded-field! bg-transparent!"
-        label={t("task.add_by_hand")}
-        icon={<PlusIcon />}
-        onClick={onAdd}
-      />
+      {onAdd && (
+        <IconButton
+          className="rounded-field! bg-transparent!"
+          label={t("task.add_by_hand")}
+          icon={<PlusIcon />}
+          onClick={onAdd}
+        />
+      )}
     </div>
   );
 }
