@@ -7,9 +7,8 @@ export {
   type AccountScreenProps,
   type AccountSettings,
   type ThemeSetting,
-  type WeekStart,
-  type TimeFormat,
 } from "./shell/AccountScreen";
 export { RouteEmptyState, EMPTY_STATE } from "./shell/EmptyScreens";
 export { Link, type LinkProps } from "./shell/Link";
 export { ROUTES, TABS, type TabId, type Navigate } from "./shell/routes";
+export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
