@@ -1,0 +1,14 @@
+{
+  "name": "@agendal/clock",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Injected clock and time zone utilities for Agendal (ADR-006)",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["clock", "timezone", "testing"],
+  "author": "Agendal Team",
+  "license": "MIT"
+}
