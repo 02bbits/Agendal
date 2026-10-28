@@ -1,6 +1,6 @@
 # Project
 
-Assumptions, constraints and risks. Decisions still open are in [open questions](open-questions.md).
+Assumptions, constraints and risks. Decisions still open are in [open questions](open-questions.md). The build plan is in [MVP tasks](tasks.md).
 
 ## Assumptions
 

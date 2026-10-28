@@ -15,7 +15,7 @@ Agendal is a mobile web app (PWA). You write or say whatever is on your mind, in
 | [05-quality](05-quality/) | [Non-functional requirements](05-quality/nfr.md) and [scalability](05-quality/scalability.md) |
 | [06-testing](06-testing/) | [Test strategy](06-testing/test-strategy.md), [scenarios](06-testing/test-scenarios.md), [traceability](06-testing/traceability-matrix.md), [ASVS checklist](06-testing/asvs-checklist.md), [note corpus](06-testing/note-corpus/) |
 | [07-architecture](07-architecture/) | [Overview](07-architecture/overview.md), [data model](07-architecture/data-model.md), [API](07-architecture/api.md), [security](07-architecture/security.md), [decisions](07-architecture/decisions/) |
-| [08-project](08-project/) | [Assumptions, constraints and risks](08-project/project.md), [open questions](08-project/open-questions.md), [glossary](08-project/glossary.md) |
+| [08-project](08-project/) | [Assumptions, constraints and risks](08-project/project.md), [open questions](08-project/open-questions.md), [glossary](08-project/glossary.md), [MVP tasks](08-project/tasks.md) |
 
 ## Modules
 
@@ -50,6 +50,7 @@ Every ID in the docs is a link to the place it's defined. A file name carries a 
 | `Q` | [Q19](08-project/open-questions.md#q19) | Question, open or decided | [open-questions.md](08-project/open-questions.md) |
 | `TS` | [TS-07](06-testing/test-scenarios.md#ts-07) | Test scenario (Given/When/Then) | [test-scenarios.md](06-testing/test-scenarios.md) |
 | `T-`, `SEC`, `PERF`, `A11Y`, `OFF` | T-RV-101 | Automated test | Listed in each module's section 11 ([test IDs](06-testing/test-strategy.md#test-ids)) |
+| `IM` | [IM-37](08-project/tasks.md#im-37) | Implementation task for the MVP | [tasks.md](08-project/tasks.md) |
 | `C` | C-044 | Note-corpus case | [seed.yaml](06-testing/note-corpus/seed.yaml) |
 
 IDs are never reused. A retired ID stays retired.
