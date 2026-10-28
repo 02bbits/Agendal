@@ -8,13 +8,13 @@ use DateTimeImmutable;
 use DateTimeZone;
 
 /**
- * SystemClock reads real system time.
+ * SystemClock reads Laravel's clock, so travelTo() in a test pins this and Eloquent timestamps together.
  */
 class SystemClock implements ClockInterface
 {
     public function now(): DateTimeImmutable
     {
-        return new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        return now('UTC')->toDateTimeImmutable();
     }
 
     public function today(string $timezone): string
