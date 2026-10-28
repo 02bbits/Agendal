@@ -14,7 +14,11 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     // AppFrame sets data-theme on the client when Appearance isn't System
     <html lang="en" suppressHydrationWarning>

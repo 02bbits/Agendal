@@ -8,31 +8,60 @@
  * - Zero direct now() / Date.now() calls in business logic
  */
 
+export interface LocalParts {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  dateString: string;
+  timeString: string;
+}
+
+export type ReminderOffset = '5m' | '15m' | '30m' | '1h' | '1d' | 'none';
+
+export interface ComputeRemindAtParams {
+  dueDate: string;
+  startTime?: string | null;
+  reminder?: ReminderOffset | string | null;
+  timezone: string;
+}
+
+export interface Clock {
+  now(): Date;
+  nowMs(): number;
+  toISOString(): string;
+  today(timezone: string): string;
+  time(timezone: string): string;
+  toLocalParts(instant: Date | number, timezone: string): LocalParts;
+}
+
 /**
  * System Clock reading the machine's real time.
  */
-export class SystemClock {
-  now() {
+export class SystemClock implements Clock {
+  now(): Date {
     return new Date();
   }
 
-  nowMs() {
+  nowMs(): number {
     return Date.now();
   }
 
-  toISOString() {
+  toISOString(): string {
     return this.now().toISOString();
   }
 
-  today(timezone) {
+  today(timezone: string): string {
     return formatLocalDate(this.now(), timezone);
   }
 
-  time(timezone) {
+  time(timezone: string): string {
     return formatLocalTime(this.now(), timezone);
   }
 
-  toLocalParts(instant, timezone) {
+  toLocalParts(instant: Date | number, timezone: string): LocalParts {
     const d = typeof instant === 'number' ? new Date(instant) : instant;
     return getLocalParts(d, timezone);
   }
@@ -41,69 +70,71 @@ export class SystemClock {
 /**
  * FakeClock for tests with frozen, controllable time.
  */
-export class FakeClock {
-  constructor(initialTime = '2026-10-23T08:12:00+07:00') {
+export class FakeClock implements Clock {
+  private currentTime: Date;
+
+  constructor(initialTime: string | Date | number = '2026-10-23T08:12:00+07:00') {
     this.currentTime = new Date(initialTime);
     if (isNaN(this.currentTime.getTime())) {
-      throw new Error(`Invalid initialTime provided to FakeClock: ${initialTime}`);
+      throw new Error(`Invalid initialTime provided to FakeClock: ${String(initialTime)}`);
     }
   }
 
-  now() {
+  now(): Date {
     return new Date(this.currentTime.getTime());
   }
 
-  nowMs() {
+  nowMs(): number {
     return this.currentTime.getTime();
   }
 
-  toISOString() {
+  toISOString(): string {
     return this.currentTime.toISOString();
   }
 
-  today(timezone) {
+  today(timezone: string): string {
     return formatLocalDate(this.currentTime, timezone);
   }
 
-  time(timezone) {
+  time(timezone: string): string {
     return formatLocalTime(this.currentTime, timezone);
   }
 
-  toLocalParts(instant, timezone) {
+  toLocalParts(instant: Date | number, timezone: string): LocalParts {
     const d = typeof instant === 'number' ? new Date(instant) : instant;
     return getLocalParts(d, timezone);
   }
 
   /** Advance clock by milliseconds */
-  advanceMs(ms) {
+  advanceMs(ms: number): void {
     this.currentTime = new Date(this.currentTime.getTime() + ms);
   }
 
   /** Advance clock by seconds */
-  advanceSeconds(seconds) {
+  advanceSeconds(seconds: number): void {
     this.advanceMs(seconds * 1000);
   }
 
   /** Advance clock by minutes */
-  advanceMinutes(minutes) {
+  advanceMinutes(minutes: number): void {
     this.advanceMs(minutes * 60 * 1000);
   }
 
   /** Advance clock by hours */
-  advanceHours(hours) {
+  advanceHours(hours: number): void {
     this.advanceMs(hours * 3600 * 1000);
   }
 
   /** Advance clock by days */
-  advanceDays(days) {
+  advanceDays(days: number): void {
     this.advanceMs(days * 86400 * 1000);
   }
 
   /** Pin clock to a new instant */
-  setTime(time) {
+  setTime(time: string | Date | number): void {
     const next = new Date(time);
     if (isNaN(next.getTime())) {
-      throw new Error(`Invalid time provided to setTime: ${time}`);
+      throw new Error(`Invalid time provided to setTime: ${String(time)}`);
     }
     this.currentTime = next;
   }
@@ -112,7 +143,7 @@ export class FakeClock {
 /**
  * Format Date to local YYYY-MM-DD in the given timezone.
  */
-export function formatLocalDate(date, timezone) {
+export function formatLocalDate(date: Date, timezone: string): string {
   const parts = getLocalParts(date, timezone);
   return parts.dateString;
 }
@@ -120,7 +151,7 @@ export function formatLocalDate(date, timezone) {
 /**
  * Format Date to local HH:mm in the given timezone.
  */
-export function formatLocalTime(date, timezone) {
+export function formatLocalTime(date: Date, timezone: string): string {
   const parts = getLocalParts(date, timezone);
   return parts.timeString;
 }
@@ -128,7 +159,7 @@ export function formatLocalTime(date, timezone) {
 /**
  * Break an instant down into local wall-clock components for a given timezone.
  */
-export function getLocalParts(date, timezone) {
+export function getLocalParts(date: Date, timezone: string): LocalParts {
   const formatter = new Intl.DateTimeFormat('en-CA', {
     timeZone: timezone,
     year: 'numeric',
@@ -184,7 +215,12 @@ export function getLocalParts(date, timezone) {
  * - If no start_time, default reference is 09:00 on due_date.
  * - Returns ISO 8601 UTC string (e.g. "2026-10-25T02:00:00.000Z"), or null if reminder is "none".
  */
-export function computeRemindAtUtc({ dueDate, startTime, reminder, timezone }) {
+export function computeRemindAtUtc({
+  dueDate,
+  startTime,
+  reminder,
+  timezone,
+}: ComputeRemindAtParams): string | null {
   if (!reminder || reminder === 'none') {
     return null;
   }
@@ -192,7 +228,7 @@ export function computeRemindAtUtc({ dueDate, startTime, reminder, timezone }) {
   const timeStr = startTime || '09:00';
   const targetWallInstant = parseWallClockInTimezone(dueDate, timeStr, timezone);
 
-  const offsetMinutesMap = {
+  const offsetMinutesMap: Record<string, number> = {
     '5m': 5,
     '15m': 15,
     '30m': 30,
@@ -215,7 +251,11 @@ export function computeRemindAtUtc({ dueDate, startTime, reminder, timezone }) {
  * - Spring forward (non-existent minute): moves to the next valid minute.
  * - Fall back (ambiguous minute): uses the first occurrence.
  */
-export function parseWallClockInTimezone(dateString, timeString, timezone) {
+export function parseWallClockInTimezone(
+  dateString: string,
+  timeString: string,
+  timezone: string
+): Date {
   const [yearStr, monthStr, dayStr] = dateString.split('-');
   const [hourStr, minuteStr] = timeString.split(':');
 
