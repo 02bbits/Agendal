@@ -18,7 +18,7 @@
 import { splitNote } from './splitter.js';
 import { extractTaskItem } from './extractor.js';
 import { classifyItem, ItemType } from './classifier.js';
-import { matchCommand } from './matcher.js';
+import { matchCommand, extractMeaningfulWords } from './matcher.js';
 import { validatePlan, decideSafetyStatus, NoteStatus } from './safety.js';
 import { generateNoteName } from './namer.js';
 import { isLowConfidenceItem } from './llm-fallback.js';
@@ -202,6 +202,24 @@ export function processNote(input, context = {}) {
       continue;
     }
 
+    // Check duplicate of open tasks (NU-E13)
+    let duplicateOf = null;
+    if (extracted.dueDate && openTasks.length > 0) {
+      const newWords = extractMeaningfulWords(extracted.title);
+      if (newWords.length > 0) {
+        for (const t of openTasks) {
+          if (t.due_date === extracted.dueDate) {
+            const taskWords = extractMeaningfulWords(t.title);
+            const matchCount = newWords.filter(w => taskWords.includes(w)).length;
+            if (matchCount / newWords.length >= 0.6) {
+              duplicateOf = t.id;
+              break;
+            }
+          }
+        }
+      }
+    }
+
     rawCreates.push({
       ref: `c${createIndex++}`,
       title: extracted.title,
@@ -213,7 +231,7 @@ export function processNote(input, context = {}) {
       repeat: extracted.repeat,
       reminder: extracted.reminder,
       notes: extracted.notes,
-      duplicate_of: null,
+      duplicate_of: duplicateOf,
     });
   }
 

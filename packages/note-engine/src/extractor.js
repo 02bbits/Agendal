@@ -9,6 +9,7 @@
  */
 
 import { getLocalParts } from '../../clock/src/clock.js';
+import { isLowConfidenceItem } from './llm-fallback.js';
 
 export const KNOWN_ACRONYMS = new Set(['SQL', 'HCI', 'CV', 'UI', 'API', 'PDF']);
 
@@ -131,16 +132,34 @@ export function extractTaskItem(itemText, context = {}) {
   ];
 
   if (!dueDate) {
+    const weekdayMatches = [];
     for (const w of weekdayMap) {
       const match = remaining.match(w.regex);
       if (match) {
         const isThis = !!match[1] || /\bthis\b/i.test(match[0]);
-        dueDate = getNextWeekday(todayStr, w.day, isThis);
-        matchedPhrases.push(match[0]);
-        const prepMatch = remaining.match(new RegExp(`\\b(by|on|vào|sang|đến)\\s+${escapeRegExp(match[0])}`, 'i'));
-        if (prepMatch) matchedPhrases.push(prepMatch[0]);
-        break;
+        const targetDate = getNextWeekday(todayStr, w.day, isThis);
+        const matchIdx = match.index;
+        const prefixStr = remaining.slice(Math.max(0, matchIdx - 15), matchIdx);
+        const hasPrep = /\b(by|on|due|before|vào|trước)\s*$/i.test(prefixStr);
+        const prepMatch = remaining.match(new RegExp(`\\b(by|on|due|before|vào|sang|đến|trước)\\s+${escapeRegExp(match[0])}`, 'i'));
+        weekdayMatches.push({
+          matchStr: prepMatch ? prepMatch[0] : match[0],
+          targetDate,
+          hasPrep: hasPrep || !!prepMatch,
+          index: matchIdx,
+        });
       }
+    }
+
+    if (weekdayMatches.length === 1) {
+      dueDate = weekdayMatches[0].targetDate;
+      matchedPhrases.push(weekdayMatches[0].matchStr);
+    } else if (weekdayMatches.length > 1) {
+      // NU-E6: The date after by / due / on / before wins. Otherwise the later date.
+      const prepWinner = weekdayMatches.find(m => m.hasPrep);
+      const winner = prepWinner || weekdayMatches.slice().sort((a, b) => b.targetDate.localeCompare(a.targetDate))[0];
+      dueDate = winner.targetDate;
+      matchedPhrases.push(winner.matchStr);
     }
   }
 
@@ -178,7 +197,8 @@ export function extractTaskItem(itemText, context = {}) {
       const m = parseInt(numMatch[2], 10);
       const y = numMatch[3] ? parseInt(numMatch[3], 10) : localNow.year;
 
-      if (m >= 1 && m <= 12 && d >= 1 && d <= 31) {
+      const maxDays = (m >= 1 && m <= 12) ? new Date(Date.UTC(y, m, 0)).getUTCDate() : 0;
+      if (m >= 1 && m <= 12 && d >= 1 && d <= maxDays) {
         let target = toDateStr(y, m, d);
         if (!numMatch[3]) {
           const diffDays = (new Date(target) - new Date(todayStr)) / 86400000;
@@ -198,7 +218,8 @@ export function extractTaskItem(itemText, context = {}) {
   // Range: 2-4pm, 14:00-16:00
   const rangeMatch = remaining.match(/\b(?:from\s+)?(\d{1,2}(?::\d{2})?(?:am|pm)?)\s*(?:-|to|đến)\s*(\d{1,2}(?::\d{2})?(?:am|pm)?)\b/i);
   if (rangeMatch) {
-    startTime = normalizeTimeStr(rangeMatch[1]);
+    const isSecondPm = /pm/i.test(rangeMatch[2]);
+    startTime = normalizeTimeStr(rangeMatch[1], isSecondPm);
     endTime = normalizeTimeStr(rangeMatch[2]);
     matchedPhrases.push(rangeMatch[0]);
   }
@@ -412,6 +433,10 @@ export function extractTaskItem(itemText, context = {}) {
     };
   }
 
+  if (isLowConfidenceItem(raw)) {
+    isLowConfidence = true;
+  }
+
   return {
     isSkip: false,
     title: cleanedTitle,
@@ -427,12 +452,15 @@ export function extractTaskItem(itemText, context = {}) {
   };
 }
 
-function normalizeTimeStr(t) {
+function normalizeTimeStr(t, referencePm = false) {
   const m = t.match(/(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i);
   if (!m) return null;
   let h = parseInt(m[1], 10);
   const min = parseInt(m[2] || '0', 10);
-  const ampm = m[3] ? m[3].toLowerCase() : null;
+  let ampm = m[3] ? m[3].toLowerCase() : null;
+  if (!ampm && referencePm && h < 12) {
+    ampm = 'pm';
+  }
   if (ampm === 'pm' && h < 12) h += 12;
   if (ampm === 'am' && h === 12) h = 0;
   return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
