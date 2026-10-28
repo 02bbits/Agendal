@@ -6,3 +6,4 @@ export * from './matcher.js';
 export * from './safety.js';
 export * from './namer.js';
 export * from './pipeline.js';
+export * from './llm-fallback.js';

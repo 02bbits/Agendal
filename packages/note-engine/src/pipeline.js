@@ -21,6 +21,7 @@ import { classifyItem, ItemType } from './classifier.js';
 import { matchCommand } from './matcher.js';
 import { validatePlan, decideSafetyStatus, NoteStatus } from './safety.js';
 import { generateNoteName } from './namer.js';
+import { isLowConfidenceItem } from './llm-fallback.js';
 
 /**
  * Process a raw note into a NoteResult plan
@@ -291,4 +292,178 @@ function formatTaskLabel(createItem) {
     parts.push(createItem.project_id);
   }
   return parts.join(' · ') || createItem.title;
+}
+
+/**
+ * Process a note with optional OpenRouter LLM fallback for low-confidence items (ADR-008, IM-38)
+ *
+ * @param {object} input
+ * @param {object} [context]
+ * @param {object|null} [fallbackService] Instance of OpenRouterFallbackService
+ * @returns {Promise<object>} NoteResult with engine 'rules', 'rules_llm', or 'rules_fallback'
+ */
+export async function processNoteWithFallback(input, context = {}, fallbackService = null) {
+  const rulesResult = processNote(input, context);
+
+  if (!fallbackService || !fallbackService.enabled) {
+    return rulesResult;
+  }
+
+  // Check if any items are low confidence
+  let items = [];
+  try {
+    items = splitNote(input.text);
+  } catch {
+    return rulesResult;
+  }
+
+  const lowConfidence = items.filter(item => isLowConfidenceItem(item));
+  if (lowConfidence.length === 0) {
+    return rulesResult;
+  }
+
+  const {
+    userProjects = ['SQL Course', 'Adv Web', 'HCI', 'Portfolio', 'Personal'],
+    openTasks = [],
+    clockContext = {
+      now: new Date(input.writtenAt || Date.now()),
+      timezone: input.timezone || 'Asia/Ho_Chi_Minh',
+    },
+    userId = 'anonymous',
+  } = context;
+
+  const response = await fallbackService.requestFallback({
+    lowConfidenceItems: lowConfidence,
+    clockContext,
+    userProjects,
+    candidateTasks: openTasks,
+    userId,
+  });
+
+  if (!response.success || !response.plan) {
+    return {
+      ...rulesResult,
+      note: {
+        ...rulesResult.note,
+        engine: 'rules_fallback',
+      },
+    };
+  }
+
+  try {
+    const rawCreates = (response.plan.create || []).map((c, i) => ({
+      ref: `c${i + 1}`,
+      title: c.title,
+      due_date: c.due_date || null,
+      start_time: c.start_time || null,
+      end_time: c.end_time || null,
+      priority: c.priority || 'low',
+      project_id: c.project_name || null,
+      repeat: c.repeat || 'never',
+      reminder: c.reminder || 'none',
+      notes: null,
+      duplicate_of: null,
+    }));
+
+    const rawUpdates = (response.plan.update || []).map((u, i) => ({
+      ref: `u${i + 1}`,
+      task_id: u.task_id,
+      done: u.done ?? null,
+      due_date: u.due_date || null,
+      start_time: u.start_time || null,
+      label: u.label || 'Updated Task',
+    }));
+
+    const rawDeletes = (response.plan.delete || []).map((d, i) => ({
+      ref: `d${i + 1}`,
+      task_id: d.task_id,
+      label: d.label || 'Deleted Task',
+    }));
+
+    const openTaskIds = new Set(openTasks.map(t => String(t.id)));
+    const { plan: validatedPlan } = validatePlan(
+      { create: rawCreates, update: rawUpdates, delete: rawDeletes },
+      { userProjects, openTaskIds }
+    );
+
+    const status = decideSafetyStatus(validatedPlan, rulesResult.skipped, rulesResult.ambiguous);
+    const name = generateNoteName(validatedPlan, rulesResult.skipped, input.text, clockContext);
+
+    let changes = [];
+    let planOutput = null;
+
+    if (status === NoteStatus.DONE) {
+      changes = [
+        ...validatedPlan.create.map(c => ({
+          kind: 'created',
+          label: formatTaskLabel(c),
+          task: {
+            id: `t_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+            title: c.title,
+            due_date: c.due_date,
+            start_time: c.start_time,
+            end_time: c.end_time,
+            priority: c.priority,
+            project_id: c.project_id,
+            repeat: c.repeat,
+            reminder: c.reminder,
+            done: false,
+            notes: c.notes,
+          },
+        })),
+        ...validatedPlan.update.map(u => ({
+          kind: 'updated',
+          label: u.label,
+          task: {
+            id: u.task_id,
+            title: u.label,
+            due_date: u.due_date,
+            start_time: u.start_time,
+            done: u.done,
+          },
+        })),
+        ...validatedPlan.delete.map(d => ({
+          kind: 'deleted',
+          label: d.label,
+          task: {
+            id: d.task_id,
+            title: d.label,
+          },
+        })),
+      ];
+      planOutput = null;
+    } else if (status === NoteStatus.FOLLOWUP) {
+      changes = [];
+      planOutput = null;
+    } else {
+      changes = [];
+      planOutput = validatedPlan;
+    }
+
+    return {
+      note: {
+        id: rulesResult.note.id,
+        client_id: input.clientId,
+        status,
+        name,
+        text: input.text,
+        source_file_name: input.sourceFileName || null,
+        written_at: input.writtenAt || new Date().toISOString(),
+        processed_at: new Date().toISOString(),
+        engine: 'rules_llm',
+      },
+      changes,
+      plan: planOutput,
+      skipped: rulesResult.skipped,
+      ambiguous: rulesResult.ambiguous,
+    };
+  } catch {
+    return {
+      ...rulesResult,
+      note: {
+        ...rulesResult.note,
+        engine: 'rules_fallback',
+      },
+    };
+  }
 }

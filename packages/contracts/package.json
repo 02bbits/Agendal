@@ -1,0 +1,13 @@
+{
+  "name": "@agendal/contracts",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Shared JSON Schemas, fixtures, and contracts for Agendal (IM-02 / ADR-001)",
+  "main": "./src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js"
+  },
+  "keywords": ["contracts", "schema", "fixtures", "agendal"],
+  "author": "Agendal Team",
+  "license": "MIT"
+}
