@@ -24,3 +24,9 @@ export {
   ProgressSummary,
   type ProgressSummaryProps,
 } from "./tasks/ProgressSummary";
+export { TaskDetails, type TaskDetailsProps } from "./tasks/TaskDetails";
+export {
+  ChoiceSheet,
+  type ChoiceSheetProps,
+  type Choice,
+} from "./tasks/ChoiceSheet";

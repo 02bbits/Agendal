@@ -8,10 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { t } from "../../copy";
+import { t, type CopyKey } from "../../copy";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import type { TaskApi } from "../../domain/api";
+import type { TaskApi, TaskPatch } from "../../domain/api";
+import { normalizePatch, patchErrors } from "../../domain/edit";
 import { todayIn } from "../../domain/dates";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 
@@ -39,6 +40,14 @@ export interface TaskStore {
   isSettling: (id: string) => boolean;
   completedToday: (task: Task) => boolean;
   toggle: (task: Task) => void;
+  /**
+   * Saves changed fields of a task (TK-2): applies the field rules, validates,
+   * then patches optimistically. Returns field errors instead of saving when invalid.
+   */
+  update: (
+    task: Task,
+    patch: TaskPatch,
+  ) => Partial<Record<keyof TaskPatch, CopyKey>>;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -172,6 +181,48 @@ export function TaskStoreProvider({
     [api, clock, applyLocal, settle, showToast, reopen, saveFailed],
   );
 
+  const update = useCallback(
+    (task: Task, raw: TaskPatch) => {
+      const patch = normalizePatch(task, raw, today);
+      const errors = patchErrors(task, patch);
+      if (Object.keys(errors).length || !Object.keys(patch).length)
+        return errors;
+      const at = clock.now().toISOString();
+      const revert = applyLocal((list) =>
+        list.map((x) => (x.id === task.id ? { ...x, ...patch } : x)),
+      );
+      if ("due_date" in raw && !raw.due_date && task.due_date) {
+        // Clearing the date also clears start, end and reminder, so offer Undo (TK §2.2)
+        const restore: TaskPatch = {
+          due_date: task.due_date,
+          start_time: task.start_time,
+          end_time: task.end_time,
+          reminder: task.reminder,
+        };
+        showToast({
+          message: t("task.due_cleared"),
+          actionLabel: t("common.undo"),
+          onAction: () => {
+            const current = tasksRef.current.find((x) => x.id === task.id);
+            if (current) update(current, restore);
+          },
+        });
+      }
+      api.patch(task.id, patch, at).then(
+        (saved) =>
+          applyLocal((list) =>
+            list.map((x) => (x.id === saved.id ? saved : x)),
+          ),
+        () => {
+          revert();
+          saveFailed(() => update(task, raw));
+        },
+      );
+      return errors;
+    },
+    [api, clock, today, applyLocal, showToast, saveFailed],
+  );
+
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -195,6 +246,7 @@ export function TaskStoreProvider({
         !!task.done_at &&
         todayIn(new Date(task.done_at), clock.timeZone) === today,
       toggle,
+      update,
       applyLocal,
       setProjects,
       saveFailed,
@@ -211,6 +263,7 @@ export function TaskStoreProvider({
       dismissToast,
       settling,
       toggle,
+      update,
       applyLocal,
       saveFailed,
     ],

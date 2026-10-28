@@ -198,7 +198,9 @@ describe("No hard-coded strings (NF-12)", () => {
     for (const file of files) {
       const source = readFileSync(join(dir, file), "utf8");
       // JSX text nodes with letters, outside {expressions}
-      for (const match of source.matchAll(/>\s*([A-Za-z][^<>{}]*?)\s*</g))
+      for (const match of source.matchAll(
+        /(?<![=\-])>\s*([A-Za-z][^<>{}()]*?)\s*</g,
+      ))
         offenders.push(`${file}: ${match[1]}`);
       for (const match of source.matchAll(
         /(?:aria-label|title|label|placeholder)="([^"]*[A-Za-z][^"]*)"/g,

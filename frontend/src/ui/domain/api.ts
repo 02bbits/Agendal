@@ -29,4 +29,8 @@ export interface TaskApi {
     id: string,
     at: string,
   ): Promise<{ task: Task; removedNextId?: string }>;
+  /** `GET /tasks/{id}`. */
+  get(id: string): Promise<Task>;
+  /** `PATCH /tasks/{id}` with only the changed fields, each stamped with `at` (ADR-004). */
+  patch(id: string, patch: TaskPatch, at: string): Promise<Task>;
 }
