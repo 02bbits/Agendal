@@ -3,13 +3,13 @@
 import { AccountScreen } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 
-/** Account: appearance applies at once; name, email and sign out come from AA (IM-11, IM-14). */
+/** Account: appearance applies at once. Name and email come from the session check; sign out is IM-14. */
 export default function AccountPage() {
-  const { back, settings, changeSettings } = useAppFrame();
+  const { back, settings, changeSettings, user } = useAppFrame();
   return (
     <AccountScreen
-      name=""
-      email=""
+      name={user?.display_name ?? ""}
+      email={user?.email ?? ""}
       settings={settings}
       onChange={changeSettings}
       onBack={back}
