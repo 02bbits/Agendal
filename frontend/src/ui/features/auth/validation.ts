@@ -8,6 +8,21 @@ export interface SignUpErrors {
 /** Trimmed and lower-cased everywhere (AA-E1). */
 export const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
+/**
+ * Where to go after sign-in: a same-origin path only, never another site (AA-E11, SEC-24).
+ * Browsers drop tabs and newlines from URLs, so "/\t/evil.com" would become "//evil.com".
+ */
+export function safeReturnPath(next: string | null | undefined): string {
+  if (
+    !next ||
+    !next.startsWith("/") ||
+    /^\/[/\\]/.test(next) ||
+    /[\u0000-\u001f]/.test(next)
+  )
+    return "/";
+  return next;
+}
+
 /** AA §2.1 and BR-17, the same rules the server checks. Length counts characters, not UTF-16 units (AA-E9). */
 export function signUpErrors(email: string, password: string): SignUpErrors {
   const errors: SignUpErrors = {};
