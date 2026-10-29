@@ -23,4 +23,9 @@ final readonly class ExtractedFields
         public Reminder $reminder,
         public bool $lowConfidence,
     ) {}
+
+    public function withTitle(string $title): self
+    {
+        return new self($title, $this->notes, $this->dueDate, $this->startTime, $this->endTime, $this->priority, $this->projectId, $this->repeat, $this->reminder, $this->lowConfidence);
+    }
 }

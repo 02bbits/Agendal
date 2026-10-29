@@ -7,6 +7,7 @@ namespace App\Services\Notes;
 use App\Models\Task;
 use Illuminate\Database\Eloquent\Builder;
 
+/** The user's tasks that share a meaningful word with a command, by trigram relevance (NU §2.4). */
 final class TaskCandidates
 {
     /**
@@ -27,7 +28,7 @@ final class TaskCandidates
         });
         $rank = implode(', ', array_fill(0, count($words), 'similarity(immutable_unaccent(title), immutable_unaccent(?))'));
 
-        return array_values($query->orderByRaw('greatest('.$rank.') DESC', $words)->orderBy('id')->limit(50)->get()
+        return array_values($query->orderByRaw('greatest('.$rank.') DESC', $words)->orderBy('id')->limit((int) config('notes.match_candidates'))->get()
             ->map(function (Task $task): array {
                 $row = $task->getAttributes();
                 foreach (['start_time', 'end_time'] as $key) {

@@ -75,6 +75,8 @@ final class NoteSplitterScenarios
                     in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
                     // Read only by the item classifier; NoteClassifierScenarios covers them.
                     in_array($category, NoteClassifierScenarios::CLASSIFIER_ONLY_CATEGORIES, true) => [],
+                    // Read only by the command matcher; CommandMatcherTest checks every stop word.
+                    $category === 'stop_word' => [],
                     default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {
