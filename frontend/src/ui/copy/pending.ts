@@ -120,6 +120,7 @@ export const pending = {
   "auth.back_to_sign_in": "Back to Sign in",
   "auth.new_password_title": "Choose a new password",
   "auth.new_password": "New password",
+  "auth.new_password_for": "For {email}",
   "auth.new_password_save": "Save password",
   "auth.reset_request_new": "Request a new link",
 } as const;

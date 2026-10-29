@@ -18,8 +18,9 @@ class ForgotPasswordController extends Controller
         $request->validate(['email' => ['required', 'string', 'max:254']]);
         $email = Str::lower(trim($request->string('email'))); // AA-E1
 
-        // Unknown email, or a resend within 45 s: nothing is sent, and the caller can't tell
-        Password::broker()->sendResetLink(['email' => $email]);
+        // Sent after the response, so a known email doesn't answer slower than an unknown one (SC-04).
+        // Unknown email, or a resend within 45 s: nothing is sent, and the caller can't tell.
+        defer(fn () => Password::broker()->sendResetLink(['email' => $email]));
         DB::table('audit_events')->insert([
             'user_id' => User::query()->where('email', $email)->value('id'),
             'event' => 'reset_requested', 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),

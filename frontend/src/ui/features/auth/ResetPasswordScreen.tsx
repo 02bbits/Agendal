@@ -72,6 +72,17 @@ export function ResetPasswordScreen({
         </>
       ) : (
         <>
+          <p className="m-0 text-callout text-ink-secondary">
+            {t("auth.new_password_for", { email: email ?? "" })}
+          </p>
+          {/* Lets a password manager save the new password to the right account */}
+          <input
+            type="email"
+            autoComplete="username"
+            value={email ?? ""}
+            readOnly
+            hidden
+          />
           <PasswordField
             ref={passwordRef}
             label={t("auth.new_password")}

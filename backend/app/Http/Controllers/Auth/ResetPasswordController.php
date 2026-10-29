@@ -27,24 +27,30 @@ class ResetPasswordController extends Controller
             'password' => $request->input('password'),
         ];
 
-        $validator = Validator::make($input, [
-            'token' => ['required', 'string'],
-            'email' => ['required', 'string', 'max:254'],
-            'password' => NewPassword::rules($input['email']),
-        ], NewPassword::messages());
+        $request->validate(['token' => ['required', 'string'], 'email' => ['required', 'string', 'max:254']]);
+
+        // The token first: without a valid link, nothing else runs (no password rules, no call to the
+        // breach service)
+        $broker = Password::broker();
+        $owner = $broker->getUser(['email' => $input['email']]);
+        if ($owner === null || ! $broker->tokenExists($owner, (string) $input['token'])) {
+            throw $this->expired();
+        }
+
+        $validator = Validator::make($input, ['password' => NewPassword::rules($input['email'])], NewPassword::messages());
         if ($validator->fails()) {
             throw new ApiError('error.invalid', 'Check the highlighted fields.', 422, $validator->errors()->toArray());
         }
         NewPassword::assertNotBreached($input['password']);
 
-        $status = Password::broker()->reset($input, function (User $user, string $password) {
+        $status = $broker->reset($input, function (User $user, string $password) {
             $user->password = $password;
             // Ends Remember me on every other device
             $user->setRememberToken(Str::random(60));
             $user->save();
         });
         if ($status !== Password::PASSWORD_RESET) {
-            throw new ApiError('auth.reset_expired', 'This link has expired or was already used. Request a new one.');
+            throw $this->expired();
         }
 
         /** @var User $user */
@@ -59,5 +65,10 @@ class ResetPasswordController extends Controller
         ]);
 
         return response()->json(['user' => $user]);
+    }
+
+    private function expired(): ApiError
+    {
+        return new ApiError('auth.reset_expired', 'This link has expired or was already used. Request a new one.');
     }
 }

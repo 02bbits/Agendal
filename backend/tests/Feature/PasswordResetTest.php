@@ -158,3 +158,20 @@ it('allows 3 requests per hour per email and 10 per IP', function () {
     }
     requestReset('another@gmail.com', '10.0.2.1')->assertStatus(429)->assertJsonPath('error.code', 'error.rate_limited');
 });
+
+it('checks the token before anything else: a bad link never reaches the breach service', function () {
+    requestReset();
+    Http::fake();
+
+    resetPassword('not-the-token', 'short')->assertStatus(422)->assertJsonPath('error.code', 'auth.reset_expired');
+    resetPassword('not-the-token')->assertStatus(422)->assertJsonPath('error.code', 'auth.reset_expired');
+    Http::assertNothingSent();
+});
+
+it('allows 5 reset tries per minute per IP', function () {
+    foreach (range(1, 5) as $i) {
+        resetPassword("guess-{$i}")->assertStatus(422);
+    }
+
+    resetPassword('guess-6')->assertStatus(429)->assertJsonPath('error.code', 'error.rate_limited');
+});

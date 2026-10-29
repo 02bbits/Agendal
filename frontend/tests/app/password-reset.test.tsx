@@ -145,6 +145,12 @@ describe("Set new password (AA §2.3)", () => {
 
     const field = await screen.findByLabelText("New password");
     expect(window.location.hash).toBe("");
+    expect(screen.getByText("For example@gmail.com")).toBeTruthy();
+    expect(
+      document
+        .querySelector('input[autocomplete="username"]')
+        ?.getAttribute("value"),
+    ).toBe("example@gmail.com");
     await user.type(field, "new river 42");
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
