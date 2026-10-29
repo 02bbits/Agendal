@@ -1,7 +1,7 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ComponentType } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import AccountPage from "../../src/app/account/page";
 import { AppFrame } from "../../src/app/AppFrame";
 import NotesPage from "../../src/app/notes/page";
@@ -11,7 +11,7 @@ import SearchPage from "../../src/app/search/page";
 import UpcomingPage from "../../src/app/upcoming/page";
 import { expectAxeCleanInBothThemes } from "../ui/axe";
 
-const router = { push: vi.fn(), back: vi.fn() };
+const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 let pathname = "/";
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
@@ -27,10 +27,21 @@ function renderAt(path: string, Page: ComponentType) {
   );
 }
 
+// The auth gate's session check: signed in unless a test says otherwise
+const session = vi.fn();
+const signedIn = () =>
+  new Response(
+    JSON.stringify({ id: 1, email: "example@gmail.com", display_name: "Mai" }),
+  );
+
 beforeEach(() => {
   router.push.mockClear();
+  router.replace.mockClear();
   router.back.mockClear();
+  session.mockReset().mockImplementation(async () => signedIn());
+  vi.stubGlobal("fetch", session);
 });
+afterEach(() => vi.unstubAllGlobals());
 
 const tabs: Array<[string, ComponentType, string, string]> = [
   ["/", InboxPage, "Inbox", "Write a note to make your first tasks."],
@@ -120,5 +131,33 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     await userEvent.click(screen.getByRole("button", { name: "Write a note" }));
     expect(router.push).toHaveBeenLastCalledWith("/notes");
     expect(screen.queryByRole("button", { name: "Add a task" })).toBeNull();
+  });
+});
+
+describe("Auth gate (AA §1)", () => {
+  it("sends a signed-out visit to Sign in and remembers where it was going", async () => {
+    session.mockImplementation(async () => new Response("{}", { status: 401 }));
+    renderAt("/upcoming", UpcomingPage);
+
+    await vi.waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/sign-in?next=%2Fupcoming"),
+    );
+  });
+
+  it("stays put offline, when the session check can't reach the server", async () => {
+    session.mockRejectedValue(new TypeError("Failed to fetch"));
+    renderAt("/", InboxPage);
+
+    await vi.waitFor(() => expect(session).toHaveBeenCalled());
+    // Let the failed request settle before checking nothing moved
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("shows the signed-in user's name and email on Account", async () => {
+    renderAt("/account", AccountPage);
+
+    expect(await screen.findByText("example@gmail.com")).toBeTruthy();
+    expect(screen.getByText("Mai")).toBeTruthy();
   });
 });
