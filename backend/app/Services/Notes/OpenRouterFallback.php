@@ -198,6 +198,7 @@ final class OpenRouterFallback
 
     /**
      * Each proposal that validates on its own, against its own candidates, replaces that item's rules entries.
+     * Entries stay in the note's item order (i1, i2, …).
      *
      * @param  array<string, array<string, mixed>>  $proposals
      * @param  array<string, list<TaskRow>>  $candidates
@@ -218,6 +219,9 @@ final class OpenRouterFallback
                 $plan[$kind] = [...$kept, ...$part[$kind]];
             }
             $accepted++;
+        }
+        foreach (self::PLAN_KINDS as $kind) {
+            usort($plan[$kind], fn (array $a, array $b): int => strnatcmp((string) ($a['ref'] ?? ''), (string) ($b['ref'] ?? '')));
         }
 
         return [$plan, $accepted];

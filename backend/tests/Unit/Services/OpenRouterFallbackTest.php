@@ -96,7 +96,7 @@ it('replaces only the uncertain item and records the prompt version', function (
     $rules = app(NoteEngine::class)->build($text, $this->context);
     $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
 
-    expect(array_column($result->plan['create'], 'ref'))->toBe(['i2', 'i1'])
+    expect(array_column($result->plan['create'], 'ref'))->toBe(['i1', 'i2'])
         ->and($result->promptVersion)->toBe(config('note_llm.prompt_version'));
 });
 
