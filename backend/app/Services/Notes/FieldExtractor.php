@@ -46,6 +46,14 @@ final class FieldExtractor
         );
     }
 
+    /** The text as a task title with nothing else read, for items left when the rules budget is spent (SEC-23). */
+    public function plain(string $text): ExtractedFields
+    {
+        [$title, $notes] = $this->cut(trim($text));
+
+        return new ExtractedFields($title, $notes, null, null, null, Priority::Low, null, Repeat::Never, Reminder::None, false);
+    }
+
     /**
      * NU-E40: Vietnamese words that need no accents ("mai", "t2") only count in accented Vietnamese.
      * They are blanked out with spaces so phrase offsets stay the same.

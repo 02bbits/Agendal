@@ -6,12 +6,11 @@ namespace App\Services\Notes;
 
 use App\Enums\CommandAction;
 use App\Enums\SkipReason;
-use DateTimeImmutable;
 
 /**
  * Finds the open task a command means and plans the change (NU §2.4).
  *
- * @phpstan-type TaskRow array{id: string, title: string, due_date?: ?string, start_time?: ?string, end_time?: ?string, done?: bool, deleted_at?: ?string}
+ * @phpstan-type TaskRow array{id: string, title: string, user_id?: int, due_date?: ?string, start_time?: ?string, end_time?: ?string, done?: bool, deleted_at?: ?string}
  */
 final class CommandMatcher
 {
@@ -19,6 +18,7 @@ final class CommandMatcher
         private FieldExtractor $extractor,
         private NoteDateParser $dates,
         private NoteTimeParser $times,
+        private TaskSchedule $schedule,
     ) {}
 
     /**
@@ -149,44 +149,17 @@ final class CommandMatcher
         $newDate = $this->dates->parse($text, $context, null)->date;
         if ($newDate !== null && $newDate !== ($task['due_date'] ?? null)) {
             $fields['due_date'] = $newDate;
-            $label = __('notes.label.due', ['date' => $this->labelDate($newDate), 'was' => $this->was($task['due_date'] ?? null, $context)]);
+            $label = $this->schedule->dueLabel($newDate, $task['due_date'] ?? null, $context);
         }
         $newStart = $this->times->parse($text, $context)->start;
         if ($newStart !== null && $newStart !== ($task['start_time'] ?? null)) {
             $fields['start_time'] = $newStart;
             if (($task['start_time'] ?? null) !== null && ($task['end_time'] ?? null) !== null) {
-                $fields['end_time'] = $this->movedEnd($task['start_time'], $task['end_time'], $newStart);
+                $fields['end_time'] = $this->schedule->movedEnd($task['start_time'], $task['end_time'], $newStart);
             }
         }
 
         return new TaskChange($task['id'], $label, fields: $fields);
-    }
-
-    private function movedEnd(string $oldStart, string $oldEnd, string $newStart): ?string
-    {
-        $day = new DateTimeImmutable('today');
-        $duration = $day->modify($oldEnd)->getTimestamp() - $day->modify($oldStart)->getTimestamp();
-        if ($duration <= 0) {
-            return null;
-        }
-        $end = $day->modify($newStart)->modify('+'.$duration.' seconds');
-
-        return $end->format('Y-m-d') === $day->format('Y-m-d') ? $end->format('H:i') : null;
-    }
-
-    private function was(?string $date, NoteContext $context): string
-    {
-        return match ($date) {
-            null => __('notes.label.was_no_date'),
-            $context->today()->format('Y-m-d') => __('notes.label.was_today'),
-            $context->today()->modify('+1 day')->format('Y-m-d') => __('notes.label.was_tomorrow'),
-            default => $this->labelDate($date),
-        };
-    }
-
-    private function labelDate(string $date): string
-    {
-        return (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
     }
 
     /** @return list<string> */

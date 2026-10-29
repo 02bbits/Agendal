@@ -6,6 +6,7 @@ namespace App\Services\Notes;
 
 use App\Enums\CommandAction;
 use App\Enums\ItemKind;
+use LogicException;
 
 final readonly class ItemClassification
 {
@@ -27,5 +28,11 @@ final readonly class ItemClassification
     public static function command(CommandAction $action): self
     {
         return new self(ItemKind::Command, $action);
+    }
+
+    /** The action of a command item. */
+    public function commandAction(): CommandAction
+    {
+        return $this->action ?? throw new LogicException('Only a command item has an action');
     }
 }

@@ -12,6 +12,16 @@ return [
     // Items allowed after merging comma lists (NU-E14, note.too_many_items).
     'max_items' => (int) env('NOTE_MAX_ITEMS', 30),
 
+    // Characters a note name keeps before it is cut at a word with an ellipsis (NU-6).
+    'name_limit' => (int) env('NOTE_NAME_LIMIT', 34),
+
+    // Milliseconds the rules engine may spend on one note; later items become plain tasks (SEC-23).
+    'engine_budget_ms' => (float) env('NOTE_ENGINE_BUDGET_MS', 200),
+
+    // Notes one user may send per minute and per day (NU §7, 429 error.rate_limited).
+    'rate_per_minute' => (int) env('NOTE_RATE_PER_MINUTE', 30),
+    'rate_per_day' => (int) env('NOTE_RATE_PER_DAY', 300),
+
     // Characters a task title keeps; the rest starts the task notes (NU-E16, task.schema.json title).
     'title_limit' => (int) env('NOTE_TITLE_LIMIT', 200),
 

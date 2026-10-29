@@ -28,8 +28,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         RateLimiter::for('notes', fn (Request $request): array => [
-            Limit::perMinute(30)->by('notes-minute:'.$request->user()?->getAuthIdentifier()),
-            Limit::perDay(300)->by('notes-day:'.$request->user()?->getAuthIdentifier()),
+            Limit::perMinute((int) config('notes.rate_per_minute'))->by('notes-minute:'.$request->user()?->getAuthIdentifier()),
+            Limit::perDay((int) config('notes.rate_per_day'))->by('notes-day:'.$request->user()?->getAuthIdentifier()),
         ]);
         // NF-13 rate limits
         RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)->by($request->ip()));

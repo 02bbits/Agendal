@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
+use App\Enums\PlanStatus;
 use App\Models\Note;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -25,7 +26,7 @@ class NoteResultResource extends JsonResource
                 'written_at' => $this->written_at->format(DATE_ATOM), 'processed_at' => $this->processed_at->format(DATE_ATOM), 'engine' => $this->engine,
             ],
             'changes' => $plan['changes'] ?? [],
-            'plan' => $this->status === 'confirm' ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
+            'plan' => $this->status === PlanStatus::Confirm->value ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
             'skipped' => $plan['skipped'] ?? [], 'ambiguous' => $plan['ambiguous'] ?? [],
         ];
     }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Tasks;
 
+use App\Enums\Repeat;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
@@ -16,7 +17,8 @@ final class TaskRecurrence
 
     public function next(Task $task): ?Task
     {
-        if ($task->repeat === 'never' || $task->due_date === null) {
+        $repeat = Repeat::tryFrom((string) $task->repeat) ?? Repeat::Never;
+        if ($repeat === Repeat::Never || $task->due_date === null) {
             return null;
         }
         $existing = Task::withTrashed()->where('user_id', $task->user_id)->where('previous_occurrence_id', $task->id)->first();
@@ -29,14 +31,14 @@ final class TaskRecurrence
         $anchor = new DateTimeImmutable((string) ($task->repeat_anchor ?: $task->due_date));
         $next = $due;
         do {
-            $next = match ($task->repeat) {
-                'daily' => $next->modify('+1 day'),
-                'weekly' => $next->modify('+7 days'),
-                'monthly' => $next->modify('first day of next month'),
-                'yearly' => $next->setDate((int) $next->format('Y') + 1, (int) $anchor->format('m'), 1),
-                default => $next->modify('+1 day'),
+            $next = match ($repeat) {
+                Repeat::Daily => $next->modify('+1 day'),
+                Repeat::Weekly => $next->modify('+7 days'),
+                Repeat::Monthly => $next->modify('first day of next month'),
+                Repeat::Yearly => $next->setDate((int) $next->format('Y') + 1, (int) $anchor->format('m'), 1),
             };
-            if (in_array($task->repeat, ['monthly', 'yearly'], true)) {
+            // Monthly and yearly keep the anchor's day, or the month's last day when it is shorter.
+            if (in_array($repeat, [Repeat::Monthly, Repeat::Yearly], true)) {
                 $next = $next->setDate((int) $next->format('Y'), (int) $next->format('m'), min((int) $anchor->format('d'), (int) $next->format('t')));
             }
         } while ($next->format('Y-m-d') < $today);
