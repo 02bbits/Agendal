@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ApiError;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\TaskLifecycleRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -62,9 +63,7 @@ class TaskController extends Controller
         // 4. Open limit
         $openCount = Task::where('done', false)->count();
         if ($openCount >= Task::OPEN_LIMIT) {
-            throw ValidationException::withMessages([
-                'task' => ["You've reached 5,000 open tasks. Complete or delete some to add more."],
-            ]);
+            throw new ApiError('task.limit', "You've reached 5,000 open tasks. Complete or delete some to add more.", 422);
         }
 
         // 5. Field updated at & create

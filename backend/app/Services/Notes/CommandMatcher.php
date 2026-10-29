@@ -15,10 +15,6 @@ use DateTimeImmutable;
  */
 final class CommandMatcher
 {
-    private const LABEL_DATE_FORMAT = 'D j M';
-
-    private const COMPLETED_LABEL = 'Completed';
-
     public function __construct(
         private FieldExtractor $extractor,
         private NoteDateParser $dates,
@@ -133,7 +129,7 @@ final class CommandMatcher
     private function change(string $text, CommandAction $action, array $task, NoteContext $context): TaskChange
     {
         return match ($action) {
-            CommandAction::Complete => new TaskChange($task['id'], self::COMPLETED_LABEL, fields: ['done' => true]),
+            CommandAction::Complete => new TaskChange($task['id'], __('notes.label.completed'), fields: ['done' => true]),
             CommandAction::Delete => new TaskChange($task['id'], $task['title'], delete: true),
             CommandAction::Reschedule => $this->reschedule($text, $task, $context),
         };
@@ -153,7 +149,7 @@ final class CommandMatcher
         $newDate = $this->dates->parse($text, $context, null)->date;
         if ($newDate !== null && $newDate !== ($task['due_date'] ?? null)) {
             $fields['due_date'] = $newDate;
-            $label = 'Due '.$this->labelDate($newDate).' (was '.$this->was($task['due_date'] ?? null, $context).')';
+            $label = __('notes.label.due', ['date' => $this->labelDate($newDate), 'was' => $this->was($task['due_date'] ?? null, $context)]);
         }
         $newStart = $this->times->parse($text, $context)->start;
         if ($newStart !== null && $newStart !== ($task['start_time'] ?? null)) {
@@ -181,16 +177,16 @@ final class CommandMatcher
     private function was(?string $date, NoteContext $context): string
     {
         return match ($date) {
-            null => 'no date',
-            $context->today()->format('Y-m-d') => 'today',
-            $context->today()->modify('+1 day')->format('Y-m-d') => 'tomorrow',
+            null => __('notes.label.was_no_date'),
+            $context->today()->format('Y-m-d') => __('notes.label.was_today'),
+            $context->today()->modify('+1 day')->format('Y-m-d') => __('notes.label.was_tomorrow'),
             default => $this->labelDate($date),
         };
     }
 
     private function labelDate(string $date): string
     {
-        return (new DateTimeImmutable($date))->format(self::LABEL_DATE_FORMAT);
+        return (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
     }
 
     /** @return list<string> */
