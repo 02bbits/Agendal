@@ -27,4 +27,7 @@ return [
     // Tied tasks offered in "Which task did you mean?" (NU-E11).
     'tie_choices' => (int) env('NOTE_TIE_CHOICES', 5),
 
+    // JSON schemas of the note result contract; every plan entry is checked against them (NU §8).
+    'schema_path' => env('NOTE_SCHEMA_PATH', dirname(__DIR__, 2).'/docs/07-architecture/contracts/schemas/'),
+
 ];
