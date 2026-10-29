@@ -23,7 +23,7 @@ class TaskPatcher
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function patch(Task $task, array $payload, string $timezone): Task
+    public function patch(Task $task, array $payload, string $timezone, ?DateTimeImmutable $orderedAt = null): Task
     {
         // 1. Project ownership check (404 if given and not owned/active)
         if (array_key_exists('project_id', $payload) && $payload['project_id'] !== null) {
@@ -35,8 +35,8 @@ class TaskPatcher
 
         // 2. Parse & clamp "at" timestamp
         $atInput = isset($payload['at']) && is_string($payload['at']) ? $payload['at'] : null;
-        $effectiveAt = $this->resolveEffectiveAt($atInput);
-        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+        $effectiveAt = $orderedAt ?? $this->resolveEffectiveAt($atInput);
+        $effectiveAtIso = $effectiveAt->format($orderedAt === null ? 'Y-m-d\TH:i:s\Z' : 'Y-m-d\TH:i:s.u\Z');
 
         // 3. Extract patchable fields from payload
         $patchData = [];
@@ -242,14 +242,14 @@ class TaskPatcher
         }
     }
 
-    public function complete(Task $task, ?string $at): Task
+    public function complete(Task $task, ?string $at, ?DateTimeImmutable $orderedAt = null): Task
     {
         if ($task->done) {
             return $task;
         }
 
-        $effectiveAt = $this->resolveEffectiveAt($at);
-        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+        $effectiveAt = $orderedAt ?? $this->resolveEffectiveAt($at);
+        $effectiveAtIso = $effectiveAt->format($orderedAt === null ? 'Y-m-d\TH:i:s\Z' : 'Y-m-d\TH:i:s.u\Z');
 
         /** @var array<string, string> $fieldUpdatedAt */
         $fieldUpdatedAt = $task->field_updated_at ?? [];
@@ -264,6 +264,24 @@ class TaskPatcher
         }
 
         return $task;
+    }
+
+    /** Notes are serialized server actions on the locked current row, even within the same clock tick.
+     * @param  array<string, mixed>  $payload
+     */
+    public function applyNote(Task $task, array $payload, string $timezone): Task
+    {
+        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+        foreach ($task->field_updated_at as $stored) {
+            $previous = new DateTimeImmutable($stored);
+            if ($at <= $previous) {
+                $at = $previous->modify('+1 microsecond');
+            }
+        }
+
+        return ($payload['done'] ?? false) === true
+            ? $this->complete($task, null, $at)
+            : $this->patch($task, $payload, $timezone, $at);
     }
 
     public function reopen(Task $task, ?string $at): Task
