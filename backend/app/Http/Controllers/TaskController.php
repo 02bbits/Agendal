@@ -37,9 +37,7 @@ class TaskController extends Controller
         }
 
         if (Task::withoutGlobalScope('owner')->withTrashed()->whereKey($id)->exists()) {
-            throw ValidationException::withMessages([
-                'id' => ['The id has already been taken.'],
-            ]);
+            abort(404, 'This item no longer exists.');
         }
 
         // 2. Project ownership
