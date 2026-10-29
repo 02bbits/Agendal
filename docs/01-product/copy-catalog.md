@@ -231,3 +231,4 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `error.slow` † | This is taking longer than usual. | After 10 s ([UX-03](ux-standards.md#ux-03)) |
 | `error.rate_limited` † | You're going a bit fast. Try again in {seconds} s. | 429 ([UX-43](ux-standards.md#ux-43)) |
 | `error.not_found` † | This item no longer exists. | 404 on a task, note or project |
+| `error.invalid` † | Check the highlighted fields. | 422 without a more specific code |
