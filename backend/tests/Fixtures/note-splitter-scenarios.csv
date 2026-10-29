@@ -1,0 +1,110 @@
+id,note,projects_json,expected_json,error
+EN-list,"- [ ] buy milk
+1. call mum; read report. then email Lee",[],"[""buy milk"", ""call mum"", ""read report"", ""email Lee""]",
+EN-groceries,"buy milk, eggs and bread",[],"[""buy milk, eggs and bread""]",
+EN-new-action,"buy ink, email the group tonight",[],"[""buy ink"", ""email the group tonight""]",
+EN-course,"buy ink, SQL quiz",[],"[""buy ink"", ""SQL quiz""]",
+EN-priority,"buy ink, urgent report",[],"[""buy ink"", ""urgent report""]",
+EN-project,"buy ink, Portfolio mockup","[""Portfolio""]","[""buy ink"", ""Portfolio mockup""]",
+EN-noun-list,"dentist, haircut",[],"[""dentist"", ""haircut""]",
+EN-abbreviation,visit athens then meet Dr. Lee at 9.30,[],"[""visit athens"", ""meet Dr. Lee at 9.30""]",
+EN-piano,play piano. call mum,[],"[""play piano"", ""call mum""]",
+EN-money,"pay 1,000 for report.pdf",[],"[""pay 1,000 for report.pdf""]",
+VI-sequence,mua sữa rồi gọi mẹ sau đó đọc sách,[],"[""mua sữa"", ""gọi mẹ"", ""đọc sách""]",
+VI-complete,bài tập xong rồi,[],"[""bài tập xong rồi""]",
+CR-newline,"call mumcall dad",[],"[""call mum"", ""call dad""]",
+CRLF-newline,"call mum
+call dad",[],"[""call mum"", ""call dad""]",
+EN-and,buy milk and bread,[],"[""buy milk and bread""]",
+VI-and,mua sữa và bánh mì,[],"[""mua sữa và bánh mì""]",
+VI-objects,"mua sữa, bánh mì và trứng",[],"[""mua sữa, bánh mì và trứng""]",
+VI-next-action,"mua sữa, đã xong bài tập SQL",[],"[""mua sữa"", ""đã xong bài tập SQL""]",
+VI-next-date,"mua sữa, mai họp nhóm",[],"[""mua sữa"", ""mai họp nhóm""]",
+VI-skip,"mua sữa, ý tưởng: làm app",[],"[""mua sữa"", ""ý tưởng: làm app""]",
+EN-date,"buy ink, 26 Oct meeting",[],"[""buy ink"", ""26 Oct meeting""]",
+EN-bare-time,"buy ink, at 2 meeting",[],"[""buy ink"", ""at 2 meeting""]",
+EN-repeat,"buy ink, every day exercise",[],"[""buy ink"", ""every day exercise""]",
+VI-priority,"mua sữa, không gấp đọc sách",[],"[""mua sữa"", ""không gấp đọc sách""]",
+EN-project-literal,"buy ink, Research (2026) outline","[""Research (2026)""]","[""buy ink"", ""Research (2026) outline""]",
+EN-case,read report THEN call mum,[],"[""read report"", ""call mum""]",
+EN-files-email,email a.b@example.com then read report.pdf,[],"[""email a.b@example.com"", ""read report.pdf""]",
+EN-abbreviation-chain,meet Prof. Lee; review e.g. SQL examples,[],"[""meet Prof. Lee"", ""review e.g. SQL examples""]",
+VI-checkbox,"• [x] gọi mẹ
+a) đọc sách
+[ ] nộp bài",[],"[""gọi mẹ"", ""đọc sách"", ""nộp bài""]",
+EN-hard-boundaries,"buy milk; eggs
+bread. cheese then apples",[],"[""buy milk"", ""eggs"", ""bread"", ""cheese"", ""apples""]",
+Repeated-delimiters,"call mum;;;
+
+; read report",[],"[""call mum"", ""read report""]",
+HTML-text,<script>alert(1)</script>,[],"[""<script>alert(1)</script>""]",
+CSV-quotes-roundtrip,"email ""Team A""; read Bob's report",[],"[""email \""Team A\"""", ""read Bob's report""]",
+VI-decomposed,gọi mẹ,[],"[""gọi mẹ""]",
+Zero-width,call​ mum,[],"[""call mum""]",
+30-items,read chapter 1;read chapter 2;read chapter 3;read chapter 4;read chapter 5;read chapter 6;read chapter 7;read chapter 8;read chapter 9;read chapter 10;read chapter 11;read chapter 12;read chapter 13;read chapter 14;read chapter 15;read chapter 16;read chapter 17;read chapter 18;read chapter 19;read chapter 20;read chapter 21;read chapter 22;read chapter 23;read chapter 24;read chapter 25;read chapter 26;read chapter 27;read chapter 28;read chapter 29;read chapter 30,[],"[""read chapter 1"", ""read chapter 2"", ""read chapter 3"", ""read chapter 4"", ""read chapter 5"", ""read chapter 6"", ""read chapter 7"", ""read chapter 8"", ""read chapter 9"", ""read chapter 10"", ""read chapter 11"", ""read chapter 12"", ""read chapter 13"", ""read chapter 14"", ""read chapter 15"", ""read chapter 16"", ""read chapter 17"", ""read chapter 18"", ""read chapter 19"", ""read chapter 20"", ""read chapter 21"", ""read chapter 22"", ""read chapter 23"", ""read chapter 24"", ""read chapter 25"", ""read chapter 26"", ""read chapter 27"", ""read chapter 28"", ""read chapter 29"", ""read chapter 30""]",
+31-items,read chapter 1;read chapter 2;read chapter 3;read chapter 4;read chapter 5;read chapter 6;read chapter 7;read chapter 8;read chapter 9;read chapter 10;read chapter 11;read chapter 12;read chapter 13;read chapter 14;read chapter 15;read chapter 16;read chapter 17;read chapter 18;read chapter 19;read chapter 20;read chapter 21;read chapter 22;read chapter 23;read chapter 24;read chapter 25;read chapter 26;read chapter 27;read chapter 28;read chapter 29;read chapter 30;read chapter 31,[],[],note.too_many_items
+Empty-invisible, . ; ​,[],[],note.empty
+Empty-boundary,then,[],[],note.empty
+EN-and-then,buy milk and then call mum,[],"[""buy milk"", ""call mum""]",
+EN-comma-and-verb,"call mum, and email boss",[],"[""call mum"", ""email boss""]",
+EN-oxford-comma,"buy milk, eggs, and bread",[],"[""buy milk, eggs, and bread""]",
+punctuation-only-items,"buy milk; ...; --, call mum",[],"[""buy milk"", ""call mum""]",
+punctuation-fragment-not-merged,"buy milk, --, eggs",[],"[""buy milk, eggs""]",
+unicode-line-separator,buy milk call mumread report,[],"[""buy milk"", ""call mum"", ""read report""]",
+nbsp-and-tight-bullet," - buy milk 
+•call mum
++ read report
+☑ email Lee",[],"[""buy milk"", ""call mum"", ""read report"", ""email Lee""]",
+unit-needs-word-end,"buy shampoo, 2 ampoules",[],"[""buy shampoo, 2 ampoules""]",
+VN-time-prefix,"mua mực, giấy lúc 9",[],"[""mua mực, giấy lúc 9""]",
+EN-relative-weeks,"buy ink, paper in 2 weeks",[],"[""buy ink, paper in 2 weeks""]",
+EN-suffix-command,"buy eggs, milk is done",[],"[""buy eggs"", ""milk is done""]",
+VN-suffix-command,"mua sữa, bài tập xong rồi",[],"[""mua sữa"", ""bài tập xong rồi""]",
+VN-hàng-is-not-repeat,"mua rau, hàng khô",[],"[""mua rau, hàng khô""]",
+VN-thứ-is-not-weekday,"mua đồ, mấy thứ linh tinh, thứ 2 gọi mẹ",[],"[""mua đồ, mấy thứ linh tinh"", ""thứ 2 gọi mẹ""]",
+EN-lead-in-merge,"please buy milk, eggs; remember to buy ink, paper",[],"[""please buy milk, eggs"", ""remember to buy ink, paper""]",
+VN-lead-in-merge,"nhớ mua sữa, trứng, cần gọi mẹ",[],"[""nhớ mua sữa, trứng"", ""cần gọi mẹ""]",
+blank-project-ignored,"buy ink,  paper","["""", "" ""]","[""buy ink, paper""]",
+decomposed-project,"buy ink, bài tập web","[""Bài tập""]","[""buy ink"", ""bài tập web""]",
+flexible-phrase-spacing,"buy ink, remember  that paper",[],"[""buy ink"", ""remember  that paper""]",
+then-inside-email,email then@x.com about it,[],"[""email then@x.com about it""]",
+VN-title-abbreviation,gọi PGS. Hùng hỏi lịch. gặp ThS. Lan ở TP. HCM,[],"[""gọi PGS. Hùng hỏi lịch"", ""gặp ThS. Lan ở TP. HCM""]",
+ellipsis-is-one-stop,ý tưởng: app đọc sách... gọi mẹ… mua sữa,[],"[""ý tưởng: app đọc sách"", ""gọi mẹ"", ""mua sữa""]",
+keyword-without-project,"buy milk, eggs for mum",[],"[""buy milk, eggs for mum""]",
+keyword-with-project,"buy milk, eggs for mum","[""Personal""]","[""buy milk"", ""eggs for mum""]",
+keyword-project-any-case,"buy ink, paper for web class","[""adv web""]","[""buy ink"", ""paper for web class""]",
+keyword-other-project-only,"buy ink, sql notes","[""Personal""]","[""buy ink, sql notes""]",
+EN-after-that,buy milk after that call mum afterwards email Lee,[],"[""buy milk"", ""call mum"", ""email Lee""]",
+VN-sequence-variants,mua sữa sau đấy gọi mẹ tiếp đó nộp bài kế đến đọc sách,[],"[""mua sữa"", ""gọi mẹ"", ""nộp bài"", ""đọc sách""]",
+VN-xong-thì,làm bài xong thì gọi mẹ,[],"[""làm bài"", ""gọi mẹ""]",
+sequence-word-needs-following-text,đọc sách sau đấy; done afterwards,[],"[""đọc sách sau đấy"", ""done afterwards""]",
+ordinal-lead-in-merge,"first buy milk, eggs; cuối cùng mua rau, thịt",[],"[""first buy milk, eggs"", ""cuối cùng mua rau, thịt""]",
+ordinal-lead-in-split,"buy milk, finally call mum",[],"[""buy milk"", ""finally call mum""]",
+next-is-not-sequence,nộp bài tiếp theo vào thứ 2,[],"[""nộp bài tiếp theo vào thứ 2""]",
+sentence-end-marks,buy milk! call mum?! email Lee,[],"[""buy milk"", ""call mum"", ""email Lee""]",
+pipe-separator,buy milk | call mum,[],"[""buy milk"", ""call mum""]",
+arrow-emoji-checkbox-bullets,"-> buy milk
+=> call mum
+✅ email Lee
+[v] read report
+1- pay rent",[],"[""buy milk"", ""call mum"", ""email Lee"", ""read report"", ""pay rent""]",
+VN-rồi-thì,làm bài rồi thì gọi mẹ,[],"[""làm bài"", ""gọi mẹ""]",
+curly-apostrophe-lead-in,"don’t forget to buy milk, eggs",[],"[""don’t forget to buy milk, eggs""]",
+VN-pronoun-lead-in,"tôi phải mua sữa, trứng",[],"[""tôi phải mua sữa, trứng""]",
+VN-new-verb-splits,"mua sữa, thanh toán tiền điện",[],"[""mua sữa"", ""thanh toán tiền điện""]",
+weekend-signal,"buy ink, paper this weekend",[],"[""buy ink, paper this weekend""]",
+until-hour-signal,"buy ink, paper until 5",[],"[""buy ink, paper until 5""]",
+am-abbreviation,meet at 9 a.m. tomorrow,[],"[""meet at 9 a.m. tomorrow""]",
+finished-suffix-command,"buy pens, report is finished",[],"[""buy pens"", ""report is finished""]",
+btw-skip-prefix,"buy pens, btw the shop closes",[],"[""buy pens"", ""btw the shop closes""]",
+VN-vv-abbreviation,"mua bút, giấy v.v. gọi mẹ",[],"[""mua bút, giấy v.v. gọi mẹ""]",
+plus-joiner-merge,"buy milk, plus eggs",[],"[""buy milk, plus eggs""]",
+number-hyphen-not-range,buy 5-6 eggs,[],"[""buy 5-6 eggs""]",
+trailing-modifier-joins,"đặt lịch khám răng tuần sau, không gấp",[],"[""đặt lịch khám răng tuần sau, không gấp""]",
+trailing-date-time-joins,"call mum, tomorrow 9am",[],"[""call mum, tomorrow 9am""]",
+modifier-after-non-verb-item,"dentist, urgent",[],"[""dentist, urgent""]",
+task-word-is-no-modifier,"buy ink, quiz",[],"[""buy ink"", ""quiz""]",
+modifier-only-first-item-stays,tomorrow 9am,[],"[""tomorrow 9am""]",
+modifier-after-semicolon-splits,call mum; tomorrow,[],"[""call mum"", ""tomorrow""]",
+list-date-applies-to-all,"mua sữa, trứng và bánh mì sáng mai",[],"[""mua sữa, trứng và bánh mì sáng mai""]",
+date-then-verb-splits,"mua sữa, mai gọi mẹ",[],"[""mua sữa"", ""mai gọi mẹ""]",

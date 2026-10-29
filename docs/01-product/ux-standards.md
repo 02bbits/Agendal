@@ -32,6 +32,9 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-21"></a>UX-21 | A focused field is scrolled into view above the keyboard. Inputs use 16px text or larger, so iOS doesn't zoom. |
 | <a id="ux-22"></a>UX-22 | Inputs set `inputmode`, `autocomplete` and `enterkeyhint` (email, current-password, new-password, search, done). |
 | <a id="ux-23"></a>UX-23 | No horizontal scroll from 320px wide. Long words in titles wrap (`overflow-wrap: anywhere`). |
+| <a id="ux-24"></a>UX-24 | From 600px wide the app stays one centred 600px column ([NF-8](../05-quality/nfr.md#nf-8)). The capture bar, tab bar, toasts and sheets are as wide as that column, not the window, and the paper background fills both sides. There is no separate tablet or desktop layout. |
+| <a id="ux-25"></a>UX-25 | The side margin is at least 20px (`space-20`) at every width, plus `env(safe-area-inset-left)` / `env(safe-area-inset-right)` when a phone is held sideways. |
+| <a id="ux-26"></a>UX-26 | Held sideways (a viewport about 320–420px tall), the bottom bars stay visible and the content scrolls above them; no fixed element covers a list row or a field. |
 
 ## 4. Truncation and formatting
 

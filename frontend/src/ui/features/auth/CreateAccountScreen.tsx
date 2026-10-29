@@ -3,6 +3,7 @@ import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { Link } from "../shell/Link";
+import { PasswordField } from "./PasswordField";
 import type { Navigate } from "../shell/routes";
 import { normalizeEmail, signUpErrors } from "./validation";
 
@@ -33,7 +34,6 @@ export function CreateAccountScreen({
 }: CreateAccountScreenProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [touched, setTouched] = useState({ email: false, password: false });
   const [server, setServer] = useState<SignUpFailure>({});
   const [busy, setBusy] = useState(false);
@@ -89,32 +89,19 @@ export function CreateAccountScreen({
           {t("auth.sign_in")}
         </Link>
       )}
-      <div className="flex flex-col gap-1">
-        <TextField
-          ref={passwordRef}
-          label={t("auth.password")}
-          type={showPassword ? "text" : "password"}
-          autoComplete="new-password"
-          value={password}
-          helper={passwordError ? undefined : t("auth.password_rule")}
-          error={passwordError}
-          onChange={(event) => {
-            setPassword(event.target.value);
-            setServer({});
-          }}
-          onBlur={() =>
-            setTouched((current) => ({ ...current, password: true }))
-          }
-        />
-        <button
-          type="button"
-          className="focus-ring min-h-11 self-end px-2 text-footnote text-primary"
-          aria-pressed={showPassword}
-          onClick={() => setShowPassword((shown) => !shown)}
-        >
-          {t("auth.show_password")}
-        </button>
-      </div>
+      <PasswordField
+        ref={passwordRef}
+        label={t("auth.password")}
+        autoComplete="new-password"
+        value={password}
+        helper={passwordError ? undefined : t("auth.password_rule")}
+        error={passwordError}
+        onChange={(event) => {
+          setPassword(event.target.value);
+          setServer({});
+        }}
+        onBlur={() => setTouched((current) => ({ ...current, password: true }))}
+      />
       {(server.form || offline) && (
         <p role="alert" className="m-0 text-footnote text-error">
           {offline ? t("auth.offline") : server.form}
