@@ -110,6 +110,9 @@ export const pending = {
   "auth.email_invalid": "Enter a valid email address.",
   "auth.have_account": "Already have an account?",
   "auth.sign_in": "Sign in",
+  "auth.forgot_password": "Forgot password?",
+  "auth.no_account": "No account yet?",
+  "auth.unlocked": "You can sign in again.",
 } as const;
 
 export type PendingKey = keyof typeof pending;

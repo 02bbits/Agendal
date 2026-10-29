@@ -6,22 +6,66 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
-it('splits note boundaries and strips list markers (T-NU-01–07, T-NU-120)', function (string $text, array $expected) {
-    expect((new NoteSplitter)->split($text, ['Portfolio']))->toBe($expected);
-})->with([
-    ["- [ ] buy milk\n1. call mum; read report. then email Lee", ['buy milk', 'call mum', 'read report', 'email Lee']],
-    ['buy milk, eggs and bread', ['buy milk, eggs and bread']],
-    ['buy ink, SQL quiz', ['buy ink', 'SQL quiz']],
-    ['buy ink, urgent report', ['buy ink', 'urgent report']],
-    ['buy ink, Portfolio mockup', ['buy ink', 'Portfolio mockup']],
-    ['dentist, haircut', ['dentist', 'haircut']],
-    ['visit athens then meet Dr. Lee at 9.30', ['visit athens', 'meet Dr. Lee at 9.30']],
-    ['play piano. call mum', ['play piano', 'call mum']],
-    ['pay 1,000 for report.pdf', ['pay 1,000 for report.pdf']],
-    ['mua sữa rồi gọi mẹ sau đó đọc sách', ['mua sữa', 'gọi mẹ', 'đọc sách']],
-    ['bài tập xong rồi', ['bài tập xong rồi']],
-    ["call mum\rcall dad", ['call mum', 'call dad']],
-]);
+dataset('note splitter CSV scenarios', function (): array {
+    $file = fopen(__DIR__.'/../../Fixtures/note-splitter-scenarios.csv', 'rb');
+    if ($file === false) {
+        throw new RuntimeException('Cannot read note splitter scenarios');
+    }
+    try {
+        $header = fgetcsv($file, null, ',', '"', '');
+        if (is_array($header)) {
+            $header[0] = ltrim((string) $header[0], "\xEF\xBB\xBF");
+        }
+        if ($header !== ['id', 'note', 'projects_json', 'expected_json', 'error']) {
+            throw new RuntimeException('Invalid scenario CSV header');
+        }
+        $cases = [];
+        while (($row = fgetcsv($file, null, ',', '"', '')) !== false) {
+            if ($row === [null]) {
+                continue;
+            }
+            if (count($row) !== 5 || ! is_string($row[0]) || $row[0] === '' || isset($cases[$row[0]])) {
+                throw new RuntimeException('Scenario CSV needs five columns and unique, nonempty IDs');
+            }
+            try {
+                $projects = json_decode((string) $row[2], true, flags: JSON_THROW_ON_ERROR);
+                $expected = json_decode((string) $row[3], true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException $error) {
+                throw new RuntimeException('Invalid JSON in CSV scenario '.$row[0], previous: $error);
+            }
+            foreach ([$projects, $expected] as $list) {
+                if (! is_array($list) || ! array_is_list($list) || count(array_filter($list, 'is_string')) !== count($list)) {
+                    throw new RuntimeException('Projects and expected items must be JSON arrays of strings');
+                }
+            }
+            if (! in_array($row[4], ['', 'note.empty', 'note.too_long', 'note.too_many_items'], true)) {
+                throw new RuntimeException('Unknown expected note error');
+            }
+            $cases[$row[0]] = [(string) $row[1], $projects, $expected, (string) $row[4]];
+        }
+        if ($cases === []) {
+            throw new RuntimeException('No note scenarios found');
+        }
+
+        return $cases;
+    } finally {
+        fclose($file);
+    }
+});
+
+it('follows documented splitting rules for an editable CSV scenario (T-NU-01–07, T-NU-120)', function (string $note, array $projects, array $expected, string $error) {
+    if ($error === '') {
+        expect((new NoteSplitter)->split($note, $projects))->toBe($expected);
+
+        return;
+    }
+    try {
+        (new NoteSplitter)->split($note, $projects);
+        $this->fail('Expected '.$error);
+    } catch (ValidationException $exception) {
+        expect($exception->errors())->toBe(['text' => [$error]]);
+    }
+})->with('note splitter CSV scenarios');
 
 it('rejects invisible, overlong and overfull notes', function (string $text, string $key) {
     try {
@@ -30,12 +74,16 @@ it('rejects invisible, overlong and overfull notes', function (string $text, str
     } catch (ValidationException $error) {
         expect($error->errors())->toBe(['text' => [$key]]);
     }
-})->with([
-    [" . ; \u{200B}", 'note.empty'],
-    ['then', 'note.empty'],
-    [str_repeat('a', 5001), 'note.too_long'],
-    [implode(';', array_fill(0, 31, 'call mum')), 'note.too_many_items'],
-]);
+})->with(function (): array {
+    $config = require __DIR__.'/../../../config/notes.php';
+
+    return [
+        [" . ; \u{200B}", 'note.empty'],
+        ['then', 'note.empty'],
+        [str_repeat('a', $config['max_length'] + 1), 'note.too_long'],
+        [implode(';', array_fill(0, $config['max_items'] + 1, 'call mum')), 'note.too_many_items'],
+    ];
+});
 
 it('normalizes decomposed accents and keeps newlines and tabs', function () {
     expect((new NoteSplitter)->normalize("  go\u{0323}i\tme\u{0323}\r\n\x01đọc "))->toBe("gọi\tmẹ\nđọc");
