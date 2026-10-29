@@ -77,7 +77,9 @@ final class NoteSplitter
                     if (preg_match(self::VISIBLE, $fragment) !== 1) {
                         continue;
                     }
-                    if ($current !== '' && NoteVocabulary::startsWithVerb($this->withoutLeadIn($current)) && ! $this->hasSignal($fragment, $projects)) {
+                    $joins = $current !== '' && ($this->onlyModifiers($fragment)
+                        || (NoteVocabulary::startsWithVerb($this->withoutLeadIn($current)) && ! $this->startsNewTask($fragment, $projects)));
+                    if ($joins) {
                         $current .= $comma.' '.$fragment;
                     } else {
                         $items[] = $current;
@@ -109,30 +111,60 @@ final class NoteSplitter
         return (string) preg_replace('~^(?:(?:'.$leads.')\s+)+~iu', '', $text);
     }
 
-    /** @param list<string> $projects */
-    private function hasSignal(string $text, array $projects): bool
+    /**
+     * The fragment starts a task of its own (NU §2.2): it opens with a date, time, priority or repeat word
+     * ("26 Oct meeting", "mai gọi mẹ"), a verb, a command or a skip prefix, or it names a project, one of the
+     * user's project keywords (NU-E34) or a task ("quiz"). Date and time words that close a fragment describe
+     * the whole list instead ("mua sữa, trứng sáng mai" is one task for tomorrow morning).
+     *
+     * @param  list<string>  $projects
+     */
+    private function startsNewTask(string $text, array $projects): bool
     {
         $text = $this->withoutLeadIn($text);
+        if (preg_match('~^(?:'.$this->modifier().')~iu', $text) === 1) {
+            return true;
+        }
         $commands = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command', 'skip_prefix']));
         if (NoteVocabulary::startsWithVerb($text)
             || preg_match('~^(?:'.$commands.')(?![\p{L}\p{N}_])~iu', $text) === 1
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')$~iu', $text) === 1) {
             return true;
         }
-        $signals = NoteVocabulary::signals();
+        $names = NoteVocabulary::phrases('priority_high_content');
         $owned = array_map(mb_strtolower(...), $projects);
         foreach ($projects as $project) {
-            $signals .= '|'.preg_quote($project, '~');
+            $names .= '|'.preg_quote($project, '~');
         }
-        // A keyword counts only for a project the user has (NU-E34).
         foreach (NoteVocabulary::projectKeywords() as $project => $keywords) {
             if (in_array(mb_strtolower(trim(Normalizer::normalize($project, Normalizer::FORM_C) ?: $project)), $owned, true)) {
-                $signals .= '|'.$keywords;
+                $names .= '|'.$keywords;
             }
         }
 
-        // Dates and clock times (26/10, 9:30, 9.30), a number with a time unit (9am, 9h30, 3 days), or "at 14".
-        return preg_match(NoteVocabulary::pattern($signals), $text) === 1
-            || preg_match('~\d(?:'.NoteVocabulary::phrases('time_separator').')\d|\d\s*(?:'.NoteVocabulary::phrases('time_unit').')(?![\p{L}_])|(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('time_prefix').')\s+\d{1,2}(?!\d)~iu', $text) === 1;
+        return preg_match(NoteVocabulary::pattern($names), $text) === 1;
+    }
+
+    /**
+     * "tomorrow 9am", "không gấp": a fragment of only date, time, priority and repeat words describes the item
+     * before it, so it joins that item whatever it starts with.
+     */
+    private function onlyModifiers(string $fragment): bool
+    {
+        $rest = (string) preg_replace('~'.$this->modifier().'~iu', ' ', $this->withoutLeadIn($fragment));
+
+        return preg_match(self::VISIBLE, $rest) !== 1;
+    }
+
+    /**
+     * A date, time, priority or repeat word, possibly after a day number (26 Oct), a date or clock time (26/10,
+     * 9:30), a number with a time unit (9am, 9h30, 3 days), or an hour after "at" (at 14).
+     */
+    private function modifier(): string
+    {
+        return '(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.NoteVocabulary::modifiers().')(?![\p{L}\p{N}_])'
+            .'|\d+(?:(?:'.NoteVocabulary::phrases('time_separator').')\d+)+'
+            .'|\d+\s*(?:'.NoteVocabulary::phrases('time_unit').')(?![\p{L}_])'
+            .'|(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('time_prefix').')\s+\d{1,2}(?!\d)';
     }
 }

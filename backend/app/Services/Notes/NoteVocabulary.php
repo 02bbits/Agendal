@@ -27,25 +27,47 @@ final class NoteVocabulary
      */
     public static function phrases(string $category): string
     {
-        $values = self::values($category);
+        return self::alternation(self::values($category));
+    }
+
+    /** @param list<string> $values */
+    private static function alternation(array $values): string
+    {
         usort($values, fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
 
         return implode('|', array_map(fn (string $phrase): string => str_replace("'", "['’]", (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~'))), $values));
     }
 
-    /** Categories whose words give a comma fragment a signal of its own (NU §2.2): dates, times, priority, repeat. */
-    public const SIGNAL_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_high_content', 'priority_low'];
+    /** Date, time, priority and repeat words: they describe a task rather than name one (NU §2.2). */
+    public const MODIFIER_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_low'];
 
-    public const SIGNAL_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
+    public const MODIFIER_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
 
+    /** One alternation across all these categories, so "every day" wins over "every" wherever each is listed. */
+    public static function modifiers(): string
+    {
+        return self::alternation(self::modifierValues());
+    }
+
+    /** Modifiers plus words that name a task ("quiz", "deadline"). */
     public static function signals(): string
     {
-        $phrases = array_map(self::phrases(...), self::SIGNAL_CATEGORIES);
-        foreach (self::SIGNAL_FAMILIES as $family) {
-            $phrases = [...$phrases, ...array_values(self::family($family))];
+        return self::alternation([...self::modifierValues(), ...self::values('priority_high_content')]);
+    }
+
+    /** @return list<string> */
+    private static function modifierValues(): array
+    {
+        self::$rules ??= self::load();
+        $values = [];
+        foreach (self::$rules as $category => $phrases) {
+            $family = explode(':', $category)[0];
+            if (in_array($category, self::MODIFIER_CATEGORIES, true) || (str_contains($category, ':') && in_array($family, self::MODIFIER_FAMILIES, true))) {
+                $values = [...$values, ...$phrases];
+            }
         }
 
-        return implode('|', $phrases);
+        return $values;
     }
 
     /**
