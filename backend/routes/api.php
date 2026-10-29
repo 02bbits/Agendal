@@ -15,11 +15,11 @@ Route::post('/auth/login', LoginController::class);
 Route::post('/auth/forgot-password', ForgotPasswordController::class)->middleware('throttle:forgot-password');
 Route::post('/auth/reset-password', ResetPasswordController::class)->middleware('throttle:reset-password');
 
-Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+Route::get('/user', function (Request $request) {
+    return $request->user();
+})->middleware('auth:sanctum');
 
+Route::middleware('auth:sanctum')->group(function () {
     Route::post('tasks', [TaskController::class, 'store']);
     Route::get('tasks/{task}', [TaskController::class, 'show']);
     Route::patch('tasks/{task}', [TaskController::class, 'update']);
