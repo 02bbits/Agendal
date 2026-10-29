@@ -180,11 +180,20 @@ skip_prefix,fyi
 skip_prefix,ý tưởng
 skip_prefix,ghi chú
 skip_prefix,lưu ý
+skip_prefix,btw
+skip_prefix,ps
+skip_prefix,p.s
+skip_prefix,ideas
+skip_prefix,notes
+skip_prefix,thoughts
+skip_prefix,suy nghĩ
 complete_command,done
 complete_command,finished
 complete_command,did
 complete_command,đã xong
 complete_command,xong
+complete_command,completed
+complete_command,đã hoàn thành
 move_command,move
 move_command,push
 move_command,reschedule
@@ -192,6 +201,8 @@ move_command,postpone
 move_command,dời
 move_command,chuyển
 move_command,hoãn
+move_command,delay
+move_command,lùi
 delete_command,delete
 delete_command,cancel
 delete_command,remove
@@ -201,6 +212,7 @@ delete_command,xoá
 delete_command,hủy
 delete_command,huỷ
 delete_command,bỏ
+delete_command,scrap
 task_verb,visit
 task_verb,walk
 task_verb,run
@@ -212,6 +224,39 @@ task_verb,translate
 task_verb,proofread
 task_verb,đi chợ
 task_verb,chạy bộ
+task_verb,pick up
+task_verb,go to
+task_verb,install
+task_verb,debug
+task_verb,refactor
+task_verb,edit
+task_verb,follow up
+task_verb,clean up
+task_verb,set up
+task_verb,scan
+task_verb,transfer
+task_verb,top up
+task_verb,đưa
+task_verb,thăm
+task_verb,nạp
+task_verb,đóng
+task_verb,lên kế hoạch
+task_verb,cài
+task_verb,cập nhật
+task_verb,ủi
+task_verb,cho ăn
+task_verb,dắt
+task_verb,trả lời
+task_verb,họp
+task_verb,ghé
+task_verb,chép
+task_verb,dịch
+task_verb,đi siêu thị
+task_verb,thanh toán
+task_verb,chuyển khoản
+task_verb,đổ xăng
+task_verb,cắt tóc
+task_verb,khám
 signal,today
 signal,tonight
 signal,tomorrow
@@ -314,6 +359,29 @@ signal,oct
 signal,nov
 signal,dec
 signal,tháng
+signal,tues
+signal,thur
+signal,thurs
+signal,weds
+signal,tmrw
+signal,tmw
+signal,tonite
+signal,weekend
+signal,next month
+signal,afternoon
+signal,night
+signal,midnight
+signal,eod
+signal,ngày kia
+signal,tuần này
+signal,năm sau
+signal,đêm
+signal,hàng năm
+signal,hằng năm
+signal,yearly
+signal,annually
+signal,biweekly
+signal,critical
 abbreviation,Dr
 abbreviation,Prof
 abbreviation,Mr
@@ -332,7 +400,23 @@ abbreviation,ThS
 abbreviation,BS
 abbreviation,KS
 abbreviation,TP
+abbreviation,Jr
+abbreviation,Sr
+abbreviation,Inc
+abbreviation,Ltd
+abbreviation,Co
+abbreviation,Corp
+abbreviation,Mt
+abbreviation,Ave
+abbreviation,Rd
+abbreviation,Dept
+abbreviation,approx
+abbreviation,v.v
+abbreviation,Cty
+abbreviation,a.m
+abbreviation,p.m
 separator,;
+separator,|
 conjunction,then
 following_conjunction,rồi
 following_conjunction,sau đó
@@ -348,6 +432,9 @@ following_conjunction,xong thì
 bullet,-
 bullet,*
 bullet,+
+bullet,->
+bullet,=>
+bullet,>
 time_unit,am
 time_unit,pm
 time_unit,h
@@ -369,11 +456,30 @@ time_unit,months
 time_unit,ngày
 time_unit,tuần
 time_unit,tháng
+time_unit,a.m
+time_unit,p.m
+time_unit,tiếng
+time_unit,year
+time_unit,years
+time_unit,năm
+time_unit,sec
+time_unit,giây
 time_prefix,at
 time_prefix,lúc
 time_prefix,by
+time_prefix,before
+time_prefix,after
+time_prefix,around
+time_prefix,from
+time_prefix,until
+time_prefix,till
 complete_suffix,is done
 complete_suffix,xong rồi
+complete_suffix,is finished
+complete_suffix,are done
+complete_suffix,is completed
+complete_suffix,đã xong
+complete_suffix,hoàn thành rồi
 lead_in,remember to
 lead_in,I need to
 lead_in,need to
@@ -396,21 +502,54 @@ lead_in,trước tiên
 lead_in,đầu tiên
 lead_in,cuối cùng
 lead_in,sau cùng
+lead_in,don't forget to
+lead_in,do not forget to
+lead_in,must
+lead_in,should
+lead_in,gotta
+lead_in,let's
+lead_in,I will
+lead_in,I'll
+lead_in,will
+lead_in,going to
+lead_in,gonna
+lead_in,want to
+lead_in,đừng quên
+lead_in,hãy
+lead_in,nên
+lead_in,sẽ
+lead_in,định
+lead_in,muốn
+lead_in,tôi
+lead_in,mình
+lead_in,em
+lead_in,I
+lead_in,we
+lead_in,chúng ta
 list_joiner,and
 list_joiner,or
 list_joiner,&
 list_joiner,và
 list_joiner,hoặc
+list_joiner,plus
 number_suffix,.
 number_suffix,)
+number_suffix,-
 letter_suffix,)
 checkbox_mark,x
 checkbox_mark,✓
 checkbox_mark,✔
 checkbox_mark,-
+checkbox_mark,v
+checkbox_mark,✗
+checkbox_mark,✘
+checkbox_mark,*
+checkbox_mark,/
 comma,","
 full_stop,.
 full_stop,…
+full_stop,!
+full_stop,?
 time_separator,/
 time_separator,:
 time_separator,.
@@ -430,6 +569,17 @@ tight_bullet,☑
 tight_bullet,☒
 tight_bullet,✓
 tight_bullet,✔
+tight_bullet,✅
+tight_bullet,❌
+tight_bullet,⬜
+tight_bullet,□
+tight_bullet,■
+tight_bullet,●
+tight_bullet,○
+tight_bullet,◆
+tight_bullet,►
+tight_bullet,▶
+tight_bullet,★
 checkbox_bracket,[]
 checkbox_bracket,()
 project_keyword:SQL Course,sql
@@ -441,3 +591,4 @@ project_keyword:Portfolio,portfolio
 project_keyword:Personal,gym
 project_keyword:Personal,mum
 project_keyword:Personal,groceries
+leading_filler,thì

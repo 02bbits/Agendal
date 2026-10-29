@@ -21,10 +21,16 @@ final class NoteVocabulary
         return preg_match('~^(?:'.self::phrases('task_verb').')(?![\p{L}\p{N}_])~iu', $text) === 1;
     }
 
-    /** CSV cells are literal phrases, never executable regex fragments. A space matches any run of whitespace. */
+    /**
+     * CSV cells are literal phrases, never executable regex fragments. A space matches any run of whitespace,
+     * an apostrophe matches a straight or curly one, and longer phrases are tried first ("rồi thì" before "rồi").
+     */
     public static function phrases(string $category): string
     {
-        return implode('|', array_map(fn (string $phrase): string => (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~')), self::values($category)));
+        $values = self::values($category);
+        usort($values, fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+
+        return implode('|', array_map(fn (string $phrase): string => str_replace("'", "['’]", (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~'))), $values));
     }
 
     /**

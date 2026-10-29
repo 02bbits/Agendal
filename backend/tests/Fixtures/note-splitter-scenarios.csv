@@ -81,3 +81,22 @@ sequence-word-needs-following-text,đọc sách sau đấy; done afterwards,[],"
 ordinal-lead-in-merge,"first buy milk, eggs; cuối cùng mua rau, thịt",[],"[""first buy milk, eggs"", ""cuối cùng mua rau, thịt""]",
 ordinal-lead-in-split,"buy milk, finally call mum",[],"[""buy milk"", ""finally call mum""]",
 next-is-not-sequence,nộp bài tiếp theo vào thứ 2,[],"[""nộp bài tiếp theo vào thứ 2""]",
+sentence-end-marks,buy milk! call mum?! email Lee,[],"[""buy milk"", ""call mum"", ""email Lee""]",
+pipe-separator,buy milk | call mum,[],"[""buy milk"", ""call mum""]",
+arrow-emoji-checkbox-bullets,"-> buy milk
+=> call mum
+✅ email Lee
+[v] read report
+1- pay rent",[],"[""buy milk"", ""call mum"", ""email Lee"", ""read report"", ""pay rent""]",
+VN-rồi-thì,làm bài rồi thì gọi mẹ,[],"[""làm bài"", ""gọi mẹ""]",
+curly-apostrophe-lead-in,"don’t forget to buy milk, eggs",[],"[""don’t forget to buy milk, eggs""]",
+VN-pronoun-lead-in,"tôi phải mua sữa, trứng",[],"[""tôi phải mua sữa, trứng""]",
+VN-new-verb-splits,"mua sữa, thanh toán tiền điện",[],"[""mua sữa"", ""thanh toán tiền điện""]",
+weekend-signal,"buy ink, paper this weekend",[],"[""buy ink"", ""paper this weekend""]",
+until-hour-signal,"buy ink, paper until 5",[],"[""buy ink"", ""paper until 5""]",
+am-abbreviation,meet at 9 a.m. tomorrow,[],"[""meet at 9 a.m. tomorrow""]",
+finished-suffix-command,"buy pens, report is finished",[],"[""buy pens"", ""report is finished""]",
+btw-skip-prefix,"buy pens, btw the shop closes",[],"[""buy pens"", ""btw the shop closes""]",
+VN-vv-abbreviation,"mua bút, giấy v.v. gọi mẹ",[],"[""mua bút, giấy v.v. gọi mẹ""]",
+plus-joiner-merge,"buy milk, plus eggs",[],"[""buy milk, plus eggs""]",
+number-hyphen-not-range,buy 5-6 eggs,[],"[""buy 5-6 eggs""]",

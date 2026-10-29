@@ -88,7 +88,9 @@ final class NoteSplitter
             }
         }
         // Joiners left at an item edge ("buy milk and then …", ", and email boss") belong to no item.
-        $items = array_map(fn (string $item): string => trim((string) preg_replace('~^(?:(?:'.$joiner.')(?:\s+|$))+|(?:(?:^|\s+)(?:'.$joiner.'))+$~iu', '', $item)), $items);
+        // A leading filler ("rồi thì gọi mẹ" leaves "thì gọi mẹ") is dropped only at the start.
+        $leading = $joiner.'|'.NoteVocabulary::phrases('leading_filler');
+        $items = array_map(fn (string $item): string => trim((string) preg_replace('~^(?:(?:'.$leading.')(?:\s+|$))+|(?:(?:^|\s+)(?:'.$joiner.'))+$~iu', '', $item)), $items);
         $items = array_values(array_filter($items, fn (string $item): bool => preg_match(self::VISIBLE, $item) === 1));
         if ($items === []) {
             throw ValidationException::withMessages(['text' => ['note.empty']]);
@@ -102,7 +104,7 @@ final class NoteSplitter
 
     private function withoutLeadIn(string $text): string
     {
-        $leads = NoteVocabulary::phrases('lead_in').'|'.NoteVocabulary::phrases('list_joiner');
+        $leads = NoteVocabulary::phrases('lead_in').'|'.NoteVocabulary::phrases('list_joiner').'|'.NoteVocabulary::phrases('leading_filler');
 
         return (string) preg_replace('~^(?:(?:'.$leads.')\s+)+~iu', '', $text);
     }

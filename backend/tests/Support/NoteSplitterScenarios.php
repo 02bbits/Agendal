@@ -108,6 +108,10 @@ final class NoteSplitterScenarios
                         [$value.' buy widget, gadget', [$value.' buy widget, gadget']],
                         ['buy widget, '.$value.' call gadget', ['buy widget', $value.' call gadget']],
                     ],
+                    'leading_filler' => [
+                        ['buy widget rồi '.$value.' call gadget', ['buy widget', 'call gadget']],
+                        ['read widget xong '.$value, ['read widget xong '.$value]],
+                    ],
                     'list_joiner' => [
                         ['buy widget, '.$value.' gadget', ['buy widget, '.$value.' gadget']],
                         ['buy widget, '.$value.' call gadget', ['buy widget', 'call gadget']],
