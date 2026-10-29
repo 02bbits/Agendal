@@ -13,6 +13,7 @@ import {
 import {
   AppShell,
   ROUTES,
+  t,
   Toast,
   type AccountSettings,
   type Navigate,
@@ -20,6 +21,7 @@ import {
   type ToastData,
 } from "@/ui";
 import { api } from "@/lib/api";
+import { wipeDevice } from "@/lib/device";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -47,6 +49,13 @@ const TAB_BY_PATH: Record<string, TabId> = {
   [ROUTES.notes]: "notes",
 };
 
+const DEFAULT_SETTINGS: AccountSettings = {
+  theme: "system",
+  weekStart: "mon",
+  timeFormat: "24h",
+  rememberDevice: true,
+};
+
 const DAISY_THEME = { light: "agendal-light", dark: "agendal-dark" } as const;
 
 interface AppFrameValue {
@@ -59,6 +68,8 @@ interface AppFrameValue {
   showToast: (message: string) => void;
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
+  /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
+  signOut: (everywhere?: boolean) => Promise<void>;
 }
 
 const AppFrameContext = createContext<AppFrameValue | null>(null);
@@ -77,12 +88,7 @@ export function useAppFrame(): AppFrameValue {
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [settings, setSettings] = useState<AccountSettings>({
-    theme: "system",
-    weekStart: "mon",
-    timeFormat: "24h",
-    rememberDevice: true,
-  });
+  const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUser] = useState<SignedInUser | null>(null);
 
   // Auth gate (AA §1): a signed-out visit opens Sign in and comes back afterwards. Offline,
@@ -139,6 +145,29 @@ export function AppFrame({ children }: { children: ReactNode }) {
     [],
   );
 
+  const signOut = useCallback(
+    async (everywhere = false) => {
+      const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
+      const response = await api(path, { method: "POST" }).catch(() => null);
+      // Offline, this device is still wiped at once; the server session ends when it expires (AA §2.4).
+      // Other devices can only be signed out from the server, so that waits for a connection.
+      if (everywhere) {
+        if (!response) return showToast(t("app.offline"));
+        if (!response.ok && response.status !== 401) {
+          const body = await response.json().catch(() => null);
+          return showToast(
+            t("error.generic", { request_id: body?.error?.request_id ?? "" }),
+          );
+        }
+      }
+      await wipeDevice();
+      setUser(null);
+      setSettings(DEFAULT_SETTINGS);
+      router.replace(ROUTES.signIn);
+    },
+    [router, showToast],
+  );
+
   // Appearance: System leaves data-theme off so daisyUI follows the device setting
   useEffect(() => {
     const root = document.documentElement;
@@ -147,8 +176,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [settings.theme]);
 
   const value = useMemo(
-    () => ({ navigate, back, settings, changeSettings, showToast, user }),
-    [navigate, back, settings, changeSettings, showToast, user],
+    () => ({
+      navigate,
+      back,
+      settings,
+      changeSettings,
+      showToast,
+      user,
+      signOut,
+    }),
+    [navigate, back, settings, changeSettings, showToast, user, signOut],
   );
   const tab = TAB_BY_PATH[pathname];
 
