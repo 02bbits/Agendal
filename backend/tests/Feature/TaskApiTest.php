@@ -171,6 +171,26 @@ it('start_time without due_date → due_date becomes 2026-10-23 (today in Ho Chi
     assertTaskSchema($response2->json());
 });
 
+it('POST with start_time 09:00 + reminder 15m and no due_date → 201, due_date = today in Asia/Ho_Chi_Minh, remind_at computed', function () {
+    $user = User::factory()->create();
+    $id = (string) Str::uuid();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Morning meeting',
+        'start_time' => '09:00',
+        'reminder' => '15m',
+    ])->assertStatus(201);
+
+    expect($response->json('due_date'))->toBe('2026-10-23');
+    assertTaskSchema($response->json());
+
+    $task = DB::table('tasks')->find($id);
+    expect($task)->not->toBeNull();
+    $remindAt = (new DateTimeImmutable($task->remind_at))->format('Y-m-d H:i:s');
+    expect($remindAt)->toBe('2026-10-23 01:45:00');
+});
+
 it('T-TK-21: end 09:00 with start 10:00 → 422 error.invalid, fields.end_time = End time must be later than the start time., no row created', function () {
     $user = User::factory()->create();
     $id = (string) Str::uuid();

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Services\Tasks\DueDateFallback;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -82,8 +83,15 @@ class StoreTaskRequest extends FormRequest
                     }
                 }
 
+                $repeat = $this->input('repeat', 'never') ?? 'never';
+                $dueDateStr = is_string($dueDate) ? $dueDate : null;
+                $startTimeStr = is_string($startTime) ? $startTime : null;
+                $repeatStr = is_string($repeat) ? $repeat : 'never';
+
                 if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($dueDate)) {
-                    $validator->errors()->add('reminder', 'Add a date to set a reminder.');
+                    if (! DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {
+                        $validator->errors()->add('reminder', 'Add a date to set a reminder.');
+                    }
                 }
             },
         ];

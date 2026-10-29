@@ -13,6 +13,7 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
+use App\Services\Tasks\DueDateFallback;
 use App\Services\Tasks\TaskPatcher;
 use DateTimeZone;
 use Illuminate\Http\JsonResponse;
@@ -56,7 +57,11 @@ class TaskController extends Controller
         $startTime = $request->input('start_time');
         $repeat = $request->input('repeat', 'never') ?? 'never';
 
-        if (empty($dueDate) && ($startTime !== null || $repeat !== 'never')) {
+        $dueDateStr = is_string($dueDate) ? $dueDate : null;
+        $startTimeStr = is_string($startTime) ? $startTime : null;
+        $repeatStr = is_string($repeat) ? $repeat : 'never';
+
+        if (DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {
             $dueDate = $clock->today($timezone);
         }
 
