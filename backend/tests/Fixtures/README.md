@@ -2,6 +2,8 @@
 
 First install the backend dependencies with `composer install` under PHP **8.4+** with Intl and Mbstring.
 
+`backend/phpunit.xml` sets the test process memory limit to **1 GB** (`1024M`), including when the local PHP default is unlimited. No extra memory flag is needed when running Pest.
+
 The dynamic scenario generator lives only in `backend/tests/Support/NoteSplitterScenarios.php`, under the `Tests\Support` namespace. Pest generates original, uppercase, padded and decomposed-accent cases from every CSV rule, plus project names, control characters, item/character limits, numeric commas and decimal times. Run them with:
 
 ```sh
