@@ -6,6 +6,7 @@ namespace App\Services\Notes;
 
 use App\Http\Resources\TaskResource;
 use App\Models\Note;
+use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
@@ -17,14 +18,43 @@ use Illuminate\Validation\ValidationException;
 
 class NoteApplier
 {
-    public function __construct(private ClockInterface $clock, private TaskPatcher $patcher, private ReminderCalculator $reminders, private TaskRecurrence $recurrence) {}
+    public function __construct(private ClockInterface $clock, private TaskPatcher $patcher, private ReminderCalculator $reminders, private TaskRecurrence $recurrence, private PlanValidator $validator) {}
 
     /**
      * @param  array<string, mixed>  $plan
-     * @return array{applied: list<array<string, mixed>>, changes: list<array<string, mixed>>}
+     * @return array{applied: list<array<string, mixed>>, changes: list<array<string, mixed>>, skipped: list<array<string, mixed>>}
      */
     public function apply(Note $note, array $plan, NoteContext $context): array
     {
+        $ids = array_values(array_filter([...array_column($plan['update'], 'task_id'), ...array_column($plan['delete'], 'task_id'), ...array_column($plan['create'], 'duplicate_of')]));
+        $locked = Task::query()->where('user_id', $note->user_id)->where('done', false)->whereIn('id', $ids)->lockForUpdate()->get()->keyBy('id');
+        $tasks = [];
+        $skipped = $plan['skipped'] ?? [];
+        foreach ($locked as $id => $task) {
+            $row = $task->attributesToArray();
+            foreach (['start_time', 'end_time'] as $key) {
+                $row[$key] = isset($row[$key]) ? substr($row[$key], 0, 5) : null;
+            }
+            $tasks[$id] = $row;
+        }
+        foreach ($plan['create'] as $index => $entry) {
+            if (isset($entry['duplicate_of']) && ! isset($tasks[$entry['duplicate_of']])) {
+                $plan['create'][$index]['duplicate_of'] = null;
+            }
+        }
+        foreach (['update', 'delete'] as $kind) {
+            foreach ($plan[$kind] as $index => $entry) {
+                if (! isset($tasks[$entry['task_id']])) {
+                    $skipped[] = ['ref' => $entry['ref'], 'text' => $entry['label'], 'reason' => 'not_found'];
+                } elseif ($kind === 'update' && ! isset($entry['done'])) {
+                    $current = $locked->get($entry['task_id']);
+                    assert($current instanceof Task);
+                    $plan[$kind][$index] = $this->refreshSchedule($entry, $current, $context);
+                }
+            }
+        }
+        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
+        $plan = $this->validator->validate($plan, $projects, $tasks);
         $applied = [];
         $changes = [];
         $stamp = $this->clock->now()->format(DATE_ATOM);
@@ -51,10 +81,9 @@ class NoteApplier
                         $task->save();
                         $task->delete();
                     } elseif (($entry['done'] ?? false) === true) {
-                        $this->patcher->complete($task, $stamp);
+                        $this->patcher->applyNote($task, $entry, $context->timezone);
                     } else {
-                        $entry = $this->refreshSchedule($entry, $task, $context);
-                        $this->patcher->patch($task, $entry, $context->timezone);
+                        $this->patcher->applyNote($task, $entry, $context->timezone);
                     }
                 }
                 if ($kind === 'create') {
@@ -76,7 +105,7 @@ class NoteApplier
             }
         }
 
-        return ['applied' => $applied, 'changes' => $changes];
+        return ['applied' => $applied, 'changes' => $changes, 'skipped' => $skipped];
     }
 
     /**
@@ -86,7 +115,11 @@ class NoteApplier
     private function refreshSchedule(array $entry, Task $task, NoteContext $context): array
     {
         if (isset($entry['due_date'])) {
-            $old = $task->due_date === null ? 'no date' : ($task->due_date === $context->local()->format('Y-m-d') ? 'today' : (new DateTimeImmutable((string) $task->due_date))->format('D j M'));
+            $old = match ($task->due_date) {
+                null => 'no date', $context->local()->format('Y-m-d') => 'today',
+                $context->local()->modify('+1 day')->format('Y-m-d') => 'tomorrow',
+                default => (new DateTimeImmutable((string) $task->due_date))->format('D j M'),
+            };
             $entry['label'] = 'Due '.(new DateTimeImmutable($entry['due_date']))->format('D j M').' (was '.$old.')';
         }
         if (isset($entry['start_time']) && $task->start_time !== null && $task->end_time !== null) {
