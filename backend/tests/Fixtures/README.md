@@ -1,5 +1,25 @@
 # Test the IM-32 splitter yourself
 
+First install the backend dependencies with `composer install` under PHP **8.4+** with Intl and Mbstring.
+
+The executable scenarios are defined in `backend/app/Console/Support/NoteSplitterScenarios.php`, and run through the application's `SplitNoteCommand`. They are not limited to a test file. Every CSV rule generates original, uppercase, padded and decomposed-accent inputs automatically. The generator also covers projects, control characters, empty notes, all separators, 29/30/31-item boundaries, post-merge counts, 4,999/5,000/5,001 Unicode-character limits, numeric commas and decimal times. Adding a rule creates new cases on the next run; adding an unknown rule category fails until scenario templates are supplied.
+
+From `backend/`, try any note or run the generated scenarios **without Pest**:
+
+```sh
+php artisan notes:split "buy milk, eggs and bread; call mum tomorrow"
+php artisan notes:split "buy ink, Research (2026) outline" --project="Research (2026)"
+php artisan notes:split --file="my-note.txt"
+php artisan notes:split --scenarios
+php artisan notes:split --scenarios --filter="numeric 9:30"
+```
+
+The command prints actual split items as JSON. Scenario mode reports PASS/FAIL by name, shows expected and actual output on failure, and returns a failing exit code if a case fails or the filter matches nothing. These checks use the real Laravel splitter; no database, web server or OpenRouter is required. Pest consumes the same generated scenarios as regression tests:
+
+```sh
+php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php
+```
+
 Use PHP **8.4+** with Intl and Mbstring. From the repository root:
 
 ```sh
