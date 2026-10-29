@@ -2,7 +2,14 @@ import { act, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AppShell, Dialog, Sheet, Toast } from "../../src/ui";
+import {
+  AccountScreen,
+  AppShell,
+  Dialog,
+  ScreenHeader,
+  Sheet,
+  Toast,
+} from "../../src/ui";
 
 const theme = readFileSync(join(process.cwd(), "src/ui/theme.css"), "utf8");
 
@@ -154,5 +161,42 @@ describe("No horizontal scroll from 320px (UX-23)", () => {
     expect(region.className).toContain("whitespace-normal");
     expect(region.className).toContain("px-gutter");
     expect(region.className).toContain("max-w-[600px]");
+  });
+});
+
+describe("Overline labels", () => {
+  it("never use Tailwind's `overline` class, which draws a line above the text", () => {
+    expect(theme).not.toMatch(/@utility overline/);
+    render(
+      <main>
+        <ScreenHeader
+          overline="Friday 23 October"
+          title="Inbox"
+          accountInitial="e"
+        />
+        <AccountScreen
+          name="example"
+          email="example@gmail.com"
+          settings={{
+            theme: "system",
+            weekStart: "mon",
+            timeFormat: "24h",
+            rememberDevice: true,
+          }}
+          onChange={() => {}}
+          onBack={() => {}}
+          onSignOut={() => {}}
+        />
+      </main>,
+    );
+    const labels = [
+      screen.getByText("Friday 23 October"),
+      ...screen.getAllByRole("heading", { level: 2 }),
+    ];
+    for (const label of labels) {
+      expect(label.className.split(/\s+/)).not.toContain("overline");
+      expect(label.className).toContain("text-overline");
+      expect(label.className).toContain("uppercase");
+    }
   });
 });

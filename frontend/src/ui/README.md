@@ -12,7 +12,7 @@ import { Button, Toast } from "@/ui";
 
 Set `data-theme="agendal-light"` or `"agendal-dark"` on `<html>` to force a theme; with no attribute the system setting decides.
 
-Token utilities beside daisyUI's roles: `bg-surface`, `bg-fill`, `border-control`, `border-separator`, `text-ink-secondary`, `text-ink-tertiary`, `bg-primary-tint`, `bg-danger-tint`, `bg-project-blue` …, the type scale (`text-display`, `text-title`, `text-heading`, `text-footnote`, `overline` …), radii (`rounded-field`, `rounded-tile`, `rounded-sheet` …) and `focus-ring`. Motion uses `motion-safe:` / `motion-reduce:` (UX-50–UX-52).
+Token utilities beside daisyUI's roles: `bg-surface`, `bg-fill`, `border-control`, `border-separator`, `text-ink-secondary`, `text-ink-tertiary`, `bg-primary-tint`, `bg-danger-tint`, `bg-project-blue` …, the type scale (`text-display`, `text-title`, `text-heading`, `text-footnote`, `text-overline` with `font-semibold uppercase` …; Tailwind's own `overline` class draws a line, so don't use it), radii (`rounded-field`, `rounded-tile`, `rounded-sheet` …), `focus-ring`, and `px-gutter` / `px-safe` for side margins with safe areas (UX-25). Motion uses `motion-safe:` / `motion-reduce:` (UX-50–UX-52).
 
 Components take every visible string as a prop (`closeLabel`, `actionLabel`, …). Pass text from the [copy catalog](../../../docs/01-product/copy-catalog.md), never inline strings.
 

@@ -230,15 +230,6 @@
   padding-right: env(safe-area-inset-right, 0px);
 }
 
-/* Overlines above screen titles and group labels */
-@utility overline {
-  font-size: var(--text-overline);
-  line-height: var(--text-overline--line-height);
-  letter-spacing: var(--text-overline--letter-spacing);
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;

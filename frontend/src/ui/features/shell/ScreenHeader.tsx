@@ -23,7 +23,9 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
     return (
       <header className="mb-5 pt-3">
         <div className="flex min-h-11 items-center justify-between">
-          <p className="overline m-0 text-ink-secondary">{overline ?? ""}</p>
+          <p className="text-overline font-semibold uppercase m-0 text-ink-secondary">
+            {overline ?? ""}
+          </p>
           <div className="flex items-center gap-1">
             <Link
               href={ROUTES.search}
