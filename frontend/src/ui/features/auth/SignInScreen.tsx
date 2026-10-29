@@ -4,6 +4,7 @@ import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { Link } from "../shell/Link";
+import { PasswordField } from "./PasswordField";
 import type { Navigate } from "../shell/routes";
 import { normalizeEmail } from "./validation";
 
@@ -44,7 +45,6 @@ export function SignInScreen({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [failure, setFailure] = useState<SignInFailure>({});
   const [busy, setBusy] = useState(false);
   const [locked, setLocked] = useState(secondsLeft(lockedUntil));
@@ -116,31 +116,20 @@ export function SignInScreen({
         onChange={(event) => setEmail(event.target.value)}
       />
       <div className="flex flex-col gap-1">
-        <TextField
+        <PasswordField
           ref={passwordRef}
           label={t("auth.password")}
-          type={showPassword ? "text" : "password"}
           autoComplete="current-password"
           value={password}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <div className="flex items-center justify-between">
-          <Link
-            href={forgotPasswordHref}
-            navigate={navigate}
-            className="focus-ring inline-flex min-h-11 items-center px-1 text-footnote text-primary"
-          >
-            {t("auth.forgot_password")}
-          </Link>
-          <button
-            type="button"
-            className="focus-ring min-h-11 px-2 text-footnote text-primary"
-            aria-pressed={showPassword}
-            onClick={() => setShowPassword((shown) => !shown)}
-          >
-            {t("auth.show_password")}
-          </button>
-        </div>
+        <Link
+          href={forgotPasswordHref}
+          navigate={navigate}
+          className="focus-ring inline-flex min-h-11 items-center self-start px-1 text-footnote text-primary"
+        >
+          {t("auth.forgot_password")}
+        </Link>
       </div>
       <label className="flex min-h-11 cursor-pointer items-center gap-3 text-callout text-ink">
         <input
