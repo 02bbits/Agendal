@@ -160,7 +160,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
         capture={{ onWrite: () => navigate(ROUTES.notes) }}
         sidebar={
-          AUTH_PATHS.includes(pathname)
+          PUBLIC_PATHS.includes(pathname)
             ? undefined
             : { accountName: user?.display_name ?? user?.email ?? "" }
         }
