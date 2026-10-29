@@ -12,6 +12,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
 - Full request/response contracts live in each module spec, section 7. This table is the index.
+- The response shapes are also JSON Schemas in [contracts/schemas](contracts/schemas/), with example responses in [contracts/fixtures](contracts/fixtures/). A fixture uses the schema its name starts with (`note-result-done.json` → `note-result.schema.json`). The backend test `tests/Unit/ContractsTest.php` checks every fixture.
 - Offline replays send a client id (notes) or per-field timestamps (task patches) ([ADR-003](decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md)).
 
 ## Resources

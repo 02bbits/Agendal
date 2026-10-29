@@ -1,0 +1,11 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+# Tests and Laravel stock config are left out: PHPStan cannot follow Pest closures.
+parameters:
+    level: 8
+    paths:
+        - app
+        - bootstrap/app.php
+        - database
+        - routes
