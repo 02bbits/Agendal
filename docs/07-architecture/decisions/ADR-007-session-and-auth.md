@@ -9,7 +9,7 @@
 - **First-party cookie session** (Laravel Sanctum SPA mode). The app and API share one registrable domain. There are no bearer tokens in JavaScript-readable storage.
 - **Cookie flags:** `Secure`, `HttpOnly`, `SameSite=Lax`. CSRF uses the `XSRF-TOKEN` cookie and an `X-XSRF-TOKEN` header on every state-changing request.
 - **Session ID** is regenerated on sign-in. A password reset or change ends every other session.
-- **Expiry.** With *Remember me* (default on): a 30-day rolling remember cookie. Without it: a browser-session cookie with a 2-hour idle timeout.
+- **Expiry.** With *Remember me* (default on): a remember cookie that lasts 30 days from sign-in. Without it: a browser-session cookie with a 2-hour idle timeout.
 - **Lockout ([AA-3](../../03-modules/AA-account-access.md#aa-3)).** 3 failures per **(email, IP)** → 60 s lock with a countdown. Anti-abuse limits that don't reveal account existence:
   - 30 attempts per IP per 10 min, across all emails
   - 20 failures per email per hour, across IPs, which triggers a 15-min lock

@@ -86,7 +86,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.5 Session lifetime
 
-- **Remember me on:** a rolling 30 days. **Off:** the browser session, plus a 2-hour idle timeout ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
+- **Remember me on:** 30 days from sign-in. **Off:** the browser session, plus a 2-hour idle timeout ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
 - **Expiry while using the app:** [UX-44](../01-product/ux-standards.md#ux-44). The queued data stays, tagged with the user ID, and syncs after the same user signs back in. If a *different* user signs in on that device, the old data is wiped first.
 
 ## 3. State matrix

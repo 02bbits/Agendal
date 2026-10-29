@@ -41,6 +41,8 @@ return [
         'web' => [
             'driver' => 'session',
             'provider' => 'users',
+            // ADR-007: Remember me lasts 30 days (minutes)
+            'remember' => 60 * 24 * 30,
         ],
     ],
 

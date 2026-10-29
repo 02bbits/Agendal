@@ -13,3 +13,13 @@ export {
 export { RouteEmptyState, EMPTY_STATE } from "./shell/EmptyScreens";
 export { Link, type LinkProps } from "./shell/Link";
 export { ROUTES, TABS, type TabId, type Navigate } from "./shell/routes";
+export {
+  CreateAccountScreen,
+  type CreateAccountScreenProps,
+  type SignUpFailure,
+} from "./auth/CreateAccountScreen";
+export {
+  signUpErrors,
+  normalizeEmail,
+  type SignUpErrors,
+} from "./auth/validation";
