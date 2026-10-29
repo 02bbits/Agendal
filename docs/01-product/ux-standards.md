@@ -24,7 +24,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text saves a draft on the device (restored next time it opens). Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
 | <a id="ux-14"></a>UX-14 | Tab order follows the visual order. Every control has a visible 2px focus ring ([NF-2](../05-quality/nfr.md#nf-2)). |
 
-## 3. Mobile viewport
+## 3. Viewport
 
 | ID | Rule |
 |---|---|
@@ -32,8 +32,10 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-21"></a>UX-21 | A focused field is scrolled into view above the keyboard. Inputs use 16px text or larger, so iOS doesn't zoom. |
 | <a id="ux-22"></a>UX-22 | Inputs set `inputmode`, `autocomplete` and `enterkeyhint` (email, current-password, new-password, search, done). |
 | <a id="ux-23"></a>UX-23 | No horizontal scroll from 320px wide. Long words in titles wrap (`overflow-wrap: anywhere`). |
-| <a id="ux-24"></a>UX-24 | From 600px wide the app stays one centred 600px column ([NF-8](../05-quality/nfr.md#nf-8)). The capture bar, tab bar, toasts and sheets are as wide as that column, not the window, and the paper background fills both sides. There is no separate tablet or desktop layout. |
+| <a id="ux-24"></a>UX-24 | Below 768px wide the app is one centred column up to 600px ([NF-8](../05-quality/nfr.md#nf-8)). The capture bar, tab bar, toasts and sheets are as wide as that column, not the window, and the paper background fills both sides. |
 | <a id="ux-25"></a>UX-25 | The side margin is at least 20px (`space-20`) at every width, plus `env(safe-area-inset-left)` / `env(safe-area-inset-right)` when a phone is held sideways. |
+| <a id="ux-27"></a>UX-27 | From 768px wide (tablet, laptop, a large phone held sideways) a 248px sidebar replaces the tab bar: the Agendal mark, Search, the four tabs with their counts, the project list, and the account at the bottom. The content is one column up to 712px with 40px side margins, centred in the space left. The capture bar stays at the bottom of that column; there is no tab bar. Sheets open as a centred dialog up to 560px wide. |
+| <a id="ux-28"></a>UX-28 | From 1280px wide a screen may show a 400px side panel on the right (task detail). Below 1280px the same content opens as its own screen. The sidebar and the side panel scroll on their own, so the capture bar and the panel never scroll away. |
 | <a id="ux-26"></a>UX-26 | Held sideways (a viewport about 320–420px tall), the bottom bars stay visible and the content scrolls above them; no fixed element covers a list row or a field. |
 
 ## 4. Truncation and formatting

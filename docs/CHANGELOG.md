@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-10-29
 
+- **Tablet and desktop layout.** [UX-24](01-product/ux-standards.md#ux-24) now covers widths below 768px only. New [UX-27](01-product/ux-standards.md#ux-27): from 768px a sidebar replaces the tab bar and the content is a column up to 712px. New [UX-28](01-product/ux-standards.md#ux-28): from 1280px an optional 400px side panel. [NF-8](05-quality/nfr.md#nf-8), the [theme guide](01-product/theme-guide.md) (sizes and platform) and the NF-8 row of the [traceability matrix](06-testing/traceability-matrix.md) follow.
 - **Layout beyond phone width.** [UX-24](01-product/ux-standards.md#ux-24): from 600px the app stays one centred 600px column, with the capture bar, tab bar, toasts and sheets inside it; no separate tablet or desktop layout. [UX-25](01-product/ux-standards.md#ux-25): side margin of at least 20px plus the side safe-area insets. [UX-26](01-product/ux-standards.md#ux-26): held sideways, the bottom bars stay visible and nothing covers a row or a field.
 - **Layout tests.** [Traceability matrix](06-testing/traceability-matrix.md), NF-8 row: adds the 768 and 1280 wide viewports and a sideways 667×375 check. [Test strategy](06-testing/test-strategy.md): the end-to-end row points to those viewports.
 - **This changelog** is added and linked from the [README](README.md).
