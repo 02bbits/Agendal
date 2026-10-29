@@ -23,7 +23,7 @@ final class NoteTimeParser
 
             return ['start' => $start, 'end' => null, 'phrase' => $start === null ? '' : $m[0], 'low' => $start === null];
         }
-        $defaults = ['tonight' => '20:00', 'tối nay' => '20:00', 'this evening' => '19:00', 'morning' => '09:00', 'sáng' => '09:00', 'noon' => '12:00', 'trưa' => '12:00', 'evening' => '19:00', 'chiều' => '15:00', 'tối' => '19:00'];
+        $defaults = ['tonight' => '20:00', 'tối nay' => '20:00', 'this evening' => '19:00', 'sáng nay' => '09:00', 'chiều nay' => '15:00', 'morning' => '09:00', 'sáng' => '09:00', 'noon' => '12:00', 'trưa' => '12:00', 'evening' => '19:00', 'chiều' => '15:00', 'tối' => '19:00'];
         foreach ($defaults as $word => $time) {
             if (preg_match(NoteVocabulary::pattern(preg_quote($word, '~')), $text)) {
                 $dayBound = in_array($word, ['tonight', 'tối nay', 'this evening'], true);

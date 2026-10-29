@@ -11,7 +11,7 @@ final class FieldExtractor
 {
     private const KEYWORDS = [
         'SQL Course' => 'sql|database|er diagram', 'Adv Web' => 'web', 'HCI' => 'hci',
-        'Portfolio' => 'portfolio', 'Personal' => 'gym|mum|groceries|mẹ|chợ',
+        'Portfolio' => 'portfolio', 'Personal' => 'gym|mum|groceries',
     ];
 
     public function __construct(
@@ -24,7 +24,9 @@ final class FieldExtractor
     public function extract(string $text, NoteContext $context): array
     {
         $time = $this->times->parse($text, $context);
-        $date = $this->dates->parse($text, $context, $time['start']);
+        $unaccentedVietnamese = preg_match('/[^\x00-\x7F]/u', $text) !== 1 && preg_match(NoteVocabulary::pattern('toi can|hop nhom|mua sua|lam bai|ngay mai|thu hai|toi nay'), $text) === 1;
+        $dateText = $unaccentedVietnamese ? (string) preg_replace(NoteVocabulary::pattern('mai|mot'), ' ', $text) : $text;
+        $date = $this->dates->parse($dateText, $context, $time['start']);
         $today = $context->local()->format('Y-m-d');
         $due = $date['date'];
         $title = $text;
@@ -79,7 +81,7 @@ final class FieldExtractor
         return [
             'title' => $title, 'due_date' => $due, 'start_time' => $time['start'], 'end_time' => $time['end'],
             'priority' => $priority, 'project_id' => $project, 'repeat' => $repeat, 'reminder' => $reminder,
-            'notes' => $notes, 'duplicate_of' => null, 'low_confidence' => $date['low'] || $time['low'] || $this->lowConfidence($text),
+            'notes' => $notes, 'duplicate_of' => null, 'low_confidence' => $date['low'] || $time['low'] || $unaccentedVietnamese || $this->lowConfidence($text),
         ];
     }
 
@@ -108,6 +110,10 @@ final class FieldExtractor
 
     private function lowConfidence(string $text): bool
     {
+        if (preg_match(NoteVocabulary::pattern('(?:every|mỗi)\s+\d+'), $text) || preg_match('~^(?:'.NoteVocabulary::VERBS.')$~iu', trim($text))) {
+            return true;
+        }
+
         // Unknown language/undecorated Vietnamese is preserved; numeric extraction still works.
         return ! NoteVocabulary::startsWithVerb($text)
             && preg_match(NoteVocabulary::pattern('sql|hci|gym|exam|quiz|report|meeting|stretch|dentist|haircut|rent|passport|database|adv web|portfolio'), $text) !== 1;
