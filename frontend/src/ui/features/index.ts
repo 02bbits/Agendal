@@ -24,7 +24,18 @@ export {
   type SignInFailure,
 } from "./auth/SignInScreen";
 export {
+  ForgotPasswordScreen,
+  RESEND_AFTER_MS,
+  type ForgotPasswordScreenProps,
+} from "./auth/ForgotPasswordScreen";
+export {
+  ResetPasswordScreen,
+  type ResetPasswordScreenProps,
+  type ResetFailure,
+} from "./auth/ResetPasswordScreen";
+export {
   signUpErrors,
+  isEmail,
   normalizeEmail,
   safeReturnPath,
   type SignUpErrors,
