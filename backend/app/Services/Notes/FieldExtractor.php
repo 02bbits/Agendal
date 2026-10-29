@@ -13,9 +13,6 @@ use DateTimeImmutable;
 /** Reads a task item's fields per NU §2.5; every phrase comes from the shared note rules CSV. */
 final class FieldExtractor
 {
-    /** NU-E16: a longer title is cut at the last word boundary and the rest starts the notes. */
-    private const TITLE_LIMIT = 200;
-
     public function __construct(
         private NoteDateParser $dates,
         private NoteTimeParser $times,
@@ -234,13 +231,18 @@ final class FieldExtractor
         return $title;
     }
 
-    /** @return array{0: string, 1: ?string} */
+    /**
+     * NU-E16: a longer title is cut at the last word boundary and the rest starts the notes.
+     *
+     * @return array{0: string, 1: ?string}
+     */
     private function cut(string $title): array
     {
-        if (mb_strlen($title) <= self::TITLE_LIMIT) {
+        $limit = (int) config('notes.title_limit');
+        if (mb_strlen($title) <= $limit) {
             return [$title, null];
         }
-        $boundary = mb_strrpos(mb_substr($title, 0, self::TITLE_LIMIT + 1), ' ') ?: self::TITLE_LIMIT;
+        $boundary = mb_strrpos(mb_substr($title, 0, $limit + 1), ' ') ?: $limit;
 
         return [trim(mb_substr($title, 0, $boundary)), trim(mb_substr($title, $boundary))];
     }

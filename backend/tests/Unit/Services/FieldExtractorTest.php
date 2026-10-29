@@ -170,8 +170,15 @@ it('maps keywords only to projects the user has, in any case (NU-E34)', function
 it('cuts long titles into notes (NU-E16)', function () {
     $fields = extractFields('read '.str_repeat('chapter ', 30));
 
-    expect(mb_strlen($fields->title))->toBeLessThanOrEqual(200)
+    expect(mb_strlen($fields->title))->toBeLessThanOrEqual(config('notes.title_limit'))
         ->and($fields->notes)->not->toBeNull();
+});
+
+it('reads the title limit from config', function () {
+    config(['notes.title_limit' => 10]);
+    $fields = extractFields('read chapter seven today');
+
+    expect([$fields->title, $fields->notes])->toBe(['Read', 'chapter seven']);
 });
 
 it('honors week start and note local time (T-NU-110)', function () {
