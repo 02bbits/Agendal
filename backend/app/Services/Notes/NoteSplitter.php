@@ -77,8 +77,8 @@ final class NoteSplitter
                     if (preg_match(self::VISIBLE, $fragment) !== 1) {
                         continue;
                     }
-                    $joins = $current !== '' && ($this->onlyModifiers($fragment)
-                        || (NoteVocabulary::startsWithVerb($this->withoutLeadIn($current)) && ! $this->startsNewTask($fragment, $projects)));
+                    $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment)
+                        || (NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($current)) && ! $this->startsNewTask($fragment, $projects)));
                     if ($joins) {
                         $current .= $comma.' '.$fragment;
                     } else {
@@ -104,13 +104,6 @@ final class NoteSplitter
         return $items;
     }
 
-    private function withoutLeadIn(string $text): string
-    {
-        $leads = NoteVocabulary::phrases('lead_in').'|'.NoteVocabulary::phrases('list_joiner').'|'.NoteVocabulary::phrases('leading_filler');
-
-        return (string) preg_replace('~^(?:(?:'.$leads.')\s+)+~iu', '', $text);
-    }
-
     /**
      * The fragment starts a task of its own (NU §2.2): it opens with a date, time, priority or repeat word
      * ("26 Oct meeting", "mai gọi mẹ"), a verb, a command or a skip prefix, or it names a project, one of the
@@ -121,8 +114,8 @@ final class NoteSplitter
      */
     private function startsNewTask(string $text, array $projects): bool
     {
-        $text = $this->withoutLeadIn($text);
-        if (preg_match('~^(?:'.$this->modifier().')~iu', $text) === 1) {
+        $text = NoteVocabulary::withoutLeadIn($text);
+        if (preg_match('~^(?:'.NoteVocabulary::modifierPattern().')~iu', $text) === 1) {
             return true;
         }
         $commands = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command', 'skip_prefix']));
@@ -143,28 +136,5 @@ final class NoteSplitter
         }
 
         return preg_match(NoteVocabulary::pattern($names), $text) === 1;
-    }
-
-    /**
-     * "tomorrow 9am", "không gấp": a fragment of only date, time, priority and repeat words describes the item
-     * before it, so it joins that item whatever it starts with.
-     */
-    private function onlyModifiers(string $fragment): bool
-    {
-        $rest = (string) preg_replace('~'.$this->modifier().'~iu', ' ', $this->withoutLeadIn($fragment));
-
-        return preg_match(self::VISIBLE, $rest) !== 1;
-    }
-
-    /**
-     * A date, time, priority or repeat word, possibly after a day number (26 Oct), a date or clock time (26/10,
-     * 9:30), a number with a time unit (9am, 9h30, 3 days), or an hour after "at" (at 14).
-     */
-    private function modifier(): string
-    {
-        return '(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.NoteVocabulary::modifiers().')(?![\p{L}\p{N}_])'
-            .'|\d+(?:(?:'.NoteVocabulary::phrases('time_separator').')\d+)+'
-            .'|\d+\s*(?:'.NoteVocabulary::phrases('time_unit').')(?![\p{L}_])'
-            .'|(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('time_prefix').')\s+\d{1,2}(?!\d)';
     }
 }

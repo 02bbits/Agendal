@@ -736,3 +736,48 @@ count_word,times
 count_word,viên
 count_word,cái
 count_word,người
+filler,hmm
+filler,hm
+filler,ok
+filler,okay
+filler,okie
+filler,k
+filler,test
+filler,thanks
+filler,thank you
+filler,thx
+filler,ty
+filler,cool
+filler,lol
+filler,haha
+filler,hihi
+filler,hehe
+filler,yes
+filler,yeah
+filler,yep
+filler,ừ
+filler,ừm
+filler,ờ
+filler,uhm
+filler,um
+filler,dạ
+filler,vâng
+filler,nhé
+filler,cảm ơn
+filler,thử
+reschedule_target,to
+reschedule_target,sang
+reschedule_target,qua
+reschedule_target,đến
+reschedule_target,tới
+complete_suffix_bare,done
+complete_suffix_bare,finished
+complete_suffix_bare,completed
+complete_suffix_bare,xong
+complete_suffix_bare,hoàn thành
+not_command,drop off
+not_command,drop by
+heading_suffix,:
+not_command,bỏ rác
+not_command,bỏ thư
+not_command,bỏ tiền

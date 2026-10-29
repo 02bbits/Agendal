@@ -49,6 +49,34 @@ final class NoteVocabulary
         return self::alternation(self::modifierValues());
     }
 
+    /**
+     * A date, time, priority or repeat word, possibly after a day number (26 Oct), a date or clock time (26/10,
+     * 9:30), a number with a time unit (9am, 9h30, 3 days), or an hour after "at" (at 14). No delimiters.
+     */
+    public static function modifierPattern(): string
+    {
+        return '(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.self::modifiers().')(?![\p{L}\p{N}_])'
+            .'|\d+(?:(?:'.self::phrases('time_separator').')\d+)+'
+            .'|\d+\s*(?:'.self::phrases('time_unit').')(?![\p{L}_])'
+            .'|(?<![\p{L}\p{N}_])(?:'.self::phrases('time_prefix').')\s+\d{1,2}(?!\d)';
+    }
+
+    /** "tomorrow 9am", "không gấp": nothing but date, time, priority and repeat words. */
+    public static function onlyModifiers(string $text): bool
+    {
+        $rest = (string) preg_replace('~'.self::modifierPattern().'~iu', ' ', self::withoutLeadIn($text));
+
+        return preg_match('/[\p{L}\p{N}\p{So}]/u', $rest) !== 1;
+    }
+
+    /** The text after any lead-ins ("please", "nhớ"), list joiners ("and") and leading fillers ("thì"). */
+    public static function withoutLeadIn(string $text): string
+    {
+        $leads = self::phrases('lead_in').'|'.self::phrases('list_joiner').'|'.self::phrases('leading_filler');
+
+        return (string) preg_replace('~^(?:(?:'.$leads.')\s+)+~iu', '', $text);
+    }
+
     /** Modifiers plus words that name a task ("quiz", "deadline"). */
     public static function signals(): string
     {
