@@ -200,3 +200,47 @@ describe("Overline labels", () => {
     }
   });
 });
+
+describe("One centred column above 600px (UX-24) and sideways phones (UX-26)", () => {
+  it("keeps the content and the bottom bars in one centred 600px column", () => {
+    render(
+      <AppShell tab="inbox" capture={{ onWrite: () => {} }}>
+        <p>content</p>
+      </AppShell>,
+    );
+    const column = screen.getByRole("main").parentElement!;
+    expect(column.className).toContain("max-w-[600px]");
+    expect(column.className).toContain("mx-auto");
+    expect(column.className).toContain("min-h-dvh");
+    const bars = screen.getByRole("navigation", {
+      name: "Main",
+    }).parentElement!;
+    expect(bars.className).toContain("max-w-[600px]");
+    expect(bars.className).toContain("mx-auto");
+    expect(bars.className).toContain("inset-x-0");
+  });
+
+  it("reserves room under the content so the bottom bars never cover it", () => {
+    render(
+      <AppShell tab="inbox" capture={{ onWrite: () => {} }}>
+        <p>content</p>
+      </AppShell>,
+    );
+    expect(screen.getByRole("main").className).toContain(
+      "pb-[calc(160px+env(safe-area-inset-bottom))]",
+    );
+  });
+
+  it("keeps sheets inside the column and within the visible height", () => {
+    render(
+      <Sheet open title="New task" closeLabel="Close" onClose={() => {}} />,
+    );
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.className).toContain("max-w-[600px]");
+    expect(sheet.className).toContain(
+      "max-h-[calc(100dvh-32px-var(--keyboard-inset,0px))]",
+    );
+    // daisyUI's modal-box scrolls its own overflow.
+    expect(sheet.className).toContain("modal-box");
+  });
+});
