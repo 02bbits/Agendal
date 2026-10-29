@@ -291,10 +291,6 @@ signal,urgent
 signal,asap
 signal,important
 signal,priority
-signal,deadline
-signal,exam
-signal,quiz
-signal,submit
 signal,whenever
 signal,someday
 signal,maybe
@@ -341,10 +337,6 @@ signal,gấp
 signal,khẩn
 signal,quan trọng
 signal,ưu tiên
-signal,hạn chót
-signal,thi
-signal,kiểm tra
-signal,nộp
 signal,khi nào rảnh
 signal,jan
 signal,feb
@@ -592,3 +584,12 @@ project_keyword:Personal,gym
 project_keyword:Personal,mum
 project_keyword:Personal,groceries
 leading_filler,thì
+priority_high_content,deadline
+priority_high_content,exam
+priority_high_content,quiz
+priority_high_content,submit
+priority_high_content,hạn chót
+priority_high_content,thi
+priority_high_content,kiểm tra
+priority_high_content,nộp
+signal,không gấp

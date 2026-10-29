@@ -66,8 +66,14 @@ final class NoteSplitterScenarios
                         [$value.' widget, gadget', [$value.' widget, gadget']],
                         ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
                     ],
-                    'complete_command', 'move_command', 'delete_command', 'skip_prefix', 'signal' => [
+                    'complete_command', 'move_command', 'delete_command', 'skip_prefix', 'priority_high_content' => [
                         ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
+                    ],
+                    // A date, time, priority or repeat word closing a fragment describes the list; opening one starts a task.
+                    'signal' => [
+                        ['buy widget, gadget '.$value, ['buy widget, gadget '.$value]],
+                        ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
+                        ['gadget, '.$value, ['gadget, '.$value]],
                     ],
                     'abbreviation' => [
                         ['meet '.$value.'. Lee. call mum', ['meet '.$value.'. Lee', 'call mum']],
@@ -95,11 +101,13 @@ final class NoteSplitterScenarios
                         ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],
                     ],
                     'time_unit' => [
-                        ['buy widget, gadget 3'.$value, ['buy widget', 'gadget 3'.$value]],
+                        ['buy widget, gadget 3'.$value, ['buy widget, gadget 3'.$value]],
+                        ['buy widget, 3'.$value.' call gadget', ['buy widget', '3'.$value.' call gadget']],
                         ['buy widget, 3 '.$value.'x', ['buy widget, 3 '.$value.'x']],
                     ],
                     'time_prefix' => [
-                        ['buy widget, gadget '.$value.' 9', ['buy widget', 'gadget '.$value.' 9']],
+                        ['buy widget, gadget '.$value.' 9', ['buy widget, gadget '.$value.' 9']],
+                        ['gadget, '.$value.' 9', ['gadget, '.$value.' 9']],
                     ],
                     'complete_suffix' => [
                         ['buy widget, gadget '.$value, ['buy widget', 'gadget '.$value]],
@@ -134,7 +142,8 @@ final class NoteSplitterScenarios
                         ['buy widget'.$value.' call mum'.$value, ['buy widget', 'call mum']],
                     ],
                     'time_separator' => [
-                        ['buy widget, gadget 9'.$value.'30', ['buy widget', 'gadget 9'.$value.'30']],
+                        ['buy widget, gadget 9'.$value.'30', ['buy widget, gadget 9'.$value.'30']],
+                        ['buy widget, 9'.$value.'30 gadget', ['buy widget', '9'.$value.'30 gadget']],
                     ],
                     'word_attachment' => [
                         ['email alpha'.$value.'then about widget', ['email alpha'.$value.'then about widget']],
