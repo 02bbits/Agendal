@@ -1,5 +1,6 @@
 export { AppShell, type AppShellProps } from "./shell/AppShell";
 export { TabBar, type TabBarProps } from "./shell/TabBar";
+export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export {
@@ -17,8 +18,25 @@ export {
   type SignUpFailure,
 } from "./auth/CreateAccountScreen";
 export {
+  SignInScreen,
+  type SignInScreenProps,
+  type SignInFailure,
+} from "./auth/SignInScreen";
+export {
+  ForgotPasswordScreen,
+  RESEND_AFTER_MS,
+  type ForgotPasswordScreenProps,
+} from "./auth/ForgotPasswordScreen";
+export {
+  ResetPasswordScreen,
+  type ResetPasswordScreenProps,
+  type ResetFailure,
+} from "./auth/ResetPasswordScreen";
+export {
   signUpErrors,
+  isEmail,
   normalizeEmail,
+  safeReturnPath,
   type SignUpErrors,
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";

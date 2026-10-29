@@ -19,6 +19,26 @@ import {
   type TabId,
   type ToastData,
 } from "@/ui";
+import { api } from "@/lib/api";
+
+/** The signed-in user, as `GET /user` returns it. */
+export interface SignedInUser {
+  id: number;
+  email: string;
+  display_name: string | null;
+}
+
+// Screens that work signed out. A signed-in user on the first three goes to Inbox; a reset
+// link still works on a device that is signed in (AA-E5).
+const SIGNED_OUT_PATHS: readonly string[] = [
+  ROUTES.signIn,
+  ROUTES.createAccount,
+  ROUTES.forgotPassword,
+];
+const PUBLIC_PATHS: readonly string[] = [
+  ...SIGNED_OUT_PATHS,
+  ROUTES.resetPassword,
+];
 
 const TAB_BY_PATH: Record<string, TabId> = {
   [ROUTES.inbox]: "inbox",
@@ -37,6 +57,8 @@ interface AppFrameValue {
   changeSettings: (patch: Partial<AccountSettings>) => void;
   /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
   showToast: (message: string) => void;
+  /** Null until the session check answers, or when signed out. */
+  user: SignedInUser | null;
 }
 
 const AppFrameContext = createContext<AppFrameValue | null>(null);
@@ -61,6 +83,33 @@ export function AppFrame({ children }: { children: ReactNode }) {
     timeFormat: "24h",
     rememberDevice: true,
   });
+  const [user, setUser] = useState<SignedInUser | null>(null);
+
+  // Auth gate (AA §1): a signed-out visit opens Sign in and comes back afterwards. Offline,
+  // the request fails and nothing moves, so the app keeps working from the device.
+  useEffect(() => {
+    let current = true;
+    const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
+    const publicPage = PUBLIC_PATHS.includes(pathname);
+    api("/user")
+      .then(async (response) => {
+        if (!current) return;
+        if (response.ok) {
+          setUser(await response.json());
+          if (signedOutPage) router.replace(ROUTES.inbox);
+        } else if (response.status === 401) {
+          setUser(null);
+          if (!publicPage)
+            router.replace(
+              `${ROUTES.signIn}?next=${encodeURIComponent(pathname)}`,
+            );
+        }
+      })
+      .catch(() => {});
+    return () => {
+      current = false;
+    };
+  }, [pathname, router]);
 
   const navigate = useCallback<Navigate>(
     (href) => {
@@ -98,8 +147,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [settings.theme]);
 
   const value = useMemo(
-    () => ({ navigate, back, settings, changeSettings, showToast }),
-    [navigate, back, settings, changeSettings, showToast],
+    () => ({ navigate, back, settings, changeSettings, showToast, user }),
+    [navigate, back, settings, changeSettings, showToast, user],
   );
   const tab = TAB_BY_PATH[pathname];
 
@@ -110,6 +159,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
         navigate={navigate}
         // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
         capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        sidebar={
+          PUBLIC_PATHS.includes(pathname)
+            ? undefined
+            : { accountName: user?.display_name ?? user?.email ?? "" }
+        }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}

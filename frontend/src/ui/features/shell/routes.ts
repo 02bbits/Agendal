@@ -10,6 +10,8 @@ export const ROUTES = {
   account: "/account",
   signIn: "/sign-in",
   createAccount: "/create-account",
+  forgotPassword: "/forgot-password",
+  resetPassword: "/reset-password",
   project: (id: string) => `/projects/${encodeURIComponent(id)}`,
   task: (id: string) => `/tasks/${encodeURIComponent(id)}`,
 } as const;
