@@ -40,3 +40,9 @@ it('validates real dates, enums, update fields and merged time ranges', function
     expect($result['dropped'])->toBe(3)->and($result['update'])->toHaveCount(1);
     expect($result['update'][0])->not->toHaveKey('due_date');
 });
+
+it('rejects a timed create without the required local date', function () {
+    $create = ['ref' => 'c1', 'title' => 'Call mum', 'due_date' => null, 'start_time' => '09:00', 'end_time' => null, 'priority' => 'low', 'project_id' => null, 'repeat' => 'never', 'reminder' => 'none', 'notes' => null, 'duplicate_of' => null];
+    $plan = array_replace(emptyNotePlan(), ['create' => [$create]]);
+    expect(app(PlanValidator::class)->validate($plan, [], [])['dropped'])->toBe(1);
+});

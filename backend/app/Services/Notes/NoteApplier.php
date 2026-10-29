@@ -8,6 +8,7 @@ use App\Http\Resources\TaskResource;
 use App\Models\Note;
 use App\Models\Project;
 use App\Models\Task;
+use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
@@ -26,6 +27,7 @@ class NoteApplier
      */
     public function apply(Note $note, array $plan, NoteContext $context): array
     {
+        $timezone = (string) User::query()->findOrFail($note->user_id)->timezone;
         $ids = array_values(array_filter([...array_column($plan['update'], 'task_id'), ...array_column($plan['delete'], 'task_id'), ...array_column($plan['create'], 'duplicate_of')]));
         $locked = Task::query()->where('user_id', $note->user_id)->where('done', false)->whereIn('id', $ids)->lockForUpdate()->get()->keyBy('id');
         $tasks = [];
@@ -81,13 +83,13 @@ class NoteApplier
                         $task->save();
                         $task->delete();
                     } elseif (($entry['done'] ?? false) === true) {
-                        $this->patcher->applyNote($task, $entry, $context->timezone);
+                        $this->patcher->applyNote($task, $entry, $timezone);
                     } else {
-                        $this->patcher->applyNote($task, $entry, $context->timezone);
+                        $this->patcher->applyNote($task, $entry, $timezone);
                     }
                 }
                 if ($kind === 'create') {
-                    $task->remind_at = $task->due_date === null ? null : $this->reminders->compute((string) $task->due_date, $task->start_time, (string) $task->reminder, $context->timezone);
+                    $task->remind_at = $task->due_date === null ? null : $this->reminders->compute((string) $task->due_date, $task->start_time, (string) $task->reminder, $timezone);
                     $task->save();
                 }
                 $task->refresh();
