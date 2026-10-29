@@ -102,6 +102,14 @@ export const pending = {
   "app.reminders": "Reminders",
   "app.install_app": "Install app",
   "app.sign_out": "Sign out",
+  "auth.create_title": "Create account",
+  "auth.create_button": "Create account",
+  "auth.email": "Email",
+  "auth.password": "Password",
+  "auth.show_password": "Show password",
+  "auth.email_invalid": "Enter a valid email address.",
+  "auth.have_account": "Already have an account?",
+  "auth.sign_in": "Sign in",
 } as const;
 
 export type PendingKey = keyof typeof pending;
