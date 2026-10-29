@@ -2,6 +2,8 @@
 
 First install the backend dependencies with `composer install` under PHP **8.4+** with Intl and Mbstring.
 
+`backend/phpunit.xml` sets the test process memory limit to **1 GB** (`1024M`), including when the local PHP default is unlimited. No extra memory flag is needed when running Pest.
+
 The dynamic scenario generator lives only in `backend/tests/Support/NoteSplitterScenarios.php`, under the `Tests\Support` namespace. Pest generates original, uppercase, padded and decomposed-accent cases from every CSV rule, plus project names, control characters, item/character limits, numeric commas and decimal times. Run them with:
 
 ```sh
@@ -9,15 +11,7 @@ php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php
 php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php --filter="numeric 9:30"
 ```
 
-Application code does not load the test generator. To inspect the real splitter output manually, use the normal application command from `backend/`:
-
-```sh
-php artisan notes:split "buy milk, eggs and bread; call mum tomorrow"
-php artisan notes:split "buy ink, Research (2026) outline" --project="Research (2026)"
-php artisan notes:split --file="my-note.txt"
-```
-
-These commands print split items as JSON. Generated scenario execution belongs to Pest and requires no database, web server or OpenRouter key.
+Application code does not load the test generator. Generated scenario execution belongs to Pest and requires no database, web server or OpenRouter key.
 
 Use PHP **8.4+** with Intl and Mbstring. From the repository root:
 
