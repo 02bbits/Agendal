@@ -51,8 +51,6 @@ jobs:
         run: composer analyse
       - name: Tests (Pest, Postgres)
         run: vendor/bin/pest
-      - name: Note corpus (rules and quotas)
-        run: php artisan notes:corpus
       - name: Dependency audit
         run: composer audit
 

@@ -1,6 +1,6 @@
 # Golden Note Corpus
 
-Run `cd backend && php artisan notes:corpus` for deterministic rules and quota checks. Pest also checks the fallback with a recorded provider fixture and provider failures. The nightly workflow runs `php artisan notes:corpus --mode=llm` with `OPENROUTER_API_KEY`, `NOTE_LLM_MODEL` and `NOTE_LLM_ENABLED=true`; it fails if no model proposal was accepted. No live provider call is made by CI.
+Run `cd backend && php vendor/bin/pest tests/Unit/Services/NoteCorpusTest.php` for the quota and every gate in rules mode, plus LLM mode against a recorded provider answer and provider failures; CI runs it with the rest of Pest. The nightly workflow also runs `vendor/bin/pest --group=corpus-live` with `NOTE_CORPUS_LIVE=true`, `OPENROUTER_API_KEY`, `NOTE_LLM_MODEL` and `NOTE_LLM_ENABLED=true`; it fails if no model proposal was accepted. No live provider call is made by CI. The runner lives in `backend/tests/Support/NoteCorpus.php`.
 
 The corpus has 429 cases: 51 seed examples, 357 variations of their objects and titles, and 21 additional edge decisions. Every non-edge category has at least eight cases; all 41 NU edges are represented. Persistence and provider-failure stages are verified by Pest alongside these plan examples.
 

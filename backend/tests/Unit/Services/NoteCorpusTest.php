@@ -1,50 +1,62 @@
 <?php
 
 use App\Services\Clock\ClockInterface;
-use App\Services\Notes\CorpusRunner;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Tests\Support\FrozenClock;
+use Tests\Support\NoteCorpus;
 use Tests\TestCase;
 
 uses(TestCase::class);
 
-it('meets corpus quotas and every rules accuracy gate', function () {
-    $runner = app(CorpusRunner::class);
-    $cases = $runner->load(glob(base_path('../docs/06-testing/note-corpus/*.yaml')));
-    expect($runner->quotas($cases))->toBe([]);
-    $report = $runner->run($cases);
+function corpusCases(): array
+{
+    return app(NoteCorpus::class)->load(NoteCorpus::files());
+}
+
+it('meets the corpus coverage quota', function () {
+    expect(app(NoteCorpus::class)->quotas(corpusCases()))->toBe([]);
+});
+
+it('meets every accuracy gate in rules mode', function () {
+    $report = app(NoteCorpus::class)->run(corpusCases());
+
     expect($report['failures'])->toBe([])->and($report['passed'])->toBeTrue();
 });
 
-it('meets LLM gates using recorded output plus provider-down fallback', function () {
+it('meets every LLM gate with a recorded provider answer and the provider down otherwise', function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
     config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model']);
     Cache::flush();
     Http::preventStrayRequests();
-    $fixture = json_decode(file_get_contents(__DIR__.'/../../Fixtures/note-llm-response.json'), true);
-    Http::fake(function (Request $request) use ($fixture) {
-        $input = json_decode($request['messages'][1]['content'], true);
+    $recorded = json_decode((string) file_get_contents(__DIR__.'/../../Fixtures/note-llm-response.json'), true);
+    Http::fake(function (Request $request) use ($recorded) {
+        $items = json_decode($request['messages'][1]['content'], true)['items'];
 
-        return count($input['items']) === 1 && $input['items'][0]['ref'] === 'i1' && $input['items'][0]['text'] === 'toi can mua sua'
-            ? Http::response($fixture) : Http::response([], 503);
+        return count($items) === 1 && $items[0]['text'] === 'toi can mua sua' ? Http::response($recorded) : Http::response([], 503);
     });
-    $runner = app(CorpusRunner::class);
-    $report = $runner->run($runner->load(glob(base_path('../docs/06-testing/note-corpus/*.yaml'))), 'llm');
+    $report = app(NoteCorpus::class)->run(corpusCases(), withModel: true);
+
     expect($report['llm_notes'])->toBeGreaterThan(0)->and($report['passed'])->toBeTrue(json_encode($report['gates']));
 });
 
-it('fails quotas and reports deliberately wrong command targets', function () {
-    $runner = app(CorpusRunner::class);
-    expect($runner->quotas([]))->not->toBe([]);
+it('fails the command gate on a wrong target', function () {
     $case = ['id' => 'wrong', 'categories' => ['command.complete'], 'note' => 'done email group', 'open_tasks' => [['id' => 't1', 'title' => 'Email group']], 'expect' => ['status' => 'done', 'update' => [['task' => 't2', 'done' => true]]]];
-    $report = $runner->run([$case]);
-    expect($report['passed'])->toBeFalse()->and($report['gates']['commands']['passed'])->toBeFalse();
+
+    expect(app(NoteCorpus::class)->run([$case])['gates']['commands']['passed'])->toBeFalse()
+        ->and(app(NoteCorpus::class)->quotas([]))->not->toBe([]);
 });
 
-it('fails LLM mode when no proposal was actually accepted', function () {
-    $runner = app(CorpusRunner::class);
+it('fails LLM mode when no proposal was accepted', function () {
     $case = ['id' => 'simple', 'categories' => ['naming.single'], 'note' => 'call dad', 'expect' => ['status' => 'done', 'create' => [['title' => 'Call dad']]]];
-    expect($runner->run([$case], 'llm')['passed'])->toBeFalse();
+
+    expect(app(NoteCorpus::class)->run([$case], withModel: true)['passed'])->toBeFalse();
 });
+
+// Nightly only (.github/workflows/note-corpus-nightly.yml): a real provider call, never in CI.
+it('meets every LLM gate with the live provider', function () {
+    $report = app(NoteCorpus::class)->run(corpusCases(), withModel: true);
+
+    expect($report['passed'])->toBeTrue(json_encode($report['gates']));
+})->group('corpus-live')->skip(fn (): bool => env('NOTE_CORPUS_LIVE') !== 'true', 'Set NOTE_CORPUS_LIVE=true with an OpenRouter key to run');

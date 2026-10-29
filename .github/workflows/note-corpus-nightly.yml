@@ -36,5 +36,7 @@ jobs:
       - run: composer install --no-interaction --no-progress
       - run: cp .env.example .env && php artisan key:generate
       - run: php artisan migrate --force
-      - run: php artisan notes:corpus --mode=rules
-      - run: php artisan notes:corpus --mode=llm
+      - run: vendor/bin/pest tests/Unit/Services/NoteCorpusTest.php
+      - run: vendor/bin/pest --group=corpus-live
+        env:
+          NOTE_CORPUS_LIVE: 'true'
