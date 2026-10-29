@@ -9,7 +9,10 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class TaskCandidates
 {
-    /** @param list<string> $words @return list<array<string, mixed>> */
+    /**
+     * @param  list<string>  $words
+     * @return list<array<string, mixed>>
+     */
     public function find(int $userId, array $words, bool $done = false): array
     {
         if ($words === []) {
@@ -24,7 +27,7 @@ final class TaskCandidates
         });
         $rank = implode(', ', array_fill(0, count($words), 'similarity(immutable_unaccent(title), immutable_unaccent(?))'));
 
-        return $query->orderByRaw('greatest('.$rank.') DESC', $words)->orderBy('id')->limit(50)->get()
+        return array_values($query->orderByRaw('greatest('.$rank.') DESC', $words)->orderBy('id')->limit(50)->get()
             ->map(function (Task $task): array {
                 $row = $task->getAttributes();
                 foreach (['start_time', 'end_time'] as $key) {
@@ -33,6 +36,6 @@ final class TaskCandidates
                 $row['done'] = (bool) $row['done'];
 
                 return $row;
-            })->all();
+            })->all());
     }
 }
