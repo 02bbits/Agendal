@@ -124,6 +124,7 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'unreadable time is low' => ['call mum 3pmish', ['lowConfidence' => true]],
     'a lone verb is low' => ['call tomorrow', ['title' => 'Call', 'lowConfidence' => true]],
     'NU-E28 other language is low' => ['comprar leche', ['lowConfidence' => true]],
+    'NU-E40 unaccented Vietnamese is low' => ['toi can mua sua', ['lowConfidence' => true, 'title' => 'Toi can mua sua', 'dueDate' => null]],
 ]);
 
 it('reads real notes the way a person means them', function (string $text, array $expected) {
