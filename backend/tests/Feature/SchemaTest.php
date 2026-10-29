@@ -1,10 +1,13 @@
 <?php
 
 use App\Models\User;
+use App\Services\Clock\ClockInterface;
+use Carbon\Carbon;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Tests\Support\FrozenClock;
 
 // IM-03: rules the database enforces on its own (data-model.md)
 uses(RefreshDatabase::class);
@@ -26,7 +29,13 @@ function insertProject(int $userId, string $name, array $overrides = []): string
 }
 
 beforeEach(function () {
+    $this->app->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
+    $this->travelTo(Carbon::instance(app(ClockInterface::class)->now()));
     $this->userId = User::factory()->create()->id;
+});
+
+afterEach(function () {
+    $this->travelBack();
 });
 
 it('T-TK-22: rejects an end time before or equal to the start time', function (string $end) {
@@ -47,7 +56,7 @@ it('rejects values outside each list', function (string $table, array $row, stri
         'projects' => fn () => insertProject($this->userId, 'HCI', $row),
         'notes' => fn () => DB::table('notes')->insert(array_merge([
             'id' => Str::uuid7(), 'user_id' => $this->userId, 'client_id' => Str::uuid(), 'text' => 'x',
-            'status' => 'new', 'written_at' => now(), 'written_tz' => 'Asia/Ho_Chi_Minh',
+            'status' => 'new', 'written_at' => app(ClockInterface::class)->now(), 'written_tz' => 'Asia/Ho_Chi_Minh',
         ], $row)),
     ];
 
@@ -78,7 +87,7 @@ it('bumps change_seq on every insert and update of synced rows', function () {
 });
 
 it('keeps project names unique per user, ignoring case and deleted projects', function () {
-    insertProject($this->userId, 'SQL Course', ['deleted_at' => now()]);
+    insertProject($this->userId, 'SQL Course', ['deleted_at' => app(ClockInterface::class)->now()]);
     insertProject($this->userId, 'SQL Course');
     insertProject(User::factory()->create()->id, 'SQL Course');
 
@@ -89,7 +98,7 @@ it('keeps project names unique per user, ignoring case and deleted projects', fu
 it('replays a note client_id only once per user', function () {
     $note = fn (int $userId) => DB::table('notes')->insert([
         'id' => Str::uuid7(), 'user_id' => $userId, 'client_id' => '6f1c2b3a-4d5e-4f7a-8b9c-0d1e2f3a4b01',
-        'text' => 'sql quiz monday', 'status' => 'new', 'written_at' => now(), 'written_tz' => 'Asia/Ho_Chi_Minh',
+        'text' => 'sql quiz monday', 'status' => 'new', 'written_at' => app(ClockInterface::class)->now(), 'written_tz' => 'Asia/Ho_Chi_Minh',
     ]);
 
     $note(User::factory()->create()->id);

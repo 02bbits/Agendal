@@ -209,6 +209,7 @@ export const catalog = {
   "error.slow": "This is taking longer than usual.",
   "error.rate_limited": "You're going a bit fast. Try again in {seconds} s.",
   "error.not_found": "This item no longer exists.",
+  "error.invalid": "Check the highlighted fields.",
 } as const;
 
 export type CatalogKey = keyof typeof catalog;

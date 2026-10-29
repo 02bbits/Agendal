@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\User;
+use App\Services\Clock\ClockInterface;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -15,7 +16,7 @@ class DatabaseSeeder extends Seeder
     /**
      * The demo account used across the docs (test strategy: test data).
      */
-    public function run(): void
+    public function run(ClockInterface $clock): void
     {
         $user = User::factory()->create([
             'email' => 'example@gmail.com',
@@ -37,8 +38,8 @@ class DatabaseSeeder extends Seeder
                 'user_id' => $user->id,
                 'name' => $name,
                 'colour' => $colour,
-                'created_at' => now(),
-                'updated_at' => now(),
+                'created_at' => $clock->now(),
+                'updated_at' => $clock->now(),
             ]);
         }
     }

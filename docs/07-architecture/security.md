@@ -23,7 +23,7 @@ Browser (untrusted) → API (trusted) → database. API → email, Web Push, Goo
 | Sign-in | **D** Lockout used to deny a victim access | <a id="sc-03"></a>SC-03 lock keyed by (email, IP), so the victim's own IP isn't locked | SEC-07 |
 | Sign-in / reset | **I** Account enumeration | <a id="sc-04"></a>SC-04 same message and timing for existing and unknown emails | SEC-08 |
 | Reset link | **S** Token guessing or reuse | <a id="sc-05"></a>SC-05 32-byte random, hashed, single use, 60 min, all sessions ended on use | SEC-09 |
-| Every request | **S** Session theft through XSS | <a id="sc-06"></a>SC-06 HttpOnly cookie (no token in JS). <a id="sc-07"></a>SC-07 strict CSP. <a id="sc-08"></a>SC-08 note and task text rendered as text only | SEC-01, SEC-20, SEC-21 |
+| Every request | **S** Session theft through XSS | <a id="sc-06"></a>SC-06 HttpOnly cookie (no token in JS). <a id="sc-07"></a>SC-07 CSP blocks framing and plugins ([NF-16](../05-quality/nfr.md#nf-16)). <a id="sc-08"></a>SC-08 note and task text rendered as text only | SEC-01, SEC-20, SEC-21 |
 | Every write | **T** CSRF | <a id="sc-09"></a>SC-09 SameSite=Lax plus XSRF header check | SEC-02 |
 | Every resource | **I/E** IDOR: reading or changing another user's note, task or project | <a id="sc-10"></a>SC-10 every query scoped by `user_id`. Policies on every route. Other users' IDs return 404 | SEC-12 ([authorization matrix](#authorization-matrix)) |
 | `POST /notes` | **D/$** Flooding to burn LLM budget | <a id="sc-11"></a>SC-11 rate limits. <a id="sc-12"></a>SC-12 per-user LLM cap plus a global budget and kill switch | SEC-10, SEC-42 |
