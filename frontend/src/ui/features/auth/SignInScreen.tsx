@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import { now } from "../../../lib/clock";
+import { useRef, useState, type FormEvent } from "react";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { Link } from "../shell/Link";
 import { PasswordField } from "./PasswordField";
+import { useSecondsLeft } from "./useSecondsLeft";
 import type { Navigate } from "../shell/routes";
 import { normalizeEmail } from "./validation";
 
@@ -30,9 +30,6 @@ export interface SignInScreenProps {
   offline?: boolean;
 }
 
-const secondsLeft = (until: number | null | undefined) =>
-  until ? Math.max(0, Math.ceil((until - now().getTime()) / 1000)) : 0;
-
 /** Sign in (AA-2, AA-3, AA §2.2). */
 export function SignInScreen({
   onSubmit,
@@ -47,30 +44,14 @@ export function SignInScreen({
   const [remember, setRemember] = useState(true);
   const [failure, setFailure] = useState<SignInFailure>({});
   const [busy, setBusy] = useState(false);
-  const [locked, setLocked] = useState(secondsLeft(lockedUntil));
-  const [unlocked, setUnlocked] = useState(false);
-  const passwordRef = useRef<HTMLInputElement>(null);
-
   // Live countdown from the server's retry_after (AA-3, T-AA-103)
-  useEffect(() => {
-    const tick = () => {
-      const left = secondsLeft(lockedUntil);
-      setLocked(left);
-      if (left === 0) {
-        clearInterval(timer);
-        if (lockedUntil) setUnlocked(true);
-      }
-    };
-    const timer = setInterval(tick, 1000);
-    tick();
-    return () => clearInterval(timer);
-  }, [lockedUntil]);
+  const locked = useSecondsLeft(lockedUntil);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!email || !password || busy || offline || locked > 0) return;
     setBusy(true);
-    setUnlocked(false);
     const result = await onSubmit({
       email: normalizeEmail(email),
       password,
@@ -106,7 +87,7 @@ export function SignInScreen({
         </div>
       )}
       <p role="status" className="sr-only">
-        {unlocked && locked === 0 ? t("auth.unlocked") : ""}
+        {lockedUntil && locked === 0 ? t("auth.unlocked") : ""}
       </p>
       <TextField
         label={t("auth.email")}

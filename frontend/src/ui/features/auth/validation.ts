@@ -23,12 +23,14 @@ export function safeReturnPath(next: string | null | undefined): string {
   return next;
 }
 
+export const isEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
+
 /** AA §2.1 and BR-17, the same rules the server checks. Length counts characters, not UTF-16 units (AA-E9). */
 export function signUpErrors(email: string, password: string): SignUpErrors {
   const errors: SignUpErrors = {};
   const normalized = normalizeEmail(email);
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized))
-    errors.email = "auth.email_invalid";
+  if (!isEmail(normalized)) errors.email = "auth.email_invalid";
 
   const length = [...password].length;
   if (length < 8 || length > 128) errors.password = "auth.password_rule";
