@@ -70,6 +70,10 @@ final class PlanValidator
             return false;
         }
         $merged = $kind === 'create' ? $entry : array_replace($tasks[$entry['task_id']], $entry);
+        if ($kind === 'create' && $merged['due_date'] === null
+            && ($merged['start_time'] !== null || $merged['repeat'] !== 'never' || $merged['reminder'] !== 'none')) {
+            return false;
+        }
         $start = $merged['start_time'] ?? null;
         $end = $merged['end_time'] ?? null;
 
