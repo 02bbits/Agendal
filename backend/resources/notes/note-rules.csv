@@ -257,131 +257,18 @@ task_verb,chuyển khoản
 task_verb,đổ xăng
 task_verb,cắt tóc
 task_verb,khám
-signal,today
-signal,tonight
-signal,tomorrow
-signal,tmr
-signal,day after tomorrow
-signal,monday
-signal,tuesday
-signal,wednesday
-signal,thursday
-signal,friday
-signal,saturday
-signal,sunday
-signal,mon
-signal,tue
-signal,wed
-signal,thu
-signal,fri
-signal,sat
-signal,sun
-signal,morning
-signal,noon
-signal,evening
-signal,next week
-signal,in a week
-signal,end of the week
-signal,end of the month
 signal,every
-signal,daily
-signal,weekly
-signal,monthly
-signal,urgent
-signal,asap
-signal,important
 signal,priority
-signal,deadline
-signal,exam
-signal,quiz
-signal,submit
-signal,whenever
-signal,someday
-signal,maybe
-signal,hôm nay
-signal,tối nay
-signal,mai
-signal,mốt
-signal,thứ 2
-signal,thứ 3
-signal,thứ 4
-signal,thứ 5
-signal,thứ 6
-signal,thứ 7
-signal,thứ hai
-signal,thứ ba
-signal,thứ tư
-signal,thứ năm
-signal,thứ sáu
-signal,thứ bảy
-signal,chủ nhật
-signal,cn
-signal,t2
-signal,t3
-signal,t4
-signal,t5
-signal,t6
-signal,t7
-signal,sáng
-signal,trưa
-signal,chiều
-signal,tối
-signal,tuần sau
-signal,tuần tới
-signal,cuối tuần
-signal,cuối tháng
 signal,mỗi
-signal,hằng ngày
-signal,hằng tuần
-signal,hằng tháng
-signal,hàng ngày
-signal,hàng tuần
-signal,hàng tháng
-signal,gấp
-signal,khẩn
-signal,quan trọng
-signal,ưu tiên
-signal,hạn chót
-signal,thi
-signal,kiểm tra
-signal,nộp
-signal,khi nào rảnh
-signal,jan
-signal,feb
-signal,mar
-signal,apr
-signal,may
-signal,jun
-signal,jul
-signal,aug
-signal,sep
-signal,oct
-signal,nov
-signal,dec
 signal,tháng
-signal,tues
-signal,thur
-signal,thurs
-signal,weds
-signal,tmrw
-signal,tmw
 signal,tonite
-signal,weekend
 signal,next month
-signal,afternoon
 signal,night
 signal,midnight
 signal,eod
-signal,ngày kia
 signal,tuần này
 signal,năm sau
 signal,đêm
-signal,hàng năm
-signal,hằng năm
-signal,yearly
-signal,annually
-signal,biweekly
-signal,critical
 abbreviation,Dr
 abbreviation,Prof
 abbreviation,Mr
@@ -592,3 +479,260 @@ project_keyword:Personal,gym
 project_keyword:Personal,mum
 project_keyword:Personal,groceries
 leading_filler,thì
+date_offset:0,today
+date_offset:0,hôm nay
+date_offset:0,tonight
+date_offset:0,tối nay
+date_offset:0,this evening
+date_offset:1,tomorrow
+date_offset:1,tmr
+date_offset:1,tmrw
+date_offset:1,tmw
+date_offset:1,ngày mai
+date_offset:1,mai
+date_offset:2,day after tomorrow
+date_offset:2,ngày mốt
+date_offset:2,mốt
+date_offset:2,ngày kia
+date_offset:7,in a week
+day_count_prefix,in
+day_count_unit,days
+day_count_unit,day
+day_count_unit,ngày
+day_count_suffix,nữa
+date_separator,/
+month_word,tháng
+week_next,next week
+week_next,tuần sau
+week_next,tuần tới
+week_end,end of the week
+week_end,end of week
+week_end,cuối tuần
+month_end,end of the month
+month_end,end of month
+month_end,cuối tháng
+date_preferred_prefix,by
+date_preferred_prefix,due
+date_preferred_prefix,on
+date_preferred_prefix,before
+date_preferred_prefix,vào
+date_preferred_prefix,trước
+weekday_this,this
+weekday_this_suffix,này
+weekday_next,next
+repeat_prefix,every
+repeat_prefix,mỗi
+repeat:daily,every day
+repeat:daily,daily
+repeat:daily,mỗi ngày
+repeat:daily,hằng ngày
+repeat:daily,hàng ngày
+repeat:weekly,every week
+repeat:weekly,weekly
+repeat:weekly,mỗi tuần
+repeat:weekly,hằng tuần
+repeat:weekly,hàng tuần
+repeat:monthly,every month
+repeat:monthly,monthly
+repeat:monthly,mỗi tháng
+repeat:monthly,hằng tháng
+repeat:monthly,hàng tháng
+repeat_unsupported,every other
+repeat_unsupported,every weekday
+repeat_unsupported,every weekend
+repeat_unsupported,every year
+repeat_unsupported,biweekly
+repeat_unsupported,yearly
+repeat_unsupported,annually
+repeat_unsupported,hằng năm
+repeat_unsupported,hàng năm
+repeat_unsupported,mỗi năm
+repeat_unsupported,cách ngày
+repeat_unsupported,cách tuần
+time_word:09:00,morning
+time_word:09:00,sáng
+time_word:09:00,sáng nay
+time_word:09:00,buổi sáng
+time_word:12:00,noon
+time_word:12:00,trưa
+time_word:12:00,trưa nay
+time_word:12:00,buổi trưa
+time_word:15:00,afternoon
+time_word:15:00,chiều
+time_word:15:00,chiều nay
+time_word:15:00,buổi chiều
+time_word:19:00,evening
+time_word:19:00,this evening
+time_word:19:00,tối
+time_word:19:00,buổi tối
+time_word:20:00,tonight
+time_word:20:00,tối nay
+day_bound,tonight
+day_bound,tối nay
+day_bound,this evening
+not_time_word,tối ưu
+not_time_word,tối thiểu
+not_time_word,tối đa
+not_time_word,tối tân
+not_time_word,sáng tạo
+not_time_word,sáng kiến
+not_time_word,sáng suốt
+not_time_word,sáng lập
+not_time_word,ánh sáng
+not_time_word,chiều dài
+not_time_word,chiều cao
+not_time_word,chiều rộng
+not_time_word,chiều sâu
+not_time_word,chiều chuộng
+period_am,am
+period_am,a.m
+period_am,sáng
+period_pm,pm
+period_pm,p.m
+period_pm,chiều
+period_pm,tối
+hour_suffix,h
+hour_suffix,giờ
+minute_separator,:
+minute_separator,.
+hour_prefix,at
+hour_prefix,lúc
+range_prefix,from
+range_prefix,từ
+range_separator,-
+range_separator,–
+range_separator,to
+range_separator,đến
+range_separator,tới
+priority_high,urgent
+priority_high,asap
+priority_high,important
+priority_high,high priority
+priority_high,critical
+priority_high,gấp
+priority_high,khẩn
+priority_high,khẩn cấp
+priority_high,quan trọng
+priority_high,ưu tiên
+priority_high_content,deadline
+priority_high_content,exam
+priority_high_content,quiz
+priority_high_content,submit
+priority_high_content,hạn chót
+priority_high_content,thi
+priority_high_content,kiểm tra
+priority_high_content,nộp
+priority_low,low priority
+priority_low,whenever
+priority_low,someday
+priority_low,maybe
+priority_low,không gấp
+priority_low,khi nào rảnh
+reminder_day_before,exam
+reminder_day_before,quiz
+reminder_day_before,thi
+reminder_day_before,kiểm tra
+acronym,SQL
+acronym,HCI
+acronym,CV
+acronym,UI
+acronym,API
+acronym,PDF
+name_title,chị
+name_title,anh
+name_title,em
+name_title,bạn
+name_title,cô
+name_title,chú
+name_title,bác
+name_title,ông
+name_title,bà
+name_title,thầy
+name_title,cậu
+name_title,dì
+vietnamese_ascii_word,mai
+vietnamese_ascii_word,cn
+vietnamese_ascii_word,t2
+vietnamese_ascii_word,t3
+vietnamese_ascii_word,t4
+vietnamese_ascii_word,t5
+vietnamese_ascii_word,t6
+vietnamese_ascii_word,t7
+vietnamese_ascii_word,thi
+weekday:1,monday
+weekday:1,mon
+weekday:1,thứ hai
+weekday:1,thứ 2
+weekday:1,t2
+weekday:2,tuesday
+weekday:2,tue
+weekday:2,tues
+weekday:2,thứ ba
+weekday:2,thứ 3
+weekday:2,t3
+weekday:3,wednesday
+weekday:3,wed
+weekday:3,weds
+weekday:3,thứ tư
+weekday:3,thứ 4
+weekday:3,t4
+weekday:4,thursday
+weekday:4,thu
+weekday:4,thur
+weekday:4,thurs
+weekday:4,thứ năm
+weekday:4,thứ 5
+weekday:4,t5
+weekday:5,friday
+weekday:5,fri
+weekday:5,thứ sáu
+weekday:5,thứ 6
+weekday:5,t6
+weekday:6,saturday
+weekday:6,sat
+weekday:6,thứ bảy
+weekday:6,thứ 7
+weekday:6,t7
+weekday:0,sunday
+weekday:0,sun
+weekday:0,chủ nhật
+weekday:0,cn
+month:1,jan
+month:1,january
+month:2,feb
+month:2,february
+month:3,mar
+month:3,march
+month:4,apr
+month:4,april
+month:5,may
+month:6,jun
+month:6,june
+month:7,jul
+month:7,july
+month:8,aug
+month:8,august
+month:9,sep
+month:9,september
+month:9,sept
+month:10,oct
+month:10,october
+month:11,nov
+month:11,november
+month:12,dec
+month:12,december
+date_day_word,ngày
+period_am,morning
+period_pm,afternoon
+period_pm,evening
+period_pm,tonight
+weekend,this weekend
+weekend,the weekend
+weekend,weekend
+project_keyword:Personal,mẹ
+project_keyword:Personal,đi chợ
+count_word,lần
+count_word,times
+count_word,viên
+count_word,cái
+count_word,người

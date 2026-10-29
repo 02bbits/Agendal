@@ -33,22 +33,70 @@ final class NoteVocabulary
         return implode('|', array_map(fn (string $phrase): string => str_replace("'", "['’]", (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~'))), $values));
     }
 
+    /** Categories whose words give a comma fragment a signal of its own (NU §2.2): dates, times, priority, repeat. */
+    public const SIGNAL_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_high_content', 'priority_low'];
+
+    public const SIGNAL_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
+
+    public static function signals(): string
+    {
+        $phrases = array_map(self::phrases(...), self::SIGNAL_CATEGORIES);
+        foreach (self::SIGNAL_FAMILIES as $family) {
+            $phrases = [...$phrases, ...array_values(self::family($family))];
+        }
+
+        return implode('|', $phrases);
+    }
+
     /**
-     * Keyword phrases per project, from "project_keyword:<Project>" categories.
+     * Phrases per key of "<family>:<key>" categories, e.g. family('weekday') => ['1' => 'monday|mon|…', …].
      *
      * @return array<string, string>
      */
-    public static function projectKeywords(): array
+    public static function family(string $family): array
     {
         self::$rules ??= self::load();
-        $keywords = [];
+        $phrases = [];
         foreach (array_keys(self::$rules) as $category) {
-            if (str_starts_with($category, 'project_keyword:')) {
-                $keywords[substr($category, strlen('project_keyword:'))] = self::phrases($category);
+            if (str_starts_with($category, $family.':')) {
+                $phrases[substr($category, strlen($family) + 1)] = self::phrases($category);
             }
         }
 
-        return $keywords;
+        return $phrases;
+    }
+
+    /**
+     * Every occurrence of a family's phrases, in text order; a longer phrase wins at the same spot.
+     *
+     * @return list<array{key: string, phrase: string, offset: int}>
+     */
+    public static function findAll(string $family, string $text): array
+    {
+        $found = [];
+        foreach (self::family($family) as $key => $phrases) {
+            preg_match_all(self::pattern($phrases), $text, $matches, PREG_OFFSET_CAPTURE);
+            foreach ($matches[0] as [$phrase, $offset]) {
+                $known = $found[$offset] ?? null;
+                if ($known === null || strlen($phrase) > strlen($known['phrase'])) {
+                    $found[$offset] = ['key' => (string) $key, 'phrase' => $phrase, 'offset' => $offset];
+                }
+            }
+        }
+        ksort($found);
+
+        return array_values($found);
+    }
+
+    /** @return array<string, string> project name => keyword phrases */
+    public static function projectKeywords(): array
+    {
+        return self::family('project_keyword');
+    }
+
+    public static function contains(string $category, string $text): bool
+    {
+        return preg_match(self::pattern(self::phrases($category)), $text) === 1;
     }
 
     /** @return list<string> */

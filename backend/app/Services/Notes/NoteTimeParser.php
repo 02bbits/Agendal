@@ -6,54 +6,173 @@ namespace App\Services\Notes;
 
 final class NoteTimeParser
 {
-    /** @return array{start: ?string, end: ?string, phrase: string, low: bool} */
-    public function parse(string $text, NoteContext $context): array
+    /** NU-E7: a bare hour from 1 to this one means the afternoon ("at 2" → 14:00); 7–11 stay morning. */
+    private const LAST_AFTERNOON_BARE_HOUR = 6;
+
+    private const HALF_DAY = 12;
+
+    public function parse(string $text, NoteContext $context): ParsedTime
     {
-        $token = '\d{1,2}(?:[:.]\d{2}|h\d{0,2}|\s*giờ(?:\s*\d{2})?)?\s*(?:am|pm|sáng|chiều|tối)?';
-        if (preg_match('~(?<!\d)(?:from\s+)?('.$token.')\s*(?:[-–]|\bto\b|đến)\s*('.$token.')(?!\d)~iu', $text, $m)) {
-            $period = preg_match('/(am|pm|sáng|chiều|tối)/iu', $m[2], $p) ? $p[1] : null;
-            $start = $this->time($m[1], $period);
-            $end = $this->time($m[2]);
-
-            return ['start' => $start, 'end' => $end !== null && $start !== null && $end > $start ? $end : null, 'phrase' => $m[0], 'low' => $start === null || $end === null];
+        $readable = (string) preg_replace(NoteVocabulary::pattern(NoteVocabulary::phrases('not_time_word')), '', $text);
+        $dayPeriod = $this->dayPeriod($readable);
+        $clock = $this->range($readable, $dayPeriod) ?? $this->clockTime($readable, $dayPeriod);
+        if ($clock === null) {
+            return $this->timeWord($readable, $context) ?? new ParsedTime(unreadable: $this->looksLikeTime($readable));
         }
-        $explicit = '(?:\d{1,2}(?:[:.]\d{2}|h\d{0,2}|\s*giờ(?:\s*\d{2})?)\s*(?:am|pm|sáng|chiều|tối)?|\d{1,2}\s*(?:am|pm)|at\s+\d{1,2})';
-        if (preg_match('~(?<![\p{L}\p{N}])(?:lúc\s+)?('.$explicit.')(?![\p{L}\p{N}])~iu', $text, $m)) {
-            $start = $this->time($m[1]);
+        // "chiều mai 2-4h", "Monday morning 9am": the day-period words belong to the time, not the title.
+        $words = array_column(NoteVocabulary::findAll('time_word', $readable), 'phrase');
 
-            return ['start' => $start, 'end' => null, 'phrase' => $start === null ? '' : $m[0], 'low' => $start === null];
-        }
-        $defaults = ['tonight' => '20:00', 'tối nay' => '20:00', 'this evening' => '19:00', 'sáng nay' => '09:00', 'chiều nay' => '15:00', 'morning' => '09:00', 'sáng' => '09:00', 'noon' => '12:00', 'trưa' => '12:00', 'evening' => '19:00', 'chiều' => '15:00', 'tối' => '19:00'];
-        foreach ($defaults as $word => $time) {
-            if (preg_match(NoteVocabulary::pattern(preg_quote($word, '~')), $text)) {
-                $dayBound = in_array($word, ['tonight', 'tối nay', 'this evening'], true);
-
-                return ['start' => $dayBound && $time <= $context->local()->format('H:i') ? null : $time, 'end' => null, 'phrase' => $word, 'low' => false];
-            }
-        }
-
-        return ['start' => null, 'end' => null, 'phrase' => '', 'low' => preg_match('/\d+(?:am|pm)\p{L}+/iu', $text) === 1];
+        return new ParsedTime($clock->start, $clock->end, [...$clock->phrases, ...$words], $clock->unreadable, $clock->couldBeEvening);
     }
 
-    private function time(string $text, ?string $inheritedPeriod = null): ?string
+    /** A standalone "chiều", "tối", "morning" gives am/pm to a time written without it ("tối 7-9h" → 19:00). */
+    private function dayPeriod(string $text): string
     {
-        if (! preg_match('/(\d{1,2})(?:[:.h]\s*(\d{2})|\s*giờ(?:\s*(\d{2}))?)?\s*(am|pm|sáng|chiều|tối)?/iu', $text, $m)) {
-            return null;
-        }
-        $hour = (int) $m[1];
-        $minute = (int) (($m[2] ?? '') !== '' ? $m[2] : ($m[3] ?? 0));
-        $period = mb_strtolower(($m[4] ?? '') ?: ($inheritedPeriod ?? ''));
-        if ($hour > 23 || $minute > 59 || ($period !== '' && ($hour < 1 || $hour > 12))) {
-            return null;
-        }
-        if (in_array($period, ['pm', 'chiều', 'tối'], true) && $hour < 12) {
-            $hour += 12;
-        } elseif (in_array($period, ['am', 'sáng'], true) && $hour === 12) {
-            $hour = 0;
-        } elseif ($period === '' && $hour >= 1 && $hour <= 6 && ! preg_match('/[:.h]|giờ/u', $text)) {
-            $hour += 12;
+        $periods = NoteVocabulary::pattern($this->periods());
+
+        return preg_match($periods, $text, $match) === 1 ? $match[0] : '';
+    }
+
+    /** NU-E30: "2-4pm", "14:00–16:00", "from 2 to 4". Plain number ranges ("pages 10-20") are not times. */
+    private function range(string $text, string $dayPeriod): ?ParsedTime
+    {
+        $token = $this->token();
+        $pattern = '~(?<![\p{L}\p{N}])(?:(?<prefix>'.NoteVocabulary::phrases('range_prefix').')\s+)?(?<from>'.$token.')\s*(?:'.NoteVocabulary::phrases('range_separator').')\s*(?<to>'.$token.')(?![\p{L}\p{N}])~iu';
+        preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
+        foreach ($matches as $match) {
+            $from = $this->clock($match['from'], $dayPeriod);
+            $to = $this->clock($match['to'], $dayPeriod);
+            if ($match['prefix'] === '' && ! $from['marked'] && ! $to['marked']) {
+                continue;
+            }
+            if (! $this->valid($from) || ! $this->valid($to)) {
+                return new ParsedTime(unreadable: true);
+            }
+            $start = $this->startBefore($from, $to);
+            $end = $this->format($to);
+
+            return new ParsedTime($start, $end > $start ? $end : null, [$match[0]]);
         }
 
-        return sprintf('%02d:%02d', $hour, $minute);
+        return null;
+    }
+
+    /** "9am", "6:30pm", "14h", "9 giờ 30", "at 14". A number with no time marker is not a time. */
+    private function clockTime(string $text, string $dayPeriod): ?ParsedTime
+    {
+        $pattern = '~(?<![\p{L}\p{N}])(?:(?<prefix>'.NoteVocabulary::phrases('hour_prefix').')\s+)?(?<time>'.$this->token().')(?![\p{L}\p{N}])~iu';
+        preg_match_all($pattern, $text, $matches, PREG_SET_ORDER);
+        foreach ($matches as $match) {
+            $clock = $this->clock($match['time'], $dayPeriod);
+            if (! $clock['marked'] && $match['prefix'] === '') {
+                continue;
+            }
+            if (! $this->valid($clock)) {
+                return new ParsedTime(unreadable: true);
+            }
+
+            return new ParsedTime($this->format($clock), phrases: [$match[0]], couldBeEvening: $this->couldBeEvening($clock));
+        }
+
+        return null;
+    }
+
+    /** "morning" (09:00), "tối nay" (20:00). Day-bound words written after their time keep no time (NU-E1). */
+    private function timeWord(string $text, NoteContext $context): ?ParsedTime
+    {
+        $words = NoteVocabulary::findAll('time_word', $text);
+        if ($words === []) {
+            return null;
+        }
+        ['key' => $time, 'phrase' => $phrase] = $words[0];
+        $passed = NoteVocabulary::contains('day_bound', $phrase) && $time <= $context->clock();
+
+        return new ParsedTime($passed ? null : $time, phrases: array_column($words, 'phrase'));
+    }
+
+    private function token(): string
+    {
+        return '\d{1,2}(?:(?:'.NoteVocabulary::phrases('minute_separator').')\d{2}|\s*(?:'.NoteVocabulary::phrases('hour_suffix').')(?:\s*\d{2})?)?(?:\s*(?:'.$this->periods().'))?';
+    }
+
+    private function periods(): string
+    {
+        return NoteVocabulary::phrases('period_am').'|'.NoteVocabulary::phrases('period_pm');
+    }
+
+    /** @return array{hour: int, minute: int, period: string, bare: bool, marked: bool} */
+    private function clock(string $token, string $dayPeriod): array
+    {
+        $pattern = '~^(?<hour>\d{1,2})(?:(?:'.NoteVocabulary::phrases('minute_separator').')(?<minute>\d{2})|\s*(?<suffix>'.NoteVocabulary::phrases('hour_suffix').')(?:\s*(?<suffixMinute>\d{2}))?)?(?:\s*(?<period>'.$this->periods().'))?$~iu';
+        preg_match($pattern, trim($token), $m);
+        $hour = (int) ($m['hour'] ?? 0);
+        $hasMinutes = ($m['minute'] ?? '') !== '' || ($m['suffixMinute'] ?? '') !== '';
+        $ownPeriod = $m['period'] ?? '';
+        // A 24-hour time ("chiều nay lúc 14h") already says which half of the day it is.
+        $period = $ownPeriod !== '' ? $ownPeriod : ($hour <= self::HALF_DAY ? $dayPeriod : '');
+
+        return [
+            'hour' => $hour,
+            'minute' => (int) (($m['minute'] ?? '') ?: ($m['suffixMinute'] ?? 0)),
+            'period' => $period,
+            'bare' => ! $hasMinutes && $period === '',
+            'marked' => $hasMinutes || ($m['suffix'] ?? '') !== '' || $ownPeriod !== '',
+        ];
+    }
+
+    /** @param array{hour: int, minute: int, period: string, bare: bool, marked: bool} $clock */
+    private function valid(array $clock): bool
+    {
+        if ($clock['hour'] > 23 || $clock['minute'] > 59) {
+            return false;
+        }
+
+        return $clock['period'] === '' || ($clock['hour'] >= 1 && $clock['hour'] <= self::HALF_DAY);
+    }
+
+    /**
+     * A start without am/pm takes the end's ("2-4pm"), unless that puts it after the end ("10-2pm" → 10:00).
+     *
+     * @param  array{hour: int, minute: int, period: string, bare: bool, marked: bool}  $from
+     * @param  array{hour: int, minute: int, period: string, bare: bool, marked: bool}  $to
+     */
+    private function startBefore(array $from, array $to): string
+    {
+        if ($from['period'] !== '' || $to['period'] === '') {
+            return $this->format($from);
+        }
+        $shared = $this->format([...$from, 'period' => $to['period']]);
+
+        return $shared < $this->format($to) ? $shared : $this->format($from);
+    }
+
+    /** @param array{hour: int, minute: int, period: string, bare: bool, marked: bool} $clock */
+    private function format(array $clock): string
+    {
+        $hour = $clock['hour'];
+        if ($clock['period'] !== '') {
+            $afternoon = NoteVocabulary::contains('period_pm', $clock['period']);
+            $hour = $hour % self::HALF_DAY + ($afternoon ? self::HALF_DAY : 0);
+        } elseif ($clock['bare'] && $hour >= 1 && $hour <= self::LAST_AFTERNOON_BARE_HOUR) {
+            $hour += self::HALF_DAY;
+        }
+
+        return sprintf('%02d:%02d', $hour, $clock['minute']);
+    }
+
+    /**
+     * "at 7" read as 07:00 by NU-E7 could also mean 19:00.
+     *
+     * @param  array{hour: int, minute: int, period: string, bare: bool, marked: bool}  $clock
+     */
+    private function couldBeEvening(array $clock): bool
+    {
+        return $clock['bare'] && $clock['hour'] > self::LAST_AFTERNOON_BARE_HOUR && $clock['hour'] < self::HALF_DAY;
+    }
+
+    /** "3pmish": a time-like token the rules can't read makes the item low confidence. */
+    private function looksLikeTime(string $text): bool
+    {
+        return preg_match('~\d\s*(?:'.$this->periods().')\p{L}~iu', $text) === 1;
     }
 }

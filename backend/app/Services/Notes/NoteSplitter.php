@@ -119,7 +119,7 @@ final class NoteSplitter
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')$~iu', $text) === 1) {
             return true;
         }
-        $signals = NoteVocabulary::phrases('signal');
+        $signals = NoteVocabulary::signals();
         $owned = array_map(mb_strtolower(...), $projects);
         foreach ($projects as $project) {
             $signals .= '|'.preg_quote($project, '~');
