@@ -11,12 +11,14 @@ class ApiError extends Exception
 {
     /**
      * @param  array<string, array<string>>  $fields
+     * @param  array{retry_after?: int}  $extra  Merged into `error`. `retry_after` also sets the Retry-After header.
      */
     public function __construct(
         public readonly string $errorCode,
         string $message,
         public readonly int $status = 422,
         public readonly array $fields = [],
+        public readonly array $extra = [],
     ) {
         parent::__construct($message);
     }
@@ -27,8 +29,9 @@ class ApiError extends Exception
         if ($this->fields !== []) {
             $error['fields'] = $this->fields;
         }
+        $headers = isset($this->extra['retry_after']) ? ['Retry-After' => (string) $this->extra['retry_after']] : [];
 
-        return response()->json(['error' => $error], $this->status);
+        return response()->json(['error' => $error + $this->extra], $this->status, $headers);
     }
 
     // A client error, not a fault: nothing to log

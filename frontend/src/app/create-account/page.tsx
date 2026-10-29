@@ -1,28 +1,15 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import { timeZone } from "@/lib/clock";
+import { useOffline } from "@/lib/online";
 import { CreateAccountScreen, ROUTES, t, type SignUpFailure } from "@/ui";
 import { useAppFrame } from "../AppFrame";
-
-const subscribeOnline = (onChange: () => void) => {
-  window.addEventListener("online", onChange);
-  window.addEventListener("offline", onChange);
-  return () => {
-    window.removeEventListener("online", onChange);
-    window.removeEventListener("offline", onChange);
-  };
-};
 
 /** Create account (IM-11): POST /auth/register, then Inbox with the welcome toast. */
 export default function CreateAccountPage() {
   const { navigate, showToast } = useAppFrame();
-  const offline = useSyncExternalStore(
-    subscribeOnline,
-    () => !navigator.onLine,
-    () => false,
-  );
+  const offline = useOffline();
 
   async function register(values: {
     email: string;

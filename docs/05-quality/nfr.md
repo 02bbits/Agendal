@@ -42,6 +42,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 | Sign-in | 3 failures → 60 s lock ([AA-3](../03-modules/AA-account-access.md#aa-3)). 30 attempts / 10 min per IP. 20 failures / hour per email → 15 min lock | (email, IP), IP, email |
 | Create account | 5 / hour per IP | IP |
 | Password reset request | 3 / hour per email, 10 / hour per IP. Resend after 45 s | email, IP |
+| Setting the new password (reset link) | 5 / min and 20 / hour per IP | IP |
 | `POST /notes` | 30 / min and 300 / day per user | user |
 | LLM fallback | 20 notes / day per user (beyond that, rules only, with no error to the user) | user |
 | `POST /files/extract` | 10 / hour and 30 / day per user | user |

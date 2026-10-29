@@ -23,7 +23,7 @@ class TaskPatcher
     /**
      * @param  array<string, mixed>  $payload
      */
-    public function patch(Task $task, array $payload, string $timezone, ?DateTimeImmutable $orderedAt = null): Task
+    public function patch(Task $task, array $payload, string $timezone): Task
     {
         // 1. Project ownership check (404 if given and not owned/active)
         if (array_key_exists('project_id', $payload) && $payload['project_id'] !== null) {
@@ -33,20 +33,20 @@ class TaskPatcher
             }
         }
 
-        // 2. Parse & clamp "at" timestamp
-        $atInput = isset($payload['at']) && is_string($payload['at']) ? $payload['at'] : null;
-        $effectiveAt = $orderedAt ?? $this->resolveEffectiveAt($atInput);
-        $effectiveAtIso = $effectiveAt->format($orderedAt === null ? 'Y-m-d\TH:i:s\Z' : 'Y-m-d\TH:i:s.u\Z');
-
-        // 3. Extract patchable fields from payload
+        // 2. Extract patchable fields from payload & resolve per-field effectiveAt
         $patchData = [];
+        /** @var array<string, DateTimeImmutable> $effectiveAtMap */
+        $effectiveAtMap = [];
+        $atPayload = $payload['at'] ?? null;
+
         foreach (Task::PATCHABLE as $field) {
             if (array_key_exists($field, $payload)) {
                 $patchData[$field] = $payload[$field];
+                $effectiveAtMap[$field] = $this->resolveFieldEffectiveAt($field, $atPayload);
             }
         }
 
-        // 4. Rule 10: Same title as before (after trim) → not counted as changed (TK-E16)
+        // 3. Rule 10: Same title as before (after trim) → not counted as changed (TK-E16)
         if (array_key_exists('title', $patchData) && is_string($patchData['title'])) {
             $trimmedTitle = trim($patchData['title']);
             if ($trimmedTitle === (string) $task->title) {
@@ -56,7 +56,7 @@ class TaskPatcher
             }
         }
 
-        // 5. Initial state
+        // 4. Initial state
         $origDueDate = $task->due_date ? substr((string) $task->due_date, 0, 10) : null;
         $origStartTime = $task->start_time !== null ? substr((string) $task->start_time, 0, 5) : null;
         $origEndTime = $task->end_time !== null ? substr((string) $task->end_time, 0, 5) : null;
@@ -80,7 +80,7 @@ class TaskPatcher
         $fieldUpdatedAt = $task->field_updated_at ?? [];
         $appliedFields = [];
 
-        // 6. Last write wins per field
+        // 5. Last write wins per field
         foreach ($patchData as $field => $value) {
             if ($field === 'reminder' && $value === null) {
                 $value = 'none';
@@ -90,49 +90,48 @@ class TaskPatcher
             }
 
             $storedAtStr = $fieldUpdatedAt[$field] ?? null;
+            $fieldEffectiveAt = $effectiveAtMap[$field] ?? $this->resolveFieldEffectiveAt($field, $atPayload);
 
-            if ($this->isLaterThan($effectiveAt, $storedAtStr)) {
+            if ($this->isLaterThan($fieldEffectiveAt, $storedAtStr)) {
                 $merged[$field] = $value;
-                $fieldUpdatedAt[$field] = $effectiveAtIso;
+                $fieldUpdatedAt[$field] = $fieldEffectiveAt->format('Y-m-d\TH:i:s\Z');
                 $appliedFields[$field] = true;
             }
         }
 
-        // 7. Dependent fields (TK §2.2), on the merged state, using the same "at"
-        // - due_date set to null → also clear start_time, end_time, reminder (= none)
-        $dueDateWasSetToNull = (array_key_exists('due_date', $appliedFields) && $merged['due_date'] === null)
-            || ($merged['due_date'] === null && $origDueDate !== null);
+        // 6. Dependent fields (TK §2.2)
+        // - clearing due_date → start_time, end_time, reminder get due_date's time
+        $dueDateWasCleared = array_key_exists('due_date', $appliedFields) && $merged['due_date'] === null;
 
-        if ($dueDateWasSetToNull) {
-            if ($merged['start_time'] !== null) {
-                $merged['start_time'] = null;
-                $fieldUpdatedAt['start_time'] = $effectiveAtIso;
-            }
-            if ($merged['end_time'] !== null) {
-                $merged['end_time'] = null;
-                $fieldUpdatedAt['end_time'] = $effectiveAtIso;
-            }
-            if ($merged['reminder'] !== 'none') {
-                $merged['reminder'] = 'none';
-                $fieldUpdatedAt['reminder'] = $effectiveAtIso;
-            }
+        if ($dueDateWasCleared) {
+            $dueDateEffectiveAtIso = ($effectiveAtMap['due_date'] ?? $this->resolveFieldEffectiveAt('due_date', $atPayload))->format('Y-m-d\TH:i:s\Z');
+            $merged['start_time'] = null;
+            $fieldUpdatedAt['start_time'] = $dueDateEffectiveAtIso;
+            $merged['end_time'] = null;
+            $fieldUpdatedAt['end_time'] = $dueDateEffectiveAtIso;
+            $merged['reminder'] = 'none';
+            $fieldUpdatedAt['reminder'] = $dueDateEffectiveAtIso;
         }
 
-        // - start_time set to null → also clear end_time
-        $startTimeWasSetToNull = (array_key_exists('start_time', $appliedFields) && $merged['start_time'] === null)
-            || ($merged['start_time'] === null && $origStartTime !== null);
+        // - clearing start_time → end_time gets start_time's time
+        $startTimeWasCleared = array_key_exists('start_time', $appliedFields) && $merged['start_time'] === null;
 
-        if ($startTimeWasSetToNull) {
-            if ($merged['end_time'] !== null) {
-                $merged['end_time'] = null;
-                $fieldUpdatedAt['end_time'] = $effectiveAtIso;
-            }
+        if ($startTimeWasCleared && ! $dueDateWasCleared) {
+            $startTimeEffectiveAtIso = ($effectiveAtMap['start_time'] ?? $this->resolveFieldEffectiveAt('start_time', $atPayload))->format('Y-m-d\TH:i:s\Z');
+            $merged['end_time'] = null;
+            $fieldUpdatedAt['end_time'] = $startTimeEffectiveAtIso;
         }
 
         // - start_time set, or repeat not never, and the merged due_date is empty → due_date = $clock->today($timezone)
         if (empty($merged['due_date']) && ($merged['start_time'] !== null || $merged['repeat'] !== 'never')) {
             $merged['due_date'] = $this->clock->today($timezone);
-            $fieldUpdatedAt['due_date'] = $effectiveAtIso;
+            if (array_key_exists('start_time', $effectiveAtMap)) {
+                $fieldUpdatedAt['due_date'] = $effectiveAtMap['start_time']->format('Y-m-d\TH:i:s\Z');
+            } elseif (array_key_exists('repeat', $effectiveAtMap)) {
+                $fieldUpdatedAt['due_date'] = $effectiveAtMap['repeat']->format('Y-m-d\TH:i:s\Z');
+            } else {
+                $fieldUpdatedAt['due_date'] = $this->resolveEffectiveAt(null)->format('Y-m-d\TH:i:s\Z');
+            }
         }
 
         // - repeat changes from never → repeat_anchor = due_date; repeat becomes never → repeat_anchor = null;
@@ -213,6 +212,23 @@ class TaskPatcher
         return $task;
     }
 
+    public function resolveFieldEffectiveAt(string $field, mixed $atPayload): DateTimeImmutable
+    {
+        if (is_array($atPayload)) {
+            if (isset($atPayload[$field]) && is_string($atPayload[$field])) {
+                return $this->resolveEffectiveAt($atPayload[$field]);
+            }
+
+            return $this->resolveEffectiveAt(null);
+        }
+
+        if (is_string($atPayload)) {
+            return $this->resolveEffectiveAt($atPayload);
+        }
+
+        return $this->resolveEffectiveAt(null);
+    }
+
     public function resolveEffectiveAt(?string $at): DateTimeImmutable
     {
         $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
@@ -242,14 +258,14 @@ class TaskPatcher
         }
     }
 
-    public function complete(Task $task, ?string $at, ?DateTimeImmutable $orderedAt = null): Task
+    public function complete(Task $task, ?string $at): Task
     {
         if ($task->done) {
             return $task;
         }
 
-        $effectiveAt = $orderedAt ?? $this->resolveEffectiveAt($at);
-        $effectiveAtIso = $effectiveAt->format($orderedAt === null ? 'Y-m-d\TH:i:s\Z' : 'Y-m-d\TH:i:s.u\Z');
+        $effectiveAt = $this->resolveEffectiveAt($at);
+        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
 
         /** @var array<string, string> $fieldUpdatedAt */
         $fieldUpdatedAt = $task->field_updated_at ?? [];
@@ -264,24 +280,6 @@ class TaskPatcher
         }
 
         return $task;
-    }
-
-    /** Notes are serialized server actions on the locked current row, even within the same clock tick.
-     * @param  array<string, mixed>  $payload
-     */
-    public function applyNote(Task $task, array $payload, string $timezone): Task
-    {
-        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
-        foreach ($task->field_updated_at as $stored) {
-            $previous = new DateTimeImmutable($stored);
-            if ($at <= $previous) {
-                $at = $previous->modify('+1 microsecond');
-            }
-        }
-
-        return ($payload['done'] ?? false) === true
-            ? $this->complete($task, null, $at)
-            : $this->patch($task, $payload, $timezone, $at);
     }
 
     public function reopen(Task $task, ?string $at): Task

@@ -6,18 +6,23 @@ namespace App\Services\Notes;
 
 use Illuminate\Validation\ValidationException;
 use Normalizer;
+use RuntimeException;
 
 final class NoteSplitter
 {
+    /** Text with a letter, digit or symbol (emoji) is visible; punctuation and spaces alone are not. */
+    private const VISIBLE = '/[\p{L}\p{N}\p{So}]/u';
+
     public function normalize(string $text): string
     {
-        $text = str_replace(["\r\n", "\r"], "\n", $text);
+        $text = (string) preg_replace('/\r\n?|[\x{85}\x{2028}\x{2029}]/u', "\n", $text);
         $text = Normalizer::normalize($text, Normalizer::FORM_C) ?: $text;
-        $text = trim((string) preg_replace('/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\p{Cf}]/u', '', $text));
-        if (preg_match('/[\p{L}\p{N}\p{So}]/u', $text) !== 1) {
+        $text = (string) preg_replace('/[^\P{Cc}\t\n]|\p{Cf}/u', '', $text);
+        $text = trim((string) preg_replace('/[^\S\t\n]/u', ' ', $text));
+        if (preg_match(self::VISIBLE, $text) !== 1) {
             throw ValidationException::withMessages(['text' => ['note.empty']]);
         }
-        if (mb_strlen($text) > 5000) {
+        if (mb_strlen($text) > (int) config('notes.max_length')) {
             throw ValidationException::withMessages(['text' => ['note.too_long']]);
         }
 
@@ -31,59 +36,105 @@ final class NoteSplitter
     public function split(string $text, array $projects = []): array
     {
         $text = $this->normalize($text);
-        $lines = preg_split('/\n/u', $text) ?: [];
-        $items = [];
-        foreach ($lines as $line) {
-            $line = (string) preg_replace('/^\s*(?:(?:[-*•–—]|\d+[.)]|[a-z][)])\s+|\[[ xX]\]\s*)+/iu', '', $line);
-            $notAbbreviation = '';
-            foreach (['Dr', 'Prof', 'Mr', 'Mrs', 'Ms', 'St', 'No', 'vs', 'etc', 'e.g', 'i.e'] as $abbreviation) {
-                $notAbbreviation .= '(?<!\b'.preg_quote($abbreviation, '~').')';
+        $projects = array_values(array_filter(
+            array_map(fn (string $project): string => trim(Normalizer::normalize($project, Normalizer::FORM_C) ?: $project), $projects),
+            fn (string $project): bool => $project !== '',
+        ));
+        $checkboxes = [];
+        foreach (NoteVocabulary::values('checkbox_bracket') as $pair) {
+            $brackets = mb_str_split($pair);
+            if (count($brackets) !== 2) {
+                throw new RuntimeException('A checkbox_bracket rule needs one opening and one closing character: '.$pair);
             }
-            $delimiter = '~(*UCP);|(?<![\p{L}\p{N}_])then(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:rồi|sau đó)\s+(?=\S)|'.$notAbbreviation.'\.(?=\s|$)~iu';
+            $checkboxes[] = preg_quote($brackets[0], '~').'\s*(?:'.NoteVocabulary::phrases('checkbox_mark').')?\s*'.preg_quote($brackets[1], '~');
+        }
+        // "bullet" needs a space after it ("- buy", not "-5"); "tight_bullet" may touch the text ("•buy").
+        $bullets = '~^\s*(?:(?:'.NoteVocabulary::phrases('bullet').')\s+|(?:'.NoteVocabulary::phrases('tight_bullet').')\s*|(?:\d+(?:'.NoteVocabulary::phrases('number_suffix').')|\p{L}(?:'.NoteVocabulary::phrases('letter_suffix').'))\s+|(?:'.implode('|', $checkboxes).')\s*)+~iu';
+        $notAbbreviation = '';
+        foreach (NoteVocabulary::values('abbreviation') as $abbreviation) {
+            $notAbbreviation .= '(?<!\b'.preg_quote($abbreviation, '~').')';
+        }
+        // A sequence word glued to an email, file name or URL character ("then@x.com", "x.com/then") is not a split.
+        $attachment = NoteVocabulary::phrases('word_attachment');
+        $word = '(?<![\p{L}\p{N}_])(?<!'.$attachment.')';
+        $delimiter = '~(*UCP)(?:'.NoteVocabulary::phrases('separator').')|'.$word.'(?:'.NoteVocabulary::phrases('conjunction').')(?![\p{L}\p{N}_])(?!(?:'.$attachment.')[\p{L}\p{N}])|'.$word.'(?:'.NoteVocabulary::phrases('following_conjunction').')\s+(?=\S)|'.$notAbbreviation.'(?:'.NoteVocabulary::phrases('full_stop').')+(?=\s|$)~iu';
+        $commas = NoteVocabulary::phrases('comma');
+        $joiner = NoteVocabulary::phrases('list_joiner');
+        $items = [];
+        foreach (explode("\n", $text) as $line) {
+            $line = (string) preg_replace($bullets, '', $line);
             foreach (preg_split($delimiter, $line) ?: [] as $chunk) {
                 $current = '';
-                foreach (preg_split('/(?<!\d),|,(?!\d)/u', $chunk) ?: [] as $fragment) {
-                    $fragment = trim($fragment);
-                    if ($fragment === '') {
+                $comma = '';
+                // A comma between digits ("1,000") is part of the number.
+                foreach (preg_split('~((?<!\d)(?:'.$commas.')|(?:'.$commas.')(?!\d))~u', $chunk, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [] as $index => $fragment) {
+                    if ($index % 2 === 1) {
+                        $comma = $fragment;
+
                         continue;
                     }
-                    if ($current !== '' && NoteVocabulary::startsWithVerb($current) && ! $this->hasSignal($fragment, $projects)) {
-                        $current .= ', '.$fragment;
+                    $fragment = trim($fragment);
+                    if (preg_match(self::VISIBLE, $fragment) !== 1) {
+                        continue;
+                    }
+                    $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment)
+                        || (NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($current)) && ! $this->startsNewTask($fragment, $projects)));
+                    if ($joins) {
+                        $current .= $comma.' '.$fragment;
                     } else {
-                        if ($current !== '') {
-                            $items[] = $current;
-                        }
+                        $items[] = $current;
                         $current = $fragment;
                     }
                 }
-                if ($current !== '') {
-                    $items[] = $current;
-                }
+                $items[] = $current;
             }
         }
+        // Joiners left at an item edge ("buy milk and then …", ", and email boss") belong to no item.
+        // A leading filler ("rồi thì gọi mẹ" leaves "thì gọi mẹ") is dropped only at the start.
+        $leading = $joiner.'|'.NoteVocabulary::phrases('leading_filler');
+        $items = array_map(fn (string $item): string => trim((string) preg_replace('~^(?:(?:'.$leading.')(?:\s+|$))+|(?:(?:^|\s+)(?:'.$joiner.'))+$~iu', '', $item)), $items);
+        $items = array_values(array_filter($items, fn (string $item): bool => preg_match(self::VISIBLE, $item) === 1));
         if ($items === []) {
             throw ValidationException::withMessages(['text' => ['note.empty']]);
         }
-        if (count($items) > 30) {
+        if (count($items) > (int) config('notes.max_items')) {
             throw ValidationException::withMessages(['text' => ['note.too_many_items']]);
         }
 
         return $items;
     }
 
-    /** @param list<string> $projects */
-    private function hasSignal(string $text, array $projects): bool
+    /**
+     * The fragment starts a task of its own (NU §2.2): it opens with a date, time, priority or repeat word
+     * ("26 Oct meeting", "mai gọi mẹ"), a verb, a command or a skip prefix, or it names a project, one of the
+     * user's project keywords (NU-E34) or a task ("quiz"). Date and time words that close a fragment describe
+     * the whole list instead ("mua sữa, trứng sáng mai" is one task for tomorrow morning).
+     *
+     * @param  list<string>  $projects
+     */
+    private function startsNewTask(string $text, array $projects): bool
     {
-        $signals = NoteVocabulary::COMPLETE.'|'.NoteVocabulary::MOVE.'|'.NoteVocabulary::DELETE.'|'.NoteVocabulary::SKIP_PREFIXES;
-        if (NoteVocabulary::startsWithVerb($text) || preg_match('~^(?:'.$signals.')(?![\p{L}\p{N}_])~iu', $text)) {
+        $text = NoteVocabulary::withoutLeadIn($text);
+        if (preg_match('~^(?:'.NoteVocabulary::modifierPattern().')~iu', $text) === 1) {
             return true;
         }
-        $signals = 'today|tonight|tomorrow|tmr|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|morning|noon|evening|next week|end of the week|end of the month|every|daily|weekly|monthly|urgent|asap|important|priority|deadline|exam|quiz|submit|whenever|someday|maybe|hôm nay|tối nay|mai|mốt|thứ|chủ nhật|cn|t[2-7]|sáng|trưa|chiều|tối|tuần sau|tuần tới|cuối tuần|cuối tháng|mỗi|hằng|hàng|gấp|khẩn|quan trọng|ưu tiên|hạn chót|thi|kiểm tra|nộp|khi nào rảnh|sql|database|er diagram|hci|web|gym|mum|groceries';
+        $commands = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command', 'skip_prefix']));
+        if (NoteVocabulary::startsWithVerb($text)
+            || preg_match('~^(?:'.$commands.')(?![\p{L}\p{N}_])~iu', $text) === 1
+            || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')$~iu', $text) === 1) {
+            return true;
+        }
+        $names = NoteVocabulary::phrases('priority_high_content');
+        $owned = array_map(mb_strtolower(...), $projects);
         foreach ($projects as $project) {
-            $signals .= '|'.preg_quote($project, '~');
+            $names .= '|'.preg_quote($project, '~');
+        }
+        foreach (NoteVocabulary::projectKeywords() as $project => $keywords) {
+            if (in_array(mb_strtolower(trim(Normalizer::normalize($project, Normalizer::FORM_C) ?: $project)), $owned, true)) {
+                $names .= '|'.$keywords;
+            }
         }
 
-        return preg_match(NoteVocabulary::pattern($signals), $text) === 1
-            || preg_match('/\d{1,4}(?:[\/:.h]\d*|\s*(?:am|pm|giờ|days|ngày))/iu', $text) === 1;
+        return preg_match(NoteVocabulary::pattern($names), $text) === 1;
     }
 }

@@ -53,7 +53,8 @@ return Application::configure(basePath: dirname(__DIR__))
             [$code, $message] = match ($status) {
                 401 => ['auth.session_expired', "You've been signed out. Sign in to continue."],
                 404 => ['error.not_found', 'This item no longer exists.'],
-                422 => [in_array($noteError, ['note.empty', 'note.too_long', 'note.too_many_items'], true) ? $noteError : 'error.invalid', 'Check the highlighted fields.'],
+                // A note's own validation codes (note.empty, note.too_long, …) are the error code (NU §7).
+                422 => [is_string($noteError) && str_starts_with($noteError, 'note.') ? $noteError : 'error.invalid', 'Check the highlighted fields.'],
                 429 => ['error.rate_limited', "You're going a bit fast. Try again shortly."],
                 default => ['error.generic', 'Something went wrong. Try again.'],
             };

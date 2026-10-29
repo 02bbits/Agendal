@@ -1,4 +1,9 @@
-import { forwardRef, useId, type InputHTMLAttributes } from "react";
+import {
+  forwardRef,
+  useId,
+  type InputHTMLAttributes,
+  type ReactNode,
+} from "react";
 import { cx } from "./cx";
 
 export interface TextFieldProps extends Omit<
@@ -10,11 +15,13 @@ export interface TextFieldProps extends Omit<
   /** Shown under the field. The caller decides when (on blur and submit, UX-07). */
   error?: string;
   id?: string;
+  /** A control inside the field on the right, e.g. the password show/hide button. */
+  trailing?: ReactNode;
 }
 
 export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
   function TextField(
-    { label, helper, error, id, className, type = "text", ...rest },
+    { label, helper, error, id, className, type = "text", trailing, ...rest },
     ref,
   ) {
     const autoId = useId();
@@ -32,15 +39,25 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
         >
           {label}
         </label>
-        <input
-          ref={ref}
-          id={inputId}
-          type={type}
-          className="input focus-ring h-[52px] w-full rounded-field border-control bg-surface px-4 text-body text-ink placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40"
-          aria-invalid={error ? true : undefined}
-          aria-describedby={describedBy}
-          {...rest}
-        />
+        <div className="relative">
+          <input
+            ref={ref}
+            id={inputId}
+            type={type}
+            className={cx(
+              "input focus-ring h-[52px] w-full rounded-field border-control bg-surface px-4 text-body text-ink placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40",
+              trailing != null && "pr-14",
+            )}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={describedBy}
+            {...rest}
+          />
+          {trailing != null && (
+            <div className="absolute inset-y-0 right-1 flex items-center">
+              {trailing}
+            </div>
+          )}
+        </div>
         {error && (
           <p id={errorId} className="m-0 text-footnote text-error">
             {error}
