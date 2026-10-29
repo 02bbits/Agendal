@@ -48,5 +48,4 @@ class SplitNoteCommand extends Command
             return self::FAILURE;
         }
     }
-
 }
