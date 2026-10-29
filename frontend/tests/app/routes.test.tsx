@@ -116,6 +116,24 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
+  it("Inbox shows today's date above the title and the account initial", async () => {
+    renderAt("/", InboxPage);
+    const header = screen.getByRole("banner");
+    expect(
+      await within(header).findByText(/^[A-Z][a-z]+day, \d{1,2} [A-Z][a-z]+$/),
+    ).toBeTruthy();
+    await vi.waitFor(() =>
+      expect(
+        within(header).getByRole("link", { name: "Account" }).textContent,
+      ).toBe("M"),
+    );
+  });
+
+  it("other tabs leave the overline empty", () => {
+    renderAt("/upcoming", UpcomingPage);
+    expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
+  });
+
   it("tab links and header links go through the Next.js router", async () => {
     renderAt("/", InboxPage);
     // The sidebar (from 768px) has the same links; these are the phone's tab bar and header

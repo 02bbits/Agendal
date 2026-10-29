@@ -28,3 +28,16 @@ export const localTime = (zone = timeZone(), at = now()) =>
     minute: "2-digit",
     hourCycle: "h23",
   }).format(at);
+
+// Inbox date overline, e.g. "Thursday, 29 October"
+export function headerDate(zone = timeZone(), at = now()): string {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: zone,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+  }).formatToParts(at);
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((p) => p.type === type)?.value ?? "";
+  return `${part("weekday")}, ${part("day")} ${part("month")}`;
+}

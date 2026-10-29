@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/lib/api";
-import { localTime, now, setTimeZone, timeZone, today } from "@/lib/clock";
+import {
+  headerDate,
+  localTime,
+  now,
+  setTimeZone,
+  timeZone,
+  today,
+} from "@/lib/clock";
 
 describe("clock (IM-05)", () => {
   beforeEach(() => {
@@ -20,6 +27,11 @@ describe("clock (IM-05)", () => {
     expect(localTime()).toBe("18:12");
     expect(today("Asia/Ho_Chi_Minh")).toBe("2026-10-23");
     expect(localTime("Asia/Ho_Chi_Minh")).toBe("08:12");
+  });
+
+  it("writes the Inbox date overline in the device zone", () => {
+    expect(headerDate()).toBe("Thursday, 22 October");
+    expect(headerDate("Asia/Ho_Chi_Minh")).toBe("Friday, 23 October");
   });
 
   it("sends X-Timezone on every API request", async () => {
