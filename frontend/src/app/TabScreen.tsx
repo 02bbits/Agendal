@@ -8,7 +8,7 @@ import {
   type CopyKey,
   type TabId,
 } from "@/ui";
-import { headerDate } from "@/lib/clock";
+import { headerDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 
 const TITLE: Record<TabId, CopyKey> = {
