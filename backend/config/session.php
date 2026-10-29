@@ -1,7 +1,5 @@
 <?php
 
-use Illuminate\Support\Str;
-
 return [
 
     /*
@@ -32,9 +30,10 @@ return [
     |
     */
 
+    // ADR-007: without Remember me, a browser-session cookie with a 2 h idle timeout
     'lifetime' => (int) env('SESSION_LIFETIME', 120),
 
-    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
+    'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', true),
 
     /*
     |--------------------------------------------------------------------------
@@ -127,10 +126,8 @@ return [
     |
     */
 
-    'cookie' => env(
-        'SESSION_COOKIE',
-        Str::slug((string) env('APP_NAME', 'laravel')).'-session'
-    ),
+    // ADR-007: __Host- makes the browser require Secure, Path=/ and no Domain (ASVS 3.4.4)
+    'cookie' => env('SESSION_COOKIE', '__Host-agendal_session'),
 
     /*
     |--------------------------------------------------------------------------
@@ -169,7 +166,7 @@ return [
     |
     */
 
-    'secure' => env('SESSION_SECURE_COOKIE'),
+    'secure' => env('SESSION_SECURE_COOKIE', true),
 
     /*
     |--------------------------------------------------------------------------

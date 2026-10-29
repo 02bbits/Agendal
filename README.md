@@ -36,7 +36,7 @@ cd backend && composer run dev    # API on :8000, plus queue worker and logs
 cd frontend && npm run dev        # app on http://localhost:3000
 ```
 
-Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (local only).
+Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (local only). Use Chrome or Firefox locally: the session cookie is `Secure` with a `__Host-` prefix (ADR-007), and Safari rejects it over plain http.
 
 ## Time
 
