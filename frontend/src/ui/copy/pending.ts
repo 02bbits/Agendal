@@ -116,6 +116,7 @@ export const pending = {
   "auth.reset_title": "Reset password",
   "auth.reset_send": "Send link",
   "auth.reset_resend_in": "Resend link in {seconds} s",
+  "auth.reset_change_email": "Use a different email",
   "auth.back_to_sign_in": "Back to Sign in",
   "auth.new_password_title": "Choose a new password",
   "auth.new_password": "New password",

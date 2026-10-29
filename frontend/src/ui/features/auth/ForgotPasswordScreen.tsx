@@ -31,6 +31,8 @@ export function ForgotPasswordScreen({
   const [resendAt, setResendAt] = useState<number | null>(null);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  // Back on the form after "Use a different email": focus the email to fix it
+  const [changingEmail, setChangingEmail] = useState(false);
   const wait = useSecondsLeft(resendAt);
 
   async function send(address: string) {
@@ -70,6 +72,19 @@ export function ForgotPasswordScreen({
               ? t("auth.reset_resend_in", { seconds: wait })
               : t("auth.reset_resend")}
           </Button>
+          <Button
+            variant="outline"
+            size="lg"
+            fullWidth
+            onClick={() => {
+              setSentTo(null);
+              setResendAt(null);
+              setError(undefined);
+              setChangingEmail(true);
+            }}
+          >
+            {t("auth.reset_change_email")}
+          </Button>
         </>
       ) : (
         <form className="flex flex-col gap-5" onSubmit={submit} noValidate>
@@ -77,6 +92,7 @@ export function ForgotPasswordScreen({
             label={t("auth.email")}
             type="email"
             autoComplete="email"
+            autoFocus={changingEmail}
             value={email}
             onChange={(event) => setEmail(event.target.value)}
           />

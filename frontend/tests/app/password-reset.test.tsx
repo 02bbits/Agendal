@@ -82,6 +82,33 @@ describe("Reset request (AA-4)", () => {
     expect(callsTo("/auth/forgot-password")).toHaveLength(2);
   });
 
+  it("Use a different email goes back to the form with the email kept and focused", async () => {
+    const user = userEvent.setup();
+    renderAt("/forgot-password", ForgotPasswordPage);
+
+    await user.type(screen.getByLabelText("Email"), "exmaple@gmail.com");
+    await user.click(screen.getByRole("button", { name: "Send link" }));
+    await user.click(
+      await screen.findByRole("button", { name: "Use a different email" }),
+    );
+
+    const email = screen.getByLabelText("Email") as HTMLInputElement;
+    expect(email.value).toBe("exmaple@gmail.com");
+    expect(document.activeElement).toBe(email);
+    await user.clear(email);
+    await user.type(email, "example@gmail.com");
+    await user.click(screen.getByRole("button", { name: "Send link" }));
+
+    expect(
+      callsTo("/auth/forgot-password").map(
+        ([, init]) => JSON.parse(init.body).email,
+      ),
+    ).toEqual(["exmaple@gmail.com", "example@gmail.com"]);
+    expect(
+      await screen.findByText(/If an account exists for example@gmail\.com/),
+    ).toBeTruthy();
+  });
+
   it("shows the rate limit with the seconds to wait", async () => {
     reply = () => json(429, {}, { "Retry-After": "900" });
     const user = userEvent.setup();
