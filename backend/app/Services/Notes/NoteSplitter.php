@@ -34,12 +34,13 @@ final class NoteSplitter
         $lines = preg_split('/\n/u', $text) ?: [];
         $items = [];
         foreach ($lines as $line) {
-            $line = (string) preg_replace('/^\s*(?:(?:[-*•–—]|\d+[.)]|[a-z][)])\s+|\[[ xX]\]\s*)+/iu', '', $line);
+            $bullets = NoteVocabulary::phrases('bullet');
+            $line = (string) preg_replace('~^\s*(?:(?:'.$bullets.'|\d+[.)]|[a-z][)])\s+|\[[ xX]\]\s*)+~iu', '', $line);
             $notAbbreviation = '';
-            foreach (['Dr', 'Prof', 'Mr', 'Mrs', 'Ms', 'St', 'No', 'vs', 'etc', 'e.g', 'i.e'] as $abbreviation) {
+            foreach (NoteVocabulary::values('abbreviation') as $abbreviation) {
                 $notAbbreviation .= '(?<!\b'.preg_quote($abbreviation, '~').')';
             }
-            $delimiter = '~(*UCP);|(?<![\p{L}\p{N}_])then(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:rồi|sau đó)\s+(?=\S)|'.$notAbbreviation.'\.(?=\s|$)~iu';
+            $delimiter = '~(*UCP)(?:'.NoteVocabulary::phrases('separator').')|(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('conjunction').')(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('following_conjunction').')\s+(?=\S)|'.$notAbbreviation.'\.(?=\s|$)~iu';
             foreach (preg_split($delimiter, $line) ?: [] as $chunk) {
                 $current = '';
                 foreach (preg_split('/(?<!\d),|,(?!\d)/u', $chunk) ?: [] as $fragment) {
@@ -74,16 +75,16 @@ final class NoteSplitter
     /** @param list<string> $projects */
     private function hasSignal(string $text, array $projects): bool
     {
-        $signals = NoteVocabulary::COMPLETE.'|'.NoteVocabulary::MOVE.'|'.NoteVocabulary::DELETE.'|'.NoteVocabulary::SKIP_PREFIXES;
+        $signals = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command', 'skip_prefix']));
         if (NoteVocabulary::startsWithVerb($text) || preg_match('~^(?:'.$signals.')(?![\p{L}\p{N}_])~iu', $text)) {
             return true;
         }
-        $signals = 'today|tonight|tomorrow|tmr|day after tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|mon|tue|wed|thu|fri|sat|sun|morning|noon|evening|next week|end of the week|end of the month|every|daily|weekly|monthly|urgent|asap|important|priority|deadline|exam|quiz|submit|whenever|someday|maybe|hôm nay|tối nay|mai|mốt|thứ|chủ nhật|cn|t[2-7]|sáng|trưa|chiều|tối|tuần sau|tuần tới|cuối tuần|cuối tháng|mỗi|hằng|hàng|gấp|khẩn|quan trọng|ưu tiên|hạn chót|thi|kiểm tra|nộp|khi nào rảnh|sql|database|er diagram|hci|web|gym|mum|groceries';
+        $signals = NoteVocabulary::phrases('signal');
         foreach ($projects as $project) {
             $signals .= '|'.preg_quote($project, '~');
         }
 
         return preg_match(NoteVocabulary::pattern($signals), $text) === 1
-            || preg_match('/\d{1,4}(?:[\/:.h]\d*|\s*(?:am|pm|giờ|days|ngày))/iu', $text) === 1;
+            || preg_match('/\d{1,4}(?:[\/:.h]\d*|\s*(?:am|pm|giờ|days|ngày))|(?<!\p{L})at\s+\d{1,2}(?!\d)/iu', $text) === 1;
     }
 }

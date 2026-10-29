@@ -10,7 +10,7 @@ Write a note, get organised tasks. A mobile web app (PWA) built for the VNUK *Ad
 
 ## Prerequisites
 
-PHP 8.3+ with `pdo_pgsql`, Composer, Node 20+, Docker.
+PHP 8.4+ with `pdo_pgsql`, `intl` and `mbstring`, Composer, Node 20+, Docker.
 
 ## First run
 
@@ -43,6 +43,8 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 Read the time only through the clock (ADR-006): `ClockInterface` on the server, `@/lib/clock` on the client. Tests pin it with `travelTo()` or `vi.setSystemTime()` plus a zone. A note's "now" is `ClientClock::fromWrittenAt()`: its `written_at`, clamped to server time. API calls go through `@/lib/api`, which sends `X-Timezone`.
 
 ## Checks
+
+For IM-32, edit the [splitter scenario CSV](backend/tests/Fixtures/note-splitter-scenarios.csv) and follow the [self-test instructions](backend/tests/Fixtures/README.md). Run only those tests with `cd backend && php vendor/bin/pest tests/Unit/Services/NoteSplitterTest.php`; they require no database.
 
 Tests run on the `agendal_test` database, created automatically with a new `db` volume. On a volume made before it existed, create it once:
 

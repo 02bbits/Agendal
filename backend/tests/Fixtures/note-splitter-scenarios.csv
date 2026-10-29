@@ -1,0 +1,47 @@
+id,note,projects_json,expected_json,error
+EN-list,"- [ ] buy milk
+1. call mum; read report. then email Lee",[],"[""buy milk"", ""call mum"", ""read report"", ""email Lee""]",
+EN-groceries,"buy milk, eggs and bread",[],"[""buy milk, eggs and bread""]",
+EN-new-action,"buy ink, email the group tonight",[],"[""buy ink"", ""email the group tonight""]",
+EN-course,"buy ink, SQL quiz",[],"[""buy ink"", ""SQL quiz""]",
+EN-priority,"buy ink, urgent report",[],"[""buy ink"", ""urgent report""]",
+EN-project,"buy ink, Portfolio mockup","[""Portfolio""]","[""buy ink"", ""Portfolio mockup""]",
+EN-noun-list,"dentist, haircut",[],"[""dentist"", ""haircut""]",
+EN-abbreviation,visit athens then meet Dr. Lee at 9.30,[],"[""visit athens"", ""meet Dr. Lee at 9.30""]",
+EN-piano,play piano. call mum,[],"[""play piano"", ""call mum""]",
+EN-money,"pay 1,000 for report.pdf",[],"[""pay 1,000 for report.pdf""]",
+VI-sequence,mua sữa rồi gọi mẹ sau đó đọc sách,[],"[""mua sữa"", ""gọi mẹ"", ""đọc sách""]",
+VI-complete,bài tập xong rồi,[],"[""bài tập xong rồi""]",
+CR-newline,"call mumcall dad",[],"[""call mum"", ""call dad""]",
+CRLF-newline,"call mum
+call dad",[],"[""call mum"", ""call dad""]",
+EN-and,buy milk and bread,[],"[""buy milk and bread""]",
+VI-and,mua sữa và bánh mì,[],"[""mua sữa và bánh mì""]",
+VI-objects,"mua sữa, bánh mì và trứng",[],"[""mua sữa, bánh mì và trứng""]",
+VI-next-action,"mua sữa, đã xong bài tập SQL",[],"[""mua sữa"", ""đã xong bài tập SQL""]",
+VI-next-date,"mua sữa, mai họp nhóm",[],"[""mua sữa"", ""mai họp nhóm""]",
+VI-skip,"mua sữa, ý tưởng: làm app",[],"[""mua sữa"", ""ý tưởng: làm app""]",
+EN-date,"buy ink, 26 Oct meeting",[],"[""buy ink"", ""26 Oct meeting""]",
+EN-bare-time,"buy ink, at 2 meeting",[],"[""buy ink"", ""at 2 meeting""]",
+EN-repeat,"buy ink, every day exercise",[],"[""buy ink"", ""every day exercise""]",
+VI-priority,"mua sữa, không gấp đọc sách",[],"[""mua sữa"", ""không gấp đọc sách""]",
+EN-project-literal,"buy ink, Research (2026) outline","[""Research (2026)""]","[""buy ink"", ""Research (2026) outline""]",
+EN-case,read report THEN call mum,[],"[""read report"", ""call mum""]",
+EN-files-email,email a.b@example.com then read report.pdf,[],"[""email a.b@example.com"", ""read report.pdf""]",
+EN-abbreviation-chain,meet Prof. Lee; review e.g. SQL examples,[],"[""meet Prof. Lee"", ""review e.g. SQL examples""]",
+VI-checkbox,"• [x] gọi mẹ
+a) đọc sách
+[ ] nộp bài",[],"[""gọi mẹ"", ""đọc sách"", ""nộp bài""]",
+EN-hard-boundaries,"buy milk; eggs
+bread. cheese then apples",[],"[""buy milk"", ""eggs"", ""bread"", ""cheese"", ""apples""]",
+Repeated-delimiters,"call mum;;;
+
+; read report",[],"[""call mum"", ""read report""]",
+HTML-text,<script>alert(1)</script>,[],"[""<script>alert(1)</script>""]",
+CSV-quotes-roundtrip,"email ""Team A""; read Bob's report",[],"[""email \""Team A\"""", ""read Bob's report""]",
+VI-decomposed,gọi mẹ,[],"[""gọi mẹ""]",
+Zero-width,call​ mum,[],"[""call mum""]",
+30-items,read chapter 1;read chapter 2;read chapter 3;read chapter 4;read chapter 5;read chapter 6;read chapter 7;read chapter 8;read chapter 9;read chapter 10;read chapter 11;read chapter 12;read chapter 13;read chapter 14;read chapter 15;read chapter 16;read chapter 17;read chapter 18;read chapter 19;read chapter 20;read chapter 21;read chapter 22;read chapter 23;read chapter 24;read chapter 25;read chapter 26;read chapter 27;read chapter 28;read chapter 29;read chapter 30,[],"[""read chapter 1"", ""read chapter 2"", ""read chapter 3"", ""read chapter 4"", ""read chapter 5"", ""read chapter 6"", ""read chapter 7"", ""read chapter 8"", ""read chapter 9"", ""read chapter 10"", ""read chapter 11"", ""read chapter 12"", ""read chapter 13"", ""read chapter 14"", ""read chapter 15"", ""read chapter 16"", ""read chapter 17"", ""read chapter 18"", ""read chapter 19"", ""read chapter 20"", ""read chapter 21"", ""read chapter 22"", ""read chapter 23"", ""read chapter 24"", ""read chapter 25"", ""read chapter 26"", ""read chapter 27"", ""read chapter 28"", ""read chapter 29"", ""read chapter 30""]",
+31-items,read chapter 1;read chapter 2;read chapter 3;read chapter 4;read chapter 5;read chapter 6;read chapter 7;read chapter 8;read chapter 9;read chapter 10;read chapter 11;read chapter 12;read chapter 13;read chapter 14;read chapter 15;read chapter 16;read chapter 17;read chapter 18;read chapter 19;read chapter 20;read chapter 21;read chapter 22;read chapter 23;read chapter 24;read chapter 25;read chapter 26;read chapter 27;read chapter 28;read chapter 29;read chapter 30;read chapter 31,[],[],note.too_many_items
+Empty-invisible, . ; ​,[],[],note.empty
+Empty-boundary,then,[],[],note.empty
