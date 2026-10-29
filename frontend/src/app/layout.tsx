@@ -1,6 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Instrument_Sans, Newsreader } from "next/font/google";
 import { AppFrame } from "./AppFrame";
 import "./globals.css";
+
+// Paper & ink fonts, self-hosted at build time (no request to Google from the browser)
+const sans = Instrument_Sans({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-instrument-sans",
+  display: "swap",
+});
+const serif = Newsreader({
+  subsets: ["latin", "latin-ext", "vietnamese"],
+  axes: ["opsz"],
+  variable: "--font-newsreader",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Agendal",
@@ -17,7 +31,11 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // AppFrame sets data-theme on the client when Appearance isn't System
-    <html lang="en" suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${sans.variable} ${serif.variable}`}
+      suppressHydrationWarning
+    >
       <body>
         <AppFrame>{children}</AppFrame>
       </body>
