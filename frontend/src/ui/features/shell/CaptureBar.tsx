@@ -14,7 +14,7 @@ export interface CaptureBarProps {
 /** Floating "Write a note…" bar above the tabs, with the square + beside it. */
 export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
   return (
-    <div className="flex items-center gap-2 px-gutter py-2">
+    <div className="flex items-center gap-2 px-gutter py-2 md:px-gutter-wide">
       <div className="flex h-[52px] flex-1 items-center rounded-field border border-control bg-surface pr-1 pl-4 shadow-sm">
         <button
           type="button"

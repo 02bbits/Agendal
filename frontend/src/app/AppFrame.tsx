@@ -154,6 +154,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
         navigate={navigate}
         // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
         capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        sidebar={
+          AUTH_PATHS.includes(pathname)
+            ? undefined
+            : { accountName: user?.display_name ?? user?.email ?? "" }
+        }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}

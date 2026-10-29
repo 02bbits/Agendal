@@ -224,6 +224,12 @@
   padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
 }
 
+/* Side margin of the content column from 768px wide: 40px plus the safe areas (UX-27) */
+@utility px-gutter-wide {
+  padding-left: calc(2.5rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(2.5rem + env(safe-area-inset-right, 0px));
+}
+
 /* Only the side safe areas, for full-width bars such as the tab bar (UX-25) */
 @utility px-safe {
   padding-left: env(safe-area-inset-left, 0px);
