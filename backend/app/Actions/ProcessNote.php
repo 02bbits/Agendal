@@ -18,6 +18,7 @@ use App\Services\Notes\OpenRouterFallback;
 use App\Services\Notes\TaskCandidates;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
@@ -62,10 +63,14 @@ class ProcessNote
             $zone = in_array($input['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true) ? $input['timezone'] : (string) $user->timezone;
             $projects = Project::query()->where('user_id', $user->id)->whereNull('deleted_at')->pluck('name', 'id')->all();
             $context = new NoteContext($clientClock->now(), $zone, $projects, (string) $user->week_start);
+            $started = hrtime(true);
             $text = $this->splitter->normalize($input['text']);
             $open = [];
             $done = [];
             foreach ($this->splitter->split($text, array_values($projects)) as $item) {
+                if ((hrtime(true) - $started) / 1e6 >= 200) {
+                    break;
+                }
                 $words = $this->matcher->words($item, $context);
                 foreach ($this->candidates->find($user->id, $words) as $task) {
                     $open[$task['id']] = $task;
@@ -74,8 +79,12 @@ class ProcessNote
                     $done[$task['id']] = $task;
                 }
             }
-            $result = $this->engine->build($text, $context, array_values($open), array_values($done));
+            $remainingMs = max(0.0, 200.0 - (hrtime(true) - $started) / 1e6);
+            $result = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
             $result = $this->fallback->resolve($result, $text, $context, array_values($open), $user->id);
+            if ($result['plan']['dropped'] > 0) {
+                Log::info('note_plan_validation', ['dropped' => $result['plan']['dropped']]);
+            }
             $note = new Note;
             $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;
             $note->forceFill([
@@ -88,7 +97,7 @@ class ProcessNote
             if ($result['status'] === 'done') {
                 $applied = $this->applier->apply($note, $result['plan'], $context);
                 $note->applied = $applied['applied'];
-                $note->plan = [...$result['plan'], 'changes' => $applied['changes']];
+                $note->plan = [...$result['plan'], 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
                 $note->save();
             }
 

@@ -42,7 +42,9 @@ final class NoteDateParser
             return $today->modify(in_array($bare, ['day after tomorrow', 'ngày mốt', 'mốt'], true) ? '+2 days' : '+1 day')->format('Y-m-d');
         }
         if (preg_match('/^(in (\d+) days|(\d+) ngày nữa|in a week)$/u', $bare, $m)) {
-            return $today->modify('+'.($m[2] ?? ($m[3] ?? 7)).' days')->format('Y-m-d');
+            $days = ($m[2] ?? '') !== '' ? (int) $m[2] : (int) (($m[3] ?? '') !== '' ? $m[3] : 7);
+
+            return $today->modify('+'.$days.' days')->format('Y-m-d');
         }
         if (in_array($bare, ['end of the month', 'cuối tháng'], true)) {
             return $today->modify('last day of this month')->format('Y-m-d');

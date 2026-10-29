@@ -28,5 +28,7 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('notes-minute:'.$request->user()?->getAuthIdentifier()),
             Limit::perDay(300)->by('notes-day:'.$request->user()?->getAuthIdentifier()),
         ]);
+        // NF-13 rate limits
+        RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)->by($request->ip()));
     }
 }

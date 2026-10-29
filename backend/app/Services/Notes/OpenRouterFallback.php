@@ -120,8 +120,8 @@ final class OpenRouterFallback
             'due_date' => ['type' => ['string', 'null'], 'format' => 'date'],
             'start_time' => ['type' => ['string', 'null'], 'pattern' => '^([01][0-9]|2[0-3]):[0-5][0-9]$'],
             'end_time' => ['type' => ['string', 'null'], 'pattern' => '^([01][0-9]|2[0-3]):[0-5][0-9]$'],
-            'priority' => ['enum' => [null, 'low', 'medium', 'high']], 'project' => ['enum' => [null, ...$projects]],
-            'repeat' => ['enum' => ['never', 'daily', 'weekly', 'monthly']], 'reminder' => ['enum' => ['none', '5m', '15m', '30m', '1h', '1d']],
+            'priority' => ['type' => ['string', 'null'], 'enum' => [null, 'low', 'medium', 'high']], 'project' => ['type' => ['string', 'null'], 'enum' => [null, ...$projects]],
+            'repeat' => ['type' => 'string', 'enum' => ['never', 'daily', 'weekly', 'monthly']], 'reminder' => ['type' => 'string', 'enum' => ['none', '5m', '15m', '30m', '1h', '1d']],
         ];
 
         return ['type' => 'object', 'additionalProperties' => false, 'required' => ['items'], 'properties' => [

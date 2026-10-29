@@ -13,9 +13,11 @@ import {
 import {
   AppShell,
   ROUTES,
+  Toast,
   type AccountSettings,
   type Navigate,
   type TabId,
+  type ToastData,
 } from "@/ui";
 
 const TAB_BY_PATH: Record<string, TabId> = {
@@ -33,6 +35,8 @@ interface AppFrameValue {
   /** Kept on the device for now; `GET/PATCH /me` (IM-16) persists them. */
   settings: AccountSettings;
   changeSettings: (patch: Partial<AccountSettings>) => void;
+  /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
+  showToast: (message: string) => void;
 }
 
 const AppFrameContext = createContext<AppFrameValue | null>(null);
@@ -66,6 +70,20 @@ export function AppFrame({ children }: { children: ReactNode }) {
     [router],
   );
   const back = useCallback(() => router.back(), [router]);
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const showToast = useCallback(
+    (message: string) =>
+      setToast((current) => ({
+        id: typeof current?.id === "number" ? current.id + 1 : 1,
+        message,
+      })),
+    [],
+  );
+  const dismissToast = useCallback(
+    (id: ToastData["id"]) =>
+      setToast((current) => (current?.id === id ? null : current)),
+    [],
+  );
   const changeSettings = useCallback(
     (patch: Partial<AccountSettings>) =>
       setSettings((current) => ({ ...current, ...patch })),
@@ -80,8 +98,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [settings.theme]);
 
   const value = useMemo(
-    () => ({ navigate, back, settings, changeSettings }),
-    [navigate, back, settings, changeSettings],
+    () => ({ navigate, back, settings, changeSettings, showToast }),
+    [navigate, back, settings, changeSettings, showToast],
   );
   const tab = TAB_BY_PATH[pathname];
 
@@ -92,6 +110,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         navigate={navigate}
         // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
         capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
       </AppShell>

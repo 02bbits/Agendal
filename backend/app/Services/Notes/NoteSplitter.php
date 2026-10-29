@@ -37,9 +37,9 @@ final class NoteSplitter
             $line = (string) preg_replace('/^\s*(?:(?:[-*•–—]|\d+[.)]|[a-z][)])\s+|\[[ xX]\]\s*)+/iu', '', $line);
             $notAbbreviation = '';
             foreach (['Dr', 'Prof', 'Mr', 'Mrs', 'Ms', 'St', 'No', 'vs', 'etc', 'e.g', 'i.e'] as $abbreviation) {
-                $notAbbreviation .= '(?<!'.preg_quote($abbreviation, '~').')';
+                $notAbbreviation .= '(?<!\b'.preg_quote($abbreviation, '~').')';
             }
-            $delimiter = '~;|(?<![\p{L}\p{N}_])then(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:rồi|sau đó)\s+(?=\S)|'.$notAbbreviation.'\.(?=\s|$)~iu';
+            $delimiter = '~(*UCP);|(?<![\p{L}\p{N}_])then(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:rồi|sau đó)\s+(?=\S)|'.$notAbbreviation.'\.(?=\s|$)~iu';
             foreach (preg_split($delimiter, $line) ?: [] as $chunk) {
                 $current = '';
                 foreach (preg_split('/(?<!\d),|,(?!\d)/u', $chunk) ?: [] as $fragment) {
@@ -60,6 +60,9 @@ final class NoteSplitter
                     $items[] = $current;
                 }
             }
+        }
+        if ($items === []) {
+            throw ValidationException::withMessages(['text' => ['note.empty']]);
         }
         if (count($items) > 30) {
             throw ValidationException::withMessages(['text' => ['note.too_many_items']]);

@@ -16,6 +16,7 @@ it('splits note boundaries and strips list markers (T-NU-01–07, T-NU-120)', fu
     ['buy ink, Portfolio mockup', ['buy ink', 'Portfolio mockup']],
     ['dentist, haircut', ['dentist', 'haircut']],
     ['visit athens then meet Dr. Lee at 9.30', ['visit athens', 'meet Dr. Lee at 9.30']],
+    ['play piano. call mum', ['play piano', 'call mum']],
     ['pay 1,000 for report.pdf', ['pay 1,000 for report.pdf']],
     ['mua sữa rồi gọi mẹ sau đó đọc sách', ['mua sữa', 'gọi mẹ', 'đọc sách']],
     ['bài tập xong rồi', ['bài tập xong rồi']],
@@ -31,6 +32,7 @@ it('rejects invisible, overlong and overfull notes', function (string $text, str
     }
 })->with([
     [" . ; \u{200B}", 'note.empty'],
+    ['then', 'note.empty'],
     [str_repeat('a', 5001), 'note.too_long'],
     [implode(';', array_fill(0, 31, 'call mum')), 'note.too_many_items'],
 ]);
