@@ -8,6 +8,8 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 - **Layout beyond phone width.** [UX-24](01-product/ux-standards.md#ux-24): from 600px the app stays one centred 600px column, with the capture bar, tab bar, toasts and sheets inside it; no separate tablet or desktop layout. [UX-25](01-product/ux-standards.md#ux-25): side margin of at least 20px plus the side safe-area insets. [UX-26](01-product/ux-standards.md#ux-26): held sideways, the bottom bars stay visible and nothing covers a row or a field.
 - **Layout tests.** [Traceability matrix](06-testing/traceability-matrix.md), NF-8 row: adds the 768 and 1280 wide viewports and a sideways 667×375 check. [Test strategy](06-testing/test-strategy.md): the end-to-end row points to those viewports.
 - **This changelog** is added and linked from the [README](README.md).
+- **Password reset (IM-13).** [AA-E4](03-modules/AA-account-access.md#aa-e4) and [AA §8](03-modules/AA-account-access.md#8-data-validation-and-authorization): resets use Laravel's reset broker, so a new request replaces the old link, only the newest link works, once, and a request within 45 s sends nothing. [NF-13](05-quality/nfr.md#rate-limits-nf-13): setting the new password is limited to 5 a minute and 20 an hour per IP.
+- **Sign-in lockout (IM-12).** [Error schema](07-architecture/contracts/schemas/error.schema.json): adds `retry_after` (seconds) for `429 auth.locked`, with the `error-locked.json` fixture.
 - **Sessions (IM-10).** [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md) and [AA](03-modules/AA-account-access.md): *Remember me* lasts 30 days from sign-in instead of a rolling 30 days.
 
 ## 2026-10-28
