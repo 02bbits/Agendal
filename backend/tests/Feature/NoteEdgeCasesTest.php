@@ -100,3 +100,12 @@ it('keeps markup as text (T-NU-139)', function () {
     expect(app(TaskCandidates::class)->find($this->owner->id, []))->toBe([]);
     expect(app(TaskRecurrence::class)->next(Task::firstOrFail()))->toBeNull();
 });
+
+it('interprets the written zone and schedules reminders in the current zone (T-NU-126)', function () {
+    $this->owner->forceFill(['timezone' => 'America/New_York'])->save();
+    $this->actingAs($this->owner)->withHeader('X-Timezone', 'America/New_York')
+        ->postJson('/api/v1/notes', edgeNote('call mum tomorrow 8pm'))->assertCreated();
+    $task = Task::firstOrFail();
+    expect($task->due_date)->toBe('2026-10-24')->and($task->start_time)->toBe('20:00:00');
+    expect($task->remind_at->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-24T23:45:00Z');
+});
