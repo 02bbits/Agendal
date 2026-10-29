@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\ApiError;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\TaskLifecycleRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -14,6 +13,7 @@ use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\DueDateFallback;
+use App\Services\Tasks\OpenTaskLimit;
 use App\Services\Tasks\TaskPatcher;
 use DateTimeZone;
 use Illuminate\Http\JsonResponse;
@@ -66,10 +66,7 @@ class TaskController extends Controller
         }
 
         // 4. Open limit
-        $openCount = Task::where('done', false)->count();
-        if ($openCount >= Task::OPEN_LIMIT) {
-            throw new ApiError('task.limit', "You've reached 5,000 open tasks. Complete or delete some to add more.", 422);
-        }
+        OpenTaskLimit::ensureRoom();
 
         // 5. Field updated at & create
         $nowIso = $clock->now()->format('Y-m-d\TH:i:s\Z');
@@ -147,6 +144,10 @@ class TaskController extends Controller
         Task $task,
         TaskPatcher $patcher,
     ): JsonResponse {
+        if ($task->done) {
+            OpenTaskLimit::ensureRoom();
+        }
+
         $at = $request->has('at') && is_string($request->input('at')) ? $request->input('at') : null;
         $updatedTask = $patcher->reopen($task, $at);
 
@@ -189,6 +190,10 @@ class TaskController extends Controller
         ClockInterface $clock,
     ): TaskResource {
         if ($task->trashed()) {
+            if (! $task->done) {
+                OpenTaskLimit::ensureRoom();
+            }
+
             $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
             /** @var array<string, string> $fieldUpdatedAt */
             $fieldUpdatedAt = $task->field_updated_at ?? [];
