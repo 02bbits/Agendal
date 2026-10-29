@@ -244,3 +244,118 @@ describe("One centred column above 600px (UX-24) and sideways phones (UX-26)", (
     expect(sheet.className).toContain("modal-box");
   });
 });
+
+describe("Tablet and desktop (UX-27, UX-28)", () => {
+  const renderWide = (aside?: React.ReactNode) =>
+    render(
+      <AppShell
+        tab="upcoming"
+        capture={{ onWrite: () => {} }}
+        sidebar={{ accountName: "example", counts: { inbox: 5 } }}
+        aside={aside}
+      >
+        <p>content</p>
+      </AppShell>,
+    );
+
+  it("shows the sidebar from 768px in place of the tab bar", () => {
+    renderWide();
+    const menu = screen.getByRole("navigation", { name: "Menu" });
+    const sidebar = menu.closest(".sticky")!;
+    expect(sidebar.className).toContain("hidden");
+    expect(sidebar.className).toContain("md:block");
+    expect(sidebar.className).toContain("w-[248px]");
+    expect(
+      screen.getByRole("navigation", { name: "Main" }).className,
+    ).toContain("md:hidden");
+  });
+
+  it("lists the four tabs with the active one marked and its count", () => {
+    renderWide();
+    const menu = screen.getByRole("navigation", { name: "Menu" });
+    const links = menu.querySelectorAll("li a");
+    expect([...links].map((link) => link.getAttribute("href"))).toEqual([
+      "/",
+      "/upcoming",
+      "/projects",
+      "/notes",
+    ]);
+    expect(links[1].getAttribute("aria-current")).toBe("page");
+    expect(links[0].textContent).toContain("5");
+  });
+
+  it("links Search and the account from the sidebar", () => {
+    renderWide();
+    const sidebar = screen
+      .getByRole("navigation", { name: "Menu" })
+      .closest(".sticky")!;
+    expect(sidebar.querySelector('a[href="/search"]')!.textContent).toContain(
+      "Search tasks",
+    );
+    const account = sidebar.querySelector('a[href="/account"]')!;
+    expect(account.textContent).toContain("example");
+    expect(account.textContent).toContain("E");
+  });
+
+  it("widens the column to 712px with 40px margins and keeps the capture bar at its bottom", () => {
+    renderWide();
+    const column = screen.getByRole("main").parentElement!;
+    expect(column.className).toContain("md:max-w-[792px]");
+    expect(screen.getByRole("main").className).toContain("md:px-gutter-wide");
+    expect(theme).toContain(
+      "padding-left: calc(2.5rem + env(safe-area-inset-left, 0px));",
+    );
+    const bars = screen.getByRole("navigation", {
+      name: "Main",
+    }).parentElement!;
+    expect(bars.className).toContain("md:sticky");
+    expect(bars.className).toContain("md:w-full");
+  });
+
+  it("shows the side panel only from 1280px, and only when a screen gives one", () => {
+    const { unmount } = renderWide();
+    expect(screen.queryByText("Task detail")).toBeNull();
+    unmount();
+    renderWide(<p>Task detail</p>);
+    const panel = screen.getByText("Task detail").parentElement!;
+    expect(panel.className).toContain("hidden");
+    expect(panel.className).toContain("xl:block");
+    expect(panel.className).toContain("w-[400px]");
+  });
+
+  it("leaves the sidebar out on signed-out screens", () => {
+    render(
+      <AppShell>
+        <p>Sign in</p>
+      </AppShell>,
+    );
+    expect(screen.queryByRole("navigation", { name: "Menu" })).toBeNull();
+  });
+
+  it("opens sheets as a centred dialog up to 560px wide", () => {
+    render(
+      <Sheet open title="New task" closeLabel="Close" onClose={() => {}} />,
+    );
+    const sheet = screen.getByRole("dialog");
+    expect(sheet.parentElement!.className).toContain("md:modal-middle");
+    expect(sheet.className).toContain("md:max-w-[560px]");
+    expect(sheet.className).toContain("md:rounded-dialog");
+  });
+
+  it("hides the header's Search and Account where the sidebar has them", () => {
+    render(<ScreenHeader title="Inbox" accountInitial="e" />);
+    expect(
+      screen.getByRole("link", { name: "Search" }).parentElement!.className,
+    ).toContain("md:hidden");
+  });
+
+  it("keeps the tab bar compact on a phone held sideways (UX-26)", () => {
+    render(
+      <AppShell tab="inbox">
+        <p>content</p>
+      </AppShell>,
+    );
+    const tab = screen.getByRole("link", { name: "Inbox" });
+    expect(tab.className).toContain("[@media(max-height:480px)]:min-h-12");
+  });
+});
