@@ -1,0 +1,7099 @@
+# Independent object/title variations of the 51 seed scenarios. Expected dates, commands and safety are preserved from the reviewed seed.
+-
+  id: C-052
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy amber printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy amber printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-053
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy blue printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy blue printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-054
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy coral printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy coral printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-055
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy green printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy green printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-056
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy ivory printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy ivory printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-057
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy silver printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy silver printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-058
+  categories:
+    - split.comma
+    - date.weekday
+    - date.relative
+    - time.am_pm
+    - time.word
+    - priority.keyword
+    - priority.default
+    - project.keyword
+    - reminder.exam
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql quiz monday 9am, email the group tonight, buy white printer ink tomorrow'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        start: '09:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+      -
+        title: 'Email the group'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+      -
+        title: 'Buy white printer ink'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-059
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about amber curtains'
+  expect:
+    status: done
+    name: 'Call mum about amber curtains'
+    create:
+      -
+        title: 'Call mum about amber curtains'
+        priority: low
+        project: Personal
+-
+  id: C-060
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about blue curtains'
+  expect:
+    status: done
+    name: 'Call mum about blue curtains'
+    create:
+      -
+        title: 'Call mum about blue curtains'
+        priority: low
+        project: Personal
+-
+  id: C-061
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about coral curtains'
+  expect:
+    status: done
+    name: 'Call mum about coral curtains'
+    create:
+      -
+        title: 'Call mum about coral curtains'
+        priority: low
+        project: Personal
+-
+  id: C-062
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about green curtains'
+  expect:
+    status: done
+    name: 'Call mum about green curtains'
+    create:
+      -
+        title: 'Call mum about green curtains'
+        priority: low
+        project: Personal
+-
+  id: C-063
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about ivory curtains'
+  expect:
+    status: done
+    name: 'Call mum about ivory curtains'
+    create:
+      -
+        title: 'Call mum about ivory curtains'
+        priority: low
+        project: Personal
+-
+  id: C-064
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about silver curtains'
+  expect:
+    status: done
+    name: 'Call mum about silver curtains'
+    create:
+      -
+        title: 'Call mum about silver curtains'
+        priority: low
+        project: Personal
+-
+  id: C-065
+  categories:
+    - project.keyword
+    - priority.default
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'Call mum about white curtains'
+  expect:
+    status: done
+    name: 'Call mum about white curtains'
+    create:
+      -
+        title: 'Call mum about white curtains'
+        priority: low
+        project: Personal
+-
+  id: C-066
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI amber report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI amber report'
+    create:
+      -
+        title: 'Submit HCI amber report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-067
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI blue report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI blue report'
+    create:
+      -
+        title: 'Submit HCI blue report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-068
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI coral report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI coral report'
+    create:
+      -
+        title: 'Submit HCI coral report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-069
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI green report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI green report'
+    create:
+      -
+        title: 'Submit HCI green report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-070
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI ivory report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI ivory report'
+    create:
+      -
+        title: 'Submit HCI ivory report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-071
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI silver report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI silver report'
+    create:
+      -
+        title: 'Submit HCI silver report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-072
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.keyword
+    - project.literal
+    - title.lead_in
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit HCI white report by friday'
+  expect:
+    status: done
+    name: 'Submit HCI white report'
+    create:
+      -
+        title: 'Submit HCI white report'
+        due: '2026-10-30'
+        priority: high
+        project: HCI
+-
+  id: C-073
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym amber session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym amber session'
+    create:
+      -
+        title: 'Gym amber session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-074
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym blue session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym blue session'
+    create:
+      -
+        title: 'Gym blue session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-075
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym coral session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym coral session'
+    create:
+      -
+        title: 'Gym coral session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-076
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym green session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym green session'
+    create:
+      -
+        title: 'Gym green session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-077
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym ivory session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym ivory session'
+    create:
+      -
+        title: 'Gym ivory session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-078
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym silver session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym silver session'
+    create:
+      -
+        title: 'Gym silver session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-079
+  categories:
+    - repeat.weekday
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym white session every monday 7am'
+  expect:
+    status: done
+    name: 'Gym white session'
+    create:
+      -
+        title: 'Gym white session'
+        due: '2026-10-26'
+        start: '07:00'
+        priority: low
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-080
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near amber mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near amber mat'
+    create:
+      -
+        title: 'Stretch near amber mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-081
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near blue mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near blue mat'
+    create:
+      -
+        title: 'Stretch near blue mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-082
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near coral mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near coral mat'
+    create:
+      -
+        title: 'Stretch near coral mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-083
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near green mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near green mat'
+    create:
+      -
+        title: 'Stretch near green mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-084
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near ivory mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near ivory mat'
+    create:
+      -
+        title: 'Stretch near ivory mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-085
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near silver mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near silver mat'
+    create:
+      -
+        title: 'Stretch near silver mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-086
+  categories:
+    - repeat.daily
+    - time.24h
+    - priority.default
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'stretch near white mat every day 21:00'
+  expect:
+    status: done
+    name: 'Stretch near white mat'
+    create:
+      -
+        title: 'Stretch near white mat'
+        due: '2026-10-23'
+        start: '21:00'
+        priority: medium
+        repeat: daily
+        reminder: 15m
+-
+  id: C-087
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay amber rent end of the month'
+  expect:
+    status: done
+    name: 'Pay amber rent'
+    create:
+      -
+        title: 'Pay amber rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-088
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay blue rent end of the month'
+  expect:
+    status: done
+    name: 'Pay blue rent'
+    create:
+      -
+        title: 'Pay blue rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-089
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay coral rent end of the month'
+  expect:
+    status: done
+    name: 'Pay coral rent'
+    create:
+      -
+        title: 'Pay coral rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-090
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay green rent end of the month'
+  expect:
+    status: done
+    name: 'Pay green rent'
+    create:
+      -
+        title: 'Pay green rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-091
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay ivory rent end of the month'
+  expect:
+    status: done
+    name: 'Pay ivory rent'
+    create:
+      -
+        title: 'Pay ivory rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-092
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay silver rent end of the month'
+  expect:
+    status: done
+    name: 'Pay silver rent'
+    create:
+      -
+        title: 'Pay silver rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-093
+  categories:
+    - date.month_end
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pay white rent end of the month'
+  expect:
+    status: done
+    name: 'Pay white rent'
+    create:
+      -
+        title: 'Pay white rent'
+        due: '2026-10-31'
+        priority: low
+-
+  id: C-094
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 6 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 6'
+    create:
+      -
+        title: 'Read chapter 6'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-095
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 7 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 7'
+    create:
+      -
+        title: 'Read chapter 7'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-096
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 8 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 8'
+    create:
+      -
+        title: 'Read chapter 8'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-097
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 9 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 9'
+    create:
+      -
+        title: 'Read chapter 9'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-098
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 10 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 10'
+    create:
+      -
+        title: 'Read chapter 10'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-099
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 11 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 11'
+    create:
+      -
+        title: 'Read chapter 11'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-100
+  categories:
+    - date.relative
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read chapter 12 in 3 days'
+  expect:
+    status: done
+    name: 'Read chapter 12'
+    create:
+      -
+        title: 'Read chapter 12'
+        due: '2026-10-26'
+        priority: low
+-
+  id: C-101
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram amber draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram amber draft'
+    create:
+      -
+        title: 'ER diagram amber draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-102
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram blue draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram blue draft'
+    create:
+      -
+        title: 'ER diagram blue draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-103
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram coral draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram coral draft'
+    create:
+      -
+        title: 'ER diagram coral draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-104
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram green draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram green draft'
+    create:
+      -
+        title: 'ER diagram green draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-105
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram ivory draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram ivory draft'
+    create:
+      -
+        title: 'ER diagram ivory draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-106
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram silver draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram silver draft'
+    create:
+      -
+        title: 'ER diagram silver draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-107
+  categories:
+    - date.relative
+    - project.keyword
+    - title.acronym
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ER diagram white draft tmr'
+  expect:
+    status: done
+    name: 'ER diagram white draft'
+    create:
+      -
+        title: 'ER diagram white draft'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-108
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the amber lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the amber lecturer'
+    create:
+      -
+        title: 'Email the amber lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-109
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the blue lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the blue lecturer'
+    create:
+      -
+        title: 'Email the blue lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-110
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the coral lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the coral lecturer'
+    create:
+      -
+        title: 'Email the coral lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-111
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the green lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the green lecturer'
+    create:
+      -
+        title: 'Email the green lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-112
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the ivory lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the ivory lecturer'
+    create:
+      -
+        title: 'Email the ivory lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-113
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the silver lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the silver lecturer'
+    create:
+      -
+        title: 'Email the silver lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-114
+  categories:
+    - title.lead_in
+    - time.word
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'remember to email the white lecturer tonight'
+  expect:
+    status: done
+    name: 'Email the white lecturer'
+    create:
+      -
+        title: 'Email the white lecturer'
+        due: '2026-10-23'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-115
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy amber milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy amber milk + 2 more'
+    create:
+      -
+        title: 'Buy amber milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-116
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy blue milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy blue milk + 2 more'
+    create:
+      -
+        title: 'Buy blue milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-117
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy coral milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy coral milk + 2 more'
+    create:
+      -
+        title: 'Buy coral milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-118
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy green milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy green milk + 2 more'
+    create:
+      -
+        title: 'Buy green milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-119
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy ivory milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy ivory milk + 2 more'
+    create:
+      -
+        title: 'Buy ivory milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-120
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy silver milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy silver milk + 2 more'
+    create:
+      -
+        title: 'Buy silver milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-121
+  categories:
+    - split.newline
+    - split.bullets
+    - title.acronym
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: |-
+    - buy white milk
+    - print CV
+    - book dentist
+  expect:
+    status: done
+    name: 'Buy white milk + 2 more'
+    create:
+      -
+        title: 'Buy white milk'
+        priority: low
+      -
+        title: 'Print CV'
+        priority: low
+      -
+        title: 'Book dentist'
+        priority: low
+-
+  id: C-122
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish amber slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish amber slides + 1 more'
+    create:
+      -
+        title: 'Finish amber slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-123
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish blue slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish blue slides + 1 more'
+    create:
+      -
+        title: 'Finish blue slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-124
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish coral slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish coral slides + 1 more'
+    create:
+      -
+        title: 'Finish coral slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-125
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish green slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish green slides + 1 more'
+    create:
+      -
+        title: 'Finish green slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-126
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish ivory slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish ivory slides + 1 more'
+    create:
+      -
+        title: 'Finish ivory slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-127
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish silver slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish silver slides + 1 more'
+    create:
+      -
+        title: 'Finish silver slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-128
+  categories:
+    - split.then
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'finish white slides then send them to the group'
+  expect:
+    status: done
+    name: 'Finish white slides + 1 more'
+    create:
+      -
+        title: 'Finish white slides'
+        priority: low
+      -
+        title: 'Send them to the group'
+        priority: low
+-
+  id: C-129
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word amber essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word amber essay'
+    create:
+      -
+        title: 'Write 1,000 word amber essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-130
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word blue essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word blue essay'
+    create:
+      -
+        title: 'Write 1,000 word blue essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-131
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word coral essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word coral essay'
+    create:
+      -
+        title: 'Write 1,000 word coral essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-132
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word green essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word green essay'
+    create:
+      -
+        title: 'Write 1,000 word green essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-133
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word ivory essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word ivory essay'
+    create:
+      -
+        title: 'Write 1,000 word ivory essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-134
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word silver essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word silver essay'
+    create:
+      -
+        title: 'Write 1,000 word silver essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-135
+  categories:
+    - split.digit_comma
+    - edge.NU-E18
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write 1,000 word white essay by sunday'
+  expect:
+    status: done
+    name: 'Write 1,000 word white essay'
+    create:
+      -
+        title: 'Write 1,000 word white essay'
+        due: '2026-10-25'
+        priority: low
+-
+  id: C-136
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio amber site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio amber site'
+        reason: skip
+-
+  id: C-137
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio blue site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio blue…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio blue site'
+        reason: skip
+-
+  id: C-138
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio coral site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio coral site'
+        reason: skip
+-
+  id: C-139
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio green site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio green site'
+        reason: skip
+-
+  id: C-140
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio ivory site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio ivory site'
+        reason: skip
+-
+  id: C-141
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio silver site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio silver site'
+        reason: skip
+-
+  id: C-142
+  categories:
+    - skip.idea
+    - naming.nothing
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'idea: dark mode for portfolio white site'
+  expect:
+    status: followup
+    name: 'Idea: dark mode for portfolio…'
+    skipped:
+      -
+        text: 'idea: dark mode for portfolio white site'
+        reason: skip
+-
+  id: C-143
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'okay thanks'
+  expect:
+    status: followup
+    name: 'Okay thanks'
+    skipped:
+      -
+        text: 'okay thanks'
+        reason: skip
+-
+  id: C-144
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'hmm thanks'
+  expect:
+    status: followup
+    name: 'Hmm thanks'
+    skipped:
+      -
+        text: 'hmm thanks'
+        reason: skip
+-
+  id: C-145
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'cool thanks'
+  expect:
+    status: followup
+    name: 'Cool thanks'
+    skipped:
+      -
+        text: 'cool thanks'
+        reason: skip
+-
+  id: C-146
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ok thank you'
+  expect:
+    status: followup
+    name: 'Ok thank you'
+    skipped:
+      -
+        text: 'ok thank you'
+        reason: skip
+-
+  id: C-147
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ừ cảm ơn'
+  expect:
+    status: followup
+    name: 'Ừ cảm ơn'
+    skipped:
+      -
+        text: 'ừ cảm ơn'
+        reason: skip
+-
+  id: C-148
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'thanks cool'
+  expect:
+    status: followup
+    name: 'Thanks cool'
+    skipped:
+      -
+        text: 'thanks cool'
+        reason: skip
+-
+  id: C-149
+  categories:
+    - skip.filler
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'okay cool'
+  expect:
+    status: followup
+    name: 'Okay cool'
+    skipped:
+      -
+        text: 'okay cool'
+        reason: skip
+-
+  id: C-150
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy amber printer ink'
+  expect:
+    status: done
+    name: 'Buy amber printer ink'
+    create:
+      -
+        title: 'Buy amber printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-151
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy blue printer ink'
+  expect:
+    status: done
+    name: 'Buy blue printer ink'
+    create:
+      -
+        title: 'Buy blue printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-152
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy coral printer ink'
+  expect:
+    status: done
+    name: 'Buy coral printer ink'
+    create:
+      -
+        title: 'Buy coral printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-153
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy green printer ink'
+  expect:
+    status: done
+    name: 'Buy green printer ink'
+    create:
+      -
+        title: 'Buy green printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-154
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy ivory printer ink'
+  expect:
+    status: done
+    name: 'Buy ivory printer ink'
+    create:
+      -
+        title: 'Buy ivory printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-155
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy silver printer ink'
+  expect:
+    status: done
+    name: 'Buy silver printer ink'
+    create:
+      -
+        title: 'Buy silver printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-156
+  categories:
+    - skip.fyi
+    - split.period
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'fyi lab moved to room 3. buy white printer ink'
+  expect:
+    status: done
+    name: 'Buy white printer ink'
+    create:
+      -
+        title: 'Buy white printer ink'
+        priority: low
+    skipped:
+      -
+        text: 'fyi lab moved to room 3'
+        reason: skip
+-
+  id: C-157
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the amber group'
+      due: '2026-10-23'
+  note: 'done email the amber group'
+  expect:
+    status: done
+    name: 'Update: Email the amber group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-158
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the blue group'
+      due: '2026-10-23'
+  note: 'done email the blue group'
+  expect:
+    status: done
+    name: 'Update: Email the blue group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-159
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the coral group'
+      due: '2026-10-23'
+  note: 'done email the coral group'
+  expect:
+    status: done
+    name: 'Update: Email the coral group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-160
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the green group'
+      due: '2026-10-23'
+  note: 'done email the green group'
+  expect:
+    status: done
+    name: 'Update: Email the green group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-161
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the ivory group'
+      due: '2026-10-23'
+  note: 'done email the ivory group'
+  expect:
+    status: done
+    name: 'Update: Email the ivory group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-162
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the silver group'
+      due: '2026-10-23'
+  note: 'done email the silver group'
+  expect:
+    status: done
+    name: 'Update: Email the silver group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-163
+  categories:
+    - command.complete
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Email the white group'
+      due: '2026-10-23'
+  note: 'done email the white group'
+  expect:
+    status: done
+    name: 'Update: Email the white group'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-164
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym amber membership'
+      due: '2026-10-23'
+  note: 'move gym amber membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym amber membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-165
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym blue membership'
+      due: '2026-10-23'
+  note: 'move gym blue membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym blue membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-166
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym coral membership'
+      due: '2026-10-23'
+  note: 'move gym coral membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym coral membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-167
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym green membership'
+      due: '2026-10-23'
+  note: 'move gym green membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym green membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-168
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym ivory membership'
+      due: '2026-10-23'
+  note: 'move gym ivory membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym ivory membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-169
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym silver membership'
+      due: '2026-10-23'
+  note: 'move gym silver membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym silver…'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-170
+  categories:
+    - command.reschedule
+    - naming.update
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t2
+      title: 'Renew gym white membership'
+      due: '2026-10-23'
+  note: 'move gym white membership to sunday'
+  expect:
+    status: done
+    name: 'Update: Renew gym white membership'
+    update:
+      -
+        task: t2
+        due: '2026-10-25'
+        label: 'Due Sun 25 Oct (was today)'
+-
+  id: C-171
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading amber list'
+  note: 'delete old reading amber list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading amber list'
+    delete:
+      - t3
+-
+  id: C-172
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading blue list'
+  note: 'delete old reading blue list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading blue list'
+    delete:
+      - t3
+-
+  id: C-173
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading coral list'
+  note: 'delete old reading coral list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading coral list'
+    delete:
+      - t3
+-
+  id: C-174
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading green list'
+  note: 'delete old reading green list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading green list'
+    delete:
+      - t3
+-
+  id: C-175
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading ivory list'
+  note: 'delete old reading ivory list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading ivory list'
+    delete:
+      - t3
+-
+  id: C-176
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading silver list'
+  note: 'delete old reading silver list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading silver list'
+    delete:
+      - t3
+-
+  id: C-177
+  categories:
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t3
+      title: 'Old reading white list'
+  note: 'delete old reading white list'
+  expect:
+    status: confirm
+    name: 'Update: Old reading white list'
+    delete:
+      - t3
+-
+  id: C-178
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy amber soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy amber soap'
+        priority: low
+-
+  id: C-179
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy blue soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy blue soap'
+        priority: low
+-
+  id: C-180
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy coral soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy coral soap'
+        priority: low
+-
+  id: C-181
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy green soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy green soap'
+        priority: low
+-
+  id: C-182
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy ivory soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy ivory soap'
+        priority: low
+-
+  id: C-183
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy silver soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy silver soap'
+        priority: low
+-
+  id: C-184
+  categories:
+    - safety.many
+    - split.comma
+    - naming.more
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy milk, buy eggs, buy bread, buy rice, buy tea, buy white soap'
+  expect:
+    status: confirm
+    name: 'Buy milk + 5 more'
+    create:
+      -
+        title: 'Buy milk'
+        priority: low
+      -
+        title: 'Buy eggs'
+        priority: low
+      -
+        title: 'Buy bread'
+        priority: low
+      -
+        title: 'Buy rice'
+        priority: low
+      -
+        title: 'Buy tea'
+        priority: low
+      -
+        title: 'Buy white soap'
+        priority: low
+-
+  id: C-185
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for amber team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for amber team'
+    create:
+      -
+        title: 'Pitch practice for amber team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-186
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for blue team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for blue team'
+    create:
+      -
+        title: 'Pitch practice for blue team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-187
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for coral team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for coral team'
+    create:
+      -
+        title: 'Pitch practice for coral team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-188
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for green team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for green team'
+    create:
+      -
+        title: 'Pitch practice for green team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-189
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for ivory team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for ivory team'
+    create:
+      -
+        title: 'Pitch practice for ivory team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-190
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for silver team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for silver team'
+    create:
+      -
+        title: 'Pitch practice for silver team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-191
+  categories:
+    - date.weekday
+    - edge.NU-E2
+    - priority.default
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'pitch practice for white team this friday'
+  expect:
+    status: done
+    name: 'Pitch practice for white team'
+    create:
+      -
+        title: 'Pitch practice for white team'
+        due: '2026-10-23'
+        priority: medium
+-
+  id: C-192
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about amber curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about amber curtains'
+    create:
+      -
+        title: 'Call mum about amber curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-193
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about blue curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about blue curtains'
+    create:
+      -
+        title: 'Call mum about blue curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-194
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about coral curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about coral curtains'
+    create:
+      -
+        title: 'Call mum about coral curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-195
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about green curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about green curtains'
+    create:
+      -
+        title: 'Call mum about green curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-196
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about ivory curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about ivory curtains'
+    create:
+      -
+        title: 'Call mum about ivory curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-197
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about silver curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about silver curtains'
+    create:
+      -
+        title: 'Call mum about silver curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-198
+  categories:
+    - edge.NU-E1
+    - time.word
+    - project.keyword
+  now: '2026-10-23T21:30'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about white curtains tonight'
+  expect:
+    status: done
+    name: 'Call mum about white curtains'
+    create:
+      -
+        title: 'Call mum about white curtains'
+        due: '2026-10-23'
+        priority: medium
+        project: Personal
+-
+  id: C-199
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about amber curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about amber curtains'
+    create:
+      -
+        title: 'Call mum about amber curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-200
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about blue curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about blue curtains'
+    create:
+      -
+        title: 'Call mum about blue curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-201
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about coral curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about coral curtains'
+    create:
+      -
+        title: 'Call mum about coral curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-202
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about green curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about green curtains'
+    create:
+      -
+        title: 'Call mum about green curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-203
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about ivory curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about ivory curtains'
+    create:
+      -
+        title: 'Call mum about ivory curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-204
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about silver curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about silver curtains'
+    create:
+      -
+        title: 'Call mum about silver curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-205
+  categories:
+    - edge.NU-E5
+    - time.am_pm
+    - reminder.timed
+    - project.keyword
+  now: '2026-10-23T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum about white curtains 9am'
+  expect:
+    status: done
+    name: 'Call mum about white curtains'
+    create:
+      -
+        title: 'Call mum about white curtains'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        project: Personal
+        reminder: 15m
+-
+  id: C-206
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit amber lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit amber lab'
+    create:
+      -
+        title: 'Submit amber lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-207
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit blue lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit blue lab'
+    create:
+      -
+        title: 'Submit blue lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-208
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit coral lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit coral lab'
+    create:
+      -
+        title: 'Submit coral lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-209
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit green lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit green lab'
+    create:
+      -
+        title: 'Submit green lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-210
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit ivory lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit ivory lab'
+    create:
+      -
+        title: 'Submit ivory lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-211
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit silver lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit silver lab'
+    create:
+      -
+        title: 'Submit silver lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-212
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+    - priority.keyword
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit white lab 26 Oct'
+  expect:
+    status: done
+    name: 'Submit white lab'
+    create:
+      -
+        title: 'Submit white lab'
+        due: '2026-10-26'
+        priority: high
+-
+  id: C-213
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew amber passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew amber passport'
+    create:
+      -
+        title: 'Renew amber passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-214
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew blue passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew blue passport'
+    create:
+      -
+        title: 'Renew blue passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-215
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew coral passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew coral passport'
+    create:
+      -
+        title: 'Renew coral passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-216
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew green passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew green passport'
+    create:
+      -
+        title: 'Renew green passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-217
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew ivory passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew ivory passport'
+    create:
+      -
+        title: 'Renew ivory passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-218
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew silver passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew silver passport'
+    create:
+      -
+        title: 'Renew silver passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-219
+  categories:
+    - edge.NU-E4
+    - date.explicit
+    - date.passed
+  now: '2026-10-27T09:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'renew white passport 1 Sep'
+  expect:
+    status: done
+    name: 'Renew white passport'
+    create:
+      -
+        title: 'Renew white passport'
+        due: '2027-09-01'
+        priority: low
+-
+  id: C-220
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet amber tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet amber tutor'
+    create:
+      -
+        title: 'Meet amber tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-221
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet blue tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet blue tutor'
+    create:
+      -
+        title: 'Meet blue tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-222
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet coral tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet coral tutor'
+    create:
+      -
+        title: 'Meet coral tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-223
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet green tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet green tutor'
+    create:
+      -
+        title: 'Meet green tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-224
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet ivory tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet ivory tutor'
+    create:
+      -
+        title: 'Meet ivory tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-225
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet silver tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet silver tutor'
+    create:
+      -
+        title: 'Meet silver tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-226
+  categories:
+    - edge.NU-E7
+    - time.bare_hour
+    - reminder.timed
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet white tutor at 2 tomorrow'
+  expect:
+    status: done
+    name: 'Meet white tutor'
+    create:
+      -
+        title: 'Meet white tutor'
+        due: '2026-10-24'
+        start: '14:00'
+        priority: low
+        reminder: 15m
+-
+  id: C-227
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof amber Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof amber Kim'
+      due: '2026-10-26'
+  note: 'done email prof amber'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof amber Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-228
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof blue Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof blue Kim'
+      due: '2026-10-26'
+  note: 'done email prof blue'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof blue Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-229
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof coral Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof coral Kim'
+      due: '2026-10-26'
+  note: 'done email prof coral'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof coral Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-230
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof green Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof green Kim'
+      due: '2026-10-26'
+  note: 'done email prof green'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof green Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-231
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof ivory Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof ivory Kim'
+      due: '2026-10-26'
+  note: 'done email prof ivory'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof ivory Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-232
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof silver Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof silver Kim'
+      due: '2026-10-26'
+  note: 'done email prof silver'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof silver Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-233
+  categories:
+    - edge.NU-E11
+    - command.tie
+    - safety.tie
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t4
+      title: 'Email Prof white Lee'
+      due: '2026-10-24'
+    -
+      id: t5
+      title: 'Email Prof white Kim'
+      due: '2026-10-26'
+  note: 'done email prof white'
+  expect:
+    status: confirm
+    name: 'Update: Email Prof white Lee'
+    update:
+      -
+        task: t4
+        done: true
+    ambiguous:
+      -
+        candidates:
+          - t4
+          - t5
+        preselected: t4
+-
+  id: C-234
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay amber rent'
+  note: 'done pay amber rent'
+  expect:
+    status: done
+    name: 'Done pay amber rent'
+    skipped:
+      -
+        text: 'done pay amber rent'
+        reason: already_done
+-
+  id: C-235
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay blue rent'
+  note: 'done pay blue rent'
+  expect:
+    status: done
+    name: 'Done pay blue rent'
+    skipped:
+      -
+        text: 'done pay blue rent'
+        reason: already_done
+-
+  id: C-236
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay coral rent'
+  note: 'done pay coral rent'
+  expect:
+    status: done
+    name: 'Done pay coral rent'
+    skipped:
+      -
+        text: 'done pay coral rent'
+        reason: already_done
+-
+  id: C-237
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay green rent'
+  note: 'done pay green rent'
+  expect:
+    status: done
+    name: 'Done pay green rent'
+    skipped:
+      -
+        text: 'done pay green rent'
+        reason: already_done
+-
+  id: C-238
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay ivory rent'
+  note: 'done pay ivory rent'
+  expect:
+    status: done
+    name: 'Done pay ivory rent'
+    skipped:
+      -
+        text: 'done pay ivory rent'
+        reason: already_done
+-
+  id: C-239
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay silver rent'
+  note: 'done pay silver rent'
+  expect:
+    status: done
+    name: 'Done pay silver rent'
+    skipped:
+      -
+        text: 'done pay silver rent'
+        reason: already_done
+-
+  id: C-240
+  categories:
+    - edge.NU-E12
+    - command.complete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  done_tasks:
+    -
+      id: t6
+      title: 'Pay white rent'
+  note: 'done pay white rent'
+  expect:
+    status: done
+    name: 'Done pay white rent'
+    skipped:
+      -
+        text: 'done pay white rent'
+        reason: already_done
+-
+  id: C-241
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry amber homework'
+  expect:
+    status: done
+    name: 'Delete chemistry amber homework'
+    skipped:
+      -
+        text: 'delete chemistry amber homework'
+        reason: not_found
+-
+  id: C-242
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry blue homework'
+  expect:
+    status: done
+    name: 'Delete chemistry blue homework'
+    skipped:
+      -
+        text: 'delete chemistry blue homework'
+        reason: not_found
+-
+  id: C-243
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry coral homework'
+  expect:
+    status: done
+    name: 'Delete chemistry coral homework'
+    skipped:
+      -
+        text: 'delete chemistry coral homework'
+        reason: not_found
+-
+  id: C-244
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry green homework'
+  expect:
+    status: done
+    name: 'Delete chemistry green homework'
+    skipped:
+      -
+        text: 'delete chemistry green homework'
+        reason: not_found
+-
+  id: C-245
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry ivory homework'
+  expect:
+    status: done
+    name: 'Delete chemistry ivory homework'
+    skipped:
+      -
+        text: 'delete chemistry ivory homework'
+        reason: not_found
+-
+  id: C-246
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry silver homework'
+  expect:
+    status: done
+    name: 'Delete chemistry silver homework'
+    skipped:
+      -
+        text: 'delete chemistry silver homework'
+        reason: not_found
+-
+  id: C-247
+  categories:
+    - edge.NU-E29
+    - command.no_match
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete chemistry white homework'
+  expect:
+    status: done
+    name: 'Delete chemistry white homework'
+    skipped:
+      -
+        text: 'delete chemistry white homework'
+        reason: not_found
+-
+  id: C-248
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move amber dentist to friday'
+  expect:
+    status: done
+    name: 'Amber dentist'
+    create:
+      -
+        title: 'Amber dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-249
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move blue dentist to friday'
+  expect:
+    status: done
+    name: 'Blue dentist'
+    create:
+      -
+        title: 'Blue dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-250
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move coral dentist to friday'
+  expect:
+    status: done
+    name: 'Coral dentist'
+    create:
+      -
+        title: 'Coral dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-251
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move green dentist to friday'
+  expect:
+    status: done
+    name: 'Green dentist'
+    create:
+      -
+        title: 'Green dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-252
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move ivory dentist to friday'
+  expect:
+    status: done
+    name: 'Ivory dentist'
+    create:
+      -
+        title: 'Ivory dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-253
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move silver dentist to friday'
+  expect:
+    status: done
+    name: 'Silver dentist'
+    create:
+      -
+        title: 'Silver dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-254
+  categories:
+    - command.no_match
+    - command.reschedule
+    - edge.NU-E29
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move white dentist to friday'
+  expect:
+    status: done
+    name: 'White dentist'
+    create:
+      -
+        title: 'White dentist'
+        due: '2026-10-30'
+        priority: low
+-
+  id: C-255
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-256
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item2, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-257
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item3, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-258
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item4, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-259
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item5, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-260
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item6, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-261
+  categories:
+    - limit.items
+    - edge.NU-E14
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'item7, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24, a25, a26, a27, a28, a29, a30, a31'
+  expect:
+    status: error
+    error: note.too_many_items
+-
+  id: C-262
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab amber report'
+  expect:
+    status: done
+    name: 'Adv Web database lab amber report'
+    create:
+      -
+        title: 'Adv Web database lab amber report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-263
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab blue report'
+  expect:
+    status: done
+    name: 'Adv Web database lab blue report'
+    create:
+      -
+        title: 'Adv Web database lab blue report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-264
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab coral report'
+  expect:
+    status: done
+    name: 'Adv Web database lab coral report'
+    create:
+      -
+        title: 'Adv Web database lab coral report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-265
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab green report'
+  expect:
+    status: done
+    name: 'Adv Web database lab green report'
+    create:
+      -
+        title: 'Adv Web database lab green report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-266
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab ivory report'
+  expect:
+    status: done
+    name: 'Adv Web database lab ivory report'
+    create:
+      -
+        title: 'Adv Web database lab ivory report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-267
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab silver report'
+  expect:
+    status: done
+    name: 'Adv Web database lab silver report'
+    create:
+      -
+        title: 'Adv Web database lab silver report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-268
+  categories:
+    - edge.NU-E22
+    - edge.NU-E21
+    - project.literal
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'adv web database lab white report'
+  expect:
+    status: done
+    name: 'Adv Web database lab white report'
+    create:
+      -
+        title: 'Adv Web database lab white report'
+        priority: low
+        project: 'Adv Web'
+-
+  id: C-269
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call amber bank'
+  expect:
+    status: done
+    name: 'Call amber bank'
+    create:
+      -
+        title: 'Call amber bank'
+        priority: high
+-
+  id: C-270
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call blue bank'
+  expect:
+    status: done
+    name: 'Call blue bank'
+    create:
+      -
+        title: 'Call blue bank'
+        priority: high
+-
+  id: C-271
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call coral bank'
+  expect:
+    status: done
+    name: 'Call coral bank'
+    create:
+      -
+        title: 'Call coral bank'
+        priority: high
+-
+  id: C-272
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call green bank'
+  expect:
+    status: done
+    name: 'Call green bank'
+    create:
+      -
+        title: 'Call green bank'
+        priority: high
+-
+  id: C-273
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call ivory bank'
+  expect:
+    status: done
+    name: 'Call ivory bank'
+    create:
+      -
+        title: 'Call ivory bank'
+        priority: high
+-
+  id: C-274
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call silver bank'
+  expect:
+    status: done
+    name: 'Call silver bank'
+    create:
+      -
+        title: 'Call silver bank'
+        priority: high
+-
+  id: C-275
+  categories:
+    - edge.NU-E24
+    - priority.conflict
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'maybe urgent call white bank'
+  expect:
+    status: done
+    name: 'Call white bank'
+    create:
+      -
+        title: 'Call white bank'
+        priority: high
+-
+  id: C-276
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI amber quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI amber quiz'
+    create:
+      -
+        title: 'HCI amber quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-277
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI blue quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI blue quiz'
+    create:
+      -
+        title: 'HCI blue quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-278
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI coral quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI coral quiz'
+    create:
+      -
+        title: 'HCI coral quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-279
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI green quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI green quiz'
+    create:
+      -
+        title: 'HCI green quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-280
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI ivory quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI ivory quiz'
+    create:
+      -
+        title: 'HCI ivory quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-281
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI silver quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI silver quiz'
+    create:
+      -
+        title: 'HCI silver quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-282
+  categories:
+    - reminder.exam
+    - edge.NU-E25
+    - project.literal
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'HCI white quiz wednesday'
+  expect:
+    status: done
+    name: 'HCI white quiz'
+    create:
+      -
+        title: 'HCI white quiz'
+        due: '2026-10-28'
+        priority: high
+        project: HCI
+        reminder: 1d
+-
+  id: C-283
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'amber exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Amber exam'
+    create:
+      -
+        title: 'Amber exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-284
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'blue exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Blue exam'
+    create:
+      -
+        title: 'Blue exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-285
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'coral exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Coral exam'
+    create:
+      -
+        title: 'Coral exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-286
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'green exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Green exam'
+    create:
+      -
+        title: 'Green exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-287
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ivory exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Ivory exam'
+    create:
+      -
+        title: 'Ivory exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-288
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'silver exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'Silver exam'
+    create:
+      -
+        title: 'Silver exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-289
+  categories:
+    - edge.NU-E25
+    - reminder.past
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'white exam tomorrow 8am'
+  expect:
+    status: done
+    name: 'White exam'
+    create:
+      -
+        title: 'White exam'
+        due: '2026-10-24'
+        start: '08:00'
+        priority: high
+-
+  id: C-290
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy amber ink tonight'
+  expect:
+    status: done
+    name: 'Buy amber ink'
+    create:
+      -
+        title: 'Buy amber ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-291
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy blue ink tonight'
+  expect:
+    status: done
+    name: 'Buy blue ink'
+    create:
+      -
+        title: 'Buy blue ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-292
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy coral ink tonight'
+  expect:
+    status: done
+    name: 'Buy coral ink'
+    create:
+      -
+        title: 'Buy coral ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-293
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy green ink tonight'
+  expect:
+    status: done
+    name: 'Buy green ink'
+    create:
+      -
+        title: 'Buy green ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-294
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy ivory ink tonight'
+  expect:
+    status: done
+    name: 'Buy ivory ink'
+    create:
+      -
+        title: 'Buy ivory ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-295
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy silver ink tonight'
+  expect:
+    status: done
+    name: 'Buy silver ink'
+    create:
+      -
+        title: 'Buy silver ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-296
+  categories:
+    - offline.written_at
+    - edge.NU-E26
+    - time.word
+  now: '2026-10-22T19:00'
+  timezone: Asia/Ho_Chi_Minh
+  processed_at: '2026-10-23T08:00'
+  note: 'buy white ink tonight'
+  expect:
+    status: done
+    name: 'Buy white ink'
+    create:
+      -
+        title: 'Buy white ink'
+        due: '2026-10-22'
+        start: '20:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-297
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit amber timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit amber timesheet'
+    create:
+      -
+        title: 'Submit amber timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-298
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit blue timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit blue timesheet'
+    create:
+      -
+        title: 'Submit blue timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-299
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit coral timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit coral timesheet'
+    create:
+      -
+        title: 'Submit coral timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-300
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit green timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit green timesheet'
+    create:
+      -
+        title: 'Submit green timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-301
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit ivory timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit ivory timesheet'
+    create:
+      -
+        title: 'Submit ivory timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-302
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit silver timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit silver timesheet'
+    create:
+      -
+        title: 'Submit silver timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-303
+  categories:
+    - edge.NU-E9
+    - date.month_end
+    - priority.keyword
+  now: '2026-10-31T10:00'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'submit white timesheet end of the month'
+  expect:
+    status: done
+    name: 'Submit white timesheet'
+    create:
+      -
+        title: 'Submit white timesheet'
+        due: '2026-10-31'
+        priority: high
+-
+  id: C-304
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql amber homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL amber homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-305
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql blue homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL blue homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-306
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql coral homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL coral homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-307
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql green homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL green homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-308
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql ivory homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL ivory homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-309
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql silver homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL silver homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-310
+  categories:
+    - naming.project
+    - title.acronym
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'sql white homework, sql reading, er diagram tmr'
+  expect:
+    status: done
+    name: 'SQL Course to-dos'
+    create:
+      -
+        title: 'SQL white homework'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'SQL reading'
+        priority: low
+        project: 'SQL Course'
+      -
+        title: 'ER diagram'
+        due: '2026-10-24'
+        priority: low
+        project: 'SQL Course'
+-
+  id: C-311
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call amber bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call amber bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-312
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call blue bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call blue bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-313
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call coral bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call coral bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-314
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call green bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call green bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-315
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call ivory bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call ivory bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-316
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call silver bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call silver bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-317
+  categories:
+    - naming.day
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ink tomorrow, call white bank tomorrow'
+  expect:
+    status: done
+    name: "Tomorrow's plan"
+    create:
+      -
+        title: 'Buy ink'
+        due: '2026-10-24'
+        priority: low
+      -
+        title: 'Call white bank'
+        due: '2026-10-24'
+        priority: low
+-
+  id: C-318
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'amber lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Amber lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-319
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'blue lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Blue lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-320
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'coral lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Coral lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-321
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'green lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Green lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-322
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ivory lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Ivory lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-323
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'silver lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'Silver lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-324
+  categories:
+    - naming.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'white lab monday, gym monday'
+  expect:
+    status: done
+    name: 'Monday plan'
+    create:
+      -
+        title: 'White lab'
+        due: '2026-10-26'
+        priority: low
+      -
+        title: Gym
+        due: '2026-10-26'
+        priority: low
+        project: Personal
+-
+  id: C-325
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring amber laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring amber laptop'
+        priority: low
+-
+  id: C-326
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring blue laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring blue laptop'
+        priority: low
+-
+  id: C-327
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring coral laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring coral laptop'
+        priority: low
+-
+  id: C-328
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring green laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring green laptop'
+        priority: low
+-
+  id: C-329
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring ivory laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring ivory laptop'
+        priority: low
+-
+  id: C-330
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring silver laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring silver laptop'
+        priority: low
+-
+  id: C-331
+  categories:
+    - edge.NU-E19
+    - split.period
+    - time.dot
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'standup 9.30 tomorrow. bring white laptop'
+  expect:
+    status: done
+    name: 'Standup + 1 more'
+    create:
+      -
+        title: Standup
+        due: '2026-10-24'
+        start: '09:30'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Bring white laptop'
+        priority: low
+-
+  id: C-332
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy amber milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy amber milk, eggs and bread'
+    create:
+      -
+        title: 'Buy amber milk, eggs and bread'
+        priority: low
+-
+  id: C-333
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy blue milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy blue milk, eggs and bread'
+    create:
+      -
+        title: 'Buy blue milk, eggs and bread'
+        priority: low
+-
+  id: C-334
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy coral milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy coral milk, eggs and bread'
+    create:
+      -
+        title: 'Buy coral milk, eggs and bread'
+        priority: low
+-
+  id: C-335
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy green milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy green milk, eggs and bread'
+    create:
+      -
+        title: 'Buy green milk, eggs and bread'
+        priority: low
+-
+  id: C-336
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ivory milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy ivory milk, eggs and bread'
+    create:
+      -
+        title: 'Buy ivory milk, eggs and bread'
+        priority: low
+-
+  id: C-337
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy silver milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy silver milk, eggs and bread'
+    create:
+      -
+        title: 'Buy silver milk, eggs and bread'
+        priority: low
+-
+  id: C-338
+  categories:
+    - split.merge
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy white milk, eggs and bread'
+  expect:
+    status: done
+    name: 'Buy white milk, eggs and bread'
+    create:
+      -
+        title: 'Buy white milk, eggs and bread'
+        priority: low
+-
+  id: C-339
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, amber haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Amber haircut'
+        priority: low
+-
+  id: C-340
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, blue haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Blue haircut'
+        priority: low
+-
+  id: C-341
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, coral haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Coral haircut'
+        priority: low
+-
+  id: C-342
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, green haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Green haircut'
+        priority: low
+-
+  id: C-343
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, ivory haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Ivory haircut'
+        priority: low
+-
+  id: C-344
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, silver haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'Silver haircut'
+        priority: low
+-
+  id: C-345
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'dentist, white haircut'
+  expect:
+    status: done
+    name: 'Dentist + 1 more'
+    create:
+      -
+        title: Dentist
+        priority: low
+      -
+        title: 'White haircut'
+        priority: low
+-
+  id: C-346
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy amber ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy amber ink + 1 more'
+    create:
+      -
+        title: 'Buy amber ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-347
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy blue ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy blue ink + 1 more'
+    create:
+      -
+        title: 'Buy blue ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-348
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy coral ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy coral ink + 1 more'
+    create:
+      -
+        title: 'Buy coral ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-349
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy green ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy green ink + 1 more'
+    create:
+      -
+        title: 'Buy green ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-350
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy ivory ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy ivory ink + 1 more'
+    create:
+      -
+        title: 'Buy ivory ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-351
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy silver ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy silver ink + 1 more'
+    create:
+      -
+        title: 'Buy silver ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-352
+  categories:
+    - split.merge
+    - split.comma
+    - edge.NU-E33
+    - date.weekday
+    - project.keyword
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'buy white ink, sql quiz monday'
+  expect:
+    status: done
+    name: 'Buy white ink + 1 more'
+    create:
+      -
+        title: 'Buy white ink'
+        priority: low
+      -
+        title: 'SQL quiz'
+        due: '2026-10-26'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-353
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 1, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 1'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-354
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 2, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 2'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-355
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 3, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 3'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-356
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 4, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 4'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-357
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 5, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 5'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-358
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 6, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 6'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-359
+  categories:
+    - lang.vi
+    - split.comma
+    - date.relative
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.literal
+    - reminder.timed
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'mai 9h họp nhóm số 7, nộp báo cáo HCI thứ 2'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Họp nhóm số 7'
+        due: '2026-10-24'
+        start: '09:00'
+        priority: low
+        reminder: 15m
+      -
+        title: 'Nộp báo cáo HCI'
+        due: '2026-10-26'
+        priority: high
+        project: HCI
+-
+  id: C-360
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 1 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 1 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 1 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-361
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 2 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 2 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 2 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-362
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 3 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 3 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 3 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-363
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 4 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 4 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 4 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-364
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 5 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 5 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 5 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-365
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 6 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 6 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 6 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-366
+  categories:
+    - lang.vi
+    - date.weekday
+    - time.vi
+    - priority.keyword
+    - project.keyword
+    - reminder.exam
+    - naming.single
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'kiểm tra phần 7 SQL thứ 2 lúc 2 giờ chiều'
+  expect:
+    status: done
+    name: 'Kiểm tra phần 7 SQL'
+    create:
+      -
+        title: 'Kiểm tra phần 7 SQL'
+        due: '2026-10-26'
+        start: '14:00'
+        priority: high
+        project: 'SQL Course'
+        reminder: 1d
+-
+  id: C-367
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 1 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 1 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 1 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-368
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 2 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 2 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 2 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-369
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 3 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 3 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 3 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-370
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 4 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 4 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 4 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-371
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 5 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 5 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 5 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-372
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 6 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 6 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 6 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-373
+  categories:
+    - lang.vi
+    - command.complete
+    - edge.NU-E41
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Bài tập phần 7 SQL'
+      due: '2026-10-23'
+  note: 'bài tập phần 7 sql xong rồi'
+  expect:
+    status: done
+    name: 'Update: Bài tập phần 7 SQL'
+    update:
+      -
+        task: t1
+        done: true
+-
+  id: C-374
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 1'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 1 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 1'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-375
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 2'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 2 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 2'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-376
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 3'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 3 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 3'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-377
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 4'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 4 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 4'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-378
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 5'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 5 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 5'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-379
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 6'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 6 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 6'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-380
+  categories:
+    - lang.vi
+    - command.reschedule
+    - date.weekday
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 7'
+      due: '2026-10-24'
+      start: '09:00'
+  note: 'dời họp nhóm số 7 sang thứ 3'
+  expect:
+    status: done
+    name: 'Update: Họp nhóm số 7'
+    update:
+      -
+        task: t1
+        due: '2026-10-27'
+        start: '09:00'
+        label: 'Due Tue 27 Oct (was tomorrow)'
+-
+  id: C-381
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 1'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 1'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-382
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 2'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 2'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-383
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 3'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 3'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-384
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 4'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 4'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-385
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 5'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 5'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-386
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 6'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 6'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-387
+  categories:
+    - lang.vi
+    - command.delete
+    - safety.delete
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  open_tasks:
+    -
+      id: t1
+      title: 'Họp nhóm số 7'
+      due: '2026-10-24'
+  note: 'xóa họp nhóm số 7'
+  expect:
+    status: confirm
+    delete:
+      - t1
+-
+  id: C-388
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm amber app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm amber app học từ vựng'
+        reason: skip
+-
+  id: C-389
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm blue app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm blue app học từ vựng'
+        reason: skip
+-
+  id: C-390
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm coral app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm coral app học từ vựng'
+        reason: skip
+-
+  id: C-391
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm green app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm green app học từ vựng'
+        reason: skip
+-
+  id: C-392
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm ivory app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm ivory app học từ vựng'
+        reason: skip
+-
+  id: C-393
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm silver app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm silver app học từ vựng'
+        reason: skip
+-
+  id: C-394
+  categories:
+    - lang.vi
+    - skip.prefix
+    - safety.followup
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'ý tưởng: làm white app học từ vựng'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'ý tưởng: làm white app học từ vựng'
+        reason: skip
+-
+  id: C-395
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua amber'
+  expect:
+    status: done
+    name: 'Toi can mua sua amber'
+    create:
+      -
+        title: 'Toi can mua sua amber'
+        priority: low
+-
+  id: C-396
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua blue'
+  expect:
+    status: done
+    name: 'Toi can mua sua blue'
+    create:
+      -
+        title: 'Toi can mua sua blue'
+        priority: low
+-
+  id: C-397
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua coral'
+  expect:
+    status: done
+    name: 'Toi can mua sua coral'
+    create:
+      -
+        title: 'Toi can mua sua coral'
+        priority: low
+-
+  id: C-398
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua green'
+  expect:
+    status: done
+    name: 'Toi can mua sua green'
+    create:
+      -
+        title: 'Toi can mua sua green'
+        priority: low
+-
+  id: C-399
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua ivory'
+  expect:
+    status: done
+    name: 'Toi can mua sua ivory'
+    create:
+      -
+        title: 'Toi can mua sua ivory'
+        priority: low
+-
+  id: C-400
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua silver'
+  expect:
+    status: done
+    name: 'Toi can mua sua silver'
+    create:
+      -
+        title: 'Toi can mua sua silver'
+        priority: low
+-
+  id: C-401
+  categories:
+    - lang.vi
+    - edge.NU-E40
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua white'
+  expect:
+    status: done
+    name: 'Toi can mua sua white'
+    create:
+      -
+        title: 'Toi can mua sua white'
+        priority: low
+-
+  id: C-402
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 1 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 1'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-403
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 2 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 2'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-404
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 3 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 3'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-405
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 4 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 4'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-406
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 5 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 5'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-407
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 6 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 6'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m
+-
+  id: C-408
+  categories:
+    - lang.vi
+    - split.then
+    - repeat.daily
+    - time.vi
+    - edge.NU-E5
+    - naming.week
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'chạy bộ 7 mỗi ngày 6h rồi đi chợ chiều nay'
+  expect:
+    status: done
+    name: 'This week'
+    create:
+      -
+        title: 'Chạy bộ 7'
+        due: '2026-10-24'
+        start: '06:00'
+        priority: low
+        repeat: daily
+        reminder: 15m
+      -
+        title: 'Đi chợ'
+        due: '2026-10-23'
+        start: '15:00'
+        priority: medium
+        reminder: 15m

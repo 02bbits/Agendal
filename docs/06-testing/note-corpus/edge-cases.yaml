@@ -1,0 +1,311 @@
+# Additional edge decisions. Persistence and provider failure stages also run in Pest feature tests.
+-
+  id: C-409
+  categories:
+    - edge.NU-E3
+  now: '2026-10-21T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read next friday'
+  expect:
+    status: done
+    create:
+      -
+        title: Read
+        due: '2026-10-23'
+-
+  id: C-410
+  categories:
+    - edge.NU-E6
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'study monday for quiz friday'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Study monday for quiz'
+        due: '2026-10-30'
+        priority: high
+        reminder: 1d
+-
+  id: C-411
+  categories:
+    - edge.NU-E8
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'gym every friday 9am'
+  expect:
+    status: done
+    create:
+      -
+        title: Gym
+        due: '2026-10-23'
+        start: '09:00'
+        priority: medium
+        project: Personal
+        repeat: weekly
+        reminder: 15m
+-
+  id: C-412
+  categories:
+    - edge.NU-E10
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read next week'
+  expect:
+    status: done
+    create:
+      -
+        title: Read
+        due: '2026-10-25'
+  week_start: sunday
+-
+  id: C-413
+  categories:
+    - edge.NU-E13
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'call mum tomorrow'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Call mum'
+        due: '2026-10-24'
+        project: Personal
+        duplicate_of: t1
+  open_tasks:
+    -
+      id: t1
+      title: 'Call mum'
+      due: '2026-10-24'
+-
+  id: C-414
+  categories:
+    - edge.NU-E15
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: ' . ; ​'
+  expect:
+    status: error
+    error: note.empty
+-
+  id: C-415
+  categories:
+    - edge.NU-E16
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'write documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation appendix'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Write documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation documentation'
+        notes: 'documentation documentation documentation documentation documentation documentation documentation appendix'
+-
+  id: C-416
+  categories:
+    - edge.NU-E17
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'visit athens'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Visit athens'
+-
+  id: C-417
+  categories:
+    - edge.NU-E20
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: '1. [x] call mum'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Call mum'
+        project: Personal
+-
+  id: C-418
+  categories:
+    - edge.NU-E23
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'study for chemistry'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Study for chemistry'
+-
+  id: C-419
+  categories:
+    - edge.NU-E27
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'toi can mua sua'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Toi can mua sua'
+  provider_failure: timeout
+-
+  id: C-420
+  categories:
+    - edge.NU-E28
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'acheter du pain demain 3/4'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Acheter du pain demain'
+        due: '2027-04-03'
+-
+  id: C-421
+  categories:
+    - edge.NU-E30
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'meet 2-4pm'
+  expect:
+    status: done
+    create:
+      -
+        title: Meet
+        due: '2026-10-23'
+        start: '14:00'
+        end: '16:00'
+        reminder: 15m
+-
+  id: C-422
+  categories:
+    - edge.NU-E31
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'read 31/2'
+  expect:
+    status: done
+    create:
+      -
+        title: 'Read 31/2'
+-
+  id: C-423
+  categories:
+    - edge.NU-E32
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'tomorrow 9am'
+  expect:
+    status: followup
+    skipped:
+      -
+        text: 'tomorrow 9am'
+        reason: skip
+-
+  id: C-424
+  categories:
+    - edge.NU-E34
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: gym
+  expect:
+    status: done
+    create:
+      -
+        title: Gym
+  projects: {}
+-
+  id: C-425
+  categories:
+    - edge.NU-E35
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move email group to sunday'
+  expect:
+    status: done
+    update:
+      -
+        task: t1
+        due: '2026-10-25'
+        start: '09:00'
+        end: '10:00'
+        label: 'Due Sun 25 Oct (was today)'
+  open_tasks:
+    -
+      id: t1
+      title: 'Email group'
+      due: '2026-10-23'
+      start: '09:00'
+      end: '10:00'
+-
+  id: C-426
+  categories:
+    - edge.NU-E36
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'done call mum'
+  expect:
+    status: done
+    update:
+      -
+        task: t1
+        done: true
+  open_tasks:
+    -
+      id: t1
+      title: 'Call mum'
+      due: '2026-10-23'
+      repeat: daily
+-
+  id: C-427
+  categories:
+    - edge.NU-E37
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'delete all tasks'
+  expect:
+    status: done
+    skipped:
+      -
+        text: 'delete all tasks'
+        reason: not_found
+-
+  id: C-428
+  categories:
+    - edge.NU-E38
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'move email group to sunday'
+  expect:
+    status: done
+    update:
+      -
+        task: t1
+        due: '2026-10-25'
+        start: '14:00'
+        end: '15:00'
+        label: 'Due Sun 25 Oct (was tomorrow)'
+  open_tasks:
+    -
+      id: t1
+      title: 'Email group'
+      due: '2026-10-24'
+      start: '14:00'
+      end: '15:00'
+-
+  id: C-429
+  categories:
+    - edge.NU-E39
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: '<script>alert(1)</script>'
+  expect:
+    status: done
+    create:
+      -
+        title: '<script>alert(1)</script>'

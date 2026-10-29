@@ -1,0 +1,40 @@
+name: Nightly note corpus
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  corpus:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_DB: agendal
+          POSTGRES_USER: agendal
+          POSTGRES_PASSWORD: agendal
+        ports: ['5432:5432']
+        options: --health-cmd "pg_isready -U agendal" --health-interval 5s --health-timeout 3s --health-retries 10
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      NOTE_LLM_ENABLED: 'true'
+      OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+      NOTE_LLM_MODEL: ${{ vars.NOTE_LLM_MODEL }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_pgsql, intl, mbstring
+      - run: composer install --no-interaction --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - run: php artisan migrate --force
+      - run: php artisan notes:corpus --mode=rules
+      - run: php artisan notes:corpus --mode=llm
