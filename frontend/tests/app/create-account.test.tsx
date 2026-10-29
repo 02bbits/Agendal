@@ -6,7 +6,7 @@ import CreateAccountPage from "../../src/app/create-account/page";
 import { signUpErrors } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "../ui/axe";
 
-const router = { push: vi.fn(), back: vi.fn() };
+const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
   usePathname: () => "/create-account",
   useRouter: () => router,
@@ -15,6 +15,10 @@ vi.mock("next/navigation", () => ({
 const fetchMock = vi.fn();
 const json = (status: number, body: unknown, headers = {}) =>
   new Response(JSON.stringify(body), { status, headers });
+// The auth gate's session check answers "signed out"; every other call gets `reply`
+let reply: () => Response;
+const registerCalls = () =>
+  fetchMock.mock.calls.filter(([url]) => url === "/api/v1/auth/register");
 
 function renderPage() {
   render(
@@ -31,7 +35,13 @@ function renderPage() {
 
 beforeEach(() => {
   router.push.mockClear();
-  fetchMock.mockReset();
+  router.replace.mockClear();
+  reply = () => json(201, { user: {} });
+  fetchMock
+    .mockReset()
+    .mockImplementation(async (url: string) =>
+      url === "/api/v1/user" ? json(401, {}) : reply(),
+    );
   vi.stubGlobal("fetch", fetchMock);
   document.cookie = "XSRF-TOKEN=token";
 });
@@ -68,7 +78,6 @@ describe("Create account (AA-1)", () => {
   });
 
   it("T-AA-05: success opens Inbox with the welcome toast", async () => {
-    fetchMock.mockResolvedValue(json(201, { user: {} }));
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
@@ -76,8 +85,7 @@ describe("Create account (AA-1)", () => {
     await user.type(password, "quiet river 42");
     await user.click(submit);
 
-    const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/v1/auth/register");
+    const [[, init]] = registerCalls();
     expect(JSON.parse(init.body)).toMatchObject({
       email: "example@gmail.com",
       password: "quiet river 42",
@@ -90,11 +98,10 @@ describe("Create account (AA-1)", () => {
 
   it("shows the server's field error with a Sign in link and focuses the field", async () => {
     const taken = "An account with this email already exists. Sign in instead?";
-    fetchMock.mockResolvedValue(
+    reply = () =>
       json(422, {
         error: { code: "auth.email_taken", fields: { email: [taken] } },
-      }),
-    );
+      });
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
@@ -110,7 +117,7 @@ describe("Create account (AA-1)", () => {
   });
 
   it("shows the rate limit with the seconds to wait", async () => {
-    fetchMock.mockResolvedValue(json(429, {}, { "Retry-After": "120" }));
+    reply = () => json(429, {}, { "Retry-After": "120" });
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 

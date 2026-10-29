@@ -19,7 +19,13 @@ export {
   type SignUpFailure,
 } from "./auth/CreateAccountScreen";
 export {
+  SignInScreen,
+  type SignInScreenProps,
+  type SignInFailure,
+} from "./auth/SignInScreen";
+export {
   signUpErrors,
   normalizeEmail,
+  safeReturnPath,
   type SignUpErrors,
 } from "./auth/validation";
