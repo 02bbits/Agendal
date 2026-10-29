@@ -1,5 +1,8 @@
 * text=auto eol=lf
 
+# Keep CR/CRLF input inside quoted CSV test cells unchanged.
+tests/Fixtures/note-splitter-scenarios.csv -text whitespace=cr-at-eol
+
 *.blade.php diff=html
 *.css diff=css
 *.html diff=html
