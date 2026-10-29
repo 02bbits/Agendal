@@ -336,6 +336,15 @@ separator,;
 conjunction,then
 following_conjunction,rồi
 following_conjunction,sau đó
+following_conjunction,after that
+following_conjunction,afterwards
+following_conjunction,afterward
+following_conjunction,sau đấy
+following_conjunction,tiếp đó
+following_conjunction,tiếp đến
+following_conjunction,kế đó
+following_conjunction,kế đến
+following_conjunction,xong thì
 bullet,-
 bullet,*
 bullet,+
@@ -376,6 +385,17 @@ lead_in,nhớ
 lead_in,cần phải
 lead_in,cần
 lead_in,phải
+lead_in,first of all
+lead_in,firstly
+lead_in,first
+lead_in,finally
+lead_in,lastly
+lead_in,also
+lead_in,trước hết
+lead_in,trước tiên
+lead_in,đầu tiên
+lead_in,cuối cùng
+lead_in,sau cùng
 list_joiner,and
 list_joiner,or
 list_joiner,&
