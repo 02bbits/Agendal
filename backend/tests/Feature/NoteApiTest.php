@@ -23,7 +23,7 @@ beforeEach(function () {
     $this->noteUser = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
 });
 
-it('creates assistant tasks and returns stored results on client-id replay (T-NU-60, T-NU-72, SEC-13)', function () {
+it('creates assistant tasks and returns stored results on client-id replay (T-NU-60, T-NU-72, T-NU-86, SEC-13)', function () {
     $payload = notePayload('call mum tomorrow; read report');
     $first = $this->actingAs($this->noteUser)->postJson('/api/v1/notes', $payload)->assertCreated()->assertJsonPath('note.status', 'done');
     expect(Task::count())->toBe(2);
@@ -85,6 +85,24 @@ it('never commands another user’s tasks (SEC-12)', function () {
 
 it('requires a session (T-NU-81)', function () {
     $this->postJson('/api/v1/notes', notePayload())->assertUnauthorized();
+});
+
+it('requires CSRF protection for a stateful note submission (T-NU-82)', function () {
+    $this->app['env'] = 'local';
+    $this->actingAs($this->noteUser)->withHeader('Referer', 'http://localhost:3000/')
+        ->postJson('/api/v1/notes', notePayload())->assertStatus(419);
+    expect(Note::count())->toBe(0);
+});
+
+it('returns maintenance status without storing a note (T-NU-85)', function () {
+    $maintenance = app()->maintenanceMode();
+    $maintenance->activate([]);
+    try {
+        $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload())->assertStatus(503);
+        expect(Note::count())->toBe(0);
+    } finally {
+        $maintenance->deactivate();
+    }
 });
 
 it('rejects invalid notes without storing anything (T-NU-83)', function (array $overrides) {

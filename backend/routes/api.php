@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
-use App\Http\Controllers\NoteController;
 use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\NoteController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
