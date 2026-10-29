@@ -10,8 +10,6 @@ use Illuminate\Testing\TestResponse;
 // IM-10: Sanctum SPA sessions (ADR-007). Sign-in itself is IM-12, so a stand-in route signs in here.
 uses(RefreshDatabase::class);
 
-const SESSION_COOKIE = '__Host-agendal_session';
-
 beforeEach(function () {
     // The database driver, as in production, so an expired session is really gone
     config(['session.driver' => 'database']);
@@ -27,23 +25,6 @@ beforeEach(function () {
     // and JSON test requests send cookies only with credentials, like fetch with credentials
     $this->withHeader('Referer', 'http://localhost:3000/')->withCredentials();
 });
-
-// The app object lives across test requests, so drop the signed-in user and session it holds,
-// as a separate browser request would
-function newRequest(): void
-{
-    Auth::forgetGuards();
-    app('session')->forgetDrivers();
-    app()->forgetInstance('session.store');
-}
-
-// The test client doesn't keep cookies between requests, so carry them like a browser would
-function carryCookies(TestResponse $response): array
-{
-    return collect($response->headers->getCookies())
-        ->mapWithKeys(fn ($c) => [$c->getName() => $response->getCookie($c->getName(), $c->getName() !== 'XSRF-TOKEN')->getValue()])
-        ->all();
-}
 
 function signIn(bool $remember): TestResponse
 {
