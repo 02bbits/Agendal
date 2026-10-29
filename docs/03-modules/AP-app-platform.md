@@ -76,7 +76,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Setting ([Q20](../08-project/open-questions.md#q20)):** Account → Appearance: System / Light / Dark. That's a three-way choice, because a toggle can't return to "System".
   - Default: System.
   - The choice is stored on the user (`theme`) and in local storage, so every device follows it.
-- **No flash on load:** a tiny blocking `theme.js` in `<head>` sets `data-theme` before first paint. It's an external file, because CSP forbids inline scripts ([NF-16](../05-quality/nfr.md#nf-16)).
+- **No flash on load:** a tiny blocking `theme.js` in `<head>` sets `data-theme` before first paint. It's an external file, so it stays cacheable by the service worker.
 - **Browser chrome:** `<meta name="theme-color">` is updated with the theme.
 
 **Week start and time format ([AP-5](#ap-5)):**

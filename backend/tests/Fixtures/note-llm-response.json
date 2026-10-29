@@ -1,0 +1,4 @@
+{
+  "choices": [{"message": {"content": "{\"items\":[{\"ref\":\"i1\",\"action\":\"create\",\"task_id\":null,\"title\":\"Mua sữa\",\"due_date\":null,\"start_time\":null,\"end_time\":null,\"priority\":\"low\",\"project\":null,\"repeat\":\"never\",\"reminder\":\"none\"}]}"}}],
+  "usage": {"total_tokens": 200}
+}

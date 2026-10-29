@@ -1,0 +1,27 @@
+# Local services only. Laravel and Next.js run on the host (see README).
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: agendal
+      POSTGRES_USER: agendal
+      POSTGRES_PASSWORD: agendal
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql
+      - ./docker/db-init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agendal -d agendal"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mail:
+    image: axllent/mailpit:v1.27
+    ports:
+      - "1025:1025" # SMTP
+      - "8025:8025" # web inbox
+
+volumes:
+  db-data:

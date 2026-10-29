@@ -1,0 +1,241 @@
+/*
+ * Paper & ink on Tailwind CSS and daisyUI (IM-06).
+ * Source of truth for every value: docs/01-product/theme-guide.md.
+ * Themes are switched with data-theme="agendal-light" | "agendal-dark" on <html>;
+ * with no attribute, the system setting picks one (prefersdark).
+ */
+@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap");
+@import "tailwindcss";
+
+@plugin "daisyui" {
+  themes: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "agendal-light";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  /* daisyUI roles */
+  --color-base-100: #f6f5f1; /* bg: paper, the 60% */
+  --color-base-200: #eceae4; /* fill: quiet controls */
+  --color-base-300: #e2dfd7; /* separator */
+  --color-base-content: #1b1a17; /* ink */
+  --color-primary: #2f5bd3; /* accent, the 10% */
+  --color-primary-content: #ffffff; /* on-accent */
+  --color-secondary: #eceae4;
+  --color-secondary-content: #1b1a17;
+  --color-accent: #2f5bd3;
+  --color-accent-content: #ffffff;
+  --color-neutral: #1b1a17; /* selected chips, toasts */
+  --color-neutral-content: #f6f5f1;
+  --color-info: #2f5bd3;
+  --color-info-content: #ffffff;
+  --color-success: #2f7a4b;
+  --color-success-content: #ffffff;
+  --color-warning: #8a5300;
+  --color-warning-content: #ffffff;
+  --color-error: #b42318; /* danger */
+  --color-error-content: #ffffff;
+
+  --radius-selector: 999px;
+  --radius-field: 12px;
+  --radius-box: 16px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  /* Paper & ink tokens daisyUI has no role for */
+  --ag-surface: #ffffff;
+  --ag-surface-elevated: #ffffff;
+  --ag-fill-thumb: #ffffff;
+  --ag-control-border: #8a867c;
+  --ag-ink-secondary: #57544d;
+  --ag-ink-tertiary: #6b675f;
+  --ag-accent-tint: #e8edfb;
+  --ag-danger-tint: #fbeae8;
+  --ag-success-tint: #e6f1ea;
+  --ag-warning-tint: #f6eddc;
+  --ag-bar: rgba(246, 245, 241, 0.92);
+  --ag-scrim: rgba(27, 26, 23, 0.32);
+}
+
+@plugin "daisyui/theme" {
+  name: "agendal-dark";
+  default: false;
+  prefersdark: true;
+  color-scheme: dark;
+
+  --color-base-100: #121211;
+  --color-base-200: #262522;
+  --color-base-300: #2c2b28;
+  --color-base-content: #f2f0ea;
+  --color-primary: #8fadff;
+  --color-primary-content: #0e1630;
+  --color-secondary: #262522;
+  --color-secondary-content: #f2f0ea;
+  --color-accent: #8fadff;
+  --color-accent-content: #0e1630;
+  --color-neutral: #f2f0ea;
+  --color-neutral-content: #121211;
+  --color-info: #8fadff;
+  --color-info-content: #0e1630;
+  --color-success: #7dd19c;
+  --color-success-content: #0e1630;
+  --color-warning: #f0b45a;
+  --color-warning-content: #0e1630;
+  --color-error: #ff8a7f;
+  --color-error-content: #0e1630;
+
+  --radius-selector: 999px;
+  --radius-field: 12px;
+  --radius-box: 16px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+
+  --ag-surface: #1c1b19;
+  --ag-surface-elevated: #22211e;
+  --ag-fill-thumb: #3a3935;
+  --ag-control-border: #77736a;
+  --ag-ink-secondary: #b5b1a7;
+  --ag-ink-tertiary: #9a968c;
+  --ag-accent-tint: #1d2640;
+  --ag-danger-tint: #3a1d1a;
+  --ag-success-tint: #16301f;
+  --ag-warning-tint: #33270f;
+  --ag-bar: rgba(18, 18, 17, 0.92);
+  --ag-scrim: rgba(0, 0, 0, 0.6);
+}
+
+/* Utilities for the tokens above: bg-surface, text-ink-secondary, border-control, … */
+@theme inline {
+  --color-paper: var(--color-base-100);
+  --color-fill: var(--color-base-200);
+  --color-separator: var(--color-base-300);
+  --color-ink: var(--color-base-content);
+  --color-danger: var(--color-error);
+  --color-surface: var(--ag-surface);
+  --color-surface-elevated: var(--ag-surface-elevated);
+  --color-fill-thumb: var(--ag-fill-thumb);
+  --color-control: var(--ag-control-border);
+  --color-ink-secondary: var(--ag-ink-secondary);
+  --color-ink-tertiary: var(--ag-ink-tertiary);
+  --color-primary-tint: var(--ag-accent-tint);
+  --color-danger-tint: var(--ag-danger-tint);
+  --color-success-tint: var(--ag-success-tint);
+  --color-warning-tint: var(--ag-warning-tint);
+  --color-bar: var(--ag-bar);
+  --color-scrim: var(--ag-scrim);
+}
+
+/* Project colours are picked at runtime (style={{ background: var(--color-project-…) }}), so always emit them */
+@theme static {
+  /* Project colours: the same in both themes, only as dots, bars and tiles */
+  --color-project-blue: #4e79d9;
+  --color-project-red: #d2584e;
+  --color-project-orange: #e08a2e;
+  --color-project-yellow: #d9b23a;
+  --color-project-green: #4e9f6b;
+  --color-project-teal: #2e9c93;
+  --color-project-purple: #8c63d2;
+  --color-project-gray: #8e8a80;
+}
+
+@theme {
+  --font-sans:
+    "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
+  --font-serif: Newsreader, Georgia, "Times New Roman", serif;
+
+  /* Type scale */
+  --text-display: 36px;
+  --text-display--line-height: 40px;
+  --text-display--letter-spacing: -0.01em;
+  --text-title: 28px;
+  --text-title--line-height: 34px;
+  --text-title--letter-spacing: -0.01em;
+  --text-dialog: 24px;
+  --text-dialog--line-height: 30px;
+  --text-dialog--letter-spacing: -0.01em;
+  --text-note: 19px;
+  --text-note--line-height: 28px;
+  --text-heading: 17px;
+  --text-heading--line-height: 24px;
+  --text-body: 16px;
+  --text-body--line-height: 22px;
+  --text-callout: 15px;
+  --text-callout--line-height: 21px;
+  --text-footnote: 13px;
+  --text-footnote--line-height: 18px;
+  --text-overline: 12px;
+  --text-overline--line-height: 16px;
+  --text-overline--letter-spacing: 0.06em;
+  --text-tab: 11px;
+  --text-tab--line-height: 14px;
+
+  /* Radius: field (12), box (16) and selector (999) come from daisyUI */
+  --radius-badge: 6px;
+  --radius-tile: 8px;
+  --radius-segmented: 10px;
+  --radius-dialog: 20px;
+  --radius-sheet: 24px;
+
+  /* Shadows only on overlays and the capture bar */
+  --shadow-xs: 0 1px 2px rgba(27, 26, 23, 0.06);
+  --shadow-sm: 0 2px 10px rgba(27, 26, 23, 0.06);
+  --shadow-knob: 0 1px 3px rgba(27, 26, 23, 0.2);
+  --shadow-md: 0 8px 24px rgba(27, 26, 23, 0.12);
+  --shadow-lg: 0 16px 48px rgba(27, 26, 23, 0.16);
+
+  /* Motion (UX-50): fades and slides, 150–200 ms */
+  --animate-fade-in: fade-in 180ms ease-out;
+  --animate-slide-up: slide-up 180ms ease-out;
+  --animate-fade-quick: fade-in 100ms linear;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @keyframes slide-up {
+    from {
+      transform: translateY(16px);
+      opacity: 0;
+    }
+  }
+}
+
+/* Keyboard focus: a 2px paper gap, then 2px solid accent, on every control (NF-2) */
+@utility focus-ring {
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Overlines above screen titles and group labels */
+@utility overline {
+  font-size: var(--text-overline);
+  line-height: var(--text-overline--line-height);
+  letter-spacing: var(--text-overline--letter-spacing);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-base-100);
+    color: var(--color-base-content);
+    font-family: var(--font-sans);
+    font-size: 16px;
+    line-height: 22px;
+  }
+}
