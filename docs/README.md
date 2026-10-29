@@ -4,6 +4,8 @@ Agendal is a mobile web app (PWA). You write or say whatever is on your mind, in
 
 > **V2 concept (Oct 23, 2026).** The earlier chat with an assistant is replaced by **notes**. A note is written once and turned into tasks; there is no back-and-forth conversation. The source PRD is `Agendal-PRD-V2.md`. The V1 docs are in git history (commit `5ad132a`).
 
+What changed in the docs, by date: [CHANGELOG](CHANGELOG.md).
+
 ## Reading order
 
 | Folder | What it answers |

@@ -4,8 +4,21 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+use App\Enums\ItemKind;
+use App\Enums\NoteEngineKind;
+use App\Enums\SkipReason;
+
+/**
+ * NU §2.1 steps 3–10 in rules mode: split, classify, extract, match, validate, status and name.
+ *
+ * @phpstan-import-type TaskRow from CommandMatcher
+ */
 final class NoteEngine
 {
+    private const ITEM_REF_PREFIX = 'i';
+
+    private const EMPTY_PLAN = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => [], 'ambiguous' => []];
+
     public function __construct(
         private NoteSplitter $splitter,
         private ItemClassifier $classifier,
@@ -16,84 +29,123 @@ final class NoteEngine
     ) {}
 
     /**
-     * @param  list<array<string, mixed>>  $tasks
-     * @param  list<array<string, mixed>>  $done
-     * @return array<string, mixed>
+     * Items left once the rules budget is spent become plain tasks (SEC-23).
+     *
+     * @param  list<TaskRow>  $openTasks
+     * @param  list<TaskRow>  $doneTasks
      */
-    public function build(string $text, NoteContext $context, array $tasks = [], array $done = [], float $limitMs = 200): array
+    public function build(string $text, NoteContext $context, array $openTasks = [], array $doneTasks = [], ?float $budgetMs = null): NoteBuild
     {
-        $start = hrtime(true);
-        $plan = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => [], 'ambiguous' => []];
-        $items = [];
+        $budgetMs ??= (float) config('notes.engine_budget_ms');
+        $started = hrtime(true);
+        $plan = self::EMPTY_PLAN;
+        $lowConfidence = [];
         foreach ($this->splitter->split($text, array_values($context->projects)) as $index => $item) {
-            $result = $this->item($item, $context, $tasks, $done, $index + 1, (hrtime(true) - $start) / 1e6 >= $limitMs);
-            $items[] = ['text' => $item, ...$result];
-            foreach (array_keys($plan) as $key) {
-                $plan[$key] = [...$plan[$key], ...$result['plan'][$key]];
+            $ref = self::ITEM_REF_PREFIX.($index + 1);
+            $expired = (hrtime(true) - $started) / 1e6 >= $budgetMs;
+            $planned = $expired
+                ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'low' => false]
+                : $this->planItem($ref, $item, $context, $openTasks, $doneTasks);
+            foreach ($planned['plan'] as $kind => $entries) {
+                $plan[$kind] = [...$plan[$kind], ...$entries];
+            }
+            if ($planned['low']) {
+                $lowConfidence[$ref] = $item;
             }
         }
-        $taskMap = array_column($tasks, null, 'id');
-        $plan = $this->validator->validate($plan, $context->projects, $taskMap);
+        $tasksById = array_column($openTasks, null, 'id');
+        $validated = $this->validator->validate($plan, $context->projects, $tasksById);
 
-        return ['plan' => $plan, 'status' => $this->validator->status($plan), 'name' => $this->namer->name($plan, $text, $context, $taskMap), 'engine' => 'rules', 'items' => $items];
+        return new NoteBuild($validated, $this->validator->status($validated), $this->namer->name($validated, $text, $context, $tasksById), NoteEngineKind::Rules, $lowConfidence);
     }
 
     /**
-     * @param  list<array<string, mixed>>  $tasks
-     * @param  list<array<string, mixed>>  $done
-     * @return array<string, mixed>
+     * @param  list<TaskRow>  $openTasks
+     * @param  list<TaskRow>  $doneTasks
+     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
      */
-    private function item(string $text, NoteContext $context, array $tasks, array $done, int $index, bool $expired): array
+    private function planItem(string $ref, string $item, NoteContext $context, array $openTasks, array $doneTasks): array
     {
-        $plan = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => [], 'ambiguous' => []];
-        $ref = 'i'.$index;
-        $type = $expired ? ['type' => 'task', 'action' => null] : $this->classifier->classify($text);
-        $low = false;
-        if ($type['type'] === 'skip') {
-            $plan['skipped'][] = ['ref' => $ref, 'text' => $text, 'reason' => 'skip'];
-        } elseif ($type['type'] === 'command') {
-            $matched = $this->matcher->match($text, (string) $type['action'], $tasks, $done, $context);
-            if (isset($matched['skip'])) {
-                $plan['skipped'][] = ['ref' => $ref, 'text' => $text, 'reason' => $matched['skip']];
-                $low = $matched['skip'] === 'not_found';
-            } elseif (isset($matched['create'])) {
-                $create = $matched['create'];
-                $low = $create['low_confidence'];
-                unset($create['low_confidence']);
-                $plan['create'][] = ['ref' => $ref, ...$create];
-            } else {
-                $plan[$matched['kind']][] = ['ref' => $ref, ...$matched['entry']];
-                if ($matched['candidates'] !== []) {
-                    $plan['ambiguous'][] = ['ref' => $ref, 'candidates' => $matched['candidates'], 'preselected' => $matched['entry']['task_id']];
-                }
-            }
-        } else {
-            $create = $expired ? $this->rawTask($text) : $this->extractor->extract($text, $context);
-            $low = $create['low_confidence'];
-            unset($create['low_confidence']);
-            if ($create['title'] === '') {
-                $plan['skipped'][] = ['ref' => $ref, 'text' => $text, 'reason' => 'skip'];
-            } else {
-                foreach ($tasks as $task) {
-                    $words = $this->matcher->words($create['title'], $context);
-                    $other = $this->matcher->words($task['title'], $context);
-                    if (($task['due_date'] ?? null) === $create['due_date'] && $words !== [] && count($words) === count($other) && array_diff($words, $other) === []) {
-                        $create['duplicate_of'] = $task['id'];
-                        break;
-                    }
-                }
-                $plan['create'][] = ['ref' => $ref, ...$create];
+        $classification = $this->classifier->classify($item, $context);
+
+        return match ($classification->kind) {
+            ItemKind::Skip => $this->skipped($ref, $item, SkipReason::Skip),
+            ItemKind::Command => $this->command($ref, $item, $this->matcher->match($item, $classification->commandAction(), $openTasks, $doneTasks, $context)),
+            ItemKind::Task => $this->task($ref, $item, $context, $openTasks),
+        };
+    }
+
+    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
+    private function command(string $ref, string $item, CommandMatch $match): array
+    {
+        if ($match->skip !== null) {
+            // An unmatched command may still mean something to the LLM.
+            return $this->skipped($ref, $item, $match->skip, $match->skip === SkipReason::NotFound);
+        }
+        if ($match->newTask !== null) {
+            return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'low' => $match->newTask->lowConfidence];
+        }
+        $change = $match->change;
+        assert($change !== null);
+        if (! $change->delete && $change->fields === []) {
+            // "move dentist to next tue" when it is due that Tuesday: the task already is as asked.
+            return $this->skipped($ref, $item, SkipReason::AlreadyDone);
+        }
+        $entry = ['ref' => $ref, 'task_id' => $change->taskId, 'label' => $change->label, ...$change->fields];
+        $tie = $match->isTie() ? [['ref' => $ref, 'candidates' => $match->tiedTaskIds, 'preselected' => $change->taskId]] : [];
+
+        return ['plan' => [...self::EMPTY_PLAN, $change->delete ? 'delete' : 'update' => [$entry], 'ambiguous' => $tie], 'low' => false];
+    }
+
+    /**
+     * @param  list<TaskRow>  $openTasks
+     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     */
+    private function task(string $ref, string $item, NoteContext $context, array $openTasks): array
+    {
+        $fields = $this->extractor->extract($item, $context);
+        if ($fields->title === '') {
+            return $this->skipped($ref, $item, SkipReason::Skip);
+        }
+        $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
+
+        return ['plan' => [...self::EMPTY_PLAN, 'create' => [$entry]], 'low' => $fields->lowConfidence];
+    }
+
+    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
+    private function skipped(string $ref, string $item, SkipReason $reason, bool $low = false): array
+    {
+        return ['plan' => [...self::EMPTY_PLAN, 'skipped' => [['ref' => $ref, 'text' => $item, 'reason' => $reason->value]]], 'low' => $low];
+    }
+
+    /**
+     * NU-E13: an open task with the same meaningful words and due date; the task is still created.
+     *
+     * @param  list<TaskRow>  $openTasks
+     */
+    private function duplicateOf(ExtractedFields $fields, array $openTasks, NoteContext $context): ?string
+    {
+        $words = $this->matcher->words($fields->title, $context);
+        sort($words);
+        foreach ($openTasks as $task) {
+            $other = $this->matcher->words($task['title'], $context);
+            sort($other);
+            if ($words !== [] && $words === $other && ($task['due_date'] ?? null) === $fields->dueDate) {
+                return $task['id'];
             }
         }
 
-        return ['ref' => $ref, 'plan' => $plan, 'low' => $low && ! $expired];
+        return null;
     }
 
-    /** @return array<string, mixed> */
-    private function rawTask(string $text): array
+    /** @return array<string, mixed> the plan's create entry (NU §7) */
+    private function createEntry(string $ref, ExtractedFields $fields, ?string $duplicateOf): array
     {
-        $cut = mb_strlen($text) <= 200 ? mb_strlen($text) : (mb_strrpos(mb_substr($text, 0, 201), ' ') ?: 200);
-
-        return ['title' => mb_substr($text, 0, $cut), 'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => 'low', 'project_id' => null, 'repeat' => 'never', 'reminder' => 'none', 'notes' => trim(mb_substr($text, $cut)) ?: null, 'duplicate_of' => null, 'low_confidence' => false];
+        return [
+            'ref' => $ref, 'title' => $fields->title, 'due_date' => $fields->dueDate,
+            'start_time' => $fields->startTime, 'end_time' => $fields->endTime, 'priority' => $fields->priority->value,
+            'project_id' => $fields->projectId, 'repeat' => $fields->repeat->value, 'reminder' => $fields->reminder->value,
+            'notes' => $fields->notes, 'duplicate_of' => $duplicateOf,
+        ];
     }
 }

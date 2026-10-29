@@ -110,6 +110,19 @@ export const pending = {
   "auth.email_invalid": "Enter a valid email address.",
   "auth.have_account": "Already have an account?",
   "auth.sign_in": "Sign in",
+  "auth.forgot_password": "Forgot password?",
+  "auth.no_account": "No account yet?",
+  "auth.unlocked": "You can sign in again.",
+  "auth.reset_title": "Reset password",
+  "auth.reset_send": "Send link",
+  "auth.reset_resend_in": "Resend link in {seconds} s",
+  "auth.reset_change_email": "Use a different email",
+  "auth.back_to_sign_in": "Back to Sign in",
+  "auth.new_password_title": "Choose a new password",
+  "auth.new_password": "New password",
+  "auth.new_password_for": "For {email}",
+  "auth.new_password_save": "Save password",
+  "auth.reset_request_new": "Request a new link",
 } as const;
 
 export type PendingKey = keyof typeof pending;

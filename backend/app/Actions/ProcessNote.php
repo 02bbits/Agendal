@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Actions;
 
+use App\Enums\PlanStatus;
+use App\Enums\WeekStart;
 use App\Models\Note;
 use App\Models\Project;
 use App\Models\User;
@@ -62,13 +64,14 @@ class ProcessNote
             }
             $zone = in_array($input['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true) ? $input['timezone'] : (string) $user->timezone;
             $projects = Project::query()->where('user_id', $user->id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-            $context = new NoteContext($clientClock->now(), $zone, $projects, (string) $user->week_start);
+            $context = new NoteContext($clientClock->now(), $zone, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
+            $budgetMs = (float) config('notes.engine_budget_ms');
             $started = hrtime(true);
             $text = $this->splitter->normalize($input['text']);
             $open = [];
             $done = [];
             foreach ($this->splitter->split($text, array_values($projects)) as $item) {
-                if ((hrtime(true) - $started) / 1e6 >= 200) {
+                if ((hrtime(true) - $started) / 1e6 >= $budgetMs) {
                     break;
                 }
                 $words = $this->matcher->words($item, $context);
@@ -79,25 +82,25 @@ class ProcessNote
                     $done[$task['id']] = $task;
                 }
             }
-            $remainingMs = max(0.0, 200.0 - (hrtime(true) - $started) / 1e6);
-            $result = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
-            $result = $this->fallback->resolve($result, $text, $context, array_values($open), $user->id);
-            if ($result['plan']['dropped'] > 0) {
-                Log::info('note_plan_validation', ['dropped' => $result['plan']['dropped']]);
+            $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
+            $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
+            $build = $this->fallback->improve($build, $text, $context, array_values($open), $user->id);
+            if ($build->plan['dropped'] > 0) {
+                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped']]);
             }
             $note = new Note;
             $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;
             $note->forceFill([
-                'user_id' => $user->id, 'client_id' => $input['client_id'], 'text' => $text, 'name' => $result['name'],
-                'status' => $result['status'], 'engine' => $result['engine'], 'prompt_version' => $result['prompt_version'] ?? null,
+                'user_id' => $user->id, 'client_id' => $input['client_id'], 'text' => $text, 'name' => $build->name,
+                'status' => $build->status->value, 'engine' => $build->engine->value, 'prompt_version' => $build->promptVersion,
                 'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
                 'written_at' => $clientClock->now(), 'written_tz' => $zone, 'processed_at' => $this->clock->now(),
-                'plan' => $result['plan'], 'applied' => [],
+                'plan' => $build->plan, 'applied' => [],
             ])->save();
-            if ($result['status'] === 'done') {
-                $applied = $this->applier->apply($note, $result['plan'], $context);
+            if ($build->status === PlanStatus::Done) {
+                $applied = $this->applier->apply($note, $build->plan, $context);
                 $note->applied = $applied['applied'];
-                $note->plan = [...$result['plan'], 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
+                $note->plan = [...$build->plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
                 $note->save();
             }
 
