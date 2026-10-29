@@ -4,7 +4,6 @@
  * Themes are switched with data-theme="agendal-light" | "agendal-dark" on <html>;
  * with no attribute, the system setting picks one (prefersdark).
  */
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap");
 @import "tailwindcss";
 
 @plugin "daisyui" {
@@ -148,9 +147,12 @@
 }
 
 @theme {
+  /* The variables come from next/font in app/layout.tsx */
   --font-sans:
-    "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-serif: Newsreader, Georgia, "Times New Roman", serif;
+    var(--font-instrument-sans), "Instrument Sans", -apple-system, "Segoe UI",
+    system-ui, sans-serif;
+  --font-serif:
+    var(--font-newsreader), Newsreader, Georgia, "Times New Roman", serif;
 
   /* Type scale */
   --text-display: 36px;
