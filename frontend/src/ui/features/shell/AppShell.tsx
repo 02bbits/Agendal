@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { CaptureBar, type CaptureBarProps } from "./CaptureBar";
 import { TabBar } from "./TabBar";
+import { useKeyboardInset } from "./useKeyboardInset";
 import type { Navigate, TabId } from "./routes";
 
 export interface AppShellProps {
@@ -14,7 +15,7 @@ export interface AppShellProps {
   children: ReactNode;
 }
 
-/** Centred 600px column, 100dvh, capture bar and tab bar fixed at the bottom (NF-8). */
+/** Centred 600px column, 100dvh, capture bar and tab bar fixed at the bottom, above the on-screen keyboard (NF-8, UX-20). */
 export function AppShell({
   tab,
   navigate,
@@ -23,6 +24,8 @@ export function AppShell({
   toast,
   children,
 }: AppShellProps) {
+  useKeyboardInset();
+
   return (
     <div className="mx-auto flex min-h-dvh max-w-[600px] flex-col bg-paper">
       <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere]">
@@ -30,7 +33,7 @@ export function AppShell({
         {children}
       </main>
       {tab && (
-        <div className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[600px]">
+        <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px]">
           {capture && <CaptureBar {...capture} />}
           <TabBar active={tab} navigate={navigate} />
         </div>
