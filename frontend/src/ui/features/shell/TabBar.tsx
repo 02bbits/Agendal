@@ -26,7 +26,7 @@ export interface TabBarProps {
 export function TabBar({ active, navigate }: TabBarProps) {
   return (
     <nav
-      className="grid grid-cols-4 border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
+      className="grid grid-cols-4 px-safe border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
       aria-label={t("nav.tabs")}
     >
       {TABS.map((tab) => (

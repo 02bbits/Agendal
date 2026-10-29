@@ -218,6 +218,18 @@
   }
 }
 
+/* Side margin of the column: 20px plus the side safe areas of a phone held sideways (UX-25) */
+@utility px-gutter {
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+}
+
+/* Only the side safe areas, for full-width bars such as the tab bar (UX-25) */
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
 /* Overlines above screen titles and group labels */
 @utility overline {
   font-size: var(--text-overline);

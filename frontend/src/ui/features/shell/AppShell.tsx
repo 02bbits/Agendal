@@ -25,7 +25,7 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-[600px] flex-col bg-paper">
-      <main className="flex-1 px-5 pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere]">
+      <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere]">
         {banner}
         {children}
       </main>

@@ -68,7 +68,7 @@ export function Toast({
   return (
     <div
       ref={regionRef}
-      className="toast toast-bottom toast-center pointer-events-none z-[110] w-full max-w-[600px] px-5"
+      className="toast toast-bottom toast-center pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
       aria-atomic="true"
