@@ -116,13 +116,38 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 
+  it("Inbox shows today's date above the title and the account initial", async () => {
+    renderAt("/", InboxPage);
+    const header = screen.getByRole("banner");
+    expect(
+      await within(header).findByText(/^[A-Z][a-z]+day, \d{1,2} [A-Z][a-z]+$/),
+    ).toBeTruthy();
+    await vi.waitFor(() =>
+      expect(
+        within(header).getByRole("link", { name: "Account" }).textContent,
+      ).toBe("M"),
+    );
+  });
+
+  it("other tabs leave the overline empty", () => {
+    renderAt("/upcoming", UpcomingPage);
+    expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
+  });
+
   it("tab links and header links go through the Next.js router", async () => {
     renderAt("/", InboxPage);
-    await userEvent.click(screen.getByRole("link", { name: "Upcoming" }));
+    // The sidebar (from 768px) has the same links; these are the phone's tab bar and header
+    const tabBar = screen.getByRole("navigation", { name: "Main" });
+    const header = screen.getByRole("banner");
+    await userEvent.click(
+      within(tabBar).getByRole("link", { name: "Upcoming" }),
+    );
     expect(router.push).toHaveBeenLastCalledWith("/upcoming");
-    await userEvent.click(screen.getByRole("link", { name: "Search" }));
+    await userEvent.click(within(header).getByRole("link", { name: "Search" }));
     expect(router.push).toHaveBeenLastCalledWith("/search");
-    await userEvent.click(screen.getByRole("link", { name: "Account" }));
+    await userEvent.click(
+      within(header).getByRole("link", { name: "Account" }),
+    );
     expect(router.push).toHaveBeenLastCalledWith("/account");
   });
 
@@ -158,6 +183,6 @@ describe("Auth gate (AA §1)", () => {
     renderAt("/account", AccountPage);
 
     expect(await screen.findByText("example@gmail.com")).toBeTruthy();
-    expect(screen.getByText("Mai")).toBeTruthy();
+    expect(within(screen.getByRole("main")).getByText("Mai")).toBeTruthy();
   });
 });

@@ -28,11 +28,15 @@ export interface SignedInUser {
   display_name: string | null;
 }
 
-// Screens for signed-out people. A signed-in user on one of them goes to Inbox.
-const AUTH_PATHS: readonly string[] = [
+// Screens that work signed out. A signed-in user on the first three goes to Inbox; a reset
+// link still works on a device that is signed in (AA-E5).
+const SIGNED_OUT_PATHS: readonly string[] = [
   ROUTES.signIn,
   ROUTES.createAccount,
   ROUTES.forgotPassword,
+];
+const PUBLIC_PATHS: readonly string[] = [
+  ...SIGNED_OUT_PATHS,
   ROUTES.resetPassword,
 ];
 
@@ -85,16 +89,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // the request fails and nothing moves, so the app keeps working from the device.
   useEffect(() => {
     let current = true;
-    const onAuthPage = AUTH_PATHS.includes(pathname);
+    const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
+    const publicPage = PUBLIC_PATHS.includes(pathname);
     api("/user")
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
           setUser(await response.json());
-          if (onAuthPage) router.replace(ROUTES.inbox);
+          if (signedOutPage) router.replace(ROUTES.inbox);
         } else if (response.status === 401) {
           setUser(null);
-          if (!onAuthPage)
+          if (!publicPage)
             router.replace(
               `${ROUTES.signIn}?next=${encodeURIComponent(pathname)}`,
             );
@@ -154,6 +159,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
         navigate={navigate}
         // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
         capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        sidebar={
+          PUBLIC_PATHS.includes(pathname)
+            ? undefined
+            : { accountName: user?.display_name ?? user?.email ?? "" }
+        }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}

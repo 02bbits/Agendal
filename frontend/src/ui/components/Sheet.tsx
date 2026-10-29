@@ -39,12 +39,12 @@ export function Sheet({
 
   return (
     <div
-      className="modal modal-open modal-bottom bg-scrim"
+      className="modal modal-open modal-bottom bg-scrim md:modal-middle"
       onMouseDown={onScrimClick}
     >
       <div
         ref={sheetRef}
-        className="modal-box mx-auto max-h-[calc(100dvh-32px)] w-full max-w-[600px] rounded-t-sheet rounded-b-none bg-surface px-5 pt-2 pb-[calc(20px+env(safe-area-inset-bottom))] text-ink shadow-lg motion-reduce:transition-none"
+        className="modal-box mx-auto mb-[var(--keyboard-inset,0px)] max-h-[calc(100dvh-32px-var(--keyboard-inset,0px))] w-full max-w-[600px] rounded-t-sheet rounded-b-none bg-surface px-gutter pt-2 pb-[calc(20px+env(safe-area-inset-bottom))] text-ink shadow-lg md:mb-0 md:max-w-[560px] md:rounded-dialog md:pb-5 motion-reduce:transition-none"
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
