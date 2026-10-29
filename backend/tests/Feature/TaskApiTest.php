@@ -27,6 +27,17 @@ function assertTaskSchema(mixed $body): void
     );
 }
 
+function assertTaskApiErrorShape(mixed $body): void
+{
+    $validator = new Validator;
+    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
+    $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/error.schema.json');
+
+    expect($result->isValid())->toBeTrue(
+        $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
+    );
+}
+
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T01:12:00Z'));
     $this->withHeader('X-Timezone', 'Asia/Ho_Chi_Minh');
@@ -230,7 +241,7 @@ it('someone else\'s project_id → 404 and no row', function () {
         ->and(Task::where('id', $id)->exists())->toBeFalse();
 });
 
-it('5000 open tasks (bulk insert with DB::table, done=false) → 422 on task; with 5000 done tasks a new one is accepted', function () {
+it('5000 open tasks (bulk insert with DB::table, done=false) → 422 task.limit; with 5000 done tasks a new one is accepted', function () {
     $user = User::factory()->create();
 
     $records = [];
@@ -252,9 +263,12 @@ it('5000 open tasks (bulk insert with DB::table, done=false) → 422 on task; wi
         'title' => 'Task 5001',
     ])->assertStatus(422);
 
-    expect($responseOverLimit->json('error.code'))->toBe('error.invalid')
-        ->and($responseOverLimit->json('error.fields.task'))->toContain("You've reached 5,000 open tasks. Complete or delete some to add more.")
+    expect($responseOverLimit->json('error.code'))->toBe('task.limit')
+        ->and($responseOverLimit->json('error.message'))->toBe("You've reached 5,000 open tasks. Complete or delete some to add more.")
+        ->and($responseOverLimit->json('error.request_id'))->not->toBeEmpty()
         ->and(Task::where('id', $id)->exists())->toBeFalse();
+
+    assertTaskApiErrorShape($responseOverLimit->json());
 
     // Mark all existing tasks as done
     DB::table('tasks')->where('user_id', $user->id)->update(['done' => true]);
