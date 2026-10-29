@@ -93,6 +93,8 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'NU-E7 bare 7 → morning' => ['meet at 7 tomorrow', ['startTime' => '07:00']],
     'NU-E7 bare 12 → noon' => ['meet at 12 tomorrow', ['startTime' => '12:00']],
     'Vietnamese hour and minutes' => ['họp 14h30', ['startTime' => '14:30']],
+    'NU-E7 does not read an hour marker' => ['chạy bộ mỗi ngày 6h', ['startTime' => '06:00', 'dueDate' => '2026-10-24', 'repeat' => 'daily']],
+    'ER is an acronym' => ['er diagram tmr', ['title' => 'ER diagram', 'dueDate' => '2026-10-24']],
     'decimal time' => ['meet 9.30', ['startTime' => '09:30']],
     'NU-E9 end of the month' => ['pay bills end of the month', ['dueDate' => '2026-10-31']],
     'end of the week (Monday start)' => ['clean room end of the week', ['dueDate' => '2026-10-25']],
