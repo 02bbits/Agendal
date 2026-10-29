@@ -153,10 +153,7 @@ One radius, 12px, covers everything you press or type in. Only overlays float; e
 | `size-chip` | 32px | Chips, segmented control. |
 | `size-icon-tile` | 28px | Coloured icon tiles in settings rows. |
 | `size-checkbox` | 22px | Checkbox circle (2px ring) inside a 44px tap area. |
-| `size-screen` | 360px | Reference width; fluid from 320px, max 600px column below 768px. |
-| `size-sidebar` | 248px | Sidebar from 768px wide. |
-| `size-column` | 712px | Content column from 768px wide, with 40px side margins. |
-| `size-panel` | 400px | Side panel from 1280px wide. |
+| `size-screen` | 360px | Reference width; fluid from 320px, max 600px column. |
 | `opacity-disabled` | 0.4 | Whole disabled control at 40%. |
 
 List rows are at least 52px tall.
@@ -226,7 +223,6 @@ Accessibility minimums:
 ## Platform: mobile web app (PWA)
 
 - Designed for phones 320–480px wide (360px reference); layouts are fluid, stop at a centred 600px column, and use `100dvh` for full height.
-- From 768px wide the same tokens dress a sidebar on `surface` beside the content on `paper`; from 1280px a side panel on `surface` may open on the right ([UX-27](ux-standards.md#ux-27), [UX-28](ux-standards.md#ux-28)).
 - Never draw a native status bar, home indicator or keyboard. Pad fixed bottom bars with `env(safe-area-inset-bottom)`.
 - Light and dark themes follow the system setting; every token has a value for each.
 - After the first sign-in, offer installation once with an info banner.
