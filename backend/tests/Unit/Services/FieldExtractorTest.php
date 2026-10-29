@@ -66,7 +66,7 @@ it('extracts English and accented Vietnamese fields (T-NU-10–18)', function (s
     ['đọc sách 3 ngày nữa', ['title' => 'Đọc sách', 'dueDate' => '2026-10-26']],
     ['read in a week', ['title' => 'Read', 'dueDate' => '2026-10-30']],
     ['mai hop nhom 9h', ['title' => 'Mai hop nhom', 'dueDate' => '2026-10-23', 'startTime' => '09:00', 'lowConfidence' => true]],
-    ['đi chợ chiều nay', ['title' => 'Đi chợ', 'startTime' => '15:00', 'projectId' => 'personal']],
+    ['đi chợ chiều nay', ['title' => 'Đi chợ', 'startTime' => '15:00', 'projectId' => null]],
     ['gym every monday 7am', ['title' => 'Gym', 'repeat' => 'weekly', 'dueDate' => '2026-10-26']],
     ['meet 2-4pm', ['startTime' => '14:00', 'endTime' => '16:00']],
     ['meet Oct 26', ['title' => 'Meet', 'dueDate' => '2026-10-26']],
