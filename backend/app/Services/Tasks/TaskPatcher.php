@@ -123,7 +123,11 @@ class TaskPatcher
         }
 
         // - start_time set, or repeat not never, and the merged due_date is empty → due_date = $clock->today($timezone)
-        if (empty($merged['due_date']) && ($merged['start_time'] !== null || $merged['repeat'] !== 'never')) {
+        if (DueDateFallback::needed(
+            is_string($merged['due_date']) ? $merged['due_date'] : null,
+            is_string($merged['start_time']) ? $merged['start_time'] : null,
+            (string) $merged['repeat'],
+        )) {
             $merged['due_date'] = $this->clock->today($timezone);
             if (array_key_exists('start_time', $effectiveAtMap)) {
                 $fieldUpdatedAt['due_date'] = $effectiveAtMap['start_time']->format('Y-m-d\TH:i:s\Z');
