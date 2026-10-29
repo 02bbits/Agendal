@@ -74,12 +74,16 @@ it('rejects invisible, overlong and overfull notes', function (string $text, str
     } catch (ValidationException $error) {
         expect($error->errors())->toBe(['text' => [$key]]);
     }
-})->with([
-    [" . ; \u{200B}", 'note.empty'],
-    ['then', 'note.empty'],
-    [str_repeat('a', 5001), 'note.too_long'],
-    [implode(';', array_fill(0, 31, 'call mum')), 'note.too_many_items'],
-]);
+})->with(function (): array {
+    $config = require __DIR__.'/../../../config/notes.php';
+
+    return [
+        [" . ; \u{200B}", 'note.empty'],
+        ['then', 'note.empty'],
+        [str_repeat('a', $config['max_length'] + 1), 'note.too_long'],
+        [implode(';', array_fill(0, $config['max_items'] + 1, 'call mum')), 'note.too_many_items'],
+    ];
+});
 
 it('normalizes decomposed accents and keeps newlines and tabs', function () {
     expect((new NoteSplitter)->normalize("  go\u{0323}i\tme\u{0323}\r\n\x01đọc "))->toBe("gọi\tmẹ\nđọc");

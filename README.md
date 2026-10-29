@@ -46,7 +46,7 @@ Read the time only through the clock (ADR-006): `ClockInterface` on the server, 
 
 For IM-32, edit the [splitter scenario CSV](backend/tests/Fixtures/note-splitter-scenarios.csv) and follow the [self-test instructions](backend/tests/Fixtures/README.md). Run only those tests with `cd backend && php vendor/bin/pest tests/Unit/Services/NoteSplitterTest.php`; they require no database.
 
-To try the application code directly, run `php artisan notes:split "your note"` from `backend/`. Run `php artisan notes:split --scenarios` for cases generated from every CSV rule plus structural limits. The executable scenario definitions live in [NoteSplitterScenarios.php](backend/app/Console/Support/NoteSplitterScenarios.php); they are shared with Pest. The rules file is [backend/resources/notes/splitter-rules.csv](backend/resources/notes/splitter-rules.csv), resolved by Laravel's `resource_path('notes/splitter-rules.csv')`.
+To try the application code directly, run `php artisan notes:split "your note"` from `backend/`. Dynamic scenario definitions live only in [tests/Support/NoteSplitterScenarios.php](backend/tests/Support/NoteSplitterScenarios.php); run them with `php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php`. The rules file is [backend/resources/notes/splitter-rules.csv](backend/resources/notes/splitter-rules.csv), resolved by Laravel's `resource_path('notes/splitter-rules.csv')`.
 
 Tests run on the `agendal_test` database, created automatically with a new `db` volume. On a volume made before it existed, create it once:
 

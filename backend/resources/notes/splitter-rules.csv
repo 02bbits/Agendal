@@ -257,7 +257,18 @@ signal,hôm nay
 signal,tối nay
 signal,mai
 signal,mốt
-signal,thứ
+signal,thứ 2
+signal,thứ 3
+signal,thứ 4
+signal,thứ 5
+signal,thứ 6
+signal,thứ 7
+signal,thứ hai
+signal,thứ ba
+signal,thứ tư
+signal,thứ năm
+signal,thứ sáu
+signal,thứ bảy
 signal,chủ nhật
 signal,cn
 signal,t2
@@ -275,8 +286,12 @@ signal,tuần tới
 signal,cuối tuần
 signal,cuối tháng
 signal,mỗi
-signal,hằng
-signal,hàng
+signal,hằng ngày
+signal,hằng tuần
+signal,hằng tháng
+signal,hàng ngày
+signal,hàng tuần
+signal,hàng tháng
 signal,gấp
 signal,khẩn
 signal,quan trọng
@@ -286,14 +301,6 @@ signal,thi
 signal,kiểm tra
 signal,nộp
 signal,khi nào rảnh
-signal,sql
-signal,database
-signal,er diagram
-signal,hci
-signal,web
-signal,gym
-signal,mum
-signal,groceries
 signal,jan
 signal,feb
 signal,mar
@@ -318,12 +325,99 @@ abbreviation,vs
 abbreviation,etc
 abbreviation,e.g
 abbreviation,i.e
+abbreviation,GS
+abbreviation,PGS
+abbreviation,TS
+abbreviation,ThS
+abbreviation,BS
+abbreviation,KS
+abbreviation,TP
 separator,;
 conjunction,then
 following_conjunction,rồi
 following_conjunction,sau đó
 bullet,-
 bullet,*
-bullet,•
-bullet,–
-bullet,—
+bullet,+
+time_unit,am
+time_unit,pm
+time_unit,h
+time_unit,giờ
+time_unit,phút
+time_unit,min
+time_unit,mins
+time_unit,minutes
+time_unit,hour
+time_unit,hours
+time_unit,hr
+time_unit,hrs
+time_unit,day
+time_unit,days
+time_unit,week
+time_unit,weeks
+time_unit,month
+time_unit,months
+time_unit,ngày
+time_unit,tuần
+time_unit,tháng
+time_prefix,at
+time_prefix,lúc
+time_prefix,by
+complete_suffix,is done
+complete_suffix,xong rồi
+lead_in,remember to
+lead_in,I need to
+lead_in,need to
+lead_in,I have to
+lead_in,have to
+lead_in,please
+lead_in,pls
+lead_in,nhớ
+lead_in,cần phải
+lead_in,cần
+lead_in,phải
+list_joiner,and
+list_joiner,or
+list_joiner,&
+list_joiner,và
+list_joiner,hoặc
+number_suffix,.
+number_suffix,)
+letter_suffix,)
+checkbox_mark,x
+checkbox_mark,✓
+checkbox_mark,✔
+checkbox_mark,-
+comma,","
+full_stop,.
+full_stop,…
+time_separator,/
+time_separator,:
+time_separator,.
+word_attachment,@
+word_attachment,.
+word_attachment,/
+tight_bullet,•
+tight_bullet,–
+tight_bullet,—
+tight_bullet,▪
+tight_bullet,◦
+tight_bullet,‣
+tight_bullet,→
+tight_bullet,➤
+tight_bullet,☐
+tight_bullet,☑
+tight_bullet,☒
+tight_bullet,✓
+tight_bullet,✔
+checkbox_bracket,[]
+checkbox_bracket,()
+project_keyword:SQL Course,sql
+project_keyword:SQL Course,database
+project_keyword:SQL Course,er diagram
+project_keyword:Adv Web,web
+project_keyword:HCI,hci
+project_keyword:Portfolio,portfolio
+project_keyword:Personal,gym
+project_keyword:Personal,mum
+project_keyword:Personal,groceries

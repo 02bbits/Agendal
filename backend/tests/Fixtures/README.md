@@ -2,23 +2,22 @@
 
 First install the backend dependencies with `composer install` under PHP **8.4+** with Intl and Mbstring.
 
-The executable scenarios are defined in `backend/app/Console/Support/NoteSplitterScenarios.php`, and run through the application's `SplitNoteCommand`. They are not limited to a test file. Every CSV rule generates original, uppercase, padded and decomposed-accent inputs automatically. The generator also covers projects, control characters, empty notes, all separators, 29/30/31-item boundaries, post-merge counts, 4,999/5,000/5,001 Unicode-character limits, numeric commas and decimal times. Adding a rule creates new cases on the next run; adding an unknown rule category fails until scenario templates are supplied.
+The dynamic scenario generator lives only in `backend/tests/Support/NoteSplitterScenarios.php`, under the `Tests\Support` namespace. Pest generates original, uppercase, padded and decomposed-accent cases from every CSV rule, plus project names, control characters, item/character limits, numeric commas and decimal times. Run them with:
 
-From `backend/`, try any note or run the generated scenarios **without Pest**:
+```sh
+php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php
+php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php --filter="numeric 9:30"
+```
+
+Application code does not load the test generator. To inspect the real splitter output manually, use the normal application command from `backend/`:
 
 ```sh
 php artisan notes:split "buy milk, eggs and bread; call mum tomorrow"
 php artisan notes:split "buy ink, Research (2026) outline" --project="Research (2026)"
 php artisan notes:split --file="my-note.txt"
-php artisan notes:split --scenarios
-php artisan notes:split --scenarios --filter="numeric 9:30"
 ```
 
-The command prints actual split items as JSON. Scenario mode reports PASS/FAIL by name, shows expected and actual output on failure, and returns a failing exit code if a case fails or the filter matches nothing. These checks use the real Laravel splitter; no database, web server or OpenRouter is required. Pest consumes the same generated scenarios as regression tests:
-
-```sh
-php vendor/bin/pest tests/Unit/Services/NoteSplitterDynamicTest.php
-```
+These commands print split items as JSON. Generated scenario execution belongs to Pest and requires no database, web server or OpenRouter key.
 
 Use PHP **8.4+** with Intl and Mbstring. From the repository root:
 
@@ -50,6 +49,6 @@ The cases cover shopping lists, independent commands, dates, times, priorities, 
 
 ## Change a vocabulary rule
 
-Edit `backend/resources/notes/splitter-rules.csv` from the repository root. Its columns are `category,value`. Values are **literal text**, not regex. The categories define task verbs, command verbs, skip prefixes, independent date/time/priority/project signals, abbreviations, bullets, semicolon separators and sequencing words. Add a scenario proving any changed rule, then rerun Pest. Rules are cached within one PHP process; restart a long-lived worker after editing them.
+Edit `backend/resources/notes/splitter-rules.csv` from the repository root. Its columns are `category,value`. Values are **literal text**, not regex. The categories define task verbs, command verbs, skip prefixes, complete suffixes (`is done`, `xong rồi`), independent date/time/priority/project signals, time units after a number (`9am`, `3 days`, `9 giờ`), time prefixes before an hour (`at 14`, `lúc 9`), lead-ins skipped before the verb check (`please`, `nhớ`), list joiners trimmed at item edges (`and`, `và`), abbreviations, bullets, semicolon separators and sequencing words. Punctuation is data too: `number_suffix`/`letter_suffix` (`1.`, `a)`), `checkbox_mark`, `comma`, `full_stop`, `time_separator` (`26/10`, `9:30`) and `word_attachment` (characters that glue a word into an email, file name or URL). Project keywords use one category per project, `project_keyword:<Project>` (e.g. `project_keyword:Personal,mum`); a keyword stops a comma merge only when the user has that project (NU-E34, any case). A space inside a value matches any run of whitespace. Each new category needs a template in `tests/Support/NoteSplitterScenarios.php`. Add a scenario proving any changed rule, then rerun Pest. The rules file path and the length and item limits live in `backend/config/notes.php` (`NOTE_RULES_PATH`, `NOTE_MAX_LENGTH`, `NOTE_MAX_ITEMS`); the generated boundary tests follow them. Rules are cached within one PHP process; restart a long-lived worker after editing them.
 
 The fixed structural decisions remain in the PHP splitter: normalize before limits; preserve digit commas and decimal/file dots; only comma fragments can merge; `and`/`và` do not split; Vietnamese sequence words require following text; count items after merging. These follow NU §2.2 and business rules. CSV storage does not introduce CSV quoting semantics into ordinary note text.

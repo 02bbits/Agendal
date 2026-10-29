@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\SplitNoteCommand;
 use Tests\TestCase;
 
 uses(TestCase::class);
@@ -10,24 +11,17 @@ it('splits an arbitrary note and accepts known project names', function () {
         ->assertSuccessful();
 });
 
-it('runs scenarios through the real application command', function () {
-    $this->artisan('notes:split', ['--scenarios' => true, '--filter' => 'numeric 9:30'])
-        ->expectsOutputToContain('PASS numeric 9:30')
-        ->expectsOutputToContain('1 scenarios; 0 failed')
-        ->assertSuccessful();
-});
-
-it('fails when no scenario matches the requested name', function () {
-    $this->artisan('notes:split', ['--scenarios' => true, '--filter' => 'missing-category'])
-        ->expectsOutputToContain('0 scenarios; 0 failed')
-        ->assertFailed();
+it('keeps generated scenarios out of the application command', function () {
+    $command = app(SplitNoteCommand::class);
+    expect($command->getDefinition()->hasOption('scenarios'))->toBeFalse()
+        ->and($command->getDefinition()->hasOption('filter'))->toBeFalse();
 });
 
 it('returns input errors without invoking a test runner', function () {
     $this->artisan('notes:split')->assertFailed();
     $this->artisan('notes:split', ['text' => ' . ; '])->expectsOutputToContain('note.empty')->assertFailed();
     $this->artisan('notes:split', ['--file' => '/missing-note-file.txt'])->assertFailed();
-    $this->artisan('notes:split', ['text' => 'call mum', '--scenarios' => true])->assertFailed();
+    $this->artisan('notes:split', ['text' => 'call mum', '--file' => '/unused.txt'])->assertFailed();
 });
 
 it('reads a UTF-8 note from a file', function () {
