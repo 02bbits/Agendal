@@ -837,3 +837,178 @@ it('rejects invalid at format with 422', function (string $invalidAt) {
     'date without offset' => '2026-10-23T08:12:00',
     'invalid month' => '2026-13-01T08:12:00Z',
 ]);
+
+it('PATCH with object form at: title at T2 applied, notes at T1 skipped when stored notes is T1.5', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    $t0 = '2026-10-23T01:10:00Z';
+    $t1 = '2026-10-23T01:11:00Z';
+    $t1_5 = '2026-10-23T01:11:30Z';
+    $t2 = '2026-10-23T01:12:00Z';
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Initial title',
+        'notes' => 'Initial notes',
+        'field_updated_at' => [
+            'title' => $t0,
+            'notes' => $t1_5,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Updated title',
+        'notes' => 'Stale notes update',
+        'at' => [
+            'title' => $t2,
+            'notes' => $t1,
+        ],
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Updated title')
+        ->and($task->notes)->toBe('Initial notes')
+        ->and($task->field_updated_at['title'])->toBe($t2)
+        ->and($task->field_updated_at['notes'])->toBe($t1_5);
+});
+
+it('PATCH with object form at: field missing from at uses pinned now', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    $pinnedNow = '2026-10-23T01:12:00Z';
+    $t0 = '2026-10-23T01:10:00Z';
+    $tTitle = '2026-10-23T01:15:00Z';
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Initial title',
+        'notes' => 'Initial notes',
+        'field_updated_at' => [
+            'title' => $t0,
+            'notes' => $t0,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Updated title',
+        'notes' => 'Updated notes',
+        'at' => [
+            'title' => $tTitle,
+        ],
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Updated title')
+        ->and($task->notes)->toBe('Updated notes')
+        ->and($task->field_updated_at['title'])->toBe($tTitle)
+        ->and($task->field_updated_at['notes'])->toBe($pinnedNow);
+});
+
+it('PATCH rejects invalid object at keys and formats with 422 and nothing saved', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+    $t0 = '2026-10-23T01:10:00Z';
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Initial title',
+        'notes' => 'Initial notes',
+        'field_updated_at' => [
+            'title' => $t0,
+            'notes' => $t0,
+        ],
+    ]);
+
+    // 1. at: {"user_id": "..."} → 422 on at.user_id
+    $resp1 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Attempt 1',
+        'at' => [
+            'user_id' => '2026-10-23T01:12:00Z',
+        ],
+    ])->assertStatus(422);
+
+    expect($resp1->json('error.code'))->toBe('error.invalid')
+        ->and($resp1->json('error.fields'))->toHaveKey('at.user_id')
+        ->and($resp1->json('error.fields')['at.user_id'])->toContain("This field can't be changed.");
+
+    // 2. at: {"notes": "..."} without notes in body → 422 on at.notes
+    $resp2 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Attempt 2',
+        'at' => [
+            'notes' => '2026-10-23T01:12:00Z',
+        ],
+    ])->assertStatus(422);
+
+    expect($resp2->json('error.code'))->toBe('error.invalid')
+        ->and($resp2->json('error.fields'))->toHaveKey('at.notes')
+        ->and($resp2->json('error.fields')['at.notes'])->toContain('There is no change for this field.');
+
+    // 3. at: {"title": "yesterday"} → 422 on at.title
+    $resp3 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'title' => 'Attempt 3',
+        'at' => [
+            'title' => 'yesterday',
+        ],
+    ])->assertStatus(422);
+
+    expect($resp3->json('error.code'))->toBe('error.invalid')
+        ->and($resp3->json('error.fields'))->toHaveKey('at.title')
+        ->and($resp3->json('error.fields')['at.title'])->toContain('The at field must be a valid ISO 8601 date-time.');
+
+    // Nothing saved in each case
+    $task = Task::find($taskId);
+    expect($task->title)->toBe('Initial title')
+        ->and($task->notes)->toBe('Initial notes');
+});
+
+it('clearing due_date with object at sets start_time, end_time, reminder field_updated_at to due_date time', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+    $t0 = '2026-10-23T01:10:00Z';
+    $tClear = '2026-10-23T01:14:00Z';
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Dated task',
+        'due_date' => '2026-10-26',
+        'start_time' => '09:00',
+        'end_time' => '10:00',
+        'reminder' => '15m',
+        'field_updated_at' => [
+            'title' => $t0,
+            'due_date' => $t0,
+            'start_time' => $t0,
+            'end_time' => $t0,
+            'reminder' => $t0,
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'due_date' => null,
+        'at' => [
+            'due_date' => $tClear,
+        ],
+    ])->assertStatus(200);
+
+    assertTaskSchema($response->json());
+
+    $task = Task::find($taskId);
+    expect($task->due_date)->toBeNull()
+        ->and($task->start_time)->toBeNull()
+        ->and($task->end_time)->toBeNull()
+        ->and($task->reminder)->toBe('none')
+        ->and($task->field_updated_at['due_date'])->toBe($tClear)
+        ->and($task->field_updated_at['start_time'])->toBe($tClear)
+        ->and($task->field_updated_at['end_time'])->toBe($tClear)
+        ->and($task->field_updated_at['reminder'])->toBe($tClear);
+});
