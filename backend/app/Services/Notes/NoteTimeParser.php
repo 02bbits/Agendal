@@ -115,7 +115,8 @@ final class NoteTimeParser
             'hour' => $hour,
             'minute' => (int) (($m['minute'] ?? '') ?: ($m['suffixMinute'] ?? 0)),
             'period' => $period,
-            'bare' => ! $hasMinutes && $period === '',
+            // NU-E7 reads only an hour with no marker at all ("at 2", "lúc 2"); "6h" and "6 giờ" mean 06:00.
+            'bare' => ! $hasMinutes && $period === '' && ($m['suffix'] ?? '') === '',
             'marked' => $hasMinutes || ($m['suffix'] ?? '') !== '' || $ownPeriod !== '',
         ];
     }
