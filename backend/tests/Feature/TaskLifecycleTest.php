@@ -242,7 +242,7 @@ it('T-TK-41 (API part of delete + Undo): DELETE → 204, GET → 404, row still 
         ->and($restoredTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00Z');
 });
 
-it('DELETE a repeating task without scope → 422 on scope, task not deleted; with scope=future → 204', function () {
+it('DELETE a repeating task without scope or with scope=future → 422 on scope, task not deleted', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -270,16 +270,15 @@ it('DELETE a repeating task without scope → 422 on scope, task not deleted; wi
         ->assertStatus(422);
     expect($respInvalidScope->json('error.fields.scope'))->toContain('Choose This task only or This and all future.');
 
-    // 2. With scope=future → 204
+    // 2. With scope=future → 422 on scope, message: "This and all future isn't available yet.", task still exists
     $respScopeFuture = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=future")
-        ->assertStatus(204);
-    expect($respScopeFuture->getContent())->toBeEmpty();
+        ->assertStatus(422);
+    expect($respScopeFuture->json('error.code'))->toBe('error.invalid')
+        ->and($respScopeFuture->json('error.fields.scope'))->toContain("This and all future isn't available yet.");
 
     $taskAfter = Task::find($taskId);
-    expect($taskAfter)->toBeNull();
-    $rawRow = DB::table('tasks')->find($taskId);
-    expect($rawRow)->not->toBeNull()
-        ->and($rawRow->deleted_at)->not->toBeNull();
+    expect($taskAfter)->not->toBeNull()
+        ->and($taskAfter->deleted_at)->toBeNull();
 });
 
 it('restore of a task that is not deleted → 200, nothing changes', function () {

@@ -155,7 +155,13 @@ class TaskController extends Controller
     ): Response {
         if ($task->repeat !== 'never') {
             $scope = $request->input('scope');
-            if ($scope !== 'one' && $scope !== 'future') {
+            if ($scope === 'future') {
+                throw ValidationException::withMessages([
+                    'scope' => ["This and all future isn't available yet."],
+                ]);
+            }
+
+            if ($scope !== 'one') {
                 throw ValidationException::withMessages([
                     'scope' => ['Choose This task only or This and all future.'],
                 ]);
