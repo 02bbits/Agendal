@@ -75,8 +75,6 @@ export function TaskStoreProvider({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [settling, setSettling] = useState<ReadonlySet<string>>(new Set());
   const toastSeq = useRef(0);
-  const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
 
   const todayDate = today(clock.timeZone, clock.now());
 
@@ -91,13 +89,58 @@ export function TaskStoreProvider({
   );
 
   const applyLocal = useCallback((update: (tasks: Task[]) => Task[]) => {
-    const before = tasksRef.current;
-    const after = update(before);
-    tasksRef.current = after;
-    setTasks(after);
+    let diff: {
+      addedIds: Set<string>;
+      removedTasks: Task[];
+      previousTasks: Map<string, Task>;
+    } | null = null;
+
+    setTasks((prev) => {
+      const next = update(prev);
+      const prevMap = new Map(prev.map((t) => [t.id, t]));
+      const nextMap = new Map(next.map((t) => [t.id, t]));
+
+      const addedIds = new Set<string>();
+      const removedTasks: Task[] = [];
+      const previousTasks = new Map<string, Task>();
+
+      for (const [id, prevTask] of prevMap) {
+        if (!nextMap.has(id)) {
+          removedTasks.push(prevTask);
+        } else {
+          const nextTask = nextMap.get(id)!;
+          if (prevTask !== nextTask) {
+            previousTasks.set(id, prevTask);
+          }
+        }
+      }
+
+      for (const id of nextMap.keys()) {
+        if (!prevMap.has(id)) {
+          addedIds.add(id);
+        }
+      }
+
+      diff = { addedIds, removedTasks, previousTasks };
+      return next;
+    });
+
     return () => {
-      tasksRef.current = before;
-      setTasks(before);
+      if (!diff) return;
+      const { addedIds, removedTasks, previousTasks } = diff;
+      setTasks((current) => {
+        let list = current.filter((t) => !addedIds.has(t.id));
+        list = list.map((t) => previousTasks.get(t.id) ?? t);
+        if (removedTasks.length > 0) {
+          const currentIds = new Set(list.map((t) => t.id));
+          for (const task of removedTasks) {
+            if (!currentIds.has(task.id)) {
+              list.push(task);
+            }
+          }
+        }
+        return list;
+      });
     };
   }, []);
 

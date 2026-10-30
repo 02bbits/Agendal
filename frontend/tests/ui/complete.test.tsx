@@ -11,7 +11,7 @@ import {
 } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
-import { TODAY, setup } from "./harness";
+import { TODAY, deferredApi, setup } from "./harness";
 
 function TodayList() {
   const store = useTaskStore();
@@ -190,6 +190,43 @@ describe("Complete a task (TK-1, WF-06)", () => {
     ).toBe("false");
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     await waitFor(() => expect(memory.db.tasks[2]!.done).toBe(true));
+  });
+
+  it("a failed save reverts only its own task while others stay done (Refs #21)", async () => {
+    const tasks = [
+      task({ id: "t-a", title: "Task A", due_date: TODAY }),
+      task({ id: "t-b", title: "Task B", due_date: TODAY }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task A" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task B" }),
+    );
+
+    const callA = deferred.calls.find((c) => c.id === "t-a")!;
+    const callB = deferred.calls.find((c) => c.id === "t-b")!;
+
+    await act(async () => {
+      callA.reject();
+      callB.resolve();
+    });
+
+    await screen.findByText("Couldn't save that change.");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task A" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Reopen Task B" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
   });
 
   it("unticking a completed task reopens it without a toast", async () => {

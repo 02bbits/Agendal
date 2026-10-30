@@ -52,3 +52,94 @@ export function createMemoryApi(seed: Partial<MemoryDb> = {}) {
     },
   };
 }
+
+export interface DeferredCall {
+  type: "complete" | "reopen";
+  id: string;
+  at: string;
+  resolve: (value?: {
+    task: Task;
+    next?: Task;
+    removedNextId?: string;
+  }) => void;
+  reject: (error?: unknown) => void;
+  promise: Promise<{ task: Task; next?: Task; removedNextId?: string }>;
+}
+
+export function deferredApi(seed: Partial<MemoryDb> = {}) {
+  const db: MemoryDb = {
+    tasks: structuredClone(seed.tasks ?? []),
+    projects: structuredClone(seed.projects ?? []),
+  };
+  const calls: DeferredCall[] = [];
+
+  const find = (id: string) => {
+    const task = db.tasks.find((t) => t.id === id);
+    if (!task) throw Object.assign(new Error("not found"), { status: 404 });
+    return task;
+  };
+
+  const createCall = (
+    type: "complete" | "reopen",
+    id: string,
+    at: string,
+  ): Promise<{ task: Task; next?: Task; removedNextId?: string }> => {
+    let resolvePromise!: (value: {
+      task: Task;
+      next?: Task;
+      removedNextId?: string;
+    }) => void;
+    let rejectPromise!: (error: unknown) => void;
+    const promise = new Promise<{
+      task: Task;
+      next?: Task;
+      removedNextId?: string;
+    }>((res, rej) => {
+      resolvePromise = res;
+      rejectPromise = rej;
+    });
+
+    const call: DeferredCall = {
+      type,
+      id,
+      at,
+      promise,
+      resolve(value) {
+        if (value) {
+          resolvePromise(value);
+        } else {
+          const task = find(id);
+          Object.assign(task, {
+            done: type === "complete",
+            done_at: type === "complete" ? at : null,
+            updated_at: at,
+          });
+          resolvePromise({ task: { ...task } });
+        }
+      },
+      reject(error) {
+        rejectPromise(
+          error ?? Object.assign(new Error("save failed"), { status: 500 }),
+        );
+      },
+    };
+
+    calls.push(call);
+    return promise;
+  };
+
+  const api: TaskApi = {
+    complete(id, at) {
+      return createCall("complete", id, at);
+    },
+    reopen(id, at) {
+      return createCall("reopen", id, at);
+    },
+  };
+
+  return {
+    api,
+    db,
+    calls,
+  };
+}
