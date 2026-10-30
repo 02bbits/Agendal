@@ -19,17 +19,19 @@ final class CommandMatcher
         private FieldExtractor $extractor,
         private NoteDateParser $dates,
         private NoteTimeParser $times,
+        private RescheduleTarget $target,
     ) {}
 
     /**
-     * The meaningful words: the title's words without the command verb, dates, times and stop words.
-     * No stemming; diacritics stay, so "bài tập" matches "Bài tập SQL" but "bai tap" doesn't.
+     * The meaningful words: the title's words without the command verb, dates, times, stop words and the
+     * reschedule target ("to 10am"). No stemming; diacritics stay, so "bài tập" matches "Bài tập SQL" but
+     * "bai tap" doesn't.
      *
      * @return list<string>
      */
     public function words(string $text, NoteContext $context): array
     {
-        $title = $this->extractor->extract($text, $context)->title;
+        $title = $this->extractor->extract($this->subject($text, $context), $context)->title;
         $starts = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command']));
         $ends = NoteVocabulary::phrases('complete_suffix').'|'.NoteVocabulary::phrases('complete_suffix_bare');
         $title = (string) preg_replace('~^(?:'.$starts.')(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:'.$ends.')[\p{P}\s]*$~iu', ' ', $title);
@@ -118,11 +120,24 @@ final class CommandMatcher
         if ($action !== CommandAction::Reschedule) {
             return CommandMatch::skip(SkipReason::NotFound);
         }
-        $withoutVerb = (string) preg_replace('~^(?:'.NoteVocabulary::phrases('move_command').')\s+~iu', '', trim($text));
+        // The subject names the task; its own dates and times are the old ones, so only the target's count.
+        $withoutVerb = (string) preg_replace('~^(?:'.NoteVocabulary::phrases('move_command').')\s+~iu', '', trim($this->subject($text, $context)));
         $fields = $this->extractor->extract($withoutVerb, $context);
-        $title = (string) preg_replace('~\s+(?:'.NoteVocabulary::phrases('reschedule_target').')$~iu', '', $fields->title);
+        $at = $this->extractor->extract($fields->title.' '.$this->when($text, $context), $context);
 
-        return CommandMatch::newTask($fields->withTitle($title));
+        return CommandMatch::newTask($fields->withWhen($at));
+    }
+
+    /** "move 9am standup to 10am" → "move 9am standup"; the whole text when there is no target. */
+    private function subject(string $text, NoteContext $context): string
+    {
+        return $this->target->split($text, $context)['subject'] ?? $text;
+    }
+
+    /** "move 9am standup to 10am" → "10am"; empty when there is no target. */
+    private function when(string $text, NoteContext $context): string
+    {
+        return $this->target->split($text, $context)['when'] ?? '';
     }
 
     /** @param TaskRow $task */
@@ -146,12 +161,13 @@ final class CommandMatcher
     {
         $fields = [];
         $label = $task['title'];
-        $newDate = $this->dates->parse($text, $context, null)->date;
+        $when = $this->when($text, $context);
+        $newDate = $this->dates->parse($when, $context, null)->date;
         if ($newDate !== null && $newDate !== ($task['due_date'] ?? null)) {
             $fields['due_date'] = $newDate;
             $label = __('notes.label.due', ['date' => $this->labelDate($newDate), 'was' => $this->was($task['due_date'] ?? null, $context)]);
         }
-        $newStart = $this->times->parse($text, $context)->start;
+        $newStart = $this->times->parse($when, $context)->start;
         if ($newStart !== null && $newStart !== ($task['start_time'] ?? null)) {
             $fields['start_time'] = $newStart;
             if (($task['start_time'] ?? null) !== null && ($task['end_time'] ?? null) !== null) {

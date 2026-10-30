@@ -92,6 +92,29 @@ it('turns an unmatched reschedule into a new task and skips other commands (NU-E
         ->and(matchCommand('delete absent task', CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
 });
 
+it('reads the task from before the target and the new when only after it', function (string $text, string $taskId, array $fields) {
+    $open = [
+        ['id' => 'standup', 'title' => '9am standup', 'due_date' => '2026-10-26', 'start_time' => '09:00', 'end_time' => '09:15'],
+        ['id' => 'rent', 'title' => 'Pay rent', 'due_date' => '2026-11-01'],
+        ['id' => 'bank', 'title' => 'Talk to bank'],
+    ];
+    $match = matchCommand($text, CommandAction::Reschedule, $open);
+
+    expect([$match->change?->taskId, $match->change?->fields])->toBe([$taskId, $fields]);
+})->with([
+    'a time in the title' => ['move 9am standup to 10am', 'standup', ['start_time' => '10:00', 'end_time' => '10:15']],
+    'a preferred date in the subject' => ['move pay rent on the 1st to the 5th', 'rent', ['due_date' => '2026-11-05']],
+    'a numeric date in the subject' => ['move pay rent due 1/11 to 5/11', 'rent', ['due_date' => '2026-11-05']],
+    'Vietnamese day numbers' => ['chuyển pay rent ngày 1 sang ngày 5', 'rent', ['due_date' => '2026-11-05']],
+    'a target word in the title' => ['move talk to bank to friday', 'bank', ['due_date' => '2026-10-30']],
+]);
+
+it('builds an unmatched reschedule from the target date, not the subject one (NU-E29)', function () {
+    $new = matchCommand('move standup on monday to tuesday 10am', CommandAction::Reschedule, [])->newTask;
+
+    expect([$new?->title, $new?->dueDate, $new?->startTime])->toBe(['Standup', '2026-10-27', '10:00']);
+});
+
 it('leaves every stop word out of the meaningful words', function () {
     $context = new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh');
     $matcher = app(CommandMatcher::class);
