@@ -188,7 +188,9 @@ export function TaskStoreProvider({
             const res = await api.reopen(task.id, at);
             if (taskSeq.current.get(task.id) !== seq) return;
             applyLocal((list) =>
-              replace(list, res.task).filter((x) => x.id !== res.removedNextId),
+              res.next
+                ? [...replace(list, res.task), res.next]
+                : replace(list, res.task),
             );
           } catch {
             if (taskSeq.current.get(task.id) !== seq) return;

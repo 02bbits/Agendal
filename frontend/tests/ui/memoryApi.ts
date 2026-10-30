@@ -57,13 +57,9 @@ export interface DeferredCall {
   type: "complete" | "reopen";
   id: string;
   at: string;
-  resolve: (value?: {
-    task: Task;
-    next?: Task;
-    removedNextId?: string;
-  }) => void;
+  resolve: (value?: { task: Task; next?: Task }) => void;
   reject: (error?: unknown) => void;
-  promise: Promise<{ task: Task; next?: Task; removedNextId?: string }>;
+  promise: Promise<{ task: Task; next?: Task }>;
 }
 
 export function deferredApi(seed: Partial<MemoryDb> = {}) {
@@ -83,18 +79,10 @@ export function deferredApi(seed: Partial<MemoryDb> = {}) {
     type: "complete" | "reopen",
     id: string,
     at: string,
-  ): Promise<{ task: Task; next?: Task; removedNextId?: string }> => {
-    let resolvePromise!: (value: {
-      task: Task;
-      next?: Task;
-      removedNextId?: string;
-    }) => void;
+  ): Promise<{ task: Task; next?: Task }> => {
+    let resolvePromise!: (value: { task: Task; next?: Task }) => void;
     let rejectPromise!: (error: unknown) => void;
-    const promise = new Promise<{
-      task: Task;
-      next?: Task;
-      removedNextId?: string;
-    }>((res, rej) => {
+    const promise = new Promise<{ task: Task; next?: Task }>((res, rej) => {
       resolvePromise = res;
       rejectPromise = rej;
     });
