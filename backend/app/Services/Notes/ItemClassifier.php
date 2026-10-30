@@ -57,8 +57,8 @@ final class ItemClassifier
         return match (true) {
             $this->isComplete($text) => CommandAction::Complete,
             $this->startsWith($text, 'delete_command') => CommandAction::Delete,
-            // Reschedule needs "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task.
-            $this->startsWith($text, 'move_command') && $this->target->split($text, $context) !== null => CommandAction::Reschedule,
+            // Reschedule needs a move verb and "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task.
+            $this->target->split($text, $context) !== null => CommandAction::Reschedule,
             default => null,
         };
     }

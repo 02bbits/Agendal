@@ -5,13 +5,14 @@ use App\Services\Notes\FieldExtractor;
 use App\Services\Notes\NoteContext;
 use Tests\Support\NoteInvariants;
 use Tests\Support\NoteRules;
+use Tests\Support\RealisticNotes;
 use Tests\TestCase;
 
 uses(TestCase::class);
 
 function invariantContext(): NoteContext
 {
-    return new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh', ['hci' => 'HCI', 'sql' => 'SQL Course', 'web' => 'Adv Web', 'personal' => 'Personal']);
+    return RealisticNotes::context();
 }
 
 function invariantFields(string $text): ExtractedFields
@@ -27,18 +28,9 @@ function meaning(string $text): array
     return [$fields->dueDate, $fields->startTime, mb_strtolower($fields->title)];
 }
 
-/** @return array<string, array{string}> */
-function realisticNotes(): array
-{
-    $lines = file(__DIR__.'/../../Fixtures/realistic-notes.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
-    $notes = array_filter($lines, fn (string $line): bool => ! str_starts_with($line, '#'));
-
-    return array_combine($notes, array_map(fn (string $note): array => [str_replace('\n', "\n", $note)], $notes));
-}
-
 it('keeps every property on realistic notes', function (string $note) {
     expect(app(NoteInvariants::class)->violations($note, invariantContext()))->toBe([]);
-})->with(realisticNotes());
+})->with(RealisticNotes::dataset());
 
 /** @return array<string, array{string, string}> every month phrase of the CSV in each date order people write */
 function monthWordings(): array

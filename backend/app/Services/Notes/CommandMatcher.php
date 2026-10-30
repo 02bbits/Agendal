@@ -33,10 +33,12 @@ final class CommandMatcher
      */
     public function words(string $text, NoteContext $context): array
     {
-        $title = $this->extractor->extract($this->subject($text, $context), $context)->title;
+        // The verb goes first, so a lead-in after it ("done remind me to call mom") starts the text the extractor reads.
         $starts = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command']));
+        $subject = (string) preg_replace('~^\s*(?:'.$starts.')(?![\p{L}\p{N}_])[\p{P}\s]*~iu', '', $this->subject($text, $context));
+        $title = $this->extractor->extract($subject, $context)->title;
         $ends = NoteVocabulary::phrases('complete_suffix').'|'.NoteVocabulary::phrases('complete_suffix_bare');
-        $title = (string) preg_replace('~^(?:'.$starts.')(?![\p{L}\p{N}_])|(?<![\p{L}\p{N}_])(?:'.$ends.')[\p{P}\s]*$~iu', ' ', $title);
+        $title = (string) preg_replace('~(?<![\p{L}\p{N}_])(?:'.$ends.')[\p{P}\s]*$~iu', ' ', $title);
 
         return array_values(array_unique(array_diff($this->tokens($title), $this->stopWords())));
     }
