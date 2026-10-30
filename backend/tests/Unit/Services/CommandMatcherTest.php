@@ -6,6 +6,7 @@ use App\Services\Notes\CommandMatch;
 use App\Services\Notes\CommandMatcher;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteVocabulary;
+use Tests\Support\NoteRules;
 use Tests\TestCase;
 
 uses(TestCase::class);
@@ -34,7 +35,6 @@ it('reschedules with the was-label and keeps or moves the times (T-NU-21, NU-E35
     'date and time move the end too' => ['move email group to tomorrow 2pm', ['due_date' => '2026-10-24', 'start_time' => '14:00', 'end_time' => '15:00'], 'Due Sat 24 Oct (was today)'],
     'a date alone keeps the times' => ['move email group to Friday', ['due_date' => '2026-10-30'], 'Due Fri 30 Oct (was today)'],
     'a time alone keeps the date' => ['move email group to 2pm', ['start_time' => '14:00', 'end_time' => '15:00'], 'Email the group'],
-    'the date it already has is no change' => ['move email group to today', [], 'Email the group'],
     'an end past midnight is dropped' => ['move email group to 11:30pm', ['start_time' => '23:30', 'end_time' => null], 'Email the group'],
 ]);
 
@@ -108,6 +108,123 @@ it('reads the task from before the target and the new when only after it', funct
     'Vietnamese day numbers' => ['chuyển pay rent ngày 1 sang ngày 5', 'rent', ['due_date' => '2026-11-05']],
     'a target word in the title' => ['move talk to bank to friday', 'bank', ['due_date' => '2026-10-30']],
 ]);
+
+const RENT_TASK = ['id' => 'rent', 'title' => 'Pay rent', 'due_date' => '2026-11-01'];
+
+const STANDUP_TASK = ['id' => 'standup', 'title' => 'Standup', 'due_date' => '2026-10-26', 'start_time' => '09:00', 'end_time' => '09:15'];
+
+/** @return array<string, array{string}> */
+function ruleCases(string $category, string $template): array
+{
+    $notes = array_map(fn (string $value): string => str_replace('{}', $value, $template), NoteRules::values($category));
+
+    return array_combine($notes, array_map(fn (string $note): array => [$note], $notes));
+}
+
+it('completes with every complete verb and ending in the rules', function (string $text) {
+    expect(matchCommand($text, CommandAction::Complete, [RENT_TASK])->change?->fields)->toBe(['done' => true]);
+})->with([...ruleCases('complete_command', '{} pay rent'), ...ruleCases('complete_suffix', 'pay rent {}'), ...ruleCases('complete_suffix_bare', 'pay rent {}')]);
+
+it('deletes with every delete verb in the rules', function (string $text) {
+    expect(matchCommand($text, CommandAction::Delete, [RENT_TASK])->change?->delete)->toBeTrue();
+})->with(ruleCases('delete_command', '{} pay rent'));
+
+/** @return array<string, array{string}> every move verb with every target word of the rules */
+function moveWordings(): array
+{
+    $cases = [];
+    foreach (NoteRules::values('move_command') as $verb) {
+        foreach (NoteRules::values('reschedule_target') as $target) {
+            $cases["{$verb} … {$target}"] = ["{$verb} pay rent on the 1st {$target} the 5th"];
+        }
+    }
+
+    return $cases;
+}
+
+it('reschedules with every move verb and target word in the rules', function (string $text) {
+    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields)->toBe(['due_date' => '2026-11-05']);
+})->with(moveWordings());
+
+/** @return array<string, array{string, string}> the old date written in the subject × the new date in the target */
+function subjectAndTargetDates(): array
+{
+    $targets = ['the 5th' => '2026-11-05', '5/11' => '2026-11-05', 'Nov 5' => '2026-11-05', 'ngày 5' => '2026-11-05', 'friday' => '2026-10-30', 'tomorrow' => '2026-10-24', 'next week' => '2026-10-26'];
+    $cases = [];
+    foreach (['', 'on the 1st', 'due 1/11', '1/11', 'Nov 1', 'ngày 1', 'at 9am', '9am'] as $subject) {
+        foreach ($targets as $target => $due) {
+            $text = trim("move pay rent {$subject}").' to '.$target;
+            $cases[$text] = [$text, $due];
+        }
+    }
+
+    return $cases;
+}
+
+it('takes the new date from the target whatever the subject says', function (string $text, string $due) {
+    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields)->toBe(['due_date' => $due]);
+})->with(subjectAndTargetDates());
+
+it('takes the new time from the target and moves or sets the end (NU-E35)', function (string $text, array $fields) {
+    expect(matchCommand($text, CommandAction::Reschedule, [STANDUP_TASK])->change?->fields)->toBe($fields);
+})->with([
+    ['move 9am standup to 10am', ['start_time' => '10:00', 'end_time' => '10:15']],
+    ['move standup at 9:00 to 10:30', ['start_time' => '10:30', 'end_time' => '10:45']],
+    ['dời standup 9h sang 10h', ['start_time' => '10:00', 'end_time' => '10:15']],
+    ['move standup to 2pm', ['start_time' => '14:00', 'end_time' => '14:15']],
+    ['move standup to tomorrow 10am', ['due_date' => '2026-10-24', 'start_time' => '10:00', 'end_time' => '10:15']],
+    ['move standup to 10-11am', ['start_time' => '10:00', 'end_time' => '11:00']],
+    ['move standup to 9-10am', ['end_time' => '10:00']],
+    ['move standup to 11:50pm', ['start_time' => '23:50', 'end_time' => null]],
+]);
+
+it('gives a time without a date today, or tomorrow once it has passed, on a task with no date (NU-E5)', function (string $text, array $fields) {
+    expect(matchCommand($text, CommandAction::Reschedule, [['id' => 'd', 'title' => 'Dentist']])->change?->fields)->toBe($fields);
+})->with([
+    'later today' => ['move dentist to 10am', ['due_date' => '2026-10-23', 'start_time' => '10:00']],
+    'already passed' => ['move dentist to 7am', ['due_date' => '2026-10-24', 'start_time' => '07:00']],
+    'in hours' => ['move dentist to in 2 hours', ['due_date' => '2026-10-23', 'start_time' => '10:12']],
+    'a date stays the date' => ['move dentist to friday 7am', ['due_date' => '2026-10-30', 'start_time' => '07:00']],
+]);
+
+it('keeps the date of a dated task when only a time is given (NU-E35)', function () {
+    expect(matchCommand('move standup to 7am', CommandAction::Reschedule, [STANDUP_TASK])->change?->fields)->toBe(['start_time' => '07:00', 'end_time' => '07:15']);
+});
+
+it('changes nothing when the task already has the new date and time', function (string $text) {
+    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK, STANDUP_TASK]))->toMatchObject(['change' => null, 'skip' => SkipReason::AlreadyDone]);
+})->with(['move pay rent to 1/11', 'move pay rent to the 1st', 'move standup to 9am', 'move standup to monday 9am', 'move standup to 9-9:15am', 'chuyển standup sang thứ 2 9h']);
+
+it('picks the tied task the reschedule would change', function () {
+    $open = [['id' => 'fri', 'title' => 'Weekly report', 'due_date' => '2026-10-23'], ['id' => 'later', 'title' => 'Weekly report', 'due_date' => '2026-10-30']];
+    $match = matchCommand('move weekly report to today', CommandAction::Reschedule, $open);
+
+    expect([$match->change?->taskId, $match->change?->fields, $match->tiedTaskIds])->toBe(['later', ['due_date' => '2026-10-23'], ['fri', 'later']]);
+});
+
+/** @return array<string, array{string}> every priority and repeat phrase of the rules */
+function modifierPhrases(): array
+{
+    $categories = array_filter(array_unique(array_column(NoteRules::rows(), 0)), fn (string $category): bool => in_array($category, ['priority_high', 'priority_low'], true) || str_starts_with($category, 'repeat:'));
+    $phrases = array_merge(...array_map(NoteRules::values(...), array_values($categories)));
+
+    return array_combine($phrases, array_map(fn (string $phrase): array => [$phrase], $phrases));
+}
+
+it('prefers the title with the repeat or priority word, and matches without it', function (string $phrase) {
+    $withWord = ['id' => 'with', 'title' => ucfirst($phrase).' report'];
+    $match = matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report'], $withWord]);
+
+    expect([$match->change?->taskId, $match->isTie()])->toBe(['with', false])
+        ->and(matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report']])->change?->taskId)->toBe('plain');
+})->with(modifierPhrases());
+
+it('tells a weekly report from a monthly one', function () {
+    $open = [['id' => 'm', 'title' => 'Monthly report', 'due_date' => '2026-10-24'], ['id' => 'w', 'title' => 'Weekly report', 'due_date' => '2026-10-26']];
+
+    expect(matchCommand('move weekly report to friday', CommandAction::Reschedule, $open)->change?->taskId)->toBe('w')
+        ->and(matchCommand('move report to friday', CommandAction::Reschedule, $open)->isTie())->toBeTrue();
+});
 
 it('builds an unmatched reschedule from the target date, not the subject one (NU-E29)', function () {
     $new = matchCommand('move standup on monday to tuesday 10am', CommandAction::Reschedule, [])->newTask;
