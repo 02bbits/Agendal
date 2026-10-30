@@ -6,6 +6,7 @@ use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use App\Support\Audit;
 use App\Support\NewPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -60,9 +61,7 @@ class ResetPasswordController extends Controller
         Auth::guard('web')->login($user, remember: true);
         $request->session()->regenerate();
         $user->notify(new PasswordChanged);
-        DB::table('audit_events')->insert([
-            'user_id' => $user->id, 'event' => 'reset_used', 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
+        Audit::log($request, 'reset_used', $user->id);
 
         return response()->json(['user' => $user]);
     }
