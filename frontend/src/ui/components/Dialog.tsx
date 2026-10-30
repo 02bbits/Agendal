@@ -1,4 +1,5 @@
 import { useId, useRef, type ReactNode } from "react";
+import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
 export interface DialogProps {
@@ -26,6 +27,7 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   useModalFocus(dialogRef, titleRef, open, onClose);
+  useHistoryEntry(open, onClose);
 
   if (!open) return null;
 

@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -48,6 +49,12 @@ const TAB_BY_PATH: Record<string, TabId> = {
   [ROUTES.projects]: "projects",
   [ROUTES.notes]: "notes",
 };
+
+// The tab a screen belongs to: /projects/5 → Projects, Account and Search → Inbox
+const tabRootOf = (path: string): string =>
+  Object.keys(TAB_BY_PATH).find(
+    (root) => root !== ROUTES.inbox && path.startsWith(`${root}/`),
+  ) ?? ROUTES.inbox;
 
 const DEFAULT_SETTINGS: AccountSettings = {
   theme: "system",
@@ -117,14 +124,28 @@ export function AppFrame({ children }: { children: ReactNode }) {
     };
   }, [pathname, router]);
 
+  // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
+  // that tab's root instead of out of the app (AP §2.4)
+  const arrivedByDeepLink = useRef(true);
+  const previousPath = useRef(pathname);
+  useEffect(() => {
+    if (previousPath.current !== pathname) arrivedByDeepLink.current = false;
+    previousPath.current = pathname;
+  }, [pathname]);
+
   const navigate = useCallback<Navigate>(
     (href) => {
-      router.push(href);
+      // Tab switches replace the entry, so Back doesn't walk through every tab visited
+      if (href in TAB_BY_PATH && pathname in TAB_BY_PATH) router.replace(href);
+      else router.push(href);
       return true;
     },
-    [router],
+    [router, pathname],
   );
-  const back = useCallback(() => router.back(), [router]);
+  const back = useCallback(() => {
+    if (arrivedByDeepLink.current) router.replace(tabRootOf(pathname));
+    else router.back();
+  }, [router, pathname]);
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
