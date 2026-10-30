@@ -8,6 +8,12 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class StoreProjectRequest extends FormRequest
 {
+    public const ALLOWED_COLOURS = ['blue', 'red', 'orange', 'yellow', 'green', 'teal', 'purple', 'gray'];
+
+    public const MIN_NAME_LENGTH = 1;
+
+    public const MAX_NAME_LENGTH = 40;
+
     public function authorize(): bool
     {
         return true;
@@ -21,14 +27,30 @@ class StoreProjectRequest extends FormRequest
     }
 
     /**
+     * @return list<string>
+     */
+    public static function nameRules(): array
+    {
+        return ['string', 'min:'.self::MIN_NAME_LENGTH, 'max:'.self::MAX_NAME_LENGTH];
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function colourRules(): array
+    {
+        return ['string', 'in:'.implode(',', self::ALLOWED_COLOURS)];
+    }
+
+    /**
      * @return array<string, list<string>>
      */
     public function rules(): array
     {
         return [
             'id' => ['required', 'uuid'],
-            'name' => ['required', 'string', 'min:1', 'max:40'],
-            'colour' => ['required', 'string', 'in:blue,red,orange,yellow,green,teal,purple,gray'],
+            'name' => ['required', ...self::nameRules()],
+            'colour' => ['required', ...self::colourRules()],
         ];
     }
 }

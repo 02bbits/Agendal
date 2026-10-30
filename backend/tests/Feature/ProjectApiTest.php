@@ -38,6 +38,17 @@ function assertProjectApiErrorShape(mixed $body): void
     );
 }
 
+function assertProjectTaskSchema(mixed $body): void
+{
+    $validator = new Validator;
+    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
+    $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/task.schema.json');
+
+    expect($result->isValid())->toBeTrue(
+        $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
+    );
+}
+
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T01:12:00Z'));
     $this->withHeader('X-Timezone', 'Asia/Ho_Chi_Minh');
@@ -340,4 +351,362 @@ it('returns 401 for guests on both routes', function () {
         'name' => 'Guest Project',
         'colour' => 'blue',
     ])->assertStatus(401);
+});
+
+it('shows a project with its tasks, progress counts, and valid schemas', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Workspace',
+        'colour' => 'blue',
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Open Task 1',
+        'done' => false,
+    ]);
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Open Task 2',
+        'done' => false,
+    ]);
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Completed Task 1',
+        'done' => true,
+        'done_at' => Carbon::now(),
+    ]);
+
+    $response = $this->actingAs($user)->getJson("/api/v1/projects/{$project->id}")
+        ->assertStatus(200);
+
+    $data = $response->json();
+    expect($data)->toHaveKeys(['project', 'progress', 'open', 'completed', 'next_cursor'])
+        ->and($data['progress'])->toBe(['done' => 1, 'total' => 3])
+        ->and($data['project']['open'])->toBe(2)
+        ->and($data['project']['done'])->toBe(1)
+        ->and($data['open'])->toHaveCount(2)
+        ->and($data['completed'])->toHaveCount(1)
+        ->and($data['next_cursor'])->toBeNull();
+
+    assertProjectSchema($data['project']);
+    assertProjectTaskSchema($data['open'][0]);
+    assertProjectTaskSchema($data['completed'][0]);
+});
+
+it('orders open tasks by due_date (nulls last), then priority (high, medium, low, null), then created_at', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Task Ordering Project',
+        'colour' => 'teal',
+    ]);
+
+    $t1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T1 due tomorrow high',
+        'due_date' => '2026-10-25',
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t2 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T2 due today low',
+        'due_date' => '2026-10-24',
+        'priority' => 'low',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t3 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T3 due today medium',
+        'due_date' => '2026-10-24',
+        'priority' => 'medium',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t4 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T4 due today high',
+        'due_date' => '2026-10-24',
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t5 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T5 due null high early',
+        'due_date' => null,
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 08:00:00'),
+    ]);
+
+    $t6 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T6 due null high late',
+        'due_date' => null,
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-21 08:00:00'),
+    ]);
+
+    $t7 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'T7 due null no priority',
+        'due_date' => null,
+        'priority' => null,
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-19 08:00:00'),
+    ]);
+
+    $response = $this->actingAs($user)->getJson("/api/v1/projects/{$project->id}")
+        ->assertStatus(200);
+
+    $openIds = array_column($response->json('open'), 'id');
+    expect($openIds)->toBe([
+        $t4->id,
+        $t3->id,
+        $t2->id,
+        $t1->id,
+        $t5->id,
+        $t6->id,
+        $t7->id,
+    ]);
+});
+
+it('pages completed tasks with cursor (12 completed -> 10 + cursor, then 2 + null cursor)', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Paging Project',
+        'colour' => 'purple',
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Open Task Stays',
+        'done' => false,
+    ]);
+
+    $completedIds = [];
+    $baseTime = Carbon::parse('2026-10-23 01:00:00Z');
+    for ($i = 1; $i <= 12; $i++) {
+        $task = Task::forceCreate([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'project_id' => $project->id,
+            'title' => "Completed Task {$i}",
+            'done' => true,
+            'done_at' => (clone $baseTime)->addMinutes($i),
+        ]);
+        $completedIds[] = $task->id;
+    }
+
+    // Expected order: newest completed first (task 12 down to task 1)
+    $expectedOrder = array_reverse($completedIds);
+
+    // 1st request: without cursor -> first 10
+    $res1 = $this->actingAs($user)->getJson("/api/v1/projects/{$project->id}")
+        ->assertStatus(200);
+
+    $completedPage1 = $res1->json('completed');
+    expect($completedPage1)->toHaveCount(10)
+        ->and(array_column($completedPage1, 'id'))->toBe(array_slice($expectedOrder, 0, 10))
+        ->and($res1->json('open'))->toHaveCount(1)
+        ->and($res1->json('next_cursor'))->not->toBeNull();
+
+    $cursor = $res1->json('next_cursor');
+
+    // 2nd request: with cursor -> remaining 2, next_cursor is null, open remains
+    $res2 = $this->actingAs($user)->getJson("/api/v1/projects/{$project->id}?cursor={$cursor}")
+        ->assertStatus(200);
+
+    $completedPage2 = $res2->json('completed');
+    expect($completedPage2)->toHaveCount(2)
+        ->and(array_column($completedPage2, 'id'))->toBe(array_slice($expectedOrder, 10, 2))
+        ->and($res2->json('open'))->toHaveCount(1)
+        ->and($res2->json('next_cursor'))->toBeNull();
+});
+
+it('returns 404 on show for another user\'s project, deleted project, or unknown id', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    $otherProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'name' => 'Other Project',
+        'colour' => 'blue',
+    ]);
+
+    $deletedProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Deleted Project',
+        'colour' => 'red',
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    $unknownId = (string) Str::uuid();
+
+    $this->actingAs($user)->getJson("/api/v1/projects/{$otherProject->id}")
+        ->assertStatus(404);
+
+    $this->actingAs($user)->getJson("/api/v1/projects/{$deletedProject->id}")
+        ->assertStatus(404);
+
+    $this->actingAs($user)->getJson("/api/v1/projects/{$unknownId}")
+        ->assertStatus(404);
+});
+
+it('renames a project and returns 200 with project item', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Old Name',
+        'colour' => 'blue',
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+        'name' => '  Renamed Project  ',
+    ])->assertStatus(200);
+
+    expect($response->json('name'))->toBe('Renamed Project')
+        ->and($response->json('colour'))->toBe('blue')
+        ->and($response->json('open'))->toBe(0)
+        ->and($response->json('done'))->toBe(0);
+
+    assertProjectSchema($response->json());
+    expect($project->fresh()->name)->toBe('Renamed Project');
+});
+
+it('recolours a project and returns 200 with project item', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Colour Test',
+        'colour' => 'blue',
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+        'colour' => 'purple',
+    ])->assertStatus(200);
+
+    expect($response->json('name'))->toBe('Colour Test')
+        ->and($response->json('colour'))->toBe('purple');
+
+    assertProjectSchema($response->json());
+    expect($project->fresh()->colour)->toBe('purple');
+});
+
+it('rejects patch with name taken by another non-deleted project with 422 but allows keeping its own name', function () {
+    $user = User::factory()->create();
+    $projectA = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Design System',
+        'colour' => 'green',
+    ]);
+    $projectB = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Mobile App',
+        'colour' => 'orange',
+    ]);
+
+    // Name taken by project A
+    $responseTaken = $this->actingAs($user)->patchJson("/api/v1/projects/{$projectB->id}", [
+        'name' => '  design SYSTEM  ',
+    ])->assertStatus(422);
+
+    expect($responseTaken->json('error.code'))->toBe('project.name_taken')
+        ->and($responseTaken->json('error.message'))->toBe('You already have a project called “Design System”.');
+    assertProjectApiErrorShape($responseTaken->json());
+
+    // Keeping its own name (case variation or identical) is allowed
+    $responseSelf = $this->actingAs($user)->patchJson("/api/v1/projects/{$projectB->id}", [
+        'name' => 'Mobile App',
+    ])->assertStatus(200);
+
+    expect($responseSelf->json('name'))->toBe('Mobile App');
+});
+
+it('rejects patch with unknown keys with 422', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Test Project',
+        'colour' => 'gray',
+    ]);
+
+    $response = $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+        'name' => 'Valid Name',
+        'extra_field' => 'not_allowed',
+    ])->assertStatus(422);
+
+    expect($response->json('error.fields.extra_field'))->toContain("This field can't be changed.");
+    assertProjectApiErrorShape($response->json());
+});
+
+it('returns 404 on patch for another user\'s project or deleted project', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    $otherProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'name' => 'Other Project',
+        'colour' => 'blue',
+    ]);
+
+    $deletedProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Deleted Project',
+        'colour' => 'red',
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    $this->actingAs($user)->patchJson("/api/v1/projects/{$otherProject->id}", [
+        'name' => 'Attempt Rename',
+    ])->assertStatus(404);
+
+    $this->actingAs($user)->patchJson("/api/v1/projects/{$deletedProject->id}", [
+        'name' => 'Attempt Rename Deleted',
+    ])->assertStatus(404);
 });
