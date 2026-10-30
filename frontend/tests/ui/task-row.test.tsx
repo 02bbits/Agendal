@@ -138,7 +138,7 @@ describe("TaskRow (LV-4)", () => {
       task({
         title: "Submit HCI reflection",
         project_id: "p-hci",
-        due_date: "2026-10-22",
+        due_date: "2026-10-21",
         start_time: "23:59",
         priority: "high",
       }),
@@ -148,11 +148,14 @@ describe("TaskRow (LV-4)", () => {
       },
     );
     expect(container.querySelector('[data-slot="meta"]')!.textContent).toBe(
-      "HCI·Yesterday·23:59",
+      "Wed 21 Oct·HCI·23:59",
     );
     expect(
       container.querySelectorAll('[data-slot="meta"] .text-error'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(
+      container.querySelector('[data-slot="meta"] .text-error')!.textContent,
+    ).toBe("Wed 21 Oct");
     expect(container.querySelector("li")!.className).toContain("is-overdue");
   });
 
