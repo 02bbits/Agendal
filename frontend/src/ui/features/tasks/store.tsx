@@ -75,6 +75,8 @@ export function TaskStoreProvider({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [settling, setSettling] = useState<ReadonlySet<string>>(new Set());
   const toastSeq = useRef(0);
+  const taskSeq = useRef<Map<string, number>>(new Map());
+  const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
 
   const todayDate = today(clock.timeZone, clock.now());
 
@@ -171,19 +173,36 @@ export function TaskStoreProvider({
   const reopen = useCallback(
     (task: Task) => {
       const at = clock.now().toISOString();
+      const seq = (taskSeq.current.get(task.id) ?? 0) + 1;
+      taskSeq.current.set(task.id, seq);
+
       const revert = applyLocal((list) =>
         replace(list, { ...task, done: false, done_at: null }),
       );
-      api.reopen(task.id, at).then(
-        ({ task: saved, removedNextId }) =>
-          applyLocal((list) =>
-            replace(list, saved).filter((x) => x.id !== removedNextId),
-          ),
-        () => {
-          revert();
-          saveFailed(() => reopen(task));
-        },
-      );
+
+      const prev = taskQueue.current.get(task.id) ?? Promise.resolve();
+      const next = prev
+        .catch(() => {})
+        .then(async () => {
+          try {
+            const res = await api.reopen(task.id, at);
+            if (taskSeq.current.get(task.id) !== seq) return;
+            applyLocal((list) =>
+              replace(list, res.task).filter((x) => x.id !== res.removedNextId),
+            );
+          } catch {
+            if (taskSeq.current.get(task.id) !== seq) return;
+            revert();
+            saveFailed(() => reopen(task));
+          }
+        })
+        .finally(() => {
+          if (taskQueue.current.get(task.id) === next) {
+            taskQueue.current.delete(task.id);
+          }
+        });
+
+      taskQueue.current.set(task.id, next);
     },
     [api, clock, applyLocal, saveFailed],
   );
@@ -191,6 +210,9 @@ export function TaskStoreProvider({
   const complete = useCallback(
     (task: Task) => {
       const at = clock.now().toISOString();
+      const seq = (taskSeq.current.get(task.id) ?? 0) + 1;
+      taskSeq.current.set(task.id, seq);
+
       const revert = applyLocal((list) =>
         replace(list, { ...task, done: true, done_at: at }),
       );
@@ -201,16 +223,32 @@ export function TaskStoreProvider({
         actionLabel: t("common.undo"),
         onAction: () => reopen({ ...task, done: true, done_at: at }),
       });
-      api.complete(task.id, at).then(
-        ({ task: saved, next }) =>
-          applyLocal((list) =>
-            next ? [...replace(list, saved), next] : replace(list, saved),
-          ),
-        () => {
-          revert();
-          saveFailed(() => complete(task));
-        },
-      );
+
+      const prev = taskQueue.current.get(task.id) ?? Promise.resolve();
+      const next = prev
+        .catch(() => {})
+        .then(async () => {
+          try {
+            const res = await api.complete(task.id, at);
+            if (taskSeq.current.get(task.id) !== seq) return;
+            applyLocal((list) =>
+              res.next
+                ? [...replace(list, res.task), res.next]
+                : replace(list, res.task),
+            );
+          } catch {
+            if (taskSeq.current.get(task.id) !== seq) return;
+            revert();
+            saveFailed(() => complete(task));
+          }
+        })
+        .finally(() => {
+          if (taskQueue.current.get(task.id) === next) {
+            taskQueue.current.delete(task.id);
+          }
+        });
+
+      taskQueue.current.set(task.id, next);
     },
     [api, clock, applyLocal, settle, showToast, reopen, saveFailed],
   );
