@@ -79,7 +79,13 @@ it('sets the new password, signs this device in and sends the notice email (T-AA
     Notification::assertSentTo($this->user, PasswordChanged::class);
 });
 
-it('SEC-09: the link works once', function () {
+it('T-AA-101: the reset request and the reset itself read the email trimmed and lower-cased', function () {
+    requestReset('  EXAMPLE@Gmail.com ')->assertStatus(202);
+
+    resetPassword(sentToken($this->user))->assertOk(); // sent as "Example@gmail.com"
+});
+
+it('T-AA-104, SEC-09: the link works once', function () {
     requestReset();
     $token = sentToken($this->user);
 
@@ -95,7 +101,7 @@ it('T-AA-31, SEC-09: the link expires after 60 minutes', function () {
     resetPassword($token)->assertStatus(422)->assertJsonPath('error.code', 'auth.reset_expired');
 });
 
-it('AA-E4: a new request replaces the old link', function () {
+it('T-AA-104: a new request replaces the old link', function () {
     requestReset();
     $first = sentToken($this->user);
     $this->travel(46)->seconds();
@@ -107,7 +113,7 @@ it('AA-E4: a new request replaces the old link', function () {
     resetPassword($second)->assertOk();
 });
 
-it('sends nothing for a resend within 45 s, but still answers 202', function () {
+it('T-AA-104: sends nothing for a resend within 45 s, but still answers 202', function () {
     requestReset();
     Notification::fake();
 
@@ -115,7 +121,7 @@ it('sends nothing for a resend within 45 s, but still answers 202', function () 
     Notification::assertNothingSent();
 });
 
-it('SC-05: ends every other session, Remember me included', function () {
+it('T-AA-105, SC-05: the link works on another device, which is signed in while every other session ends', function () {
     // Another device, signed in with Remember me
     $other = carryCookies($this->get('/sanctum/csrf-cookie'));
     newRequest();

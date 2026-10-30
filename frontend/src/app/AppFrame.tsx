@@ -21,8 +21,8 @@ import {
   type TabId,
   type ToastData,
 } from "@/ui";
-import { api } from "@/lib/api";
-import { wipeDevice } from "@/lib/device";
+import { api, SESSION_EXPIRED } from "@/lib/api";
+import { claimDevice, wipeDevice } from "@/lib/device";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -121,7 +121,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
-  const [user, setUser] = useState<SignedInUser | null>(null);
+  const [user, setUserState] = useState<SignedInUser | null>(null);
+  // Read by the session-expired handler, which mustn't wait for a render
+  const userRef = useRef<SignedInUser | null>(null);
+  const setUser = useCallback((next: SignedInUser | null) => {
+    userRef.current = next;
+    setUserState(next);
+  }, []);
   // Counts changes made on this device, so a session check sent before one can't undo it
   const settingsEdits = useRef(0);
 
@@ -137,6 +143,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
         if (!current) return;
         if (response.ok) {
           const me: SignedInUser = await response.json();
+          await claimDevice(me.id);
+          if (!current) return;
           setUser(me);
           if (settingsEdits.current === editsBefore)
             setSettings(settingsOf(me));
@@ -153,7 +161,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [pathname, router]);
+  }, [pathname, router, setUser]);
 
   // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
   // that tab's root instead of out of the app (AP §2.4)
@@ -250,8 +258,23 @@ export function AppFrame({ children }: { children: ReactNode }) {
       document.documentElement.removeAttribute("data-theme");
       router.replace(ROUTES.signIn);
     },
-    [router, showToast],
+    [router, showToast, setUser],
   );
+
+  // UX-44, AA-E6: a session that ended elsewhere opens Sign in and comes back to this screen
+  // afterwards. Nothing is wiped: the same account signing in again keeps its unsynced changes.
+  useEffect(() => {
+    const expired = () => {
+      // Signed out already: a plain visit is the auth gate's job, without the toast
+      if (!userRef.current) return;
+      setUser(null);
+      showToast(t("auth.session_expired"));
+      const here = window.location.pathname + window.location.search;
+      router.replace(`${ROUTES.signIn}?next=${encodeURIComponent(here)}`);
+    };
+    window.addEventListener(SESSION_EXPIRED, expired);
+    return () => window.removeEventListener(SESSION_EXPIRED, expired);
+  }, [router, showToast, setUser]);
 
   // Appearance: System leaves data-theme off so daisyUI follows the device setting. The choice is
   // also kept for /theme.js, which applies it before the next first paint (AP-3)

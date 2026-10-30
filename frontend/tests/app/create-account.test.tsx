@@ -96,7 +96,7 @@ describe("Create account (AA-1)", () => {
     ).toBeTruthy();
   });
 
-  it("shows the server's field error with a Sign in link and focuses the field", async () => {
+  it("A11Y-62: shows the server's field error with a Sign in link and focuses the field", async () => {
     const taken = "An account with this email already exists. Sign in instead?";
     reply = () =>
       json(422, {
