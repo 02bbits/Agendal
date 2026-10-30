@@ -27,28 +27,98 @@ final class NoteVocabulary
      */
     public static function phrases(string $category): string
     {
-        $values = self::values($category);
+        return self::alternation(self::values($category));
+    }
+
+    /** @param list<string> $values */
+    private static function alternation(array $values): string
+    {
         usort($values, fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
 
         return implode('|', array_map(fn (string $phrase): string => str_replace("'", "['’]", (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~'))), $values));
     }
 
-    /**
-     * Keyword phrases per project, from "project_keyword:<Project>" categories.
-     *
-     * @return array<string, string>
-     */
-    public static function projectKeywords(): array
+    /** Date, time, priority and repeat words: they describe a task rather than name one (NU §2.2). */
+    public const MODIFIER_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_low'];
+
+    public const MODIFIER_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
+
+    /** One alternation across all these categories, so "every day" wins over "every" wherever each is listed. */
+    public static function modifiers(): string
+    {
+        return self::alternation(self::modifierValues());
+    }
+
+    /** Modifiers plus words that name a task ("quiz", "deadline"). */
+    public static function signals(): string
+    {
+        return self::alternation([...self::modifierValues(), ...self::values('priority_high_content')]);
+    }
+
+    /** @return list<string> */
+    private static function modifierValues(): array
     {
         self::$rules ??= self::load();
-        $keywords = [];
-        foreach (array_keys(self::$rules) as $category) {
-            if (str_starts_with($category, 'project_keyword:')) {
-                $keywords[substr($category, strlen('project_keyword:'))] = self::phrases($category);
+        $values = [];
+        foreach (self::$rules as $category => $phrases) {
+            $family = explode(':', $category)[0];
+            if (in_array($category, self::MODIFIER_CATEGORIES, true) || (str_contains($category, ':') && in_array($family, self::MODIFIER_FAMILIES, true))) {
+                $values = [...$values, ...$phrases];
             }
         }
 
-        return $keywords;
+        return $values;
+    }
+
+    /**
+     * Phrases per key of "<family>:<key>" categories, e.g. family('weekday') => ['1' => 'monday|mon|…', …].
+     *
+     * @return array<string, string>
+     */
+    public static function family(string $family): array
+    {
+        self::$rules ??= self::load();
+        $phrases = [];
+        foreach (array_keys(self::$rules) as $category) {
+            if (str_starts_with($category, $family.':')) {
+                $phrases[substr($category, strlen($family) + 1)] = self::phrases($category);
+            }
+        }
+
+        return $phrases;
+    }
+
+    /**
+     * Every occurrence of a family's phrases, in text order; a longer phrase wins at the same spot.
+     *
+     * @return list<array{key: string, phrase: string, offset: int}>
+     */
+    public static function findAll(string $family, string $text): array
+    {
+        $found = [];
+        foreach (self::family($family) as $key => $phrases) {
+            preg_match_all(self::pattern($phrases), $text, $matches, PREG_OFFSET_CAPTURE);
+            foreach ($matches[0] as [$phrase, $offset]) {
+                $known = $found[$offset] ?? null;
+                if ($known === null || strlen($phrase) > strlen($known['phrase'])) {
+                    $found[$offset] = ['key' => (string) $key, 'phrase' => $phrase, 'offset' => $offset];
+                }
+            }
+        }
+        ksort($found);
+
+        return array_values($found);
+    }
+
+    /** @return array<string, string> project name => keyword phrases */
+    public static function projectKeywords(): array
+    {
+        return self::family('project_keyword');
+    }
+
+    public static function contains(string $category, string $text): bool
+    {
+        return preg_match(self::pattern(self::phrases($category)), $text) === 1;
     }
 
     /** @return list<string> */

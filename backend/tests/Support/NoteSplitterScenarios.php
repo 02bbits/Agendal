@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Tests\Support;
 
+use App\Services\Notes\NoteVocabulary;
 use Normalizer;
 use RuntimeException;
 
@@ -37,7 +38,7 @@ final class NoteSplitterScenarios
     {
         $file = fopen($path, 'rb');
         if ($file === false) {
-            throw new RuntimeException('Missing backend/resources/notes/splitter-rules.csv');
+            throw new RuntimeException('Missing backend/resources/notes/note-rules.csv');
         }
         try {
             $header = fgetcsv($file, null, ',', '"', '');
@@ -57,99 +58,22 @@ final class NoteSplitterScenarios
                 }
                 [$category, $value] = $row;
                 $project = str_starts_with($category, 'project_keyword:') ? substr($category, strlen('project_keyword:')) : null;
-                $examples = $project !== null ? [
+                $family = explode(':', $category)[0];
+                $examples = match (true) {
                     // NU-E34: a keyword is a signal only for a project the user has.
-                    ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget'], [$project]],
-                    ['buy widget, '.$value.' gadget', ['buy widget, '.$value.' gadget'], []],
-                ] : match ($category) {
-                    'task_verb' => [
-                        [$value.' widget, gadget', [$value.' widget, gadget']],
-                        ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
-                    ],
-                    'complete_command', 'move_command', 'delete_command', 'skip_prefix', 'priority_high_content' => [
-                        ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
+                    $project !== null => [
+                        ['buy widget, gadget '.$value, ['buy widget', 'gadget '.$value], [$project]],
+                        ['buy widget, gadget '.$value, ['buy widget, gadget '.$value], []],
                     ],
                     // A date, time, priority or repeat word closing a fragment describes the list; opening one starts a task.
-                    'signal' => [
+                    in_array($family, [...NoteVocabulary::MODIFIER_CATEGORIES, ...NoteVocabulary::MODIFIER_FAMILIES], true) => [
                         ['buy widget, gadget '.$value, ['buy widget, gadget '.$value]],
                         ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
                         ['gadget, '.$value, ['gadget, '.$value]],
                     ],
-                    'abbreviation' => [
-                        ['meet '.$value.'. Lee. call mum', ['meet '.$value.'. Lee', 'call mum']],
-                    ],
-                    'bullet' => [
-                        [$value.' [ ] read widget'."\n".$value.' call mum', ['read widget', 'call mum']],
-                        [$value.'5 widget', [$value.'5 widget']],
-                    ],
-                    'tight_bullet' => [
-                        [$value.'read widget'."\n".$value.' call mum', ['read widget', 'call mum']],
-                    ],
-                    'checkbox_bracket' => [
-                        [mb_substr($value, 0, 1).' '.mb_substr($value, 1).' read widget'."\n".mb_substr($value, 0, 1).'x'.mb_substr($value, 1).' call mum', ['read widget', 'call mum']],
-                    ],
-                    'separator' => [
-                        ['buy widget'.$value.'gadget', ['buy widget', 'gadget']],
-                    ],
-                    'conjunction' => [
-                        ['buy widget '.$value.' call mum', ['buy widget', 'call mum']],
-                        ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],
-                    ],
-                    'following_conjunction' => [
-                        ['buy widget '.$value.' call mum', ['buy widget', 'call mum']],
-                        ['read widget '.$value, ['read widget '.$value]],
-                        ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],
-                    ],
-                    'time_unit' => [
-                        ['buy widget, gadget 3'.$value, ['buy widget, gadget 3'.$value]],
-                        ['buy widget, 3'.$value.' call gadget', ['buy widget', '3'.$value.' call gadget']],
-                        ['buy widget, 3 '.$value.'x', ['buy widget, 3 '.$value.'x']],
-                    ],
-                    'time_prefix' => [
-                        ['buy widget, gadget '.$value.' 9', ['buy widget, gadget '.$value.' 9']],
-                        ['gadget, '.$value.' 9', ['gadget, '.$value.' 9']],
-                    ],
-                    'complete_suffix' => [
-                        ['buy widget, gadget '.$value, ['buy widget', 'gadget '.$value]],
-                    ],
-                    'lead_in' => [
-                        [$value.' buy widget, gadget', [$value.' buy widget, gadget']],
-                        ['buy widget, '.$value.' call gadget', ['buy widget', $value.' call gadget']],
-                    ],
-                    'leading_filler' => [
-                        ['buy widget rồi '.$value.' call gadget', ['buy widget', 'call gadget']],
-                        ['read widget xong '.$value, ['read widget xong '.$value]],
-                    ],
-                    'list_joiner' => [
-                        ['buy widget, '.$value.' gadget', ['buy widget, '.$value.' gadget']],
-                        ['buy widget, '.$value.' call gadget', ['buy widget', 'call gadget']],
-                        ['buy widget '.$value.' then call gadget', ['buy widget', 'call gadget']],
-                    ],
-                    'number_suffix' => [
-                        ['3'.$value.' read widget'."\n".'12'.$value.' call mum', ['read widget', 'call mum']],
-                    ],
-                    'letter_suffix' => [
-                        ['b'.$value.' read widget', ['read widget']],
-                    ],
-                    'checkbox_mark' => [
-                        ['['.$value.'] read widget'."\n".'[ '.$value.' ] call mum', ['read widget', 'call mum']],
-                    ],
-                    'comma' => [
-                        ['buy widget'.$value.' gadget'.$value.' call mum', ['buy widget'.$value.' gadget', 'call mum']],
-                        ['pay 1'.$value.'000 for widget', ['pay 1'.$value.'000 for widget']],
-                    ],
-                    'full_stop' => [
-                        ['buy widget'.$value.' call mum'.$value, ['buy widget', 'call mum']],
-                    ],
-                    'time_separator' => [
-                        ['buy widget, gadget 9'.$value.'30', ['buy widget, gadget 9'.$value.'30']],
-                        ['buy widget, 9'.$value.'30 gadget', ['buy widget', '9'.$value.'30 gadget']],
-                    ],
-                    'word_attachment' => [
-                        ['email alpha'.$value.'then about widget', ['email alpha'.$value.'then about widget']],
-                        ['email then'.$value.'alpha about widget', ['email then'.$value.'alpha about widget']],
-                    ],
-                    default => throw new RuntimeException('Add scenario templates for new rule category '.$category),
+                    // Read only by the field extractor; NoteExtractionScenarios covers them.
+                    in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
+                    default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {
                     [$note, $expected] = $example;
@@ -178,6 +102,95 @@ final class NoteSplitterScenarios
         } finally {
             fclose($file);
         }
+    }
+
+    /** @return list<array{0: string, 1: list<string>}> */
+    private static function splitterExamples(string $category, string $value): array
+    {
+        return match ($category) {
+            'task_verb' => [
+                [$value.' widget, gadget', [$value.' widget, gadget']],
+                ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
+            ],
+            'complete_command', 'move_command', 'delete_command', 'skip_prefix', 'priority_high_content' => [
+                ['buy widget, '.$value.' gadget', ['buy widget', $value.' gadget']],
+            ],
+            'abbreviation' => [
+                ['meet '.$value.'. Lee. call mum', ['meet '.$value.'. Lee', 'call mum']],
+            ],
+            'bullet' => [
+                [$value.' [ ] read widget'."\n".$value.' call mum', ['read widget', 'call mum']],
+                [$value.'5 widget', [$value.'5 widget']],
+            ],
+            'tight_bullet' => [
+                [$value.'read widget'."\n".$value.' call mum', ['read widget', 'call mum']],
+            ],
+            'checkbox_bracket' => [
+                [mb_substr($value, 0, 1).' '.mb_substr($value, 1).' read widget'."\n".mb_substr($value, 0, 1).'x'.mb_substr($value, 1).' call mum', ['read widget', 'call mum']],
+            ],
+            'separator' => [
+                ['buy widget'.$value.'gadget', ['buy widget', 'gadget']],
+            ],
+            'conjunction' => [
+                ['buy widget '.$value.' call mum', ['buy widget', 'call mum']],
+                ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],
+            ],
+            'following_conjunction' => [
+                ['buy widget '.$value.' call mum', ['buy widget', 'call mum']],
+                ['read widget '.$value, ['read widget '.$value]],
+                ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],
+            ],
+            'time_unit' => [
+                ['buy widget, gadget 3'.$value, ['buy widget, gadget 3'.$value]],
+                ['buy widget, 3'.$value.' call gadget', ['buy widget', '3'.$value.' call gadget']],
+                ['buy widget, 3 '.$value.'x', ['buy widget, 3 '.$value.'x']],
+            ],
+            'time_prefix' => [
+                ['buy widget, gadget '.$value.' 9', ['buy widget, gadget '.$value.' 9']],
+                ['gadget, '.$value.' 9', ['gadget, '.$value.' 9']],
+            ],
+            'complete_suffix' => [
+                ['buy widget, gadget '.$value, ['buy widget', 'gadget '.$value]],
+            ],
+            'lead_in' => [
+                [$value.' buy widget, gadget', [$value.' buy widget, gadget']],
+                ['buy widget, '.$value.' call gadget', ['buy widget', $value.' call gadget']],
+            ],
+            'leading_filler' => [
+                ['buy widget rồi '.$value.' call gadget', ['buy widget', 'call gadget']],
+                ['read widget xong '.$value, ['read widget xong '.$value]],
+            ],
+            'list_joiner' => [
+                ['buy widget, '.$value.' gadget', ['buy widget, '.$value.' gadget']],
+                ['buy widget, '.$value.' call gadget', ['buy widget', 'call gadget']],
+                ['buy widget '.$value.' then call gadget', ['buy widget', 'call gadget']],
+            ],
+            'number_suffix' => [
+                ['3'.$value.' read widget'."\n".'12'.$value.' call mum', ['read widget', 'call mum']],
+            ],
+            'letter_suffix' => [
+                ['b'.$value.' read widget', ['read widget']],
+            ],
+            'checkbox_mark' => [
+                ['['.$value.'] read widget'."\n".'[ '.$value.' ] call mum', ['read widget', 'call mum']],
+            ],
+            'comma' => [
+                ['buy widget'.$value.' gadget'.$value.' call mum', ['buy widget'.$value.' gadget', 'call mum']],
+                ['pay 1'.$value.'000 for widget', ['pay 1'.$value.'000 for widget']],
+            ],
+            'full_stop' => [
+                ['buy widget'.$value.' call mum'.$value, ['buy widget', 'call mum']],
+            ],
+            'time_separator' => [
+                ['buy widget, gadget 9'.$value.'30', ['buy widget, gadget 9'.$value.'30']],
+                ['buy widget, 9'.$value.'30 gadget', ['buy widget', '9'.$value.'30 gadget']],
+            ],
+            'word_attachment' => [
+                ['email alpha'.$value.'then about widget', ['email alpha'.$value.'then about widget']],
+                ['email then'.$value.'alpha about widget', ['email then'.$value.'alpha about widget']],
+            ],
+            default => throw new RuntimeException('Add scenario templates for new rule category '.$category),
+        };
     }
 
     /** @return array<string, array<mixed>> */
