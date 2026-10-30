@@ -7,6 +7,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -28,7 +29,25 @@ export interface SignedInUser {
   id: number;
   email: string;
   display_name: string | null;
+  theme?: AccountSettings["theme"];
+  week_start?: AccountSettings["weekStart"];
+  time_format?: AccountSettings["timeFormat"];
+  remember_device?: boolean;
 }
+
+// The settings as `PATCH /me` names them
+const SETTING_FIELDS = {
+  theme: "theme",
+  weekStart: "week_start",
+  timeFormat: "time_format",
+  rememberDevice: "remember_device",
+} as const;
+
+const THEME_KEY = "agendal.theme";
+const PAGE_COLOR = {
+  light: "#f6f5f1",
+  dark: "#121211",
+} as const;
 
 // Screens that work signed out. A signed-in user on the first three goes to Inbox; a reset
 // link still works on a device that is signed in (AA-E5).
@@ -56,12 +75,19 @@ const DEFAULT_SETTINGS: AccountSettings = {
   rememberDevice: true,
 };
 
+const settingsOf = (me: SignedInUser): AccountSettings => ({
+  theme: me.theme ?? DEFAULT_SETTINGS.theme,
+  weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
+  timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
+  rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
+});
+
 const DAISY_THEME = { light: "agendal-light", dark: "agendal-dark" } as const;
 
 interface AppFrameValue {
   navigate: Navigate;
   back: () => void;
-  /** Kept on the device for now; `GET/PATCH /me` (IM-16) persists them. */
+  /** Loaded from `GET /me` and saved with `PATCH /me`; every device follows them. */
   settings: AccountSettings;
   changeSettings: (patch: Partial<AccountSettings>) => void;
   /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
@@ -97,11 +123,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
     let current = true;
     const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
     const publicPage = PUBLIC_PATHS.includes(pathname);
-    api("/user")
+    api("/me")
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
-          setUser(await response.json());
+          const me: SignedInUser = await response.json();
+          setUser(me);
+          setSettings(settingsOf(me));
           if (signedOutPage) router.replace(ROUTES.inbox);
         } else if (response.status === 401) {
           setUser(null);
@@ -139,10 +167,40 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  // Applies at once, then saves. A refused save puts the old values back; offline the change
+  // stays on this device until the sync arrives (IM-52).
+  const settingsRef = useRef(settings);
   const changeSettings = useCallback(
-    (patch: Partial<AccountSettings>) =>
-      setSettings((current) => ({ ...current, ...patch })),
-    [],
+    (patch: Partial<AccountSettings>) => {
+      const before = settingsRef.current;
+      const revert = Object.fromEntries(
+        Object.keys(patch).map((key) => [
+          key,
+          before[key as keyof AccountSettings],
+        ]),
+      );
+      settingsRef.current = { ...before, ...patch };
+      setSettings(settingsRef.current);
+      const body = Object.fromEntries(
+        Object.entries(patch).map(([key, value]) => [
+          SETTING_FIELDS[key as keyof AccountSettings],
+          value,
+        ]),
+      );
+      api("/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      })
+        .then((response) => {
+          if (response.ok || response.status === 401) return;
+          settingsRef.current = { ...settingsRef.current, ...revert };
+          setSettings(settingsRef.current);
+          showToast(t("error.generic", { request_id: "" }));
+        })
+        .catch(() => {});
+    },
+    [showToast],
   );
 
   const signOut = useCallback(
@@ -162,18 +220,36 @@ export function AppFrame({ children }: { children: ReactNode }) {
       }
       await wipeDevice();
       setUser(null);
+      settingsRef.current = DEFAULT_SETTINGS;
       setSettings(DEFAULT_SETTINGS);
+      document.documentElement.removeAttribute("data-theme");
       router.replace(ROUTES.signIn);
     },
     [router, showToast],
   );
 
-  // Appearance: System leaves data-theme off so daisyUI follows the device setting
+  // Appearance: System leaves data-theme off so daisyUI follows the device setting. The choice is
+  // also kept for /theme.js, which applies it before the next first paint (AP-3)
   useEffect(() => {
+    settingsRef.current = settings;
+    // Until /me answers these are only defaults, and would undo what /theme.js applied
+    if (!user) return;
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
-  }, [settings.theme]);
+    const dark =
+      settings.theme === "dark" ||
+      (settings.theme === "system" &&
+        window.matchMedia?.("(prefers-color-scheme: dark)").matches);
+    document
+      .querySelector('meta[name="theme-color"]')
+      ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
+    try {
+      localStorage.setItem(THEME_KEY, settings.theme);
+    } catch {
+      // Private mode: the theme just flashes on the next load
+    }
+  }, [settings, user]);
 
   const value = useMemo(
     () => ({

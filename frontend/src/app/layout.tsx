@@ -36,6 +36,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${sans.variable} ${serif.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        {/* Blocking on purpose: sets the theme before first paint (AP-3, T-AP-22) */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/theme.js" />
+      </head>
       <body>
         <AppFrame>{children}</AppFrame>
       </body>

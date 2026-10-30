@@ -47,7 +47,7 @@ beforeEach(() => {
   cachesMock.delete.mockClear();
   reply = async () => new Response(null, { status: 204 });
   fetchMock.mockReset().mockImplementation(async (url: string) =>
-    url === "/api/v1/user"
+    url === "/api/v1/me"
       ? new Response(
           JSON.stringify({
             id: 1,

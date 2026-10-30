@@ -1,5 +1,5 @@
 import { t } from "../copy";
-import type { TimeFormat } from "./types";
+import type { TimeFormat, WeekStart } from "./types";
 
 // Floating local dates as `YYYY-MM-DD` strings. Arithmetic runs in UTC so no
 // time zone or DST can shift a day (ADR-006). "Today" always comes from the
@@ -70,12 +70,6 @@ export function formatDay(date: string, today: string): string {
     : `${short} ${date.slice(0, 4)}`;
 }
 
-/** Overline above a screen title: `Friday 23 October` (shown uppercase by the overline style). */
-export function formatLongDate(date: string): string {
-  const d = parse(date);
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
-}
-
 /** `16:00`, or `4:00 pm` with the 12-hour setting (AP-5). */
 export function formatTime(time: string, format: TimeFormat): string {
   const [h, m] = time.split(":").map(Number) as [number, number];
@@ -95,12 +89,14 @@ export function formatTimeRange(
     : formatTime(start, format);
 }
 
-/** Today's date in a time zone, from an injected instant (ADR-006). */
-export function todayIn(now: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+/** First day of the week containing `date`, for the setting in AP-5. */
+export function startOfWeek(date: string, weekStart: WeekStart): string {
+  const first = weekStart === "sun" ? 0 : 1;
+  return addDays(date, -((weekday(date) - first + 7) % 7));
+}
+
+/** Weekday numbers (0 = Sunday) in the order a picker's columns run. */
+export function weekdayOrder(weekStart: WeekStart): number[] {
+  const first = weekStart === "sun" ? 0 : 1;
+  return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
