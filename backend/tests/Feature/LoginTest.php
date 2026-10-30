@@ -61,8 +61,12 @@ it('T-AA-10, SEC-08: a wrong password and an unknown email get the same answer',
 });
 
 describe('lockout', function () {
-    // Each failure waits out Laravel's 200 ms sign-in padding; the limits don't need it
-    beforeEach(fn () => config(['auth.timebox_duration' => 0]));
+    // Each failure waits out Laravel's 200 ms sign-in padding; the limits don't need it. The
+    // clock is frozen so a lock's seconds left can't tick down between the failure and the check
+    beforeEach(function () {
+        config(['auth.timebox_duration' => 0]);
+        $this->freezeTime();
+    });
 
     it('T-AA-20, SEC-05: locks (email, IP) for 60 s after 3 failures, even for the right password', function () {
         wrongPassword();
