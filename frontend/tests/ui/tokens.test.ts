@@ -162,3 +162,51 @@ describe("Paper & ink daisyUI themes", () => {
     }
   });
 });
+
+describe("theme choice (AP-3, T-AP-20)", () => {
+  /** The plain options of a theme block (name, prefersdark, root…), as daisyUI's plugin reads them. */
+  function options(name: string): Record<string, string | boolean> {
+    const block = [...css.matchAll(/@plugin "daisyui\/theme" \{([^{}]*)\}/g)]
+      .map(([, body]) => body!.replace(/\/\*[\s\S]*?\*\//g, ""))
+      .find((body) => body.includes(`name: "${name}"`))!;
+    return Object.fromEntries(
+      [...block.matchAll(/^\s*([a-z][\w-]*):\s*([^;]+);/gm)].map(
+        ([, key, value]) => {
+          const v = value!.trim();
+          return [
+            key!,
+            v === "true"
+              ? true
+              : v === "false"
+                ? false
+                : v.replace(/^"|"$/g, ""),
+          ];
+        },
+      ),
+    );
+  }
+
+  it("the system dark mode never overrides a theme the user picked", async () => {
+    // daisyUI ships this plugin without types
+    const pluginPath = "daisyui/theme/index.js";
+    const { default: theme } = (await import(
+      /* @vite-ignore */ pluginPath
+    )) as {
+      default: (options: object) => {
+        handler: (api: { addBase: (rule: never) => void }) => void;
+      };
+    };
+    const added: Record<string, Record<string, unknown>>[] = [];
+    theme(options("agendal-dark")).handler({
+      addBase: (rule: never) => added.push(rule),
+    });
+    const systemDark = added.find(
+      (rule) => "@media (prefers-color-scheme: dark)" in rule,
+    )!;
+
+    // With a bare ":root" this rule outranks [data-theme="agendal-light"], so Light can't be picked
+    expect(
+      Object.keys(systemDark["@media (prefers-color-scheme: dark)"]!),
+    ).toEqual([":root:not([data-theme])"]);
+  });
+});

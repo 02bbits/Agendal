@@ -65,8 +65,11 @@ describe("Account settings (AP-3, AP-5)", () => {
     expect(radio("Dark").getAttribute("aria-checked")).toBe("true");
     expect(radio("Sunday").getAttribute("aria-checked")).toBe("true");
     expect(radio("12-hour").getAttribute("aria-checked")).toBe("true");
-    expect(document.documentElement.getAttribute("data-theme")).toBe(
-      "agendal-dark",
+    // The theme is applied in an effect, which can run just after the text appears
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-theme")).toBe(
+        "agendal-dark",
+      ),
     );
   });
 
@@ -92,6 +95,50 @@ describe("Account settings (AP-3, AP-5)", () => {
 
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     expect(localStorage.getItem("agendal.theme")).toBe("system");
+  });
+
+  it("a session check that answers after a change doesn't undo it", async () => {
+    let answer!: () => void;
+    const late = new Promise<void>((resolve) => (answer = resolve));
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url !== "/api/v1/me") return new Response(null, { status: 204 });
+      if (init?.method === "PATCH") return new Response("{}", { status: 200 });
+      await late;
+      return new Response(JSON.stringify(me()), { status: 200 });
+    });
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await userEvent.click(radio("Dark"));
+    answer();
+
+    await screen.findByText("ann@example.com");
+    expect(radio("Dark").getAttribute("aria-checked")).toBe("true");
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-theme")).toBe(
+        "agendal-dark",
+      ),
+    );
+  });
+
+  it("applies a change even when the session check can't answer", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") throw new TypeError("Failed to fetch");
+      return new Response(null, { status: 204 });
+    });
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await userEvent.click(radio("Dark"));
+
+    expect(document.documentElement.getAttribute("data-theme")).toBe(
+      "agendal-dark",
+    );
+    expect(localStorage.getItem("agendal.theme")).toBe("dark");
   });
 
   it("puts the old value back and says so when the save is refused", async () => {
