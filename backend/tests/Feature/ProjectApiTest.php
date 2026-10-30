@@ -224,7 +224,7 @@ it('replay returns 200 if the project was deleted', function () {
     assertProjectSchema($response->json());
 });
 
-it('rejects an id taken by another user with 422', function () {
+it('rejects an id taken by another user with 404', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $id = (string) Str::uuid();
@@ -239,9 +239,12 @@ it('rejects an id taken by another user with 422', function () {
         'id' => $id,
         'name' => 'Hacker Project',
         'colour' => 'green',
-    ])->assertStatus(422);
+    ])->assertStatus(404);
 
-    expect($response->json('error.fields.id'))->toContain('The id has already been taken.');
+    expect($response->json('error.code'))->toBe('error.not_found')
+        ->and($response->json('error.message'))->toBe('This item no longer exists.')
+        ->and($response->json('error.request_id'))->not->toBeEmpty();
+
     assertProjectApiErrorShape($response->json());
 });
 

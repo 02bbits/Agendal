@@ -13,7 +13,6 @@ use App\Services\Projects\ProjectCounts;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
@@ -53,9 +52,7 @@ class ProjectController extends Controller
         }
 
         if (Project::withoutGlobalScope('owner')->whereKey($id)->exists()) {
-            throw ValidationException::withMessages([
-                'id' => ['The id has already been taken.'],
-            ]);
+            abort(404, 'This item no longer exists.');
         }
 
         $name = (string) $request->input('name');
