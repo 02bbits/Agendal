@@ -7,7 +7,6 @@ import {
   formatLongDate,
   formatTime,
   formatTimeRange,
-  todayIn,
   addDays,
   type Priority,
   type Reminder,
@@ -57,13 +56,7 @@ describe("dates (UX-32)", () => {
   });
 
   it("writes the overline date in full", () => {
-    expect(formatLongDate(TODAY)).toBe("Friday 23 October");
-  });
-
-  it("computes today from an injected instant and zone (ADR-006)", () => {
-    const instant = new Date("2026-10-23T18:30:00Z");
-    expect(todayIn(instant, "Asia/Ho_Chi_Minh")).toBe("2026-10-24");
-    expect(todayIn(instant, "America/New_York")).toBe("2026-10-23");
+    expect(formatLongDate(TODAY)).toBe("Friday, 23 October");
   });
 });
 

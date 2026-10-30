@@ -70,10 +70,10 @@ export function formatDay(date: string, today: string): string {
     : `${short} ${date.slice(0, 4)}`;
 }
 
-/** Overline above a screen title: `Friday 23 October` (shown uppercase by the overline style). */
+/** Overline above a screen title: `Thursday, 29 October` (shown uppercase by the overline style). */
 export function formatLongDate(date: string): string {
   const d = parse(date);
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  return `${WEEKDAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
 /** `16:00`, or `4:00 pm` with the 12-hour setting (AP-5). */
@@ -93,14 +93,4 @@ export function formatTimeRange(
   return end
     ? `${formatTime(start, format)} – ${formatTime(end, format)}`
     : formatTime(start, format);
-}
-
-/** Today's date in a time zone, from an injected instant (ADR-006). */
-export function todayIn(now: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
 }
