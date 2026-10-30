@@ -2,8 +2,6 @@
 
 use App\Services\Notes\ItemClassifier;
 use App\Services\Notes\NoteContext;
-use App\Services\Notes\NoteDateParser;
-use App\Services\Notes\NoteTimeParser;
 use Tests\Support\NoteClassifierScenarios;
 use Tests\TestCase;
 
@@ -12,7 +10,7 @@ uses(TestCase::class);
 /** "kind" or "kind/action", as the datasets write it. */
 function classified(string $text): string
 {
-    $classifier = new ItemClassifier(new NoteDateParser, new NoteTimeParser);
+    $classifier = app(ItemClassifier::class);
     $result = $classifier->classify($text, new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh'));
 
     return $result->kind->value.($result->action === null ? '' : '/'.$result->action->value);
