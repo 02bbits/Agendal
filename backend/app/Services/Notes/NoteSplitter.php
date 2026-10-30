@@ -66,8 +66,7 @@ final class NoteSplitter
             foreach (preg_split($delimiter, $line) ?: [] as $chunk) {
                 $current = '';
                 $comma = '';
-                // A comma between digits ("1,000") is part of the number.
-                foreach (preg_split('~((?<!\d)(?:'.$commas.')|(?:'.$commas.')(?!\d))~u', $chunk, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [] as $index => $fragment) {
+                foreach (preg_split($this->splittingComma($commas), $chunk, -1, PREG_SPLIT_DELIM_CAPTURE) ?: [] as $index => $fragment) {
                     if ($index % 2 === 1) {
                         $comma = $fragment;
 
@@ -102,6 +101,18 @@ final class NoteSplitter
         }
 
         return $items;
+    }
+
+    /**
+     * A comma that ends an item. A comma between digits ("1,000") or between a day and its year
+     * ("Oct 26, 2026", "September 1st, 2026") belongs to the number or the date.
+     */
+    private function splittingComma(string $commas): string
+    {
+        $dayEnds = array_map(fn (string $suffix): string => '\d'.preg_quote($suffix, '~'), NoteVocabulary::values('ordinal_suffix'));
+        $afterDay = '(?<!\d)'.implode('', array_map(fn (string $end): string => '(?<!'.$end.')', $dayEnds));
+
+        return '~('.$afterDay.'(?:'.$commas.')|(?:'.$commas.')(?!\d|\s*\d{4}(?!\d)))~iu';
     }
 
     /**

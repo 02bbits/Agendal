@@ -1,12 +1,9 @@
 <?php
 
 use App\Enums\WeekStart;
-use App\Services\Clock\ReminderCalculator;
 use App\Services\Notes\ExtractedFields;
 use App\Services\Notes\FieldExtractor;
 use App\Services\Notes\NoteContext;
-use App\Services\Notes\NoteDateParser;
-use App\Services\Notes\NoteTimeParser;
 use Tests\Support\NoteExtractionScenarios;
 use Tests\TestCase;
 
@@ -18,7 +15,7 @@ const EXTRACTOR_NOW = '2026-10-23T08:12:00+07:00';
 /** @param array<string, string> $projects */
 function extractFields(string $text, array $projects = ['sql' => 'SQL Course', 'web' => 'Adv Web', 'hci' => 'HCI', 'personal' => 'Personal'], string $now = EXTRACTOR_NOW, WeekStart $weekStart = WeekStart::Monday): ExtractedFields
 {
-    $extractor = new FieldExtractor(new NoteDateParser, new NoteTimeParser, new ReminderCalculator);
+    $extractor = app(FieldExtractor::class);
 
     return $extractor->extract($text, new NoteContext(new DateTimeImmutable($now), 'Asia/Ho_Chi_Minh', $projects, $weekStart));
 }
@@ -66,7 +63,7 @@ it('extracts English and accented Vietnamese fields (T-NU-10–18)', function (s
     ['đọc sách 3 ngày nữa', ['title' => 'Đọc sách', 'dueDate' => '2026-10-26']],
     ['read in a week', ['title' => 'Read', 'dueDate' => '2026-10-30']],
     ['mai hop nhom 9h', ['title' => 'Mai hop nhom', 'dueDate' => '2026-10-23', 'startTime' => '09:00', 'lowConfidence' => true]],
-    ['đi chợ chiều nay', ['title' => 'Đi chợ', 'startTime' => '15:00', 'projectId' => 'personal']],
+    ['đi chợ chiều nay', ['title' => 'Đi chợ', 'startTime' => '15:00', 'projectId' => null]],
     ['gym every monday 7am', ['title' => 'Gym', 'repeat' => 'weekly', 'dueDate' => '2026-10-26']],
     ['meet 2-4pm', ['startTime' => '14:00', 'endTime' => '16:00']],
     ['meet Oct 26', ['title' => 'Meet', 'dueDate' => '2026-10-26']],
@@ -124,7 +121,8 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'chiều dài is no time' => ['đo chiều dài bàn', ['startTime' => null]],
     'a name after a title is no date' => ['gặp chị Mai', ['dueDate' => null, 'title' => 'Gặp chị Mai', 'lowConfidence' => true]],
     'unreadable time is low' => ['call mum 3pmish', ['lowConfidence' => true]],
-    'a lone verb is low' => ['call tomorrow', ['title' => 'Call', 'lowConfidence' => true]],
+    'a lone noun is low' => ['report tomorrow', ['title' => 'Report', 'lowConfidence' => true]],
+    'a lone verb still has a verb' => ['call tomorrow', ['title' => 'Call', 'lowConfidence' => false]],
     'NU-E28 other language is low' => ['comprar leche', ['lowConfidence' => true]],
     'NU-E40 unaccented Vietnamese is low' => ['toi can mua sua', ['lowConfidence' => true, 'title' => 'Toi can mua sua', 'dueDate' => null]],
 ]);
@@ -142,7 +140,7 @@ it('reads real notes the way a person means them', function (string $text, array
     'a count is no day' => ['uống thuốc ngày 2 lần', ['dueDate' => null]],
     'a plain number is no time' => ['đọc 28 trang', ['startTime' => null, 'lowConfidence' => false]],
     'weekend → Saturday' => ['maybe read a book this weekend', ['dueDate' => '2026-10-24', 'title' => 'Read a book', 'priority' => 'low']],
-    'a passed bare morning hour → this evening' => ['call John at 7', ['dueDate' => '2026-10-23', 'startTime' => '19:00']],
+    'NU-E5 a passed bare hour → tomorrow' => ['call John at 7', ['dueDate' => '2026-10-24', 'startTime' => '07:00']],
     'Vietnamese mum keyword' => ['gọi mẹ tối nay', ['projectId' => 'personal']],
 ]);
 
@@ -159,11 +157,42 @@ it('keeps a yearless date within the grace days, counted in calendar days (NU-E4
     '31 in a 30-day month → no date' => ['2026-10-23T08:00:00+07:00', 'pay 31/9', null],
 ]);
 
-it('keeps a passed bare hour for tomorrow once the evening has passed too', function () {
-    $fields = extractFields('call John at 7', [], '2026-10-23T20:00:00+07:00');
+// Thursday 29 Oct 2026, 10:00, as in the IM-33 review.
+it('reads the notes from the IM-33 review', function (string $text, array $expected) {
+    expect(selectedFields(extractFields($text, ['portfolio' => 'Portfolio', 'hci' => 'HCI'], '2026-10-29T10:00:00+07:00'), $expected))->toBe(sortedFields($expected));
+})->with([
+    'an hour before tối nay leaves the title' => ['học bài lúc 8 giờ tối nay', ['title' => 'Học bài', 'startTime' => '20:00', 'dueDate' => '2026-10-29']],
+    'the same with họp' => ['họp lúc 7 giờ tối nay', ['title' => 'Họp', 'startTime' => '19:00']],
+    'a year after the month name' => ['Book flight Oct 26, 2026', ['title' => 'Book flight', 'dueDate' => '2026-10-26']],
+    'NU-E5/E7 for a bare hour' => ['call John at 9', ['dueDate' => '2026-10-30', 'startTime' => '09:00']],
+    'NU-E5/E7 with minutes' => ['call John at 9:30', ['dueDate' => '2026-10-30', 'startTime' => '09:30']],
+    'English with a time is understood' => ['team meeting 3pm', ['lowConfidence' => false, 'startTime' => '15:00']],
+    'a two-word Vietnamese task is whole' => ['đi chợ chiều nay', ['title' => 'Đi chợ', 'lowConfidence' => false]],
+    'an English ordinal day' => ['pay rent on the 1st', ['dueDate' => '2026-11-01', 'title' => 'Pay rent']],
+    'a relative time and remind me to' => ['remind me to call mom in 2 hours', ['title' => 'Call mom', 'dueDate' => '2026-10-29', 'startTime' => '12:00']],
+]);
 
-    expect([$fields->dueDate, $fields->startTime])->toBe(['2026-10-24', '07:00']);
-});
+it('reads dates and times like the review cases', function (string $text, array $expected, string $now) {
+    expect(selectedFields(extractFields($text, [], $now), $expected))->toBe(sortedFields($expected));
+})->with([
+    'tomorrow morning at an hour' => ['họp lúc 9 giờ sáng mai', ['title' => 'Họp', 'dueDate' => '2026-10-24', 'startTime' => '09:00'], EXTRACTOR_NOW],
+    'weekday evening at an hour' => ['call mum friday evening at 7', ['title' => 'Call mum', 'dueDate' => '2026-10-30', 'startTime' => '19:00'], EXTRACTOR_NOW],
+    'month name with ordinal and year' => ['submit report September 1st, 2027', ['title' => 'Submit report', 'dueDate' => '2027-09-01'], EXTRACTOR_NOW],
+    'ordinal of month' => ['party 26th of December', ['title' => 'Party', 'dueDate' => '2026-12-26'], EXTRACTOR_NOW],
+    'month name before a day, within the grace days' => ['pay rent Oct 1st', ['title' => 'Pay rent', 'dueDate' => '2026-10-01'], EXTRACTOR_NOW],
+    'Vietnamese named month and year' => ['nộp bài ngày 26 tháng 9 năm 2027', ['title' => 'Nộp bài', 'dueDate' => '2027-09-26'], EXTRACTOR_NOW],
+    'ISO date' => ['deploy 2026-11-02', ['title' => 'Deploy', 'dueDate' => '2026-11-02'], EXTRACTOR_NOW],
+    'dotted date with year' => ['gửi hồ sơ 2.11.2026', ['title' => 'Gửi hồ sơ', 'dueDate' => '2026-11-02'], EXTRACTOR_NOW],
+    'mùng day' => ['đóng học phí mùng 5', ['title' => 'Đóng học phí', 'dueDate' => '2026-11-05'], EXTRACTOR_NOW],
+    'weeks from today' => ['renew passport in 2 weeks', ['title' => 'Renew passport', 'dueDate' => '2026-11-06'], EXTRACTOR_NOW],
+    'months from today' => ['khám răng 3 tháng nữa', ['title' => 'Khám răng', 'dueDate' => '2027-01-23'], EXTRACTOR_NOW],
+    'minutes from now' => ['gọi lại trong 30 phút', ['title' => 'Gọi lại', 'dueDate' => '2026-10-23', 'startTime' => '08:42'], EXTRACTOR_NOW],
+    'hours from now past midnight' => ['take medicine in 2 hours', ['dueDate' => '2026-10-24', 'startTime' => '01:30'], '2026-10-23T23:30:00+07:00'],
+    'nhắc tôi as a lead-in' => ['nhắc tôi gọi mẹ 2 tiếng nữa', ['title' => 'Gọi mẹ', 'startTime' => '10:12'], EXTRACTOR_NOW],
+    'two dates keep the other one in the title' => ['study monday for quiz on friday 2pm', ['title' => 'Study monday for quiz', 'dueDate' => '2026-10-30', 'startTime' => '14:00'], EXTRACTOR_NOW],
+    'unaccented Vietnamese with a time' => ['mai hop nhom 9h', ['lowConfidence' => true], EXTRACTOR_NOW],
+    'English with a pronoun stays English' => ['call me tomorrow', ['lowConfidence' => false], EXTRACTOR_NOW],
+]);
 
 it('maps keywords only to projects the user has, in any case (NU-E34)', function () {
     expect(extractFields('go to gym', ['p' => 'personal'])->projectId)->toBe('p')
