@@ -15,7 +15,7 @@ describe("api (IM-10)", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("sends no CSRF token on reads", async () => {
-    await api("/user");
+    await api("/me");
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(headersOf(0).get("X-XSRF-TOKEN")).toBeNull();

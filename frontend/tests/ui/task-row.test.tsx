@@ -4,10 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
   TaskRow,
   formatDay,
-  formatLongDate,
   formatTime,
   formatTimeRange,
   addDays,
+  formatLongDate,
+  startOfWeek,
+  weekdayOrder,
   type Priority,
   type Reminder,
   type Repeat,
@@ -53,6 +55,14 @@ describe("dates (UX-32)", () => {
     expect(formatTime("16:00", "12h")).toBe("4:00 pm");
     expect(formatTime("00:30", "12h")).toBe("12:30 am");
     expect(formatTimeRange("16:00", "17:00", "24h")).toBe("16:00 – 17:00");
+  });
+
+  it("moves a date to the start of its week for either setting (T-AP-51)", () => {
+    expect(startOfWeek("2026-10-25", "mon")).toBe("2026-10-19"); // a Sunday
+    expect(startOfWeek("2026-10-25", "sun")).toBe("2026-10-25");
+    expect(startOfWeek("2026-10-24", "sun")).toBe("2026-10-18");
+    expect(weekdayOrder("mon")).toEqual([1, 2, 3, 4, 5, 6, 0]);
+    expect(weekdayOrder("sun")).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 
   it("writes the overline date in full", () => {

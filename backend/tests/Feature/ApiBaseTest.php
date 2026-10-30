@@ -42,7 +42,7 @@ it('uses the error shape for validation, sign-in and missing routes', function (
     $invalid = $this->postJson('/api/v1/_validate')->assertStatus(422);
     expect($invalid->json('error.code'))->toBe('error.invalid')->and($invalid->json('error.fields'))->toHaveKey('title');
 
-    $guest = $this->getJson('/api/v1/user')->assertUnauthorized();
+    $guest = $this->getJson('/api/v1/me')->assertUnauthorized();
     expect($guest->json('error.code'))->toBe('auth.session_expired');
 
     $missing = $this->getJson('/api/v1/nothing-here')->assertNotFound();

@@ -40,7 +40,7 @@ beforeEach(() => {
   fetchMock
     .mockReset()
     .mockImplementation(async (url: string) =>
-      url === "/api/v1/user" ? json(401, {}) : reply(),
+      url === "/api/v1/me" ? json(401, {}) : reply(),
     );
   vi.stubGlobal("fetch", fetchMock);
   document.cookie = "XSRF-TOKEN=token";

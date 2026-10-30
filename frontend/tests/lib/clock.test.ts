@@ -26,10 +26,10 @@ describe("clock (IM-05)", () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response("{}"));
     vi.stubGlobal("fetch", fetchMock);
 
-    await api("/user", { headers: { "X-Test": "1" } });
+    await api("/me", { headers: { "X-Test": "1" } });
 
     const [url, init] = fetchMock.mock.calls[0];
-    expect(url).toBe("/api/v1/user");
+    expect(url).toBe("/api/v1/me");
     expect(new Headers(init.headers).get("X-Timezone")).toBe(timeZone());
     expect(new Headers(init.headers).get("X-Test")).toBe("1");
     vi.unstubAllGlobals();

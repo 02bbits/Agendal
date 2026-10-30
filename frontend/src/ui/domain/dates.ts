@@ -1,5 +1,5 @@
 import { t } from "../copy";
-import type { TimeFormat } from "./types";
+import type { TimeFormat, WeekStart } from "./types";
 
 // Floating local dates as `YYYY-MM-DD` strings. Arithmetic runs in UTC so no
 // time zone or DST can shift a day (ADR-006). "Today" always comes from the
@@ -84,4 +84,16 @@ export function formatTimeRange(
   return end
     ? `${formatTime(start, format)} – ${formatTime(end, format)}`
     : formatTime(start, format);
+}
+
+/** First day of the week containing `date`, for the setting in AP-5. */
+export function startOfWeek(date: string, weekStart: WeekStart): string {
+  const first = weekStart === "sun" ? 0 : 1;
+  return addDays(date, -((parse(date).getUTCDay() - first + 7) % 7));
+}
+
+/** Weekday numbers (0 = Sunday) in the order a picker's columns run. */
+export function weekdayOrder(weekStart: WeekStart): number[] {
+  const first = weekStart === "sun" ? 0 : 1;
+  return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }

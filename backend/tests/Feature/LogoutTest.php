@@ -41,7 +41,7 @@ it('T-AA-40, SEC-50: ends this session and forgets Remember me', function () {
     $recaller = collect($response->headers->getCookies())->first(fn ($c) => str_starts_with($c->getName(), 'remember_web_'));
     expect($recaller?->getExpiresTime())->toBeLessThan(time())
         ->and(DB::table('sessions')->where('user_id', $this->user->id)->count())->toBe(0);
-    asDevice([SESSION_COOKIE => $device[SESSION_COOKIE]])->getJson('/api/v1/user')->assertUnauthorized();
+    asDevice([SESSION_COOKIE => $device[SESSION_COOKIE]])->getJson('/api/v1/me')->assertUnauthorized();
 });
 
 it('leaves other devices signed in, Remember me included', function () {
@@ -49,7 +49,7 @@ it('leaves other devices signed in, Remember me included', function () {
     $token = $this->user->fresh()->getRememberToken();
     asDevice(signInDevice())->postJson('/api/v1/auth/logout')->assertNoContent();
 
-    asDevice($other)->getJson('/api/v1/user')->assertOk();
+    asDevice($other)->getJson('/api/v1/me')->assertOk();
     expect($this->user->fresh()->getRememberToken())->toBe($token);
 });
 
@@ -63,7 +63,7 @@ it('T-AA-43: sign out on all devices ends every session and is audited', functio
     $token = $this->user->fresh()->getRememberToken();
     asDevice(signInDevice())->postJson('/api/v1/auth/logout-everywhere')->assertNoContent();
 
-    asDevice($other)->getJson('/api/v1/user')->assertUnauthorized();
+    asDevice($other)->getJson('/api/v1/me')->assertUnauthorized();
     expect($this->user->fresh()->getRememberToken())->not->toBe($token)
         ->and(DB::table('audit_events')->where(['user_id' => $this->user->id, 'event' => 'sign_out_everywhere'])->exists())->toBeTrue();
 });
