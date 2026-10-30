@@ -122,6 +122,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUser] = useState<SignedInUser | null>(null);
+  // Counts changes made on this device, so a session check sent before one can't undo it
+  const settingsEdits = useRef(0);
 
   // Auth gate (AA §1): a signed-out visit opens Sign in and comes back afterwards. Offline,
   // the request fails and nothing moves, so the app keeps working from the device.
@@ -129,13 +131,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
     let current = true;
     const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
     const publicPage = PUBLIC_PATHS.includes(pathname);
+    const editsBefore = settingsEdits.current;
     api("/me")
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
           const me: SignedInUser = await response.json();
           setUser(me);
-          setSettings(settingsOf(me));
+          if (settingsEdits.current === editsBefore)
+            setSettings(settingsOf(me));
           if (signedOutPage) router.replace(ROUTES.inbox);
         } else if (response.status === 401) {
           setUser(null);
@@ -192,6 +196,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const settingsRef = useRef(settings);
   const changeSettings = useCallback(
     (patch: Partial<AccountSettings>) => {
+      settingsEdits.current += 1;
       const before = settingsRef.current;
       const revert = Object.fromEntries(
         Object.keys(patch).map((key) => [
@@ -252,8 +257,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // also kept for /theme.js, which applies it before the next first paint (AP-3)
   useEffect(() => {
     settingsRef.current = settings;
-    // Until /me answers these are only defaults, and would undo what /theme.js applied
-    if (!user) return;
+    // Until /me answers or the user picks one, these are only defaults and would undo what
+    // /theme.js applied
+    if (!user && settingsEdits.current === 0) return;
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
