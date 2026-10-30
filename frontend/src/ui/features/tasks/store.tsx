@@ -208,6 +208,7 @@ export function TaskStoreProvider({
           } catch {
             if (taskSeq.current.get(task.id) !== seq) return;
             revert();
+            // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
             saveFailed(() => reopen(task));
           }
         })
@@ -254,6 +255,7 @@ export function TaskStoreProvider({
           } catch {
             if (taskSeq.current.get(task.id) !== seq) return;
             revert();
+            // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
             saveFailed(() => complete(task));
           }
         })
