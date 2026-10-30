@@ -66,6 +66,9 @@
   name: "agendal-dark";
   default: false;
   prefersdark: true;
+  /* The system dark mode applies only when no theme is chosen. With the default ":root", its
+     media rule outranks [data-theme="agendal-light"] and Light can't be picked (AP-3) */
+  root: ":root:not([data-theme])";
   color-scheme: dark;
 
   --color-base-100: #121211;
