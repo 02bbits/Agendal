@@ -19,7 +19,7 @@ final class NoteExtractionScenarios
 
     /** Categories only the field extractor reads; the splitter generator skips them. */
     public const EXTRACTION_ONLY_CATEGORIES = [
-        'duration_prefix', 'duration_suffix', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
+        'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
@@ -41,8 +41,9 @@ final class NoteExtractionScenarios
                     continue;
                 }
                 [$category, $value] = array_map(trim(...), array_map('strval', $row));
+                $family = explode(':', $category)[0];
                 $examples = self::examples($category, $value);
-                if ($examples === [] && in_array($category, self::EXTRACTION_ONLY_CATEGORIES, true)) {
+                if ($examples === [] && (in_array($category, self::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, self::EXTRACTION_ONLY_CATEGORIES, true))) {
                     throw new RuntimeException('Add extraction templates for rule category '.$category);
                 }
                 foreach ($examples as $index => [$note, $expected, $now]) {

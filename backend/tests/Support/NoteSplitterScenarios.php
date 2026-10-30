@@ -72,7 +72,7 @@ final class NoteSplitterScenarios
                         ['gadget, '.$value, ['gadget, '.$value]],
                     ],
                     // Read only by the field extractor; NoteExtractionScenarios covers them.
-                    in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
+                    in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
                     default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {
