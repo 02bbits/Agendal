@@ -361,6 +361,28 @@ describe("Complete a task (TK-1, WF-06)", () => {
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
   });
 
+  it("unmount right after a tick: clears timers and leaves vi.getTimerCount() at 0 (Refs #21)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { wrap } = setup(seed());
+      const { unmount } = render(wrap(<TodayList />));
+
+      await userEvent.click(
+        screen.getByRole("checkbox", {
+          name: "Complete Read chapter 4 for SQL",
+        }),
+      );
+
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("progress summary is axe clean in both themes", async () => {
     const { wrap } = setup(seed());
     render(wrap(<TodayList />));

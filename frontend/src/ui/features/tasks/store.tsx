@@ -1,8 +1,8 @@
-/* eslint-disable react-hooks/immutability, react-hooks/refs -- a failed save retries the same action, and tasksRef mirrors state so a revert snapshot is synchronous */
 import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
@@ -77,6 +77,17 @@ export function TaskStoreProvider({
   const toastSeq = useRef(0);
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+  const settleTimers = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+
+  useEffect(() => {
+    const timers = settleTimers.current;
+    return () => {
+      for (const timer of timers) {
+        clearTimeout(timer);
+      }
+      timers.clear();
+    };
+  }, []);
 
   const todayDate = today(clock.timeZone, clock.now());
 
@@ -158,13 +169,15 @@ export function TaskStoreProvider({
 
   const settle = useCallback((id: string) => {
     setSettling((s) => new Set(s).add(id));
-    setTimeout(() => {
+    const timer = setTimeout(() => {
+      settleTimers.current.delete(timer);
       setSettling((s) => {
         const next = new Set(s);
         next.delete(id);
         return next;
       });
     }, SETTLE_MS);
+    settleTimers.current.add(timer);
   }, []);
 
   const replace = (list: Task[], task: Task) =>
