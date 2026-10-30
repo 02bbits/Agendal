@@ -40,3 +40,15 @@ export {
   type SignUpErrors,
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
+export {
+  TaskStoreProvider,
+  useTaskStore,
+  SETTLE_MS,
+  type TaskStore,
+  type TaskStoreProviderProps,
+  type Clock,
+} from "./tasks/store";
+export {
+  ProgressSummary,
+  type ProgressSummaryProps,
+} from "./tasks/ProgressSummary";
