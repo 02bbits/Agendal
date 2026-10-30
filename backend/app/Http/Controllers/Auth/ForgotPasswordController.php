@@ -4,9 +4,9 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 
@@ -21,10 +21,7 @@ class ForgotPasswordController extends Controller
         // Sent after the response, so a known email doesn't answer slower than an unknown one (SC-04).
         // Unknown email, or a resend within 45 s: nothing is sent, and the caller can't tell.
         defer(fn () => Password::broker()->sendResetLink(['email' => $email]));
-        DB::table('audit_events')->insert([
-            'user_id' => User::query()->where('email', $email)->value('id'),
-            'event' => 'reset_requested', 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
+        Audit::log($request, 'reset_requested', User::query()->where('email', $email)->value('id'));
 
         return response()->noContent(202);
     }

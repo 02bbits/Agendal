@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
@@ -29,9 +30,7 @@ class LogoutController extends Controller
         $user = $request->user();
         DB::table('sessions')->where('user_id', $user->id)->delete();
         Auth::guard('web')->logout(); // Also replaces the Remember me token
-        DB::table('audit_events')->insert([
-            'user_id' => $user->id, 'event' => 'sign_out_everywhere', 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
+        Audit::log($request, 'sign_out_everywhere', $user->id);
 
         return $this->endSession($request);
     }

@@ -39,6 +39,24 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(20)->by('ip:'.$request->ip()),
         ]);
 
+        // Everything else: 120/min per user, 300/min per IP for guests
+        RateLimiter::for('api', fn (Request $request) => $request->user('sanctum')
+            ? Limit::perMinute(120)->by('user:'.$request->user('sanctum')->getAuthIdentifier())
+            : Limit::perMinute(300)->by('ip:'.$request->ip()));
+        // Named for endpoints that arrive later; their owners attach them with throttle:<name>.
+        // Each replaces the general limit on its route, so it carries the per-user key itself
+        $perUser = fn (Request $request) => 'user:'.($request->user('sanctum')?->getAuthIdentifier() ?? $request->ip());
+        RateLimiter::for('notes', fn (Request $request) => [
+            Limit::perMinute(30)->by('notes-min:'.$perUser($request)),
+            Limit::perDay(300)->by('notes-day:'.$perUser($request)),
+        ]);
+        RateLimiter::for('files', fn (Request $request) => [
+            Limit::perHour(10)->by('files-hour:'.$perUser($request)),
+            Limit::perDay(30)->by('files-day:'.$perUser($request)),
+        ]);
+        RateLimiter::for('search', fn (Request $request) => Limit::perMinute(60)->by('search:'.$perUser($request)));
+        RateLimiter::for('sync', fn (Request $request) => Limit::perMinute(30)->by('sync:'.$perUser($request)));
+
         // The reset link opens the app, with the token in the fragment so it never reaches a
         // server log or a Referer (AA §2.3)
         ResetPassword::createUrlUsing(fn (User $user, string $token) => config('app.frontend_url').'/reset-password#'
