@@ -74,7 +74,7 @@ it('sets the new password, signs this device in and sends the notice email (T-AA
     resetPassword(sentToken($this->user))->assertOk()->assertJsonPath('user.email', 'example@gmail.com');
 
     expect(Hash::check('new river 42', $this->user->fresh()->password))->toBeTrue()
-        ->and(DB::table('audit_events')->where('user_id', $this->user->id)->pluck('event')->all())->toBe(['reset_requested', 'reset_used']);
+        ->and(DB::table('audit_events')->where('user_id', $this->user->id)->orderBy('id')->pluck('event')->all())->toBe(['reset_requested', 'reset_used']);
     $this->assertAuthenticatedAs($this->user->fresh(), 'web');
     Notification::assertSentTo($this->user, PasswordChanged::class);
 });

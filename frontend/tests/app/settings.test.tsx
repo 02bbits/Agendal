@@ -65,8 +65,11 @@ describe("Account settings (AP-3, AP-5)", () => {
     expect(radio("Dark").getAttribute("aria-checked")).toBe("true");
     expect(radio("Sunday").getAttribute("aria-checked")).toBe("true");
     expect(radio("12-hour").getAttribute("aria-checked")).toBe("true");
-    expect(document.documentElement.getAttribute("data-theme")).toBe(
-      "agendal-dark",
+    // The theme is applied in an effect, which can run just after the text appears
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-theme")).toBe(
+        "agendal-dark",
+      ),
     );
   });
 
@@ -113,8 +116,10 @@ describe("Account settings (AP-3, AP-5)", () => {
 
     await screen.findByText("ann@example.com");
     expect(radio("Dark").getAttribute("aria-checked")).toBe("true");
-    expect(document.documentElement.getAttribute("data-theme")).toBe(
-      "agendal-dark",
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-theme")).toBe(
+        "agendal-dark",
+      ),
     );
   });
 

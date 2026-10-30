@@ -106,7 +106,7 @@ describe('lockout', function () {
             wrongPassword();
         }
 
-        expect(DB::table('audit_events')->where('user_id', $this->user->id)->pluck('event')->all())
+        expect(DB::table('audit_events')->where('user_id', $this->user->id)->orderBy('id')->pluck('event')->all())
             ->toBe(['sign_in_failed', 'sign_in_failed', 'sign_in_failed', 'lockout']);
     });
 });
