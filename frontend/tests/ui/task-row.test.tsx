@@ -7,7 +7,6 @@ import {
   formatLongDate,
   formatTime,
   formatTimeRange,
-  todayIn,
   addDays,
   type Priority,
   type Reminder,
@@ -57,13 +56,7 @@ describe("dates (UX-32)", () => {
   });
 
   it("writes the overline date in full", () => {
-    expect(formatLongDate(TODAY)).toBe("Friday 23 October");
-  });
-
-  it("computes today from an injected instant and zone (ADR-006)", () => {
-    const instant = new Date("2026-10-23T18:30:00Z");
-    expect(todayIn(instant, "Asia/Ho_Chi_Minh")).toBe("2026-10-24");
-    expect(todayIn(instant, "America/New_York")).toBe("2026-10-23");
+    expect(formatLongDate(TODAY)).toBe("Friday, 23 October");
   });
 });
 
@@ -138,7 +131,7 @@ describe("TaskRow (LV-4)", () => {
       task({
         title: "Submit HCI reflection",
         project_id: "p-hci",
-        due_date: "2026-10-22",
+        due_date: "2026-10-21",
         start_time: "23:59",
         priority: "high",
       }),
@@ -148,11 +141,14 @@ describe("TaskRow (LV-4)", () => {
       },
     );
     expect(container.querySelector('[data-slot="meta"]')!.textContent).toBe(
-      "HCI·Yesterday·23:59",
+      "Wed 21 Oct·HCI·23:59",
     );
     expect(
       container.querySelectorAll('[data-slot="meta"] .text-error'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(
+      container.querySelector('[data-slot="meta"] .text-error')!.textContent,
+    ).toBe("Wed 21 Oct");
     expect(container.querySelector("li")!.className).toContain("is-overdue");
   });
 

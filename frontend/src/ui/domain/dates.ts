@@ -48,15 +48,6 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);
 }
 
-/** 0 = Sunday … 6 = Saturday. */
-export function weekday(date: string): number {
-  return parse(date).getUTCDay();
-}
-
-export function daysInMonth(year: number, month1: number): number {
-  return new Date(Date.UTC(year, month1, 0)).getUTCDate();
-}
-
 /** Today, Tomorrow, Yesterday as words; otherwise `Mon 26 Oct`, with the year when it isn't this year (UX-32). */
 export function formatDay(date: string, today: string): string {
   const diff = daysBetween(today, date);
@@ -70,10 +61,10 @@ export function formatDay(date: string, today: string): string {
     : `${short} ${date.slice(0, 4)}`;
 }
 
-/** Overline above a screen title: `Friday 23 October` (shown uppercase by the overline style). */
+/** Overline above a screen title: `Thursday, 29 October` (shown uppercase by the overline style). */
 export function formatLongDate(date: string): string {
   const d = parse(date);
-  return `${WEEKDAYS[d.getUTCDay()]} ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
+  return `${WEEKDAYS[d.getUTCDay()]}, ${d.getUTCDate()} ${MONTHS[d.getUTCMonth()]}`;
 }
 
 /** `16:00`, or `4:00 pm` with the 12-hour setting (AP-5). */
@@ -93,14 +84,4 @@ export function formatTimeRange(
   return end
     ? `${formatTime(start, format)} – ${formatTime(end, format)}`
     : formatTime(start, format);
-}
-
-/** Today's date in a time zone, from an injected instant (ADR-006). */
-export function todayIn(now: Date, timeZone: string): string {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
 }
