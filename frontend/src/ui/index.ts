@@ -1,7 +1,5 @@
 // Styles: src/app/globals.css imports ./theme.css (Tailwind CSS + daisyUI themes).
 
-import type { ProjectColor } from "./domain/types";
-
 export {
   Button,
   type ButtonProps,
@@ -11,11 +9,6 @@ export {
 export { IconButton, type IconButtonProps } from "./components/IconButton";
 export { TextField, type TextFieldProps } from "./components/TextField";
 export { Chip, type ChipProps } from "./components/Chip";
-export {
-  ChipGroup,
-  type ChipGroupProps,
-  type ChipOption,
-} from "./components/ChipGroup";
 export { Sheet, type SheetProps } from "./components/Sheet";
 export { Dialog, type DialogProps } from "./components/Dialog";
 export {
@@ -28,7 +21,7 @@ export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
 export * from "./components/icons";
 
 /** The 8 project colours, in picker order (PJ-1). Use as `var(--project-<name>)`. */
-export const PROJECT_COLORS: readonly ProjectColor[] = [
+export const PROJECT_COLORS = [
   "blue",
   "red",
   "orange",
@@ -37,7 +30,8 @@ export const PROJECT_COLORS: readonly ProjectColor[] = [
   "teal",
   "purple",
   "gray",
-];
+] as const;
+export type ProjectColor = (typeof PROJECT_COLORS)[number];
 export { NavBar, type NavBarProps } from "./components/NavBar";
 export {
   Segmented,
@@ -47,4 +41,3 @@ export {
 export { Switch, type SwitchProps } from "./components/Switch";
 export { t, tc, quoted, type CopyKey, type CopyVars } from "./copy/index";
 export * from "./features/index";
-export * from "./domain/index";

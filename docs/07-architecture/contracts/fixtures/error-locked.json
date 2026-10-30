@@ -1,0 +1,8 @@
+{
+  "error": {
+    "code": "auth.locked",
+    "message": "Too many attempts. Try again in 60 s.",
+    "request_id": "req_9Fk3",
+    "retry_after": 60
+  }
+}
