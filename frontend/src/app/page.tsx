@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
+  Button,
   InboxScreen,
   ScreenHeader,
   TaskStoreProvider,
@@ -16,6 +17,13 @@ import { httpTaskApi, inbox, projects } from "@/lib/taskApi";
 import { now, timeZone } from "@/lib/clock";
 
 const noSubscription = () => () => {};
+
+const clock: Clock = {
+  now,
+  get timeZone() {
+    return timeZone();
+  },
+};
 
 export default function Page() {
   const { navigate, user, settings } = useAppFrame();
@@ -37,16 +45,13 @@ export default function Page() {
     setStatus("loading");
     Promise.all([inbox(), projects()])
       .then(([inboxData, projectsData]) => {
-        const combinedTasks: Task[] = [
-          ...(Array.isArray(inboxData?.overdue) ? inboxData.overdue : []),
-          ...(Array.isArray(inboxData?.today) ? inboxData.today : []),
-          ...(Array.isArray(inboxData?.no_date) ? inboxData.no_date : []),
-          ...(Array.isArray(inboxData?.completed_today)
-            ? inboxData.completed_today
-            : []),
-        ];
-        setTasks(combinedTasks);
-        setProjectList(Array.isArray(projectsData) ? projectsData : []);
+        setTasks([
+          ...(inboxData?.overdue ?? []),
+          ...(inboxData?.today ?? []),
+          ...(inboxData?.no_date ?? []),
+          ...(inboxData?.completed_today ?? []),
+        ]);
+        setProjectList(projectsData ?? []);
         setStatus("ready");
       })
       .catch(() => {
@@ -57,13 +62,6 @@ export default function Page() {
   useEffect(() => {
     loadData();
   }, []);
-
-  const clock: Clock = {
-    now,
-    get timeZone() {
-      return timeZone();
-    },
-  };
 
   return (
     <div className="pb-8">
@@ -83,13 +81,7 @@ export default function Page() {
           <p className="text-callout text-ink-secondary">
             {t("error.generic")}
           </p>
-          <button
-            type="button"
-            onClick={loadData}
-            className="focus-ring cursor-pointer rounded-tile bg-surface px-4 py-2 text-callout font-semibold text-primary"
-          >
-            {t("common.retry")}
-          </button>
+          <Button onClick={loadData}>{t("common.retry")}</Button>
         </div>
       )}
       {status === "ready" && (
