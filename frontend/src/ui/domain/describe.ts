@@ -16,7 +16,7 @@ export function taskAccessibleName(
       formatTimeRange(task.start_time, task.end_time, opts.timeFormat),
     );
   parts.push(project ? project.name : t("project.none"));
-  if (task.priority !== "low")
+  if (task.priority === "medium" || task.priority === "high")
     parts.push(
       t("task.priority_named", {
         priority: t(`priority.${task.priority}` as CopyKey),

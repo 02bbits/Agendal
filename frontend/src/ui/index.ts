@@ -11,11 +11,6 @@ export {
 export { IconButton, type IconButtonProps } from "./components/IconButton";
 export { TextField, type TextFieldProps } from "./components/TextField";
 export { Chip, type ChipProps } from "./components/Chip";
-export {
-  ChipGroup,
-  type ChipGroupProps,
-  type ChipOption,
-} from "./components/ChipGroup";
 export { Sheet, type SheetProps } from "./components/Sheet";
 export { Dialog, type DialogProps } from "./components/Dialog";
 export {

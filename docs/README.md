@@ -4,6 +4,8 @@ Agendal is a mobile web app (PWA). You write or say whatever is on your mind, in
 
 > **V2 concept (Oct 23, 2026).** The earlier chat with an assistant is replaced by **notes**. A note is written once and turned into tasks; there is no back-and-forth conversation. The source PRD is `Agendal-PRD-V2.md`. The V1 docs are in git history (commit `5ad132a`).
 
+What changed in the docs, by date: [CHANGELOG](CHANGELOG.md).
+
 ## Reading order
 
 | Folder | What it answers |
@@ -14,7 +16,7 @@ Agendal is a mobile web app (PWA). You write or say whatever is on your mind, in
 | [04-workflows](04-workflows/) | End-to-end flows that cross modules |
 | [05-quality](05-quality/) | [Non-functional requirements](05-quality/nfr.md) and [scalability](05-quality/scalability.md) |
 | [06-testing](06-testing/) | [Test strategy](06-testing/test-strategy.md), [scenarios](06-testing/test-scenarios.md), [traceability](06-testing/traceability-matrix.md), [ASVS checklist](06-testing/asvs-checklist.md), [note corpus](06-testing/note-corpus/) |
-| [07-architecture](07-architecture/) | [Overview](07-architecture/overview.md), [data model](07-architecture/data-model.md), [API](07-architecture/api.md), [security](07-architecture/security.md), [decisions](07-architecture/decisions/) |
+| [07-architecture](07-architecture/) | [Overview](07-architecture/overview.md), [data model](07-architecture/data-model.md), [API](07-architecture/api.md) and its [contracts](07-architecture/contracts/) (JSON Schemas and fixtures), [security](07-architecture/security.md), [decisions](07-architecture/decisions/) |
 | [08-project](08-project/) | [Assumptions, constraints and risks](08-project/project.md), [open questions](08-project/open-questions.md), [glossary](08-project/glossary.md), [MVP tasks](08-project/tasks.md) |
 
 ## Modules

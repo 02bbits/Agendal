@@ -3,25 +3,17 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { t, type CopyKey } from "../../copy";
+import { today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import type {
-  DeleteScope,
-  NewTask,
-  ProjectTaskAction,
-  TaskApi,
-  TaskPatch,
-} from "../../domain/api";
-import { localDateTime, normalizePatch, patchErrors } from "../../domain/edit";
-import { todayIn } from "../../domain/dates";
-import type { Project, Task, TimeFormat, WeekStart } from "../../domain/types";
+import { t } from "../../copy";
+import type { TaskApi } from "../../domain/api";
+import type { Project, Task, TimeFormat } from "../../domain/types";
 
 /** Injected clock (IM-05 / ADR-006): no screen reads the system time directly. */
 export interface Clock {
@@ -37,7 +29,6 @@ export interface TaskStore {
   projects: Project[];
   today: string;
   timeFormat: TimeFormat;
-  weekStart: WeekStart;
   clock: Clock;
   api: TaskApi;
   toast: ToastData | null;
@@ -48,22 +39,6 @@ export interface TaskStore {
   isSettling: (id: string) => boolean;
   completedToday: (task: Task) => boolean;
   toggle: (task: Task) => void;
-  /**
-   * Saves changed fields of a task (TK-2): applies the field rules, validates,
-   * then patches optimistically. Returns field errors instead of saving when invalid.
-   */
-  update: (
-    task: Task,
-    patch: TaskPatch,
-  ) => Partial<Record<keyof TaskPatch, CopyKey>>;
-  /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */
-  remove: (task: Task, scope?: DeleteScope) => void;
-  /** Adds a task made by hand, with the "Added “…”" toast (NC-7). */
-  create: (input: NewTask) => void;
-  /** Creates a project; the caller opens it, or returns to the picker with it selected (PJ-1). */
-  createProject: (input: Pick<Project, "id" | "name" | "colour">) => Project;
-  /** Deletes a project, moving its tasks to No project or deleting them, with Undo (PJ-4). */
-  removeProject: (project: Project, tasks: ProjectTaskAction) => void;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -84,7 +59,6 @@ export interface TaskStoreProviderProps {
   initialTasks: Task[];
   initialProjects: Project[];
   timeFormat?: TimeFormat;
-  weekStart?: WeekStart;
   children: ReactNode;
 }
 
@@ -94,7 +68,6 @@ export function TaskStoreProvider({
   initialTasks,
   initialProjects,
   timeFormat = "24h",
-  weekStart = "mon",
   children,
 }: TaskStoreProviderProps) {
   const [tasks, setTasks] = useState(initialTasks);
@@ -105,26 +78,7 @@ export function TaskStoreProvider({
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
 
-  const [, setTick] = useState(0);
-  const today = todayIn(clock.now(), clock.timeZone);
-
-  // Lists recompute at local midnight while open, and when the tab comes back (LV-E1)
-  useEffect(() => {
-    const [h, m] = localDateTime(clock.now(), clock.timeZone)
-      .slice(11)
-      .split(":")
-      .map(Number) as [number, number];
-    const msToMidnight =
-      ((24 * 60 - (h * 60 + m)) * 60 - clock.now().getSeconds()) * 1000 + 500;
-    const timer = setTimeout(() => setTick((n) => n + 1), msToMidnight);
-    const onVisible = () =>
-      document.visibilityState === "visible" && setTick((n) => n + 1);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      clearTimeout(timer);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-  }, [clock, today]);
+  const todayDate = today(clock.timeZone, clock.now());
 
   const showToast = useCallback((data: Omit<ToastData, "id">) => {
     toastSeq.current += 1;
@@ -218,197 +172,6 @@ export function TaskStoreProvider({
     [api, clock, applyLocal, settle, showToast, reopen, saveFailed],
   );
 
-  const update = useCallback(
-    (task: Task, raw: TaskPatch) => {
-      const patch = normalizePatch(task, raw, today);
-      const errors = patchErrors(task, patch);
-      if (Object.keys(errors).length || !Object.keys(patch).length)
-        return errors;
-      const at = clock.now().toISOString();
-      const revert = applyLocal((list) =>
-        list.map((x) => (x.id === task.id ? { ...x, ...patch } : x)),
-      );
-      if ("due_date" in raw && !raw.due_date && task.due_date) {
-        // Clearing the date also clears start, end and reminder, so offer Undo (TK §2.2)
-        const restore: TaskPatch = {
-          due_date: task.due_date,
-          start_time: task.start_time,
-          end_time: task.end_time,
-          reminder: task.reminder,
-        };
-        showToast({
-          message: t("task.due_cleared"),
-          actionLabel: t("common.undo"),
-          onAction: () => {
-            const current = tasksRef.current.find((x) => x.id === task.id);
-            if (current) update(current, restore);
-          },
-        });
-      }
-      api.patch(task.id, patch, at).then(
-        (saved) =>
-          applyLocal((list) =>
-            list.map((x) => (x.id === saved.id ? saved : x)),
-          ),
-        () => {
-          revert();
-          saveFailed(() => update(task, raw));
-        },
-      );
-      return errors;
-    },
-    [api, clock, today, applyLocal, showToast, saveFailed],
-  );
-
-  const restore = useCallback(
-    (task: Task, madeNextId?: string) => {
-      const revert = applyLocal((list) => [
-        ...list.filter((x) => x.id !== madeNextId),
-        task,
-      ]);
-      api.restore(task.id).then(
-        (saved) =>
-          applyLocal((list) =>
-            list.map((x) => (x.id === saved.id ? saved : x)),
-          ),
-        () => {
-          revert();
-          saveFailed(() => restore(task, madeNextId));
-        },
-      );
-    },
-    [api, applyLocal, saveFailed],
-  );
-
-  const remove = useCallback(
-    (task: Task, scope?: DeleteScope) => {
-      const revert = applyLocal((list) => list.filter((x) => x.id !== task.id));
-      let madeNextId: string | undefined;
-      showToast({
-        message: t("task.deleted", { title: task.title }),
-        actionLabel: t("common.undo"),
-        onAction: () => restore(task, madeNextId),
-      });
-      api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
-        ({ next }) => {
-          if (!next) return;
-          madeNextId = next.id;
-          applyLocal((list) => [...list, next]);
-        },
-        () => {
-          revert();
-          saveFailed(() => remove(task, scope));
-        },
-      );
-    },
-    [api, applyLocal, showToast, restore, saveFailed],
-  );
-
-  const create = useCallback(
-    (input: NewTask) => {
-      const now = clock.now().toISOString();
-      const draft: Task = {
-        due_date: null,
-        start_time: null,
-        end_time: null,
-        priority: "low",
-        project_id: null,
-        repeat: "never",
-        reminder: "none",
-        notes: null,
-        done: false,
-        done_at: null,
-        created_by: "user",
-        created_at: now,
-        ...input,
-      };
-      const revert = applyLocal((list) => [...list, draft]);
-      showToast({ message: t("task.added", { title: draft.title }) });
-      // The client id makes a retry safe: the server answers a replay with the same task (UX-06)
-      api.create(input).then(
-        (saved) =>
-          applyLocal((list) =>
-            list.map((x) => (x.id === saved.id ? saved : x)),
-          ),
-        () => {
-          revert();
-          saveFailed(() => create(input));
-        },
-      );
-    },
-    [api, clock, applyLocal, showToast, saveFailed],
-  );
-
-  const projectsRef = useRef(projects);
-  projectsRef.current = projects;
-
-  const createProject = useCallback(
-    (input: Pick<Project, "id" | "name" | "colour">) => {
-      const draft: Project = {
-        ...input,
-        name: input.name.trim(),
-        created_at: clock.now().toISOString(),
-      };
-      setProjects((list) => [...list, draft]);
-      api.createProject(draft).then(
-        (saved) =>
-          setProjects((list) =>
-            list.map((p) => (p.id === saved.id ? saved : p)),
-          ),
-        () => {
-          setProjects((list) => list.filter((p) => p.id !== draft.id));
-          saveFailed(() => createProject(input));
-        },
-      );
-      return draft;
-    },
-    [api, clock, saveFailed],
-  );
-
-  const restoreProject = useCallback(
-    (project: Project) => {
-      api.restoreProject(project.id).then(
-        ({ project: saved, tasks: restored }) => {
-          setProjects((list) => [
-            ...list.filter((p) => p.id !== saved.id),
-            saved,
-          ]);
-          applyLocal((list) => [
-            ...list.filter((x) => !restored.some((r) => r.id === x.id)),
-            ...restored,
-          ]);
-        },
-        () => saveFailed(() => restoreProject(project)),
-      );
-    },
-    [api, applyLocal, saveFailed],
-  );
-
-  const removeProject = useCallback(
-    (project: Project, action: ProjectTaskAction) => {
-      const beforeProjects = projectsRef.current;
-      setProjects((list) => list.filter((p) => p.id !== project.id));
-      const revertTasks = applyLocal((list) =>
-        action === "move"
-          ? list.map((x) =>
-              x.project_id === project.id ? { ...x, project_id: null } : x,
-            )
-          : list.filter((x) => x.project_id !== project.id),
-      );
-      showToast({
-        message: t("project.deleted", { name: project.name }),
-        actionLabel: t("common.undo"),
-        onAction: () => restoreProject(project),
-      });
-      api.removeProject(project.id, action).catch(() => {
-        setProjects(beforeProjects);
-        revertTasks();
-        saveFailed(() => removeProject(project, action));
-      });
-    },
-    [api, applyLocal, showToast, restoreProject, saveFailed],
-  );
-
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -418,9 +181,8 @@ export function TaskStoreProvider({
     () => ({
       tasks,
       projects,
-      today,
+      today: todayDate,
       timeFormat,
-      weekStart,
       clock,
       api,
       toast,
@@ -431,13 +193,8 @@ export function TaskStoreProvider({
       isSettling: (id) => settling.has(id),
       completedToday: (task) =>
         !!task.done_at &&
-        todayIn(new Date(task.done_at), clock.timeZone) === today,
+        today(clock.timeZone, new Date(task.done_at)) === todayDate,
       toggle,
-      update,
-      remove,
-      create,
-      createProject,
-      removeProject,
       applyLocal,
       setProjects,
       saveFailed,
@@ -445,9 +202,8 @@ export function TaskStoreProvider({
     [
       tasks,
       projects,
-      today,
+      todayDate,
       timeFormat,
-      weekStart,
       clock,
       api,
       toast,
@@ -455,11 +211,6 @@ export function TaskStoreProvider({
       dismissToast,
       settling,
       toggle,
-      update,
-      remove,
-      create,
-      createProject,
-      removeProject,
       applyLocal,
       saveFailed,
     ],

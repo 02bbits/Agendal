@@ -94,6 +94,14 @@ export function TaskRow({
           data-slot="meta"
           aria-hidden="true"
         >
+          {showDue && task.due_date && (
+            <>
+              <span className={cx(overdue && "text-error")}>
+                {formatDay(task.due_date, today)}
+              </span>
+              <span>·</span>
+            </>
+          )}
           <span
             className="mr-0.5 inline-block size-2 shrink-0 rounded-full"
             data-slot="dot"
@@ -102,18 +110,10 @@ export function TaskRow({
             }}
           />
           <span>{project ? project.name : t("project.none")}</span>
-          {showDue && task.due_date && (
-            <>
-              <span>·</span>
-              <span className={cx(overdue && "text-error")}>
-                {formatDay(task.due_date, today)}
-              </span>
-            </>
-          )}
           {task.start_time && (
             <>
               <span>·</span>
-              <span className={cx(overdue && "text-error")}>
+              <span>
                 {formatTimeRange(task.start_time, task.end_time, timeFormat)}
               </span>
             </>
