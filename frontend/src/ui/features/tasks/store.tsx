@@ -62,6 +62,59 @@ export interface TaskStoreProviderProps {
   children: ReactNode;
 }
 
+interface RowDiff {
+  addedIds: Set<string>;
+  removedTasks: Task[];
+  previousTasks: Map<string, Task>;
+}
+
+function diffRows(prev: Task[], next: Task[]): RowDiff {
+  const prevMap = new Map(prev.map((t) => [t.id, t]));
+  const nextMap = new Map(next.map((t) => [t.id, t]));
+
+  const addedIds = new Set<string>();
+  const removedTasks: Task[] = [];
+  const previousTasks = new Map<string, Task>();
+
+  for (const [id, prevTask] of prevMap) {
+    if (!nextMap.has(id)) {
+      removedTasks.push(prevTask);
+    } else {
+      const nextTask = nextMap.get(id)!;
+      if (prevTask !== nextTask) {
+        previousTasks.set(id, prevTask);
+      }
+    }
+  }
+
+  for (const id of nextMap.keys()) {
+    if (!prevMap.has(id)) {
+      addedIds.add(id);
+    }
+  }
+
+  return { addedIds, removedTasks, previousTasks };
+}
+
+function undoRows(current: Task[], diff: RowDiff): Task[] {
+  const { addedIds, removedTasks, previousTasks } = diff;
+  let list = current.filter((t) => !addedIds.has(t.id));
+  list = list.map((t) => previousTasks.get(t.id) ?? t);
+  if (removedTasks.length > 0) {
+    const currentIds = new Set(list.map((t) => t.id));
+    for (const task of removedTasks) {
+      if (!currentIds.has(task.id)) {
+        list.push(task);
+      }
+    }
+  }
+  return list;
+}
+
+function replace(list: Task[], task: Task): Task[] {
+  return list.map((x) => (x.id === task.id ? task : x));
+}
+
 export function TaskStoreProvider({
   api,
   clock,
@@ -102,58 +155,17 @@ export function TaskStoreProvider({
   );
 
   const applyLocal = useCallback((update: (tasks: Task[]) => Task[]) => {
-    let diff: {
-      addedIds: Set<string>;
-      removedTasks: Task[];
-      previousTasks: Map<string, Task>;
-    } | null = null;
-
+    let diff: RowDiff | null = null;
     setTasks((prev) => {
       const next = update(prev);
-      const prevMap = new Map(prev.map((t) => [t.id, t]));
-      const nextMap = new Map(next.map((t) => [t.id, t]));
-
-      const addedIds = new Set<string>();
-      const removedTasks: Task[] = [];
-      const previousTasks = new Map<string, Task>();
-
-      for (const [id, prevTask] of prevMap) {
-        if (!nextMap.has(id)) {
-          removedTasks.push(prevTask);
-        } else {
-          const nextTask = nextMap.get(id)!;
-          if (prevTask !== nextTask) {
-            previousTasks.set(id, prevTask);
-          }
-        }
-      }
-
-      for (const id of nextMap.keys()) {
-        if (!prevMap.has(id)) {
-          addedIds.add(id);
-        }
-      }
-
-      diff = { addedIds, removedTasks, previousTasks };
+      diff = diffRows(prev, next);
       return next;
     });
 
     return () => {
       if (!diff) return;
-      const { addedIds, removedTasks, previousTasks } = diff;
-      setTasks((current) => {
-        let list = current.filter((t) => !addedIds.has(t.id));
-        list = list.map((t) => previousTasks.get(t.id) ?? t);
-        if (removedTasks.length > 0) {
-          const currentIds = new Set(list.map((t) => t.id));
-          for (const task of removedTasks) {
-            if (!currentIds.has(task.id)) {
-              list.push(task);
-            }
-          }
-        }
-        return list;
-      });
+      const d = diff;
+      setTasks((current) => undoRows(current, d));
     };
   }, []);
 
@@ -180,55 +192,74 @@ export function TaskStoreProvider({
     settleTimers.current.add(timer);
   }, []);
 
-  const replace = (list: Task[], task: Task) =>
-    list.map((x) => (x.id === task.id ? task : x));
+  const send = useCallback(
+    (
+      taskId: string,
+      request: () => Promise<{ task: Task; next?: Task }>,
+      onSaved: (res: { task: Task; next?: Task }) => void,
+      onFailed: () => void,
+    ) => {
+      const seq = (taskSeq.current.get(taskId) ?? 0) + 1;
+      taskSeq.current.set(taskId, seq);
 
-  const reopen = useCallback(
-    (task: Task) => {
-      const at = clock.now().toISOString();
-      const seq = (taskSeq.current.get(task.id) ?? 0) + 1;
-      taskSeq.current.set(task.id, seq);
-
-      const revert = applyLocal((list) =>
-        replace(list, { ...task, done: false, done_at: null }),
-      );
-
-      const prev = taskQueue.current.get(task.id) ?? Promise.resolve();
+      const prev = taskQueue.current.get(taskId) ?? Promise.resolve();
       const next = prev
         .catch(() => {})
         .then(async () => {
           try {
-            const res = await api.reopen(task.id, at);
-            if (taskSeq.current.get(task.id) !== seq) return;
-            applyLocal((list) =>
-              res.next
-                ? [...replace(list, res.task), res.next]
-                : replace(list, res.task),
-            );
+            const res = await request();
+            if (taskSeq.current.get(taskId) !== seq) return;
+            onSaved(res);
           } catch {
-            if (taskSeq.current.get(task.id) !== seq) return;
-            revert();
-            // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
-            saveFailed(() => reopen(task));
+            if (taskSeq.current.get(taskId) !== seq) return;
+            onFailed();
           }
         })
         .finally(() => {
-          if (taskQueue.current.get(task.id) === next) {
-            taskQueue.current.delete(task.id);
+          if (taskQueue.current.get(taskId) === next) {
+            taskQueue.current.delete(taskId);
           }
         });
 
-      taskQueue.current.set(task.id, next);
+      taskQueue.current.set(taskId, next);
     },
-    [api, clock, applyLocal, saveFailed],
+    [],
+  );
+
+  const applySaved = useCallback(
+    (res: { task: Task; next?: Task }) =>
+      applyLocal((list) =>
+        res.next
+          ? [...replace(list, res.task), res.next]
+          : replace(list, res.task),
+      ),
+    [applyLocal],
+  );
+
+  const reopen = useCallback(
+    (task: Task) => {
+      const at = clock.now().toISOString();
+      const revert = applyLocal((list) =>
+        replace(list, { ...task, done: false, done_at: null }),
+      );
+
+      send(
+        task.id,
+        () => api.reopen(task.id, at),
+        applySaved,
+        () => {
+          revert();
+          // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
+          saveFailed(() => reopen(task));
+        },
+      );
+    },
+    [clock, applyLocal, send, api, applySaved, saveFailed],
   );
 
   const complete = useCallback(
     (task: Task) => {
       const at = clock.now().toISOString();
-      const seq = (taskSeq.current.get(task.id) ?? 0) + 1;
-      taskSeq.current.set(task.id, seq);
-
       const revert = applyLocal((list) =>
         replace(list, { ...task, done: true, done_at: at }),
       );
@@ -240,34 +271,28 @@ export function TaskStoreProvider({
         onAction: () => reopen({ ...task, done: true, done_at: at }),
       });
 
-      const prev = taskQueue.current.get(task.id) ?? Promise.resolve();
-      const next = prev
-        .catch(() => {})
-        .then(async () => {
-          try {
-            const res = await api.complete(task.id, at);
-            if (taskSeq.current.get(task.id) !== seq) return;
-            applyLocal((list) =>
-              res.next
-                ? [...replace(list, res.task), res.next]
-                : replace(list, res.task),
-            );
-          } catch {
-            if (taskSeq.current.get(task.id) !== seq) return;
-            revert();
-            // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
-            saveFailed(() => complete(task));
-          }
-        })
-        .finally(() => {
-          if (taskQueue.current.get(task.id) === next) {
-            taskQueue.current.delete(task.id);
-          }
-        });
-
-      taskQueue.current.set(task.id, next);
+      send(
+        task.id,
+        () => api.complete(task.id, at),
+        applySaved,
+        () => {
+          revert();
+          // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
+          saveFailed(() => complete(task));
+        },
+      );
     },
-    [api, clock, applyLocal, settle, showToast, reopen, saveFailed],
+    [
+      clock,
+      applyLocal,
+      settle,
+      showToast,
+      reopen,
+      send,
+      api,
+      applySaved,
+      saveFailed,
+    ],
   );
 
   const toggle = useCallback(
