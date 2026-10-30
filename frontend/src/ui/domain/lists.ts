@@ -3,6 +3,10 @@ import type { Task } from "./types";
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const;
 
+function priorityRank(priority: Task["priority"]): number {
+  return priority ? PRIORITY_RANK[priority] : 3;
+}
+
 /** Within a day (Today, and each Upcoming day): timed by start, then untimed by priority, then created (LV §2.1). */
 export function sortWithinDay(tasks: readonly Task[]): Task[] {
   return [...tasks].sort((a, b) => {
@@ -14,7 +18,7 @@ export function sortWithinDay(tasks: readonly Task[]): Task[] {
     if (a.start_time) return -1;
     if (b.start_time) return 1;
     return (
-      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      priorityRank(a.priority) - priorityRank(b.priority) ||
       a.created_at.localeCompare(b.created_at)
     );
   });
@@ -63,7 +67,7 @@ export function buildInbox(
     today: sortWithinDay(dueToday),
     noDate: [...noDate].sort(
       (a, b) =>
-        PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+        priorityRank(a.priority) - priorityRank(b.priority) ||
         b.created_at.localeCompare(a.created_at),
     ),
     completed: [...completed].sort((a, b) =>

@@ -41,8 +41,7 @@ export default function Page() {
 
   const accountInitial = user?.display_name || user?.email || "";
 
-  const loadData = () => {
-    setStatus("loading");
+  const fetchData = () => {
     Promise.all([inbox(), projects()])
       .then(([inboxData, projectsData]) => {
         setTasks([
@@ -59,8 +58,13 @@ export default function Page() {
       });
   };
 
+  const handleRetry = () => {
+    setStatus("loading");
+    fetchData();
+  };
+
   useEffect(() => {
-    loadData();
+    fetchData();
   }, []);
 
   return (
@@ -81,7 +85,7 @@ export default function Page() {
           <p className="text-callout text-ink-secondary">
             {t("error.generic")}
           </p>
-          <Button onClick={loadData}>{t("common.retry")}</Button>
+          <Button onClick={handleRetry}>{t("common.retry")}</Button>
         </div>
       )}
       {status === "ready" && (
