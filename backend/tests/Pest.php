@@ -32,6 +32,8 @@ const SESSION_COOKIE = '__Host-agendal_session';
 function newRequest(): void
 {
     Auth::forgetGuards();
+    // The session handler reads sessions.user_id from this binding, a singleton that outlives a request
+    app()->forgetInstance('auth.driver');
     app('session')->forgetDrivers();
     app()->forgetInstance('session.store');
 }

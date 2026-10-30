@@ -8,10 +8,9 @@ import {
 import { NavBar } from "../../components/NavBar";
 import { Segmented } from "../../components/Segmented";
 import { Switch } from "../../components/Switch";
+import type { TimeFormat, WeekStart } from "../../domain/types";
 
 export type ThemeSetting = "system" | "light" | "dark";
-export type WeekStart = "mon" | "sun";
-export type TimeFormat = "24h" | "12h";
 
 export interface AccountSettings {
   theme: ThemeSetting;
@@ -72,7 +71,7 @@ export function AccountScreen({
         </div>
       </section>
 
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.appearance")}
       </h2>
       <Segmented
@@ -85,7 +84,7 @@ export function AccountScreen({
           { value: "dark", label: t("app.theme_dark") },
         ]}
       />
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.week_start")}
       </h2>
       <Segmented
@@ -97,7 +96,7 @@ export function AccountScreen({
           { value: "sun", label: t("app.week_sun") },
         ]}
       />
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.time_format")}
       </h2>
       <Segmented
@@ -110,7 +109,7 @@ export function AccountScreen({
         ]}
       />
 
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.this_device")}
       </h2>
       <div className="flex flex-col">

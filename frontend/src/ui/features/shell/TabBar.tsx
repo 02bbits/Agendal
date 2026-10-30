@@ -26,7 +26,7 @@ export interface TabBarProps {
 export function TabBar({ active, navigate }: TabBarProps) {
   return (
     <nav
-      className="grid grid-cols-4 border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
+      className="grid grid-cols-4 px-safe md:hidden border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
       aria-label={t("nav.tabs")}
     >
       {TABS.map((tab) => (
@@ -35,7 +35,7 @@ export function TabBar({ active, navigate }: TabBarProps) {
           href={tab.href}
           navigate={navigate}
           className={cx(
-            "focus-ring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-field text-ink-secondary",
+            "focus-ring flex min-h-14 flex-col [@media(max-height:480px)]:min-h-12 items-center justify-center gap-0.5 rounded-field text-ink-secondary",
             tab.id === active && "text-primary!",
           )}
           aria-current={tab.id === active ? "page" : undefined}

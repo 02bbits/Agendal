@@ -131,7 +131,7 @@ it('SC-05: ends every other session, Remember me included', function () {
     expect(carryCookies($thisDevice)[SESSION_COOKIE])->not->toBe($other[SESSION_COOKIE]);
 
     newRequest();
-    $this->withCookies($other)->getJson('/api/v1/user')->assertUnauthorized();
+    $this->withCookies($other)->getJson('/api/v1/me')->assertUnauthorized();
     expect($this->user->fresh()->getRememberToken())->not->toBe($rememberToken);
 });
 

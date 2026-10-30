@@ -1,4 +1,5 @@
 import { useId, useRef, type ReactNode } from "react";
+import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
 export interface DialogProps {
@@ -26,11 +27,12 @@ export function Dialog({
   const titleId = useId();
   const descriptionId = useId();
   useModalFocus(dialogRef, titleRef, open, onClose);
+  useHistoryEntry(open, onClose);
 
   if (!open) return null;
 
   return (
-    <div className="modal modal-open bg-scrim px-5">
+    <div className="modal modal-open bg-scrim px-gutter">
       <div
         ref={dialogRef}
         className="modal-box flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-lg motion-reduce:transition-none"
