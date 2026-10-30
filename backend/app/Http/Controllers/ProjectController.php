@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\ApiError;
+use App\Http\Requests\RestoreProjectRequest;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
@@ -14,9 +15,12 @@ use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Projects\ProjectCounts;
 use Carbon\Carbon;
+use DateTimeZone;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProjectController extends Controller
 {
@@ -190,6 +194,186 @@ class ProjectController extends Controller
         $response = (new ProjectResource($project))->response();
 
         return $response->setStatusCode(200);
+    }
+
+    public function destroy(
+        Request $request,
+        Project $project,
+        ClockInterface $clock,
+    ): JsonResponse {
+        $this->ensureNotDeleted($project);
+
+        /** @var Collection<int, Task> $tasks */
+        $tasks = Task::query()->where('project_id', $project->id)->get();
+
+        $tasksMode = $request->query('tasks');
+
+        if ($tasks->isNotEmpty()) {
+            if ($tasksMode !== 'move' && $tasksMode !== 'delete') {
+                throw ValidationException::withMessages([
+                    'tasks' => ['Choose Move tasks to No project or Delete them too.'],
+                ]);
+            }
+        }
+
+        $now = Carbon::instance($clock->now());
+        $nowIso = $clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+
+        return DB::transaction(function () use ($project, $tasks, $tasksMode, $now, $nowIso): JsonResponse {
+            $project->deleted_at = $now;
+            $project->updated_at = $now;
+            $project->save();
+
+            if ($tasks->isEmpty()) {
+                return response()->json([
+                    'undo' => [
+                        'task_ids' => [],
+                        'mode' => 'move',
+                    ],
+                ]);
+            }
+
+            if ($tasksMode === 'move') {
+                foreach ($tasks as $task) {
+                    /** @var array<string, string> $fieldUpdatedAt */
+                    $fieldUpdatedAt = $task->field_updated_at ?? [];
+                    $fieldUpdatedAt['project_id'] = $nowIso;
+                    $task->field_updated_at = $fieldUpdatedAt;
+                    $task->project_id = null;
+                    $task->updated_at = $now;
+                    $task->save();
+                }
+            } else {
+                foreach ($tasks as $task) {
+                    /** @var array<string, string> $fieldUpdatedAt */
+                    $fieldUpdatedAt = $task->field_updated_at ?? [];
+                    $fieldUpdatedAt['deleted'] = $nowIso;
+                    $task->field_updated_at = $fieldUpdatedAt;
+                    $task->deleted_at = $now;
+                    $task->updated_at = $now;
+                    $task->save();
+                }
+            }
+
+            return response()->json([
+                'undo' => [
+                    'task_ids' => $tasks->pluck('id')->values()->all(),
+                    'mode' => $tasksMode,
+                ],
+            ]);
+        });
+    }
+
+    public function restore(
+        RestoreProjectRequest $request,
+        string $id,
+        ClockInterface $clock,
+    ): JsonResponse {
+        $project = Project::query()->find($id);
+        if (! $project) {
+            abort(404, 'This item no longer exists.');
+        }
+
+        if ($project->deleted_at === null) {
+            $this->projectCounts->load(collect([$project]));
+
+            /** @var JsonResponse $response */
+            $response = (new ProjectResource($project))->response();
+
+            return $response->setStatusCode(200);
+        }
+
+        /** @var list<string> $taskIds */
+        $taskIds = (array) $request->input('task_ids', []);
+        $mode = (string) $request->input('mode');
+
+        $this->ensureNameAvailable((string) $project->name, (string) $project->id);
+
+        $tasks = $this->resolveAndValidateRestorableTasks($taskIds, $mode, $project);
+
+        $now = Carbon::instance($clock->now());
+        $nowIso = $clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+
+        return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso): JsonResponse {
+            $project->deleted_at = null;
+            $project->updated_at = $now;
+            $project->save();
+
+            if ($mode === 'move') {
+                foreach ($tasks as $task) {
+                    /** @var array<string, string> $fieldUpdatedAt */
+                    $fieldUpdatedAt = $task->field_updated_at ?? [];
+                    $fieldUpdatedAt['project_id'] = $nowIso;
+                    $task->field_updated_at = $fieldUpdatedAt;
+                    $task->project_id = $project->id;
+                    $task->updated_at = $now;
+                    $task->save();
+                }
+            } else {
+                foreach ($tasks as $task) {
+                    /** @var array<string, string> $fieldUpdatedAt */
+                    $fieldUpdatedAt = $task->field_updated_at ?? [];
+                    $fieldUpdatedAt['deleted'] = $nowIso;
+                    $task->field_updated_at = $fieldUpdatedAt;
+                    $task->deleted_at = null;
+                    $task->updated_at = $now;
+                    $task->save();
+                }
+            }
+
+            $this->projectCounts->load(collect([$project]));
+
+            /** @var JsonResponse $response */
+            $response = (new ProjectResource($project))->response();
+
+            return $response->setStatusCode(200);
+        });
+    }
+
+    /**
+     * @param  list<string>  $taskIds
+     * @return Collection<int, Task>
+     */
+    private function resolveAndValidateRestorableTasks(array $taskIds, string $mode, Project $project): Collection
+    {
+        if (empty($taskIds)) {
+            return new Collection;
+        }
+
+        $uniqueIds = array_values(array_unique($taskIds));
+        if (count($uniqueIds) !== count($taskIds)) {
+            throw ValidationException::withMessages([
+                'task_ids' => ['Task IDs must not contain duplicates.'],
+            ]);
+        }
+
+        /** @var Collection<int, Task> $tasks */
+        $tasks = Task::withTrashed()->whereIn('id', $uniqueIds)->get();
+
+        if ($tasks->count() !== count($uniqueIds)) {
+            throw ValidationException::withMessages([
+                'task_ids' => ['One or more tasks cannot be restored.'],
+            ]);
+        }
+
+        foreach ($tasks as $task) {
+            if ($mode === 'move') {
+                if ($task->trashed() || $task->project_id !== null) {
+                    throw ValidationException::withMessages([
+                        'task_ids' => ['One or more tasks were not part of this deletion.'],
+                    ]);
+                }
+            } else {
+                $projectDeletedAt = $project->deleted_at ? Carbon::parse($project->deleted_at) : null;
+                if (! $task->trashed() || ! $task->deleted_at || ! $projectDeletedAt || ! $task->deleted_at->equalTo($projectDeletedAt)) {
+                    throw ValidationException::withMessages([
+                        'task_ids' => ['One or more tasks were not deleted with this project.'],
+                    ]);
+                }
+            }
+        }
+
+        return $tasks;
     }
 
     private function ensureNotDeleted(Project $project): void

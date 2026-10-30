@@ -710,3 +710,337 @@ it('returns 404 on patch for another user\'s project or deleted project', functi
         'name' => 'Attempt Rename Deleted',
     ])->assertStatus(404);
 });
+
+it('deletes a project with move mode, unlinking tasks and setting project_id update timestamp', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Delete Move Project',
+        'colour' => 'blue',
+    ]);
+
+    $task1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Task 1 to move',
+        'done' => false,
+    ]);
+    $task2 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Task 2 to move',
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=move")
+        ->assertStatus(200);
+
+    expect($response->json('undo.mode'))->toBe('move')
+        ->and($response->json('undo.task_ids'))->toHaveCount(2)
+        ->and($response->json('undo.task_ids'))->toContain($task1->id, $task2->id);
+
+    $freshProject = Project::withoutGlobalScope('owner')->find($project->id);
+    expect($freshProject->deleted_at)->not->toBeNull();
+
+    $fresh1 = Task::find($task1->id);
+    $fresh2 = Task::find($task2->id);
+    expect($fresh1->project_id)->toBeNull()
+        ->and($fresh1->deleted_at)->toBeNull()
+        ->and($fresh1->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00Z')
+        ->and($fresh2->project_id)->toBeNull()
+        ->and($fresh2->deleted_at)->toBeNull()
+        ->and($fresh2->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00Z');
+});
+
+it('deletes a project with delete mode, soft-deleting tasks and setting deleted update timestamp', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Delete Delete Project',
+        'colour' => 'green',
+    ]);
+
+    $task1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Task 1 to delete',
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=delete")
+        ->assertStatus(200);
+
+    expect($response->json('undo.mode'))->toBe('delete')
+        ->and($response->json('undo.task_ids'))->toBe([$task1->id]);
+
+    $freshProject = Project::withoutGlobalScope('owner')->find($project->id);
+    expect($freshProject->deleted_at)->not->toBeNull();
+
+    $freshTask = Task::withTrashed()->find($task1->id);
+    expect($freshTask->trashed())->toBeTrue()
+        ->and($freshTask->deleted_at->toIso8601String())->toBe(Carbon::parse($freshProject->deleted_at)->toIso8601String())
+        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00Z');
+});
+
+it('deletes a project with no tasks returning empty task_ids and move mode', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Empty Project',
+        'colour' => 'yellow',
+    ]);
+
+    $response = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}")
+        ->assertStatus(200);
+
+    expect($response->json('undo'))->toBe([
+        'task_ids' => [],
+        'mode' => 'move',
+    ]);
+
+    $freshProject = Project::withoutGlobalScope('owner')->find($project->id);
+    expect($freshProject->deleted_at)->not->toBeNull();
+});
+
+it('rejects delete with 422 if project has tasks and tasks parameter is missing or invalid', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Has Tasks Project',
+        'colour' => 'red',
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Some Task',
+        'done' => false,
+    ]);
+
+    // Missing tasks parameter
+    $resMissing = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}")
+        ->assertStatus(422);
+
+    expect($resMissing->json('error.fields.tasks'))->not->toBeEmpty();
+    assertProjectApiErrorShape($resMissing->json());
+
+    // Invalid tasks parameter
+    $resInvalid = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=archive")
+        ->assertStatus(422);
+
+    expect($resInvalid->json('error.fields.tasks'))->not->toBeEmpty();
+    assertProjectApiErrorShape($resInvalid->json());
+});
+
+it('restores a project and its moved tasks with 200', function () {
+    $clock = new FrozenClock('2026-10-23T01:12:00Z');
+    app()->instance(ClockInterface::class, $clock);
+
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Restore Move Project',
+        'colour' => 'teal',
+    ]);
+
+    $task1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Moved Task 1',
+        'done' => false,
+    ]);
+
+    // Delete with move
+    $delRes = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=move")
+        ->assertStatus(200);
+
+    $undo = $delRes->json('undo');
+
+    // Advance clock for restore
+    $clock->advance('+5 minutes');
+
+    // Restore
+    $res = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", $undo)
+        ->assertStatus(200);
+
+    expect($res->json('id'))->toBe($project->id)
+        ->and($res->json('open'))->toBe(1)
+        ->and($res->json('done'))->toBe(0);
+    assertProjectSchema($res->json());
+
+    $freshProject = Project::find($project->id);
+    expect($freshProject->deleted_at)->toBeNull();
+
+    $freshTask = Task::find($task1->id);
+    expect($freshTask->project_id)->toBe($project->id)
+        ->and($freshTask->field_updated_at['project_id'])->toBe('2026-10-23T01:17:00Z');
+});
+
+it('restores a project and its deleted tasks with 200', function () {
+    $clock = new FrozenClock('2026-10-23T01:12:00Z');
+    app()->instance(ClockInterface::class, $clock);
+
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Restore Delete Project',
+        'colour' => 'orange',
+    ]);
+
+    $task1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Deleted Task 1',
+        'done' => false,
+    ]);
+
+    // Delete with delete
+    $delRes = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=delete")
+        ->assertStatus(200);
+
+    $undo = $delRes->json('undo');
+
+    // Advance clock for restore
+    $clock->advance('+5 minutes');
+
+    // Restore
+    $res = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", $undo)
+        ->assertStatus(200);
+
+    expect($res->json('id'))->toBe($project->id)
+        ->and($res->json('open'))->toBe(1);
+    assertProjectSchema($res->json());
+
+    $freshProject = Project::find($project->id);
+    expect($freshProject->deleted_at)->toBeNull();
+
+    $freshTask = Task::find($task1->id);
+    expect($freshTask->trashed())->toBeFalse()
+        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:17:00Z');
+});
+
+it('returns 200 no-op if the restored project is not deleted', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Active Project',
+        'colour' => 'blue',
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", [
+        'task_ids' => [],
+        'mode' => 'move',
+    ])->assertStatus(200);
+
+    expect($response->json('id'))->toBe($project->id);
+    assertProjectSchema($response->json());
+});
+
+it('rejects restore with 422 project.name_taken if a project with the same name now exists', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Conflict Project',
+        'colour' => 'blue',
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    // Another project with the same name created since
+    Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'conflict project',
+        'colour' => 'red',
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", [
+        'task_ids' => [],
+        'mode' => 'move',
+    ])->assertStatus(422);
+
+    expect($response->json('error.code'))->toBe('project.name_taken');
+    assertProjectApiErrorShape($response->json());
+});
+
+it('rejects restore with foreign task id or task not matching delete with 422 and restores nothing', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Restore Check Project',
+        'colour' => 'purple',
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    $foreignTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'title' => 'Foreign Task',
+        'done' => false,
+    ]);
+
+    // Foreign task ID
+    $resForeign = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", [
+        'task_ids' => [$foreignTask->id],
+        'mode' => 'move',
+    ])->assertStatus(422);
+
+    expect($resForeign->json('error.fields.task_ids'))->not->toBeEmpty();
+    assertProjectApiErrorShape($resForeign->json());
+
+    // Project is still deleted
+    $freshProject = Project::withoutGlobalScope('owner')->find($project->id);
+    expect($freshProject->deleted_at)->not->toBeNull();
+
+    // Mismatched task: deleted task with move mode
+    $deletedTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Deleted Task',
+        'done' => false,
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    $resMismatch = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", [
+        'task_ids' => [$deletedTask->id],
+        'mode' => 'move',
+    ])->assertStatus(422);
+
+    expect($resMismatch->json('error.fields.task_ids'))->not->toBeEmpty();
+});
+
+it('returns 404 on delete and restore for another user\'s project', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+
+    $otherProject = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'name' => 'Other Project',
+        'colour' => 'blue',
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/projects/{$otherProject->id}?tasks=move")
+        ->assertStatus(404);
+
+    $this->actingAs($user)->postJson("/api/v1/projects/{$otherProject->id}/restore", [
+        'task_ids' => [],
+        'mode' => 'move',
+    ])->assertStatus(404);
+});
