@@ -12,7 +12,7 @@ import { localTime, today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
-import type { TaskApi } from "../../domain/api";
+import type { TaskApi, TaskRequest } from "../../domain/api";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 
 /** Injected clock (IM-05 / ADR-006): no screen reads the system time directly. */
@@ -213,7 +213,7 @@ export function TaskStoreProvider({
   const send = useCallback(
     (
       taskId: string,
-      request: () => Promise<{ task: Task; next?: Task }>,
+      request: TaskRequest,
       onSaved: (res: { task: Task; next?: Task }) => void,
       onFailed: () => void,
     ) => {
