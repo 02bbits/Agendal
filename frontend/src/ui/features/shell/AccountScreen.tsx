@@ -8,10 +8,9 @@ import {
 import { NavBar } from "../../components/NavBar";
 import { Segmented } from "../../components/Segmented";
 import { Switch } from "../../components/Switch";
+import type { TimeFormat, WeekStart } from "../../domain/types";
 
 export type ThemeSetting = "system" | "light" | "dark";
-export type WeekStart = "mon" | "sun";
-export type TimeFormat = "24h" | "12h";
 
 export interface AccountSettings {
   theme: ThemeSetting;

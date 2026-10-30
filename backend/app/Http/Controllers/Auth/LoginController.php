@@ -5,10 +5,10 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 
@@ -47,10 +47,10 @@ class LoginController extends Controller
 
         if (! Auth::guard('web')->attempt(['email' => $email, 'password' => $request->string('password')->value()], $request->boolean('remember'))) {
             $userId = User::query()->where('email', $email)->value('id');
-            $this->audit($request, 'sign_in_failed', $userId);
+            Audit::log($request, 'sign_in_failed', $userId);
             $lockedNow = max($this->fail($pair), $this->fail($perEmail));
             if ($lockedNow > 0) {
-                $this->audit($request, 'lockout', $userId);
+                Audit::log($request, 'lockout', $userId);
             }
 
             throw new ApiError('auth.invalid', 'Email or password is incorrect.');
@@ -60,7 +60,7 @@ class LoginController extends Controller
         RateLimiter::clear($pair[0]);
         /** @var User $user */
         $user = Auth::guard('web')->user();
-        $this->audit($request, 'sign_in', $user->id);
+        Audit::log($request, 'sign_in', $user->id);
 
         return response()->json(['user' => $user]);
     }
@@ -91,12 +91,5 @@ class LoginController extends Controller
     private function lockedError(int $seconds): ApiError
     {
         return new ApiError('auth.locked', "Too many attempts. Try again in {$seconds} s.", 429, [], ['retry_after' => $seconds]);
-    }
-
-    private function audit(Request $request, string $event, ?int $userId): void
-    {
-        DB::table('audit_events')->insert([
-            'user_id' => $userId, 'event' => $event, 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
     }
 }
