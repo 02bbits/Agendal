@@ -48,15 +48,6 @@ export function daysBetween(from: string, to: string): number {
   return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);
 }
 
-/** 0 = Sunday … 6 = Saturday. */
-export function weekday(date: string): number {
-  return parse(date).getUTCDay();
-}
-
-export function daysInMonth(year: number, month1: number): number {
-  return new Date(Date.UTC(year, month1, 0)).getUTCDate();
-}
-
 /** Today, Tomorrow, Yesterday as words; otherwise `Mon 26 Oct`, with the year when it isn't this year (UX-32). */
 export function formatDay(date: string, today: string): string {
   const diff = daysBetween(today, date);
