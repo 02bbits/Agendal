@@ -1,0 +1,12 @@
+{
+  "error": {
+    "code": "task.end_before_start",
+    "message": "End time must be later than the start time.",
+    "request_id": "req_7Hq2",
+    "fields": {
+      "end_time": [
+        "End time must be later than the start time."
+      ]
+    }
+  }
+}

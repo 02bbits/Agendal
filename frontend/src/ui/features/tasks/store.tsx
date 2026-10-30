@@ -8,11 +8,11 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { t } from "../../copy";
+import { today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
+import { t } from "../../copy";
 import type { TaskApi } from "../../domain/api";
-import { todayIn } from "../../domain/dates";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 
 /** Injected clock (IM-05 / ADR-006): no screen reads the system time directly. */
@@ -78,7 +78,7 @@ export function TaskStoreProvider({
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
 
-  const today = todayIn(clock.now(), clock.timeZone);
+  const todayDate = today(clock.timeZone, clock.now());
 
   const showToast = useCallback((data: Omit<ToastData, "id">) => {
     toastSeq.current += 1;
@@ -181,7 +181,7 @@ export function TaskStoreProvider({
     () => ({
       tasks,
       projects,
-      today,
+      today: todayDate,
       timeFormat,
       clock,
       api,
@@ -193,7 +193,7 @@ export function TaskStoreProvider({
       isSettling: (id) => settling.has(id),
       completedToday: (task) =>
         !!task.done_at &&
-        todayIn(new Date(task.done_at), clock.timeZone) === today,
+        today(clock.timeZone, new Date(task.done_at)) === todayDate,
       toggle,
       applyLocal,
       setProjects,
@@ -202,7 +202,7 @@ export function TaskStoreProvider({
     [
       tasks,
       projects,
-      today,
+      todayDate,
       timeFormat,
       clock,
       api,

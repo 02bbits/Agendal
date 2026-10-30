@@ -61,7 +61,7 @@ One row per requirement: where it is specified, which workflows and scenarios ex
 | [NF-5](../05-quality/nfr.md#nf-5) | Performance | PERF-02, [NU §10](../03-modules/NU-note-understanding.md#10-performance-and-scaling) budget |
 | [NF-6](../05-quality/nfr.md#nf-6) | Offline | [TS-08](test-scenarios.md#ts-08), OFF-01–04, OFF-10–15, OFF-20–21, OFF-30–31, PERF-04 |
 | [NF-7](../05-quality/nfr.md#nf-7) | Platform | T-AP-01, T-AP-101, E2E browser matrix ([test strategy](test-strategy.md#levels-and-tools)) |
-| [NF-8](../05-quality/nfr.md#nf-8) | Layout | E2E viewports 320, 360, 480 and 600 wide, no horizontal scroll ([UX-23](../01-product/ux-standards.md#ux-23)) |
+| [NF-8](../05-quality/nfr.md#nf-8) | Layout | E2E viewports 320, 360, 480 and 600 wide, no horizontal scroll ([UX-23](../01-product/ux-standards.md#ux-23)). At 600 wide, one centred 600px column with the bars and sheets inside it ([UX-24](../01-product/ux-standards.md#ux-24)). At 768×1024, 1024×768 and a large phone sideways at 915×412, the sidebar and no tab bar ([UX-27](../01-product/ux-standards.md#ux-27)); at 1440×900, the side panel beside the column ([UX-28](../01-product/ux-standards.md#ux-28)). Sideways at 667×375, bars visible and nothing covered ([UX-26](../01-product/ux-standards.md#ux-26)) |
 | [NF-9](../05-quality/nfr.md#nf-9) | Privacy | [TS-18](test-scenarios.md#ts-18), SEC-34, SEC-43, SEC-44, SEC-61 |
 | [NF-10](../05-quality/nfr.md#nf-10) | Security | SEC-03, SEC-05, SEC-09, SEC-20 |
 | [NF-11](../05-quality/nfr.md#nf-11) | Reliability | [TS-07](test-scenarios.md#ts-07), T-NU-73, T-RV-13 |

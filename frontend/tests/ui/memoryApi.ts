@@ -1,5 +1,5 @@
-import type { TaskApi } from "./api";
-import type { Project, Task } from "./types";
+import type { TaskApi } from "../../src/ui/domain/api";
+import type { Project, Task } from "../../src/ui/domain/types";
 
 export interface MemoryDb {
   tasks: Task[];

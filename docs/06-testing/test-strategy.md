@@ -23,7 +23,7 @@ Write the test ID in the test name (`it('T-NU-07 tonight after 20:00 has no time
 | Corpus | Whole-note plans against the golden set, in rules mode and rules + LLM mode (LLM mode: nightly and on prompt/model change, against the real provider) | Pest data provider over `note-corpus/*.yaml` | Every push (rules), nightly (LLM) |
 | API / integration | Endpoints with a real DB: validation, authorization matrix, rate limits, idempotency, undo, sync | Pest + Laravel HTTP tests, a fresh DB per test | Every push |
 | Component | Screens and components in every state of the module's state matrix | Vitest + React Testing Library | Every push |
-| End-to-end | Workflows [WF-01](../04-workflows/WF-01-capture-and-process-note.md)–07 in a real browser, including offline (`context.setOffline`) and two-device sync | Playwright (Chromium, WebKit, Firefox; mobile viewport 360×800) | Every PR |
+| End-to-end | Workflows [WF-01](../04-workflows/WF-01-capture-and-process-note.md)–07 in a real browser, including offline (`context.setOffline`) and two-device sync | Playwright (Chromium, WebKit, Firefox; mobile viewport 360×800, plus the layout viewports in [NF-8](../05-quality/nfr.md#nf-8)'s traceability row) | Every PR |
 | Accessibility | axe on every screen and state, keyboard-only paths | @axe-core/playwright. Manual VoiceOver/TalkBack pass before each release | Every PR (axe), release (manual) |
 | Security | Authorization matrix, CSRF, headers, upload abuse, rate limits | Pest + Playwright, OWASP ZAP baseline against the server, `composer audit`, `npm audit`, secret scan | Every PR. ZAP nightly |
 | Performance | PERF-01–05 | k6 against the server. Lighthouse CI for [NF-4](../05-quality/nfr.md#nf-4) | Before the demo |

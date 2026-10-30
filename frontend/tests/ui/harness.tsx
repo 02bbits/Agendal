@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Toast } from "../../src/ui/components/Toast";
-import { createMemoryApi } from "../../src/ui/domain/memoryApi";
+import { createMemoryApi } from "./memoryApi";
 import type { Task } from "../../src/ui/domain/types";
 import {
   TaskStoreProvider,
