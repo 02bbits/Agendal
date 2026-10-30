@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -16,6 +16,13 @@ export function useModalFocus(
   open: boolean,
   onEscape: () => void,
 ): void {
+  // An inline onClose changes every render; as an effect dependency it would hand focus back to
+  // the opener each time, so Escape (which listens inside the container) never fired
+  const escape = useRef(onEscape);
+  useEffect(() => {
+    escape.current = onEscape;
+  });
+
   useEffect(() => {
     if (!open) return;
     const container = containerRef.current;
@@ -26,12 +33,22 @@ export function useModalFocus(
         : null;
 
     const firstField = container.querySelector<HTMLElement>(FIELD);
-    (firstField ?? titleRef.current ?? container).focus();
+    const target = firstField ?? titleRef.current ?? container;
+    // The modal fades in from visibility: hidden, which refuses focus, so try again on the next
+    // frames until it lands (at most half a second)
+    let frame = 0;
+    let tries = 30;
+    const focusTarget = () => {
+      target.focus();
+      if (!container.contains(document.activeElement) && tries-- > 0)
+        frame = requestAnimationFrame(focusTarget);
+    };
+    focusTarget();
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        onEscape();
+        escape.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -59,8 +76,9 @@ export function useModalFocus(
 
     container.addEventListener("keydown", onKeyDown);
     return () => {
+      cancelAnimationFrame(frame);
       container.removeEventListener("keydown", onKeyDown);
       if (opener && opener.isConnected) opener.focus();
     };
-  }, [open, containerRef, titleRef, onEscape]);
+  }, [open, containerRef, titleRef]);
 }

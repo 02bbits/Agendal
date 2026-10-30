@@ -1,6 +1,7 @@
 import { useId, useRef, type MouseEvent, type ReactNode } from "react";
 import { IconButton } from "./IconButton";
 import { XIcon } from "./icons";
+import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
 export interface SheetProps {
@@ -30,6 +31,7 @@ export function Sheet({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   useModalFocus(sheetRef, titleRef, open, onClose);
+  useHistoryEntry(open, onClose);
 
   if (!open) return null;
 

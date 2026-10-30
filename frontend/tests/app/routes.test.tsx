@@ -91,7 +91,9 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
       }),
     ).toBeTruthy();
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(router.back).toHaveBeenCalledOnce();
+    // Opened directly, so there is no earlier screen in the app: Back goes to Inbox (AP §2.4)
+    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(router.back).not.toHaveBeenCalled();
   });
 
   it("/account is a pushed screen whose Appearance switches the daisyUI theme", async () => {
@@ -142,7 +144,8 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     await userEvent.click(
       within(tabBar).getByRole("link", { name: "Upcoming" }),
     );
-    expect(router.push).toHaveBeenLastCalledWith("/upcoming");
+    // Tab switches replace the history entry (AP-4)
+    expect(router.replace).toHaveBeenLastCalledWith("/upcoming");
     await userEvent.click(within(header).getByRole("link", { name: "Search" }));
     expect(router.push).toHaveBeenLastCalledWith("/search");
     await userEvent.click(
@@ -154,7 +157,7 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
   it("the capture bar opens Notes until the note editor lands, and hides + until New task exists", async () => {
     renderAt("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Write a note" }));
-    expect(router.push).toHaveBeenLastCalledWith("/notes");
+    expect(router.replace).toHaveBeenLastCalledWith("/notes");
     expect(screen.queryByRole("button", { name: "Add a task" })).toBeNull();
   });
 });
