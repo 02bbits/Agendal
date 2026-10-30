@@ -19,7 +19,8 @@ final class NoteExtractionScenarios
 
     /** Categories only the field extractor reads; the splitter generator skips them. */
     public const EXTRACTION_ONLY_CATEGORIES = [
-        'day_count_prefix', 'day_count_unit', 'day_count_suffix', 'date_separator', 'date_day_word', 'month_word',
+        'duration_prefix', 'duration_suffix', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
+        'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word',
@@ -93,14 +94,34 @@ final class NoteExtractionScenarios
             'weekday_this_suffix' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_next' => [['nộp '.$value.' monday', ['dueDate' => '2026-10-26'], self::NOW]],
             'repeat_prefix' => [['tập gym '.$value.' monday', ['repeat' => 'weekly', 'dueDate' => '2026-10-26'], self::NOW]],
-            'day_count_prefix' => [['đọc sách '.$value.' 3 days', ['dueDate' => self::day(3)], self::NOW]],
-            'day_count_unit' => [['đọc sách in 3 '.$value, ['dueDate' => self::day(3)], self::NOW]],
-            'day_count_suffix' => [['đọc sách 3 ngày '.$value, ['dueDate' => self::day(3)], self::NOW]],
+            'duration_prefix' => [['đọc sách '.$value.' 3 days', ['dueDate' => self::day(3)], self::NOW]],
+            'duration_suffix' => [['đọc sách 3 ngày '.$value, ['dueDate' => self::day(3)], self::NOW]],
+            'duration_unit' => [['đọc sách in 2 '.$value, self::afterDuration($key, 2), self::NOW]],
+            'full_date_separator' => [['nộp bài 26'.$value.'9'.$value.'2027', ['dueDate' => '2027-09-26', 'title' => 'Nộp bài'], self::NOW]],
+            'ordinal_suffix' => [['pay rent 28'.$value, ['dueDate' => '2026-10-28', 'title' => 'Pay rent'], self::NOW]],
+            'ordinal_day_word' => [['pay rent '.$value.' 28th', ['dueDate' => '2026-10-28', 'title' => 'Pay rent'], self::NOW]],
+            'month_link' => [['pay rent 28th '.$value.' October', ['dueDate' => '2026-10-28', 'title' => 'Pay rent'], self::NOW]],
+            'year_word' => [['nộp bài 26 tháng 9 '.$value.' 2027', ['dueDate' => '2027-09-26', 'title' => 'Nộp bài'], self::NOW]],
+            'vietnamese_unaccented_syllable' => [['toi '.$value, ['lowConfidence' => true], self::NOW]],
             'date_separator' => [['đọc sách 26'.$value.'10', ['dueDate' => '2026-10-26'], self::NOW]],
             'date_day_word' => [['đọc sách '.$value.' 26/10', ['dueDate' => '2026-10-26', 'title' => 'Đọc sách'], self::NOW]],
             'month_word' => [['đọc sách 26 '.$value.' 10', ['dueDate' => '2026-10-26'], self::NOW]],
             default => [],
         };
+    }
+
+    /**
+     * "in 2 <unit>" from NOW: minutes and hours set the start time, days and longer the due date.
+     *
+     * @return array<string, string>
+     */
+    private static function afterDuration(string $unit, int $amount): array
+    {
+        $at = (new DateTimeImmutable(self::NOW))->modify('+'.$amount.' '.$unit.'s');
+
+        return in_array($unit, ['minute', 'hour'], true)
+            ? ['dueDate' => $at->format('Y-m-d'), 'startTime' => $at->format('H:i')]
+            : ['dueDate' => $at->format('Y-m-d')];
     }
 
     private static function today(): DateTimeImmutable

@@ -4,6 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+/**
+ * Reads an item's due date (NU §2.5). Every candidate keeps its byte offset and length, so the title can drop
+ * exactly the words read, however date and time phrases overlap.
+ *
+ * @phpstan-type Candidate array{date: ?string, phrase: string, offset: int}
+ */
 final class NoteDateParser
 {
     private const DAYS_PER_WEEK = 7;
@@ -15,25 +21,29 @@ final class NoteDateParser
     /** Enough months ahead to reach a 31st from any month. */
     private const MONTHS_TO_FIND_A_DAY = 2;
 
+    /** Duration units this parser reads, in "+N <unit>" steps; minutes and hours belong to the time parser. */
+    private const DATE_UNITS = ['day' => 'days', 'week' => 'weeks', 'month' => 'months'];
+
+    public function __construct(private NoteDurations $durations) {}
+
     public function parse(string $text, NoteContext $context, ?string $startTime): ParsedDate
     {
         $unreadable = false;
         $best = null;
         foreach ($this->candidates($text, $context, $startTime) as $candidate) {
             $before = substr($text, 0, $candidate['offset']);
-            if ($this->endsWith($before, 'name_title') !== null || $candidate['date'] === null) {
+            if ($this->endsWith($before, NoteVocabulary::phrases('name_title')) !== null || $candidate['date'] === null) {
                 // "chị Mai" may be a person, and "31/2" is no date: leave both to the LLM (NU-E31, ADR-008).
                 $unreadable = true;
 
                 continue;
             }
-            $prefix = $this->endsWith($before, 'date_preferred_prefix');
-            $candidate['preferred'] = $prefix !== null;
-            $candidate['phrase'] = ($prefix ?? '').$candidate['phrase'];
+            $prefix = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix')) ?? '';
+            $candidate = [...$candidate, 'preferred' => $prefix !== '', 'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix)];
             $best = $best === null || $this->wins($candidate, $best) ? $candidate : $best;
         }
 
-        return new ParsedDate($best['date'] ?? null, $best['phrase'] ?? '', $unreadable);
+        return new ParsedDate($best['date'] ?? null, $best === null ? [] : [[$best['offset'], strlen($best['phrase'])]], $unreadable);
     }
 
     /**
@@ -47,12 +57,12 @@ final class NoteDateParser
         return [$candidate['preferred'], $candidate['date'], -$candidate['offset']] > [$best['preferred'], $best['date'], -$best['offset']];
     }
 
-    /** @return list<array{date: ?string, phrase: string, offset: int}> */
+    /** @return list<Candidate> */
     private function candidates(string $text, NoteContext $context, ?string $startTime): array
     {
         return [
             ...$this->offsets($text, $context),
-            ...$this->dayCounts($text, $context),
+            ...$this->durationsFromToday($text, $context),
             ...$this->weekAndMonthEnds($text, $context),
             ...$this->weekdays($text, $context, $startTime),
             ...$this->numericDates($text, $context),
@@ -64,7 +74,7 @@ final class NoteDateParser
     /**
      * "today", "tomorrow", "ngày mốt", "in a week".
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
     private function offsets(string $text, NoteContext $context): array
     {
@@ -76,28 +86,29 @@ final class NoteDateParser
     }
 
     /**
-     * "in 3 days", "3 ngày nữa".
+     * "in 3 days", "3 ngày nữa", "trong 2 tuần", "after 1 month".
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
-    private function dayCounts(string $text, NoteContext $context): array
+    private function durationsFromToday(string $text, NoteContext $context): array
     {
-        $unit = NoteVocabulary::phrases('day_count_unit');
-        $pattern = '~(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('day_count_prefix').')\s+(?<before>\d+)\s*(?:'.$unit.')|(?<after>\d+)\s*(?:'.$unit.')\s+(?:'.NoteVocabulary::phrases('day_count_suffix').'))(?![\p{L}\p{N}])~iu';
-        preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        $found = [];
+        foreach ($this->durations->findAll($text) as $duration) {
+            $step = self::DATE_UNITS[$duration['unit']] ?? null;
+            if ($step !== null) {
+                $date = $context->today()->modify('+'.$duration['amount'].' '.$step)->format('Y-m-d');
+                $found[] = ['date' => $date, 'phrase' => substr($text, $duration['offset'], $duration['length']), 'offset' => $duration['offset']];
+            }
+        }
 
-        return array_map(fn (array $m): array => [
-            'date' => $this->daysFromToday($context, (int) ($m['before'][0] !== '' ? $m['before'][0] : $m['after'][0])),
-            'phrase' => $m[0][0],
-            'offset' => $m[0][1],
-        ], $matches);
+        return $found;
     }
 
     /**
      * "next week" → the week's first day (NU-E10), "end of the week" → its last day, "weekend" → Saturday
      * (today on a weekend day), "end of the month" → its last day (NU-E9).
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
     private function weekAndMonthEnds(string $text, NoteContext $context): array
     {
@@ -124,7 +135,7 @@ final class NoteDateParser
     /**
      * Weekdays mean the next one ahead; "this" allows today (NU-E2, NU-E3); "every" allows today until its time (NU-E8).
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
     private function weekdays(string $text, NoteContext $context, ?string $startTime): array
     {
@@ -133,9 +144,9 @@ final class NoteDateParser
         foreach (NoteVocabulary::findAll('weekday', $text) as ['key' => $day, 'phrase' => $phrase, 'offset' => $offset]) {
             $before = substr($text, 0, $offset);
             $after = substr($text, $offset + strlen($phrase));
-            $repeat = $this->endsWith($before, 'repeat_prefix');
-            $thisPrefix = $this->endsWith($before, 'weekday_this');
-            $next = $this->endsWith($before, 'weekday_next');
+            $repeat = $this->endsWith($before, NoteVocabulary::phrases('repeat_prefix'));
+            $thisPrefix = $this->endsWith($before, NoteVocabulary::phrases('weekday_this'));
+            $next = $this->endsWith($before, NoteVocabulary::phrases('weekday_next'));
             $thisSuffix = preg_match('~^\s+(?:'.NoteVocabulary::phrases('weekday_this_suffix').')(?![\p{L}\p{N}_])~iu', $after, $suffix) === 1 ? $suffix[0] : '';
             $prefix = $repeat ?? $thisPrefix ?? $next ?? '';
             $days = $this->daysUntil($today, (int) $day);
@@ -151,62 +162,88 @@ final class NoteDateParser
     }
 
     /**
-     * "26/10", "26/10/2026", "ngày 26/10": numbers are day/month (NU-E31).
+     * Numbers are day/month (NU-E31): "26/10", "ngày 26/10", and with a year "26/10/2026", "26.10.2026",
+     * "26-10-2026", or year first "2026-10-26".
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
     private function numericDates(string $text, NoteContext $context): array
     {
-        $separator = NoteVocabulary::phrases('date_separator');
-        $pattern = '~(?<![\p{N}])(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+)?(?<day>\d{1,2})(?:'.$separator.')(?<month>\d{1,2})(?:(?:'.$separator.')(?<year>\d{4}))?(?![\p{N}])(?!(?:'.$separator.')\d)~iu';
-        preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
-
-        return array_map(fn (array $m): array => [
-            'date' => $this->explicitDate($context, (int) $m['day'][0], (int) $m['month'][0], isset($m['year']) && $m['year'][0] !== '' ? (int) $m['year'][0] : null),
-            'phrase' => $m[0][0],
-            'offset' => $m[0][1],
-        ], $matches);
-    }
-
-    /**
-     * "26 Oct", "Oct 26", "26 tháng 10".
-     *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
-     */
-    private function namedDates(string $text, NoteContext $context): array
-    {
-        $day = '(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+)?(?<day>\d{1,2})';
-        $patterns = ['~(?<![\p{L}\p{N}])'.$day.'\s+(?:'.NoteVocabulary::phrases('month_word').')\s+(?<month>\d{1,2})(?![\p{L}\p{N}])~iu' => null];
-        foreach (NoteVocabulary::family('month') as $month => $names) {
-            $patterns['~(?<![\p{L}\p{N}])(?:'.$day.'\s+(?:'.$names.')|(?:'.$names.')\s+(?<dayAfter>\d{1,2}))(?![\p{L}\p{N}])~iu'] = (int) $month;
-        }
+        $dayWord = '(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+)?';
+        $short = NoteVocabulary::phrases('date_separator');
+        $full = NoteVocabulary::phrases('full_date_separator');
+        $patterns = [
+            '~(?<![\p{N}])'.$dayWord.'(?<day>\d{1,2})(?:'.$full.')(?<month>\d{1,2})(?:'.$full.')(?<year>\d{4})(?![\p{N}])~iu',
+            '~(?<![\p{N}])(?<year>\d{4})(?:'.$full.')(?<month>\d{1,2})(?:'.$full.')(?<day>\d{1,2})(?![\p{N}])~iu',
+            '~(?<![\p{N}])'.$dayWord.'(?<day>\d{1,2})(?:'.$short.')(?<month>\d{1,2})(?![\p{N}])(?!(?:'.$full.')\d)~iu',
+        ];
         $found = [];
-        foreach ($patterns as $pattern => $month) {
+        foreach ($patterns as $pattern) {
             preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
             foreach ($matches as $m) {
-                $dayNumber = ($m['day'][0] ?? '') !== '' ? (int) $m['day'][0] : (int) $m['dayAfter'][0];
-                $found[] = ['date' => $this->explicitDate($context, $dayNumber, $month ?? (int) $m['month'][0], null), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
+                $year = ($m['year'][0] ?? '') !== '' ? (int) $m['year'][0] : null;
+                $found[] = ['date' => $this->explicitDate($context, (int) $m['day'][0], (int) $m['month'][0], $year), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
             }
         }
 
         return $found;
     }
 
-    /** Null when the numbers are no real date ("31/2"). */
     /**
-     * "ngày 28": that day this month, or next month once it has passed. Not "mỗi ngày", "ngày 2 lần".
+     * "ngày 28", "mùng 5", "the 1st", "28th": that day this month, or next month once it has passed. Not
+     * "mỗi ngày", "ngày 2 lần", and not a day that belongs to a named month ("Oct 1st", "1st of October").
      *
-     * @return list<array{date: ?string, phrase: string, offset: int}>
+     * @return list<Candidate>
      */
     private function daysOfMonth(string $text, NoteContext $context): array
     {
-        $notFollowedBy = NoteVocabulary::phrases('date_separator').'|'.NoteVocabulary::phrases('month_word').'|'.NoteVocabulary::phrases('count_word');
-        $pattern = '~(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('date_day_word').')\s+(?<day>\d{1,2})(?![\p{N}])(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
+        $months = implode('|', NoteVocabulary::family('month'));
+        $notFollowedBy = implode('|', [
+            NoteVocabulary::phrases('date_separator'), NoteVocabulary::phrases('full_date_separator'),
+            NoteVocabulary::phrases('month_word'), NoteVocabulary::phrases('count_word'), NoteVocabulary::phrases('month_link'), $months,
+        ]);
+        $ordinal = NoteVocabulary::phrases('ordinal_suffix');
+        $pattern = '~(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+(?<day>\d{1,2})|(?:(?:'.NoteVocabulary::phrases('ordinal_day_word').')\s+)?(?<ordinalDay>\d{1,2})(?:'.$ordinal.'))'
+            .'(?![\p{L}\p{N}])(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         $found = [];
         foreach ($matches as $m) {
-            if ($this->endsWith(substr($text, 0, $m[0][1]), 'repeat_prefix') === null) {
-                $found[] = ['date' => $this->nextDayOfMonth($context, (int) $m['day'][0]), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
+            $before = substr($text, 0, $m[0][1]);
+            if ($this->endsWith($before, NoteVocabulary::phrases('repeat_prefix')) !== null || $this->endsWith($before, $months) !== null) {
+                continue;
+            }
+            $day = ($m['day'][0] ?? '') !== '' ? $m['day'][0] : $m['ordinalDay'][0];
+            $found[] = ['date' => $this->nextDayOfMonth($context, (int) $day), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
+        }
+
+        return $found;
+    }
+
+    /**
+     * Month-name dates with an optional year: "26 Oct", "26th of October 2026", "Oct 26, 2026",
+     * "September 1st", "26 tháng 10", "26 tháng 9 năm 2026".
+     *
+     * @return list<Candidate>
+     */
+    private function namedDates(string $text, NoteContext $context): array
+    {
+        $dayWord = '(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+)?';
+        $ordinal = '(?:'.NoteVocabulary::phrases('ordinal_suffix').')?';
+        $link = '(?:(?:'.NoteVocabulary::phrases('month_link').')\s+)?';
+        $year = '(?:\s*(?:'.NoteVocabulary::phrases('comma').')?\s*(?:(?:'.NoteVocabulary::phrases('year_word').')\s+)?(?<year>\d{4}))?';
+        $edge = '(?![\p{L}\p{N}])';
+        $patterns = ['~(?<![\p{L}\p{N}])'.$dayWord.'(?<day>\d{1,2})\s+(?:'.NoteVocabulary::phrases('month_word').')\s+(?<month>\d{1,2})'.$year.$edge.'~iu' => null];
+        foreach (NoteVocabulary::family('month') as $month => $names) {
+            $patterns['~(?<![\p{L}\p{N}])'.$dayWord.'(?<day>\d{1,2})'.$ordinal.'\s+'.$link.'(?:'.$names.')'.$year.$edge.'~iu'] = (int) $month;
+            $patterns['~(?<![\p{L}\p{N}])(?:'.$names.')\s+(?<day>\d{1,2})'.$ordinal.$year.$edge.'~iu'] = (int) $month;
+        }
+        $found = [];
+        foreach ($patterns as $pattern => $month) {
+            preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+            foreach ($matches as $m) {
+                $explicitYear = ($m['year'][0] ?? '') !== '' ? (int) $m['year'][0] : null;
+                $date = $this->explicitDate($context, (int) $m['day'][0], $month ?? (int) $m['month'][0], $explicitYear);
+                $found[] = ['date' => $date, 'phrase' => $m[0][0], 'offset' => $m[0][1]];
             }
         }
 
@@ -229,6 +266,7 @@ final class NoteDateParser
         return null;
     }
 
+    /** Null when the numbers are no real date ("31/2"). */
     private function explicitDate(NoteContext $context, int $day, int $month, ?int $explicitYear): ?string
     {
         $today = $context->today();
@@ -259,9 +297,9 @@ final class NoteDateParser
         return $context->today()->modify('+'.$days.' days')->format('Y-m-d');
     }
 
-    /** The phrase of $category that ends $text (followed by spaces), or null. */
-    private function endsWith(string $text, string $category): ?string
+    /** The phrase among $phrases that ends $text (followed by spaces), or null. */
+    private function endsWith(string $text, string $phrases): ?string
     {
-        return preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases($category).')\s+$~iu', $text, $m) === 1 ? $m[0] : null;
+        return preg_match('~(?<![\p{L}\p{N}_])(?:'.$phrases.')\s+$~iu', $text, $m) === 1 ? $m[0] : null;
     }
 }

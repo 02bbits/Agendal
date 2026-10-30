@@ -4,25 +4,18 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
-/** A start/end time read from an item and the phrases it came from. */
+/** A start/end time read from an item and where its words are, so the title can drop exactly those. */
 final readonly class ParsedTime
 {
-    private const HALF_DAY_HOURS = 12;
-
-    /** @param list<string> $phrases */
+    /**
+     * @param  ?string  $date  set when the time fixes its own day ("in 2 hours" late in the evening)
+     * @param  list<array{0: int, 1: int}>  $spans  byte offset and length of each word group read
+     */
     public function __construct(
         public ?string $start = null,
         public ?string $end = null,
-        public array $phrases = [],
+        public array $spans = [],
         public bool $unreadable = false,
-        public bool $couldBeEvening = false,
+        public ?string $date = null,
     ) {}
-
-    /** The same time twelve hours later ("at 7" → 19:00). */
-    public function inTheEvening(): self
-    {
-        $start = $this->start === null ? null : sprintf('%02d:%s', (int) substr($this->start, 0, 2) + self::HALF_DAY_HOURS, substr($this->start, 3));
-
-        return new self($start, $this->end, $this->phrases, $this->unreadable);
-    }
 }
