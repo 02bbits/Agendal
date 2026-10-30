@@ -152,7 +152,7 @@ class ProjectController extends Controller
             $lastTask = $completedTasks->last();
             assert($lastTask !== null);
             $doneAt = $lastTask->done_at ?? $lastTask->created_at;
-            $doneAtStr = $doneAt ? $doneAt->format('Y-m-d\TH:i:s.u\Z') : '';
+            $doneAtStr = $doneAt instanceof \DateTimeInterface ? $doneAt->format('Y-m-d\TH:i:s.u\Z') : (string) $doneAt;
             $nextCursor = base64_encode("{$doneAtStr}|{$lastTask->id}");
         }
 
@@ -220,7 +220,7 @@ class ProjectController extends Controller
         $nowIso = $clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
 
         return DB::transaction(function () use ($project, $tasks, $tasksMode, $now, $nowIso): JsonResponse {
-            $project->deleted_at = $now;
+            $project->deleted_at = $nowIso;
             $project->updated_at = $now;
             $project->save();
 
