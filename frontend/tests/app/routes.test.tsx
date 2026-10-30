@@ -69,7 +69,7 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
         screen.getByRole("heading", { level: 1, name: title }),
       ).toBeTruthy();
       expect(
-        screen.getByRole("heading", { level: 2, name: empty }),
+        await screen.findByRole("heading", { level: 2, name: empty }),
       ).toBeTruthy();
       const nav = screen.getByRole("navigation", { name: "Main" });
       expect(

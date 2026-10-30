@@ -1,6 +1,31 @@
 import { api } from "./api";
 import type { TaskApi } from "../ui/domain/api";
-import type { Task } from "../ui/domain/types";
+import type { Project, Task } from "../ui/domain/types";
+
+export interface InboxData {
+  overdue: Task[];
+  today: Task[];
+  no_date: Task[];
+  completed_today: Task[];
+  progress: { done: number; total: number };
+  no_date_count: number;
+  completed_count: number;
+}
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let errorCode: string | undefined;
+    try {
+      const data = await response.json();
+      errorCode = data?.error?.code;
+    } catch {
+      // Body is not JSON
+    }
+    throw new Error(errorCode || "error.generic");
+  }
+
+  return response.json();
+}
 
 async function postLifecycle<T>(
   id: string,
@@ -15,18 +40,17 @@ async function postLifecycle<T>(
     body: JSON.stringify({ at }),
   });
 
-  if (!response.ok) {
-    let errorCode: string | undefined;
-    try {
-      const data = await response.json();
-      errorCode = data?.error?.code;
-    } catch {
-      // Body is not JSON
-    }
-    throw new Error(errorCode || "error.generic");
-  }
+  return handleResponse<T>(response);
+}
 
-  return response.json();
+export async function inbox(): Promise<InboxData> {
+  const response = await api("/tasks?view=inbox");
+  return handleResponse<InboxData>(response);
+}
+
+export async function projects(): Promise<Project[]> {
+  const response = await api("/projects");
+  return handleResponse<Project[]>(response);
 }
 
 export const httpTaskApi: TaskApi = {

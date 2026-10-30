@@ -3,12 +3,13 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
   type ReactNode,
 } from "react";
-import { today } from "../../../lib/clock";
+import { localTime, today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
@@ -78,7 +79,25 @@ export function TaskStoreProvider({
   const tasksRef = useRef(tasks);
   tasksRef.current = tasks;
 
+  const [, setTick] = useState(0);
   const todayDate = today(clock.timeZone, clock.now());
+
+  // Lists recompute at local midnight while open, and when the tab comes back (LV-E1)
+  useEffect(() => {
+    const [h, m] = localTime(clock.timeZone, clock.now())
+      .split(":")
+      .map(Number) as [number, number];
+    const msToMidnight =
+      ((24 * 60 - (h * 60 + m)) * 60 - clock.now().getSeconds()) * 1000 + 500;
+    const timer = setTimeout(() => setTick((n) => n + 1), msToMidnight);
+    const onVisible = () =>
+      document.visibilityState === "visible" && setTick((n) => n + 1);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearTimeout(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [clock, todayDate]);
 
   const showToast = useCallback((data: Omit<ToastData, "id">) => {
     toastSeq.current += 1;
