@@ -18,4 +18,7 @@ return [
     // Calendar days a yearless explicit date may lie in the past and still stay this year (NU-E4).
     'overdue_grace_days' => (int) env('NOTE_OVERDUE_GRACE_DAYS', 30),
 
+    // Changes one note may make before it needs Apply changes (BR-01, NU-5).
+    'changes_before_confirm' => (int) env('NOTE_CHANGES_BEFORE_CONFIRM', 5),
+
 ];

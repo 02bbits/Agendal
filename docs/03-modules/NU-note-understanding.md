@@ -75,8 +75,8 @@ Every note goes through the same steps, on the server, in one request:
 
 In this order, first match wins:
 
-1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3). Reason `skip`.
-2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*. Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*). Without it, the item is a task.
+1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*, symbols alone such as 👍), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3), or a heading that ends with `:` and starts with no task verb ("Tuần này:", "Shopping list:"). Reason `skip`. The full word lists live in `backend/resources/notes/note-rules.csv`.
+2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*, or ends with a bare *done* / *xong* after a non-verb ("homework done", but "get it done" is a task). Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*) where *\<when>* reads as a date or time: "move the boxes to the garage" and "push code to github" are tasks. Phrasal verbs such as *drop off* and *bỏ rác* are tasks.
 3. **Task:** everything else. An item with no title words after extraction (only a date, time or priority, such as "tomorrow 9am") becomes a skip ([NU-E32](#nu-e32)).
 
 "Remember to" is a lead-in (it makes a task). "Remember that" is a skip. Both follow the business rules.
