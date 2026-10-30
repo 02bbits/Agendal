@@ -5,11 +5,11 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Audit;
 use App\Support\NewPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 
@@ -47,9 +47,7 @@ class RegisterController extends Controller
             'timezone' => $input['timezone'],
         ]);
         Auth::guard('web')->login($user, remember: true);
-        DB::table('audit_events')->insert([
-            'user_id' => $user->id, 'event' => 'sign_up', 'ip' => $request->ip(), 'user_agent' => $request->userAgent(),
-        ]);
+        Audit::log($request, 'sign_up', $user->id);
 
         return response()->json(['user' => $user], 201);
     }
