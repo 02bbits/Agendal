@@ -13,6 +13,7 @@ use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\DueDateFallback;
+use App\Services\Tasks\InboxQuery;
 use App\Services\Tasks\OpenTaskLimit;
 use App\Services\Tasks\TaskPatcher;
 use DateTimeZone;
@@ -23,6 +24,19 @@ use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
+    public function index(Request $request, InboxQuery $inboxQuery): JsonResponse
+    {
+        if ($request->query('view') !== 'inbox') {
+            throw ValidationException::withMessages([
+                'view' => ['The selected view is invalid.'],
+            ]);
+        }
+
+        $timezone = (string) $request->attributes->get('timezone', 'UTC');
+
+        return response()->json($inboxQuery->for($timezone));
+    }
+
     public function store(
         StoreTaskRequest $request,
         ClockInterface $clock,
