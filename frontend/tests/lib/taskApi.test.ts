@@ -53,8 +53,14 @@ describe("httpTaskApi (Refs #21)", () => {
       done: false,
       done_at: null,
     };
+    const fakeNext = {
+      id: "t-124",
+      title: "Test Task Next",
+      done: false,
+      done_at: null,
+    };
     fetchMock.mockResolvedValueOnce(
-      new Response(JSON.stringify({ task: fakeTask }), {
+      new Response(JSON.stringify({ task: fakeTask, next: fakeNext }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       }),
@@ -69,7 +75,7 @@ describe("httpTaskApi (Refs #21)", () => {
     expect(JSON.parse(init.body as string)).toEqual({
       at: "2026-10-23T08:05:00Z",
     });
-    expect(result).toEqual({ task: fakeTask });
+    expect(result).toEqual({ task: fakeTask, next: fakeNext });
   });
 
   it("rejects with error.not_found on 404 response", async () => {

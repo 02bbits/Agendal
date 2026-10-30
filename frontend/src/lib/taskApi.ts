@@ -58,10 +58,7 @@ export const httpTaskApi: TaskApi = {
     return postLifecycle(id, "complete", at);
   },
 
-  reopen(
-    id: string,
-    at: string,
-  ): Promise<{ task: Task; removedNextId?: string }> {
+  reopen(id: string, at: string): Promise<{ task: Task; next?: Task }> {
     return postLifecycle(id, "reopen", at);
   },
 };
