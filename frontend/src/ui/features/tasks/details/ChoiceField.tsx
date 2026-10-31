@@ -1,4 +1,6 @@
 import type { ReactElement } from "react";
+import { Field } from "./Field";
+import { CONTROL_CLASS } from "./control";
 
 export interface ChoiceOption<V extends string> {
   value: V;
@@ -27,20 +29,14 @@ export function ChoiceField<V extends string>({
   const helperId = helper ? `${id}-helper` : undefined;
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor={id}
-        className="text-footnote font-medium text-ink-secondary"
-      >
-        {label}
-      </label>
+    <Field id={id} label={label} helper={helper} helperId={helperId}>
       <select
         id={id}
         value={value}
         disabled={disabled}
         aria-describedby={helperId}
         onChange={(e) => onChange(e.target.value as V)}
-        className="focus-ring h-[52px] w-full cursor-pointer rounded-field border border-control bg-surface px-4 text-body text-ink disabled:cursor-not-allowed disabled:opacity-40"
+        className={`focus-ring cursor-pointer border disabled:cursor-not-allowed disabled:opacity-40 ${CONTROL_CLASS}`}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>
@@ -48,11 +44,6 @@ export function ChoiceField<V extends string>({
           </option>
         ))}
       </select>
-      {helper && (
-        <p id={helperId} className="m-0 text-footnote text-ink-secondary">
-          {helper}
-        </p>
-      )}
-    </div>
+    </Field>
   );
 }

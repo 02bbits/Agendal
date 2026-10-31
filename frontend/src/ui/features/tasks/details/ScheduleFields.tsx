@@ -1,6 +1,8 @@
 import { useState, type ChangeEvent, type ReactElement } from "react";
 import { t, type CopyKey } from "../../../copy";
 import { scheduleError } from "../../../domain/edit";
+import { Field } from "./Field";
+import { CONTROL_CLASS } from "./control";
 
 export interface ScheduleFieldsProps {
   startTime: string | null;
@@ -56,50 +58,46 @@ export function ScheduleFields({
     }
   };
 
+  const fields = [
+    {
+      id: "task-start",
+      label: t("task.start"),
+      value: start,
+      disabled: false,
+      error: undefined,
+      onChange: handleStartChange,
+    },
+    {
+      id: "task-end",
+      label: t("task.end"),
+      value: end,
+      disabled: !start,
+      error: error ? t(error) : undefined,
+      onChange: handleEndChange,
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="task-start"
-          className="text-footnote font-medium text-ink-secondary"
+      {fields.map((field) => (
+        <Field
+          key={field.id}
+          id={field.id}
+          label={field.label}
+          error={field.error}
         >
-          {t("task.start")}
-        </label>
-        <input
-          id="task-start"
-          type="time"
-          value={start}
-          className="input focus-ring h-[52px] w-full rounded-field border-control bg-surface px-4 text-body text-ink"
-          onChange={handleStartChange}
-        />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="task-end"
-          className="text-footnote font-medium text-ink-secondary"
-        >
-          {t("task.end")}
-        </label>
-        <input
-          id="task-end"
-          type="time"
-          value={end}
-          disabled={!start}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? "task-end-error" : undefined}
-          className="input focus-ring h-[52px] w-full rounded-field border-control bg-surface px-4 text-body text-ink aria-invalid:border-error disabled:opacity-40"
-          onChange={handleEndChange}
-        />
-        {error && (
-          <p
-            id="task-end-error"
-            role="alert"
-            className="m-0 text-footnote text-error"
-          >
-            {t(error)}
-          </p>
-        )}
-      </div>
+          <input
+            id={field.id}
+            type="time"
+            value={field.value}
+            disabled={field.disabled}
+            aria-invalid={field.error ? true : undefined}
+            aria-describedby={field.error ? `${field.id}-error` : undefined}
+            className={`input focus-ring ${CONTROL_CLASS} ${field.error ? "aria-invalid:border-error" : ""} ${field.disabled ? "disabled:opacity-40" : ""}`}
+            onChange={field.onChange}
+          />
+        </Field>
+      ))}
     </div>
   );
 }

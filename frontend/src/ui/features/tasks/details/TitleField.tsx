@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from "react";
 import { t } from "../../../copy";
 import { TITLE_MAX } from "../../../domain/edit";
+import { Field } from "./Field";
+import { CONTROL_CLASS } from "./control";
 
 export interface TitleFieldProps {
   value: string;
@@ -31,13 +33,7 @@ export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="task-title"
-        className="text-footnote font-medium text-ink-secondary"
-      >
-        {t("task.title")}
-      </label>
+    <Field id="task-title" label={t("task.title")} error={error}>
       <textarea
         id="task-title"
         rows={1}
@@ -45,7 +41,7 @@ export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
         value={title}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "task-title-error" : undefined}
-        className="input focus-ring min-h-[52px] w-full resize-none rounded-field border-control bg-surface px-4 py-3 font-serif text-title font-semibold text-ink placeholder:text-ink-tertiary aria-invalid:border-error [field-sizing:content]"
+        className={`input focus-ring min-h-[52px] resize-none py-3 font-serif text-title font-semibold placeholder:text-ink-tertiary aria-invalid:border-error [field-sizing:content] ${CONTROL_CLASS}`}
         onChange={(e) => setTitle(e.target.value.replace(/\n/g, " "))}
         onBlur={handleBlur}
         onKeyDown={(e) => {
@@ -55,15 +51,6 @@ export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
           }
         }}
       />
-      {error && (
-        <p
-          id="task-title-error"
-          role="alert"
-          className="m-0 text-footnote text-error"
-        >
-          {error}
-        </p>
-      )}
-    </div>
+    </Field>
   );
 }

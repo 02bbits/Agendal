@@ -1,6 +1,8 @@
 import { useState, type ReactElement } from "react";
 import { t } from "../../../copy";
 import { NOTES_MAX } from "../../../domain/edit";
+import { Field } from "./Field";
+import { CONTROL_CLASS } from "./control";
 
 export interface NotesFieldProps {
   value: string | null;
@@ -25,23 +27,17 @@ export function NotesField({ value, onSave }: NotesFieldProps): ReactElement {
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="task-notes"
-        className="text-footnote font-medium text-ink-secondary"
-      >
-        {t("task.notes")}
-      </label>
+    <Field id="task-notes" label={t("task.notes")}>
       <textarea
         id="task-notes"
         rows={4}
         maxLength={NOTES_MAX}
         value={notes}
         placeholder={t("task.notes_add")}
-        className="textarea focus-ring min-h-[120px] w-full resize-y rounded-field border border-control bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-tertiary [field-sizing:content]"
+        className={`textarea focus-ring min-h-[120px] resize-y border py-3 placeholder:text-ink-tertiary [field-sizing:content] ${CONTROL_CLASS}`}
         onChange={(e) => setNotes(e.target.value)}
         onBlur={handleBlur}
       />
-    </div>
+    </Field>
   );
 }

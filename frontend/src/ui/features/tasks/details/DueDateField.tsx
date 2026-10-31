@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
 import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
+import { Field } from "./Field";
+import { CONTROL_CLASS } from "./control";
 
 export interface DueDateFieldProps {
   value: string | null;
@@ -12,19 +14,13 @@ export function DueDateField({
   onSave,
 }: DueDateFieldProps): ReactElement {
   return (
-    <div className="flex flex-col gap-1.5">
-      <label
-        htmlFor="task-due"
-        className="text-footnote font-medium text-ink-secondary"
-      >
-        {t("task.due")}
-      </label>
+    <Field id="task-due" label={t("task.due")}>
       <div className="flex gap-2">
         <input
           id="task-due"
           type="date"
           value={value ?? ""}
-          className="input focus-ring h-[52px] flex-1 rounded-field border-control bg-surface px-4 text-body text-ink"
+          className={`input focus-ring flex-1 ${CONTROL_CLASS}`}
           onChange={(e) => onSave(e.target.value || null)}
         />
         <Button
@@ -36,6 +32,6 @@ export function DueDateField({
           {t("common.clear")}
         </Button>
       </div>
-    </div>
+    </Field>
   );
 }
