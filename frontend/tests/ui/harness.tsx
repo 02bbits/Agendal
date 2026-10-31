@@ -6,8 +6,8 @@ import type { Task } from "../../src/ui/domain/types";
 import {
   TaskStoreProvider,
   useTaskStore,
-  type Clock,
 } from "../../src/ui/features/tasks/store";
+import type { Clock } from "../../src/ui/features/tasks/types";
 import { TODAY, projects } from "./fixtures";
 
 /** Friday 23 October 2026, 08:12 in Ho Chi Minh City. */

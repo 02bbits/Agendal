@@ -450,7 +450,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
     ).toBe("true");
   });
 
-  it("bug 2: a row never changes position after a failure (Refs #21)", async () => {
+  it("review 3: a row keeps its position after a failure (Refs #21)", async () => {
     const tasks = [
       task({ id: "t-1", title: "Task 1", due_date: TODAY }),
       task({ id: "t-2", title: "Task 2", due_date: TODAY }),
@@ -475,6 +475,34 @@ describe("Complete a task (TK-1, WF-06)", () => {
     expect(items[0]).toContain("Task 1");
     expect(items[1]).toContain("Task 2");
     expect(items[2]).toContain("Task 3");
+  });
+
+  it("review 2: a `next` in the response is not added to the list (Refs #21)", async () => {
+    const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    await act(async () => {
+      deferred.calls[0].resolve({
+        task: {
+          ...tasks[0],
+          done: true,
+          done_at: "2026-10-23T01:12:00Z",
+          updated_at: "2026-10-23T01:12:00Z",
+        },
+        next: task({
+          id: "t-next",
+          title: "Recurring next instance",
+          due_date: TODAY,
+        }),
+      });
+    });
+
+    expect(screen.queryByText("Recurring next instance")).toBeNull();
   });
 
   it("bug 3: a field changed while complete is in flight survives its failure (Refs #21)", async () => {

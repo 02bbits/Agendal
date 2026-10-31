@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { localTime, today } from "../../../lib/clock";
-import type { Clock } from "./useTaskSync";
+import type { Clock } from "./types";
 
 function msUntilNextMidnight(clock: Clock): number {
   const at = clock.now();

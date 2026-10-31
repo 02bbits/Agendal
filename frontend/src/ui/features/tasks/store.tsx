@@ -3,14 +3,16 @@ import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
 import type { Task } from "../../domain/types";
-import * as sync from "./useTaskSync";
+import * as types from "./types";
+import { useTaskSync } from "./useTaskSync";
 import { createZoneFormatter, useToday } from "./useToday";
 
+export * from "./types";
 export * from "./useTaskSync";
 
-const Ctx = React.createContext<sync.TaskStore | null>(null);
+const Ctx = React.createContext<types.TaskStore | null>(null);
 
-export function useTaskStore(): sync.TaskStore {
+export function useTaskStore(): types.TaskStore {
   const store = React.useContext(Ctx);
   if (!store) throw new Error("useTaskStore needs a <TaskStoreProvider>");
   return store;
@@ -23,16 +25,16 @@ export function TaskStoreProvider({
   initialProjects,
   timeFormat = "24h",
   children,
-}: sync.TaskStoreProviderProps) {
-  const { tasks, change, getTask } = sync.useTaskSync(initialTasks);
+}: types.TaskStoreProviderProps) {
+  const { tasks, change, getTask } = useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const [settling, setSettling] = React.useState<ReadonlySet<string>>(
     new Set(),
   );
   const toastSeq = React.useRef(0);
-  const settleTimers = React.useRef<sync.SettleTimerMap>(new Map());
-  const lifecycleRef = React.useRef<sync.LifecycleFn>(() => {});
+  const settleTimers = React.useRef<types.SettleTimerMap>(new Map());
+  const lifecycleRef = React.useRef<types.LifecycleFn>(() => {});
 
   React.useEffect(() => {
     const timers = settleTimers.current;
@@ -61,7 +63,7 @@ export function TaskStoreProvider({
   );
 
   const showToast = React.useCallback(
-    (d: sync.ToastDraft) => setToast({ ...d, id: ++toastSeq.current }),
+    (d: types.ToastDraft) => setToast({ ...d, id: ++toastSeq.current }),
     [],
   );
   const dismissToast = React.useCallback(
@@ -85,7 +87,7 @@ export function TaskStoreProvider({
       const nextTimer = setTimeout(() => {
         settleTimers.current.delete(id);
         setSettling((s) => new Set([...s].filter((x) => x !== id)));
-      }, sync.SETTLE_MS);
+      }, types.SETTLE_MS);
       settleTimers.current.set(id, nextTimer);
     },
     [clearSettle],
@@ -93,12 +95,12 @@ export function TaskStoreProvider({
 
   const handleSaveError = React.useCallback(
     (error: unknown, retry: () => void) =>
-      showToast(sync.formatSaveErrorToast(error, retry)),
+      showToast(types.formatSaveErrorToast(error, retry)),
     [showToast],
   );
 
   const mutateLifecycle = React.useCallback(
-    (id: string, action: sync.LifecycleAction) => {
+    (id: string, action: types.LifecycleAction) => {
       const at = clock.now().toISOString();
       const isComplete = action === "complete";
       if (isComplete) {
@@ -152,7 +154,7 @@ export function TaskStoreProvider({
     [mutateLifecycle],
   );
 
-  const store: sync.TaskStore = React.useMemo(
+  const store: types.TaskStore = React.useMemo(
     () => ({
       tasks,
       projects,
