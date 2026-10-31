@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { cx } from "../../../components/cx";
 import { Field } from "./Field";
 import { CONTROL_CLASS } from "./control";
@@ -14,7 +14,7 @@ export interface ChoiceFieldProps<V extends string> {
   value: V;
   options: readonly ChoiceOption<V>[];
   disabled?: boolean;
-  helper?: string;
+  helper?: ReactNode;
   onChange: (value: V) => void;
 }
 
@@ -39,7 +39,7 @@ export function ChoiceField<V extends string>({
         onChange={(e) => onChange(e.target.value as V)}
         className={cx(
           CONTROL_CLASS,
-          "focus-ring cursor-pointer border aria-invalid:border-error disabled:cursor-not-allowed disabled:opacity-40",
+          "focus-ring cursor-pointer border disabled:cursor-not-allowed disabled:opacity-40",
         )}
       >
         {options.map((option) => (

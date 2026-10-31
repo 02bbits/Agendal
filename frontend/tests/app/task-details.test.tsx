@@ -324,4 +324,52 @@ describe("Task details page /tasks/[id]", () => {
     );
     expect(patchCalls).toHaveLength(0);
   });
+
+  it("no project + projects 404 → disabled select shows No project, helper and Retry, no PATCH", async () => {
+    const fakeTask = task({
+      id: "t-1",
+      title: "No Project Task",
+      project_id: null,
+    });
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-1") return json(200, fakeTask);
+      if (url === "/api/v1/projects")
+        return json(404, { error: { code: "error.not_found" } });
+      return json(404, {});
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    // The project select is disabled
+    const select = (await screen.findByLabelText(
+      t("task.project"),
+    )) as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+
+    // Shows "No project"
+    expect(screen.getByText(t("project.none"))).toBeTruthy();
+    expect(select.value).toBe("");
+
+    // Shows helper and Retry
+    expect(screen.getByText(t("project.load_failed"))).toBeTruthy();
+    const retryBtn = screen.getByRole("button", { name: t("common.retry") });
+    expect(retryBtn).toBeTruthy();
+
+    // No PATCH was sent
+    const patchCalls = fetchMock.mock.calls.filter(
+      ([, init]) => init?.method === "PATCH",
+    );
+    expect(patchCalls).toHaveLength(0);
+  });
 });
