@@ -1,6 +1,28 @@
 import { api } from "./api";
+import { ApiRequestError } from "./apiError";
 import type { TaskApi } from "../ui/domain/api";
 import type { Task } from "../ui/domain/types";
+
+async function handleResponse<T>(response: Response): Promise<T> {
+  if (!response.ok) {
+    let errorCode: string | undefined;
+    let requestId: string | undefined;
+    try {
+      const data = await response.json();
+      errorCode = data?.error?.code;
+      requestId = data?.error?.request_id;
+    } catch {
+      // Body is not JSON
+    }
+    throw new ApiRequestError(
+      errorCode ?? "error.generic",
+      response.status,
+      requestId,
+    );
+  }
+
+  return response.json();
+}
 
 async function postLifecycle<T>(
   id: string,
@@ -15,18 +37,7 @@ async function postLifecycle<T>(
     body: JSON.stringify({ at }),
   });
 
-  if (!response.ok) {
-    let errorCode: string | undefined;
-    try {
-      const data = await response.json();
-      errorCode = data?.error?.code;
-    } catch {
-      // Body is not JSON
-    }
-    throw new Error(errorCode || "error.generic");
-  }
-
-  return response.json();
+  return handleResponse<T>(response);
 }
 
 export const httpTaskApi: TaskApi = {

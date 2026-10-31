@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ApiRequestError } from "@/lib/apiError";
 import { httpTaskApi } from "@/lib/taskApi";
 
 describe("httpTaskApi (Refs #21)", () => {
@@ -96,16 +97,58 @@ describe("httpTaskApi (Refs #21)", () => {
     ).rejects.toThrow("error.not_found");
   });
 
-  it("rejects with error.generic when error body has no code", async () => {
+  it("rejects with ApiRequestError on 422 task.limit with code, status 422, and requestId", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: { code: "task.limit", request_id: "req-limit-422" },
+        }),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    try {
+      await httpTaskApi.complete("t-123", "2026-10-23T08:00:00Z");
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiRequestError);
+      const apiErr = err as ApiRequestError;
+      expect(apiErr.code).toBe("task.limit");
+      expect(apiErr.status).toBe(422);
+      expect(apiErr.requestId).toBe("req-limit-422");
+      expect(apiErr.message).toBe("task.limit");
+    }
+  });
+
+  it("rejects with code error.generic and status 500 when response is 500 without JSON", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response("Internal Server Error", {
         status: 500,
       }),
     );
 
+    try {
+      await httpTaskApi.complete("t-123", "2026-10-23T08:00:00Z");
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiRequestError);
+      const apiErr = err as ApiRequestError;
+      expect(apiErr.code).toBe("error.generic");
+      expect(apiErr.status).toBe(500);
+      expect(apiErr.requestId).toBeUndefined();
+      expect(apiErr.message).toBe("error.generic");
+    }
+  });
+
+  it("passes through fetch TypeError on network failure", async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+
     await expect(
       httpTaskApi.complete("t-123", "2026-10-23T08:00:00Z"),
-    ).rejects.toThrow("error.generic");
+    ).rejects.toThrow(TypeError);
   });
 
   it("encodes the id in the URL", async () => {
