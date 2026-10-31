@@ -2,7 +2,7 @@ import type { ReactElement } from "react";
 import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
 import { useTaskStore } from "../store";
-import { ChoiceField, type ChoiceOption } from "./ChoiceField";
+import { ChoiceField } from "./ChoiceField";
 
 export interface ProjectFieldProps {
   projectId: string | null;
@@ -19,7 +19,9 @@ export function ProjectField({
 }: ProjectFieldProps): ReactElement {
   const store = useTaskStore();
   const knownProject = projectId
-    ? store.projects.find((p) => p.id === projectId)
+    ? store.projects.find((p) => {
+        return p.id === projectId;
+      })
     : undefined;
   const isProjectInList = projectId === null || knownProject !== undefined;
   const isNormal = projectsStatus === "ready" && isProjectInList;
@@ -31,7 +33,7 @@ export function ProjectField({
       ? t("project.none")
       : (knownProject?.name ?? t("project.load_failed"));
 
-  const options: readonly ChoiceOption<string>[] = isNormal
+  const options = isNormal
     ? [
         { value: "", label: t("project.none") },
         ...store.projects.map((p) => ({ value: p.id, label: p.name })),
@@ -50,14 +52,16 @@ export function ProjectField({
   ) : undefined;
 
   return (
-    <ChoiceField<string>
+    <ChoiceField
       id="task-project"
       label={t("task.project")}
       value={projectId ?? ""}
       options={options}
       disabled={disabled}
       helper={helper}
-      onChange={(v) => onChange(v ? v : null)}
+      onChange={(v) => {
+        onChange(v ? v : null);
+      }}
     />
   );
 }
