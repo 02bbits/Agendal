@@ -28,7 +28,10 @@ function TodayList() {
     <>
       <ProgressSummary
         progress={progress}
-        next={nextUp(open.filter((x) => !x.done))}
+        next={nextUp(
+          open.filter((x) => !x.done),
+          store.today,
+        )}
         timeFormat={store.timeFormat}
       />
       <ul className="m-0 list-none p-0" aria-label="Today">
@@ -116,11 +119,38 @@ describe("inboxProgress (LV-1)", () => {
 
   it("picks the next timed task first", () => {
     const tasks = [
-      task({ title: "untimed" }),
-      task({ title: "later", start_time: "20:00" }),
-      task({ title: "sooner", start_time: "16:00" }),
+      task({ title: "untimed", due_date: TODAY }),
+      task({ title: "later", due_date: TODAY, start_time: "20:00" }),
+      task({ title: "sooner", due_date: TODAY, start_time: "16:00" }),
     ];
-    expect(nextUp(tasks)!.title).toBe("sooner");
+    expect(nextUp(tasks, TODAY)!.title).toBe("sooner");
+  });
+
+  it("bug 7: an overdue 07:00 task from yesterday and today's 16:00 task -> next is today's (Refs #21)", () => {
+    const overdueYesterday = task({
+      title: "Overdue yesterday",
+      due_date: "2026-10-22",
+      start_time: "07:00",
+    });
+    const todayTask = task({
+      title: "Today meeting",
+      due_date: TODAY,
+      start_time: "16:00",
+    });
+    expect(nextUp([overdueYesterday, todayTask], TODAY)!.title).toBe(
+      "Today meeting",
+    );
+  });
+
+  it("bug 9: total 0 -> ProgressSummary renders nothing (Refs #21)", () => {
+    const { container } = render(
+      <ProgressSummary
+        progress={{ done: 0, total: 0 }}
+        next={null}
+        timeFormat="24h"
+      />,
+    );
+    expect(container.firstChild).toBeNull();
   });
 });
 
