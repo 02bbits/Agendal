@@ -21,11 +21,11 @@ export interface WhenSectionProps {
 
 export function WhenSection({ task, onSave }: WhenSectionProps): ReactElement {
   const store = useTaskStore();
-  const zone =
-    typeof store.clock.timeZone === "function"
-      ? store.clock.timeZone()
-      : store.clock.timeZone;
-  const isReminderPast = reminderPast(task, store.clock.now(), zone);
+  const isReminderPast = reminderPast(
+    task,
+    store.clock.now(),
+    store.clock.timeZone,
+  );
 
   const reminderHelper = !task.due_date
     ? t("task.reminder_needs_date")

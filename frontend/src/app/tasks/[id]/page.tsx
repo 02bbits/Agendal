@@ -59,10 +59,9 @@ export default function TaskDetailsPage({
   const [errorStatus, setErrorStatus] = useState<
     "not_found" | "generic" | null
   >(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
-  const load = () => {
-    setLoading(true);
-    setErrorStatus(null);
+  useEffect(() => {
     let cancelled = false;
 
     Promise.all([getTask(id), projects().catch(() => [])])
@@ -87,22 +86,22 @@ export default function TaskDetailsPage({
     return () => {
       cancelled = true;
     };
-  };
+  }, [id, reloadKey]);
 
   useEffect(() => {
-    return load();
-  }, [id]);
-
-  useEffect(() => {
-    if (!loading) {
-      setShowSkeleton(false);
-      return;
-    }
+    if (!loading) return;
     const timer = setTimeout(() => {
       setShowSkeleton(true);
     }, SKELETON_DELAY_MS);
     return () => clearTimeout(timer);
   }, [loading]);
+
+  const retry = () => {
+    setLoading(true);
+    setShowSkeleton(false);
+    setErrorStatus(null);
+    setReloadKey((k) => k + 1);
+  };
 
   if (loading) {
     if (!showSkeleton) return null;
@@ -138,7 +137,7 @@ export default function TaskDetailsPage({
         <p className="text-body text-ink-secondary">
           {t("error.generic", { request_id: "-" })}
         </p>
-        <Button variant="secondary" onClick={load}>
+        <Button variant="secondary" onClick={retry}>
           {t("common.retry")}
         </Button>
       </div>

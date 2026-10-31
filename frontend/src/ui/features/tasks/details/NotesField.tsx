@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { t } from "../../../copy";
 import { NOTES_MAX } from "../../../domain/edit";
 
@@ -9,10 +9,12 @@ export interface NotesFieldProps {
 
 export function NotesField({ value, onSave }: NotesFieldProps): ReactElement {
   const [notes, setNotes] = useState(value ?? "");
+  const [prevValue, setPrevValue] = useState(value);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     setNotes(value ?? "");
-  }, [value]);
+  }
 
   const handleBlur = () => {
     const trimmed = notes.trim() ? notes : null;

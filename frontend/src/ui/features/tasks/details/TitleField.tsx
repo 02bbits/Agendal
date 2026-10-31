@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { t } from "../../../copy";
 import { TITLE_MAX } from "../../../domain/edit";
 
@@ -9,11 +9,13 @@ export interface TitleFieldProps {
 
 export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
   const [title, setTitle] = useState(value);
+  const [prevValue, setPrevValue] = useState(value);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  if (value !== prevValue) {
+    setPrevValue(value);
     setTitle(value);
-  }, [value]);
+  }
 
   const handleBlur = () => {
     const trimmed = title.trim();

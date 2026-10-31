@@ -1,9 +1,4 @@
-import {
-  useEffect,
-  useState,
-  type ChangeEvent,
-  type ReactElement,
-} from "react";
+import { useState, type ChangeEvent, type ReactElement } from "react";
 import { t, type CopyKey } from "../../../copy";
 import { scheduleError } from "../../../domain/edit";
 
@@ -24,12 +19,16 @@ export function ScheduleFields({
   const [start, setStart] = useState(startTime ?? "");
   const [end, setEnd] = useState(endTime ?? "");
   const [error, setError] = useState<CopyKey | null>(null);
+  const [prevStart, setPrevStart] = useState(startTime);
+  const [prevEnd, setPrevEnd] = useState(endTime);
 
-  useEffect(() => {
+  if (startTime !== prevStart || endTime !== prevEnd) {
+    setPrevStart(startTime);
+    setPrevEnd(endTime);
     setStart(startTime ?? "");
     setEnd(endTime ?? "");
     setError(scheduleError(startTime, endTime));
-  }, [startTime, endTime]);
+  }
 
   const handleStartChange = (e: ChangeEvent<HTMLInputElement>) => {
     const nextStart = e.target.value;
