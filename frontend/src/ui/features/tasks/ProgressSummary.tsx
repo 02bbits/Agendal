@@ -16,6 +16,7 @@ export function ProgressSummary({
   timeFormat,
 }: ProgressSummaryProps) {
   const { done, total } = progress;
+  if (total === 0) return null;
   const left = total - done;
   const r = 15;
   const circumference = 2 * Math.PI * r;

@@ -14,7 +14,11 @@ async function handleResponse<T>(response: Response): Promise<T> {
     } catch {
       // Body is not JSON
     }
-    throw new ApiRequestError(errorCode || "error.generic", requestId);
+    throw new ApiRequestError(
+      errorCode ?? "error.generic",
+      response.status,
+      requestId,
+    );
   }
 
   return response.json();
