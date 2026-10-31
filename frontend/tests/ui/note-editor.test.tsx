@@ -1,18 +1,20 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { loadDraft, saveDraft } from "../../src/lib/draft";
+import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
 import { NoteEditor } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 
 vi.mock("../../src/lib/draft", () => ({
   loadDraft: vi.fn(),
   saveDraft: vi.fn(),
+  clearDraft: vi.fn(),
 }));
 
 beforeEach(() => {
   vi.mocked(loadDraft).mockReset().mockResolvedValue("");
   vi.mocked(saveDraft).mockReset().mockResolvedValue();
+  vi.mocked(clearDraft).mockReset().mockResolvedValue();
 });
 
 const field = () => screen.getByRole("textbox", { name: "Your note" });
@@ -86,13 +88,69 @@ describe("NoteEditor (IM-41)", () => {
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 
-  it("closes with × and Escape without asking", async () => {
+  it("closes an empty editor at once", async () => {
+    const onClose = vi.fn();
+    render(<NoteEditor onClose={onClose} />);
+    await userEvent.type(field(), "  ");
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it.each([
+    ["×", () => userEvent.click(screen.getByRole("button", { name: "Close" }))],
+    ["Escape", () => userEvent.keyboard("{Escape}")],
+  ])(
+    "%s with text asks first, and Keep editing goes back to the text",
+    async (_, close) => {
+      const onClose = vi.fn();
+      render(<NoteEditor onClose={onClose} />);
+      await userEvent.type(field(), "unsent");
+      await close();
+      const dialog = screen.getByRole("alertdialog", {
+        name: "Discard this note?",
+      });
+      expect(dialog).toBeTruthy();
+      expect(onClose).not.toHaveBeenCalled();
+      await expectAxeCleanInBothThemes();
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: "Keep editing" }),
+      );
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect((field() as HTMLTextAreaElement).value).toBe("unsent");
+      expect(onClose).not.toHaveBeenCalled();
+    },
+  );
+
+  it("Discard clears the draft and closes without saving the text again", async () => {
+    const onClose = vi.fn();
+    const { unmount } = render(<NoteEditor onClose={onClose} />);
+    await userEvent.type(field(), "unsent");
+    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: "Discard" }));
+    expect(clearDraft).toHaveBeenCalledOnce();
+    expect(onClose).toHaveBeenCalledOnce();
+    unmount();
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("Back with text asks first and keeps the editor's history entry", async () => {
     const onClose = vi.fn();
     render(<NoteEditor onClose={onClose} />);
     await userEvent.type(field(), "unsent");
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    await userEvent.keyboard("{Escape}");
-    expect(onClose).toHaveBeenCalledTimes(2);
+    await act(async () => {
+      window.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    expect(onClose).not.toHaveBeenCalled();
+    await act(async () => {
+      window.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(field()).toBe(screen.getByRole("textbox", { name: "Your note" }));
   });
 
   it("saves the draft 500 ms after the last keystroke (T-NC-101)", async () => {

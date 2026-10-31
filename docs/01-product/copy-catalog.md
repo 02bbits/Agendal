@@ -18,6 +18,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `common.retry` † | Retry | Error toasts and banners |
 | `common.done` | Done | Note result |
 | `common.discard` † | Discard changes? | Closing a sheet with edits. Buttons: Discard / Keep editing |
+| `common.discard_action` † | Discard | Button in the "Discard this note?" dialog |
+| `common.keep_editing` † | Keep editing | Button in the same dialog |
 | `common.back` | Back | Back button accessible name |
 
 ## Account and access (AA)
@@ -79,6 +81,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up |
 | `note.needs_look_other` † | {count} need a look. | Same |
 | `note.couldnt_process` † | Couldn't turn this note into tasks. Tap to edit it. | Notes card, for a queued note rejected with a `422` |
+| `note.discard_title` † | Discard this note? | Closing the editor with text |
+| `note.discard_body` † | What you wrote won't be kept. | Same dialog |
 | `note.draft_restored` † | Your unsent note is back. | Editor, after a restored draft ([UX-13](ux-standards.md#ux-13)) |
 | `task.new` | New task | Sheet title ([NC-7](../03-modules/NC-note-capture.md#nc-7)) |
 | `task.title_only` | Only a title is needed | Sheet helper |

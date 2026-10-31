@@ -6,10 +6,11 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { loadDraft, saveDraft } from "../../../lib/draft";
+import { clearDraft, loadDraft, saveDraft } from "../../../lib/draft";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
+import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
 import { XIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
@@ -25,7 +26,7 @@ const EXAMPLES = [
 const VISIBLE = /[^\s​-‍⁠﻿]/;
 
 export interface NoteEditorProps {
-  /** Called by ×, Escape and Back. The text is saved as a draft, so nothing asks first (UX-13). */
+  /** Called when the editor closes: at once when it is empty, otherwise after Discard (UX-13). */
   onClose: () => void;
   /** An earlier unsent note was put back in the editor (`note.draft_restored`). */
   onDraftRestored?: () => void;
@@ -53,8 +54,21 @@ export function NoteEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const titleId = useId();
-  useModalFocus(editorRef, textRef, true, onClose);
-  useHistoryEntry(true, onClose);
+  const [confirming, setConfirming] = useState(false);
+  // ×, Escape and Back ask first when there is text; the draft only guards against a crash
+  const requestClose = () => {
+    if (confirming) setConfirming(false);
+    else if (VISIBLE.test(latest.current)) setConfirming(true);
+    else return onClose();
+    return false;
+  };
+  const discard = () => {
+    dirty.current = false;
+    clearDraft().catch(() => {});
+    onClose();
+  };
+  useModalFocus(editorRef, textRef, true, requestClose);
+  useHistoryEntry(true, requestClose);
 
   // Focus runs in the opener's tap, before paint: iOS only opens the keyboard for focus
   // that happens inside the gesture, and an effect that waits a frame is too late (NC §2.1)
@@ -124,54 +138,73 @@ export function NoteEditor({
   };
 
   return (
-    <div
-      ref={editorRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby={titleId}
-      className="fixed inset-x-0 top-0 bottom-[var(--keyboard-inset,0px)] z-[70] flex flex-col bg-paper"
-    >
-      <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col px-gutter md:max-w-[712px] md:px-gutter-wide">
-        <div className="flex min-h-14 items-center pt-[env(safe-area-inset-top)]">
-          <IconButton
-            plain
-            label={t("common.close")}
-            icon={<XIcon />}
-            onClick={onClose}
+    <>
+      <div
+        ref={editorRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="fixed inset-x-0 top-0 bottom-[var(--keyboard-inset,0px)] z-[70] flex flex-col bg-paper"
+      >
+        <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col px-gutter md:max-w-[712px] md:px-gutter-wide">
+          <div className="flex min-h-14 items-center pt-[env(safe-area-inset-top)]">
+            <IconButton
+              plain
+              label={t("common.close")}
+              icon={<XIcon />}
+              onClick={requestClose}
+            />
+            <h2 id={titleId} className="sr-only">
+              {t("note.capture_open")}
+            </h2>
+          </div>
+          <textarea
+            ref={textRef}
+            value={text}
+            onChange={(event) => edit(event.target.value)}
+            onKeyDown={onKeyDown}
+            aria-label={t("note.text_label")}
+            placeholder={t("note.placeholder")}
+            className="focus:outline-none min-h-0 w-full flex-1 resize-none border-0 bg-transparent py-2 font-serif text-dialog text-ink placeholder:text-ink-tertiary"
           />
-          <h2 id={titleId} className="sr-only">
-            {t("note.capture_open")}
-          </h2>
-        </div>
-        <textarea
-          ref={textRef}
-          value={text}
-          onChange={(event) => edit(event.target.value)}
-          onKeyDown={onKeyDown}
-          aria-label={t("note.text_label")}
-          placeholder={t("note.placeholder")}
-          className="focus:outline-none min-h-0 w-full flex-1 resize-none border-0 bg-transparent py-2 font-serif text-dialog text-ink placeholder:text-ink-tertiary"
-        />
-        {!VISIBLE.test(text) && (
-          <ul className="m-0 flex list-none flex-wrap gap-2 p-0 pb-3">
-            {EXAMPLES.map((key) => (
-              <li key={key}>
-                <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
-              </li>
-            ))}
-          </ul>
-        )}
-        <div className="flex justify-end pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]">
-          <Button
-            variant="primary"
-            size="lg"
-            disabled={!canSubmit}
-            onClick={submit}
-          >
-            {t("note.make_tasks")}
-          </Button>
+          {!VISIBLE.test(text) && (
+            <ul className="m-0 flex list-none flex-wrap gap-2 p-0 pb-3">
+              {EXAMPLES.map((key) => (
+                <li key={key}>
+                  <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex justify-end pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]">
+            <Button
+              variant="primary"
+              size="lg"
+              disabled={!canSubmit}
+              onClick={submit}
+            >
+              {t("note.make_tasks")}
+            </Button>
+          </div>
         </div>
       </div>
-    </div>
+      <Dialog
+        open={confirming}
+        history={false}
+        title={t("note.discard_title")}
+        description={t("note.discard_body")}
+        onClose={() => setConfirming(false)}
+        actions={
+          <>
+            <Button variant="destructive" onClick={discard}>
+              {t("common.discard_action")}
+            </Button>
+            <Button onClick={() => setConfirming(false)}>
+              {t("common.keep_editing")}
+            </Button>
+          </>
+        }
+      />
+    </>
   );
 }

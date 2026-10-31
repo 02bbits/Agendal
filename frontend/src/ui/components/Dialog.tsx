@@ -12,6 +12,8 @@ export interface DialogProps {
   /** Stacked buttons; the safe exit (Cancel) goes last and destructive buttons are never the default. */
   actions: ReactNode;
   children?: ReactNode;
+  /** Takes a history entry so Back closes it. Off when the dialog sits over a screen that has its own entry. */
+  history?: boolean;
 }
 
 export function Dialog({
@@ -21,13 +23,14 @@ export function Dialog({
   onClose,
   actions,
   children,
+  history = true,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
   useModalFocus(dialogRef, titleRef, open, onClose);
-  useHistoryEntry(open, onClose);
+  useHistoryEntry(open && history, onClose);
 
   if (!open) return null;
 

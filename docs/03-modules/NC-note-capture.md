@@ -53,7 +53,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Opening the editor restores it with `note.draft_restored`.
   - A successful submit clears it.
   - One draft per user per device. It is wiped on sign-out ([NF-19](../05-quality/nfr.md#nf-19)).
-- **Close:** × or Back closes without asking, because the draft is kept.
+- **Close:** an empty editor closes at once. With text, × , Escape and Back ask `note.discard_title` with *Discard* and *Keep editing*. Discard clears the draft and closes; Keep editing returns to the text. The draft is for when the app closes mid-note ([NC-E1](#nc-e1)).
 
 ### 2.2 Submit
 
@@ -165,7 +165,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 
