@@ -106,6 +106,7 @@ it('reads the task from before the target and the new when only after it', funct
     'a preferred date in the subject' => ['move pay rent on the 1st to the 5th', 'rent', ['due_date' => '2026-11-05']],
     'a numeric date in the subject' => ['move pay rent due 1/11 to 5/11', 'rent', ['due_date' => '2026-11-05']],
     'Vietnamese day numbers' => ['chuyển pay rent ngày 1 sang ngày 5', 'rent', ['due_date' => '2026-11-05']],
+    'a US date' => ['move pay rent to 11/20', 'rent', ['due_date' => '2026-11-20']],
     'a target word in the title' => ['move talk to bank to friday', 'bank', ['due_date' => '2026-10-30']],
 ]);
 
@@ -239,6 +240,21 @@ it('tells a weekly report from a monthly one', function () {
     expect(matchCommand('move weekly report to friday', CommandAction::Reschedule, $open)->change?->taskId)->toBe('w')
         ->and(matchCommand('move report to friday', CommandAction::Reschedule, $open)->isTie())->toBeTrue();
 });
+
+it('makes a task of a delete with a deadline when no task matches, and deletes one that does (NU-E29)', function (string $word) {
+    $unmatched = matchCommand("cancel netflix {$word} friday", CommandAction::Delete, [])->newTask;
+    $matched = matchCommand("cancel netflix {$word} friday", CommandAction::Delete, [['id' => 'n', 'title' => 'Netflix']]);
+
+    expect([$unmatched?->title, $unmatched?->dueDate])->toBe(['Cancel netflix', '2026-10-30'])
+        ->and([$matched->change?->taskId, $matched->change?->delete])->toBe(['n', true])
+        ->and(matchCommand("cancel netflix {$word}", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
+})->with(fn (): array => NoteRules::values('deadline_prefix'));
+
+it('makes a task of a delete with a place when no task matches, but not of one with a time (NU-E29)', function (string $word) {
+    expect(matchCommand("drop the kids {$word} school", CommandAction::Delete, [])->newTask?->title)->toBe("Drop the kids {$word} school")
+        ->and(matchCommand("drop the meeting {$word} 3pm", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound)
+        ->and(matchCommand("drop the meeting {$word} noon", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
+})->with(fn (): array => NoteRules::values('place_prefix'));
 
 it('builds an unmatched reschedule from the target date, not the subject one (NU-E29)', function () {
     $new = matchCommand('move standup on monday to tuesday 10am', CommandAction::Reschedule, [])->newTask;

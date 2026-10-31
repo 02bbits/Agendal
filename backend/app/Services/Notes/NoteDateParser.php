@@ -14,6 +14,8 @@ final class NoteDateParser
 {
     private const DAYS_PER_WEEK = 7;
 
+    private const MONTHS_PER_YEAR = 12;
+
     private const SATURDAY = 6;
 
     private const SUNDAY = 0;
@@ -38,7 +40,8 @@ final class NoteDateParser
 
                 continue;
             }
-            $prefix = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix')) ?? '';
+            // A deadline word ("until", "chậm nhất") prefers its date as much as "by" or "on" does.
+            $prefix = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix').'|'.NoteVocabulary::phrases('deadline_prefix')) ?? '';
             $candidate = [...$candidate, 'preferred' => $prefix !== '', 'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix)];
             $best = $best === null || $this->wins($candidate, $best) ? $candidate : $best;
         }
@@ -182,7 +185,12 @@ final class NoteDateParser
             preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
             foreach ($matches as $m) {
                 $year = ($m['year'][0] ?? '') !== '' ? (int) $m['year'][0] : null;
-                $found[] = ['date' => $this->explicitDate($context, (int) $m['day'][0], (int) $m['month'][0], $year), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
+                [$day, $month] = [(int) $m['day'][0], (int) $m['month'][0]];
+                // Day first ("26/10"); "11/20" can only be month first, as written in the US.
+                if ($month > self::MONTHS_PER_YEAR && $day <= self::MONTHS_PER_YEAR) {
+                    [$day, $month] = [$month, $day];
+                }
+                $found[] = ['date' => $this->explicitDate($context, $day, $month, $year), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
             }
         }
 
@@ -198,13 +206,12 @@ final class NoteDateParser
     private function daysOfMonth(string $text, NoteContext $context): array
     {
         $months = implode('|', NoteVocabulary::family('month'));
-        $notFollowedBy = implode('|', [
-            NoteVocabulary::phrases('date_separator'), NoteVocabulary::phrases('full_date_separator'),
-            NoteVocabulary::phrases('month_word'), NoteVocabulary::phrases('count_word'), NoteVocabulary::phrases('month_link'), $months,
-        ]);
+        // "ngày 10/11" is a numeric date, but "ngày 10 - done" and "ngày 10." end at the day.
+        $separators = NoteVocabulary::phrases('date_separator').'|'.NoteVocabulary::phrases('full_date_separator');
+        $notFollowedBy = implode('|', [NoteVocabulary::phrases('month_word'), NoteVocabulary::phrases('count_word'), NoteVocabulary::phrases('month_link'), $months]);
         $ordinal = NoteVocabulary::phrases('ordinal_suffix');
         $pattern = '~(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+(?<day>\d{1,2})|(?:(?:'.NoteVocabulary::phrases('ordinal_day_word').')\s+)?(?<ordinalDay>\d{1,2})(?:'.$ordinal.'))'
-            .'(?![\p{L}\p{N}])(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
+            .'(?![\p{L}\p{N}])(?!\s*(?:'.$separators.')\s*\d)(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         $found = [];
         foreach ($matches as $m) {

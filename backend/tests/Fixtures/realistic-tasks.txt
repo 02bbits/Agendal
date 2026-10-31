@@ -1,0 +1,114 @@
+# Notes that are tasks only, for RealisticNotes::tasks(): every item must be read as a task, never a command or skip.
+# Written as unseen holdouts in two rounds; add each task a reviewer or user finds misread.
+Pick up dry cleaning Thursday
+pay the phone bill before the 20th
+renew gym membership next month
+fix the leaking tap this weekend
+text Linh about the party tonight 8pm
+order new headphones online
+return library book by Monday 6pm
+book dentist cleaning for Nov 12
+write cover letter for the internship
+grocery run after work tomorrow
+meeting w/ Prof. Tran 3:15pm thursday
+call insurance company re: claim #4521
+submit expense report EOD
+buy flowers for mom's bday 11/15
+clean the fridge sunday morning
+update linkedin profile
+finish chapter 6 of the novel by friday night
+Pay credit card bill - URGENT
+send birthday card to Grandpa
+plan team lunch next wednesday 12:30
+mua bỉm cho bé chiều nay
+đặt vé máy bay đi Đà Nẵng tháng 12
+gửi báo cáo tuần cho sếp trước 5h chiều thứ 6
+đi nha sĩ lúc 9h30 sáng thứ 3
+nấu cơm tối nay 6h
+đóng học phí cho con trước ngày 10
+sửa máy giặt cuối tuần này
+gọi điện cho bác sĩ hẹn tái khám
+họp phụ huynh lúc 7h tối thứ 5
+mua thuốc cho bà ngày mai
+chuẩn bị slide thuyết trình môn Marketing
+rút tiền ở ATM chiều mai
+đăng ký khóa học tiếng Nhật tuần sau
+viết email xin nghỉ phép thứ 2 tới
+review code cho Nam trước 3pm
+deploy bản fix lên production tối nay
+backup ảnh lên Google Drive
+họp sprint planning 10h sáng thứ 2
+viết unit test cho module thanh toán
+mua cà phê, sữa tươi và bánh quy
+call the vet @ 5pm tomorrow
+PAY WATER BILL BY FRIDAY
+buy batteries + light bulbs
+pick up kids at 3:30 today
+dinner with Mai's family sat 7pm
+cancel the gym trial before nov 28
+email landlord about the heater asap!!
+print boarding pass the day before the flight
+take out the trash tonight
+meet Huy at the library at noon
+prep for interview w/ Google on 11/24
+order cake for Tom's farewell, friday 2pm
+buy gift card for Secret Santa by Dec 15th
+fix bug #231 in the checkout page
+draft Q4 budget proposal for the board
+check tire pressure this weekend 🚗
+renew domain name before 2026-12-01
+call Mom on her birthday 12/3
+schedule a call with the designer next tue at 10:30am
+read 2 chapters every night
+học bài lúc 17h
+họp nhóm 5h30 chiều mai
+nộp đơn xin học bổng trước 23/11
+mua quà Giáng sinh cho cả nhà
+gặp khách hàng ở Quận 1 lúc 14h30 thứ 4
+đi khám mắt sáng thứ 7 tuần sau
+trả nợ cho Tùng 500k cuối tháng
+lên kế hoạch du lịch Tết
+đóng tiền mạng trước ngày 5 tháng 12
+in tài liệu ôn thi cuối kỳ
+đi chơi với nhóm bạn tối chủ nhật
+gửi hồ sơ cho phòng nhân sự sáng mai 9h
+dọn tủ quần áo
+thay dầu xe máy tuần này
+nhắc bố uống thuốc huyết áp mỗi sáng
+ôn tập chương 3 môn Kinh tế vĩ mô
+viết báo cáo thực tập
+cập nhật CV lên TopCV
+mua sách giáo khoa cho em trai
+gọi lại cho chị Hà lúc 4h chiều
+cancel netflix subscription before the 10th
+xóa ảnh cũ trong máy trước thứ 6
+water the garden at 6 tmrw
+call Anh Khoa about the contract on wed
+sign the lease before Nov 30th
+book a cab to the airport for 5am sunday
+send the invoice to ACME by end of day
+attend Lan's wedding on 12/20
+buy a new charger
+renew driver's license before it expires on 1/15/2027
+remove old files from the shared drive by friday
+drop the kids at school 7:15
+pay electricity 450k before the 25th
+submit the visa application next Monday morning
+practice presentation 3 times before Thursday
+schedule annual check-up in December
+pick up package from post office after 5pm
+hủy gói cước điện thoại trước ngày 30
+xóa tài khoản Facebook cũ trước cuối tháng
+mua vé xem phim tối thứ 6 lúc 19h
+dời lịch cắt tóc
+học lái xe vào sáng chủ nhật
+đổi tiền đô trước khi đi Mỹ
+nộp thuế thu nhập cá nhân trước 31/12
+gặp thầy hướng dẫn chiều thứ 3 lúc 15h
+mua 2 kg gạo và 1 chai nước mắm
+gửi tiền tiết kiệm 10 triệu ngày 1 tháng sau
+check in khách sạn 14h ngày 24/12
+tập yoga 6h sáng mỗi ngày
+làm bài tập nhóm môn OOP trước thứ 5
+sạc pin dự phòng tối nay
+in vé tàu đi Huế
