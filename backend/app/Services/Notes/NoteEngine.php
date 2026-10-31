@@ -85,12 +85,9 @@ final class NoteEngine
         if ($match->newTask !== null) {
             return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'low' => $match->newTask->lowConfidence];
         }
+        // A change that would leave the task as it is comes back as an already_done skip, never empty.
         $change = $match->change;
         assert($change !== null);
-        if (! $change->delete && $change->fields === []) {
-            // "move dentist to next tue" when it is due that Tuesday: the task already is as asked.
-            return $this->skipped($ref, $item, SkipReason::AlreadyDone);
-        }
         $entry = ['ref' => $ref, 'task_id' => $change->taskId, 'label' => $change->label, ...$change->fields];
         $tie = $match->isTie() ? [['ref' => $ref, 'candidates' => $match->tiedTaskIds, 'preselected' => $change->taskId]] : [];
 
