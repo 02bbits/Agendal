@@ -106,6 +106,11 @@ describe("normalizePatch (TK §2.2)", () => {
 });
 
 describe("scheduleError (TK-3)", () => {
+  it("exports named constants", () => {
+    expect(TITLE_MAX).toBe(200);
+    expect(NOTES_MAX).toBe(5000);
+  });
+
   it("returns task.end_before_start when end is earlier than start", () => {
     expect(scheduleError("10:00", "09:00")).toBe("task.end_before_start");
   });

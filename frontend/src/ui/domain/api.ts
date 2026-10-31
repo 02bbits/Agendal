@@ -1,7 +1,11 @@
+import type { CopyKey } from "../copy";
 import type { Task } from "./types";
 
 export type TaskRequest = () => Promise<{ task: Task; next?: Task }>;
 export type PatchTaskResponse = Promise<Task>;
+export type TaskUpdateErrors = Partial<Record<keyof TaskPatch, CopyKey>>;
+export type TaskUpdateFn = (task: Task, raw: TaskPatch) => TaskUpdateErrors;
+export type AsyncRequest<T> = () => Promise<T>;
 
 export type TaskPatch = Partial<
   Pick<

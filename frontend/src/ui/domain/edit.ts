@@ -1,6 +1,6 @@
 import { localTime, now, timeZone, today } from "../../lib/clock";
 import type { CopyKey } from "../copy";
-import type { TaskPatch } from "./api";
+import type { TaskPatch, TaskUpdateErrors } from "./api";
 import { addDays } from "./dates";
 import type { Reminder, Task } from "./types";
 
@@ -62,12 +62,9 @@ export function normalizePatch(
 }
 
 /** Validates a normalized patch against the task; returns field errors as copy keys. */
-export function patchErrors(
-  task: Task,
-  patch: TaskPatch,
-): Partial<Record<keyof TaskPatch, CopyKey>> {
+export function patchErrors(task: Task, patch: TaskPatch): TaskUpdateErrors {
   const merged = { ...task, ...patch };
-  const errors: Partial<Record<keyof TaskPatch, CopyKey>> = {};
+  const errors: TaskUpdateErrors = {};
   if ("title" in patch && (!merged.title || merged.title.length > TITLE_MAX)) {
     errors.title = "task.title_required";
   }

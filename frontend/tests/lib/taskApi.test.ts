@@ -115,6 +115,26 @@ describe("httpTaskApi (Refs #21, Refs #22)", () => {
     expect(result).toEqual(fakeTask);
   });
 
+  it("patch function calls PATCH /api/v1/tasks/<id> directly", async () => {
+    const fakeTask = {
+      id: "t-456",
+      title: "Patched Directly",
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(fakeTask), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await patch(
+      "t-456",
+      { title: "Patched Directly" },
+      "2026-10-23T08:10:00Z",
+    );
+    expect(result).toEqual(fakeTask);
+  });
+
   it("getTask calls GET /api/v1/tasks/<id> returning parsed task", async () => {
     const fakeTask = {
       id: "t-123",

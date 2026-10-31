@@ -11,8 +11,14 @@ import {
 import { today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import { t, type CopyKey } from "../../copy";
-import type { TaskApi, TaskPatch, TaskRequest } from "../../domain/api";
+import { t } from "../../copy";
+import type {
+  AsyncRequest,
+  TaskApi,
+  TaskPatch,
+  TaskUpdateErrors,
+  TaskUpdateFn,
+} from "../../domain/api";
 import { normalizePatch, patchErrors } from "../../domain/edit";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 
@@ -44,10 +50,7 @@ export interface TaskStore {
    * Saves changed fields of a task (TK-2): applies the field rules, validates,
    * then patches optimistically. Returns field errors instead of saving when invalid.
    */
-  update: (
-    task: Task,
-    raw: TaskPatch,
-  ) => Partial<Record<keyof TaskPatch, CopyKey>>;
+  update: TaskUpdateFn;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -137,7 +140,10 @@ export function TaskStoreProvider({
   const [toast, setToast] = useState<ToastData | null>(null);
   const [settling, setSettling] = useState<ReadonlySet<string>>(new Set());
   const tasksRef = useRef(tasks);
-  tasksRef.current = tasks;
+
+  useEffect(() => {
+    tasksRef.current = tasks;
+  }, [tasks]);
   const toastSeq = useRef(0);
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
@@ -206,7 +212,7 @@ export function TaskStoreProvider({
   const send = useCallback(
     <T,>(
       taskId: string,
-      request: () => Promise<T>,
+      request: AsyncRequest<T>,
       onSaved: (res: T) => void,
       onFailed: () => void,
     ) => {
@@ -306,8 +312,8 @@ export function TaskStoreProvider({
     ],
   );
 
-  const update = useCallback(
-    (task: Task, raw: TaskPatch) => {
+  const update: TaskUpdateFn = useCallback(
+    (task: Task, raw: TaskPatch): TaskUpdateErrors => {
       const patch = normalizePatch(task, raw, todayDate);
       const errors = patchErrors(task, patch);
       if (Object.keys(errors).length > 0 || Object.keys(patch).length === 0) {
@@ -331,6 +337,7 @@ export function TaskStoreProvider({
           onAction: () => {
             const current = tasksRef.current.find((x) => x.id === task.id);
             if (current) {
+              // eslint-disable-next-line react-hooks/immutability -- undo callback invokes update on action
               update(current, restore);
             }
           },
@@ -343,7 +350,6 @@ export function TaskStoreProvider({
         (saved) => applyLocal((list) => replace(list, saved)),
         () => {
           revert();
-          // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
           saveFailed(() => update(task, raw));
         },
       );
