@@ -1,36 +1,17 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
-import { today } from "../../../lib/clock";
+import * as React from "react";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
 import type { Task } from "../../domain/types";
-import {
-  formatSaveErrorToast,
-  isTaskCompletedToday,
-  SETTLE_MS,
-  useTaskSync,
-  type Clock,
-  type LifecycleAction,
-  type LifecycleFn,
-  type SettleTimerMap,
-  type TaskStore,
-  type TaskStoreProviderProps,
-} from "./useTaskSync";
+import * as sync from "./useTaskSync";
+import { createZoneFormatter, useToday } from "./useToday";
 
-export { SETTLE_MS, type Clock, type TaskStore, type TaskStoreProviderProps };
+export * from "./useTaskSync";
 
-const Ctx = createContext<TaskStore | null>(null);
+const Ctx = React.createContext<sync.TaskStore | null>(null);
 
-export function useTaskStore(): TaskStore {
-  const store = useContext(Ctx);
+export function useTaskStore(): sync.TaskStore {
+  const store = React.useContext(Ctx);
   if (!store) throw new Error("useTaskStore needs a <TaskStoreProvider>");
   return store;
 }
@@ -42,16 +23,18 @@ export function TaskStoreProvider({
   initialProjects,
   timeFormat = "24h",
   children,
-}: TaskStoreProviderProps) {
-  const { tasks, change, getTask } = useTaskSync(initialTasks);
-  const [projects, setProjects] = useState(initialProjects);
-  const [toast, setToast] = useState<ToastData | null>(null);
-  const [settling, setSettling] = useState<ReadonlySet<string>>(new Set());
-  const toastSeq = useRef(0);
-  const settleTimers = useRef<SettleTimerMap>(new Map());
-  const lifecycleRef = useRef<LifecycleFn>(() => {});
+}: sync.TaskStoreProviderProps) {
+  const { tasks, change, getTask } = sync.useTaskSync(initialTasks);
+  const [projects, setProjects] = React.useState(initialProjects);
+  const [toast, setToast] = React.useState<ToastData | null>(null);
+  const [settling, setSettling] = React.useState<ReadonlySet<string>>(
+    new Set(),
+  );
+  const toastSeq = React.useRef(0);
+  const settleTimers = React.useRef<sync.SettleTimerMap>(new Map());
+  const lifecycleRef = React.useRef<sync.LifecycleFn>(() => {});
 
-  useEffect(() => {
+  React.useEffect(() => {
     const timers = settleTimers.current;
     return () => {
       for (const timer of timers.values()) clearTimeout(timer);
@@ -59,17 +42,34 @@ export function TaskStoreProvider({
     };
   }, []);
 
-  const todayDate = today(clock.timeZone, clock.now());
-  const showToast = useCallback(
+  const todayDate = useToday(clock);
+
+  // Cached Intl.DateTimeFormat per time zone (same en-CA format as clock.today)
+  // to avoid re-allocating a formatter instance on every task row check.
+  const dateFormatter = React.useMemo(
+    () => createZoneFormatter(clock.timeZone),
+    [clock.timeZone],
+  );
+
+  const completedToday = React.useCallback(
+    (task: Task) =>
+      Boolean(
+        task.done_at &&
+        dateFormatter.format(new Date(task.done_at)) === todayDate,
+      ),
+    [dateFormatter, todayDate],
+  );
+
+  const showToast = React.useCallback(
     (d: Omit<ToastData, "id">) => setToast({ ...d, id: ++toastSeq.current }),
     [],
   );
-  const dismissToast = useCallback(
+  const dismissToast = React.useCallback(
     (id: ToastData["id"]) => setToast((c) => (c?.id === id ? null : c)),
     [],
   );
 
-  const clearSettle = useCallback((id: string) => {
+  const clearSettle = React.useCallback((id: string) => {
     const timer = settleTimers.current.get(id);
     if (timer) clearTimeout(timer);
     settleTimers.current.delete(id);
@@ -78,27 +78,27 @@ export function TaskStoreProvider({
     );
   }, []);
 
-  const settle = useCallback(
+  const settle = React.useCallback(
     (id: string) => {
       clearSettle(id);
       setSettling((s) => new Set(s).add(id));
       const nextTimer = setTimeout(() => {
         settleTimers.current.delete(id);
         setSettling((s) => new Set([...s].filter((x) => x !== id)));
-      }, SETTLE_MS);
+      }, sync.SETTLE_MS);
       settleTimers.current.set(id, nextTimer);
     },
     [clearSettle],
   );
 
-  const handleSaveError = useCallback(
+  const handleSaveError = React.useCallback(
     (error: unknown, retry: () => void) =>
-      showToast(formatSaveErrorToast(error, retry)),
+      showToast(sync.formatSaveErrorToast(error, retry)),
     [showToast],
   );
 
-  const mutateLifecycle = useCallback(
-    (id: string, action: LifecycleAction) => {
+  const mutateLifecycle = React.useCallback(
+    (id: string, action: sync.LifecycleAction) => {
       const at = clock.now().toISOString();
       const isComplete = action === "complete";
       if (isComplete) {
@@ -143,16 +143,16 @@ export function TaskStoreProvider({
     ],
   );
 
-  useEffect(() => {
+  React.useEffect(() => {
     lifecycleRef.current = mutateLifecycle;
   }, [mutateLifecycle]);
 
-  const toggle = useCallback(
+  const toggle = React.useCallback(
     (task: Task) => mutateLifecycle(task.id, task.done ? "reopen" : "complete"),
     [mutateLifecycle],
   );
 
-  const store = useMemo<TaskStore>(
+  const store = React.useMemo<sync.TaskStore>(
     () => ({
       tasks,
       projects,
@@ -166,8 +166,7 @@ export function TaskStoreProvider({
       projectOf: (task) =>
         projects.find((p) => p.id === task.project_id) ?? null,
       isSettling: (id) => settling.has(id),
-      completedToday: (task) =>
-        isTaskCompletedToday(task, clock.timeZone, todayDate),
+      completedToday,
       toggle,
       change,
       setProjects,
@@ -183,6 +182,7 @@ export function TaskStoreProvider({
       showToast,
       dismissToast,
       settling,
+      completedToday,
       toggle,
       change,
     ],

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
@@ -7,14 +7,18 @@ import {
   ProgressSummary,
   SETTLE_MS,
   TaskRow,
+  TaskStoreProvider,
   inboxProgress,
   nextUp,
   useTaskStore,
+  type Clock,
+  type TaskStore,
 } from "../../src/ui";
 import type { Task } from "../../src/ui/domain/types";
 import { expectAxeCleanInBothThemes } from "./axe";
-import { task } from "./fixtures";
-import { TODAY, deferredApi, setup } from "./harness";
+import { TODAY, projects, task } from "./fixtures";
+import { deferredApi, setup } from "./harness";
+import { createMemoryApi } from "./memoryApi";
 
 function TodayList() {
   const store = useTaskStore();
@@ -700,6 +704,94 @@ describe("Complete a task (TK-1, WF-06)", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("bug 8: crossing midnight updates progress without any other re-render; timer cleared on unmount (Refs #21)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      let currentTime = new Date("2026-10-23T16:50:00Z");
+      const dynamicClock: Clock = {
+        now: () => currentTime,
+        timeZone: "Asia/Ho_Chi_Minh",
+      };
+
+      const tasks = [
+        task({
+          id: "t-done",
+          title: "Done on 23rd",
+          due_date: "2026-10-23",
+          done: true,
+          done_at: "2026-10-23T16:30:00Z",
+        }),
+        task({
+          id: "t-tomorrow",
+          title: "Due on 24th",
+          due_date: "2026-10-24",
+          done: false,
+        }),
+      ];
+
+      const memory = createMemoryApi({ tasks, projects });
+      const wrap = (ui: ReactNode) => (
+        <TaskStoreProvider
+          api={memory.api}
+          clock={dynamicClock}
+          initialTasks={tasks}
+          initialProjects={projects}
+        >
+          <main>{ui}</main>
+        </TaskStoreProvider>
+      );
+
+      const { unmount } = render(wrap(<TodayList />));
+
+      expect(screen.getByText("1 of 1 done")).toBeTruthy();
+
+      currentTime = new Date("2026-10-23T17:01:00Z");
+      await act(async () => {
+        vi.advanceTimersByTime(11 * 60 * 1000);
+      });
+
+      expect(screen.getByText("0 of 1 done")).toBeTruthy();
+
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("completedToday caches Intl.DateTimeFormat per time zone (cleanup item 1)", () => {
+    let capturedStore: TaskStore | undefined;
+    function Consumer() {
+      const store = useTaskStore();
+      useEffect(() => {
+        capturedStore = store;
+      }, [store]);
+      return null;
+    }
+    const { wrap } = setup(seed());
+    render(wrap(<Consumer />));
+
+    const doneToday = task({
+      title: "Done today",
+      done: true,
+      done_at: "2026-10-23T01:30:00Z",
+    });
+    const doneYesterday = task({
+      title: "Done yesterday",
+      done: true,
+      done_at: "2026-10-22T01:30:00Z",
+    });
+    const notDone = task({
+      title: "Not done",
+      done: false,
+      done_at: null,
+    });
+
+    expect(capturedStore!.completedToday(doneToday)).toBe(true);
+    expect(capturedStore!.completedToday(doneYesterday)).toBe(false);
+    expect(capturedStore!.completedToday(notDone)).toBe(false);
   });
 
   it("progress summary is axe clean in both themes", async () => {
