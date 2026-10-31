@@ -9,6 +9,7 @@ export {
   type AccountSettings,
   type ThemeSetting,
 } from "./shell/AccountScreen";
+export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export { RouteEmptyState, EMPTY_STATE } from "./shell/EmptyScreens";
 export { Link, type LinkProps } from "./shell/Link";
 export { ROUTES, TABS, type TabId, type Navigate } from "./shell/routes";

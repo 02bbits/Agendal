@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   AppShell,
+  NoteEditor,
   ROUTES,
   t,
   Toast,
@@ -98,6 +99,8 @@ interface AppFrameValue {
   changeSettings: (patch: Partial<AccountSettings>) => void;
   /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
   showToast: (message: string) => void;
+  /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
+  openNoteEditor: () => void;
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
@@ -185,6 +188,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
     if (arrivedByDeepLink.current) router.replace(tabRootOf(pathname));
     else router.back();
   }, [router, pathname]);
+  const [editing, setEditing] = useState(false);
+  const openNoteEditor = useCallback(() => setEditing(true), []);
+  const closeNoteEditor = useCallback(() => setEditing(false), []);
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
@@ -307,10 +313,20 @@ export function AppFrame({ children }: { children: ReactNode }) {
       settings,
       changeSettings,
       showToast,
+      openNoteEditor,
       user,
       signOut,
     }),
-    [navigate, back, settings, changeSettings, showToast, user, signOut],
+    [
+      navigate,
+      back,
+      settings,
+      changeSettings,
+      showToast,
+      openNoteEditor,
+      user,
+      signOut,
+    ],
   );
   const tab = TAB_BY_PATH[pathname];
 
@@ -319,8 +335,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
-        // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
-        capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        // The + appears with the New task sheet (IM-26)
+        capture={{ onWrite: openNoteEditor }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
@@ -329,6 +345,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
+        {editing && (
+          <NoteEditor
+            onClose={closeNoteEditor}
+            onDraftRestored={() => showToast(t("note.draft_restored"))}
+          />
+        )}
       </AppShell>
     </AppFrameContext.Provider>
   );

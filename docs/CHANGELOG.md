@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-10-31
+
+- **Closing the note editor (IM-41).** [UX-13](01-product/ux-standards.md#ux-13) and [NC §2.1](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5): closing the editor with text asks "Discard this note?" (Discard / Keep editing) instead of closing without asking; Discard clears the draft, which still guards against the app closing mid-note ([NC-E1](03-modules/NC-note-capture.md#nc-e1)). [Copy catalog](01-product/copy-catalog.md) and the NC copy keys add `note.discard_title`, `note.discard_body`, `common.discard_action` and `common.keep_editing`.
+
 ## 2026-10-29
 
 - **16:10 (UTC+7) · Layout docs match the built shell.** [UX-24](01-product/ux-standards.md#ux-24): the phone header keeps Search and the avatar. [UX-26](01-product/ux-standards.md#ux-26): the tab bar shrinks to 48px when the viewport is 480px tall or less, and a phone 768px wide or more sideways gets the sidebar. [UX-27](01-product/ux-standards.md#ux-27): follows the Figma desktop frames; sidebar and side panel on `surface`, content on `paper`, capture bar over a paper fade, header without Search and avatar, toasts centred on the column, no sidebar on signed-out screens. [UX-28](01-product/ux-standards.md#ux-28): panel as tall as the window. The UX rows are back in ID order. [Traceability matrix](06-testing/traceability-matrix.md), NF-8 row: adds the 915×412 sideways check. The [UI README](../frontend/src/ui/README.md) lists `AppShell`, `Sidebar`, `px-gutter-wide` and the fonts loaded with `next/font`.
