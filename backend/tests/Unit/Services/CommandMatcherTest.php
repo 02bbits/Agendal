@@ -219,6 +219,20 @@ it('prefers the title with the repeat or priority word, and matches without it',
         ->and(matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report']])->change?->taskId)->toBe('plain');
 })->with(modifierPhrases());
 
+it('prefers the title the command names fully over a longer one, and ties titles equally close', function (string $text, array $titles, ?string $expected, bool $tie) {
+    $open = array_map(fn (string $id, string $title): array => ['id' => $id, 'title' => $title], array_keys($titles), $titles);
+    $match = matchCommand($text, CommandAction::Complete, $open);
+
+    expect([$match->change?->taskId, $match->isTie()])->toBe([$expected, $tie]);
+})->with([
+    'exact over longer' => ['done buy milk', ['eggs' => 'Buy milk and eggs', 'milk' => 'Buy milk'], 'milk', false],
+    'shorter of two longer' => ['done buy milk', ['long' => 'Buy milk, eggs and bread', 'mid' => 'Buy milk early'], 'mid', false],
+    'stop words are no extra' => ['done call mum', ['for' => 'Call for mum', 'about' => 'Call mum about rent'], 'for', false],
+    'Vietnamese' => ['xong mua sữa', ['more' => 'Mua sữa và trứng', 'exact' => 'Mua sữa'], 'exact', false],
+    'equally close is a tie' => ['done report', ['w' => 'Weekly report', 'm' => 'Monthly report'], 'm', true],
+    'same title is a tie' => ['done call mum', ['a' => 'Call mum', 'b' => 'Call mum'], 'a', true],
+]);
+
 it('tells a weekly report from a monthly one', function () {
     $open = [['id' => 'm', 'title' => 'Monthly report', 'due_date' => '2026-10-24'], ['id' => 'w', 'title' => 'Weekly report', 'due_date' => '2026-10-26']];
 

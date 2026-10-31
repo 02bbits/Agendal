@@ -85,8 +85,8 @@ final class CommandMatcher
         if ($ranked === []) {
             return $this->withoutOpenMatch($text, $action, $words, $modifiers, $doneTasks, $context);
         }
-        $best = [$ranked[0]['score'], $ranked[0]['found']];
-        $tied = array_column(array_filter($ranked, fn (array $row): bool => [$row['score'], $row['found']] === $best), 'task');
+        $best = [$ranked[0]['score'], $ranked[0]['found'], $ranked[0]['extra']];
+        $tied = array_column(array_filter($ranked, fn (array $row): bool => [$row['score'], $row['found'], $row['extra']] === $best), 'task');
         $tiedIds = count($tied) > 1 ? array_slice(array_column($tied, 'id'), 0, (int) config('notes.tie_choices')) : [];
         // The first tied task the command would change: "move report to friday" means the Report not yet due then.
         foreach ($tied as $task) {
@@ -101,13 +101,14 @@ final class CommandMatcher
     }
 
     /**
-     * Open tasks scoring at least the threshold, best first; more words found wins next, then the soonest due
+     * Open tasks scoring at least the threshold, best first; then more words found, then fewer title words the
+     * command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"), then the soonest due
      * date, with tasks without one last (NU-E11).
      *
      * @param  list<string>  $words
      * @param  list<string>  $modifiers
      * @param  list<TaskRow>  $tasks
-     * @return list<array{task: TaskRow, score: float, found: int}>
+     * @return list<array{task: TaskRow, score: float, found: int, extra: int}>
      */
     private function ranked(array $words, array $modifiers, array $tasks): array
     {
@@ -116,11 +117,12 @@ final class CommandMatcher
             $open = ! ($task['done'] ?? false) && ($task['deleted_at'] ?? null) === null;
             $score = $this->score($words, $task['title'], $modifiers);
             if ($open && $score >= (float) config('notes.match_threshold')) {
-                $ranked[] = ['task' => $task, 'score' => $score, 'found' => $this->found($words, $task['title'], $modifiers)];
+                $ranked[] = ['task' => $task, 'score' => $score, 'found' => $this->found($words, $task['title'], $modifiers), 'extra' => $this->extra($words, $task['title'], $modifiers)];
             }
         }
         usort($ranked, fn (array $a, array $b): int => ($b['score'] <=> $a['score'])
             ?: ($b['found'] <=> $a['found'])
+            ?: ($a['extra'] <=> $b['extra'])
             ?: $this->dueOrder($a['task']['due_date'] ?? null, $b['task']['due_date'] ?? null)
             ?: strcmp($a['task']['id'], $b['task']['id']));
 
@@ -136,6 +138,17 @@ final class CommandMatcher
         $tokens = $this->tokens($title);
 
         return count(array_intersect($words, $tokens)) + count(array_intersect($modifiers, $tokens));
+    }
+
+    /**
+     * Meaningful title words the command doesn't name.
+     *
+     * @param  list<string>  $words
+     * @param  list<string>  $modifiers
+     */
+    private function extra(array $words, string $title, array $modifiers): int
+    {
+        return count(array_unique(array_diff($this->tokens($title), $words, $modifiers, $this->stopWords())));
     }
 
     private function dueOrder(?string $a, ?string $b): int
