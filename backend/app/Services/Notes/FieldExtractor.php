@@ -213,12 +213,13 @@ final class FieldExtractor
         return $this->cut($title);
     }
 
-    /** Spaces, dashes, colons, commas, semicolons and full stops left at either end. */
+    /** Spaces, dashes, colons, commas, semicolons, full stops and joiners ("8am and 8pm" read) left at either end. */
     private function tidy(string $title): string
     {
+        $joiner = '(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('list_joiner').')(?![\p{L}\p{N}])';
         $edge = '(?:\s|\p{Pd}|:|'.NoteVocabulary::phrases('comma').'|'.NoteVocabulary::phrases('separator').'|'.NoteVocabulary::phrases('full_stop').')+';
 
-        return (string) preg_replace('~^'.$edge.'|'.$edge.'$~u', '', $title);
+        return (string) preg_replace('~^(?:'.$edge.'|'.$joiner.')+|(?:'.$edge.'|'.$joiner.')+$~iu', '', $title);
     }
 
     /** Project names keep their own casing (NU-E21); acronyms are written as in the rules. */

@@ -24,8 +24,9 @@ final readonly class ExtractedFields
         public bool $lowConfidence,
     ) {}
 
-    public function withTitle(string $title): self
+    /** These fields with the date and times of $at, as a reschedule with no matching task becomes a new task. */
+    public function withWhen(self $at): self
     {
-        return new self($title, $this->notes, $this->dueDate, $this->startTime, $this->endTime, $this->priority, $this->projectId, $this->repeat, $this->reminder, $this->lowConfidence);
+        return new self($this->title, $this->notes, $at->dueDate, $at->startTime, $at->endTime, $this->priority, $this->projectId, $this->repeat, $this->reminder, $this->lowConfidence || $at->lowConfidence);
     }
 }

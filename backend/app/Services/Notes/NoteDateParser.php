@@ -227,7 +227,7 @@ final class NoteDateParser
      */
     private function namedDates(string $text, NoteContext $context): array
     {
-        $dayWord = '(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+)?';
+        $dayWord = '(?:(?:'.NoteVocabulary::phrases('date_day_word').'|'.NoteVocabulary::phrases('ordinal_day_word').')\s+)?';
         $ordinal = '(?:'.NoteVocabulary::phrases('ordinal_suffix').')?';
         $link = '(?:(?:'.NoteVocabulary::phrases('month_link').')\s+)?';
         $year = '(?:\s*(?:'.NoteVocabulary::phrases('comma').')?\s*(?:(?:'.NoteVocabulary::phrases('year_word').')\s+)?(?<year>\d{4}))?';

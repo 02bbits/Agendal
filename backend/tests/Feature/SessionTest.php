@@ -73,9 +73,9 @@ it('T-AA-13: without Remember me the session ends when the browser closes or aft
 
     $this->travel(119)->minutes();
     newRequest();
-    $this->withCookies($cookies)->getJson('/api/v1/user')->assertOk();
+    $this->withCookies($cookies)->getJson('/api/v1/me')->assertOk();
 
     $this->travel(121)->minutes();
     newRequest();
-    $this->withCookies($cookies)->getJson('/api/v1/user')->assertUnauthorized();
+    $this->withCookies($cookies)->getJson('/api/v1/me')->assertUnauthorized();
 });
