@@ -11,8 +11,9 @@ import {
 import { today } from "../../../lib/clock";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
-import { t } from "../../copy";
-import type { TaskApi, TaskRequest } from "../../domain/api";
+import { t, type CopyKey } from "../../copy";
+import type { TaskApi, TaskPatch, TaskRequest } from "../../domain/api";
+import { normalizePatch, patchErrors } from "../../domain/edit";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 
 /** Injected clock (IM-05 / ADR-006): no screen reads the system time directly. */
@@ -39,6 +40,14 @@ export interface TaskStore {
   isSettling: (id: string) => boolean;
   completedToday: (task: Task) => boolean;
   toggle: (task: Task) => void;
+  /**
+   * Saves changed fields of a task (TK-2): applies the field rules, validates,
+   * then patches optimistically. Returns field errors instead of saving when invalid.
+   */
+  update: (
+    task: Task,
+    raw: TaskPatch,
+  ) => Partial<Record<keyof TaskPatch, CopyKey>>;
   /** Optimistic local change; returns a function that reverts it (UX-01). */
   applyLocal: (update: (tasks: Task[]) => Task[]) => () => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
@@ -127,6 +136,8 @@ export function TaskStoreProvider({
   const [projects, setProjects] = useState(initialProjects);
   const [toast, setToast] = useState<ToastData | null>(null);
   const [settling, setSettling] = useState<ReadonlySet<string>>(new Set());
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
   const toastSeq = useRef(0);
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
@@ -193,10 +204,10 @@ export function TaskStoreProvider({
   }, []);
 
   const send = useCallback(
-    (
+    <T,>(
       taskId: string,
-      request: TaskRequest,
-      onSaved: (res: { task: Task; next?: Task }) => void,
+      request: () => Promise<T>,
+      onSaved: (res: T) => void,
       onFailed: () => void,
     ) => {
       const seq = (taskSeq.current.get(taskId) ?? 0) + 1;
@@ -295,6 +306,53 @@ export function TaskStoreProvider({
     ],
   );
 
+  const update = useCallback(
+    (task: Task, raw: TaskPatch) => {
+      const patch = normalizePatch(task, raw, todayDate);
+      const errors = patchErrors(task, patch);
+      if (Object.keys(errors).length > 0 || Object.keys(patch).length === 0) {
+        return errors;
+      }
+      const at = clock.now().toISOString();
+      const revert = applyLocal((list) =>
+        list.map((x) => (x.id === task.id ? { ...x, ...patch } : x)),
+      );
+
+      if ("due_date" in raw && !raw.due_date && task.due_date) {
+        const restore: TaskPatch = {
+          due_date: task.due_date,
+          start_time: task.start_time,
+          end_time: task.end_time,
+          reminder: task.reminder,
+        };
+        showToast({
+          message: t("task.due_cleared"),
+          actionLabel: t("common.undo"),
+          onAction: () => {
+            const current = tasksRef.current.find((x) => x.id === task.id);
+            if (current) {
+              update(current, restore);
+            }
+          },
+        });
+      }
+
+      send(
+        task.id,
+        () => api.patch(task.id, patch, at),
+        (saved) => applyLocal((list) => replace(list, saved)),
+        () => {
+          revert();
+          // eslint-disable-next-line react-hooks/immutability -- retry callback invokes itself on failure
+          saveFailed(() => update(task, raw));
+        },
+      );
+
+      return errors;
+    },
+    [api, applyLocal, clock, saveFailed, send, showToast, todayDate],
+  );
+
   const toggle = useCallback(
     (task: Task) => (task.done ? reopen(task) : complete(task)),
     [complete, reopen],
@@ -318,6 +376,7 @@ export function TaskStoreProvider({
         !!task.done_at &&
         today(clock.timeZone, new Date(task.done_at)) === todayDate,
       toggle,
+      update,
       applyLocal,
       setProjects,
       saveFailed,
@@ -334,6 +393,7 @@ export function TaskStoreProvider({
       dismissToast,
       settling,
       toggle,
+      update,
       applyLocal,
       saveFailed,
     ],

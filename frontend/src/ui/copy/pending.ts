@@ -44,6 +44,7 @@ export const pending = {
   "task.created": "Created {date}",
   "task.edited": "Edited {date}",
   "task.saves_as_you_go": "Changes save as you go",
+  "task.due_cleared": "Date cleared, with its time and reminder",
   "task.next_week": "Next week",
   "task.pick_date": "Pick date…",
   "task.reminder_set": "reminder set",
