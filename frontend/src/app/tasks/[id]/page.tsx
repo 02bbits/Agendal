@@ -9,6 +9,6 @@ interface PageProps {
 }
 
 export default function TaskDetailsPage({ params }: PageProps) {
-  const id = (params as unknown as { id?: string }).id ?? use(params).id;
+  const { id } = use(params);
   return <TaskDetailsClient id={id} />;
 }

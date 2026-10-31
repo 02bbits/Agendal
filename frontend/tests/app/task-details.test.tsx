@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -14,8 +15,6 @@ vi.mock("next/navigation", () => ({
 }));
 
 const fetchMock = vi.fn();
-const pageParams = (id: string) =>
-  Object.assign(Promise.resolve({ id }), { id });
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
@@ -53,11 +52,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(404, {});
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-1")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     const titleInput = await screen.findByDisplayValue("Buy groceries");
     expect(titleInput).toBeTruthy();
@@ -76,11 +79,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(404, {});
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-missing")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-missing" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     expect(await screen.findByText(t("error.not_found"))).toBeTruthy();
 
@@ -109,11 +116,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(404, {});
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-1")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     expect(
       await screen.findByText(t("error.generic", { request_id: "req-123" })),
@@ -144,11 +155,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(404, {});
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-1")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     expect(await screen.findByText(t("app.offline"))).toBeTruthy();
 
@@ -180,11 +195,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(404, {});
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-1")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     const input = await screen.findByDisplayValue("Original Title");
     fireEvent.change(input, { target: { value: "Updated Title" } });
@@ -213,11 +232,15 @@ describe("Task details page /tasks/[id]", () => {
       return json(200, []);
     });
 
-    render(
-      <AppFrame>
-        <TaskDetailsPage params={pageParams("t-slow")} />
-      </AppFrame>,
-    );
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-slow" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
 
     // Before 300ms, no skeleton
     expect(screen.queryByRole("status", { busy: true })).toBeNull();
