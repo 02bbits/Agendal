@@ -1,8 +1,9 @@
 "use client";
 
-import { use, useEffect, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
+import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
-import { now, timeZone } from "../../../lib/clock";
+import { ApiRequestError } from "../../../lib/apiError";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
   Button,
@@ -17,15 +18,27 @@ import type { Navigate } from "../../../ui/features/shell/routes";
 
 export const SKELETON_DELAY_MS = 300;
 
-const clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
-
 interface ClientProps {
-  params: Promise<{ id: string }> | { id: string };
+  id: string;
+}
+
+function PageMessage({
+  message,
+  actionLabel,
+  onAction,
+}: {
+  message: string;
+  actionLabel: string;
+  onAction: () => void;
+}): ReactElement {
+  return (
+    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
+      <p className="text-body text-ink-secondary">{message}</p>
+      <Button variant="secondary" onClick={onAction}>
+        {actionLabel}
+      </Button>
+    </div>
+  );
 }
 
 function TaskDetailsContainer({
@@ -44,21 +57,18 @@ function TaskDetailsContainer({
 }
 
 export default function TaskDetailsClient({
-  params,
+  id,
 }: ClientProps): ReactElement | null {
-  const id =
-    typeof (params as { then?: unknown })?.then === "function"
-      ? use(params as Promise<{ id: string }>).id
-      : (params as { id: string }).id;
   const { back, navigate, settings } = useAppFrame();
 
   const [task, setTask] = useState<Task | null>(null);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
-  const [errorStatus, setErrorStatus] = useState<
-    "not_found" | "generic" | null
-  >(null);
+  const [errorState, setErrorState] = useState<{
+    notFound: boolean;
+    message?: string;
+  } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
@@ -74,13 +84,23 @@ export default function TaskDetailsClient({
       .catch((err: unknown) => {
         if (cancelled) return;
         setLoading(false);
-        const isNotFound =
-          (err instanceof Error && err.message === "error.not_found") ||
-          (typeof err === "object" &&
-            err !== null &&
-            "status" in err &&
-            (err as { status: unknown }).status === 404);
-        setErrorStatus(isNotFound ? "not_found" : "generic");
+        const notFound =
+          err instanceof Error && err.message === "error.not_found";
+        if (notFound) {
+          setErrorState({ notFound: true });
+        } else if (err instanceof ApiRequestError) {
+          setErrorState({
+            notFound: false,
+            message: t("error.generic", {
+              request_id: err.requestId ?? err.code,
+            }),
+          });
+        } else {
+          setErrorState({
+            notFound: false,
+            message: t("app.offline"),
+          });
+        }
       });
 
     return () => {
@@ -99,7 +119,7 @@ export default function TaskDetailsClient({
   const retry = () => {
     setLoading(true);
     setShowSkeleton(false);
-    setErrorStatus(null);
+    setErrorState(null);
     setReloadKey((k) => k + 1);
   };
 
@@ -109,7 +129,6 @@ export default function TaskDetailsClient({
       <div
         role="status"
         aria-busy="true"
-        aria-label={t("error.slow")}
         className="flex animate-pulse flex-col gap-6 pb-8"
       >
         <div className="h-10 w-24 rounded bg-surface" />
@@ -120,34 +139,30 @@ export default function TaskDetailsClient({
     );
   }
 
-  if (errorStatus === "not_found") {
+  if (errorState?.notFound) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <p className="text-body text-ink-secondary">{t("error.not_found")}</p>
-        <Button variant="secondary" onClick={back}>
-          {t("common.back")}
-        </Button>
-      </div>
+      <PageMessage
+        message={t("error.not_found")}
+        actionLabel={t("common.back")}
+        onAction={back}
+      />
     );
   }
 
-  if (errorStatus === "generic" || !task) {
+  if (errorState || !task) {
     return (
-      <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-        <p className="text-body text-ink-secondary">
-          {t("error.generic", { request_id: "-" })}
-        </p>
-        <Button variant="secondary" onClick={retry}>
-          {t("common.retry")}
-        </Button>
-      </div>
+      <PageMessage
+        message={errorState?.message ?? t("app.offline")}
+        actionLabel={t("common.retry")}
+        onAction={retry}
+      />
     );
   }
 
   return (
     <TaskStoreProvider
       api={httpTaskApi}
-      clock={clock}
+      clock={appClock}
       initialTasks={[task]}
       initialProjects={projectList}
       timeFormat={settings.timeFormat}

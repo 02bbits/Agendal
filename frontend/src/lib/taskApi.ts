@@ -1,17 +1,20 @@
 import { api } from "./api";
+import { ApiRequestError } from "./apiError";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { Project, Task } from "../ui/domain/types";
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let errorCode: string | undefined;
+    let requestId: string | undefined;
     try {
       const data = await response.json();
       errorCode = data?.error?.code;
+      requestId = data?.error?.request_id;
     } catch {
       // Body is not JSON
     }
-    throw new Error(errorCode || "error.generic");
+    throw new ApiRequestError(errorCode || "error.generic", requestId);
   }
 
   return response.json();

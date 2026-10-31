@@ -227,6 +227,26 @@ describe("httpTaskApi (Refs #21, Refs #22)", () => {
     ).rejects.toThrow("error.generic");
   });
 
+  it("rejects with ApiRequestError including code and requestId", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: { code: "error.generic", request_id: "req-999" },
+        }),
+        {
+          status: 500,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    await expect(getTask("t-123")).rejects.toMatchObject({
+      code: "error.generic",
+      requestId: "req-999",
+      message: "error.generic",
+    });
+  });
+
   it("encodes the id in the URL", async () => {
     fetchMock.mockResolvedValueOnce(
       new Response(JSON.stringify({ task: { id: "a/b" } }), { status: 200 }),

@@ -14,6 +14,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 const fetchMock = vi.fn();
+const pageParams = (id: string) =>
+  Object.assign(Promise.resolve({ id }), { id });
 const json = (status: number, body: unknown) =>
   new Response(JSON.stringify(body), {
     status,
@@ -53,7 +55,7 @@ describe("Task details page /tasks/[id]", () => {
 
     render(
       <AppFrame>
-        <TaskDetailsPage params={{ id: "t-1" }} />
+        <TaskDetailsPage params={pageParams("t-1")} />
       </AppFrame>,
     );
 
@@ -76,7 +78,7 @@ describe("Task details page /tasks/[id]", () => {
 
     render(
       <AppFrame>
-        <TaskDetailsPage params={{ id: "t-missing" }} />
+        <TaskDetailsPage params={pageParams("t-missing")} />
       </AppFrame>,
     );
 
@@ -89,7 +91,7 @@ describe("Task details page /tasks/[id]", () => {
     expect(router.replace).toHaveBeenCalledWith("/");
   });
 
-  it("shows error.generic with Retry on server failure and re-fetches when clicked", async () => {
+  it("shows error.generic with (Ref req-123) and Retry on 500 and re-fetches when clicked", async () => {
     let fail = true;
     const fakeTask = task({ id: "t-1", title: "Flaky Task" });
 
@@ -97,7 +99,10 @@ describe("Task details page /tasks/[id]", () => {
       if (url === "/api/v1/me")
         return json(200, { id: 1, email: "u@test.com" });
       if (url === "/api/v1/tasks/t-1") {
-        if (fail) return json(500, { error: { code: "error.generic" } });
+        if (fail)
+          return json(500, {
+            error: { code: "error.generic", request_id: "req-123" },
+          });
         return json(200, fakeTask);
       }
       if (url === "/api/v1/projects") return json(200, []);
@@ -106,13 +111,14 @@ describe("Task details page /tasks/[id]", () => {
 
     render(
       <AppFrame>
-        <TaskDetailsPage params={{ id: "t-1" }} />
+        <TaskDetailsPage params={pageParams("t-1")} />
       </AppFrame>,
     );
 
     expect(
-      await screen.findByText(t("error.generic", { request_id: "-" })),
+      await screen.findByText(t("error.generic", { request_id: "req-123" })),
     ).toBeTruthy();
+    expect(screen.getByText(/\(Ref req-123\)/)).toBeTruthy();
 
     fail = false;
     const retryBtn = screen.getByRole("button", {
@@ -121,6 +127,38 @@ describe("Task details page /tasks/[id]", () => {
     await userEvent.click(retryBtn);
 
     expect(await screen.findByDisplayValue("Flaky Task")).toBeTruthy();
+  });
+
+  it("shows app.offline and Retry when fetch rejects with TypeError", async () => {
+    let fail = true;
+    const fakeTask = task({ id: "t-1", title: "Offline Task" });
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-1") {
+        if (fail) throw new TypeError("Failed to fetch");
+        return json(200, fakeTask);
+      }
+      if (url === "/api/v1/projects") return json(200, []);
+      return json(404, {});
+    });
+
+    render(
+      <AppFrame>
+        <TaskDetailsPage params={pageParams("t-1")} />
+      </AppFrame>,
+    );
+
+    expect(await screen.findByText(t("app.offline"))).toBeTruthy();
+
+    fail = false;
+    const retryBtn = screen.getByRole("button", {
+      name: t("common.retry"),
+    });
+    await userEvent.click(retryBtn);
+
+    expect(await screen.findByDisplayValue("Offline Task")).toBeTruthy();
   });
 
   it("sends PATCH when a field changes", async () => {
@@ -144,7 +182,7 @@ describe("Task details page /tasks/[id]", () => {
 
     render(
       <AppFrame>
-        <TaskDetailsPage params={{ id: "t-1" }} />
+        <TaskDetailsPage params={pageParams("t-1")} />
       </AppFrame>,
     );
 
@@ -177,24 +215,21 @@ describe("Task details page /tasks/[id]", () => {
 
     render(
       <AppFrame>
-        <TaskDetailsPage params={{ id: "t-slow" }} />
+        <TaskDetailsPage params={pageParams("t-slow")} />
       </AppFrame>,
     );
 
     // Before 300ms, no skeleton
-    expect(screen.queryByRole("status", { name: t("error.slow") })).toBeNull();
+    expect(screen.queryByRole("status", { busy: true })).toBeNull();
 
     // Fast-forward 300ms
     act(() => {
       vi.advanceTimersByTime(300);
     });
 
-    expect(screen.getByRole("status", { name: t("error.slow") })).toBeTruthy();
-    expect(
-      screen
-        .getByRole("status", { name: t("error.slow") })
-        .getAttribute("aria-busy"),
-    ).toBe("true");
+    const skeleton = screen.getByRole("status", { busy: true });
+    expect(skeleton).toBeTruthy();
+    expect(skeleton.getAttribute("aria-busy")).toBe("true");
 
     vi.useRealTimers();
   });
