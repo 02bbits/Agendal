@@ -75,6 +75,8 @@ final class NoteSplitterScenarios
                     in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
                     // Read only by the item classifier; NoteClassifierScenarios covers them.
                     in_array($category, NoteClassifierScenarios::CLASSIFIER_ONLY_CATEGORIES, true) => [],
+                    // Read only by the command matcher; CommandMatcherTest checks every stop word, deadline and place word.
+                    in_array($category, ['stop_word', 'deadline_prefix', 'place_prefix'], true) => [],
                     default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {

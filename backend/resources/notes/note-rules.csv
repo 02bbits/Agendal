@@ -778,6 +778,29 @@ heading_suffix,:
 not_command,bỏ rác
 not_command,bỏ thư
 not_command,bỏ tiền
+stop_word,a
+stop_word,an
+stop_word,the
+stop_word,to
+stop_word,for
+stop_word,my
+stop_word,of
+stop_word,on
+stop_word,in
+stop_word,at
+stop_word,with
+stop_word,and
+stop_word,or
+stop_word,task
+stop_word,cái
+stop_word,các
+stop_word,những
+stop_word,của
+stop_word,cho
+stop_word,với
+stop_word,và
+stop_word,là
+stop_word,việc
 vietnamese_ascii_word,mua
 vietnamese_ascii_word,em
 duration_unit:minute,minute
@@ -928,3 +951,11 @@ vietnamese_unaccented_syllable,giat
 vietnamese_unaccented_syllable,quan
 vietnamese_unaccented_syllable,ao
 vietnamese_unaccented_syllable,nau
+deadline_prefix,by
+deadline_prefix,before
+deadline_prefix,until
+deadline_prefix,trước
+deadline_prefix,chậm nhất
+place_prefix,at
+place_prefix,ở
+place_prefix,tại

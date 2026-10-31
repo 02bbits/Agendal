@@ -9,10 +9,7 @@ use App\Enums\CommandAction;
 /** Skip, command or task, first match wins (NU §2.3); every phrase comes from the shared note rules CSV. */
 final class ItemClassifier
 {
-    public function __construct(
-        private NoteDateParser $dates,
-        private NoteTimeParser $times,
-    ) {}
+    public function __construct(private RescheduleTarget $target) {}
 
     public function classify(string $text, NoteContext $context): ItemClassification
     {
@@ -60,31 +57,25 @@ final class ItemClassifier
         return match (true) {
             $this->isComplete($text) => CommandAction::Complete,
             $this->startsWith($text, 'delete_command') => CommandAction::Delete,
-            $this->startsWith($text, 'move_command') && $this->hasNewDate($text, $context) => CommandAction::Reschedule,
+            // Reschedule needs a move verb and "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task.
+            $this->target->split($text, $context) !== null => CommandAction::Reschedule,
             default => null,
         };
     }
 
-    /** "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done", not "get it done"). */
+    /**
+     * "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done",
+     * not "get it done") or set off by a dash, colon or comma ("pick up laundry - done", "gọi mẹ: xong").
+     */
     private function isComplete(string $text): bool
     {
         $sentenceEnd = '[\p{P}\s]*$';
+        $bare = '(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd;
 
         return $this->startsWith($text, 'complete_command')
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')'.$sentenceEnd.'~iu', $text) === 1
-            || (preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd.'~iu', $text) === 1
-                && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
-    }
-
-    /** Reschedule needs "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task. */
-    private function hasNewDate(string $text, NoteContext $context): bool
-    {
-        if (preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('reschedule_target').')\s+(?<when>.+)$~iu', $text, $match) !== 1) {
-            return false;
-        }
-
-        return $this->dates->parse($match['when'], $context, null)->date !== null
-            || $this->times->parse($match['when'], $context)->start !== null;
+            || preg_match('~\S\s*(?:\p{Pd}|:|'.NoteVocabulary::phrases('comma').')\s*'.$bare.'~iu', $text) === 1
+            || (preg_match('~(?<![\p{L}\p{N}_])'.$bare.'~iu', $text) === 1 && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
     }
 
     private function startsWith(string $text, string $category): bool
