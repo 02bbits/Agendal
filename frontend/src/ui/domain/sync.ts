@@ -1,5 +1,6 @@
 import type { Task } from "./types";
 
+/** Owned by useTaskSync's ref; the functions below update it in place and return a new row. */
 export interface TaskSyncState {
   confirmed: Map<string, Task>;
   writers: Map<string, Map<keyof Task, number>>;
@@ -18,6 +19,7 @@ export function createTaskSyncState(initialTasks?: Task[]): TaskSyncState {
   };
 }
 
+/** Registers confirmed if not present, applies fields, and sets writers to seq. */
 export function beginChange(
   state: TaskSyncState,
   row: Task,
@@ -44,6 +46,7 @@ export function beginChange(
   };
 }
 
+/** Success keeps newer writers. */
 export function settleSuccess(
   state: TaskSyncState,
   row: Task,
@@ -70,6 +73,7 @@ export function settleSuccess(
   return { state, row: nextRow };
 }
 
+/** Failure rolls back only fields this request still owns. */
 export function settleFailure(
   state: TaskSyncState,
   row: Task,

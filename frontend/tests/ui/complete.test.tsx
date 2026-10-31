@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
+import { ApiRequestError } from "../../src/lib/apiError";
 import {
   ProgressSummary,
   SETTLE_MS,
@@ -9,6 +11,7 @@ import {
   nextUp,
   useTaskStore,
 } from "../../src/ui";
+import type { Task } from "../../src/ui/domain/types";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, deferredApi, setup } from "./harness";
@@ -342,6 +345,292 @@ describe("Complete a task (TK-1, WF-06)", () => {
         .getByRole("checkbox", { name: "Complete Task 1" })
         .getAttribute("aria-checked"),
     ).toBe("false");
+  });
+
+  it("bug 1: complete scenario end-to-end (Refs #21)", async () => {
+    const tasks = [
+      task({ id: "t-1", title: "Task 1", due_date: TODAY, done: false }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    // Complete task 1
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    expect(deferred.calls).toHaveLength(1);
+
+    // Undo while complete in flight
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    // Complete fails -> nothing rolled back, no error toast
+    await act(async () => {
+      deferred.calls[0].reject(new Error("complete failed"));
+    });
+    expect(screen.queryByText("Couldn't save that change.")).toBeNull();
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+
+    // Reopen was queued; now resolve it
+    expect(deferred.calls).toHaveLength(2);
+    await act(async () => {
+      deferred.calls[1].resolve();
+    });
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+
+    // Next: complete succeeds, then reopen fails -> rolls back to confirmed true
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    expect(deferred.calls).toHaveLength(3);
+    await act(async () => {
+      deferred.calls[2].resolve();
+    });
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Reopen Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+
+    // Click Undo -> reopen is sent
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(deferred.calls).toHaveLength(4);
+
+    // Reopen fails -> rolls back to confirmed true
+    await act(async () => {
+      deferred.calls[3].reject(new Error("reopen failed"));
+    });
+    await screen.findByText("Couldn't save that change.");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Reopen Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("bug 2: a row never changes position after a failure (Refs #21)", async () => {
+    const tasks = [
+      task({ id: "t-1", title: "Task 1", due_date: TODAY }),
+      task({ id: "t-2", title: "Task 2", due_date: TODAY }),
+      task({ id: "t-3", title: "Task 3", due_date: TODAY }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 2" }),
+    );
+    await act(async () => {
+      deferred.calls[0].reject(new Error("failed"));
+    });
+    await screen.findByText("Couldn't save that change.");
+
+    const todayList = screen.getByRole("list", { name: "Today" });
+    const items = Array.from(todayList.querySelectorAll("li")).map(
+      (li) => li.textContent,
+    );
+    expect(items[0]).toContain("Task 1");
+    expect(items[1]).toContain("Task 2");
+    expect(items[2]).toContain("Task 3");
+  });
+
+  it("bug 3: a field changed while complete is in flight survives its failure (Refs #21)", async () => {
+    function TestWithRename() {
+      const store = useTaskStore();
+      return (
+        <>
+          <TodayList />
+          <button
+            onClick={() => {
+              store.change(
+                "t-1",
+                { title: "Renamed Title" },
+                () => new Promise(() => {}),
+              );
+            }}
+          >
+            Rename Task 1
+          </button>
+        </>
+      );
+    }
+
+    const tasks = [
+      task({ id: "t-1", title: "Original Title", due_date: TODAY }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TestWithRename />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Original Title" }),
+    );
+    expect(deferred.calls).toHaveLength(1);
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Rename Task 1" }),
+    );
+    expect(screen.getByText("Renamed Title")).toBeTruthy();
+
+    await act(async () => {
+      deferred.calls[0].reject(new Error("complete failed"));
+    });
+
+    await screen.findByText("Couldn't save that change.");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Renamed Title" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(screen.getByText("Renamed Title")).toBeTruthy();
+  });
+
+  it("bug 4: Undo after a successful complete keeps the server's updated_at (Refs #21)", async () => {
+    let latestTask: Task | undefined;
+    function Inspector() {
+      const store = useTaskStore();
+      const current = store.tasks.find((t) => t.id === "t-1");
+      useEffect(() => {
+        latestTask = current;
+      }, [current]);
+      return null;
+    }
+
+    const initialUpdatedAt = "2026-10-23T01:00:00Z";
+    const serverUpdatedAt = "2026-10-23T01:30:00Z";
+    const tasks = [
+      task({
+        id: "t-1",
+        title: "Task 1",
+        due_date: TODAY,
+        updated_at: initialUpdatedAt,
+      }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(
+      wrap(
+        <>
+          <TodayList />
+          <Inspector />
+        </>,
+      ),
+    );
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    await act(async () => {
+      deferred.calls[0].resolve({
+        task: {
+          ...tasks[0],
+          done: true,
+          done_at: "2026-10-23T01:12:00Z",
+          updated_at: serverUpdatedAt,
+        },
+      });
+    });
+
+    expect(latestTask?.updated_at).toBe(serverUpdatedAt);
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(latestTask?.done).toBe(false);
+    expect(latestTask?.updated_at).toBe(serverUpdatedAt);
+  });
+
+  it("bug 5: tick, Undo, tick within 600 ms: the row stays settling the full 600 ms of the second tick (Refs #21)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
+      const { wrap } = setup(tasks);
+      render(wrap(<TodayList />));
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Complete Task 1" }),
+      );
+      expect(screen.getByRole("list", { name: "Today" }).textContent).toContain(
+        "Task 1",
+      );
+
+      await act(async () => vi.advanceTimersByTime(200));
+
+      await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+      expect(screen.getByRole("list", { name: "Today" }).textContent).toContain(
+        "Task 1",
+      );
+      expect(
+        screen
+          .getByRole("checkbox", { name: "Complete Task 1" })
+          .getAttribute("aria-checked"),
+      ).toBe("false");
+
+      await userEvent.click(
+        screen.getByRole("checkbox", { name: "Complete Task 1" }),
+      );
+
+      await act(async () => vi.advanceTimersByTime(500));
+      expect(screen.getByRole("list", { name: "Today" }).textContent).toContain(
+        "Task 1",
+      );
+      expect(
+        screen.queryByRole("list", { name: "Completed" })?.textContent ?? "",
+      ).not.toContain("Task 1");
+
+      await act(async () => vi.advanceTimersByTime(100));
+      expect(
+        screen.getByRole("list", { name: "Completed" }).textContent,
+      ).toContain("Task 1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("bug 6: task.limit shows its message without Retry; 500 shows save_failed with Retry (Refs #21)", async () => {
+    const tasks = [
+      task({ id: "t-limit", title: "Task Limit", due_date: TODAY }),
+      task({ id: "t-500", title: "Task 500", due_date: TODAY }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task Limit" }),
+    );
+    await act(async () => {
+      deferred.calls[0].reject(new ApiRequestError("task.limit", 422, "req-1"));
+    });
+
+    await screen.findByText(
+      "You've reached 5,000 open tasks. Complete or delete some to add more.",
+    );
+    expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task Limit" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 500" }),
+    );
+    await act(async () => {
+      deferred.calls[1].reject(
+        new ApiRequestError("error.generic", 500, "req-2"),
+      );
+    });
+
+    await screen.findByText("Couldn't save that change.");
+    expect(screen.getByRole("button", { name: "Retry" })).toBeTruthy();
   });
 
   it("unticking a completed task reopens it without a toast", async () => {
