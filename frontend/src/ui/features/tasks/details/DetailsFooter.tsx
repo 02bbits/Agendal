@@ -1,12 +1,14 @@
 import type { ReactElement } from "react";
 import { t } from "../../../copy";
 import { formatDay, formatTime } from "../../../domain/dates";
+import { localDateTime } from "../../../domain/edit";
 import type { TimeFormat } from "../../../domain/types";
 
 export interface DetailsFooterProps {
   createdAt: string;
   updatedAt?: string;
   todayDate: string;
+  timeZone: string;
   timeFormat: TimeFormat;
 }
 
@@ -14,21 +16,21 @@ export function DetailsFooter({
   createdAt,
   updatedAt,
   todayDate,
+  timeZone,
   timeFormat,
 }: DetailsFooterProps): ReactElement {
+  const localCreated = localDateTime(createdAt, timeZone);
   const createdStr = t("task.created", {
-    date: formatDay(createdAt.slice(0, 10), todayDate),
+    date: formatDay(localCreated.date, todayDate),
   });
 
   let editedStr: string | null = null;
   if (updatedAt) {
-    const datePart = formatDay(updatedAt.slice(0, 10), todayDate);
-    const timePart =
-      updatedAt.length >= 16
-        ? ` ${formatTime(updatedAt.slice(11, 16), timeFormat)}`
-        : "";
+    const localUpdated = localDateTime(updatedAt, timeZone);
+    const datePart = formatDay(localUpdated.date, todayDate);
+    const timePart = formatTime(localUpdated.time, timeFormat);
     editedStr = t("task.edited", {
-      date: `${datePart}${timePart}`,
+      date: `${datePart} ${timePart}`,
     });
   }
 

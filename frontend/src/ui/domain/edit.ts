@@ -7,6 +7,21 @@ import type { Reminder, Task } from "./types";
 export const TITLE_MAX = 200;
 export const NOTES_MAX = 5000;
 
+/**
+ * Formats an ISO instant into floating local date (YYYY-MM-DD) and time (HH:mm)
+ * in the given time zone (ADR-006).
+ */
+export function localDateTime(
+  instant: string,
+  zone: string,
+): { date: string; time: string } {
+  const d = new Date(instant);
+  return {
+    date: today(zone, d),
+    time: localTime(zone, d),
+  };
+}
+
 /** TK-3: an end not after the start is an error (also a DB CHECK). */
 export function scheduleError(
   start: string | null | undefined,

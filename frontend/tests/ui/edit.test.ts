@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   NOTES_MAX,
   TITLE_MAX,
+  localDateTime,
   normalizePatch,
   patchErrors,
   reminderAt,
@@ -240,5 +241,21 @@ describe("reminderAt and reminderPast (BR-12, TK-E4)", () => {
 
     // No due date is never past
     expect(reminderPast({ ...t, due_date: null }, after, "UTC")).toBe(false);
+  });
+});
+
+describe("localDateTime", () => {
+  it("formats instant into local date and time in the given time zone", () => {
+    expect(localDateTime("2026-10-22T18:30:00Z", "Asia/Ho_Chi_Minh")).toEqual({
+      date: "2026-10-23",
+      time: "01:30",
+    });
+
+    expect(
+      localDateTime("2026-10-22T18:30:00Z", "America/Los_Angeles"),
+    ).toEqual({
+      date: "2026-10-22",
+      time: "11:30",
+    });
   });
 });

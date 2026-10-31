@@ -82,6 +82,7 @@ export function TaskDetails({
           createdAt={task.created_at}
           updatedAt={task.updated_at}
           todayDate={store.today}
+          timeZone={store.clock.timeZone}
           timeFormat={store.timeFormat}
         />
       </div>

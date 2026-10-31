@@ -10,6 +10,7 @@ import {
   useTaskStore,
   type Task,
 } from "../../src/ui";
+import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
@@ -341,5 +342,36 @@ describe("Field edge cases and accessibility", () => {
       }),
     );
     await expectAxeCleanInBothThemes();
+  });
+});
+
+describe("DetailsFooter", () => {
+  it("shows footer times in the device's time zone", () => {
+    open(
+      task({
+        title: "Footer Task",
+        created_at: "2026-10-21T20:00:00Z",
+        updated_at: "2026-10-22T18:30:00Z",
+      }),
+    );
+    // In harness, clock is Asia/Ho_Chi_Minh (UTC+7), today is 2026-10-23.
+    // 2026-10-22T18:30:00Z in Ho Chi Minh is 2026-10-23 01:30 -> "Edited Today 01:30"
+    expect(screen.getByText(/Edited Today 01:30/)).toBeTruthy();
+    // 2026-10-21T20:00:00Z in Ho Chi Minh is 2026-10-22 03:00 -> yesterday relative to 2026-10-23 -> "Created Yesterday"
+    expect(screen.getByText(/Created Yesterday/)).toBeTruthy();
+  });
+
+  it("shows day name when created date is not yesterday or today", () => {
+    render(
+      <DetailsFooter
+        createdAt="2026-10-21T20:00:00Z"
+        updatedAt="2026-10-22T18:30:00Z"
+        todayDate="2026-10-24"
+        timeZone="Asia/Ho_Chi_Minh"
+        timeFormat="24h"
+      />,
+    );
+    // With today 2026-10-24, created 2026-10-22 (Thu) is 2 days ago -> "Created Thu 22 Oct"
+    expect(screen.getByText(/Created Thu 22 Oct/)).toBeTruthy();
   });
 });
