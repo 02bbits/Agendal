@@ -50,7 +50,7 @@ final class CommandMatcher
      *
      * @return list<string>
      */
-    public function modifierWords(string $text, NoteContext $context): array
+    private function modifierWords(string $text, NoteContext $context): array
     {
         $categories = ['priority_high', 'priority_low', 'repeat_prefix', ...array_map(fn (string $key): string => 'repeat:'.$key, array_keys(NoteVocabulary::family('repeat')))];
         $modifiers = $this->tokens(implode(' ', array_merge(...array_map(NoteVocabulary::values(...), $categories))));

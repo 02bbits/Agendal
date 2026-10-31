@@ -44,7 +44,7 @@ final class NoteVocabulary
     public const MODIFIER_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
 
     /** One alternation across all these categories, so "every day" wins over "every" wherever each is listed. */
-    public static function modifiers(): string
+    private static function modifiers(): string
     {
         return self::alternation(self::modifierValues());
     }
