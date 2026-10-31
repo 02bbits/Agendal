@@ -81,6 +81,39 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     },
   );
 
+  it.each([
+    [
+      "the capture bar",
+      (bar: HTMLElement) =>
+        within(bar).getByRole("button", { name: "Write a note" }),
+    ],
+    [
+      "the Notes tab",
+      () =>
+        within(screen.getByRole("main")).getByRole("button", {
+          name: "Write a note",
+        }),
+    ],
+  ])(
+    "%s opens the full-screen editor with the cursor in the text (T-NC-01)",
+    async (_, opener) => {
+      renderAt("/notes", NotesPage);
+      const bar = screen.getByRole("navigation", {
+        name: "Main",
+      }).parentElement!;
+      await userEvent.click(opener(bar));
+      const editor = screen.getByRole("dialog", { name: "Write a note" });
+      expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
+        document.activeElement,
+      );
+      expect(router.push).not.toHaveBeenCalled();
+      await userEvent.click(
+        within(editor).getByRole("button", { name: "Close" }),
+      );
+      expect(screen.queryByRole("dialog")).toBeNull();
+    },
+  );
+
   it("/search is a pushed screen with Back and the search hint", async () => {
     renderAt("/search", SearchPage);
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
@@ -154,10 +187,11 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     expect(router.push).toHaveBeenLastCalledWith("/account");
   });
 
-  it("the capture bar opens Notes until the note editor lands, and hides + until New task exists", async () => {
+  it("the capture bar stays on the screen it was on, and hides + until New task exists", async () => {
     renderAt("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Write a note" }));
-    expect(router.replace).toHaveBeenLastCalledWith("/notes");
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Add a task" })).toBeNull();
   });
 });
