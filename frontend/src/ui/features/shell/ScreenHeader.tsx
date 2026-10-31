@@ -5,7 +5,8 @@ import { Link } from "./Link";
 import { ROUTES, type Navigate } from "./routes";
 
 export interface ScreenHeaderProps {
-  overline: string;
+  /** Date or count above the title, e.g. "Friday 23 October" on Inbox. */
+  overline?: string;
   title: string;
   /** The account avatar shows the first letter of the name. */
   accountInitial: string;
@@ -20,10 +21,13 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
     ref,
   ) {
     return (
-      <header className="mb-5 pt-3">
+      <header className="mb-5 pt-3 md:pt-8">
         <div className="flex min-h-11 items-center justify-between">
-          <p className="overline m-0 text-ink-secondary">{overline}</p>
-          <div className="flex items-center gap-1">
+          <p className="text-overline font-semibold uppercase m-0 text-ink-secondary">
+            {overline ?? ""}
+          </p>
+          {/* From 768px the sidebar has Search and Account (UX-27) */}
+          <div className="flex items-center gap-1 md:hidden">
             <Link
               href={ROUTES.search}
               navigate={navigate}

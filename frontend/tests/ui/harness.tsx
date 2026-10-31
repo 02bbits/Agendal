@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Toast } from "../../src/ui/components/Toast";
-import { createMemoryApi } from "../../src/ui/domain/memoryApi";
+import { createMemoryApi, deferredApi } from "./memoryApi";
+import type { TaskApi } from "../../src/ui/domain/api";
 import type { Task } from "../../src/ui/domain/types";
 import {
   TaskStoreProvider,
@@ -14,18 +15,19 @@ export const clock: Clock = {
   now: () => new Date("2026-10-23T01:12:00Z"),
   timeZone: "Asia/Ho_Chi_Minh",
 };
-export { TODAY };
+export { TODAY, deferredApi };
 
 function StoreToast() {
   const { toast, dismissToast } = useTaskStore();
   return <Toast toast={toast} onDismiss={dismissToast} />;
 }
 
-export function setup(tasks: Task[]) {
+export function setup(tasks: Task[], customApi?: TaskApi) {
   const memory = createMemoryApi({ tasks, projects });
+  const api = customApi ?? memory.api;
   const wrap = (ui: ReactNode) => (
     <TaskStoreProvider
-      api={memory.api}
+      api={api}
       clock={clock}
       initialTasks={tasks}
       initialProjects={projects}

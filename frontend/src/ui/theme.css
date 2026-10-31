@@ -4,7 +4,6 @@
  * Themes are switched with data-theme="agendal-light" | "agendal-dark" on <html>;
  * with no attribute, the system setting picks one (prefersdark).
  */
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap");
 @import "tailwindcss";
 
 @plugin "daisyui" {
@@ -67,6 +66,9 @@
   name: "agendal-dark";
   default: false;
   prefersdark: true;
+  /* The system dark mode applies only when no theme is chosen. With the default ":root", its
+     media rule outranks [data-theme="agendal-light"] and Light can't be picked (AP-3) */
+  root: ":root:not([data-theme])";
   color-scheme: dark;
 
   --color-base-100: #121211;
@@ -148,9 +150,12 @@
 }
 
 @theme {
+  /* The variables come from next/font in app/layout.tsx */
   --font-sans:
-    "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-serif: Newsreader, Georgia, "Times New Roman", serif;
+    var(--font-instrument-sans), "Instrument Sans", -apple-system, "Segoe UI",
+    system-ui, sans-serif;
+  --font-serif:
+    var(--font-newsreader), Newsreader, Georgia, "Times New Roman", serif;
 
   /* Type scale */
   --text-display: 36px;
@@ -218,13 +223,22 @@
   }
 }
 
-/* Overlines above screen titles and group labels */
-@utility overline {
-  font-size: var(--text-overline);
-  line-height: var(--text-overline--line-height);
-  letter-spacing: var(--text-overline--letter-spacing);
-  font-weight: 600;
-  text-transform: uppercase;
+/* Side margin of the column: 20px plus the side safe areas of a phone held sideways (UX-25) */
+@utility px-gutter {
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+}
+
+/* Side margin of the content column from 768px wide: 40px plus the safe areas (UX-27) */
+@utility px-gutter-wide {
+  padding-left: calc(2.5rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(2.5rem + env(safe-area-inset-right, 0px));
+}
+
+/* Only the side safe areas, for full-width bars such as the tab bar (UX-25) */
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @layer base {

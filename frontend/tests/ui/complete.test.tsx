@@ -11,7 +11,7 @@ import {
 } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
-import { TODAY, setup } from "./harness";
+import { TODAY, deferredApi, setup } from "./harness";
 
 function TodayList() {
   const store = useTaskStore();
@@ -192,6 +192,158 @@ describe("Complete a task (TK-1, WF-06)", () => {
     await waitFor(() => expect(memory.db.tasks[2]!.done).toBe(true));
   });
 
+  it("a failed save reverts only its own task while others stay done (Refs #21)", async () => {
+    const tasks = [
+      task({ id: "t-a", title: "Task A", due_date: TODAY }),
+      task({ id: "t-b", title: "Task B", due_date: TODAY }),
+    ];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task A" }),
+    );
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task B" }),
+    );
+
+    const callA = deferred.calls.find((c) => c.id === "t-a")!;
+    const callB = deferred.calls.find((c) => c.id === "t-b")!;
+
+    await act(async () => {
+      callA.reject();
+      callB.resolve();
+    });
+
+    await screen.findByText("Couldn't save that change.");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task A" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Reopen Task B" })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+  });
+
+  it("complete in flight -> Undo: reopen is not sent until complete settles (Refs #21)", async () => {
+    const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    expect(deferred.calls).toHaveLength(1);
+    expect(deferred.calls[0].type).toBe("complete");
+
+    // Click Undo while complete is in flight
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    // reopen is NOT sent until complete settles
+    expect(deferred.calls).toHaveLength(1);
+
+    // Settle complete
+    await act(async () => {
+      deferred.calls[0].resolve();
+    });
+
+    // Now reopen is sent
+    expect(deferred.calls).toHaveLength(2);
+    expect(deferred.calls[1].type).toBe("reopen");
+
+    // Settle reopen
+    await act(async () => {
+      deferred.calls[1].resolve();
+    });
+
+    // Task is open
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("complete in flight -> Undo: late complete response is ignored and task stays open (Refs #21)", async () => {
+    const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    expect(deferred.calls).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    // Resolve complete late with a done task
+    await act(async () => {
+      deferred.calls[0].resolve({
+        task: { ...tasks[0], done: true, done_at: "2026-10-23T08:00:00Z" },
+      });
+    });
+
+    // Task stays open, late response is ignored
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+
+    // Settle reopen
+    expect(deferred.calls).toHaveLength(2);
+    await act(async () => {
+      deferred.calls[1].resolve();
+    });
+
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
+  it("complete fails after Undo -> no revert and no Retry toast for old request (Refs #21)", async () => {
+    const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
+    const deferred = deferredApi({ tasks });
+    const { wrap } = setup(tasks, deferred.api);
+    render(wrap(<TodayList />));
+
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Task 1" }),
+    );
+    expect(deferred.calls).toHaveLength(1);
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    // Complete fails after Undo
+    await act(async () => {
+      deferred.calls[0].reject(new Error("server error"));
+    });
+
+    // No Retry toast for the old request
+    expect(screen.queryByText("Couldn't save that change.")).toBeNull();
+
+    // Settle reopen
+    expect(deferred.calls).toHaveLength(2);
+    await act(async () => {
+      deferred.calls[1].resolve();
+    });
+
+    // Task stays open (no revert)
+    expect(
+      screen
+        .getByRole("checkbox", { name: "Complete Task 1" })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+  });
+
   it("unticking a completed task reopens it without a toast", async () => {
     const { wrap, memory } = setup([
       task({
@@ -207,6 +359,28 @@ describe("Complete a task (TK-1, WF-06)", () => {
     );
     await waitFor(() => expect(memory.db.tasks[0]!.done).toBe(false));
     expect(screen.queryByRole("button", { name: "Undo" })).toBeNull();
+  });
+
+  it("unmount right after a tick: clears timers and leaves vi.getTimerCount() at 0 (Refs #21)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const { wrap } = setup(seed());
+      const { unmount } = render(wrap(<TodayList />));
+
+      await userEvent.click(
+        screen.getByRole("checkbox", {
+          name: "Complete Read chapter 4 for SQL",
+        }),
+      );
+
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+
+      unmount();
+
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("progress summary is axe clean in both themes", async () => {
