@@ -15,7 +15,15 @@ import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
 
-function Details({ id }: { id: string }) {
+function Details({
+  id,
+  projectsStatus,
+  onRetryProjects,
+}: {
+  id: string;
+  projectsStatus?: "ready" | "failed";
+  onRetryProjects?: () => void;
+}) {
   const store = useTaskStore();
   const current = store.tasks.find((x) => x.id === id)!;
   return (
@@ -23,14 +31,27 @@ function Details({ id }: { id: string }) {
       task={current}
       onBack={() => {}}
       sourceNote={{ name: "This week", href: "/notes/n1" }}
+      projectsStatus={projectsStatus}
+      onRetryProjects={onRetryProjects}
     />
   );
 }
 
-function open(t0: Task) {
+function open(
+  t0: Task,
+  opts?: { projectsStatus?: "ready" | "failed"; onRetryProjects?: () => void },
+) {
   const ctx = setup([t0]);
   const patchSpy = vi.spyOn(ctx.memory.api, "patch");
-  render(ctx.wrap(<Details id={t0.id} />));
+  render(
+    ctx.wrap(
+      <Details
+        id={t0.id}
+        projectsStatus={opts?.projectsStatus}
+        onRetryProjects={opts?.onRetryProjects}
+      />,
+    ),
+  );
   const saved = () => ctx.memory.db.tasks.find((x) => x.id === t0.id)!;
   return { ...ctx, saved, patchSpy };
 }
@@ -207,6 +228,31 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
       ),
     );
+  });
+
+  it("shows project name when projects are loaded and contain task's project", () => {
+    open(task({ title: "Task with Project", project_id: "p-hci" }));
+    const select = screen.getByLabelText(
+      t("task.project"),
+    ) as HTMLSelectElement;
+    expect(select.disabled).toBe(false);
+    expect(select.value).toBe("p-hci");
+    expect(screen.getByText("HCI")).toBeTruthy();
+  });
+
+  it("disables select with helper and sends no patch when task has no project and projects fail", async () => {
+    const { patchSpy } = open(
+      task({ title: "No Project Task", project_id: null }),
+      { projectsStatus: "failed" },
+    );
+    const select = screen.getByLabelText(
+      t("task.project"),
+    ) as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+    expect(
+      screen.getAllByText(t("project.load_failed")).length,
+    ).toBeGreaterThan(0);
+    expect(patchSpy).not.toHaveBeenCalled();
   });
 
   it("saves notes on blur", async () => {

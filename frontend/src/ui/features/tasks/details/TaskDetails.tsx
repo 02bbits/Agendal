@@ -10,6 +10,7 @@ import { useTaskStore } from "../store";
 import { ChoiceField } from "./ChoiceField";
 import { DetailsFooter } from "./DetailsFooter";
 import { NotesField } from "./NotesField";
+import { ProjectField } from "./ProjectField";
 import { TaskHeader } from "./TaskHeader";
 import { WhenSection } from "./WhenSection";
 
@@ -19,6 +20,8 @@ export interface TaskDetailsProps {
   navigate?: Navigate;
   sourceNote?: { name: string; href: string };
   deleteAction?: ReactNode;
+  projectsStatus?: "ready" | "failed";
+  onRetryProjects?: () => void;
 }
 
 export function TaskDetails({
@@ -27,6 +30,8 @@ export function TaskDetails({
   navigate,
   sourceNote,
   deleteAction,
+  projectsStatus = "ready",
+  onRetryProjects,
 }: TaskDetailsProps): ReactElement {
   const store = useTaskStore();
   function save(patch: TaskPatch) {
@@ -60,17 +65,11 @@ export function TaskDetails({
           }))}
           onChange={(priority) => save({ priority })}
         />
-        <ChoiceField<string>
-          id="task-project"
-          label={t("task.project")}
-          value={task.project_id ?? ""}
-          options={[
-            { value: "", label: t("project.none") },
-            ...store.projects.map((p) => ({ value: p.id, label: p.name })),
-          ]}
-          onChange={(project_id) =>
-            save({ project_id: project_id ? project_id : null })
-          }
+        <ProjectField
+          projectId={task.project_id}
+          projectsStatus={projectsStatus}
+          onRetryProjects={onRetryProjects}
+          onChange={(project_id) => save({ project_id })}
         />
         <NotesField value={task.notes} onSave={(notes) => save({ notes })} />
       </div>

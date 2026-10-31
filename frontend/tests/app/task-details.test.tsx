@@ -1,5 +1,11 @@
 import { Suspense } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
@@ -255,5 +261,67 @@ describe("Task details page /tasks/[id]", () => {
     expect(skeleton.getAttribute("aria-busy")).toBe("true");
 
     vi.useRealTimers();
+  });
+
+  it("never shows or saves a wrong project when projects fail to load, and reloads projects on retry", async () => {
+    let failProjects = true;
+    const fakeTask = task({
+      id: "t-1",
+      title: "Project Task",
+      project_id: "p-1",
+    });
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-1") return json(200, fakeTask);
+      if (url === "/api/v1/projects") {
+        if (failProjects)
+          return json(404, { error: { code: "error.not_found" } });
+        return json(200, [{ id: "p-1", name: "Alpha Project" }]);
+      }
+      return json(404, {});
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    // The project select is disabled
+    const select = (await screen.findByLabelText(
+      t("task.project"),
+    )) as HTMLSelectElement;
+    expect(select.disabled).toBe(true);
+
+    // Does NOT show "No project"
+    expect(screen.queryByText(t("project.none"))).toBeNull();
+
+    // Shows "Couldn't load your projects." and Retry
+    expect(
+      screen.getAllByText(t("project.load_failed")).length,
+    ).toBeGreaterThan(0);
+    const retryBtn = screen.getByRole("button", { name: t("common.retry") });
+    expect(retryBtn).toBeTruthy();
+
+    // Retry with /projects now answering the list
+    failProjects = false;
+    await userEvent.click(retryBtn);
+
+    // The select shows the project's name and is enabled
+    await waitFor(() => expect(select.disabled).toBe(false));
+    expect(screen.getByText("Alpha Project")).toBeTruthy();
+    expect(select.value).toBe("p-1");
+
+    // No PATCH was sent
+    const patchCalls = fetchMock.mock.calls.filter(
+      ([, init]) => init?.method === "PATCH",
+    );
+    expect(patchCalls).toHaveLength(0);
   });
 });

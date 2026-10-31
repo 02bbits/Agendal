@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactElement } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { ApiRequestError } from "../../../lib/apiError";
@@ -45,15 +45,36 @@ function TaskDetailsContainer({
   initialTask,
   back,
   navigate,
+  projectsStatus,
+  onRetryProjects,
+  onRegisterStore,
 }: {
   initialTask: Task;
   back: () => void;
   navigate?: Navigate;
+  projectsStatus: "ready" | "failed";
+  onRetryProjects: () => void;
+  onRegisterStore: (
+    setter: (updater: (prev: Project[]) => Project[]) => void,
+  ) => void;
 }): ReactElement {
   const store = useTaskStore();
+
+  useEffect(() => {
+    onRegisterStore(store.setProjects);
+  }, [store.setProjects, onRegisterStore]);
+
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
-  return <TaskDetails task={currentTask} onBack={back} navigate={navigate} />;
+  return (
+    <TaskDetails
+      task={currentTask}
+      onBack={back}
+      navigate={navigate}
+      projectsStatus={projectsStatus}
+      onRetryProjects={onRetryProjects}
+    />
+  );
 }
 
 export default function TaskDetailsClient({
@@ -63,6 +84,9 @@ export default function TaskDetailsClient({
 
   const [task, setTask] = useState<Task | null>(null);
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
+    "ready",
+  );
   const [loading, setLoading] = useState(true);
   const [showSkeleton, setShowSkeleton] = useState(false);
   const [errorState, setErrorState] = useState<{
@@ -71,14 +95,35 @@ export default function TaskDetailsClient({
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
+  const storeProjectsRef = useRef<
+    ((updater: (prev: Project[]) => Project[]) => void) | null
+  >(null);
+
+  const reloadProjects = () => {
+    return projects()
+      .then((pData) => {
+        setProjectsStatus("ready");
+        storeProjectsRef.current?.(() => pData);
+      })
+      .catch(() => {
+        setProjectsStatus("failed");
+      });
+  };
+
   useEffect(() => {
     let cancelled = false;
 
-    Promise.all([getTask(id), projects().catch(() => [])])
-      .then(([tData, pData]) => {
+    const taskPromise = getTask(id);
+    const projectsPromise = projects()
+      .then((pData) => ({ status: "ready" as const, data: pData }))
+      .catch(() => ({ status: "failed" as const, data: [] as Project[] }));
+
+    Promise.all([taskPromise, projectsPromise])
+      .then(([tData, pRes]) => {
         if (cancelled) return;
         setTask(tData);
-        setProjectList(pData);
+        setProjectList(pRes.data);
+        setProjectsStatus(pRes.status);
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -171,6 +216,11 @@ export default function TaskDetailsClient({
         initialTask={task}
         back={back}
         navigate={navigate}
+        projectsStatus={projectsStatus}
+        onRetryProjects={reloadProjects}
+        onRegisterStore={(setter) => {
+          storeProjectsRef.current = setter;
+        }}
       />
     </TaskStoreProvider>
   );

@@ -85,6 +85,7 @@ export const pending = {
   "project.menu": "Project options",
   "project.delete": "Delete project",
   "project.no_project_open": "Open tasks without a project",
+  "project.load_failed": "Couldn't load your projects.",
   "colour.blue": "Blue",
   "colour.red": "Red",
   "colour.orange": "Orange",
