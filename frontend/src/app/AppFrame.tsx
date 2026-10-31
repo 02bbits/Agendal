@@ -345,7 +345,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
-        {editing && <NoteEditor onClose={closeNoteEditor} />}
+        {editing && (
+          <NoteEditor
+            onClose={closeNoteEditor}
+            onDraftRestored={() => showToast(t("note.draft_restored"))}
+          />
+        )}
       </AppShell>
     </AppFrameContext.Provider>
   );

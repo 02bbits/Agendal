@@ -1,8 +1,19 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { loadDraft, saveDraft } from "../../src/lib/draft";
 import { NoteEditor } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
+
+vi.mock("../../src/lib/draft", () => ({
+  loadDraft: vi.fn(),
+  saveDraft: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(loadDraft).mockReset().mockResolvedValue("");
+  vi.mocked(saveDraft).mockReset().mockResolvedValue();
+});
 
 const field = () => screen.getByRole("textbox", { name: "Your note" });
 const makeTasks = () => screen.getByRole("button", { name: "Make tasks" });
@@ -82,5 +93,53 @@ describe("NoteEditor (IM-41)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
     await userEvent.keyboard("{Escape}");
     expect(onClose).toHaveBeenCalledTimes(2);
+  });
+
+  it("saves the draft 500 ms after the last keystroke (T-NC-101)", async () => {
+    render(<NoteEditor onClose={() => {}} />);
+    await userEvent.type(field(), "buy milk");
+    expect(saveDraft).not.toHaveBeenCalled();
+    await vi.waitFor(() => expect(saveDraft).toHaveBeenCalledWith("buy milk"), {
+      timeout: 2000,
+    });
+    expect(saveDraft).toHaveBeenCalledOnce();
+  });
+
+  it("saves at once when the editor closes, and when the page is hidden", async () => {
+    const { unmount } = render(<NoteEditor onClose={() => {}} />);
+    await userEvent.type(field(), "unsent");
+    window.dispatchEvent(new Event("pagehide"));
+    expect(saveDraft).toHaveBeenCalledWith("unsent");
+    await userEvent.type(field(), "!");
+    unmount();
+    expect(saveDraft).toHaveBeenLastCalledWith("unsent!");
+  });
+
+  it("puts an unsent note back with the cursor at the end (T-NC-101)", async () => {
+    vi.mocked(loadDraft).mockResolvedValue("call the bank");
+    const onDraftRestored = vi.fn();
+    render(<NoteEditor onClose={() => {}} onDraftRestored={onDraftRestored} />);
+    const input = field() as HTMLTextAreaElement;
+    await vi.waitFor(() => expect(input.value).toBe("call the bank"));
+    expect(onDraftRestored).toHaveBeenCalledOnce();
+    expect(
+      screen.queryByRole("button", { name: "move gym to sunday" }),
+    ).toBeNull();
+    await vi.waitFor(() => expect(input.selectionStart).toBe(13));
+    expect(saveDraft).not.toHaveBeenCalled();
+  });
+
+  it("does not overwrite what was typed before the draft arrived", async () => {
+    let arrive: (text: string) => void = () => {};
+    vi.mocked(loadDraft).mockReturnValue(
+      new Promise((resolve) => (arrive = resolve)),
+    );
+    const onDraftRestored = vi.fn();
+    render(<NoteEditor onClose={() => {}} onDraftRestored={onDraftRestored} />);
+    await userEvent.type(field(), "new");
+    arrive("old draft");
+    await Promise.resolve();
+    expect((field() as HTMLTextAreaElement).value).toBe("new");
+    expect(onDraftRestored).not.toHaveBeenCalled();
   });
 });
