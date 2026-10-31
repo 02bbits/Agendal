@@ -42,7 +42,7 @@ it('uses the error shape for validation, sign-in and missing routes', function (
     $invalid = $this->postJson('/api/v1/_validate')->assertStatus(422);
     expect($invalid->json('error.code'))->toBe('error.invalid')->and($invalid->json('error.fields'))->toHaveKey('title');
 
-    $guest = $this->getJson('/api/v1/user')->assertUnauthorized();
+    $guest = $this->getJson('/api/v1/me')->assertUnauthorized();
     expect($guest->json('error.code'))->toBe('auth.session_expired');
 
     $missing = $this->getJson('/api/v1/nothing-here')->assertNotFound();
@@ -61,7 +61,7 @@ it('SC-10: someone else\'s task is a 404, your own is found', function () {
 });
 
 it('SEC-12: every API route needs a session unless it is public', function () {
-    $public = ['api/v1/health', 'api/v1/auth/register', 'api/v1/auth/login', 'api/v1/auth/forgot-password', 'api/v1/auth/reset-password', 'api/v1/_boom', 'api/v1/_validate'];
+    $public = ['api/v1/health', 'api/v1/auth/register', 'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/forgot-password', 'api/v1/auth/reset-password', 'api/v1/_boom', 'api/v1/_validate'];
 
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($r) => str_starts_with($r->uri(), 'api/v1/') && ! in_array($r->uri(), $public));

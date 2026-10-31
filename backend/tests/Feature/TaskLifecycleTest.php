@@ -242,7 +242,7 @@ it('T-TK-41 (API part of delete + Undo): DELETE → 204, GET → 404, row still 
         ->and($restoredTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00Z');
 });
 
-it('DELETE a repeating task without scope → 422 on scope, task not deleted; with scope=future → 204', function () {
+it('DELETE a repeating task without scope or with scope=future → 422 on scope, task not deleted', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -270,16 +270,15 @@ it('DELETE a repeating task without scope → 422 on scope, task not deleted; wi
         ->assertStatus(422);
     expect($respInvalidScope->json('error.fields.scope'))->toContain('Choose This task only or This and all future.');
 
-    // 2. With scope=future → 204
+    // 2. With scope=future → 422 on scope, message: "This and all future isn't available yet.", task still exists
     $respScopeFuture = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=future")
-        ->assertStatus(204);
-    expect($respScopeFuture->getContent())->toBeEmpty();
+        ->assertStatus(422);
+    expect($respScopeFuture->json('error.code'))->toBe('error.invalid')
+        ->and($respScopeFuture->json('error.fields.scope'))->toContain("This and all future isn't available yet.");
 
     $taskAfter = Task::find($taskId);
-    expect($taskAfter)->toBeNull();
-    $rawRow = DB::table('tasks')->find($taskId);
-    expect($rawRow)->not->toBeNull()
-        ->and($rawRow->deleted_at)->not->toBeNull();
+    expect($taskAfter)->not->toBeNull()
+        ->and($taskAfter->deleted_at)->toBeNull();
 });
 
 it('restore of a task that is not deleted → 200, nothing changes', function () {
@@ -425,4 +424,146 @@ it('DELETE repeating task with scope=one succeeds with 204', function () {
 
     $task = Task::find($taskId);
     expect($task)->toBeNull();
+});
+
+it('with 5000 open tasks, reopen a done task → 422 task.limit, task stays done; succeeds when under limit', function () {
+    $user = User::factory()->create();
+
+    $doneTaskId = (string) Str::uuid();
+    $doneAt = '2026-10-23 01:10:00';
+    Task::forceCreate([
+        'id' => $doneTaskId,
+        'user_id' => $user->id,
+        'title' => 'Completed task to reopen',
+        'done' => true,
+        'done_at' => Carbon::parse($doneAt),
+        'field_updated_at' => [
+            'done' => '2026-10-23T01:10:00Z',
+        ],
+    ]);
+
+    $records = [];
+    for ($i = 0; $i < 5000; $i++) {
+        $records[] = [
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'title' => "Task {$i}",
+            'done' => false,
+        ];
+    }
+    foreach (array_chunk($records, 1000) as $chunk) {
+        DB::table('tasks')->insert($chunk);
+    }
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$doneTaskId}/reopen")
+        ->assertStatus(422);
+
+    expect($response->json('error.code'))->toBe('task.limit')
+        ->and($response->json('error.message'))->toBe("You've reached 5,000 open tasks. Complete or delete some to add more.")
+        ->and($response->json('error.request_id'))->not->toBeEmpty();
+
+    $taskAfter = Task::find($doneTaskId);
+    expect($taskAfter)->not->toBeNull()
+        ->and($taskAfter->done)->toBeTrue()
+        ->and($taskAfter->done_at->format('Y-m-d H:i:s'))->toBe($doneAt);
+
+    // Delete one open task so we are under 5000
+    DB::table('tasks')->where('user_id', $user->id)->where('done', false)->limit(1)->delete();
+
+    $successResponse = $this->actingAs($user)->postJson("/api/v1/tasks/{$doneTaskId}/reopen")
+        ->assertStatus(200);
+
+    expect($successResponse->json('task.done'))->toBeFalse()
+        ->and($successResponse->json('task.done_at'))->toBeNull();
+});
+
+it('with 5000 open tasks, restore a deleted open task → 422 task.limit, task stays deleted; succeeds when under limit', function () {
+    $user = User::factory()->create();
+
+    $deletedTaskId = (string) Str::uuid();
+    $deletedAt = '2026-10-23 01:10:00';
+    Task::forceCreate([
+        'id' => $deletedTaskId,
+        'user_id' => $user->id,
+        'title' => 'Deleted open task to restore',
+        'done' => false,
+        'deleted_at' => Carbon::parse($deletedAt),
+        'field_updated_at' => [
+            'deleted' => '2026-10-23T01:10:00Z',
+        ],
+    ]);
+
+    $records = [];
+    for ($i = 0; $i < 5000; $i++) {
+        $records[] = [
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'title' => "Task {$i}",
+            'done' => false,
+        ];
+    }
+    foreach (array_chunk($records, 1000) as $chunk) {
+        DB::table('tasks')->insert($chunk);
+    }
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$deletedTaskId}/restore")
+        ->assertStatus(422);
+
+    expect($response->json('error.code'))->toBe('task.limit')
+        ->and($response->json('error.message'))->toBe("You've reached 5,000 open tasks. Complete or delete some to add more.")
+        ->and($response->json('error.request_id'))->not->toBeEmpty();
+
+    $rawRow = DB::table('tasks')->find($deletedTaskId);
+    expect($rawRow)->not->toBeNull()
+        ->and($rawRow->deleted_at)->not->toBeNull();
+
+    // Delete one open task so we are under 5000
+    DB::table('tasks')->where('user_id', $user->id)->whereNull('deleted_at')->where('done', false)->limit(1)->delete();
+
+    $successResponse = $this->actingAs($user)->postJson("/api/v1/tasks/{$deletedTaskId}/restore")
+        ->assertStatus(200);
+
+    expect($successResponse->json('id'))->toBe($deletedTaskId);
+    $restoredTask = Task::find($deletedTaskId);
+    expect($restoredTask)->not->toBeNull()
+        ->and($restoredTask->deleted_at)->toBeNull();
+});
+
+it('with 5000 open tasks, restoring a deleted done task succeeds because it is not open', function () {
+    $user = User::factory()->create();
+
+    $deletedDoneTaskId = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $deletedDoneTaskId,
+        'user_id' => $user->id,
+        'title' => 'Deleted completed task to restore',
+        'done' => true,
+        'done_at' => Carbon::parse('2026-10-23 01:00:00'),
+        'deleted_at' => Carbon::parse('2026-10-23 01:10:00'),
+        'field_updated_at' => [
+            'deleted' => '2026-10-23T01:10:00Z',
+        ],
+    ]);
+
+    $records = [];
+    for ($i = 0; $i < 5000; $i++) {
+        $records[] = [
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'title' => "Task {$i}",
+            'done' => false,
+        ];
+    }
+    foreach (array_chunk($records, 1000) as $chunk) {
+        DB::table('tasks')->insert($chunk);
+    }
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$deletedDoneTaskId}/restore")
+        ->assertStatus(200);
+
+    expect($response->json('id'))->toBe($deletedDoneTaskId);
+    $restoredTask = Task::find($deletedDoneTaskId);
+    expect($restoredTask)->not->toBeNull()
+        ->and($restoredTask->deleted_at)->toBeNull()
+        ->and($restoredTask->done)->toBeTrue();
 });

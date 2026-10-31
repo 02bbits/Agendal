@@ -27,6 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->append(SecurityHeaders::class);
         // Sanctum SPA cookie sessions (ADR-007)
         $middleware->statefulApi();
+        $middleware->throttleApi(); // NF-13: the 'api' limiter
         $middleware->appendToGroup('api', SyncTimezone::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

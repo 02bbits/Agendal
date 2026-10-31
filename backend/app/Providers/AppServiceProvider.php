@@ -27,10 +27,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        RateLimiter::for('notes', fn (Request $request): array => [
-            Limit::perMinute((int) config('notes.rate_per_minute'))->by('notes-minute:'.$request->user()?->getAuthIdentifier()),
-            Limit::perDay((int) config('notes.rate_per_day'))->by('notes-day:'.$request->user()?->getAuthIdentifier()),
-        ]);
         // NF-13 rate limits
         RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)->by($request->ip()));
         RateLimiter::for('forgot-password', fn (Request $request) => [
@@ -42,6 +38,24 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(5)->by('ip:'.$request->ip()),
             Limit::perHour(20)->by('ip:'.$request->ip()),
         ]);
+
+        // Everything else: 120/min per user, 300/min per IP for guests
+        RateLimiter::for('api', fn (Request $request) => $request->user('sanctum')
+            ? Limit::perMinute(120)->by('user:'.$request->user('sanctum')->getAuthIdentifier())
+            : Limit::perMinute(300)->by('ip:'.$request->ip()));
+        // Named for endpoints that arrive later; their owners attach them with throttle:<name>.
+        // Each replaces the general limit on its route, so it carries the per-user key itself
+        $perUser = fn (Request $request) => 'user:'.($request->user('sanctum')?->getAuthIdentifier() ?? $request->ip());
+        RateLimiter::for('notes', fn (Request $request) => [
+            Limit::perMinute(30)->by('notes-min:'.$perUser($request)),
+            Limit::perDay(300)->by('notes-day:'.$perUser($request)),
+        ]);
+        RateLimiter::for('files', fn (Request $request) => [
+            Limit::perHour(10)->by('files-hour:'.$perUser($request)),
+            Limit::perDay(30)->by('files-day:'.$perUser($request)),
+        ]);
+        RateLimiter::for('search', fn (Request $request) => Limit::perMinute(60)->by('search:'.$perUser($request)));
+        RateLimiter::for('sync', fn (Request $request) => Limit::perMinute(30)->by('sync:'.$perUser($request)));
 
         // The reset link opens the app, with the token in the fragment so it never reaches a
         // server log or a Referer (AA §2.3)

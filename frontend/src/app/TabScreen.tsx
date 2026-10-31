@@ -1,5 +1,6 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import {
   RouteEmptyState,
   ScreenHeader,
@@ -7,6 +8,7 @@ import {
   type CopyKey,
   type TabId,
 } from "@/ui";
+import { headerDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 
 const TITLE: Record<TabId, CopyKey> = {
@@ -16,15 +18,24 @@ const TITLE: Record<TabId, CopyKey> = {
   notes: "nav.notes",
 };
 
+const noSubscription = () => () => {};
+
 /** A tab route before its screen lands: header and the tab's empty state. */
 export function TabScreen({ tab }: { tab: TabId }) {
-  const { navigate } = useAppFrame();
+  const { navigate, user } = useAppFrame();
+  // Inbox shows today's date (screens.md). Empty on the server: the page is prerendered at build time
+  const date = useSyncExternalStore(
+    noSubscription,
+    () => (tab === "inbox" ? headerDate() : undefined),
+    () => undefined,
+  );
+
   return (
     <>
-      {/* The account initial comes from the signed-in user (AA) */}
       <ScreenHeader
+        overline={date}
         title={t(TITLE[tab])}
-        accountInitial=""
+        accountInitial={user?.display_name || user?.email || ""}
         navigate={navigate}
       />
       <RouteEmptyState route={tab} />

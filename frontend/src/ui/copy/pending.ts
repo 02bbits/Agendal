@@ -10,6 +10,8 @@ export const pending = {
   "nav.search": "Search",
   "nav.account": "Account",
   "nav.tabs": "Main",
+  "nav.sidebar": "Menu",
+  "app.name": "Agendal",
   "common.close": "Close",
   "common.more": "More",
   "common.add": "Add",

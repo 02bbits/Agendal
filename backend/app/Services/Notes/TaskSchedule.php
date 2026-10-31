@@ -9,6 +9,8 @@ use DateTimeImmutable;
 /** Reschedule rules shared by planning (CommandMatcher) and applying (NoteApplier) a note (NU §2.4). */
 final class TaskSchedule
 {
+    private const MINUTES_PER_DAY = 1440;
+
     /** "Due Sun 25 Oct (was today)", "(was no date)". */
     public function dueLabel(string $newDate, ?string $oldDate, NoteContext $context): string
     {
@@ -21,14 +23,21 @@ final class TaskSchedule
      */
     public function movedEnd(string $oldStart, string $oldEnd, string $newStart): ?string
     {
-        $day = new DateTimeImmutable('today');
-        $duration = $day->modify($oldEnd)->getTimestamp() - $day->modify($oldStart)->getTimestamp();
-        if ($duration <= 0) {
+        $duration = $this->minutes($oldEnd) - $this->minutes($oldStart);
+        $end = $this->minutes($newStart) + $duration;
+        if ($duration <= 0 || $end >= self::MINUTES_PER_DAY) {
             return null;
         }
-        $end = $day->modify($newStart)->modify('+'.$duration.' seconds');
 
-        return $end->format('Y-m-d') === $day->format('Y-m-d') ? $end->format('H:i') : null;
+        return sprintf('%02d:%02d', intdiv($end, 60), $end % 60);
+    }
+
+    /** "09:30" → 570. */
+    private function minutes(string $time): int
+    {
+        [$hour, $minute] = array_map(intval(...), explode(':', $time));
+
+        return $hour * 60 + $minute;
     }
 
     private function was(?string $date, NoteContext $context): string

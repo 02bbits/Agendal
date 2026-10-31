@@ -84,11 +84,16 @@ final class NoteTimeParser
         return null;
     }
 
-    /** "9am", "6:30pm", "14h", "9 giờ 30", "at 14". A number with no time marker is not a time. */
+    /**
+     * "9am", "6:30pm", "14h", "9 giờ 30", "at 14". A number with no time marker is not a time. Two different times
+     * ("8am and 8pm") are left to the LLM: the first is kept, both leave the title.
+     */
     private function clockTime(string $text, string $dayPeriod): ?ParsedTime
     {
         $pattern = '~'.$this->notInDateBefore().'(?:(?<prefix>'.NoteVocabulary::phrases('hour_prefix').')\s+)?(?<time>'.$this->token().')'.$this->notInDateAfter().'~iu';
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        $times = [];
+        $spans = [];
         foreach ($matches as $match) {
             $clock = $this->clock($match['time'][0], $dayPeriod);
             if (! $clock['marked'] && $match['prefix'][0] === '') {
@@ -97,11 +102,11 @@ final class NoteTimeParser
             if (! $this->valid($clock)) {
                 return new ParsedTime(unreadable: true);
             }
-
-            return new ParsedTime($this->format($clock), spans: [[$match[0][1], strlen($match[0][0])]]);
+            $times[] = $this->format($clock);
+            $spans[] = [$match[0][1], strlen($match[0][0])];
         }
 
-        return null;
+        return $times === [] ? null : new ParsedTime($times[0], spans: $spans, unreadable: count(array_unique($times)) > 1);
     }
 
     /** "morning" (09:00), "tối nay" (20:00). Day-bound words written after their time keep no time (NU-E1). */

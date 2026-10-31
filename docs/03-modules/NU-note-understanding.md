@@ -86,7 +86,7 @@ In this order, first match wins:
 - **Meaningful words:** the words left after lower-casing and removing the command verb, date/time phrases, and stop words (*a, an, the, to, for, my, of, on, in, at, with, and, or, task*; *cái, các, những, của, cho, với, và, là, việc*). No stemming. Diacritics are kept, so "xong bài tập sql" matches "Bài tập SQL" but "bai tap" doesn't.
 - **Candidates:** trigram search (`pg_trgm` on the unaccented title) over the user's **open** tasks for any meaningful word (a wide net; scoring then compares with diacritics), the top 50 by relevance ([scalability](../05-quality/scalability.md#design-rules-that-keep-it-scaling)).
 - **Score** = meaningful words found in the task title ÷ meaningful words in the command. A task matches when the score is ≥ 0.6.
-- **Best match wins.** Two or more tasks with the same top score is a tie ([NU-E11](#nu-e11)).
+- **Best match wins.** On equal scores, the title with more of the command's words wins, then the title with fewer words the command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"). Two or more tasks still equal after that is a tie ([NU-E11](#nu-e11)).
 - **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. Complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
 - **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`.
 - **Repeating tasks:** "done" completes this occurrence and creates the next one ([TK-4](TK-tasks.md#tk-4)). "move" moves only this occurrence ([NU-E36](#nu-e36)).
@@ -151,7 +151,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e8"></a>NU-E8 | "every Monday" with no start date | The next Monday. Today if today is Monday and the time (if any) hasn't passed | T-NU-108 · C-004 |
 | <a id="nu-e9"></a>NU-E9 | "end of the month" on its last day, "end of the week" on the week's last day | Today | T-NU-109 · C-036 |
 | <a id="nu-e10"></a>NU-E10 | "next week" | The first day of next week, per the user's week-start setting (Monday by default, [Q6](../08-project/open-questions.md#q6)), no time | T-NU-110 |
-| <a id="nu-e11"></a>NU-E11 | Command ties: 2+ open tasks with the same top score | `confirm`. "Which task did you mean?" shows up to 5 candidates by due date (no date last). The soonest is preselected (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-111 · C-026 |
+| <a id="nu-e11"></a>NU-E11 | Command ties: 2+ open tasks equally close to the command (same score, same words found, same extra title words) | `confirm`. "Which task did you mean?" shows up to 5 candidates by due date (no date last). The soonest is preselected (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-111 · C-026 |
 | <a id="nu-e12"></a>NU-E12 | Command matches only a done task | Skip `already_done` (`note.skip_already_done`) | T-NU-112 · C-027 |
 | <a id="nu-e13"></a>NU-E13 | New task looks like an open one (same meaningful words, same due date) | Created anyway. The result row shows `note.duplicate_hint` | T-NU-113 |
 | <a id="nu-e14"></a>NU-E14 | More than 30 items | `422 note.too_many_items`. Nothing is stored. The text stays in the editor | T-NU-114 · C-030 |
