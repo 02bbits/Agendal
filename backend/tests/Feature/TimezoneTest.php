@@ -48,7 +48,7 @@ it('T-TK-111: updates the user zone and UTC reminders without moving floating ta
     // Real Carbon time from here on: timestamps must come from the injected clock.
     $this->travelBack();
 
-    $this->getJson('/api/v1/user', ['X-Timezone' => 'Asia/Tokyo'])->assertOk()->assertJsonPath('timezone', 'Asia/Tokyo');
+    $this->getJson('/api/v1/me', ['X-Timezone' => 'Asia/Tokyo'])->assertOk()->assertJsonPath('timezone', 'Asia/Tokyo');
 
     expect($user->fresh()->timezone)->toBe('Asia/Tokyo')
         ->and($user->fresh()->updated_at->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-23T01:12:00Z');
@@ -70,7 +70,7 @@ it('does not rewrite reminders when the timezone is unchanged', function () {
     $sequence = DB::table('tasks')->where('id', $id)->value('change_seq');
     $this->actingAs($user, 'web');
 
-    $this->getJson('/api/v1/user', ['X-Timezone' => 'Asia/Tokyo'])->assertOk();
+    $this->getJson('/api/v1/me', ['X-Timezone' => 'Asia/Tokyo'])->assertOk();
 
     expect(DB::table('tasks')->where('id', $id)->value('change_seq'))->toBe($sequence);
 });
@@ -108,7 +108,7 @@ it('recalculates date-only reminders and skips completed, deleted, and unschedul
     }
     $this->actingAs($user, 'web');
 
-    $this->getJson('/api/v1/user', ['X-Timezone' => 'Asia/Tokyo'])->assertOk();
+    $this->getJson('/api/v1/me', ['X-Timezone' => 'Asia/Tokyo'])->assertOk();
 
     $readReminder = fn (string $name) => DB::table('tasks')->where('id', $ids[$name])->value('remind_at');
     expect((new DateTimeImmutable($readReminder('date-only')))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-25T23:00:00Z')

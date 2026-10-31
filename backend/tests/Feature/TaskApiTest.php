@@ -93,7 +93,7 @@ it('a replay of the same id returns 200 with the stored task and still one row',
     assertTaskSchema($response->json());
 });
 
-it('the same id used by another user returns 422 on id, and the other user\'s row is unchanged', function () {
+it('the same id used by another user returns 404, and the other user\'s row is unchanged', function () {
     $user = User::factory()->create();
     $otherUser = User::factory()->create();
     $id = (string) Str::uuid();
@@ -106,10 +106,13 @@ it('the same id used by another user returns 422 on id, and the other user\'s ro
     $response = $this->actingAs($otherUser)->postJson('/api/v1/tasks', [
         'id' => $id,
         'title' => 'Hacker title',
-    ])->assertStatus(422);
+    ])->assertStatus(404);
 
-    expect($response->json('error.code'))->toBe('error.invalid')
-        ->and($response->json('error.fields.id'))->toContain('The id has already been taken.');
+    expect($response->json('error.code'))->toBe('error.not_found')
+        ->and($response->json('error.message'))->toBe('This item no longer exists.')
+        ->and($response->json('error.request_id'))->not->toBeEmpty();
+
+    assertTaskApiErrorShape($response->json());
 
     $task = Task::withoutGlobalScope('owner')->find($id);
     expect($task)->not->toBeNull()
@@ -169,6 +172,26 @@ it('start_time without due_date → due_date becomes 2026-10-23 (today in Ho Chi
 
     expect($response2->json('due_date'))->toBe('2026-10-23');
     assertTaskSchema($response2->json());
+});
+
+it('POST with start_time 09:00 + reminder 15m and no due_date → 201, due_date = today in Asia/Ho_Chi_Minh, remind_at computed', function () {
+    $user = User::factory()->create();
+    $id = (string) Str::uuid();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Morning meeting',
+        'start_time' => '09:00',
+        'reminder' => '15m',
+    ])->assertStatus(201);
+
+    expect($response->json('due_date'))->toBe('2026-10-23');
+    assertTaskSchema($response->json());
+
+    $task = DB::table('tasks')->find($id);
+    expect($task)->not->toBeNull();
+    $remindAt = (new DateTimeImmutable($task->remind_at))->format('Y-m-d H:i:s');
+    expect($remindAt)->toBe('2026-10-23 01:45:00');
 });
 
 it('T-TK-21: end 09:00 with start 10:00 → 422 error.invalid, fields.end_time = End time must be later than the start time., no row created', function () {

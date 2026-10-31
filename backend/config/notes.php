@@ -18,10 +18,6 @@ return [
     // Milliseconds the rules engine may spend on one note; later items become plain tasks (SEC-23).
     'engine_budget_ms' => (float) env('NOTE_ENGINE_BUDGET_MS', 200),
 
-    // Notes one user may send per minute and per day (NU §7, 429 error.rate_limited).
-    'rate_per_minute' => (int) env('NOTE_RATE_PER_MINUTE', 30),
-    'rate_per_day' => (int) env('NOTE_RATE_PER_DAY', 300),
-
     // Characters a task title keeps; the rest starts the task notes (NU-E16, task.schema.json title).
     'title_limit' => (int) env('NOTE_TITLE_LIMIT', 200),
 

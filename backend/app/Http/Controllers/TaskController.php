@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\ApiError;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\TaskLifecycleRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -13,6 +12,8 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
+use App\Services\Tasks\DueDateFallback;
+use App\Services\Tasks\OpenTaskLimit;
 use App\Services\Tasks\TaskPatcher;
 use DateTimeZone;
 use Illuminate\Http\JsonResponse;
@@ -36,9 +37,7 @@ class TaskController extends Controller
         }
 
         if (Task::withoutGlobalScope('owner')->withTrashed()->whereKey($id)->exists()) {
-            throw ValidationException::withMessages([
-                'id' => ['The id has already been taken.'],
-            ]);
+            abort(404, 'This item no longer exists.');
         }
 
         // 2. Project ownership
@@ -56,15 +55,16 @@ class TaskController extends Controller
         $startTime = $request->input('start_time');
         $repeat = $request->input('repeat', 'never') ?? 'never';
 
-        if (empty($dueDate) && ($startTime !== null || $repeat !== 'never')) {
+        $dueDateStr = is_string($dueDate) ? $dueDate : null;
+        $startTimeStr = is_string($startTime) ? $startTime : null;
+        $repeatStr = is_string($repeat) ? $repeat : 'never';
+
+        if (DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {
             $dueDate = $clock->today($timezone);
         }
 
         // 4. Open limit
-        $openCount = Task::where('done', false)->count();
-        if ($openCount >= Task::OPEN_LIMIT) {
-            throw new ApiError('task.limit', "You've reached 5,000 open tasks. Complete or delete some to add more.", 422);
-        }
+        OpenTaskLimit::ensureRoom();
 
         // 5. Field updated at & create
         $nowIso = $clock->now()->format('Y-m-d\TH:i:s\Z');
@@ -142,6 +142,10 @@ class TaskController extends Controller
         Task $task,
         TaskPatcher $patcher,
     ): JsonResponse {
+        if ($task->done) {
+            OpenTaskLimit::ensureRoom();
+        }
+
         $at = $request->has('at') && is_string($request->input('at')) ? $request->input('at') : null;
         $updatedTask = $patcher->reopen($task, $at);
 
@@ -155,7 +159,13 @@ class TaskController extends Controller
     ): Response {
         if ($task->repeat !== 'never') {
             $scope = $request->input('scope');
-            if ($scope !== 'one' && $scope !== 'future') {
+            if ($scope === 'future') {
+                throw ValidationException::withMessages([
+                    'scope' => ["This and all future isn't available yet."],
+                ]);
+            }
+
+            if ($scope !== 'one') {
                 throw ValidationException::withMessages([
                     'scope' => ['Choose This task only or This and all future.'],
                 ]);
@@ -178,6 +188,10 @@ class TaskController extends Controller
         ClockInterface $clock,
     ): TaskResource {
         if ($task->trashed()) {
+            if (! $task->done) {
+                OpenTaskLimit::ensureRoom();
+            }
+
             $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
             /** @var array<string, string> $fieldUpdatedAt */
             $fieldUpdatedAt = $task->field_updated_at ?? [];

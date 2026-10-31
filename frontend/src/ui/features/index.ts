@@ -1,5 +1,6 @@
 export { AppShell, type AppShellProps } from "./shell/AppShell";
 export { TabBar, type TabBarProps } from "./shell/TabBar";
+export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export {
@@ -7,8 +8,6 @@ export {
   type AccountScreenProps,
   type AccountSettings,
   type ThemeSetting,
-  type WeekStart,
-  type TimeFormat,
 } from "./shell/AccountScreen";
 export { RouteEmptyState, EMPTY_STATE } from "./shell/EmptyScreens";
 export { Link, type LinkProps } from "./shell/Link";
@@ -40,3 +39,4 @@ export {
   safeReturnPath,
   type SignUpErrors,
 } from "./auth/validation";
+export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
