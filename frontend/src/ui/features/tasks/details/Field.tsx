@@ -1,7 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
 
-export { CONTROL_CLASS, FIELD_CONTROL_CLASS } from "./control";
-
 export interface FieldProps {
   id?: string;
   label: ReactNode;

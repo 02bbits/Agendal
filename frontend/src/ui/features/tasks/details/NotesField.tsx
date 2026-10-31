@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from "react";
+import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import { NOTES_MAX } from "../../../domain/edit";
 import { Field } from "./Field";
@@ -34,7 +35,10 @@ export function NotesField({ value, onSave }: NotesFieldProps): ReactElement {
         maxLength={NOTES_MAX}
         value={notes}
         placeholder={t("task.notes_add")}
-        className={`textarea focus-ring min-h-[120px] resize-y border py-3 placeholder:text-ink-tertiary [field-sizing:content] ${CONTROL_CLASS}`}
+        className={cx(
+          CONTROL_CLASS,
+          "textarea focus-ring min-h-[120px] resize-y border py-3 placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40 [field-sizing:content]",
+        )}
         onChange={(e) => setNotes(e.target.value)}
         onBlur={handleBlur}
       />

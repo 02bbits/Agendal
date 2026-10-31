@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { cx } from "../../../components/cx";
 import { Field } from "./Field";
 import { CONTROL_CLASS } from "./control";
 
@@ -36,7 +37,10 @@ export function ChoiceField<V extends string>({
         disabled={disabled}
         aria-describedby={helperId}
         onChange={(e) => onChange(e.target.value as V)}
-        className={`focus-ring cursor-pointer border disabled:cursor-not-allowed disabled:opacity-40 ${CONTROL_CLASS}`}
+        className={cx(
+          CONTROL_CLASS,
+          "focus-ring cursor-pointer border aria-invalid:border-error disabled:cursor-not-allowed disabled:opacity-40",
+        )}
       >
         {options.map((option) => (
           <option key={option.value} value={option.value}>

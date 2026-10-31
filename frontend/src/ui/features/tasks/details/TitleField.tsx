@@ -1,4 +1,5 @@
 import { useState, type ReactElement } from "react";
+import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import { TITLE_MAX } from "../../../domain/edit";
 import { Field } from "./Field";
@@ -41,7 +42,10 @@ export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
         value={title}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? "task-title-error" : undefined}
-        className={`input focus-ring min-h-[52px] resize-none py-3 font-serif text-title font-semibold placeholder:text-ink-tertiary aria-invalid:border-error [field-sizing:content] ${CONTROL_CLASS}`}
+        className={cx(
+          CONTROL_CLASS,
+          "input focus-ring min-h-[52px] resize-none py-3 font-serif text-title font-semibold placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40 [field-sizing:content]",
+        )}
         onChange={(e) => setTitle(e.target.value.replace(/\n/g, " "))}
         onBlur={handleBlur}
         onKeyDown={(e) => {

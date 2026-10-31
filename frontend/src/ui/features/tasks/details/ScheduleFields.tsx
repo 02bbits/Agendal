@@ -1,4 +1,5 @@
 import { useState, type ChangeEvent, type ReactElement } from "react";
+import { cx } from "../../../components/cx";
 import { t, type CopyKey } from "../../../copy";
 import { scheduleError } from "../../../domain/edit";
 import { Field } from "./Field";
@@ -93,7 +94,10 @@ export function ScheduleFields({
             disabled={field.disabled}
             aria-invalid={field.error ? true : undefined}
             aria-describedby={field.error ? `${field.id}-error` : undefined}
-            className={`input focus-ring ${CONTROL_CLASS} ${field.error ? "aria-invalid:border-error" : ""} ${field.disabled ? "disabled:opacity-40" : ""}`}
+            className={cx(
+              CONTROL_CLASS,
+              "input focus-ring aria-invalid:border-error disabled:opacity-40",
+            )}
             onChange={field.onChange}
           />
         </Field>

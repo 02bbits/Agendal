@@ -1,5 +1,6 @@
 import type { ReactElement } from "react";
 import { Button } from "../../../components/Button";
+import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import { Field } from "./Field";
 import { CONTROL_CLASS } from "./control";
@@ -20,7 +21,10 @@ export function DueDateField({
           id="task-due"
           type="date"
           value={value ?? ""}
-          className={`input focus-ring flex-1 ${CONTROL_CLASS}`}
+          className={cx(
+            CONTROL_CLASS,
+            "input focus-ring flex-1 aria-invalid:border-error disabled:opacity-40",
+          )}
           onChange={(e) => onSave(e.target.value || null)}
         />
         <Button
