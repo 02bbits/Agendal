@@ -6,6 +6,8 @@ export interface TaskSyncState {
   writers: Map<string, Map<keyof Task, number>>;
 }
 
+export type ToastDraft = Omit<import("../components/Toast").ToastData, "id">;
+
 export function createTaskSyncState(initialTasks?: Task[]): TaskSyncState {
   const confirmed = new Map<string, Task>();
   if (initialTasks) {

@@ -39,6 +39,7 @@ export type TaskSaveErrorCallback = (error: unknown) => void;
 export type SettleTimerMap = Map<string, ReturnType<typeof setTimeout>>;
 export type LifecycleAction = "complete" | "reopen";
 export type LifecycleFn = (id: string, action: LifecycleAction) => void;
+export type ToastDraft = Omit<ToastData, "id">;
 
 export interface UseTaskSyncReturn {
   tasks: Task[];

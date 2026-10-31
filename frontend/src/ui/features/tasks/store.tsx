@@ -61,7 +61,7 @@ export function TaskStoreProvider({
   );
 
   const showToast = React.useCallback(
-    (d: Omit<ToastData, "id">) => setToast({ ...d, id: ++toastSeq.current }),
+    (d: sync.ToastDraft) => setToast({ ...d, id: ++toastSeq.current }),
     [],
   );
   const dismissToast = React.useCallback(
@@ -152,7 +152,7 @@ export function TaskStoreProvider({
     [mutateLifecycle],
   );
 
-  const store = React.useMemo<sync.TaskStore>(
+  const store: sync.TaskStore = React.useMemo(
     () => ({
       tasks,
       projects,
