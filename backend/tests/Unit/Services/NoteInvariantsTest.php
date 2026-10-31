@@ -30,7 +30,7 @@ function meaning(string $text): array
 
 it('keeps every property on realistic notes', function (string $note) {
     expect(app(NoteInvariants::class)->violations($note, invariantContext()))->toBe([]);
-})->with(RealisticNotes::dataset());
+})->with(RealisticNotes::all());
 
 /** @return array<string, array{string, string}> every month phrase of the CSV in each date order people write */
 function monthWordings(): array

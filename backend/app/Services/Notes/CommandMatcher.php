@@ -161,7 +161,8 @@ final class CommandMatcher
 
     /**
      * NU-E12, NU-E29: a done task that matches → already done; a reschedule → a new task with the target
-     * date; complete or delete → not found (Q17: never a new task named "Delete …").
+     * date; a delete with a deadline → that task; otherwise complete or delete → not found (Q17: never a new
+     * task named "Delete …").
      *
      * @param  list<string>  $words
      * @param  list<string>  $modifiers
@@ -173,6 +174,11 @@ final class CommandMatcher
             if ($this->score($words, $task['title'], $modifiers) >= (float) config('notes.match_threshold')) {
                 return CommandMatch::skip(SkipReason::AlreadyDone);
             }
+        }
+        // "cancel netflix before the 10th" or "drop the kids at school" with no such task is a task to do, not a
+        // lost command: a deadline or a place belongs to an action in the world, which a delete never needs.
+        if ($action === CommandAction::Delete && ($this->hasDeadline($text, $context) || $this->hasPlace($text))) {
+            return CommandMatch::newTask($this->extractor->extract($text, $context));
         }
         if ($action !== CommandAction::Reschedule) {
             return CommandMatch::skip(SkipReason::NotFound);
@@ -235,6 +241,26 @@ final class CommandMatcher
             : $task['title'];
 
         return new TaskChange($task['id'], $label, fields: $fields);
+    }
+
+    /** A deadline word ("before", "trước") followed by a date or time. */
+    private function hasDeadline(string $text, NoteContext $context): bool
+    {
+        preg_match_all('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('deadline_prefix').')\s+~iu', $text, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] as [$word, $offset]) {
+            $after = substr($text, $offset + strlen($word));
+            if ($this->dates->parse($after, $context, null)->date !== null || $this->times->parse($after, $context)->start !== null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** A place word followed by a place, not a time: "at school", "ở nhà", but not "at 3pm" or "at noon". */
+    private function hasPlace(string $text): bool
+    {
+        return preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('place_prefix').')\s+(?!'.NoteVocabulary::modifierPattern().')\p{L}~iu', $text) === 1;
     }
 
     /** "move 9am standup to 10am" → "move 9am standup"; the whole text when there is no target. */
