@@ -17,3 +17,25 @@ export async function wipeDevice() {
   localStorage.clear();
   sessionStorage.clear();
 }
+
+const USER_KEY = "agendal.user_id";
+
+/**
+ * Marks this device as holding `userId`'s data. A different account signing in first wipes what
+ * the previous one left (AA-E7, SEC-52), so it can't show or sync into the wrong account. The
+ * same account coming back keeps its unsynced changes (AA-E6).
+ */
+export async function claimDevice(userId: number) {
+  let previous: string | null = null;
+  try {
+    previous = localStorage.getItem(USER_KEY);
+  } catch {
+    // Storage blocked: nothing can have been kept either
+  }
+  if (previous !== null && previous !== String(userId)) await wipeDevice();
+  try {
+    localStorage.setItem(USER_KEY, String(userId));
+  } catch {
+    // As above
+  }
+}

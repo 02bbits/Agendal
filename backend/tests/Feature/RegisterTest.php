@@ -24,7 +24,7 @@ beforeEach(function () {
     Http::fake(['api.pwnedpasswords.com/*' => fn () => ($this->breachReply)()]);
 });
 
-it('creates the account, signs in and returns the user', function () {
+it('T-AA-101: creates the account with the email trimmed and lower-cased, signs in and returns the user', function () {
     $response = register(['email' => '  Example@Gmail.COM '])->assertCreated();
 
     $user = User::sole();

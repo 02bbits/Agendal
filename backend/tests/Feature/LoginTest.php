@@ -29,7 +29,7 @@ function wrongPassword(string $ip = '10.0.0.1', string $email = 'example@gmail.c
     return login(['email' => $email, 'password' => 'not my password'], $ip)->assertStatus(422);
 }
 
-it('signs in with a new session ID and returns the user', function () {
+it('T-AA-101: signs in with a new session ID and returns the user, whatever the email case and spaces', function () {
     $before = carryCookies($this->get('/sanctum/csrf-cookie'))[SESSION_COOKIE];
 
     $response = login(['email' => ' Example@Gmail.com'])->assertOk()->assertJsonPath('user.email', 'example@gmail.com');
@@ -80,7 +80,7 @@ describe('lockout', function () {
         login()->assertOk();
     });
 
-    it('SEC-07: a lock on one IP leaves the same email working from another IP', function () {
+    it('T-AA-102, SEC-07: a lock on one IP leaves the same email working from another IP', function () {
         foreach (range(1, 3) as $i) {
             wrongPassword('10.0.0.1');
         }
