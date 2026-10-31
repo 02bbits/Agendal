@@ -63,15 +63,19 @@ final class ItemClassifier
         };
     }
 
-    /** "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done", not "get it done"). */
+    /**
+     * "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done",
+     * not "get it done") or set off by a dash, colon or comma ("pick up laundry - done", "gọi mẹ: xong").
+     */
     private function isComplete(string $text): bool
     {
         $sentenceEnd = '[\p{P}\s]*$';
+        $bare = '(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd;
 
         return $this->startsWith($text, 'complete_command')
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')'.$sentenceEnd.'~iu', $text) === 1
-            || (preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd.'~iu', $text) === 1
-                && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
+            || preg_match('~\S\s*(?:\p{Pd}|:|'.NoteVocabulary::phrases('comma').')\s*'.$bare.'~iu', $text) === 1
+            || (preg_match('~(?<![\p{L}\p{N}_])'.$bare.'~iu', $text) === 1 && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
     }
 
     private function startsWith(string $text, string $category): bool
