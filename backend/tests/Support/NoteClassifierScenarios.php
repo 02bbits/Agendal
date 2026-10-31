@@ -50,7 +50,7 @@ final class NoteClassifierScenarios
             'filler' => [[$value.'!', 'skip'], ['read '.$value.' notes', 'task']],
             'complete_command' => [[$value.' report', 'command/complete']],
             'complete_suffix' => [['report '.$value, 'command/complete']],
-            'complete_suffix_bare' => [['report '.$value, 'command/complete'], ['get report '.$value, 'task']],
+            'complete_suffix_bare' => [['report '.$value, 'command/complete'], ['get report '.$value, 'task'], ['get report - '.$value, 'command/complete'], ['get report: '.$value, 'command/complete']],
             'delete_command' => [[$value.' report', 'command/delete']],
             'move_command' => [[$value.' report to friday', 'command/reschedule'], [$value.' report', 'task']],
             'reschedule_target' => [['move report '.$value.' friday', 'command/reschedule'], ['move boxes '.$value.' garage', 'task']],
