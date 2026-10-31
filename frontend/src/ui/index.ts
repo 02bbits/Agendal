@@ -40,13 +40,6 @@ export {
   type SegmentedOption,
 } from "./components/Segmented";
 export { Switch, type SwitchProps } from "./components/Switch";
-export {
-  t,
-  tc,
-  quoted,
-  isCopyKey,
-  type CopyKey,
-  type CopyVars,
-} from "./copy/index";
+export { t, tc, quoted, type CopyKey, type CopyVars } from "./copy/index";
 export * from "./features/index";
 export * from "./domain/index";

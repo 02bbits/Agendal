@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { buildCatalog } from "../../scripts/gen-copy.mjs";
 import { catalog } from "../../src/ui/copy/catalog";
 import { pending } from "../../src/ui/copy/pending";
-import { isCopyKey, t, tc } from "../../src/ui/copy";
+import { t, tc } from "../../src/ui/copy";
 
 const read = (rel: string) =>
   readFileSync(fileURLToPath(new URL(rel, import.meta.url)), "utf8");
@@ -38,12 +38,5 @@ describe("copy catalog", () => {
     expect(tc("project.delete_body", 3)).toBe(
       "It has 3 tasks. What should happen to them?",
     );
-  });
-
-  it("identifies valid copy keys with isCopyKey", () => {
-    expect(isCopyKey("task.completed")).toBe(true);
-    expect(isCopyKey("error.save_failed")).toBe(true);
-    expect(isCopyKey("not.a.real.key")).toBe(false);
-    expect(isCopyKey("toString")).toBe(false);
   });
 });
