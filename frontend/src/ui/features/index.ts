@@ -52,3 +52,7 @@ export {
   ProgressSummary,
   type ProgressSummaryProps,
 } from "./tasks/ProgressSummary";
+export {
+  TaskDetails,
+  type TaskDetailsProps,
+} from "./tasks/details/TaskDetails";

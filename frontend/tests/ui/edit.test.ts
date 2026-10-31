@@ -133,14 +133,15 @@ describe("scheduleError (TK-3)", () => {
 describe("patchErrors", () => {
   const base = task({ title: "Clean task", due_date: TODAY });
 
-  it("returns task.title_required when title is empty or exceeds TITLE_MAX", () => {
+  it("returns task.title_required when title is empty", () => {
     expect(patchErrors(base, { title: "" })).toEqual({
       title: "task.title_required",
     });
-    expect(patchErrors(base, { title: "a".repeat(TITLE_MAX + 1) })).toEqual({
-      title: "task.title_required",
-    });
     expect(patchErrors(base, { title: "Valid Title" })).toEqual({});
+  });
+
+  it("does not return task.title_required when title exceeds TITLE_MAX (enforced by input maxLength)", () => {
+    expect(patchErrors(base, { title: "a".repeat(TITLE_MAX + 1) })).toEqual({});
   });
 
   it("validates schedule via scheduleError", () => {

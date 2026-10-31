@@ -65,7 +65,7 @@ export function normalizePatch(
 export function patchErrors(task: Task, patch: TaskPatch): TaskUpdateErrors {
   const merged = { ...task, ...patch };
   const errors: TaskUpdateErrors = {};
-  if ("title" in patch && (!merged.title || merged.title.length > TITLE_MAX)) {
+  if ("title" in patch && !merged.title) {
     errors.title = "task.title_required";
   }
   const schedule = scheduleError(merged.start_time, merged.end_time);
