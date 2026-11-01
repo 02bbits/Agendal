@@ -29,6 +29,38 @@ export function InboxScreen({
 }: InboxScreenProps) {
   const store = useTaskStore();
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [openNoDate, setOpenNoDate] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:no_date");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return false;
+  });
+  const [openCompleted, setOpenCompleted] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:completed");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return false;
+  });
+
+  const handleToggleNoDate = (next: boolean) => {
+    setOpenNoDate(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:no_date", String(next));
+    } catch {}
+  };
+
+  const handleToggleCompleted = (next: boolean) => {
+    setOpenCompleted(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:completed", String(next));
+    } catch {}
+  };
   const view = buildInbox(store.tasks, store.today, {
     completedToday: store.completedToday,
     isSettling: store.isSettling,
@@ -143,6 +175,8 @@ export function InboxScreen({
               title={t("list.no_date")}
               count={view.noDate.length}
               collapsible
+              open={openNoDate}
+              onToggle={handleToggleNoDate}
             >
               {view.noDate.map((x) => row(x, { showDue: true }))}
             </Section>
@@ -152,6 +186,8 @@ export function InboxScreen({
               title={t("list.completed")}
               count={view.completed.length}
               collapsible
+              open={openCompleted}
+              onToggle={handleToggleCompleted}
               footer={
                 hasHiddenCompleted ? (
                   <Button
