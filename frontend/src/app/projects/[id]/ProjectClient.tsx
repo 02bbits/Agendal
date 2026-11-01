@@ -18,6 +18,8 @@ import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDial
 export function ProjectClient({ id }: { id: string }) {
   const { navigate, back, showToast, settings } = useAppFrame();
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -29,6 +31,7 @@ export function ProjectClient({ id }: { id: string }) {
       .then((res) => {
         if (!active) return;
         setData(res);
+        setNextCursor(res.next_cursor);
         setLoading(false);
       })
       .catch((err) => {
@@ -40,6 +43,56 @@ export function ProjectClient({ id }: { id: string }) {
       active = false;
     };
   }, [id]);
+
+  useEffect(() => {
+    const onTaskCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<Task>;
+      const created = customEvent.detail;
+      if (created && created.project_id === id) {
+        setData((prev) => {
+          if (!prev) return prev;
+          if (prev.open.some((t) => t.id === created.id)) return prev;
+          return {
+            ...prev,
+            open: [...prev.open, created],
+            progress: {
+              done: prev.progress.done,
+              total: prev.progress.total + 1,
+            },
+          };
+        });
+      }
+    };
+    window.addEventListener("agendal:task-created", onTaskCreated);
+    return () => {
+      window.removeEventListener("agendal:task-created", onTaskCreated);
+    };
+  }, [id]);
+
+  const handleLoadMoreCompleted = async () => {
+    if (!nextCursor || loadingMore || !data) return;
+    setLoadingMore(true);
+    try {
+      const res = await getProject(id, nextCursor);
+      setData((prev) => {
+        if (!prev) return prev;
+        const existingIds = new Set(prev.completed.map((t) => t.id));
+        const newCompleted = res.completed.filter(
+          (t) => !existingIds.has(t.id),
+        );
+        return {
+          ...prev,
+          completed: [...prev.completed, ...newCompleted],
+          next_cursor: res.next_cursor,
+        };
+      });
+      setNextCursor(res.next_cursor);
+    } catch {
+      showToast(t("error.save_failed"));
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   const handleToggleTask = async (task: Task) => {
     if (!data) return;
@@ -177,6 +230,9 @@ export function ProjectClient({ id }: { id: string }) {
     if (!data) return;
     try {
       const res = await deleteProject(data.project.id, action);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+      }
       navigate(ROUTES.projects);
       showToast({
         message: t("project.deleted", { name: data.project.name }),
@@ -184,6 +240,9 @@ export function ProjectClient({ id }: { id: string }) {
         onAction: async () => {
           try {
             await restoreProject(data.project.id, res.undo);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+            }
             showToast(
               t("project.progress", {
                 done: data.progress.done,
@@ -224,6 +283,9 @@ export function ProjectClient({ id }: { id: string }) {
       progress={data.progress}
       openTasks={data.open}
       completedTasks={data.completed}
+      hasMoreCompleted={Boolean(nextCursor)}
+      onLoadMoreCompleted={nextCursor ? handleLoadMoreCompleted : undefined}
+      loadingMore={loadingMore}
       today={today}
       timeFormat={settings.timeFormat}
       onToggleTask={handleToggleTask}
