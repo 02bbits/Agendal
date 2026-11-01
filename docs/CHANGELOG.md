@@ -5,6 +5,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 ## 2026-11-01
 
 - **Graphite design (V2.1, #97).** [Theme guide](01-product/theme-guide.md) is rewritten for Graphite (monochrome greys, Inter) and replaces Paper & ink; the reference package is not in git and is linked from the guide. [Screens](01-product/screens.md): no serif, "Made from your note" link, round + button. [Overview](01-product/overview.md) and [project](08-project/project.md) name Graphite. [Tasks](08-project/tasks.md) IM-06 maps the Graphite tokens. The UI rework is #98; the `task.created_by_assistant` string changes with it.
+- **Note editor layout (#98).** [NC §2.1](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5): the editor follows the Graphite New note screen: Cancel and "✦ New note" bar, "Your note" card, helper line, "Try writing" examples, full-width Make tasks. Cancel replaces ×.
 
 ## 2026-10-31
 

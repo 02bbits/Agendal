@@ -11,8 +11,7 @@ import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { Dialog } from "../../components/Dialog";
-import { IconButton } from "../../components/IconButton";
-import { XIcon } from "../../components/icons";
+import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
 
@@ -35,7 +34,7 @@ export interface NoteEditorProps {
 }
 
 /**
- * Full-screen note editor (NC-1, NC-2): the serif text area with the cursor in it, three
+ * Full-screen note editor (NC-1, NC-2): the ruled note card with the cursor in it, three
  * example chips while it is empty, and Make tasks once there is something to read.
  */
 export function NoteEditor({
@@ -54,6 +53,7 @@ export function NoteEditor({
   const editorRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const titleId = useId();
+  const fieldId = useId();
   const [confirming, setConfirming] = useState(false);
   // ×, Escape and Back ask first when there is text; the draft only guards against a crash
   const requestClose = () => {
@@ -146,43 +146,69 @@ export function NoteEditor({
         aria-labelledby={titleId}
         className="fixed inset-x-0 top-0 bottom-[var(--keyboard-inset,0px)] z-[70] flex flex-col bg-paper"
       >
-        <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col px-gutter md:max-w-[712px] md:px-gutter-wide">
-          <div className="flex min-h-14 items-center pt-[env(safe-area-inset-top)]">
-            <IconButton
-              plain
-              label={t("common.close")}
-              icon={<XIcon />}
-              onClick={requestClose}
+        <div className="mx-auto grid w-full max-w-[600px] grid-cols-[1fr_auto_1fr] items-center px-gutter pt-[env(safe-area-inset-top)] md:max-w-[712px] md:px-gutter-wide">
+          <button
+            type="button"
+            className="focus-ring -ml-2 min-h-11 justify-self-start rounded-field px-2 text-body text-primary"
+            onClick={requestClose}
+          >
+            {t("common.cancel")}
+          </button>
+          <h2
+            id={titleId}
+            className="m-0 flex items-center gap-1.5 text-heading font-semibold"
+          >
+            <SparklesIcon size={16} />
+            {t("note.new_title")}
+          </h2>
+          <span />
+        </div>
+        <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide">
+          <div className="flex min-h-[286px] flex-col rounded-box bg-surface p-3.5 pb-[18px]">
+            <label
+              htmlFor={fieldId}
+              className="mb-1.5 text-footnote font-medium text-ink-secondary"
+            >
+              {t("note.text_label")}
+            </label>
+            <textarea
+              id={fieldId}
+              ref={textRef}
+              value={text}
+              onChange={(event) => edit(event.target.value)}
+              onKeyDown={onKeyDown}
+              placeholder={t("note.placeholder")}
+              className="focus:outline-none min-h-[225px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
-            <h2 id={titleId} className="sr-only">
-              {t("note.capture_open")}
-            </h2>
           </div>
-          <textarea
-            ref={textRef}
-            value={text}
-            onChange={(event) => edit(event.target.value)}
-            onKeyDown={onKeyDown}
-            aria-label={t("note.text_label")}
-            placeholder={t("note.placeholder")}
-            className="focus:outline-none min-h-0 w-full flex-1 resize-none rounded-[14px] border border-control bg-surface bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] px-4 text-note [background-attachment:local] text-ink placeholder:text-ink-tertiary"
-          />
+          <p className="m-0 text-footnote text-ink-secondary">
+            {t("note.editor_hint")}
+          </p>
           {!VISIBLE.test(text) && (
-            <ul className="m-0 flex list-none flex-wrap gap-2 p-0 pb-3">
-              {EXAMPLES.map((key) => (
-                <li key={key}>
-                  <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
-                </li>
-              ))}
-            </ul>
+            <div>
+              <p className="m-0 mb-2 text-overline font-semibold text-ink-secondary uppercase">
+                {t("note.examples_title")}
+              </p>
+              <ul className="m-0 flex list-none flex-col items-start gap-2 p-0">
+                {EXAMPLES.map((key) => (
+                  <li key={key}>
+                    <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
-          <div className="flex justify-end pt-2 pb-[calc(12px+env(safe-area-inset-bottom))]">
+        </div>
+        <div className="border-t border-separator bg-bar px-3 pt-2.5 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg">
+          <div className="mx-auto w-full max-w-[600px] md:max-w-[712px]">
             <Button
               variant="primary"
               size="lg"
+              fullWidth
               disabled={!canSubmit}
               onClick={submit}
             >
+              <SparklesIcon size={18} />
               {t("note.make_tasks")}
             </Button>
           </div>
