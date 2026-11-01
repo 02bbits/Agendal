@@ -17,11 +17,12 @@ function newTaskEntry(array $fields = []): array
     return [...['ref' => 'c1', 'title' => 'Call mum', 'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => 'low', 'project_id' => null, 'repeat' => 'never', 'reminder' => 'none', 'notes' => null, 'duplicate_of' => null], ...$fields];
 }
 
-it('requires confirmation for deletes, ties and six changes (T-NU-40–43)', function (array $plan, PlanStatus $status) {
+it('requires confirmation for deletes, ties and five changes (T-NU-40–43)', function (array $plan, PlanStatus $status) {
     expect(app(PlanValidator::class)->status(array_replace(emptyNotePlan(), $plan)))->toBe($status);
 })->with([
-    '5 creates → done' => [['create' => array_fill(0, 5, [])], PlanStatus::Done],
-    '6 creates → confirm' => [['create' => array_fill(0, 6, [])], PlanStatus::Confirm],
+    '4 creates → done' => [['create' => array_fill(0, 4, [])], PlanStatus::Done],
+    '5 creates → confirm' => [['create' => array_fill(0, 5, [])], PlanStatus::Confirm],
+    'a task changed twice counts once' => [['create' => array_fill(0, 3, []), 'update' => [['task_id' => 't1'], ['task_id' => 't1']]], PlanStatus::Done],
     'a delete → confirm' => [['delete' => [[]]], PlanStatus::Confirm],
     'a tie → confirm' => [['ambiguous' => [[]]], PlanStatus::Confirm],
     'a plain skip → followup' => [['skipped' => [['ref' => 's1', 'text' => 'ok', 'reason' => 'skip']]], PlanStatus::Followup],

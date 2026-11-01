@@ -63,10 +63,14 @@ final class PlanValidator
         return [...$valid, 'dropped' => $dropped];
     }
 
-    /** @param Plan $plan */
+    /**
+     * A change is one task: two entries for the same task count once (BR-01).
+     *
+     * @param  Plan  $plan
+     */
     public function status(array $plan): PlanStatus
     {
-        $changes = count($plan['create']) + count($plan['update']) + count($plan['delete']);
+        $changes = count($plan['create']) + count(array_unique(array_column([...$plan['update'], ...$plan['delete']], 'task_id')));
         $skipReasons = array_map(fn (array $skip): SkipReason => SkipReason::from($skip['reason']), $plan['skipped']);
 
         return $this->statuses->resolve($changes, $plan['delete'] !== [], $plan['ambiguous'] !== [], $skipReasons);

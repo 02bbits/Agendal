@@ -18,8 +18,8 @@ return [
     // Calendar days a yearless explicit date may lie in the past and still stay this year (NU-E4).
     'overdue_grace_days' => (int) env('NOTE_OVERDUE_GRACE_DAYS', 30),
 
-    // Changes one note may make before it needs Apply changes (BR-01, NU-5).
-    'changes_before_confirm' => (int) env('NOTE_CHANGES_BEFORE_CONFIRM', 5),
+    // Changes in one note from which it needs Apply changes (BR-01, NU-5).
+    'changes_to_confirm' => (int) env('NOTE_CHANGES_TO_CONFIRM', 5),
 
     // Share of a command's meaningful words a task title must contain to match (NU §2.4).
     'match_threshold' => (float) env('NOTE_MATCH_THRESHOLD', 0.6),
