@@ -5,6 +5,8 @@ import { useCallback, useState } from "react";
 import { t, type NewTaskSheetProps, type Project } from "@/ui";
 import { createTask, projects as fetchProjects } from "@/lib/taskApi";
 
+type CreateTaskBody = Parameters<typeof createTask>[0];
+
 export interface UseNewTaskOptions {
   pathname?: string;
   showToast: (message: string) => void;
@@ -54,13 +56,24 @@ export function useNewTask({
     [showToast],
   );
 
+  const handleCreate = useCallback(async (body: CreateTaskBody) => {
+    const created = await createTask(body);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("agendal:task-created", { detail: created }),
+      );
+      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+    }
+    return created;
+  }, []);
+
   const sheetProps: NewTaskSheetProps = {
     open,
     pathname,
     projects,
     projectsStatus,
     onRetryProjects: loadProjects,
-    onCreate: createTask,
+    onCreate: handleCreate,
     onAdded: handleAdded,
     onClose: closeNewTask,
   };
