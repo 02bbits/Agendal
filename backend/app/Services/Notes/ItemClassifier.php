@@ -28,7 +28,7 @@ final class ItemClassifier
      */
     private function isNotATask(string $text): bool
     {
-        return $this->startsWith($text, 'skip_prefix')
+        return NoteVocabulary::startsWith($text, 'skip_prefix')
             || $this->onlyFiller($text)
             || $this->isHeading($text)
             || NoteVocabulary::onlyModifiers($text);
@@ -50,36 +50,33 @@ final class ItemClassifier
 
     private function commandAction(string $text, NoteContext $context): ?CommandAction
     {
-        if ($this->startsWith($text, 'not_command')) {
+        if (NoteVocabulary::startsWith($text, 'not_command')) {
             return null;
         }
 
         return match (true) {
             $this->isComplete($text) => CommandAction::Complete,
-            $this->startsWith($text, 'delete_command') => CommandAction::Delete,
+            NoteVocabulary::startsWith($text, 'delete_command') => CommandAction::Delete,
             // Reschedule needs a move verb and "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task.
-            $this->target->split($text, $context) !== null => CommandAction::Reschedule,
+            $this->target->split($text, $context) !== null || $this->target->shift($text) !== null => CommandAction::Reschedule,
             default => null,
         };
     }
 
     /**
      * "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done",
-     * not "get it done") or set off by a dash, colon or comma ("pick up laundry - done", "gọi mẹ: xong").
+     * not "get it done") or set off by a dash, colon or comma ("pick up laundry - done", "gọi mẹ: xong"). A hyphen
+     * inside a word ("well-done") sets nothing off.
      */
     private function isComplete(string $text): bool
     {
         $sentenceEnd = '[\p{P}\s]*$';
         $bare = '(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd;
+        $notInWord = '(?<![\p{L}\p{N}_])(?<![\p{L}\p{N}]\p{Pd})';
 
-        return $this->startsWith($text, 'complete_command')
+        return NoteVocabulary::startsWith($text, 'complete_command')
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')'.$sentenceEnd.'~iu', $text) === 1
-            || preg_match('~\S\s*(?:\p{Pd}|:|'.NoteVocabulary::phrases('comma').')\s*'.$bare.'~iu', $text) === 1
-            || (preg_match('~(?<![\p{L}\p{N}_])'.$bare.'~iu', $text) === 1 && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
-    }
-
-    private function startsWith(string $text, string $category): bool
-    {
-        return preg_match('~^(?:'.NoteVocabulary::phrases($category).')(?![\p{L}\p{N}_])~iu', $text) === 1;
+            || preg_match('~\S(?:\s*(?::|'.NoteVocabulary::phrases('comma').')|\s+\p{Pd}|\p{Pd}(?=\s))\s*'.$bare.'~iu', $text) === 1
+            || (preg_match('~'.$notInWord.$bare.'~iu', $text) === 1 && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
     }
 }

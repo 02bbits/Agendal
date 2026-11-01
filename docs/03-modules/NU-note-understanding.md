@@ -19,7 +19,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
-| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or more than 5 changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
+| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or 5 or more changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
 | <a id="nu-6"></a>NU-6 | Name each note automatically | Should | The name follows the naming rules and shows on the result screen and Notes card |
 | <a id="nu-7"></a>NU-7 | Label tasks the assistant made | Should | Task details show "Created by the assistant" |
 
@@ -29,7 +29,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | Make tasks in the note editor (online) | `POST /notes` → result, confirm or follow-up (RV) |
 | Reconnect with pending notes | Service worker replays them oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)) → toast |
-| Make it a task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
+| Keep it as task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
 
 - As a user, I write several things in one line, so that I don't fill in a form for each one.
 - As a user, I write "done X" or "move X to Friday", so that I can update tasks without finding them.
@@ -88,7 +88,7 @@ In this order, first match wins:
 - **Score** = meaningful words found in the task title ÷ meaningful words in the command. A task matches when the score is ≥ 0.6.
 - **Best match wins.** On equal scores, the title with more of the command's words wins, then the title with fewer words the command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"). Two or more tasks still equal after that is a tie ([NU-E11](#nu-e11)).
 - **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. A delete with a deadline (*before / by / until / trước \<when>*, "cancel netflix before the 10th") or a place (*at / ở / tại \<place>*, "drop the kids at school") → that task, since a delete never needs either. Other complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
-- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`.
+- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`. A move to the date and time the task already has changes nothing → skip `no_change` (`note.skip_no_change`).
 - **Repeating tasks:** "done" completes this occurrence and creates the next one ([TK-4](TK-tasks.md#tk-4)). "move" moves only this occurrence ([NU-E36](#nu-e36)).
 
 ### 2.5 Extraction (NU-2)
@@ -118,9 +118,9 @@ The business-rules table is the phrase list. The precise semantics:
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
-| Any delete, any tie ([NU-E11](#nu-e11)), or more than 5 changes (creates + updates + deletes) | `confirm` |
+| Any delete, any tie ([NU-E11](#nu-e11)), or 5 or more changes (creates + updates + deletes) | `confirm` |
 | At least one change | `done` |
-| No changes, and every skip is `already_done` or `not_found` | `done` with zero changes. The result shows the skipped section |
+| No changes, and every skip is `already_done`, `not_found` or `no_change` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
 
 Skipped items never count as changes. A `confirm` plan is re-validated when it is applied ([NU-E38](#nu-e38)).
@@ -185,7 +185,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 
 ## 5. Copy keys
 
-`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
+`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
 
 ## 6. Accessibility
 
@@ -267,7 +267,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `priority`: `low`, `medium`, `high`
   - `repeat`: `never`, `daily`, `weekly`, `monthly`, `yearly`
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
-  - `reason`: `skip`, `already_done`, `not_found`
+  - `reason`: `skip`, `already_done`, `not_found`, `no_change`
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ## 8. Data, validation and authorization
@@ -334,7 +334,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-4](#nu-4) | Ideas, FYIs and filler are kept in the note but make no task | T-NU-30 (prefixes), T-NU-31 (filler), T-NU-32 (kept in `skipped` and in the note text) · C-013–C-015 |
 | [NU-4](#nu-4) | A note with nothing actionable triggers the follow-up | T-NU-33 · C-013, C-014 |
 | [NU-5](#nu-5) | Any delete shows "Check this first" | T-NU-40 · C-018 |
-| [NU-5](#nu-5) | More than 5 changes shows "Check this first" | T-NU-41 (5 → `done`, 6 → `confirm`) · C-019 |
+| [NU-5](#nu-5) | 5 or more changes shows "Check this first" | T-NU-41 (4 → `done`, 5 → `confirm`) · C-019 |
 | [NU-5](#nu-5) | Nothing is applied until Apply changes | T-NU-42 (no task rows change while `confirm`), T-NU-43 (a tie → `confirm`) |
 | [NU-6](#nu-6) | The name follows the naming rules | T-NU-50 (one test per naming row, plus "first row wins") · corpus `naming.*` |
 | [NU-6](#nu-6) | Names over 34 characters are cut at a word boundary with an ellipsis | T-NU-51 |

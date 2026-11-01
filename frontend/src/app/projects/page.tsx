@@ -1,5 +1,5 @@
-import { TabScreen } from "../TabScreen";
+import { ProjectsClient } from "./ProjectsClient";
 
 export default function Page() {
-  return <TabScreen tab="projects" />;
+  return <ProjectsClient />;
 }

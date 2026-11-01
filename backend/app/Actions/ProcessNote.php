@@ -74,11 +74,11 @@ class ProcessNote
                 if ((hrtime(true) - $started) / 1e6 >= $budgetMs) {
                     break;
                 }
-                $words = $this->matcher->words($item, $context);
-                foreach ($this->candidates->find($user->id, $words) as $task) {
+                $groups = $this->matcher->candidateWords($item, $context);
+                foreach ($this->candidates->findEach($user->id, $groups) as $task) {
                     $open[$task['id']] = $task;
                 }
-                foreach ($this->candidates->find($user->id, $words, true) as $task) {
+                foreach ($this->candidates->findEach($user->id, $groups, true) as $task) {
                     $done[$task['id']] = $task;
                 }
             }
@@ -86,7 +86,7 @@ class ProcessNote
             $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
             $build = $this->fallback->improve($build, $text, $context, array_values($open), $user->id);
             if ($build->plan['dropped'] > 0) {
-                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped']]);
+                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
             }
             $note = new Note;
             $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;
@@ -98,7 +98,7 @@ class ProcessNote
                 'plan' => $build->plan, 'applied' => [],
             ])->save();
             if ($build->status === PlanStatus::Done) {
-                $applied = $this->applier->apply($note, $build->plan, $context);
+                $applied = $this->applier->apply($note, $build->plan);
                 $note->applied = $applied['applied'];
                 $note->plan = [...$build->plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
                 $note->save();

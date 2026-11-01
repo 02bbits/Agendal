@@ -2,6 +2,7 @@
 
 use App\Services\Notes\ItemClassifier;
 use App\Services\Notes\NoteContext;
+use Tests\Support\Cases;
 use Tests\Support\NoteClassifierScenarios;
 use Tests\TestCase;
 
@@ -52,13 +53,6 @@ it('reads real notes the way a person means them', function (string $text, strin
     'done with punctuation' => ['report is done!', 'command/complete'],
 ]);
 
-dataset('classifier rules', function (): array {
-    // Datasets build before the app boots, so read the config file directly.
-    $config = require __DIR__.'/../../../config/notes.php';
-
-    return NoteClassifierScenarios::generate($config['rules']);
+it('reads every classifier rule in the shared rules CSV', function () {
+    expect(Cases::failing(NoteClassifierScenarios::generate(config('notes.rules')), fn (string $text, string $expected): ?string => classified($text) === $expected ? null : classified($text)))->toBe([]);
 });
-
-it('reads every classifier rule in the shared rules CSV', function (string $text, string $expected) {
-    expect(classified($text))->toBe($expected);
-})->with('classifier rules');

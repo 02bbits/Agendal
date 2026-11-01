@@ -5,7 +5,7 @@ import {
   CheckIcon,
   FolderIcon,
   InboxIcon,
-  PencilIcon,
+  NotesIcon,
   SearchIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
@@ -16,7 +16,7 @@ const ICONS: Record<TabId, ReactNode> = {
   inbox: <InboxIcon size={20} />,
   upcoming: <CalendarIcon size={20} />,
   projects: <FolderIcon size={20} />,
-  notes: <PencilIcon size={20} />,
+  notes: <NotesIcon size={20} />,
 };
 
 export interface SidebarProps {
@@ -44,7 +44,7 @@ export function Sidebar({
       aria-label={t("nav.sidebar")}
       className="flex h-full flex-col gap-4 pt-5 pr-3 pb-[calc(12px+env(safe-area-inset-bottom))] pl-[calc(12px+env(safe-area-inset-left))]"
     >
-      <p className="m-0 flex items-center gap-2.5 px-2 font-serif text-title font-semibold text-ink">
+      <p className="m-0 flex items-center gap-2.5 px-2 text-title font-bold text-ink">
         <span
           className="inline-flex size-8 items-center justify-center rounded-tile bg-neutral text-neutral-content"
           aria-hidden="true"

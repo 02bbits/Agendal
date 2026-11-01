@@ -11,6 +11,11 @@ export {
 export { IconButton, type IconButtonProps } from "./components/IconButton";
 export { TextField, type TextFieldProps } from "./components/TextField";
 export { Chip, type ChipProps } from "./components/Chip";
+export {
+  ChipGroup,
+  type ChipGroupProps,
+  type ChipOption,
+} from "./components/ChipGroup";
 export { Sheet, type SheetProps } from "./components/Sheet";
 export { Dialog, type DialogProps } from "./components/Dialog";
 export {
@@ -40,6 +45,13 @@ export {
   type SegmentedOption,
 } from "./components/Segmented";
 export { Switch, type SwitchProps } from "./components/Switch";
-export { t, tc, quoted, type CopyKey, type CopyVars } from "./copy/index";
+export {
+  t,
+  tc,
+  quoted,
+  isCopyKey,
+  type CopyKey,
+  type CopyVars,
+} from "./copy/index";
 export * from "./features/index";
 export * from "./domain/index";

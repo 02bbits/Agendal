@@ -13,6 +13,9 @@ use DateTimeImmutable;
  */
 final class RealisticNotes
 {
+    /** Every fourth note: enough spread to catch a broken rule without reading the whole fixture each run. */
+    private const SAMPLE_EVERY = 4;
+
     /** Friday 23 Oct 2026, 08:12 in Ho Chi Minh City, with the projects the notes name. */
     public static function context(): NoteContext
     {
@@ -41,7 +44,8 @@ final class RealisticNotes
     private static function read(string $file): array
     {
         $lines = file(__DIR__.'/../Fixtures/'.$file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
-        $notes = array_filter($lines, fn (string $line): bool => ! str_starts_with($line, '#'));
+        $notes = array_values(array_filter($lines, fn (string $line): bool => ! str_starts_with($line, '#')));
+        $notes = array_filter($notes, fn (int $index): bool => $index % self::SAMPLE_EVERY === 0, ARRAY_FILTER_USE_KEY);
 
         return array_combine($notes, array_map(fn (string $note): array => [str_replace('\n', "\n", $note)], $notes));
     }

@@ -22,9 +22,18 @@ final class FieldExtractor
         private ReminderCalculator $reminders,
     ) {}
 
+    /** @var array<string, ExtractedFields> fields by context and text: a command reads its name many times */
+    private array $extracted = [];
+
     public function extract(string $text, NoteContext $context): ExtractedFields
     {
-        $readable = $this->withoutUnaccentedVietnamese($text);
+        return $this->extracted[$context->key().'|'.$text] ??= $this->read($text, $context);
+    }
+
+    private function read(string $text, NoteContext $context): ExtractedFields
+    {
+        // Literals (URLs, emails, file and project names) hold no field: project "Daily" repeats nothing.
+        $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
         $time = $this->times->parse($readable, $context);
         $date = $this->dates->parse($readable, $context, $time->start);
         $repeat = $this->repeat($readable);
@@ -52,6 +61,31 @@ final class FieldExtractor
         [$title, $notes] = $this->cut(trim($text));
 
         return new ExtractedFields($title, $notes, null, null, null, Priority::Low, null, Repeat::Never, Reminder::None, false);
+    }
+
+    /**
+     * A reschedule with no matching task becomes a new task (NU-E29): the subject's title, project and repeat, with
+     * the date of $at, and its time too when it gives one (NU-E35). Priority and reminder follow the new date and
+     * time, unless the subject states a priority ("move urgent call mom to today 10am").
+     */
+    public function withWhen(string $subject, ExtractedFields $at, NoteContext $context): ExtractedFields
+    {
+        $fields = $this->extract($subject, $context);
+        $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($subject, array_values($context->projects)));
+        [$start, $end] = $at->startTime === null ? [$fields->startTime, $fields->endTime] : [$at->startTime, $at->endTime];
+
+        return new ExtractedFields(
+            title: $fields->title,
+            notes: $fields->notes,
+            dueDate: $at->dueDate,
+            startTime: $start,
+            endTime: $end,
+            priority: $this->priority($readable, $at->dueDate, $context),
+            projectId: $fields->projectId,
+            repeat: $fields->repeat,
+            reminder: $this->reminder($readable, $at->dueDate, $start, $context),
+            lowConfidence: $fields->lowConfidence || $at->lowConfidence,
+        );
     }
 
     /**
@@ -147,10 +181,14 @@ final class FieldExtractor
         return $dueDate === $context->today()->format('Y-m-d') ? Priority::Medium : Priority::Low;
     }
 
-    /** A project name wins over a keyword (NU-E22); keywords count only for the user's projects (NU-E34). */
+    /**
+     * A project name wins over a keyword (NU-E22); keywords count only for the user's projects (NU-E34). Neither
+     * counts inside a URL, email or file name ("sql.example.com", "notes.daily.md").
+     */
     private function project(string $text, NoteContext $context): ?string
     {
         $byPosition = [];
+        $text = NoteVocabulary::withoutLiterals($text);
         foreach ($context->projects as $id => $name) {
             if (preg_match(NoteVocabulary::pattern(preg_quote($name, '~')), $text, $match, PREG_OFFSET_CAPTURE) === 1) {
                 $byPosition[$match[0][1]] ??= (string) $id;
@@ -200,15 +238,21 @@ final class FieldExtractor
     private function title(string $text, array $spans, NoteContext $context): array
     {
         $title = $text;
+        $lead = '~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('span_lead').')\s+$~iu';
         foreach ($spans as [$offset, $length]) {
+            // "gym from monday" → "Gym": the word that leads into a date or time goes with it.
+            if (preg_match($lead, substr($text, 0, $offset), $m) === 1) {
+                [$offset, $length] = [$offset - strlen($m[0]), $length + strlen($m[0])];
+            }
             $title = substr_replace($title, str_repeat(' ', $length), $offset, $length);
         }
-        $pureWords = NoteVocabulary::phrases('priority_high').'|'.NoteVocabulary::phrases('priority_low');
-        $title = (string) preg_replace(NoteVocabulary::pattern($pureWords), ' ', $title);
+        $pureWords = NoteVocabulary::pattern(NoteVocabulary::phrases('priority_high').'|'.NoteVocabulary::phrases('priority_low'));
+        $title = NoteVocabulary::outsideLiterals($title, array_values($context->projects), fn (string $part): string => (string) preg_replace($pureWords, ' ', $part));
         $title = $this->tidy((string) preg_replace('/\s+/u', ' ', $title));
         $title = (string) preg_replace('~^(?:(?:'.NoteVocabulary::phrases('lead_in').')(?:\s+|$))+~iu', '', $title);
         $title = $this->withKnownCasing($this->tidy($title), $context);
-        $title = mb_strtoupper(mb_substr($title, 0, 1)).mb_substr($title, 1);
+        // A title that starts with a URL, email or file name keeps it as written.
+        $title = (NoteVocabulary::literals($title)[0][0] ?? null) === 0 ? $title : mb_strtoupper(mb_substr($title, 0, 1)).mb_substr($title, 1);
 
         return $this->cut($title);
     }
@@ -222,14 +266,19 @@ final class FieldExtractor
         return (string) preg_replace('~^(?:'.$edge.'|'.$joiner.')+|(?:'.$edge.'|'.$joiner.')+$~iu', '', $title);
     }
 
-    /** Project names keep their own casing (NU-E21); acronyms are written as in the rules. */
+    /**
+     * Project names keep their own casing (NU-E21); acronyms are written as in the rules, but never inside a URL,
+     * email, file or project name ("https://example.com/sql/report.pdf" stays as typed).
+     */
     private function withKnownCasing(string $title, NoteContext $context): string
     {
-        foreach ([...array_values($context->projects), ...NoteVocabulary::values('acronym')] as $word) {
-            $title = (string) preg_replace_callback(NoteVocabulary::pattern(preg_quote($word, '~')), fn (): string => $word, $title);
-        }
+        return NoteVocabulary::outsideLiterals($title, [], function (string $part) use ($context): string {
+            foreach ([...array_values($context->projects), ...NoteVocabulary::values('acronym')] as $word) {
+                $part = (string) preg_replace_callback(NoteVocabulary::pattern(preg_quote($word, '~')), fn (): string => $word, $part);
+            }
 
-        return $title;
+            return $part;
+        });
     }
 
     /**

@@ -12,8 +12,8 @@ it('picks the plan status in the NU §2.6 order (T-NU-33, T-NU-40, T-NU-41)', fu
 })->with([
     'any delete → confirm' => [1, true, false, [], PlanStatus::Confirm],
     'a tie → confirm' => [0, false, true, [], PlanStatus::Confirm],
-    '6 changes → confirm' => [6, false, false, [], PlanStatus::Confirm],
-    '5 changes → done' => [5, false, false, [], PlanStatus::Done],
+    '5 changes → confirm' => [5, false, false, [], PlanStatus::Confirm],
+    '4 changes → done' => [4, false, false, [], PlanStatus::Done],
     'changes beat skips' => [1, false, false, [SkipReason::Skip], PlanStatus::Done],
     'only unmatched commands → done' => [0, false, false, [SkipReason::AlreadyDone, SkipReason::NotFound], PlanStatus::Done],
     'a plain skip → followup' => [0, false, false, [SkipReason::NotFound, SkipReason::Skip], PlanStatus::Followup],
@@ -21,7 +21,7 @@ it('picks the plan status in the NU §2.6 order (T-NU-33, T-NU-40, T-NU-41)', fu
 ]);
 
 it('reads the confirm threshold from config (BR-01)', function () {
-    config(['notes.changes_before_confirm' => 2]);
+    config(['notes.changes_to_confirm' => 2]);
 
-    expect((new PlanStatusResolver)->resolve(3, false, false, []))->toBe(PlanStatus::Confirm);
+    expect((new PlanStatusResolver)->resolve(2, false, false, []))->toBe(PlanStatus::Confirm);
 });

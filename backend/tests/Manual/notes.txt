@@ -1,0 +1,76 @@
+# Try notes by hand. Edit this file, then from backend/ run:
+#   php vendor/bin/pest tests/Manual
+# Or try one note at a time in the browser: php -S localhost:8090 tests/Manual/try.php, then open http://localhost:8090
+#
+# task: Title | due date | start-end    an open task the notes below can match (date and times optional)
+# done: Title | due date | start-end    a done task (for "already done")
+# now: 2026-10-23T08:12:00+07:00 Asia/Ho_Chi_Minh    the note's written time and zone (this is the default);
+#                                                     add "sun" at the end for weeks starting on Sunday
+# ---                                   start a new block: forgets the tasks above
+# any other line                        a note; prints what the engine makes of it
+# note => text                          also fails the run when the output doesn't contain "text"
+#
+# Output: "task <title> <date> <times>", "skip", or "<action> → <task> <changed fields> label <label> was <old>",
+# "<action> → new task …", "<action> → skip <reason>", with "· tie: …" when it asks "Which task did you mean?".
+
+# ===== Your notes: put anything here =====
+task: Call mum
+task: Email the group | 2026-10-23 | 09:00-10:00
+done call mum
+move email group to tomorrow 2pm
+buy milk tomorrow 9am
+
+---
+# ===== Known cases. Each "=>" is the expected result; ✗ means it no longer holds. =====
+
+# A hyphenated word ending in "done" is a task; "done" set off by a dash is a complete command.
+cook steak well-done => task "Cook steak well-done"
+pick up laundry - done => complete
+
+---
+# A tie asks (NU-E11), and the task the command changes is always on the "Which task did you mean?" list.
+# Seven tasks tie on "report"; the first five are already due Friday, so "Report;" (due Mon 2 Nov) moves to Fri 6 Nov.
+task: Report | 2026-10-30
+task: Report. | 2026-10-30
+task: Report! | 2026-10-30
+task: Report? | 2026-10-30
+task: Report: | 2026-10-30
+task: Report; | 2026-11-02
+task: Report… | 2026-11-03
+move report to friday => "Report;" {"due_date":"2026-11-06"} label "Due Fri 6 Nov" was "Mon 2 Nov" · tie: Report, Report., Report!, Report;, Report…
+
+---
+# A delete with no match is skipped, with or without a place or deadline (NU-E29).
+delete old photos at work => delete → skip not_found
+cancel netflix before the 10th => delete → skip not_found
+
+---
+# An unmatched reschedule makes a new task named without the verb, however the verb is set off.
+move: dentist to friday => new task "Dentist" 2026-10-30
+move dentist to friday => new task "Dentist" 2026-10-30
+
+---
+# An unmatched reschedule keeps the time the user gave, as the same command on an existing task does (NU-E35).
+move 9am standup to friday => new task "Standup" 2026-10-30 09:00
+task: Standup | 2026-10-23 | 09:00-09:30
+move 9am standup to monday => "Standup" {"due_date":"2026-10-26"}
+
+---
+# NU-E6: only by / due / on / before make a date win; otherwise the later date, and the other date phrase stays
+# in the title ("until monday" stays).
+free trial until monday renew friday => task "Free trial until monday renew" 2026-10-30
+study monday for quiz by friday => task "Study monday for quiz" 2026-10-30
+# Not affected: Friday is the later date either way.
+vacation from monday until friday => 2026-10-30
+
+---
+# Several tasks in one command: each name is matched on its own; a title with "and" itself stays whole.
+task: Report | 2026-10-26
+task: Gym | 2026-10-28
+task: Buy milk and eggs | 2026-10-26
+move report and gym to friday => "Report" {"due_date":"2026-10-30"} label "Due Fri 30 Oct" was "Mon 26 Oct" + "Gym" {"due_date":"2026-10-30"}
+move report to friday and gym to monday => + "Gym" {"due_date":"2026-10-26"}
+move buy milk and eggs to friday => reschedule → "Buy milk and eggs" {"due_date":"2026-10-30"} label "Due Fri 30 Oct" was "Mon 26 Oct"
+task: Call mom
+push report by 1 day and gym by 2 days => "Report" {"due_date":"2026-10-27"} label "Due Tue 27 Oct" was "Mon 26 Oct" + "Gym" {"due_date":"2026-10-30"}
+done buy milk and eggs and call mom => "Buy milk and eggs" {"done":true} label "Completed" + "Call mom" {"done":true}

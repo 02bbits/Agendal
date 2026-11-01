@@ -4,6 +4,7 @@ use App\Enums\WeekStart;
 use App\Services\Notes\ExtractedFields;
 use App\Services\Notes\FieldExtractor;
 use App\Services\Notes\NoteContext;
+use Tests\Support\Cases;
 use Tests\Support\NoteExtractionScenarios;
 use Tests\TestCase;
 
@@ -37,16 +38,13 @@ function sortedFields(array $expected): array
     return $expected;
 }
 
-dataset('extraction rules', function (): array {
-    // Datasets build before the app boots, so read the config file directly.
-    $config = require __DIR__.'/../../../config/notes.php';
+it('reads every extraction rule in the shared rules CSV', function () {
+    expect(Cases::failing(NoteExtractionScenarios::generate(config('notes.rules')), function (string $note, array $expected, string $now): ?array {
+        $got = selectedFields(extractFields($note, [], $now), $expected);
 
-    return NoteExtractionScenarios::generate($config['rules']);
+        return $got === sortedFields($expected) ? null : $got;
+    }))->toBe([]);
 });
-
-it('reads every extraction rule in the shared rules CSV', function (string $note, array $expected, string $now) {
-    expect(selectedFields(extractFields($note, [], $now), $expected))->toBe(sortedFields($expected));
-})->with('extraction rules');
 
 it('extracts English and accented Vietnamese fields (T-NU-10–18)', function (string $text, array $expected) {
     expect(selectedFields(extractFields($text), $expected))->toBe(sortedFields($expected));
