@@ -5,6 +5,7 @@ import {
   ProjectSheet,
   ProjectsScreen,
   ROUTES,
+  type Project,
   type ProjectWithCounts,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
@@ -28,6 +29,37 @@ export function ProjectsClient() {
     load();
   }, [load]);
 
+  useEffect(() => {
+    const handleProjectsChanged = () => {
+      load();
+    };
+    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
+    return () => {
+      window.removeEventListener(
+        "agendal:projects-changed",
+        handleProjectsChanged,
+      );
+    };
+  }, [load]);
+
+  const handleCreated = (created: Project) => {
+    setProjects((prev) => [...prev, { ...created, open: 0, done: 0 }]);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+    }
+    setCreating(false);
+
+    let done = false;
+    const go = () => {
+      if (done) return;
+      done = true;
+      window.removeEventListener("popstate", go);
+      navigate(ROUTES.project(created.id));
+    };
+    window.addEventListener("popstate", go);
+    setTimeout(go, 250);
+  };
+
   const accountInitial = user?.display_name || user?.email || "";
 
   return (
@@ -45,9 +77,7 @@ export function ProjectsClient() {
           onClose={() => setCreating(false)}
           clock={appClock}
           onCreate={createProject}
-          onCreated={(created) => {
-            navigate(ROUTES.project(created.id));
-          }}
+          onCreated={handleCreated}
         />
       )}
     </>
