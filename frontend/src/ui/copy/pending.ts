@@ -94,6 +94,8 @@ export const pending = {
   "list.show_all": "Show all",
   "list.show_less": "Show less",
   "list.inbox_subtitle": "{overdue} overdue · {today} due or scheduled today",
+  "list.upcoming_subtitle": "{count} tasks in the next 7 days",
+  "list.upcoming_subtitle_one": "1 task in the next 7 days",
   "search.filter_label": "Status",
   "search.count_one": "1 result",
   "search.count_other": "{count} results",
