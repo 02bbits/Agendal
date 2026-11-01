@@ -49,7 +49,7 @@ export function InboxScreen({
     ? view.completed
     : view.completed.slice(0, INBOX_COMPLETED_PAGE);
   const hasHiddenCompleted =
-    !showAllCompleted && totalCompleted > INBOX_COMPLETED_PAGE;
+    !showAllCompleted && INBOX_COMPLETED_PAGE < totalCompleted;
 
   const row = (
     task: (typeof view.today)[number],
@@ -161,7 +161,7 @@ export function InboxScreen({
                   >
                     {t("list.show_all")}
                   </Button>
-                ) : showAllCompleted && totalCompleted > INBOX_COMPLETED_PAGE ? (
+                ) : showAllCompleted && INBOX_COMPLETED_PAGE < totalCompleted ? (
                   <Button
                     variant="secondary"
                     className="mt-3 w-full"
