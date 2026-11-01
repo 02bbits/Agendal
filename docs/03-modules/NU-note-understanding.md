@@ -19,7 +19,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
-| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or more than 5 changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
+| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or 5 or more changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
 | <a id="nu-6"></a>NU-6 | Name each note automatically | Should | The name follows the naming rules and shows on the result screen and Notes card |
 | <a id="nu-7"></a>NU-7 | Label tasks the assistant made | Should | Task details show "Created by the assistant" |
 
@@ -29,7 +29,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | Make tasks in the note editor (online) | `POST /notes` → result, confirm or follow-up (RV) |
 | Reconnect with pending notes | Service worker replays them oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)) → toast |
-| Make it a task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
+| Keep it as task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
 
 - As a user, I write several things in one line, so that I don't fill in a form for each one.
 - As a user, I write "done X" or "move X to Friday", so that I can update tasks without finding them.
@@ -118,7 +118,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
-| Any delete, any tie ([NU-E11](#nu-e11)), or more than 5 changes (creates + updates + deletes) | `confirm` |
+| Any delete, any tie ([NU-E11](#nu-e11)), or 5 or more changes (creates + updates + deletes) | `confirm` |
 | At least one change | `done` |
 | No changes, and every skip is `already_done` or `not_found` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
@@ -334,7 +334,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-4](#nu-4) | Ideas, FYIs and filler are kept in the note but make no task | T-NU-30 (prefixes), T-NU-31 (filler), T-NU-32 (kept in `skipped` and in the note text) · C-013–C-015 |
 | [NU-4](#nu-4) | A note with nothing actionable triggers the follow-up | T-NU-33 · C-013, C-014 |
 | [NU-5](#nu-5) | Any delete shows "Check this first" | T-NU-40 · C-018 |
-| [NU-5](#nu-5) | More than 5 changes shows "Check this first" | T-NU-41 (5 → `done`, 6 → `confirm`) · C-019 |
+| [NU-5](#nu-5) | 5 or more changes shows "Check this first" | T-NU-41 (4 → `done`, 5 → `confirm`) · C-019 |
 | [NU-5](#nu-5) | Nothing is applied until Apply changes | T-NU-42 (no task rows change while `confirm`), T-NU-43 (a tie → `confirm`) |
 | [NU-6](#nu-6) | The name follows the naming rules | T-NU-50 (one test per naming row, plus "first row wins") · corpus `naming.*` |
 | [NU-6](#nu-6) | Names over 34 characters are cut at a word boundary with an ellipsis | T-NU-51 |
