@@ -23,7 +23,7 @@ export function ProgressSummary({
   const share = total ? done / total : 0;
 
   return (
-    <section className="mb-6 flex items-center gap-3 rounded-box bg-surface p-3.5">
+    <section className="mb-6 flex items-center gap-4 rounded-2xl border border-separator/50 bg-surface p-4 shadow-xs">
       <svg
         className="shrink-0"
         width="44"
