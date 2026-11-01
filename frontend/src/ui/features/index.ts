@@ -83,4 +83,5 @@ export {
 export {
   UpcomingScreen,
   type UpcomingScreenProps,
+  type UpcomingViewMode,
 } from "./lists/UpcomingScreen";
