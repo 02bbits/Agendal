@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-01
+
+- **Graphite design (V2.1, #97).** [Theme guide](01-product/theme-guide.md) is rewritten for Graphite (monochrome greys, Inter) and replaces Paper & ink; the reference package is not in git and is linked from the guide. [Screens](01-product/screens.md): no serif, "Made from your note" link, round + button. [Overview](01-product/overview.md) and [project](08-project/project.md) name Graphite. [Tasks](08-project/tasks.md) IM-06 maps the Graphite tokens. The UI rework is #98; the `task.created_by_assistant` string changes with it.
+
 ## 2026-10-31
 
 - **Closing the note editor (IM-41).** [UX-13](01-product/ux-standards.md#ux-13) and [NC §2.1](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5): closing the editor with text asks "Discard this note?" (Discard / Keep editing) instead of closing without asking; Discard clears the draft, which still guards against the app closing mid-note ([NC-E1](03-modules/NC-note-capture.md#nc-e1)). [Copy catalog](01-product/copy-catalog.md) and the NC copy keys add `note.discard_title`, `note.discard_body`, `common.discard_action` and `common.keep_editing`.
