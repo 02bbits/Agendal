@@ -21,4 +21,13 @@ return [
     // Changes one note may make before it needs Apply changes (BR-01, NU-5).
     'changes_before_confirm' => (int) env('NOTE_CHANGES_BEFORE_CONFIRM', 5),
 
+    // Share of a command's meaningful words a task title must contain to match (NU §2.4).
+    'match_threshold' => (float) env('NOTE_MATCH_THRESHOLD', 0.6),
+
+    // Open tasks fetched as candidates for one command, best trigram relevance first (NU §2.4).
+    'match_candidates' => (int) env('NOTE_MATCH_CANDIDATES', 50),
+
+    // Tied tasks offered in "Which task did you mean?" (NU-E11).
+    'tie_choices' => (int) env('NOTE_TIE_CHOICES', 5),
+
 ];

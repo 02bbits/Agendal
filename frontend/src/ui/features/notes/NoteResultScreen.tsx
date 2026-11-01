@@ -167,7 +167,9 @@ export function NoteResultScreen({
                   ? t("note.skip_already_done", { title: item.text })
                   : item.reason === "not_found"
                     ? t("note.skip_not_found", { text: item.text })
-                    : item.text}
+                    : item.reason === "no_change"
+                      ? t("note.skip_no_change", { title: item.text })
+                      : item.text}
               </li>
             ))}
           </ul>

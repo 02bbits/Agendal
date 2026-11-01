@@ -14,6 +14,8 @@ final class NoteDateParser
 {
     private const DAYS_PER_WEEK = 7;
 
+    private const MONTHS_PER_YEAR = 12;
+
     private const SATURDAY = 6;
 
     private const SUNDAY = 0;
@@ -21,13 +23,12 @@ final class NoteDateParser
     /** Enough months ahead to reach a 31st from any month. */
     private const MONTHS_TO_FIND_A_DAY = 2;
 
-    /** Duration units this parser reads, in "+N <unit>" steps; minutes and hours belong to the time parser. */
-    private const DATE_UNITS = ['day' => 'days', 'week' => 'weeks', 'month' => 'months'];
-
     public function __construct(private NoteDurations $durations) {}
 
     public function parse(string $text, NoteContext $context, ?string $startTime): ParsedDate
     {
+        // No date inside a URL, email, file name or project name ("https://x.com/2026/10/26", project "Friday").
+        $text = NoteVocabulary::withoutLiterals($text, array_values($context->projects));
         $unreadable = false;
         $best = null;
         foreach ($this->candidates($text, $context, $startTime) as $candidate) {
@@ -38,12 +39,26 @@ final class NoteDateParser
 
                 continue;
             }
-            $prefix = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix')) ?? '';
-            $candidate = [...$candidate, 'preferred' => $prefix !== '', 'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix)];
+            // Only by/due/on/before make a date win (NU-E6); a deadline word ("until", "chậm nhất") just leaves the title with it.
+            $preferred = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix'));
+            $prefix = $preferred ?? $this->endsWith($before, NoteVocabulary::phrases('deadline_prefix')) ?? '';
+            $candidate = [...$candidate, 'preferred' => $preferred !== null, 'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix)];
             $best = $best === null || $this->wins($candidate, $best) ? $candidate : $best;
         }
 
         return new ParsedDate($best['date'] ?? null, $best === null ? [] : [[$best['offset'], strlen($best['phrase'])]], $unreadable);
+    }
+
+    /**
+     * Where the first date the text reads starts, whichever date parse() then chooses: 0 for "tomorrow before
+     * friday" and "tuesday or friday". Null when the text reads no date.
+     */
+    public function firstAt(string $text, NoteContext $context): ?int
+    {
+        $text = NoteVocabulary::withoutLiterals($text, array_values($context->projects));
+        $offsets = array_column(array_filter($this->candidates($text, $context, null), fn (array $candidate): bool => $candidate['date'] !== null), 'offset');
+
+        return $offsets === [] ? null : min($offsets);
     }
 
     /**
@@ -94,9 +109,9 @@ final class NoteDateParser
     {
         $found = [];
         foreach ($this->durations->findAll($text) as $duration) {
-            $step = self::DATE_UNITS[$duration['unit']] ?? null;
-            if ($step !== null) {
-                $date = $context->today()->modify('+'.$duration['amount'].' '.$step)->format('Y-m-d');
+            // Minutes and hours are times (NoteTimeParser); a month ends on a shorter month's last day.
+            if (! NoteDurations::isClock($duration['unit'])) {
+                $date = NoteDurations::add($context->today(), $duration['amount'], $duration['unit'])->format('Y-m-d');
                 $found[] = ['date' => $date, 'phrase' => substr($text, $duration['offset'], $duration['length']), 'offset' => $duration['offset']];
             }
         }
@@ -182,7 +197,12 @@ final class NoteDateParser
             preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
             foreach ($matches as $m) {
                 $year = ($m['year'][0] ?? '') !== '' ? (int) $m['year'][0] : null;
-                $found[] = ['date' => $this->explicitDate($context, (int) $m['day'][0], (int) $m['month'][0], $year), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
+                [$day, $month] = [(int) $m['day'][0], (int) $m['month'][0]];
+                // Day first ("26/10"); "11/20" can only be month first, as written in the US.
+                if ($month > self::MONTHS_PER_YEAR && $day <= self::MONTHS_PER_YEAR) {
+                    [$day, $month] = [$month, $day];
+                }
+                $found[] = ['date' => $this->explicitDate($context, $day, $month, $year), 'phrase' => $m[0][0], 'offset' => $m[0][1]];
             }
         }
 
@@ -198,13 +218,12 @@ final class NoteDateParser
     private function daysOfMonth(string $text, NoteContext $context): array
     {
         $months = implode('|', NoteVocabulary::family('month'));
-        $notFollowedBy = implode('|', [
-            NoteVocabulary::phrases('date_separator'), NoteVocabulary::phrases('full_date_separator'),
-            NoteVocabulary::phrases('month_word'), NoteVocabulary::phrases('count_word'), NoteVocabulary::phrases('month_link'), $months,
-        ]);
+        // "ngày 10/11" is a numeric date, but "ngày 10 - done" and "ngày 10." end at the day.
+        $separators = NoteVocabulary::phrases('date_separator').'|'.NoteVocabulary::phrases('full_date_separator');
+        $notFollowedBy = implode('|', [NoteVocabulary::phrases('month_word'), NoteVocabulary::phrases('count_word'), NoteVocabulary::phrases('month_link'), $months]);
         $ordinal = NoteVocabulary::phrases('ordinal_suffix');
         $pattern = '~(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('date_day_word').')\s+(?<day>\d{1,2})|(?:(?:'.NoteVocabulary::phrases('ordinal_day_word').')\s+)?(?<ordinalDay>\d{1,2})(?:'.$ordinal.'))'
-            .'(?![\p{L}\p{N}])(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
+            .'(?![\p{L}\p{N}])(?!\s*(?:'.$separators.')\s*\d)(?!\s*(?:'.$notFollowedBy.')(?![\p{L}]))~iu';
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         $found = [];
         foreach ($matches as $m) {

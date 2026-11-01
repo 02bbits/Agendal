@@ -3,14 +3,17 @@
 use App\Services\Notes\ExtractedFields;
 use App\Services\Notes\FieldExtractor;
 use App\Services\Notes\NoteContext;
+use Tests\Support\Cases;
 use Tests\Support\NoteInvariants;
+use Tests\Support\NoteRules;
+use Tests\Support\RealisticNotes;
 use Tests\TestCase;
 
 uses(TestCase::class);
 
 function invariantContext(): NoteContext
 {
-    return new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh', ['hci' => 'HCI', 'sql' => 'SQL Course', 'web' => 'Adv Web', 'personal' => 'Personal']);
+    return RealisticNotes::context();
 }
 
 function invariantFields(string $text): ExtractedFields
@@ -26,27 +29,16 @@ function meaning(string $text): array
     return [$fields->dueDate, $fields->startTime, mb_strtolower($fields->title)];
 }
 
-/** @return array<string, array{string}> */
-function realisticNotes(): array
-{
-    $lines = file(__DIR__.'/../../Fixtures/realistic-notes.txt', FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];
-    $notes = array_filter($lines, fn (string $line): bool => ! str_starts_with($line, '#'));
-
-    return array_combine($notes, array_map(fn (string $note): array => [str_replace('\n', "\n", $note)], $notes));
-}
-
-it('keeps every property on realistic notes', function (string $note) {
-    expect(app(NoteInvariants::class)->violations($note, invariantContext()))->toBe([]);
-})->with(realisticNotes());
+it('keeps every property on realistic notes', function () {
+    expect(Cases::failing(RealisticNotes::all(), fn (string $note): ?array => app(NoteInvariants::class)->violations($note, invariantContext()) ?: null))->toBe([]);
+});
 
 /** @return array<string, array{string, string}> every month phrase of the CSV in each date order people write */
 function monthWordings(): array
 {
-    // Datasets build before the app boots, so read the rules file directly.
-    $config = require __DIR__.'/../../../config/notes.php';
     $cases = [];
-    foreach (array_map(str_getcsv(...), file($config['rules'], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: []) as [$category, $phrase]) {
-        if (preg_match('/^month:(\d+)$/', (string) $category, $month) !== 1) {
+    foreach (NoteRules::rows() as [$category, $phrase]) {
+        if (preg_match('/^month:(\d+)$/', $category, $month) !== 1) {
             continue;
         }
         $due = sprintf('2027-%02d-26', (int) $month[1]);
@@ -58,10 +50,13 @@ function monthWordings(): array
     return $cases;
 }
 
-it('reads a month name in any order as the same date (M1)', function (string $note, string $due) {
-    expect(meaning($note))->toBe([$due, null, 'pay rent'])
-        ->and(meaning((new DateTimeImmutable($due))->format('d/m/Y').' pay rent'))->toBe([$due, null, 'pay rent']);
-})->with(monthWordings());
+it('reads a month name in any order as the same date (M1)', function () {
+    expect(Cases::failing(monthWordings(), function (string $note, string $due): ?array {
+        $numeric = (new DateTimeImmutable($due))->format('d/m/Y').' pay rent';
+
+        return meaning($note) === [$due, null, 'pay rent'] && meaning($numeric) === [$due, null, 'pay rent'] ? null : [meaning($note), meaning($numeric)];
+    }))->toBe([]);
+});
 
 it('reads the same note whatever the phrase order (M2)', function (string $reordered) {
     expect(meaning($reordered))->toBe(meaning('pay rent tomorrow at 9am'));
@@ -79,6 +74,6 @@ function clockHours(): array
     return array_combine(array_map(fn (int $hour): string => "at {$hour}", $hours), array_map(fn (int $hour): array => [$hour], $hours));
 }
 
-it('reads "at H" as "at H:00" (M4)', function (int $hour) {
-    expect(meaning("call John at {$hour}"))->toBe(meaning("call John at {$hour}:00"));
-})->with(clockHours());
+it('reads "at H" as "at H:00" (M4)', function () {
+    expect(Cases::failing(clockHours(), fn (int $hour): ?array => meaning("call John at {$hour}") === meaning("call John at {$hour}:00") ? null : meaning("call John at {$hour}")))->toBe([]);
+});

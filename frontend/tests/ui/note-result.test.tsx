@@ -189,9 +189,11 @@ describe("Note result (IM-43, RV-1)", () => {
           { ref: "s1", text: "fyi lab moved to room 3", reason: "skip" },
           { ref: "s2", text: "Email Prof. Kim", reason: "already_done" },
           { ref: "s3", text: "gym", reason: "not_found" },
+          { ref: "s4", text: "HCI quiz", reason: "no_change" },
         ],
       ),
     );
+    expect(screen.getByText("Already set: “HCI quiz”")).toBeTruthy();
     expect(screen.getByText(t("note.skipped"))).toBeTruthy();
     expect(screen.getByText("fyi lab moved to room 3")).toBeTruthy();
     expect(screen.getByText("Already done: “Email Prof. Kim”")).toBeTruthy();

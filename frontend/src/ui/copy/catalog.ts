@@ -126,6 +126,7 @@ export const catalog = {
   "note.skipped": "Not made into tasks",
   "note.skip_already_done": "Already done: “{title}”",
   "note.skip_not_found": "Couldn't find a task matching “{text}”",
+  "note.skip_no_change": "Already set: “{title}”",
   "note.duplicate_hint": "You already have a task like this",
   "note.processing_failed":
     "I couldn't read this note just now. It's saved, and I'll try again.",
