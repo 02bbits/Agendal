@@ -1,5 +1,5 @@
-import { TabScreen } from "../TabScreen";
+import { UpcomingClient } from "./UpcomingClient";
 
 export default function Page() {
-  return <TabScreen tab="upcoming" />;
+  return <UpcomingClient />;
 }
