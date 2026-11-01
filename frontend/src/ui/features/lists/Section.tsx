@@ -11,6 +11,7 @@ export interface SectionProps {
   /** Collapsed sections are disclosure buttons with aria-expanded (A11Y-53). */
   collapsible?: boolean;
   icon?: ReactNode;
+  footer?: ReactNode;
   children: ReactNode;
 }
 
@@ -21,6 +22,7 @@ export function Section({
   tone,
   collapsible = false,
   icon,
+  footer,
   children,
 }: SectionProps) {
   const [open, setOpen] = useState(!collapsible);
@@ -66,7 +68,10 @@ export function Section({
         )}
       </h2>
       <div id={listId} hidden={!open}>
-        <ul className="m-0 list-none p-0">{children}</ul>
+        <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
+          <ul className="m-0 list-none p-0">{children}</ul>
+        </div>
+        {footer}
       </div>
     </section>
   );
