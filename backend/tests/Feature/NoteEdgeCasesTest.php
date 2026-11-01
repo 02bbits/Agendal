@@ -9,6 +9,7 @@ use App\Services\Notes\TaskCandidates;
 use App\Services\Tasks\TaskRecurrence;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Tests\Support\FrozenClock;
 
@@ -70,8 +71,10 @@ it('revalidates deleted and changed confirmation targets under row locks (T-NU-1
     expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->end_time)->toBe('16:00:00');
     $task->delete();
     $deletePlan = ['create' => [], 'update' => [], 'delete' => [['ref' => 'i1', 'task_id' => $task->id, 'label' => 'Email group']], 'skipped' => [], 'ambiguous' => []];
+    Log::spy();
     $deleted = DB::transaction(fn () => app(NoteApplier::class)->apply($note, $deletePlan));
     expect($deleted['changes'])->toBe([])->and($deleted['skipped'][0])->toMatchArray(['text' => 'move email group to sunday', 'reason' => 'not_found']);
+    Log::shouldHaveReceived('info')->with('note_plan_validation', ['dropped' => 1, 'at' => 'apply']);
 });
 
 it('moves by an amount from the time a task has when the plan is applied (NU-E38)', function () {

@@ -83,7 +83,7 @@ class ProcessNote
             $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
             $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
             if ($build->plan['dropped'] > 0) {
-                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped']]);
+                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
             }
             $note = new Note;
             $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;

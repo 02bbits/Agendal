@@ -22,6 +22,7 @@ use App\Services\Tasks\TaskRecurrence;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -60,6 +61,9 @@ final class NoteApplier
         $timezone = (string) $user->timezone;
         $locked = $this->lockTargets($note, $plan);
         [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked);
+        if ($plan['dropped'] > 0) {
+            Log::info('note_plan_validation', ['dropped' => $plan['dropped'], 'at' => 'apply']);
+        }
         $this->guardOpenLimit($note, count($plan['create']));
         $applied = [];
         $changes = [];
