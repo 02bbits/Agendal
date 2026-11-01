@@ -64,6 +64,7 @@ export function WhenSection({ task, onSave }: WhenSectionProps): ReactElement {
           id="task-repeat"
           label={t("task.repeat")}
           value={task.repeat}
+          helper={task.repeat_description}
           options={REPEATS.map((r) => ({
             value: r,
             label: t(`repeat.${r}` as CopyKey),

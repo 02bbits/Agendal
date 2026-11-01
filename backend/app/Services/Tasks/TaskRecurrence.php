@@ -30,18 +30,27 @@ final class TaskRecurrence
         $due = new DateTimeImmutable((string) $task->due_date);
         $anchor = new DateTimeImmutable((string) ($task->repeat_anchor ?: $task->due_date));
         $next = $due;
-        do {
-            $next = match ($repeat) {
-                Repeat::Daily => $next->modify('+1 day'),
-                Repeat::Weekly => $next->modify('+7 days'),
-                Repeat::Monthly => $next->modify('first day of next month'),
-                Repeat::Yearly => $next->setDate((int) $next->format('Y') + 1, (int) $anchor->format('m'), 1),
-            };
-            // Monthly and yearly keep the anchor's day, or the month's last day when it is shorter.
-            if (in_array($repeat, [Repeat::Monthly, Repeat::Yearly], true)) {
-                $next = $next->setDate((int) $next->format('Y'), (int) $next->format('m'), min((int) $anchor->format('d'), (int) $next->format('t')));
+        if ($task->repeat_rule !== null) {
+            $from = max($today, $due->modify('+1 day')->format('Y-m-d'));
+            $date = RepeatSchedule::onOrAfter((string) $task->repeat_rule, $anchor->format('Y-m-d'), $from);
+            if ($date === null) {
+                return null;
             }
-        } while ($next->format('Y-m-d') < $today);
+            $next = new DateTimeImmutable($date);
+        } else {
+            do {
+                $next = match ($repeat) {
+                    Repeat::Daily => $next->modify('+1 day'),
+                    Repeat::Weekly => $next->modify('+7 days'),
+                    Repeat::Monthly => $next->modify('first day of next month'),
+                    Repeat::Yearly => $next->setDate((int) $next->format('Y') + 1, (int) $anchor->format('m'), 1),
+                };
+                // Monthly and yearly keep the anchor's day, or the month's last day when it is shorter.
+                if (in_array($repeat, [Repeat::Monthly, Repeat::Yearly], true)) {
+                    $next = $next->setDate((int) $next->format('Y'), (int) $next->format('m'), min((int) $anchor->format('d'), (int) $next->format('t')));
+                }
+            } while ($next->format('Y-m-d') < $today);
+        }
         $copy = $task->replicate(['done_at', 'remind_at', 'deleted_at', 'change_seq']);
         $copy->done = false;
         $copy->previous_occurrence_id = $task->id;

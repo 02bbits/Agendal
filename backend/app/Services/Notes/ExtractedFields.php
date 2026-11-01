@@ -22,5 +22,6 @@ final readonly class ExtractedFields
         public Repeat $repeat,
         public Reminder $reminder,
         public bool $lowConfidence,
+        public ?string $repeatRule = null,
     ) {}
 }

@@ -1058,3 +1058,18 @@ file_extension,py
 file_extension,js
 file_extension,ts
 file_extension,php
+
+repeat:yearly,every year
+repeat:yearly,yearly
+repeat:yearly,annually
+repeat:yearly,mỗi năm
+repeat:yearly,hàng năm
+repeat:yearly,hằng năm
+repeat_prefix,lặp lại
+span_lead,on
+span_lead,vào
+span_lead,starting from
+span_lead,starting
+span_lead,bắt đầu từ
+span_lead,bắt đầu
+span_lead,on the

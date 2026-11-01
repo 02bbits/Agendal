@@ -35,6 +35,8 @@ export interface Task {
   priority: Priority | null;
   project_id: string | null;
   repeat: Repeat;
+  repeat_rule?: string | null;
+  repeat_description?: string | null;
   reminder: Reminder;
   notes: string | null;
   done: boolean;

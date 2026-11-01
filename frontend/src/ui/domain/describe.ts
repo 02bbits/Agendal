@@ -26,7 +26,9 @@ export function taskAccessibleName(
   if (task.repeat !== "never")
     parts.push(
       t("task.repeats", {
-        repeat: t(`repeat.${task.repeat}` as CopyKey).toLowerCase(),
+        repeat:
+          task.repeat_description ??
+          t(`repeat.${task.repeat}` as CopyKey).toLowerCase(),
       }),
     );
   return parts.join(", ");

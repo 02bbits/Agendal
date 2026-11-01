@@ -76,7 +76,7 @@ final class NoteSplitter
                     if (preg_match(self::VISIBLE, $fragment) !== 1) {
                         continue;
                     }
-                    $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment)
+                    $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment) || $this->joinsRepeatDays($current, $fragment, $projects)
                         || ($this->opensList($current) && ! $this->startsNewTask($fragment, $projects)));
                     if ($joins) {
                         $current .= $comma.' '.$fragment;
@@ -121,6 +121,25 @@ final class NoteSplitter
         $item = NoteVocabulary::withoutLeadIn($item);
 
         return NoteVocabulary::startsWithVerb($item) || $this->startsWithCommand($item);
+    }
+
+    /**
+     * Weekday lists belong to one recurrence: "gym every Monday, Wednesday and Friday".
+     *
+     * @param  list<string>  $projects
+     */
+    private function joinsRepeatDays(string $current, string $fragment, array $projects): bool
+    {
+        $current = NoteVocabulary::withoutLiterals($current, $projects);
+        if (! NoteVocabulary::contains('repeat_prefix', $current) && NoteVocabulary::findAll('repeat', $current) === []) {
+            return false;
+        }
+        if (NoteVocabulary::findAll('weekday', $fragment) === []) {
+            return false;
+        }
+        $withoutJoiners = (string) preg_replace(NoteVocabulary::pattern(NoteVocabulary::phrases('list_joiner')), ' ', $fragment);
+
+        return NoteVocabulary::onlyModifiers($withoutJoiners);
     }
 
     private function startsWithCommand(string $text): bool

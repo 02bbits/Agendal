@@ -95,6 +95,7 @@
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
         "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
         "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
+        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule" },
         "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
         "notes": { "$ref": "task.schema.json#/$defs/notes" },
         "duplicate_of": { "$ref": "task.schema.json#/$defs/uuid_or_null" }
@@ -118,6 +119,7 @@
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
         "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
         "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
+        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule" },
         "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
         "notes": { "$ref": "task.schema.json#/$defs/notes" }
       }

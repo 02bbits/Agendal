@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Resources;
 
 use App\Models\Task;
+use App\Services\Tasks\RepeatSchedule;
 use Carbon\CarbonInterface;
 use DateTimeInterface;
 use Illuminate\Http\Request;
@@ -38,6 +39,8 @@ class TaskResource extends JsonResource
             'priority' => $this->priority ?: null,
             'project_id' => $this->project_id,
             'repeat' => $this->repeat ?? 'never',
+            'repeat_rule' => $this->repeat_rule,
+            'repeat_description' => $this->repeat_rule === null ? null : RepeatSchedule::describe((string) $this->repeat_rule, (string) ($this->repeat_anchor ?: $this->due_date)),
             'reminder' => $this->reminder ?? 'none',
             'notes' => $this->notes,
             'done' => (bool) $this->done,

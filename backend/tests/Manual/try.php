@@ -14,6 +14,7 @@ use App\Enums\WeekStart;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
 use App\Services\Notes\NoteSplitter;
+use App\Services\Tasks\RepeatSchedule;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -75,12 +76,28 @@ if ($result !== null) {
         }
     }
 }
-$describe = function (string $kind, array $entry) use ($result): string {
+$repeatLabel = function (array $entry): string {
+    if ($entry['repeat'] === 'never') {
+        return '';
+    }
+    $date = new DateTimeImmutable($entry['due_date']);
+    if (isset($entry['repeat_rule'])) {
+        return ' · '.RepeatSchedule::describe($entry['repeat_rule'], $entry['due_date']);
+    }
+
+    return ' · '.match ($entry['repeat']) {
+        'daily' => 'every day',
+        'weekly' => 'every '.$date->format('l'),
+        'monthly' => 'every month on day '.$date->format('j').((int) $date->format('j') > 28 ? ' (last day in shorter months)' : ''),
+        'yearly' => 'every year on '.$date->format('F j').' (last day in shorter months)',
+    };
+};
+$describe = function (string $kind, array $entry) use ($result, $repeatLabel): string {
     $title = fn (?string $id): string => $result['titles'][$id] ?? (string) $id;
 
     return match ($kind) {
         'create' => trim('"'.$entry['title'].'" '.($entry['due_date'] ?? 'no date').' '.($entry['start_time'] ?? '').($entry['end_time'] ? '–'.$entry['end_time'] : '')
-            .($entry['project_id'] ? ' · project' : '').($entry['repeat'] !== 'never' ? ' · repeats '.$entry['repeat'] : '').($entry['reminder'] !== 'none' ? ' · reminder '.$entry['reminder'] : '')
+            .($entry['project_id'] ? ' · project' : '').$repeatLabel($entry).($entry['reminder'] !== 'none' ? ' · reminder '.$entry['reminder'] : '')
             .($entry['priority'] !== 'low' ? ' · '.$entry['priority'] : '').($entry['duplicate_of'] ? ' · looks like "'.$title($entry['duplicate_of']).'"' : '')),
         'update' => '"'.$title($entry['task_id']).'" → '.json_encode(array_diff_key($entry, array_flip(['ref', 'task_id', 'label'])), JSON_UNESCAPED_UNICODE).' · label "'.$entry['label'].'"',
         'delete' => '"'.$title($entry['task_id']).'"',
@@ -141,6 +158,7 @@ $describe = function (string $kind, array $entry) use ($result): string {
     <?php if ($result['build']->plan['needs_confirm']) { ?><span>· needs confirm</span><?php } ?>
     <?php if ($result['build']->lowConfidence !== []) { ?><span>· low confidence: <?= $e(implode(' / ', $result['build']->lowConfidence)) ?></span><?php } ?>
   </div>
+  <?php if ($result['build']->lowConfidence !== []) { ?><p class="error">Rules preview only: these items need fallback processing. Their dates and recurrence are not confirmed.</p><?php } ?>
   <table>
     <tr><th>Item</th><th>Kind</th><th>Result</th></tr>
     <?php foreach ($rows as $row) { ?>

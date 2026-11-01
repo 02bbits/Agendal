@@ -171,6 +171,7 @@ final class NoteEngine
             'start_time' => $fields->startTime, 'end_time' => $fields->endTime, 'priority' => $fields->priority->value,
             'project_id' => $fields->projectId, 'repeat' => $fields->repeat->value, 'reminder' => $fields->reminder->value,
             'notes' => $fields->notes, 'duplicate_of' => $duplicateOf,
+            ...($fields->repeatRule === null ? [] : ['repeat_rule' => $fields->repeatRule]),
         ];
     }
 }
