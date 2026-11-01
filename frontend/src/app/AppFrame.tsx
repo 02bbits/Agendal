@@ -26,8 +26,8 @@ import {
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
-import { submitNote } from "@/lib/noteApi";
 import { useNewTask } from "./useNewTask";
+import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -195,6 +195,26 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [editing, setEditing] = useState(false);
   const openNoteEditor = useCallback(() => setEditing(true), []);
   const closeNoteEditor = useCallback(() => setEditing(false), []);
+  // Closing the editor takes its history entry off with history.back(), which is only done a
+  // moment later. The result goes on top of where the editor was opened once that has happened,
+  // so Back from the result returns there and never to the editor (RV-E12). A router.replace
+  // over the editor's entry would be undone by that back
+  const openResult = useCallback(
+    (id: string) => {
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("popstate", go);
+        router.push(ROUTES.note(id));
+      };
+      window.addEventListener("popstate", go);
+      // The entry wasn't on top (nothing to take off): no popstate comes
+      setTimeout(go, 250);
+      setEditing(false);
+    },
+    [router],
+  );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
@@ -266,6 +286,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
+      forgetNotes();
       setUser(null);
       settingsRef.current = DEFAULT_SETTINGS;
       setSettings(DEFAULT_SETTINGS);
@@ -357,8 +378,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onClose={closeNoteEditor}
             onDraftRestored={() => showToast(t("note.draft_restored"))}
             onSubmit={submitNote}
-            // ponytail: interim until IM-43's result screen; counts every change, not only created ones
             onSubmitted={(result) => {
+              if (result.note.status === "done") {
+                rememberNote(result);
+                openResult(result.note.id);
+                return;
+              }
+              // ponytail: Check this first (IM-45) and the follow-up (IM-46) have no screen yet
               closeNoteEditor();
               showToast(tc("note.made", result.changes.length));
             }}
