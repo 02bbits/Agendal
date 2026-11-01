@@ -10,6 +10,9 @@ export interface SectionProps {
   tone?: "danger";
   /** Collapsed sections are disclosure buttons with aria-expanded (A11Y-53). */
   collapsible?: boolean;
+  defaultOpen?: boolean;
+  open?: boolean;
+  onToggle?: (open: boolean) => void;
   icon?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -21,13 +24,27 @@ export function Section({
   count,
   tone,
   collapsible = false,
+  defaultOpen,
+  open: controlledOpen,
+  onToggle,
   icon,
   footer,
   children,
 }: SectionProps) {
-  const [open, setOpen] = useState(!collapsible);
+  const [internalOpen, setInternalOpen] = useState(
+    defaultOpen !== undefined ? defaultOpen : !collapsible,
+  );
+  const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const listId = useId();
   const label = tc("list.section_count", count, { section: title });
+
+  const handleToggle = () => {
+    const next = !open;
+    if (controlledOpen === undefined) {
+      setInternalOpen(next);
+    }
+    onToggle?.(next);
+  };
   const visible = (
     <span
       aria-hidden="true"
@@ -48,7 +65,7 @@ export function Section({
             className="focus-ring flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-tile border-0 border-t border-separator bg-transparent p-0 text-left text-ink"
             aria-expanded={open}
             aria-controls={listId}
-            onClick={() => setOpen((v) => !v)}
+            onClick={handleToggle}
           >
             {visible}
             <span className="sr-only">{label}</span>
