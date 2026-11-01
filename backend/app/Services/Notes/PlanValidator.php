@@ -14,17 +14,14 @@ use Opis\JsonSchema\Validator;
  * Checks every plan entry, whoever produced it, and drops the ones that fail (NU §8, NU-5).
  * The plan keeps the note result contract's JSON shape.
  *
- * @phpstan-type Plan array{create: list<array<string, mixed>>, update: list<array<string, mixed>>, delete: list<array<string, mixed>>, skipped: list<array{ref: string, text: string, reason: string}>, ambiguous: list<array<string, mixed>>}
- * @phpstan-type ValidatedPlan array{create: list<array<string, mixed>>, update: list<array<string, mixed>>, delete: list<array<string, mixed>>, skipped: list<array{ref: string, text: string, reason: string}>, ambiguous: list<array<string, mixed>>, dropped: int}
+ * @phpstan-type Plan array{create: list<array<string, mixed>>, update: list<array<string, mixed>>, delete: list<array<string, mixed>>, skipped: list<array{ref: string, text: string, reason: string}>, ambiguous: list<array<string, mixed>>, needs_confirm?: bool}
+ * @phpstan-type ValidatedPlan array{create: list<array<string, mixed>>, update: list<array<string, mixed>>, delete: list<array<string, mixed>>, skipped: list<array{ref: string, text: string, reason: string}>, ambiguous: list<array<string, mixed>>, dropped: int, needs_confirm: bool}
  */
 final class PlanValidator
 {
     private const SCHEMA_ID = 'https://agendal.app/schemas/';
 
     private const ENTRY_KINDS = ['create', 'update', 'delete'];
-
-    /** A tie offers a choice between at least two tasks (NU-E11). */
-    private const MIN_TIE_CHOICES = 2;
 
     private Validator $schema;
 
@@ -35,6 +32,8 @@ final class PlanValidator
     }
 
     /**
+     * A broken tie still asks: its change, the best match, waits for Apply changes (`needs_confirm`, NU-E11).
+     *
      * @param  array<string, mixed>  $plan
      * @param  array<string, string>  $projects  the user's project ids => names
      * @param  array<string, array<string, mixed>>  $tasks  the tasks entries may name: the user's own, and for the LLM only its candidates
@@ -42,8 +41,9 @@ final class PlanValidator
      */
     public function validate(array $plan, array $projects, array $tasks): array
     {
-        $valid = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => $plan['skipped'] ?? [], 'ambiguous' => []];
+        $valid = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => [], 'ambiguous' => []];
         $dropped = 0;
+        $needsConfirm = false;
         foreach (self::ENTRY_KINDS as $kind) {
             foreach ($plan[$kind] ?? [] as $entry) {
                 if (is_array($entry) && $this->entryIsValid($kind, $entry, $projects, $tasks)) {
@@ -53,14 +53,28 @@ final class PlanValidator
                 }
             }
         }
-        $changedRefs = array_column([...$valid['update'], ...$valid['delete']], 'ref');
-        foreach ($plan['ambiguous'] ?? [] as $tie) {
-            if (is_array($tie) && $this->tieIsValid($tie, $changedRefs, $tasks)) {
-                $valid['ambiguous'][] = $tie;
+        foreach ($plan['skipped'] ?? [] as $skip) {
+            $kept = is_array($skip) ? $this->readableSkip($skip) : null;
+            if ($kept === null) {
+                $dropped++;
+            } else {
+                $valid['skipped'][] = $kept;
             }
         }
+        $changedTasks = array_column([...$valid['update'], ...$valid['delete']], 'task_id', 'ref');
+        foreach ($plan['ambiguous'] ?? [] as $tie) {
+            $ref = is_array($tie) ? ($tie['ref'] ?? null) : null;
+            $ofKeptChange = is_string($ref) && array_key_exists($ref, $changedTasks);
+            if ($ofKeptChange && $this->tieIsValid($tie, $changedTasks[$ref], $tasks)) {
+                $valid['ambiguous'][] = $tie;
 
-        return [...$valid, 'dropped' => $dropped];
+                continue;
+            }
+            $dropped++;
+            $needsConfirm = $needsConfirm || $ofKeptChange;
+        }
+
+        return [...$valid, 'dropped' => $dropped, 'needs_confirm' => $needsConfirm];
     }
 
     /**
@@ -73,7 +87,9 @@ final class PlanValidator
         $changes = count($plan['create']) + count(array_unique(array_column([...$plan['update'], ...$plan['delete']], 'task_id')));
         $skipReasons = array_map(fn (array $skip): SkipReason => SkipReason::from($skip['reason']), $plan['skipped']);
 
-        return $this->statuses->resolve($changes, $plan['delete'] !== [], $plan['ambiguous'] !== [], $skipReasons);
+        $hasTie = $plan['ambiguous'] !== [] || ($plan['needs_confirm'] ?? false);
+
+        return $this->statuses->resolve($changes, $plan['delete'] !== [], $hasTie, $skipReasons);
     }
 
     /**
@@ -83,7 +99,7 @@ final class PlanValidator
      */
     private function entryIsValid(string $kind, array $entry, array $projects, array $tasks): bool
     {
-        if (! $this->matchesSchema($kind, $entry) || ! $this->hasVisibleTitle($entry)) {
+        if (! $this->matchesSchema('$defs/'.$kind, $entry) || ! $this->hasVisibleTitle($entry)) {
             return false;
         }
         if (isset($entry['project_id']) && ! array_key_exists($entry['project_id'], $projects)) {
@@ -97,39 +113,59 @@ final class PlanValidator
         }
         $result = $kind === 'create' ? $entry : array_replace($tasks[$entry['task_id']], $entry);
 
-        return $this->hasDateWhenNeeded($kind, $result) && $this->endsAfterStart($result);
-    }
-
-    /** @param array<string, mixed> $entry */
-    private function matchesSchema(string $kind, array $entry): bool
-    {
-        $object = json_decode(json_encode($entry, JSON_THROW_ON_ERROR));
-
-        return $this->schema->validate($object, self::SCHEMA_ID.'note-result.schema.json#/$defs/'.$kind)->isValid();
+        return $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($result);
     }
 
     /**
-     * The schema allows "   "; a title must have something to read (NU §8: 1–200 characters).
+     * @param  string  $pointer  where the definition sits in the note result schema
+     * @param  array<mixed>  $value
+     */
+    private function matchesSchema(string $pointer, array $value): bool
+    {
+        $object = json_decode(json_encode($value, JSON_THROW_ON_ERROR));
+
+        return $this->schema->validate($object, self::SCHEMA_ID.'note-result.schema.json#/'.$pointer)->isValid();
+    }
+
+    /**
+     * A skip with a reason the server doesn't know keeps its text as a plain skip, so the follow-up offers it (BR-02).
+     *
+     * @param  array<mixed>  $skip
+     * @return array{ref: string, text: string, reason: string}|null
+     */
+    private function readableSkip(array $skip): ?array
+    {
+        if (! is_string($skip['ref'] ?? null) || ! is_string($skip['text'] ?? null)) {
+            return null;
+        }
+        $reason = $this->matchesSchema('properties/skipped/items', $skip) ? (string) $skip['reason'] : SkipReason::Skip->value;
+
+        return ['ref' => $skip['ref'], 'text' => $skip['text'], 'reason' => $reason];
+    }
+
+    /**
+     * The schema allows "   " or only invisible characters; a title must have something to read (NU §8, NU-E15).
      *
      * @param  array<string, mixed>  $entry
      */
     private function hasVisibleTitle(array $entry): bool
     {
-        return ! array_key_exists('title', $entry) || trim((string) $entry['title']) !== '';
+        return ! array_key_exists('title', $entry) || preg_match('~[^\p{Z}\p{C}\s]~u', (string) $entry['title']) === 1;
     }
 
     /**
-     * A new task with a time, repeat or reminder needs a due date (NU-E5).
+     * A time, repeat or reminder the entry sets needs a due date; the engine always gives one (NU-E5).
      *
-     * @param  array<string, mixed>  $task
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $task  the task after the entry
      */
-    private function hasDateWhenNeeded(string $kind, array $task): bool
+    private function hasDateWhenNeeded(array $entry, array $task): bool
     {
-        $needsDate = ($task['start_time'] ?? null) !== null
-            || ($task['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
-            || ($task['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
+        $setsSchedule = ($entry['start_time'] ?? null) !== null
+            || ($entry['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
+            || ($entry['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
 
-        return $kind !== 'create' || ! $needsDate || $task['due_date'] !== null;
+        return ! $setsSchedule || ($task['due_date'] ?? null) !== null;
     }
 
     /**
@@ -146,23 +182,18 @@ final class PlanValidator
     }
 
     /**
-     * NU-E11: a tie belongs to a kept change and offers 2 to the configured number of the user's tasks,
-     * one of them preselected.
+     * NU-E11: a tie offers 2 (the schema) to the configured number of the user's tasks and preselects the one its
+     * change names, so Apply changes without a choice changes a task the screen showed.
      *
-     * @param  array<string, mixed>  $tie
-     * @param  list<mixed>  $changedRefs
+     * @param  array<mixed>  $tie
      * @param  array<string, array<string, mixed>>  $tasks
      */
-    private function tieIsValid(array $tie, array $changedRefs, array $tasks): bool
+    private function tieIsValid(array $tie, mixed $changedTask, array $tasks): bool
     {
-        $candidates = $tie['candidates'] ?? null;
-        if (! is_array($candidates) || ! in_array($tie['ref'] ?? null, $changedRefs, true)) {
-            return false;
-        }
-
-        return count($candidates) >= self::MIN_TIE_CHOICES
-            && count($candidates) <= (int) config('notes.tie_choices')
-            && array_diff($candidates, array_keys($tasks)) === []
-            && in_array($tie['preselected'] ?? null, $candidates, true);
+        return $this->matchesSchema('properties/ambiguous/items', $tie)
+            && count($tie['candidates']) <= (int) config('notes.tie_choices')
+            && array_diff($tie['candidates'], array_keys($tasks)) === []
+            && $tie['preselected'] === $changedTask
+            && in_array($changedTask, $tie['candidates'], true);
     }
 }

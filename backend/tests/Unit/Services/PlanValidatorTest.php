@@ -66,7 +66,21 @@ it('rejects titles with nothing to read or over 200 characters (NU §8)', functi
     $plan = array_replace(emptyNotePlan(), ['create' => [newTaskEntry(['title' => $title])]]);
 
     expect(app(PlanValidator::class)->validate($plan, [], [])['dropped'])->toBe(1);
-})->with(['empty' => [''], 'spaces' => ['   '], 'too long' => [str_repeat('a', 201)]]);
+})->with(['empty' => [''], 'spaces' => ['   '], 'invisible' => ["\u{200B}\u{00A0}"], 'too long' => [str_repeat('a', 201)]]);
+
+it('rejects an update that sets a time on a task with no date (NU-E5)', function () {
+    $id = (string) Str::uuid();
+    $plan = array_replace(emptyNotePlan(), ['update' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Move', 'start_time' => '09:00']]]);
+
+    expect(app(PlanValidator::class)->validate($plan, [], [$id => ['due_date' => null]])['dropped'])->toBe(1);
+});
+
+it('keeps the text of a skip with an unknown reason as a plain skip (BR-02)', function () {
+    $validator = app(PlanValidator::class);
+    $result = $validator->validate(array_replace(emptyNotePlan(), ['skipped' => [['ref' => 's1', 'text' => 'call the bank', 'reason' => 'weird']]]), [], []);
+
+    expect([$result['skipped'], $validator->status($result)])->toBe([[['ref' => 's1', 'text' => 'call the bank', 'reason' => 'skip']], PlanStatus::Followup]);
+});
 
 it('keeps a valid create and drops an unknown project', function () {
     $project = (string) Str::uuid();
@@ -85,11 +99,24 @@ it('keeps only ties of a kept change with 2 to 5 owned candidates and one presel
         'ambiguous' => [$tie],
     ]);
 
-    expect(app(PlanValidator::class)->validate($plan, [], $tasks)['ambiguous'] !== [])->toBe($kept);
+    $validator = app(PlanValidator::class);
+    $result = $validator->validate($plan, [], $tasks);
+
+    // A broken tie drops, but its change still waits for Apply changes.
+    expect([$result['ambiguous'] !== [], count($result['update']), $validator->status($result)])->toBe([$kept, 1, PlanStatus::Confirm]);
 })->with([
     'valid' => [['ref' => 'u1', 'candidates' => [0, 1], 'preselected' => 0], true],
     'one candidate' => [['ref' => 'u1', 'candidates' => [0], 'preselected' => 0], false],
     'six candidates' => [['ref' => 'u1', 'candidates' => [0, 1, 2, 3, 4, 5], 'preselected' => 0], false],
     'preselected outside' => [['ref' => 'u1', 'candidates' => [0, 1], 'preselected' => 2], false],
-    'no kept change' => [['ref' => 'u9', 'candidates' => [0, 1], 'preselected' => 0], false],
+    'preselected is not the changed task' => [['ref' => 'u1', 'candidates' => [0, 1], 'preselected' => 1], false],
+    'changed task not offered' => [['ref' => 'u1', 'candidates' => [1, 2], 'preselected' => 1], false],
 ]);
+
+it('drops a tie whose change was dropped, with nothing left to confirm', function () {
+    $ids = [(string) Str::uuid(), (string) Str::uuid()];
+    $plan = array_replace(emptyNotePlan(), ['ambiguous' => [['ref' => 'u9', 'candidates' => $ids, 'preselected' => $ids[0]]]]);
+    $result = app(PlanValidator::class)->validate($plan, [], array_fill_keys($ids, []));
+
+    expect([$result['dropped'], $result['needs_confirm']])->toBe([1, false]);
+});
