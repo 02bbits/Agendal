@@ -10,7 +10,7 @@
       document.documentElement.setAttribute("data-theme", "agendal-" + theme);
     var meta = document.createElement("meta");
     meta.name = "theme-color";
-    meta.content = dark ? "#121211" : "#f6f5f1";
+    meta.content = dark ? "#1a1a1a" : "#f2f2f2";
     document.head.appendChild(meta);
   } catch {}
 })();

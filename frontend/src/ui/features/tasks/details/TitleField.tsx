@@ -44,7 +44,7 @@ export function TitleField({ value, onSave }: TitleFieldProps): ReactElement {
         aria-describedby={error ? "task-title-error" : undefined}
         className={cx(
           CONTROL_CLASS,
-          "input focus-ring min-h-[52px] resize-none py-3 font-serif text-title font-semibold placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40 [field-sizing:content]",
+          "input focus-ring min-h-[52px] resize-none py-3 text-title font-bold placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40 [field-sizing:content]",
         )}
         onChange={(e) => setTitle(e.target.value.replace(/\n/g, " "))}
         onBlur={handleBlur}

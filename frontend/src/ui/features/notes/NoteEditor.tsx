@@ -165,7 +165,7 @@ export function NoteEditor({
             onKeyDown={onKeyDown}
             aria-label={t("note.text_label")}
             placeholder={t("note.placeholder")}
-            className="focus:outline-none min-h-0 w-full flex-1 resize-none border-0 bg-transparent py-2 font-serif text-dialog text-ink placeholder:text-ink-tertiary"
+            className="focus:outline-none min-h-0 w-full flex-1 resize-none rounded-[14px] border border-control bg-surface bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] px-4 text-note [background-attachment:local] text-ink placeholder:text-ink-tertiary"
           />
           {!VISIBLE.test(text) && (
             <ul className="m-0 flex list-none flex-wrap gap-2 p-0 pb-3">

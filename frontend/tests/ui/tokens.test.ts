@@ -74,19 +74,19 @@ const themes = {
   "agendal-dark": theme("agendal-dark"),
 };
 
-describe("Paper & ink daisyUI themes", () => {
+describe("Graphite daisyUI themes", () => {
   it("matches the theme guide values", () => {
     expect(themes["agendal-light"]).toMatchObject({
-      bg: "#f6f5f1",
-      ink: "#1b1a17",
-      accent: "#2f5bd3",
-      danger: "#b42318",
+      bg: "#f2f2f2",
+      ink: "#252525",
+      accent: "#252525",
+      danger: "#b3261e",
     });
     expect(themes["agendal-dark"]).toMatchObject({
-      bg: "#121211",
-      ink: "#f2f0ea",
-      accent: "#8fadff",
-      danger: "#ff8a7f",
+      bg: "#1a1a1a",
+      ink: "#ededed",
+      accent: "#cfcfcf",
+      danger: "#ff8a80",
     });
   });
 
@@ -111,7 +111,6 @@ describe("Paper & ink daisyUI themes", () => {
       it.each([
         "ink",
         "ink-secondary",
-        "ink-tertiary",
         "accent",
         "danger",
         "success",
@@ -120,12 +119,20 @@ describe("Paper & ink daisyUI themes", () => {
         expect(contrast(t[token], t.bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it.each(["ink", "ink-secondary", "ink-tertiary"] as const)(
+      it.each(["ink", "ink-secondary"] as const)(
         "%s text reaches 4.5:1 on surface",
         (token) => {
           expect(contrast(t[token], t.surface)).toBeGreaterThanOrEqual(4.5);
         },
       );
+
+      // ink-tertiary is for icons, empty checkbox rings and placeholders only (theme guide)
+      it("ink-tertiary reaches 3:1 on bg and surface", () => {
+        expect(contrast(t["ink-tertiary"], t.bg)).toBeGreaterThanOrEqual(3);
+        expect(contrast(t["ink-tertiary"], t.surface)).toBeGreaterThanOrEqual(
+          3,
+        );
+      });
 
       it("control-border reaches 3:1 on bg", () => {
         expect(contrast(t["control-border"], t.bg)).toBeGreaterThanOrEqual(3);

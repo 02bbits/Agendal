@@ -173,7 +173,7 @@ describe("theme.js (T-AP-22)", () => {
       document.head
         .querySelector('meta[name="theme-color"]')
         ?.getAttribute("content"),
-    ).toBe("#121211");
+    ).toBe("#1a1a1a");
   });
 
   it("leaves System to the device", () => {
