@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Services\Notes;
 
 use App\Enums\ChangeKind;
+use App\Enums\CommandAction;
 use App\Enums\Repeat;
 use App\Enums\SkipReason;
 use App\Enums\TaskCreator;
+use App\Enums\WeekStart;
 use App\Http\Resources\TaskResource;
 use App\Models\Note;
 use App\Models\Project;
@@ -27,6 +29,7 @@ use Illuminate\Validation\ValidationException;
  * their current values (NU-E38), writes the tasks and logs each change with its before values (ADR-002).
  *
  * @phpstan-import-type ValidatedPlan from PlanValidator
+ * @phpstan-import-type TaskRow from CommandMatcher
  *
  * @phpstan-type AppliedChange array{kind: string, task_id: string, before: array<string, mixed>|null, label: string}
  */
@@ -34,13 +37,17 @@ final class NoteApplier
 {
     private const KIND_BY_ENTRY = ['create' => ChangeKind::Created, 'update' => ChangeKind::Updated, 'delete' => ChangeKind::Deleted];
 
+    /** Update fields that schedule a task: an update with one of them is a move, planned again at apply (NU-E38). */
+    private const MOVE_FIELDS = ['due_date', 'start_time', 'end_time'];
+
     public function __construct(
         private ClockInterface $clock,
         private TaskPatcher $patcher,
         private ReminderCalculator $reminders,
         private TaskRecurrence $recurrence,
         private PlanValidator $validator,
-        private TaskSchedule $schedule,
+        private NoteSplitter $splitter,
+        private CommandMatcher $matcher,
     ) {}
 
     /**
@@ -49,9 +56,10 @@ final class NoteApplier
      */
     public function apply(Note $note, array $plan): array
     {
-        $timezone = (string) User::query()->findOrFail($note->user_id)->timezone;
+        $user = User::query()->findOrFail($note->user_id);
+        $timezone = (string) $user->timezone;
         $locked = $this->lockTargets($note, $plan);
-        [$plan, $gone] = $this->revalidate($note, $plan, $locked);
+        [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked);
         $this->guardOpenLimit($note, count($plan['create']));
         $applied = [];
         $changes = [];
@@ -97,25 +105,36 @@ final class NoteApplier
     }
 
     /**
-     * NU-E38: a task deleted or done since planning → its entry becomes skip not_found; a changed task gets
-     * the change on its current values and a current "was" label.
+     * NU-E38: a task deleted or done since planning → its entry becomes skip not_found; a move is planned again
+     * on the task as it is now.
      *
      * @param  ValidatedPlan  $plan
      * @param  array<string, Task>  $locked
      * @return array{0: ValidatedPlan, 1: list<array<string, mixed>>}
      */
-    private function revalidate(Note $note, array $plan, array $locked): array
+    private function revalidate(Note $note, User $user, array $plan, array $locked): array
     {
+        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
+        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
+        $items = $this->splitter->split($note->text, array_values($projects));
         $gone = [];
         foreach (['update', 'delete'] as $kind) {
             foreach ($plan[$kind] as $index => $entry) {
                 $current = $locked[$entry['task_id']] ?? null;
+                $item = $items[NoteEngine::itemIndex($entry['ref']) ?? -1] ?? null;
                 if ($current === null) {
-                    $gone[] = ['ref' => $entry['ref'], 'text' => $entry['label'], 'reason' => SkipReason::NotFound->value];
-                } elseif ($kind === 'update' && ! isset($entry['done'])) {
-                    $plan[$kind][$index] = $this->onCurrentSchedule($entry, $current);
+                    $gone[] = ['ref' => $entry['ref'], 'text' => $item ?? $entry['label'], 'reason' => SkipReason::NotFound->value];
+                } elseif ($kind === 'update' && array_intersect_key($entry, array_flip(self::MOVE_FIELDS)) !== []) {
+                    $moved = $item === null ? $entry : $this->movedNow($item, $entry, $current, $context);
+                    if ($moved === null) {
+                        $gone[] = ['ref' => $entry['ref'], 'text' => $item, 'reason' => SkipReason::NoChange->value];
+                        unset($plan[$kind][$index]);
+                    } else {
+                        $plan[$kind][$index] = $moved;
+                    }
                 }
             }
+            $plan[$kind] = array_values($plan[$kind]);
         }
         foreach ($plan['create'] as $index => $entry) {
             if (isset($entry['duplicate_of']) && ! isset($locked[$entry['duplicate_of']])) {
@@ -123,23 +142,29 @@ final class NoteApplier
             }
         }
         $rows = array_map(fn (Task $task): array => $this->row($task), $locked);
-        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
 
         return [$this->validator->validate($plan, $projects, $rows), $gone];
     }
 
     /**
+     * The move planned again on the task as it is now, so "push back 1 hour" counts from its current time. Null when
+     * the task already is where the move puts it. A task the command no longer finds (renamed since) keeps the
+     * planned move, as the user saw it on Check this first.
+     *
      * @param  array<string, mixed>  $entry
-     * @return array<string, mixed>
+     * @return array<string, mixed>|null
      */
-    private function onCurrentSchedule(array $entry, Task $task): array
+    private function movedNow(string $item, array $entry, Task $task, NoteContext $context): ?array
     {
+        /** @var TaskRow $row */
         $row = $this->row($task);
-        if (isset($entry['due_date']) || isset($entry['start_time'])) {
-            $entry['label'] = $this->schedule->dueLabel($entry['due_date'] ?? $row['due_date'], $entry['start_time'] ?? $row['start_time']);
-        }
-        if (isset($entry['start_time']) && $row['start_time'] !== null && $row['end_time'] !== null) {
-            $entry['end_time'] = $this->schedule->movedEnd($row['start_time'], $row['end_time'], $entry['start_time']);
+        foreach ($this->matcher->matchEach($item, CommandAction::Reschedule, [$row], [], $context) as $match) {
+            if ($match->change?->taskId === $task->id) {
+                return ['ref' => $entry['ref'], 'task_id' => $task->id, 'label' => $match->change->label, ...$match->change->fields];
+            }
+            if ($match->skip === SkipReason::NoChange) {
+                return null;
+            }
         }
 
         return $entry;

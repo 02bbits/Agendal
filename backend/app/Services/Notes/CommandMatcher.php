@@ -28,7 +28,6 @@ final class CommandMatcher
         private NoteDateParser $dates,
         private NoteTimeParser $times,
         private RescheduleTarget $target,
-        private TaskSchedule $schedule,
     ) {}
 
     /**
@@ -341,9 +340,9 @@ final class CommandMatcher
         }
         // The new date and time, and the old ones as "was" (T-NU-21): "Due Fri 30 Oct 09:00", was "Fri 23 Oct 09:00".
         $old = [$task['due_date'] ?? null, $task['start_time'] ?? null];
-        $label = $this->schedule->dueLabel($fields['due_date'] ?? $old[0], array_key_exists('start_time', $fields) ? $fields['start_time'] : $old[1]);
+        $new = $this->scheduled($fields['due_date'] ?? $old[0], array_key_exists('start_time', $fields) ? $fields['start_time'] : $old[1]);
 
-        return new TaskChange($task['id'], $label, fields: $fields, was: $this->schedule->scheduled(...$old) ?: null);
+        return new TaskChange($task['id'], __('notes.label.due', ['when' => $new]), fields: $fields, was: $this->scheduled(...$old) ?: null);
     }
 
     /**
@@ -365,7 +364,7 @@ final class CommandMatcher
             $fields['due_date'] = $newDate;
         }
         if ($at->startTime !== null) {
-            $newEnd = $at->endTime ?? ($oldStart !== null && $oldEnd !== null ? $this->schedule->movedEnd($oldStart, $oldEnd, $at->startTime) : $oldEnd);
+            $newEnd = $at->endTime ?? ($oldStart !== null && $oldEnd !== null ? $this->movedEnd($oldStart, $oldEnd, $at->startTime) : $oldEnd);
             if ($at->startTime !== $oldStart) {
                 $fields['start_time'] = $at->startTime;
             }
@@ -398,7 +397,7 @@ final class CommandMatcher
             $at = NoteDurations::add(new DateTimeImmutable($date.' '.$oldStart), $shift['amount'], $shift['unit']);
             $new = ['due_date' => $at->format('Y-m-d'), 'start_time' => $at->format('H:i')];
             if ($oldEnd !== null) {
-                $new['end_time'] = $this->schedule->movedEnd($oldStart, $oldEnd, $new['start_time']);
+                $new['end_time'] = $this->movedEnd($oldStart, $oldEnd, $new['start_time']);
             }
         }
         $old = ['due_date' => $oldDate, 'start_time' => $oldStart, 'end_time' => $oldEnd];
@@ -433,6 +432,13 @@ final class CommandMatcher
         $date = $old->modify('-'.$week((int) $old->format('w')).' days')->modify('+'.$week($target).' days')->format('Y-m-d');
 
         return $date <= $today ? null : $date;
+    }
+
+    private function movedEnd(string $oldStart, string $oldEnd, string $newStart): ?string
+    {
+        $duration = NoteDurations::clockMinutes($oldEnd) - NoteDurations::clockMinutes($oldStart);
+
+        return $duration <= 0 ? null : NoteDurations::clockTime(NoteDurations::clockMinutes($newStart) + $duration);
     }
 
     /**
@@ -513,5 +519,13 @@ final class CommandMatcher
     private function stopWords(): array
     {
         return $this->stopWords ??= array_map(mb_strtolower(...), [...NoteVocabulary::values('stop_word'), ...NoteVocabulary::values('reschedule_target')]);
+    }
+
+    /** "Fri 30 Oct 09:00", "Fri 30 Oct", "09:00"; empty for neither. */
+    private function scheduled(?string $date, ?string $start): string
+    {
+        $day = $date === null ? '' : (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
+
+        return trim($day.' '.$start);
     }
 }

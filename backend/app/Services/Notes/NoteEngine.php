@@ -28,6 +28,12 @@ final class NoteEngine
         private NoteNamer $namer,
     ) {}
 
+    /** The note item an entry came from, counted from 0: "i3" and "i3-2" are item 2. */
+    public static function itemIndex(string $ref): ?int
+    {
+        return preg_match('~^'.self::ITEM_REF_PREFIX.'(\d+)(?:-\d+)?$~', $ref, $match) === 1 ? (int) $match[1] - 1 : null;
+    }
+
     /**
      * Items left once the rules budget is spent become plain tasks (SEC-23).
      *
