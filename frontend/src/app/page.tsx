@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   Button,
   InboxScreen,
+  PlusIcon,
   ScreenHeader,
   TaskStoreProvider,
   Toast,
@@ -31,12 +32,13 @@ function InboxToast() {
 }
 
 export default function Page() {
-  const { navigate, user, settings } = useAppFrame();
+  const { navigate, user, settings, openNewTask } = useAppFrame();
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
     "loading",
   );
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [subtitle, setSubtitle] = useState<string>("");
 
   const date = useSyncExternalStore(
     subscribeHeaderDate,
@@ -56,6 +58,11 @@ export default function Page() {
           ...(inboxData?.completed_today ?? []),
         ]);
         setProjectList(projectsData ?? []);
+        const overdueCount = inboxData?.overdue?.length ?? 0;
+        const todayCount = inboxData?.today?.length ?? 0;
+        setSubtitle(
+          t("list.inbox_subtitle", { overdue: overdueCount, today: todayCount }),
+        );
         setStatus("ready");
       })
       .catch(() => {
@@ -70,6 +77,30 @@ export default function Page() {
 
   useEffect(() => {
     fetchData();
+
+    const handleTaskCreated = () => {
+      fetchData();
+    };
+    const handleProjectsChanged = () => {
+      fetchData();
+    };
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchData();
+      }
+    };
+
+    window.addEventListener("agendal:task-created", handleTaskCreated);
+    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("agendal:task-created", handleTaskCreated);
+      window.removeEventListener("agendal:projects-changed", handleProjectsChanged);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
+    };
   }, []);
 
   return (
@@ -79,7 +110,24 @@ export default function Page() {
         title={t("nav.inbox")}
         accountInitial={accountInitial}
         navigate={navigate}
-      />
+        actions={
+          <Button
+            variant="primary"
+            pill
+            className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+            onClick={openNewTask}
+          >
+            <PlusIcon size={16} />
+            {t("task.new")}
+          </Button>
+        }
+      >
+        {subtitle && (
+          <p className="m-0 mt-1 text-footnote text-ink-secondary">
+            {subtitle}
+          </p>
+        )}
+      </ScreenHeader>
       {status === "loading" && (
         <div data-testid="inbox-loading" className="flex justify-center py-12">
           <span className="loading loading-spinner text-ink-tertiary" />
