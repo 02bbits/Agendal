@@ -1,6 +1,7 @@
 import { api } from "./api";
 import { handleResponse } from "./apiError";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
+import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { Project, Task } from "../ui/domain/types";
 
 async function postLifecycle<T>(
@@ -40,6 +41,18 @@ export async function patch(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ ...fields, at }),
+  });
+
+  return handleResponse<Task>(response);
+}
+
+export async function createTask(body: CreateTaskBody): Promise<Task> {
+  const response = await api("/tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
   });
 
   return handleResponse<Task>(response);
