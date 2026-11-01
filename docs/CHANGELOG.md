@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-02
+
+- **Inbox completed pagination, card styling and desktop header subtitle (Refs #27).** [LV §2.1](03-modules/LV-lists-search.md#21-inbox-lv-1): Completed tasks section caps at 5 tasks initially with "Show all" (`list.show_all`) and "Show less" (`list.show_less`) toggle; sections use Figma D14 elevated card layout containers (`rounded-2xl border border-separator/50 bg-surface shadow-xs`); desktop header includes overdue/today count subtitle (`list.inbox_subtitle`) and pill button; real-time event sync and section expanded state persistence in sessionStorage documented.
+
 ## 2026-11-01
 
 - **Project completed paging, undo consistency and Figma D14 styling (Refs #26).** [PJ §2.3](03-modules/PJ-projects.md#23-project-screen-pj-2): "Show completed" button strictly displays only when hidden completed tasks remain (`effectiveShown < totalDone`). Undoing a completed task synchronizes with the server to pull remaining hidden completed tasks into visible slots. Rapid-toggle race conditions are guarded with deduplication by task ID. [PJ §2.4](03-modules/PJ-projects.md#24-rename-and-recolour-pj-3-should): Rename is supported in project card menus and project detail action bar via `ProjectSheet`. Task lists use elevated card containers matching Figma prototype D14.
