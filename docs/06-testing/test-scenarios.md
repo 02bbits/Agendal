@@ -34,9 +34,9 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 - **Then** the task still exists, and the note is kept
 - **Tests:** C-018, T-NU-40, T-RV-40
 
-## <a id="ts-05"></a>TS-05 — More than 5 changes needs confirmation (NU-5)
-- **When** a note produces 6 creates
-- **Then** "Check this first" shows, and Apply changes creates all 6
+## <a id="ts-05"></a>TS-05 — 5 or more changes need confirmation (NU-5)
+- **When** a note produces 5 changes (for example 3 updates and 2 creates)
+- **Then** "Check this first" shows, and Apply changes applies all 5
 - **Tests:** C-019, T-NU-41
 
 ## <a id="ts-06"></a>TS-06 — Nothing actionable (NU-4, RV-3)

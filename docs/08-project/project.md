@@ -19,7 +19,7 @@ Assumptions, constraints and risks. Decisions still open are in [open questions]
 
 | Type | Constraint | Source |
 |---|---|---|
-| Product | Mobile web app (PWA), phones 320–480px, no native apps | PRD, [NF-7](../05-quality/nfr.md#nf-7), [NF-8](../05-quality/nfr.md#nf-8) |
+| Product | Mobile-first web app (PWA), responsive from 320px phones up to desktop, no native apps | PRD, [NF-7](../05-quality/nfr.md#nf-7), [NF-8](../05-quality/nfr.md#nf-8) |
 | Design | Graphite theme, Agendal design system, WCAG 2.2 AA | [theme guide](../01-product/theme-guide.md), [NF-1](../05-quality/nfr.md#nf-1)–3 |
 | Content | Sentence case, 24-hour times by default, short dates, no emoji | [NF-12](../05-quality/nfr.md#nf-12) |
 | Privacy | No note or task text in logs. Files discarded after extraction | [NF-9](../05-quality/nfr.md#nf-9) |

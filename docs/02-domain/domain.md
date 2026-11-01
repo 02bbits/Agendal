@@ -38,7 +38,7 @@ Domain terms, used the same way in requirements, UI copy, and code. For acronyms
 | Change | One applied create, change or delete, with enough data to undo it |
 | Result screen | Lists every change from a note with CREATED / UPDATED / DELETED badges ([RV-1](../03-modules/RV-review-control.md#rv-1)) |
 | Undo all | Reverses every change from one note. The note is kept and marked Undone ([RV-2](../03-modules/RV-review-control.md#rv-2)) |
-| Check this first | The confirmation shown before a risky plan: any delete, or more than 5 changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
+| Check this first | The confirmation shown before a risky plan: any delete, or 5 or more changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
 | Follow-up | The one question for a note with nothing actionable: Keep as note, or Make it a task ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
 | Note name | A name generated from the plan, e.g. "This week" or "SQL Course to-dos" ([NU-6](../03-modules/NU-note-understanding.md#nu-6)) |
 | Pending note | A note saved offline, shown as "Waiting for connection" ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
@@ -129,7 +129,7 @@ flowchart TD
   B -- yes --> P["Build a plan<br/>Tasks to create, change, delete"]
   P --> C{Anything to do?}
   C -- no --> Q["Ask one question<br/>Keep as note, or make it a task"]
-  C -- yes --> R{"Any delete or 6+ changes?"}
+  C -- yes --> R{"Any delete or 5+ changes?"}
   R -- yes --> K["Check this first<br/>Apply, or Cancel to keep the note"]
   K -- Apply changes --> AP
   R -- no --> AP["Apply the plan<br/>Tasks created, changed, deleted"]
@@ -169,7 +169,7 @@ stateDiagram-v2
     [*] --> new : Make tasks (online)
     pending --> new : reconnect
     new --> done : plan is safe
-    new --> confirm : any delete or > 5 changes
+    new --> confirm : any delete or 5+ changes
     new --> followup : nothing actionable
     confirm --> done : Apply changes
     confirm --> kept : Cancel
