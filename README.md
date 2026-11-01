@@ -6,35 +6,23 @@ Write a note, get organised tasks. A mobile web app (PWA) built for the VNUK *Ad
 |---|---|
 | `backend/` | Laravel 13 API at `/api/v1`, Sanctum cookie sessions ([ADR-007](docs/07-architecture/decisions/ADR-007-session-and-auth.md)) |
 | `frontend/` | Next.js 16, TypeScript strict. Forwards `/api/*` and `/sanctum/*` to the backend, so the browser sees one site |
-| `docker-compose.yml` | PostgreSQL 18 and Mailpit for local development |
+| `docker-compose.yml` | The whole stack: PostgreSQL 18, Mailpit, the API, a queue worker and the Next.js dev server |
 
-## Prerequisites
+## Run it
 
-PHP 8.4+ with `pdo_pgsql`, `intl` and `mbstring`, Composer, Node 20+, Docker.
-
-## First run
+Needs only Docker.
 
 ```bash
-docker compose up -d
-
-cd backend
-composer install
-cp .env.example .env
-php artisan key:generate
-php artisan migrate --seed       # demo account: example@gmail.com / password
-
-cd ../frontend
-npm install
-cp .env.example .env.local
+docker compose up        # app on http://localhost:3000, API on :8000
 ```
 
-## Every day
+The first start installs Composer and npm packages, creates `backend/.env` with an app key, then migrates and seeds (demo account: example@gmail.com / password). Every start migrates, so pulling new migrations needs no extra step. Code is mounted from the host and reloads on save. After changing `package.json`, restart `web` (`docker compose restart web`).
 
-```bash
-docker compose up -d
-cd backend && composer run dev    # API on :8000, plus queue worker and logs
-cd frontend && npm run dev        # app on http://localhost:3000
-```
+Run commands inside the containers, for example `docker compose exec api php artisan test` or `docker compose exec web npm test`. The API container runs as UID 1000 by default; if yours differs, `export UID GID` first.
+
+### Without Docker for the app
+
+PHP 8.4+ with `pdo_pgsql`, `intl` and `mbstring`, Composer, Node 20+. Start only the services with `docker compose up -d db mail`, set up once with `cd backend && composer setup && php artisan db:seed` and `cd frontend && npm install && cp .env.example .env.local`, then run `composer run dev` in `backend/` and `npm run dev` in `frontend/`.
 
 Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (local only). Use Chrome or Firefox locally: the session cookie is `Secure` with a `__Host-` prefix (ADR-007), and Safari rejects it over plain http.
 
