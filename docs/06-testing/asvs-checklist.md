@@ -96,7 +96,7 @@ The ASVS 4.0.3 Level 2 requirements that apply to Agendal, with how each is met 
 
 | ASVS | Requirement (short) | How Agendal meets it | Test | Status |
 |---|---|---|---|---|
-| 10.3.2 | Integrity of third-party code | Lockfiles. Fonts are the only third-party runtime asset (CSP) | SEC-70 | Planned |
+| 10.3.2 | Integrity of third-party code | Lockfiles. Fonts are the only third-party runtime asset. No third-party scripts | SEC-70 | Planned |
 
 ## V11 Business logic
 
@@ -140,3 +140,4 @@ The ASVS 4.0.3 Level 2 requirements that apply to Agendal, with how each is met 
 1. **2.1.1 password length 8 vs 12:** approved ([Q18](../08-project/open-questions.md#q18)).
 2. **8.3.1 search query in the URL:** approved ([Q21](../08-project/open-questions.md#q21)). Kept for shareable, cacheable GET semantics. Excluded from access logs instead.
 3. **12.4.2 malware scan:** approved ([Q21](../08-project/open-questions.md#q21)). Files are never stored or served.
+4. **14.4.3 CSP without a script allow-list:** accepted. Next.js inlines its bootstrap scripts, and a nonce would turn off the prerendered static pages. XSS is covered by React escaping, text-only rendering ([SC-08](../07-architecture/security.md#sc-08)) and the HttpOnly session cookie ([SC-06](../07-architecture/security.md#sc-06)).

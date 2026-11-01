@@ -1,0 +1,111 @@
+# Realistic notes for NoteInvariantsTest: one note per line, "\n" is a line break inside a note.
+# Written the way people type, not to match the rules. Add every note a reviewer or user finds misread.
+buy milk, eggs and bread tomorrow
+call mum tonight
+meeting on september 26, 2026 with team
+Book flight Oct 26, 2026
+pay rent on the 1st
+remind me to call mom in 2 hours
+team meeting 3pm
+call John at 9
+call John at 9:30
+học bài lúc 8 giờ tối nay
+họp lúc 7 giờ tối nay
+đi chợ chiều nay
+nộp báo cáo HCI trước thứ 2 9h tối
+họp nhóm chiều mai 2-4h
+mua sữa, trứng và bánh mì sáng mai
+đặt lịch khám răng tuần sau, không gấp
+gặp anh Tuấn lúc 10h30 ở quán cà phê
+tối ưu trang portfolio
+Remember to submit the HCI report by Friday 5pm!!
+dentist appointment next Tue 3:30pm
+quiz on Monday morning, revise chapters 3-5
+pay rent end of the month
+book flight 12/12 urgent
+gym every day 6am
+maybe read a book this weekend
+team standup 9:15-9:30 every weekday
+email boss re: deadline extension asap
+Tuần này:\n- nộp bài tập SQL thứ 2\n- ôn thi cuối kỳ adv web 5/11\n- trả tiền điện trước ngày 28
+Shopping list:\n- milk\n- eggs\n- bread
+submit the report by 26th October 2026
+renew passport before 3rd of December
+interview on Nov 2nd at 10am
+doctor's appointment friday at 4:30pm
+gọi điện cho mẹ lúc 6h chiều
+đi siêu thị sáng thứ 7
+nộp học phí trước ngày 15 tháng 11 năm 2026
+họp lớp mùng 5 tháng sau
+đón em lúc 5 giờ chiều nay
+chạy bộ mỗi sáng 6h
+tưới cây mỗi ngày
+review PR before lunch
+fix login bug today, high priority
+deploy to staging tonight 11pm
+send invoice to client on 2026-11-02
+backup database every sunday 2am
+prepare slides for monday's presentation
+call the bank tomorrow morning
+pick up laundry after work
+buy a gift for Lan's birthday on 3/11
+email professor about the deadline on Friday
+meet Dr. Nguyen at 2pm tomorrow
+dọn nhà cuối tuần
+mua quà sinh nhật cho bạn ngày 20/11
+học tiếng Anh 30 phút mỗi tối
+nộp bài tập SQL trước 23h59 chủ nhật
+họp với khách hàng lúc 9h sáng thứ 4 tuần sau
+check emails, reply to Minh, then update the roadmap
+read chapter 4 and summarize it by Thursday
+water the plants every 2 days
+call grandma this sunday afternoon
+buy groceries on the way home
+go to the gym at 6:30am tomorrow
+cancel netflix subscription before the 10th
+pay electricity bill by Nov 5
+schedule a haircut next week
+take medicine at 8am and 8pm
+finish the essay in 3 days
+book a table for dinner Saturday 7pm
+renew library books in 2 weeks
+mai đi khám bệnh lúc 8h
+chiều nay 3h họp với sếp
+gọi cho chị Mai về hợp đồng
+nhắn tin cho anh Hùng tối mai
+học bài từ 7h đến 9h tối
+nộp hồ sơ xin việc trước 30/11
+trả sách thư viện thứ 5 tuần này
+đổ xăng trước khi đi làm
+cắt tóc chủ nhật này
+mua vé tàu Tết sớm
+sửa xe máy cuối tháng
+kiểm tra email công việc mỗi sáng
+ôn thi HCI 3 ngày nữa
+plan trip to Da Lat for December 24
+call plumber asap, kitchen sink leaking
+buy printer ink, paper and staples
+finish homework, then call mum, then sleep
+lunch with Hoa at noon on Wednesday
+gym, groceries, laundry
+ideas: build a reading app
+fyi the lab moved to room 3
+ok thanks
+tomorrow 9am
+call dad
+write blog post about laravel queues
+update CV and send to HR by end of the week
+practice guitar 20 minutes every evening
+meet investor at 10:00 on 4 Nov 2026
+renew car insurance 15/01/2027
+attend webinar at 7.30pm tonight
+mua sữa 2 hộp và 1 vỉ trứng
+đóng tiền nhà ngày 5 hàng tháng
+gọi lại cho khách trong 30 phút
+nhắc tôi uống thuốc 2 tiếng nữa
+họp nhóm dự án lúc 14:00 - 15:30 thứ 6
+học từ vựng 20 từ mỗi ngày
+submit timesheet every friday 5pm
+buy birthday cake for mum's birthday next saturday
+send the slides to the team in 1 hour
+call the landlord about the leak this afternoon

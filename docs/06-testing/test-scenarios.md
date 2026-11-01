@@ -34,17 +34,19 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 - **Then** the task still exists, and the note is kept
 - **Tests:** C-018, T-NU-40, T-RV-40
 
-## <a id="ts-05"></a>TS-05 — More than 5 changes needs confirmation (NU-5)
-- **When** a note produces 6 creates
-- **Then** "Check this first" shows, and Apply changes creates all 6
+## <a id="ts-05"></a>TS-05 — 5 or more changes need confirmation (NU-5)
+- **When** a note produces 5 changes (for example 3 updates and 2 creates)
+- **Then** "Check this first" shows, and Apply changes applies all 5
 - **Tests:** C-019, T-NU-41
 
 ## <a id="ts-06"></a>TS-06 — Nothing actionable (NU-4, RV-3)
 - **When** the user submits *"idea: dark mode for the portfolio site"*
-- **Then** "I couldn't find a task in this note." offers Keep as note / Make it a task
-- **When** they tap Keep as note
-- **Then** no task exists, and the note is named "Idea: dark mode for the portfolio" (its first 6 words)
-- **Tests:** C-013, T-NU-33, T-RV-20, T-RV-21
+- **Then** "I couldn't find a task in this note." offers Keep it as task / Edit the note, and the note is named "Idea: dark mode for the portfolio" (its first 6 words)
+- **When** they tap Keep it as task
+- **Then** one task exists titled "Idea: dark mode for the portfolio site", and the note is `done`
+- **When** instead they tap Edit the note
+- **Then** the editor opens with the text, and the note stays `followup` until Make tasks
+- **Tests:** C-013, T-NU-33, T-RV-20, T-RV-22, T-RV-23
 
 ## <a id="ts-07"></a>TS-07 — Undo all (RV-2, NF-11)
 - **Given** a note that created 2 tasks, rescheduled 1 and (after confirmation) deleted 1

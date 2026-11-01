@@ -55,7 +55,7 @@ export function TaskRow({
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[52px] items-start after:absolute after:right-0 after:bottom-0 after:left-[34px] after:border-b after:border-separator",
+        "group/task relative flex min-h-[52px] items-start px-3.5 after:absolute after:right-0 after:bottom-0 after:left-12 after:border-b after:border-separator",
         task.done && "is-done",
         overdue && "is-overdue",
       )}
@@ -67,7 +67,7 @@ export function TaskRow({
         aria-label={t(task.done ? "task.reopen" : "task.complete", {
           title: task.title,
         })}
-        className="group/check mt-1 -ml-[11px] inline-flex size-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-paper focus-visible:outline-none"
+        className="group/check mt-1 -ml-[11px] inline-flex size-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-surface focus-visible:outline-none"
         onClick={() => onToggle(task)}
       >
         <span
@@ -84,7 +84,7 @@ export function TaskRow({
         aria-label={accessibleName}
       >
         <span
-          className="line-clamp-2 text-body font-medium group-[.is-done]/task:font-normal group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
+          className="line-clamp-2 text-body group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
           data-slot="title"
         >
           {renderTitle ? renderTitle(task.title) : task.title}
@@ -94,6 +94,14 @@ export function TaskRow({
           data-slot="meta"
           aria-hidden="true"
         >
+          {showDue && task.due_date && (
+            <>
+              <span className={cx(overdue && "text-error")}>
+                {formatDay(task.due_date, today)}
+              </span>
+              <span>·</span>
+            </>
+          )}
           <span
             className="mr-0.5 inline-block size-2 shrink-0 rounded-full"
             data-slot="dot"
@@ -102,18 +110,10 @@ export function TaskRow({
             }}
           />
           <span>{project ? project.name : t("project.none")}</span>
-          {showDue && task.due_date && (
-            <>
-              <span>·</span>
-              <span className={cx(overdue && "text-error")}>
-                {formatDay(task.due_date, today)}
-              </span>
-            </>
-          )}
           {task.start_time && (
             <>
               <span>·</span>
-              <span className={cx(overdue && "text-error")}>
+              <span>
                 {formatTimeRange(task.start_time, task.end_time, timeFormat)}
               </span>
             </>

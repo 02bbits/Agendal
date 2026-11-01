@@ -42,7 +42,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Editor (NC-1, NC-2, NC-5)
 
-- **Layout:** full screen. Close (×) top-left, the serif text area, then a bottom bar with the mic, the paperclip and Make tasks. The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
+- **Layout:** full screen. A nav bar with Cancel on the left and "✦ New note" in the centre; the "Your note" card (429px minimum, text on ruled lines); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with Make tasks, full width (with the mic and the paperclip beside it once they exist). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
 - **Focus:** the text area is focused inside the tap handler, so iOS opens the keyboard (focusing after an `await` doesn't).
 - **Examples** show while the text is empty: 3 chips ("sql quiz monday 9am, email the group tonight", "done email the group", "move gym to sunday"). A chip replaces the empty text and keeps focus at the end ([NC-5](#nc-5)).
 - **Make tasks** is enabled when the text has a visible character ([NU-E15](NU-note-understanding.md#nu-e15)), and not while listening or reading a file. Ctrl/Cmd+Enter submits ([UX-12](../01-product/ux-standards.md#ux-12)).
@@ -53,7 +53,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Opening the editor restores it with `note.draft_restored`.
   - A successful submit clears it.
   - One draft per user per device. It is wiped on sign-out ([NF-19](../05-quality/nfr.md#nf-19)).
-- **Close:** × or Back closes without asking, because the draft is kept.
+- **Close:** an empty editor closes at once. With text, Cancel, Escape and Back ask `note.discard_title` with *Discard* and *Keep editing*. Discard clears the draft and closes; Keep editing returns to the text. The draft is for when the app closes mid-note ([NC-E1](#nc-e1)).
 
 ### 2.2 Submit
 
@@ -61,6 +61,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - The client generates `client_id` (UUID v4) and `written_at` (with offset), and reads `timezone` from `Intl`.
   - It posts to `POST /notes`, shows `note.reading` after 300 ms, then replaces the editor with the RV screen.
   - A network error or `5xx` queues the note ([NU §3](NU-note-understanding.md#3-state-matrix)).
+  - `client_id` is made when the editor opens and kept for retries ([NC-E10](#nc-e10), [NC-E11](#nc-e11)). Changing the text after a failed send gives the next try a new `client_id`, because the server answers a known id with its stored result and ignores the body ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)).
+  - **Until the result screen ([IM-43](../08-project/tasks.md#im-43)) and the offline queue ([IM-53](../08-project/tasks.md#im-53)) exist:** a success clears the draft, closes the editor and shows `note.made_*`. A network error or `5xx` queues nothing: the text stays, editable, with `note.send_failed` and Retry. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
 - **Offline:**
   - The button reads `note.save_offline`.
   - The note is written to IndexedDB with the same fields and status `pending`.
@@ -165,7 +167,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 

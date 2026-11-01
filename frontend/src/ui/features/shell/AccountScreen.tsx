@@ -64,14 +64,12 @@ export function AccountScreen({
           {name.slice(0, 1).toUpperCase()}
         </span>
         <div>
-          <p className="font-serif text-[19px] leading-[26px] font-semibold">
-            {name}
-          </p>
+          <p className="text-heading font-semibold">{name}</p>
           <p className="text-footnote text-ink-secondary">{email}</p>
         </div>
       </section>
 
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.appearance")}
       </h2>
       <Segmented
@@ -84,7 +82,7 @@ export function AccountScreen({
           { value: "dark", label: t("app.theme_dark") },
         ]}
       />
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.week_start")}
       </h2>
       <Segmented
@@ -96,7 +94,7 @@ export function AccountScreen({
           { value: "sun", label: t("app.week_sun") },
         ]}
       />
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.time_format")}
       </h2>
       <Segmented
@@ -109,7 +107,7 @@ export function AccountScreen({
         ]}
       />
 
-      <h2 className="overline mt-6 mb-2 text-ink-secondary">
+      <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
         {t("app.this_device")}
       </h2>
       <div className="flex flex-col">

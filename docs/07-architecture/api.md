@@ -12,6 +12,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
 - Full request/response contracts live in each module spec, section 7. This table is the index.
+- The response shapes are also JSON Schemas in [contracts/schemas](contracts/schemas/), with example responses in [contracts/fixtures](contracts/fixtures/). A fixture uses the schema its name starts with (`note-result-done.json` → `note-result.schema.json`). The backend test `tests/Unit/ContractsTest.php` checks every fixture.
 - Offline replays send a client id (notes) or per-field timestamps (task patches) ([ADR-003](decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md)).
 
 ## Resources
@@ -25,7 +26,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /notes` | Submit a note `{client_id, text, written_at, timezone, source_file_name?}` → `{status, name, changes \| plan}`. Full contract: [NU module](../03-modules/NU-note-understanding.md#7-api-contract) | [NC-2](../03-modules/NC-note-capture.md#nc-2), [NC-6](../03-modules/NC-note-capture.md#nc-6), [NU-1](../03-modules/NU-note-understanding.md#nu-1)–6, [RV-1](../03-modules/RV-review-control.md#rv-1) |
 | `GET /notes`, `GET /notes/{id}` | Notes tab and a note's result | [RV-4](../03-modules/RV-review-control.md#rv-4), [RV-1](../03-modules/RV-review-control.md#rv-1) |
 | `POST /notes/{id}/apply` · `/cancel` | Confirm or cancel a `confirm` plan | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
-| `POST /notes/{id}/keep` · `/make-task` | Resolve a `followup` | [RV-3](../03-modules/RV-review-control.md#rv-3) |
+| `POST /notes/{id}/make-task` | Keep a `followup` as a task (Edit the note uses `PUT /notes/{id}`) | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
 | `POST /files/extract` | File (≤ 5 MB) → text. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
 | `GET /tasks?view=inbox\|upcoming&filter=` | Lists | [LV-1](../03-modules/LV-lists-search.md#lv-1), [LV-2](../03-modules/LV-lists-search.md#lv-2) |

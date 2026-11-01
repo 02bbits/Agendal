@@ -5,8 +5,6 @@
 export type Priority = "low" | "medium" | "high";
 export type Repeat = "never" | "daily" | "weekly" | "monthly" | "yearly";
 export type Reminder = "none" | "5m" | "15m" | "30m" | "1h" | "1d";
-export type ProjectColor =
-  "blue" | "red" | "orange" | "yellow" | "green" | "teal" | "purple" | "gray";
 
 export const PRIORITIES: readonly Priority[] = ["low", "medium", "high"];
 export const REPEATS: readonly Repeat[] = [
@@ -24,6 +22,8 @@ export const REMINDERS: readonly Reminder[] = [
   "1h",
   "1d",
 ];
+export type ProjectColor =
+  "blue" | "red" | "orange" | "yellow" | "green" | "teal" | "purple" | "gray";
 
 export interface Task {
   id: string;
@@ -31,7 +31,8 @@ export interface Task {
   due_date: string | null;
   start_time: string | null;
   end_time: string | null;
-  priority: Priority;
+  /** null when no priority was set (the API contract allows it); shown like Low. */
+  priority: Priority | null;
   project_id: string | null;
   repeat: Repeat;
   reminder: Reminder;
@@ -55,3 +56,13 @@ export interface Project {
 
 export type TimeFormat = "24h" | "12h";
 export type WeekStart = "mon" | "sun";
+
+/** The part of `POST /notes`' answer the app reads so far (NU §7); the result screen is IM-43. */
+export interface NoteResult {
+  note: {
+    id: string;
+    client_id: string;
+    status: "done" | "confirm" | "followup";
+  };
+  changes: { kind: "created" | "updated" | "deleted" }[];
+}

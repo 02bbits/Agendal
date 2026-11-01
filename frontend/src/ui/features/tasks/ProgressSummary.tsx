@@ -16,17 +16,18 @@ export function ProgressSummary({
   timeFormat,
 }: ProgressSummaryProps) {
   const { done, total } = progress;
+  if (total === 0) return null;
   const left = total - done;
   const r = 15;
   const circumference = 2 * Math.PI * r;
   const share = total ? done / total : 0;
 
   return (
-    <section className="mb-6 flex items-center gap-3">
+    <section className="mb-6 flex items-center gap-3 rounded-box bg-surface p-3.5">
       <svg
         className="shrink-0"
-        width="40"
-        height="40"
+        width="44"
+        height="44"
         viewBox="0 0 40 40"
         aria-hidden="true"
         focusable="false"
@@ -35,7 +36,7 @@ export function ProgressSummary({
           cx="20"
           cy="20"
           r={r}
-          className="fill-none stroke-fill stroke-[3]"
+          className="fill-none stroke-fill-2 stroke-[3]"
         />
         <circle
           cx="20"

@@ -1,0 +1,93 @@
+# IM-04: CI gates 1, 2 and 6 from docs/06-testing/test-strategy.md.
+# Every job must pass before a pull request can merge into main.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_DB: agendal_test
+          POSTGRES_USER: agendal
+          POSTGRES_PASSWORD: agendal
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agendal -d agendal_test"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, intl, mbstring
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+      - run: composer install --no-interaction --no-progress
+      - run: cp .env.example .env && php artisan key:generate
+      - name: Format (Pint)
+        run: vendor/bin/pint --test
+      - name: Type check (Larastan)
+        run: composer analyse
+      - name: Tests (Pest, Postgres)
+        run: vendor/bin/pest
+      - name: Dependency audit
+        run: composer audit
+
+  frontend:
+    name: Frontend
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - name: Format (Prettier)
+        run: npm run format:check
+      - name: Lint (ESLint)
+        run: npm run lint
+      - name: Type check (tsc)
+        run: npm run typecheck
+      - name: Tests (Vitest)
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Dependency audit
+        run: npm audit --omit=dev --audit-level=high
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v3
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

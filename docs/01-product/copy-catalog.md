@@ -18,6 +18,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `common.retry` † | Retry | Error toasts and banners |
 | `common.done` | Done | Note result |
 | `common.discard` † | Discard changes? | Closing a sheet with edits. Buttons: Discard / Keep editing |
+| `common.discard_action` † | Discard | Button in the "Discard this note?" dialog |
+| `common.keep_editing` † | Keep editing | Button in the same dialog |
 | `common.back` | Back | Back button accessible name |
 
 ## Account and access (AA)
@@ -79,6 +81,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up |
 | `note.needs_look_other` † | {count} need a look. | Same |
 | `note.couldnt_process` † | Couldn't turn this note into tasks. Tap to edit it. | Notes card, for a queued note rejected with a `422` |
+| `note.discard_title` † | Discard this note? | Closing the editor with text |
+| `note.discard_body` † | What you wrote won't be kept. | Same dialog |
 | `note.draft_restored` † | Your unsent note is back. | Editor, after a restored draft ([UX-13](ux-standards.md#ux-13)) |
 | `task.new` | New task | Sheet title ([NC-7](../03-modules/NC-note-capture.md#nc-7)) |
 | `task.title_only` | Only a title is needed | Sheet helper |
@@ -123,8 +127,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.cancel_keep` † | Cancel and keep the note | Confirm secondary |
 | `note.pick_task` † | Which task did you mean? | Tie ([NU-E11](../03-modules/NU-note-understanding.md#nu-e11)): candidates as radio buttons |
 | `note.followup_title` | I couldn't find a task in this note. | Follow-up ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
-| `note.keep` | Keep as note | Follow-up |
-| `note.make_one` | Make it a task | Follow-up |
+| `note.followup_edit` † | Edit the note | Follow-up secondary ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| `note.make_one` † | Keep it as task | Follow-up primary |
 | `note.skipped` † | Not made into tasks | Result section heading for skipped text |
 | `note.skip_already_done` † | Already done: “{title}” | Skipped reason ([NU-E12](../03-modules/NU-note-understanding.md#nu-e12)) |
 | `note.skip_not_found` † | Couldn't find a task matching “{text}” | Skipped reason ([NU-E29](../03-modules/NU-note-understanding.md#nu-e29)) |
@@ -231,3 +235,4 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `error.slow` † | This is taking longer than usual. | After 10 s ([UX-03](ux-standards.md#ux-03)) |
 | `error.rate_limited` † | You're going a bit fast. Try again in {seconds} s. | 429 ([UX-43](ux-standards.md#ux-43)) |
 | `error.not_found` † | This item no longer exists. | 404 on a task, note or project |
+| `error.invalid` † | Check the highlighted fields. | 422 without a more specific code |

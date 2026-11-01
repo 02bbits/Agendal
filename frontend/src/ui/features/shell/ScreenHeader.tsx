@@ -5,7 +5,8 @@ import { Link } from "./Link";
 import { ROUTES, type Navigate } from "./routes";
 
 export interface ScreenHeaderProps {
-  overline: string;
+  /** Date or count above the title, e.g. "Friday 23 October" on Inbox. */
+  overline?: string;
   title: string;
   /** The account avatar shows the first letter of the name. */
   accountInitial: string;
@@ -13,21 +14,24 @@ export interface ScreenHeaderProps {
   children?: ReactNode;
 }
 
-/** Tab-screen header: overline, serif display title, Search and Account at the top right. */
+/** Tab-screen header: overline, display title, Search and Account at the top right. */
 export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
   function ScreenHeader(
     { overline, title, accountInitial, navigate, children },
     ref,
   ) {
     return (
-      <header className="mb-5 pt-3">
+      <header className="mb-5 pt-3 md:pt-8">
         <div className="flex min-h-11 items-center justify-between">
-          <p className="overline m-0 text-ink-secondary">{overline}</p>
-          <div className="flex items-center gap-1">
+          <p className="text-overline font-semibold uppercase m-0 text-ink-secondary">
+            {overline ?? ""}
+          </p>
+          {/* From 768px the sidebar has Search and Account (UX-27) */}
+          <div className="flex items-center gap-1 md:hidden">
             <Link
               href={ROUTES.search}
               navigate={navigate}
-              className="btn btn-circle btn-ghost focus-ring size-11 min-h-11 text-ink"
+              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-ink before:absolute before:size-8 before:rounded-full before:bg-fill [&>svg]:relative"
               aria-label={t("nav.search")}
             >
               <SearchIcon size={20} />
@@ -35,7 +39,7 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
             <Link
               href={ROUTES.account}
               navigate={navigate}
-              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-footnote font-semibold text-ink before:absolute before:size-[30px] before:rounded-full before:bg-fill [&>span]:relative"
+              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-footnote font-semibold text-ink before:absolute before:size-8 before:rounded-full before:bg-fill [&>span]:relative"
               aria-label={t("nav.account")}
             >
               <span aria-hidden="true">
@@ -46,7 +50,7 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
         </div>
         <h1
           ref={ref}
-          className="mt-1 font-serif text-display font-semibold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary"
+          className="mt-1 text-display font-bold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary"
           tabIndex={-1}
         >
           {title}

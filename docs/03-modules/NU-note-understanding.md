@@ -19,7 +19,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
-| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or more than 5 changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
+| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or 5 or more changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
 | <a id="nu-6"></a>NU-6 | Name each note automatically | Should | The name follows the naming rules and shows on the result screen and Notes card |
 | <a id="nu-7"></a>NU-7 | Label tasks the assistant made | Should | Task details show "Created by the assistant" |
 
@@ -29,7 +29,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | Make tasks in the note editor (online) | `POST /notes` → result, confirm or follow-up (RV) |
 | Reconnect with pending notes | Service worker replays them oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)) → toast |
-| Make it a task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
+| Keep it as task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
 
 - As a user, I write several things in one line, so that I don't fill in a form for each one.
 - As a user, I write "done X" or "move X to Friday", so that I can update tasks without finding them.
@@ -64,7 +64,8 @@ Every note goes through the same steps, on the server, in one request:
 - Split on the **whole word** "then", in any case ([NU-E17](#nu-e17)), and on "sau đó" or "rồi" when words follow them ([NU-E41](#nu-e41)). "and" and "và" never split.
 - **Merge comma lists ([NU-E33](#nu-e33), [Q17](../08-project/open-questions.md#q17)).** A fragment after a comma joins the item before it when both of these hold:
   - The item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
-  - The fragment has **no signal of its own**: no task verb or command verb at its start, no skip prefix, and no date, time, priority word, repeat phrase, project name or project keyword.
+  - The fragment **starts no task of its own**: it doesn't open with a task verb, command verb, skip prefix, or a date, time, priority or repeat phrase ("mai gọi mẹ", "26 Oct meeting"), and it names no project, project keyword the user has, or task word (*exam, quiz, deadline, submit* …). Date, time, priority and repeat phrases that **close** the fragment describe the whole list: "mua sữa, trứng và bánh mì sáng mai" is one task for tomorrow morning.
+  - A fragment of **only** date, time, priority and repeat phrases ("tomorrow 9am", "không gấp") always joins the item before it.
   
   Only commas merge. Newlines, semicolons, full stops and "then" always split. When unsure, the rule splits, as the PRD does. The 30-item limit counts items after merging.
 - At the start of each line, strip bullets (`-`, `*`, `•`, `–`), numbering (`1.`, `1)`, `a)`) and checkboxes (`[ ]`, `[x]`) ([NU-E20](#nu-e20)).
@@ -74,8 +75,8 @@ Every note goes through the same steps, on the server, in one request:
 
 In this order, first match wins:
 
-1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3). Reason `skip`.
-2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*. Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*). Without it, the item is a task.
+1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*, symbols alone such as 👍), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3), or a heading that ends with `:` and starts with no task verb ("Tuần này:", "Shopping list:"). Reason `skip`. The full word lists live in `backend/resources/notes/note-rules.csv`.
+2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*, or ends with a bare *done* / *xong* after a non-verb ("homework done", but "get it done" is a task). Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*) where *\<when>* reads as a date or time: "move the boxes to the garage" and "push code to github" are tasks. Phrasal verbs such as *drop off* and *bỏ rác* are tasks.
 3. **Task:** everything else. An item with no title words after extraction (only a date, time or priority, such as "tomorrow 9am") becomes a skip ([NU-E32](#nu-e32)).
 
 "Remember to" is a lead-in (it makes a task). "Remember that" is a skip. Both follow the business rules.
@@ -117,7 +118,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
-| Any delete, any tie ([NU-E11](#nu-e11)), or more than 5 changes (creates + updates + deletes) | `confirm` |
+| Any delete, any tie ([NU-E11](#nu-e11)), or 5 or more changes (creates + updates + deletes) | `confirm` |
 | At least one change | `done` |
 | No changes, and every skip is `already_done` or `not_found` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
@@ -172,7 +173,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e30"></a>NU-E30 | Time range ("2-4pm", "14:00–16:00", "from 2 to 4") | Sets the start and end. An end not after the start is dropped ([TK-3](TK-tasks.md#tk-3)) | T-NU-130 |
 | <a id="nu-e31"></a>NU-E31 | Numeric date ("3/4", "31/2") | Day/month: 3 April. An invalid date isn't a date, and the item is low confidence | T-NU-131 |
 | <a id="nu-e32"></a>NU-E32 | Item with no title words ("tomorrow 9am") | Skip. On its own it leads to the follow-up | T-NU-132 |
-| <a id="nu-e33"></a>NU-E33 | Comma between objects ("buy milk, eggs and bread") | One task, "Buy milk, eggs and bread", per the merge rule in §2.2 (**[Q17](../08-project/open-questions.md#q17)**). "dentist, haircut" still splits, because the first item has no verb. "buy ink, sql quiz monday" still splits, because the second fragment has a date and a keyword | T-NU-133 · C-041–C-043 |
+| <a id="nu-e33"></a>NU-E33 | Comma between objects ("buy milk, eggs and bread") | One task, "Buy milk, eggs and bread", per the merge rule in §2.2 (**[Q17](../08-project/open-questions.md#q17)**). "dentist, haircut" still splits, because the first item has no verb. "buy ink, sql quiz monday" still splits, because the second fragment names a keyword and a task word. "buy milk, eggs tomorrow" stays one task due tomorrow | T-NU-133 · C-041–C-043 |
 | <a id="nu-e34"></a>NU-E34 | Keyword for a project the user doesn't have ("gym" with no Personal project) | No project | T-NU-134 |
 | <a id="nu-e35"></a>NU-E35 | "move X to Friday" with and without a time | No time → the task keeps its times. With a time → the start is set and the end moves by the same amount | T-NU-135 |
 | <a id="nu-e36"></a>NU-E36 | Command on a repeating task | *done* completes this occurrence and creates the next one. *move* moves only this occurrence | T-NU-136 |
@@ -333,7 +334,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-4](#nu-4) | Ideas, FYIs and filler are kept in the note but make no task | T-NU-30 (prefixes), T-NU-31 (filler), T-NU-32 (kept in `skipped` and in the note text) · C-013–C-015 |
 | [NU-4](#nu-4) | A note with nothing actionable triggers the follow-up | T-NU-33 · C-013, C-014 |
 | [NU-5](#nu-5) | Any delete shows "Check this first" | T-NU-40 · C-018 |
-| [NU-5](#nu-5) | More than 5 changes shows "Check this first" | T-NU-41 (5 → `done`, 6 → `confirm`) · C-019 |
+| [NU-5](#nu-5) | 5 or more changes shows "Check this first" | T-NU-41 (4 → `done`, 5 → `confirm`) · C-019 |
 | [NU-5](#nu-5) | Nothing is applied until Apply changes | T-NU-42 (no task rows change while `confirm`), T-NU-43 (a tie → `confirm`) |
 | [NU-6](#nu-6) | The name follows the naming rules | T-NU-50 (one test per naming row, plus "first row wins") · corpus `naming.*` |
 | [NU-6](#nu-6) | Names over 34 characters are cut at a word boundary with an ellipsis | T-NU-51 |

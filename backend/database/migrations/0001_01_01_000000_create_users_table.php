@@ -2,6 +2,7 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
@@ -13,13 +14,24 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
-            $table->timestamp('email_verified_at')->nullable();
+            $table->string('email', 254)->unique();
+            $table->string('display_name', 100)->nullable();
             $table->string('password');
             $table->rememberToken();
+            $table->string('timezone', 64)->default('Asia/Ho_Chi_Minh');
+            $table->boolean('remember_device')->default(true);
+            $table->string('theme', 6)->default('system');
+            $table->string('week_start', 3)->default('mon');
+            $table->string('time_format', 3)->default('24h');
+            $table->boolean('install_prompt_shown')->default(false);
             $table->timestamps();
         });
+
+        // Data model: email stored lower case; settings limited to their options (AP-3, AP-5)
+        DB::statement('ALTER TABLE users ADD CONSTRAINT users_email_lower CHECK (email = lower(email))');
+        DB::statement("ALTER TABLE users ADD CONSTRAINT users_theme CHECK (theme IN ('system', 'light', 'dark'))");
+        DB::statement("ALTER TABLE users ADD CONSTRAINT users_week_start CHECK (week_start IN ('mon', 'sun'))");
+        DB::statement("ALTER TABLE users ADD CONSTRAINT users_time_format CHECK (time_format IN ('24h', '12h'))");
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();

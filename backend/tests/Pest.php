@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 
 /*
@@ -17,6 +19,32 @@ use Tests\TestCase;
 pest()->extend(TestCase::class)
  // ->use(RefreshDatabase::class)
     ->in('Feature');
+
+/*
+| Browser-like sessions (IM-10). Feature tests that keep a session across requests use the
+| database driver, newRequest() between requests and carryCookies() to pass cookies on.
+*/
+
+const SESSION_COOKIE = '__Host-agendal_session';
+
+// The app object lives across test requests, so drop the signed-in user and session it holds,
+// as a separate browser request would
+function newRequest(): void
+{
+    Auth::forgetGuards();
+    // The session handler reads sessions.user_id from this binding, a singleton that outlives a request
+    app()->forgetInstance('auth.driver');
+    app('session')->forgetDrivers();
+    app()->forgetInstance('session.store');
+}
+
+// The test client doesn't keep cookies between requests, so carry them like a browser would
+function carryCookies(TestResponse $response): array
+{
+    return collect($response->headers->getCookies())
+        ->mapWithKeys(fn ($c) => [$c->getName() => $response->getCookie($c->getName(), $c->getName() !== 'XSRF-TOKEN')->getValue()])
+        ->all();
+}
 
 /*
 |--------------------------------------------------------------------------
