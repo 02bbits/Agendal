@@ -68,18 +68,54 @@ it('rejects titles with nothing to read or over 200 characters (NU §8)', functi
     expect(app(PlanValidator::class)->validate($plan, [], [])['dropped'])->toBe(1);
 })->with(['empty' => [''], 'spaces' => ['   '], 'invisible' => ["\u{200B}\u{00A0}"], 'too long' => [str_repeat('a', 201)]]);
 
-it('rejects an update that sets a time on a task with no date (NU-E5)', function () {
+it('keeps a date on a task an update schedules (NU-E5)', function (array $task, array $fields) {
     $id = (string) Str::uuid();
-    $plan = array_replace(emptyNotePlan(), ['update' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Move', 'start_time' => '09:00']]]);
+    $plan = array_replace(emptyNotePlan(), ['update' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Move', ...$fields]]]);
 
-    expect(app(PlanValidator::class)->validate($plan, [], [$id => ['due_date' => null]])['dropped'])->toBe(1);
+    expect(app(PlanValidator::class)->validate($plan, [], [$id => $task])['dropped'])->toBe(1);
+})->with([
+    'a time on an undated task' => [['due_date' => null], ['start_time' => '09:00']],
+    'clearing the date of a timed, repeating task' => [['due_date' => '2026-10-26', 'start_time' => '09:00', 'repeat' => 'weekly', 'reminder' => '15m'], ['due_date' => null]],
+]);
+
+it('checks entries for one task on the task as the earlier ones leave it', function () {
+    $id = (string) Str::uuid();
+    $plan = array_replace(emptyNotePlan(), ['update' => [
+        ['ref' => 'u1', 'task_id' => $id, 'label' => 'Move', 'start_time' => '10:00'],
+        ['ref' => 'u2', 'task_id' => $id, 'label' => 'Move', 'end_time' => '09:30'],
+    ]]);
+    $result = app(PlanValidator::class)->validate($plan, [], [$id => ['due_date' => '2026-10-26', 'start_time' => '09:00', 'end_time' => '17:00']]);
+
+    expect(array_column($result['update'], 'ref'))->toBe(['u1']);
 });
 
-it('keeps the text of a skip with an unknown reason as a plain skip (BR-02)', function () {
+it('asks when two entries set a field of one task to different values', function () {
+    $id = (string) Str::uuid();
     $validator = app(PlanValidator::class);
-    $result = $validator->validate(array_replace(emptyNotePlan(), ['skipped' => [['ref' => 's1', 'text' => 'call the bank', 'reason' => 'weird']]]), [], []);
+    $result = $validator->validate(array_replace(emptyNotePlan(), ['update' => [
+        ['ref' => 'u1', 'task_id' => $id, 'label' => 'Move', 'due_date' => '2026-10-27'],
+        ['ref' => 'u2', 'task_id' => $id, 'label' => 'Move', 'due_date' => '2026-10-28'],
+    ]]), [], [$id => ['due_date' => '2026-10-26']]);
 
-    expect([$result['skipped'], $validator->status($result)])->toBe([[['ref' => 's1', 'text' => 'call the bank', 'reason' => 'skip']], PlanStatus::Followup]);
+    expect([count($result['update']), $validator->status($result)])->toBe([2, PlanStatus::Confirm]);
+});
+
+it('drops parts that are not lists and a second entry with the same ref', function () {
+    $id = (string) Str::uuid();
+    $plan = [...emptyNotePlan(), 'create' => 'oops', 'update' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Completed', 'done' => true]], 'delete' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Delete']]];
+    $result = app(PlanValidator::class)->validate($plan, [], [$id => []]);
+
+    expect([$result['dropped'], count($result['update']), $result['delete']])->toBe([2, 1, []]);
+});
+
+it('keeps a skip reason it knows, without extra fields, and makes an unknown one a plain skip (BR-02)', function () {
+    $validator = app(PlanValidator::class);
+    $result = $validator->validate(array_replace(emptyNotePlan(), ['skipped' => [
+        ['ref' => 's1', 'text' => 'done x', 'reason' => 'not_found', 'extra' => 1],
+        ['ref' => 's2', 'text' => 'call the bank', 'reason' => 'weird'],
+    ]]), [], []);
+
+    expect([$result['skipped'], $validator->status($result)])->toBe([[['ref' => 's1', 'text' => 'done x', 'reason' => 'not_found'], ['ref' => 's2', 'text' => 'call the bank', 'reason' => 'skip']], PlanStatus::Followup]);
 });
 
 it('keeps a valid create and drops an unknown project', function () {
@@ -111,6 +147,7 @@ it('keeps only ties of a kept change with 2 to 5 owned candidates and one presel
     'preselected outside' => [['ref' => 'u1', 'candidates' => [0, 1], 'preselected' => 2], false],
     'preselected is not the changed task' => [['ref' => 'u1', 'candidates' => [0, 1], 'preselected' => 1], false],
     'changed task not offered' => [['ref' => 'u1', 'candidates' => [1, 2], 'preselected' => 1], false],
+    'a repeated candidate drops, leaving one' => [['ref' => 'u1', 'candidates' => [0, 0], 'preselected' => 0], false],
 ]);
 
 it('drops a tie whose change was dropped, with nothing left to confirm', function () {
@@ -119,4 +156,16 @@ it('drops a tie whose change was dropped, with nothing left to confirm', functio
     $result = app(PlanValidator::class)->validate($plan, [], array_fill_keys($ids, []));
 
     expect([$result['dropped'], $result['needs_confirm']])->toBe([1, false]);
+});
+
+it('keeps the confirm step when a validated plan is validated again (NU-E38)', function () {
+    $id = (string) Str::uuid();
+    $validator = app(PlanValidator::class);
+    $plan = array_replace(emptyNotePlan(), [
+        'update' => [['ref' => 'u1', 'task_id' => $id, 'label' => 'Completed', 'done' => true]],
+        'ambiguous' => [['ref' => 'u1', 'candidates' => [$id], 'preselected' => $id]],
+    ]);
+    $again = $validator->validate($validator->validate($plan, [], [$id => []]), [], [$id => []]);
+
+    expect($validator->status($again))->toBe(PlanStatus::Confirm);
 });

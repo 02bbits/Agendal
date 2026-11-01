@@ -23,6 +23,12 @@ final class PlanValidator
 
     private const ENTRY_KINDS = ['create', 'update', 'delete'];
 
+    /** Keys that name an update and describe it; the rest are the fields it changes. */
+    private const ENTRY_KEYS = ['ref', 'task_id', 'label'];
+
+    /** Fields that schedule a task: an entry setting one has to leave a date when the task has a time, repeat or reminder. */
+    private const SCHEDULE_FIELDS = ['due_date', 'start_time', 'repeat', 'reminder'];
+
     private Validator $schema;
 
     public function __construct(private PlanStatusResolver $statuses)
@@ -32,7 +38,12 @@ final class PlanValidator
     }
 
     /**
-     * A broken tie still asks: its change, the best match, waits for Apply changes (`needs_confirm`, NU-E11).
+     * Entries for the same task are checked one after another on the task as the earlier ones leave it. A ref names
+     * one entry; a later one with the same ref drops.
+     *
+     * `needs_confirm` keeps a plan waiting for Apply changes, also when it is validated again (NU-E38), when:
+     * - a tie is broken: it drops, and its change, the best match, waits (NU-E11)
+     * - two entries set a field of the same task to different values
      *
      * @param  array<string, mixed>  $plan
      * @param  array<string, string>  $projects  the user's project ids => names
@@ -43,29 +54,49 @@ final class PlanValidator
     {
         $valid = ['create' => [], 'update' => [], 'delete' => [], 'skipped' => [], 'ambiguous' => []];
         $dropped = 0;
-        $needsConfirm = false;
+        $needsConfirm = ($plan['needs_confirm'] ?? false) === true;
+        $refs = [];
+        $after = $tasks;
+        $setFields = [];
         foreach (self::ENTRY_KINDS as $kind) {
-            foreach ($plan[$kind] ?? [] as $entry) {
-                if (is_array($entry) && $this->entryIsValid($kind, $entry, $projects, $tasks)) {
-                    $valid[$kind][] = $entry;
-                } else {
+            foreach ($this->items($plan[$kind] ?? [], $dropped) as $entry) {
+                if (! $this->entryIsValid($kind, $entry, $projects, $after) || isset($refs[$entry['ref']])) {
                     $dropped++;
+
+                    continue;
                 }
+                $refs[$entry['ref']] = true;
+                $valid[$kind][] = $entry;
+                if ($kind === 'create') {
+                    continue;
+                }
+                $id = $entry['task_id'];
+                $fields = array_diff_key($entry, array_flip(self::ENTRY_KEYS));
+                foreach ($fields as $field => $value) {
+                    $needsConfirm = $needsConfirm || (array_key_exists($field, $setFields[$id] ?? []) && $setFields[$id][$field] !== $value);
+                }
+                $setFields[$id] = [...$setFields[$id] ?? [], ...$fields];
+                $after[$id] = array_replace($after[$id], $fields);
             }
         }
-        foreach ($plan['skipped'] ?? [] as $skip) {
-            $kept = is_array($skip) ? $this->readableSkip($skip) : null;
-            if ($kept === null) {
+        foreach ($this->items($plan['skipped'] ?? [], $dropped) as $item) {
+            $skip = $this->readableSkip($item);
+            if ($skip === null || isset($refs[$skip['ref']])) {
                 $dropped++;
-            } else {
-                $valid['skipped'][] = $kept;
+
+                continue;
             }
+            $refs[$skip['ref']] = true;
+            $valid['skipped'][] = $skip;
         }
         $changedTasks = array_column([...$valid['update'], ...$valid['delete']], 'task_id', 'ref');
-        foreach ($plan['ambiguous'] ?? [] as $tie) {
-            $ref = is_array($tie) ? ($tie['ref'] ?? null) : null;
-            $ofKeptChange = is_string($ref) && array_key_exists($ref, $changedTasks);
+        $asked = [];
+        foreach ($this->items($plan['ambiguous'] ?? [], $dropped) as $tie) {
+            $tie = $this->withUniqueCandidates($tie);
+            $ref = $tie['ref'] ?? null;
+            $ofKeptChange = is_string($ref) && array_key_exists($ref, $changedTasks) && ! isset($asked[$ref]);
             if ($ofKeptChange && $this->tieIsValid($tie, $changedTasks[$ref], $tasks)) {
+                $asked[$ref] = true;
                 $valid['ambiguous'][] = $tie;
 
                 continue;
@@ -93,9 +124,28 @@ final class PlanValidator
     }
 
     /**
+     * A plan part that isn't a list drops whole, and so does any of its items that isn't an object.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function items(mixed $part, int &$dropped): array
+    {
+        if (! is_array($part)) {
+            $dropped++;
+
+            return [];
+        }
+        /** @var list<array<string, mixed>> $items */
+        $items = array_values(array_filter($part, is_array(...)));
+        $dropped += count($part) - count($items);
+
+        return $items;
+    }
+
+    /**
      * @param  array<string, mixed>  $entry
      * @param  array<string, string>  $projects
-     * @param  array<string, array<string, mixed>>  $tasks
+     * @param  array<string, array<string, mixed>>  $tasks  each task as the entries kept so far leave it
      */
     private function entryIsValid(string $kind, array $entry, array $projects, array $tasks): bool
     {
@@ -128,9 +178,10 @@ final class PlanValidator
     }
 
     /**
-     * A skip with a reason the server doesn't know keeps its text as a plain skip, so the follow-up offers it (BR-02).
+     * A skip keeps its ref, text and reason; a reason the server doesn't know becomes a plain skip, so the follow-up
+     * offers the text (BR-02).
      *
-     * @param  array<mixed>  $skip
+     * @param  array<string, mixed>  $skip
      * @return array{ref: string, text: string, reason: string}|null
      */
     private function readableSkip(array $skip): ?array
@@ -138,9 +189,9 @@ final class PlanValidator
         if (! is_string($skip['ref'] ?? null) || ! is_string($skip['text'] ?? null)) {
             return null;
         }
-        $reason = $this->matchesSchema('properties/skipped/items', $skip) ? (string) $skip['reason'] : SkipReason::Skip->value;
+        $reason = is_string($skip['reason'] ?? null) ? SkipReason::tryFrom($skip['reason']) : null;
 
-        return ['ref' => $skip['ref'], 'text' => $skip['text'], 'reason' => $reason];
+        return ['ref' => $skip['ref'], 'text' => $skip['text'], 'reason' => ($reason ?? SkipReason::Skip)->value];
     }
 
     /**
@@ -154,18 +205,20 @@ final class PlanValidator
     }
 
     /**
-     * A time, repeat or reminder the entry sets needs a due date; the engine always gives one (NU-E5).
+     * A task the entry schedules keeps a due date while it has a time, repeat or reminder; the engine always gives
+     * one (NU-E5).
      *
      * @param  array<string, mixed>  $entry
      * @param  array<string, mixed>  $task  the task after the entry
      */
     private function hasDateWhenNeeded(array $entry, array $task): bool
     {
-        $setsSchedule = ($entry['start_time'] ?? null) !== null
-            || ($entry['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
-            || ($entry['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
+        $schedules = array_intersect_key($entry, array_flip(self::SCHEDULE_FIELDS)) !== [];
+        $needsDate = ($task['start_time'] ?? null) !== null
+            || ($task['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
+            || ($task['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
 
-        return ! $setsSchedule || ($task['due_date'] ?? null) !== null;
+        return ! $schedules || ! $needsDate || ($task['due_date'] ?? null) !== null;
     }
 
     /**
@@ -182,10 +235,25 @@ final class PlanValidator
     }
 
     /**
+     * "Which task did you mean?" lists a task once: a repeated candidate drops (NU-E11).
+     *
+     * @param  array<string, mixed>  $tie
+     * @return array<string, mixed>
+     */
+    private function withUniqueCandidates(array $tie): array
+    {
+        if (is_array($tie['candidates'] ?? null)) {
+            $tie['candidates'] = array_values(array_unique($tie['candidates'], SORT_REGULAR));
+        }
+
+        return $tie;
+    }
+
+    /**
      * NU-E11: a tie offers 2 (the schema) to the configured number of the user's tasks and preselects the one its
      * change names, so Apply changes without a choice changes a task the screen showed.
      *
-     * @param  array<mixed>  $tie
+     * @param  array<string, mixed>  $tie
      * @param  array<string, array<string, mixed>>  $tasks
      */
     private function tieIsValid(array $tie, mixed $changedTask, array $tasks): bool
