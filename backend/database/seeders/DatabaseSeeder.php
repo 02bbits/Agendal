@@ -18,11 +18,6 @@ class DatabaseSeeder extends Seeder
      */
     public function run(ClockInterface $clock): void
     {
-        // docker compose seeds on every start
-        if (User::where('email', 'example@gmail.com')->exists()) {
-            return;
-        }
-
         $user = User::factory()->create([
             'email' => 'example@gmail.com',
             'display_name' => 'example',
