@@ -4,10 +4,12 @@ import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
 import type { Task } from "../../domain/types";
 import * as types from "./types";
+import { useTaskEdit } from "./useTaskEdit";
 import { useTaskSync } from "./useTaskSync";
 import { createZoneFormatter, useToday } from "./useToday";
 
 export * from "./types";
+export * from "./useTaskEdit";
 export * from "./useTaskSync";
 
 const Ctx = React.createContext<types.TaskStore | null>(null);
@@ -29,25 +31,20 @@ export function TaskStoreProvider({
   const { tasks, change, getTask } = useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
   const [toast, setToast] = React.useState<ToastData | null>(null);
-  const [settling, setSettling] = React.useState<ReadonlySet<string>>(
-    new Set(),
-  );
+  const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
   const toastSeq = React.useRef(0);
   const settleTimers = React.useRef<types.SettleTimerMap>(new Map());
   const lifecycleRef = React.useRef<types.LifecycleFn>(() => {});
 
-  React.useEffect(() => {
-    const timers = settleTimers.current;
-    return () => {
-      for (const timer of timers.values()) clearTimeout(timer);
-      timers.clear();
-    };
-  }, []);
+  React.useEffect(
+    () => () => {
+      settleTimers.current.forEach(clearTimeout);
+      settleTimers.current.clear();
+    },
+    [],
+  );
 
   const todayDate = useToday(clock);
-
-  // Cached Intl.DateTimeFormat per time zone (same en-CA format as clock.today)
-  // to avoid re-allocating a formatter instance on every task row check.
   const dateFormatter = React.useMemo(
     () => createZoneFormatter(clock.timeZone),
     [clock.timeZone],
@@ -84,18 +81,20 @@ export function TaskStoreProvider({
     (id: string) => {
       clearSettle(id);
       setSettling((s) => new Set(s).add(id));
-      const nextTimer = setTimeout(() => {
-        settleTimers.current.delete(id);
-        setSettling((s) => new Set([...s].filter((x) => x !== id)));
-      }, types.SETTLE_MS);
-      settleTimers.current.set(id, nextTimer);
+      settleTimers.current.set(
+        id,
+        setTimeout(() => {
+          settleTimers.current.delete(id);
+          setSettling((s) => new Set([...s].filter((x) => x !== id)));
+        }, types.SETTLE_MS),
+      );
     },
     [clearSettle],
   );
 
   const handleSaveError = React.useCallback(
-    (error: unknown, retry: () => void) =>
-      showToast(types.formatSaveErrorToast(error, retry)),
+    (err: unknown, retry: () => void) =>
+      showToast(types.formatSaveErrorToast(err, retry)),
     [showToast],
   );
 
@@ -116,21 +115,15 @@ export function TaskStoreProvider({
         clearSettle(id);
       }
 
-      change(
-        id,
-        isComplete
-          ? { done: true, done_at: at }
-          : { done: false, done_at: null },
-        async () => {
-          const res = await (isComplete
-            ? api.complete(id, at)
-            : api.reopen(id, at));
-          // The next occurrence comes with IM-24 (#23).
-          return res.task;
-        },
-        (error) => {
-          handleSaveError(error, () => lifecycleRef.current(id, action));
-        },
+      const fields = isComplete
+        ? { done: true, done_at: at }
+        : { done: false, done_at: null };
+      const req = () =>
+        (isComplete ? api.complete(id, at) : api.reopen(id, at)).then(
+          (r) => r.task,
+        );
+      change(id, fields, req, (err) =>
+        handleSaveError(err, () => lifecycleRef.current(id, action)),
       );
     },
     [
@@ -154,6 +147,16 @@ export function TaskStoreProvider({
     [mutateLifecycle],
   );
 
+  const { update } = useTaskEdit({
+    getTask,
+    change,
+    api,
+    clock,
+    todayDate,
+    showToast,
+    handleSaveError,
+  });
+
   const store: types.TaskStore = React.useMemo(
     () => ({
       tasks,
@@ -171,6 +174,7 @@ export function TaskStoreProvider({
       completedToday,
       toggle,
       change,
+      update,
       setProjects,
     }),
     [
@@ -187,6 +191,7 @@ export function TaskStoreProvider({
       completedToday,
       toggle,
       change,
+      update,
     ],
   );
 

@@ -3,7 +3,7 @@ import { ApiRequestError } from "../../../lib/apiError";
 import { today } from "../../../lib/clock";
 import type { ToastData } from "../../components/Toast";
 import { isCopyKey, t } from "../../copy";
-import type { TaskApi } from "../../domain/api";
+import type { TaskApi, TaskUpdateFn } from "../../domain/api";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { UseTaskSyncReturn } from "./useTaskSync";
 
@@ -26,6 +26,7 @@ export interface Clock {
 /** A ticked row stays in place this long before it moves to the completed area (TK §2.1). */
 export const SETTLE_MS = 600;
 
+export type SettleSet = ReadonlySet<string>;
 export type SettleTimerMap = Map<string, ReturnType<typeof setTimeout>>;
 export type LifecycleAction = "complete" | "reopen";
 export type LifecycleFn = (id: string, action: LifecycleAction) => void;
@@ -46,6 +47,7 @@ export interface TaskStore {
   completedToday: (task: Task) => boolean;
   toggle: (task: Task) => void;
   change: UseTaskSyncReturn["change"];
+  update: TaskUpdateFn;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
 }
 
@@ -76,3 +78,5 @@ export function formatSaveErrorToast(
     onAction: retry,
   };
 }
+
+export type { TaskUpdateFn };
