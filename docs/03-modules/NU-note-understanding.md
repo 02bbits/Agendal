@@ -29,7 +29,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | Make tasks in the note editor (online) | `POST /notes` → result, confirm or follow-up (RV) |
 | Reconnect with pending notes | Service worker replays them oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)) → toast |
-| Make it a task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
+| Keep it as task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
 
 - As a user, I write several things in one line, so that I don't fill in a form for each one.
 - As a user, I write "done X" or "move X to Friday", so that I can update tasks without finding them.

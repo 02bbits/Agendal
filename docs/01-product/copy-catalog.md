@@ -127,8 +127,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.cancel_keep` † | Cancel and keep the note | Confirm secondary |
 | `note.pick_task` † | Which task did you mean? | Tie ([NU-E11](../03-modules/NU-note-understanding.md#nu-e11)): candidates as radio buttons |
 | `note.followup_title` | I couldn't find a task in this note. | Follow-up ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
-| `note.keep` | Keep as note | Follow-up |
-| `note.make_one` | Make it a task | Follow-up |
+| `note.followup_edit` † | Edit the note | Follow-up secondary ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| `note.make_one` † | Keep it as task | Follow-up primary |
 | `note.skipped` † | Not made into tasks | Result section heading for skipped text |
 | `note.skip_already_done` † | Already done: “{title}” | Skipped reason ([NU-E12](../03-modules/NU-note-understanding.md#nu-e12)) |
 | `note.skip_not_found` † | Couldn't find a task matching “{text}” | Skipped reason ([NU-E29](../03-modules/NU-note-understanding.md#nu-e29)) |
