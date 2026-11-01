@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t, tc } from "../../copy";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
@@ -60,6 +60,31 @@ function ProjectCard({
   onDelete?: () => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    const handlePointerDown = (e: MouseEvent | TouchEvent | PointerEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [menuOpen]);
+
   const percentage = progress.total
     ? (progress.done / progress.total) * 100
     : 0;
@@ -84,7 +109,7 @@ function ProjectCard({
           </span>
         </div>
         {onDelete || onRename ? (
-          <div className="relative">
+          <div ref={menuRef} className="relative">
             <button
               type="button"
               className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent p-0 text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
@@ -207,6 +232,7 @@ function ProjectCard({
         <Link
           href={href}
           navigate={navigate}
+          onClick={() => setMenuOpen(false)}
           className="focus-ring block h-full rounded-2xl border border-separator bg-surface shadow-xs transition-all hover:border-ink-tertiary hover:shadow-sm"
           aria-label={accessibleName}
         >

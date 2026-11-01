@@ -7,6 +7,7 @@ import {
   ProjectScreen,
   ProjectSheet,
   ProjectsScreen,
+  t,
   type Project,
   type Task,
 } from "../../src/ui";
@@ -65,6 +66,33 @@ describe("ProjectsScreen (PJ §2.2)", () => {
       />,
     );
     expect(screen.getByText("Group tasks by area or goal.")).toBeTruthy();
+  });
+
+  it("closes project card menu on click outside and on Escape", async () => {
+    const list = [{ ...seedProjects[1]!, open: 5, done: 3 }];
+    render(
+      <ProjectsScreen
+        projects={list}
+        accountInitial="E"
+        onNewProject={() => {}}
+        onRenameProject={() => {}}
+        onDeleteProject={() => {}}
+      />,
+    );
+
+    const menuButton = screen.getByRole("button", { name: t("project.menu") });
+    await userEvent.click(menuButton);
+    expect(screen.getByRole("menu")).toBeTruthy();
+
+    // Click outside on document body closes menu
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("menu")).toBeNull();
+
+    // Open again and press Escape to close
+    await userEvent.click(menuButton);
+    expect(screen.getByRole("menu")).toBeTruthy();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 });
 

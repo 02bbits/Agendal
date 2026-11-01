@@ -23,6 +23,8 @@ import { appClock } from "../../appClock";
 import { PageMessage } from "../../PageMessage";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
 
+export const SKELETON_DELAY_MS = 300;
+
 export function ProjectClient({ id }: { id: string }) {
   const { navigate, back, showToast, settings } = useAppFrame();
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
@@ -31,8 +33,17 @@ export function ProjectClient({ id }: { id: string }) {
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [showSkeleton, setShowSkeleton] = useState(false);
 
   const today = useToday(appClock);
+
+  useEffect(() => {
+    if (!loading) return;
+    const timer = setTimeout(() => {
+      setShowSkeleton(true);
+    }, SKELETON_DELAY_MS);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   useEffect(() => {
     let active = true;
@@ -368,9 +379,41 @@ export function ProjectClient({ id }: { id: string }) {
   };
 
   if (loading) {
+    if (!showSkeleton) return null;
     return (
-      <div className="p-8 text-center text-ink-secondary">
-        {t("common.back")}...
+      <div
+        role="status"
+        aria-busy="true"
+        className="flex animate-pulse flex-col gap-4 pb-8"
+      >
+        <div className="flex items-center justify-between py-2">
+          <div className="h-8 w-20 rounded-full bg-surface-hover/60" />
+        </div>
+        <div className="mt-2 mb-3 flex items-center gap-3">
+          <div className="size-3 shrink-0 rounded-full bg-surface-hover/60" />
+          <div className="h-7 w-48 rounded-xl bg-surface-hover/60" />
+        </div>
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="h-1.5 w-full rounded-full bg-fill/80" />
+          <div className="h-3.5 w-28 rounded-lg bg-fill/60" />
+        </div>
+        <div className="rounded-2xl border border-separator/50 bg-surface shadow-xs overflow-hidden">
+          <div className="flex flex-col">
+            {[1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="flex items-center gap-3 border-b border-separator/40 px-4 py-3.5 last:border-b-0"
+              >
+                <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+                <div
+                  className="h-4 rounded-xl bg-fill/80"
+                  style={{ width: i === 1 ? "55%" : i === 2 ? "70%" : "40%" }}
+                />
+                <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60" />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     );
   }
