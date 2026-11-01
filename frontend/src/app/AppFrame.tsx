@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   AppShell,
+  NewTaskSheet,
   NoteEditor,
   ROUTES,
   t,
@@ -20,12 +21,14 @@ import {
   Toast,
   type AccountSettings,
   type Navigate,
+  type Project,
   type TabId,
   type ToastData,
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { submitNote } from "@/lib/noteApi";
+import { createTask, projects as fetchProjects } from "@/lib/taskApi";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -193,6 +196,26 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [editing, setEditing] = useState(false);
   const openNoteEditor = useCallback(() => setEditing(true), []);
   const closeNoteEditor = useCallback(() => setEditing(false), []);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
+  const [taskProjects, setTaskProjects] = useState<Project[]>([]);
+  const [taskProjectsStatus, setTaskProjectsStatus] = useState<
+    "ready" | "failed"
+  >("ready");
+  const loadProjects = useCallback(() => {
+    fetchProjects()
+      .then((p) => {
+        setTaskProjects(p);
+        setTaskProjectsStatus("ready");
+      })
+      .catch(() => {
+        setTaskProjectsStatus("failed");
+      });
+  }, []);
+  const openNewTask = useCallback(() => {
+    setTaskSheetOpen(true);
+    loadProjects();
+  }, [loadProjects]);
+  const closeNewTask = useCallback(() => setTaskSheetOpen(false), []);
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
@@ -337,8 +360,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
-        // The + appears with the New task sheet (IM-26)
-        capture={{ onWrite: openNoteEditor }}
+        capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
@@ -357,6 +379,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
               closeNoteEditor();
               showToast(tc("note.made", result.changes.length));
             }}
+          />
+        )}
+        {taskSheetOpen && (
+          <NewTaskSheet
+            open={taskSheetOpen}
+            pathname={pathname}
+            projects={taskProjects}
+            projectsStatus={taskProjectsStatus}
+            onRetryProjects={loadProjects}
+            onCreate={createTask}
+            onAdded={(title) => showToast(t("task.added", { title }))}
+            onClose={closeNewTask}
           />
         )}
       </AppShell>
