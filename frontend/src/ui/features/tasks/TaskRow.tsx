@@ -55,7 +55,7 @@ export function TaskRow({
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[52px] items-start px-3.5 after:absolute after:right-0 after:bottom-0 after:left-12 after:border-b after:border-separator",
+        "group/task relative flex min-h-[52px] items-start px-3.5 after:absolute after:right-0 after:bottom-0 after:left-12 after:border-b after:border-separator last:after:hidden",
         task.done && "is-done",
         overdue && "is-overdue",
       )}
