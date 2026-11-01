@@ -13,19 +13,28 @@ import {
 } from "react";
 import {
   AppShell,
+  Link,
   NewTaskSheet,
   NoteEditor,
+  ProjectSheet,
   ROUTES,
+  sortProjects,
   t,
   tc,
   Toast,
   type AccountSettings,
   type Navigate,
+  type Project,
+  type ProjectWithCounts,
   type TabId,
   type ToastData,
 } from "@/ui";
+import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { createProject, listProjects } from "@/lib/projectApi";
+import { inbox } from "@/lib/taskApi";
+import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
 import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
 
@@ -362,6 +371,161 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
   const tab = TAB_BY_PATH[pathname];
 
+  const [inboxCount, setInboxCount] = useState<number | undefined>(undefined);
+  const [projectsList, setProjectsList] = useState<ProjectWithCounts[]>([]);
+  const [noProjectCount, setNoProjectCount] = useState<number | undefined>(
+    undefined,
+  );
+  const [creatingProject, setCreatingProject] = useState(false);
+
+  const isMainView = Boolean(
+    TAB_BY_PATH[pathname] || pathname.startsWith("/projects"),
+  );
+
+  const loadSidebarData = useCallback(() => {
+    if (!isMainView || PUBLIC_PATHS.includes(pathname)) return;
+
+    listProjects()
+      .then((data) => {
+        if (Array.isArray(data)) {
+          setProjectsList(data);
+        }
+      })
+      .catch(() => {});
+
+    inbox()
+      .then((data) => {
+        if (data) {
+          const overdue = data.overdue?.length ?? 0;
+          const today = data.today?.length ?? 0;
+          setInboxCount(overdue + today);
+
+          const allTasks = [
+            ...(data.overdue ?? []),
+            ...(data.today ?? []),
+            ...(data.no_date ?? []),
+          ];
+          const unassigned = allTasks.filter((t) => !t.project_id && !t.done);
+          setNoProjectCount(unassigned.length);
+        }
+      })
+      .catch(() => {});
+  }, [isMainView, pathname]);
+
+  useEffect(() => {
+    loadSidebarData();
+
+    const handleUpdate = () => {
+      loadSidebarData();
+    };
+
+    window.addEventListener("agendal:task-created", handleUpdate);
+    window.addEventListener("agendal:projects-changed", handleUpdate);
+    document.addEventListener("visibilitychange", handleUpdate);
+
+    return () => {
+      window.removeEventListener("agendal:task-created", handleUpdate);
+      window.removeEventListener("agendal:projects-changed", handleUpdate);
+      document.removeEventListener("visibilitychange", handleUpdate);
+    };
+  }, [loadSidebarData]);
+
+  const sidebarCounts = useMemo<Partial<Record<TabId, number>>>(() => {
+    const counts: Partial<Record<TabId, number>> = {};
+    if (inboxCount !== undefined) {
+      counts.inbox = inboxCount;
+    }
+    if (projectsList.length > 0) {
+      counts.projects = projectsList.length + 1;
+    }
+    return counts;
+  }, [inboxCount, projectsList.length]);
+
+  const sortedSidebarProjects = useMemo(
+    () => sortProjects(projectsList),
+    [projectsList],
+  );
+
+  const sidebarProjects = useMemo(() => {
+    if (projectsList.length === 0) return undefined;
+
+    return (
+      <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+        {sortedSidebarProjects.map((p) => {
+          const isCurrent = pathname === ROUTES.project(p.id);
+          return (
+            <li key={p.id}>
+              <Link
+                href={ROUTES.project(p.id)}
+                navigate={navigate}
+                className={cx(
+                  "focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill",
+                  isCurrent && "bg-primary-tint! font-semibold text-primary!",
+                )}
+                aria-current={isCurrent ? "page" : undefined}
+              >
+                <span
+                  className="inline-block size-2 shrink-0 rounded-full"
+                  style={{ background: `var(--color-project-${p.colour})` }}
+                  aria-hidden="true"
+                />
+                <span className="flex-1 truncate text-callout">{p.name}</span>
+                {p.open !== undefined && (
+                  <span
+                    className={cx(
+                      "text-footnote tabular-nums",
+                      isCurrent ? "text-primary" : "text-ink-tertiary",
+                    )}
+                  >
+                    {p.open}
+                  </span>
+                )}
+              </Link>
+            </li>
+          );
+        })}
+        <li key="no-project">
+          <Link
+            href={ROUTES.projects}
+            navigate={navigate}
+            className="focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill"
+          >
+            <span
+              className="inline-block size-2 shrink-0 rounded-full bg-neutral-content/60"
+              aria-hidden="true"
+            />
+            <span className="flex-1 truncate text-callout">
+              {t("project.none")}
+            </span>
+            {noProjectCount !== undefined && (
+              <span className="text-footnote tabular-nums text-ink-tertiary">
+                {noProjectCount}
+              </span>
+            )}
+          </Link>
+        </li>
+      </ul>
+    );
+  }, [
+    projectsList.length,
+    sortedSidebarProjects,
+    pathname,
+    navigate,
+    noProjectCount,
+  ]);
+
+  const handleProjectCreated = useCallback(
+    (created: Project) => {
+      setProjectsList((prev) => [...prev, { ...created, open: 0, done: 0 }]);
+      setCreatingProject(false);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+      }
+      navigate(ROUTES.project(created.id));
+    },
+    [navigate],
+  );
+
   return (
     <AppFrameContext.Provider value={value}>
       <AppShell
@@ -371,7 +535,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
-            : { accountName: user?.display_name ?? user?.email ?? "" }
+            : {
+                accountName: user?.display_name ?? user?.email ?? "",
+                counts: sidebarCounts,
+                projects: sidebarProjects,
+                onNewProject: () => setCreatingProject(true),
+              }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
@@ -394,6 +563,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
           />
         )}
         {open && <NewTaskSheet {...sheetProps} />}
+        {creatingProject && (
+          <ProjectSheet
+            open
+            projects={projectsList}
+            onClose={() => setCreatingProject(false)}
+            clock={appClock}
+            onCreate={createProject}
+            onCreated={handleProjectCreated}
+          />
+        )}
       </AppShell>
     </AppFrameContext.Provider>
   );
