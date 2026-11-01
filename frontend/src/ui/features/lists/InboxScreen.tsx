@@ -80,6 +80,7 @@ export function InboxScreen({
               progress={view.progress}
               next={nextUp(
                 [...view.today, ...view.overdue].filter((x) => !x.done),
+                store.today,
               )}
               timeFormat={store.timeFormat}
             />
