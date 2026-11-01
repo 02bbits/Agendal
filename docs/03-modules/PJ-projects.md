@@ -55,13 +55,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - **Progress bar:** `project.progress`. *M* counts every non-deleted task in the project (open and completed), and *N* counts the completed ones.
 - **Open tasks:** by due date (no date last), then priority, then created.
-- **Completed tasks:** below, newest completion first. The first 10 show, then `project.show_completed` loads more (keyset, 50 at a time).
+- **Completed tasks:** below, newest completion first. The first 10 show, then `project.show_completed` loads more (keyset, 50 at a time). "Show completed" is displayed only when hidden completed tasks remain (`effectiveShown < totalDone`) and automatically hides when total completed is $\le 10$ or all tasks are displayed. Undoing a completed task synchronizes with the server to pull remaining hidden completed tasks into visible slots. Task lists are grouped in card containers matching Figma prototype D14.
 - **Empty:** `project.empty` ("No tasks yet"), plus the capture bar. The `+` sheet opens with this project preselected (NC).
 - **Menu:** rename, change colour, delete. No project has no menu.
 
 ### 2.4 Rename and recolour (PJ-3, Should)
 
-- **Rename:** the same sheet as create, prefilled, with the same validation.
+- **Rename:** supported from project card menus and project detail action bar using the same sheet as create, prefilled, with the same validation.
   - Renaming doesn't change task titles.
   - New notes match the new name (NU). The old name no longer matches.
 - **Colour:** saves on tap. Every row using the project updates.

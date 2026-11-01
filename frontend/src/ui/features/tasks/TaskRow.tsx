@@ -28,7 +28,7 @@ export interface TaskRowProps {
   renderTitle?: (title: string) => ReactNode;
 }
 
-/** One task: checkbox, title (2 lines), meta line and priority flag. Tapping the row opens details. */
+/** One task: circular checkbox, title, meta line and priority flag matching Figma design. */
 export function TaskRow({
   task,
   project,
@@ -55,7 +55,7 @@ export function TaskRow({
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[52px] items-start px-3.5 after:absolute after:right-0 after:bottom-0 after:left-12 after:border-b after:border-separator",
+        "group/task relative flex min-h-[56px] items-center gap-3 border-b border-separator/60 px-4 py-3 transition-colors hover:bg-surface-hover/40 last:border-b-0",
         task.done && "is-done",
         overdue && "is-overdue",
       )}
@@ -67,36 +67,44 @@ export function TaskRow({
         aria-label={t(task.done ? "task.reopen" : "task.complete", {
           title: task.title,
         })}
-        className="group/check mt-1 -ml-[11px] inline-flex size-11 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-surface focus-visible:outline-none"
+        className="group/check inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary"
         onClick={() => onToggle(task)}
       >
         <span
-          className="inline-flex size-[22px] items-center justify-center rounded-full shadow-[inset_0_0_0_2px_var(--color-ink-tertiary)] group-[.is-overdue]/task:shadow-[inset_0_0_0_2px_var(--color-error)] group-aria-checked/check:bg-ink group-aria-checked/check:shadow-none group-focus-visible/check:outline-2 group-focus-visible/check:outline-offset-2 group-focus-visible/check:outline-primary"
+          className={cx(
+            "inline-flex size-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors",
+            overdue
+              ? "border-error shadow-[inset_0_0_0_1px_var(--color-error)]"
+              : task.done
+                ? "border-ink bg-ink text-surface"
+                : "border-ink-tertiary group-hover/check:border-ink-secondary",
+          )}
           aria-hidden="true"
         >
           {task.done && <CheckIcon size={14} strokeWidth={2.5} />}
         </span>
       </button>
+
       <Link
         href={ROUTES.task(task.id)}
         navigate={navigate}
-        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-3 pr-2 pl-px text-ink"
+        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink"
         aria-label={accessibleName}
       >
         <span
-          className="line-clamp-2 text-body group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
+          className="line-clamp-2 text-body font-medium group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
           data-slot="title"
         >
           {renderTitle ? renderTitle(task.title) : task.title}
         </span>
         <span
-          className="flex flex-wrap items-center gap-1 text-footnote text-ink-secondary"
+          className="flex flex-wrap items-center gap-1.5 text-footnote text-ink-secondary"
           data-slot="meta"
           aria-hidden="true"
         >
           {showDue && task.due_date && (
             <>
-              <span className={cx(overdue && "text-error")}>
+              <span className={cx(overdue && "text-error font-medium")}>
                 {formatDay(task.due_date, today)}
               </span>
               <span>·</span>
@@ -118,21 +126,26 @@ export function TaskRow({
               </span>
             </>
           )}
-          {task.reminder !== "none" && <BellIcon size={12} />}
-          {task.repeat !== "never" && <RepeatIcon size={12} />}
+          {task.reminder !== "none" && (
+            <BellIcon size={13} className="text-ink-tertiary" />
+          )}
+          {task.repeat !== "never" && (
+            <RepeatIcon size={13} className="text-ink-tertiary" />
+          )}
         </span>
       </Link>
+
       {flag && !task.done && (
         <span
           className={cx(
-            "shrink-0 pt-3",
+            "ml-2 shrink-0 self-center",
             flag === "danger" ? "text-error" : "text-warning",
           )}
           data-slot="flag"
           data-tone={flag}
           aria-hidden="true"
         >
-          <FlagIcon size={16} />
+          <FlagIcon size={18} />
         </span>
       )}
     </li>

@@ -19,10 +19,12 @@ function Details({
   id,
   projectsStatus,
   onRetryProjects,
+  showSchedule = true,
 }: {
   id: string;
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;
+  showSchedule?: boolean;
 }) {
   const store = useTaskStore();
   const current = store.tasks.find((x) => x.id === id)!;
@@ -33,13 +35,18 @@ function Details({
       sourceNote={{ name: "This week", href: "/notes/n1" }}
       projectsStatus={projectsStatus}
       onRetryProjects={onRetryProjects}
+      showSchedule={showSchedule}
     />
   );
 }
 
 function open(
   t0: Task,
-  opts?: { projectsStatus?: "ready" | "failed"; onRetryProjects?: () => void },
+  opts?: {
+    projectsStatus?: "ready" | "failed";
+    onRetryProjects?: () => void;
+    showSchedule?: boolean;
+  },
 ) {
   const ctx = setup([t0]);
   const patchSpy = vi.spyOn(ctx.memory.api, "patch");
@@ -49,6 +56,7 @@ function open(
         id={t0.id}
         projectsStatus={opts?.projectsStatus}
         onRetryProjects={opts?.onRetryProjects}
+        showSchedule={opts?.showSchedule ?? true}
       />,
     ),
   );
@@ -367,10 +375,12 @@ describe("Field edge cases and accessibility", () => {
     ).toBe("/notes/n1");
   });
 
-  it("Mark done button completes the task", async () => {
+  it("Task header checkbox completes the task", async () => {
     const { saved } = open(task({ title: "Toggle Task", done: false }));
     await userEvent.click(
-      screen.getByRole("button", { name: t("task.mark_done") }),
+      screen.getByRole("checkbox", {
+        name: t("task.complete", { title: "Toggle Task" }),
+      }),
     );
     await waitFor(() => expect(saved().done).toBe(true));
   });

@@ -153,6 +153,131 @@ describe("ProjectScreen (PJ-2, T-PJ-10, T-PJ-11)", () => {
     await userEvent.click(button);
     expect(called).toBe(true);
   });
+
+  it("pulls up hidden completed task on undo and removes Show completed when count <= 10", () => {
+    const project = seedProjects[1]!;
+    const manyCompleted = Array.from({ length: 11 }, (_, i) =>
+      task({
+        id: `t-done-${i}`,
+        title: `Done ${i}`,
+        project_id: "p-web",
+        done: true,
+        done_at: `2026-10-${String(10 + i).padStart(2, "0")}T08:00:00Z`,
+      }),
+    );
+
+    const { rerender } = render(
+      <ProjectScreen
+        project={project}
+        openTasks={[]}
+        completedTasks={manyCompleted}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    // Initial 11 tasks: exactly 10 visible, Done 0 (oldest done_at) is hidden, Show completed exists
+    expect(screen.getAllByRole("checkbox")).toHaveLength(10);
+    expect(screen.queryByText("Done 0")).toBeNull();
+    expect(screen.getByRole("button", { name: "Show completed" })).toBeTruthy();
+
+    // User undoes one task (say Done 10), so completedTasks has 10 remaining (Done 0 to 9)
+    const afterUndo = manyCompleted.filter((t) => t.id !== "t-done-10");
+    rerender(
+      <ProjectScreen
+        project={project}
+        openTasks={[task({ id: "t-done-10", title: "Done 10", done: false })]}
+        completedTasks={afterUndo}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    // Now Done 0 is pulled up into view!
+    expect(screen.getByText("Done 0")).toBeTruthy();
+    // And Show completed button is now GONE because total completed <= 10
+    expect(screen.queryByRole("button", { name: "Show completed" })).toBeNull();
+  });
+
+  it("never shows Show completed when total completed <= 10 even if hasMoreCompleted is true", () => {
+    const project = seedProjects[1]!;
+    const fewCompleted = Array.from({ length: 5 }, (_, i) =>
+      task({
+        id: `t-done-${i}`,
+        title: `Done ${i}`,
+        done: true,
+        done_at: `2026-10-23T0${i}:00:00Z`,
+      }),
+    );
+
+    render(
+      <ProjectScreen
+        project={project}
+        progress={{ done: 5, total: 10 }}
+        openTasks={[]}
+        completedTasks={fewCompleted}
+        hasMoreCompleted={true}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(5);
+    expect(screen.queryByRole("button", { name: "Show completed" })).toBeNull();
+  });
+
+  it("clicking Show completed expands list and button disappears when all are shown", async () => {
+    const project = seedProjects[1]!;
+    const twelveCompleted = Array.from({ length: 12 }, (_, i) =>
+      task({
+        id: `t-done-${i}`,
+        title: `Done ${i}`,
+        done: true,
+        done_at: `2026-10-23T${String(i).padStart(2, "0")}:00:00Z`,
+      }),
+    );
+
+    render(
+      <ProjectScreen
+        project={project}
+        progress={{ done: 12, total: 12 }}
+        openTasks={[]}
+        completedTasks={twelveCompleted}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(10);
+    const showCompletedBtn = screen.getByRole("button", {
+      name: "Show completed",
+    });
+    expect(showCompletedBtn).toBeTruthy();
+
+    await userEvent.click(showCompletedBtn);
+    expect(screen.getAllByRole("checkbox")).toHaveLength(12);
+    expect(screen.queryByRole("button", { name: "Show completed" })).toBeNull();
+  });
+
+  it("deduplicates tasks by id to prevent React key collision errors", () => {
+    const project = seedProjects[1]!;
+    const dupTasks = [
+      task({ id: "t-dup", title: "Duplicate task", done: false }),
+      task({ id: "t-dup", title: "Duplicate task", done: false }),
+    ];
+
+    render(
+      <ProjectScreen
+        project={project}
+        openTasks={dupTasks}
+        completedTasks={[]}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    expect(screen.getAllByRole("checkbox")).toHaveLength(1);
+  });
 });
 
 describe("ProjectSheet (PJ-1, T-PJ-01)", () => {
