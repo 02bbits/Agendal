@@ -16,6 +16,7 @@ use App\Services\Tasks\DueDateFallback;
 use App\Services\Tasks\InboxQuery;
 use App\Services\Tasks\OpenTaskLimit;
 use App\Services\Tasks\TaskPatcher;
+use App\Services\Tasks\UpcomingQuery;
 use DateTimeZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,9 +25,13 @@ use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
-    public function index(Request $request, InboxQuery $inboxQuery): JsonResponse
-    {
-        if ($request->query('view') !== 'inbox') {
+    public function index(
+        Request $request,
+        InboxQuery $inboxQuery,
+        UpcomingQuery $upcomingQuery,
+    ): JsonResponse {
+        $view = $request->query('view');
+        if ($view !== 'inbox' && $view !== 'upcoming') {
             throw ValidationException::withMessages([
                 'view' => ['The selected view is invalid.'],
             ]);
@@ -34,7 +39,19 @@ class TaskController extends Controller
 
         $timezone = (string) $request->attributes->get('timezone', 'UTC');
 
-        return response()->json($inboxQuery->for($timezone));
+        if ($view === 'inbox') {
+            return response()->json($inboxQuery->for($timezone));
+        }
+
+        $from = $request->has('from') && $request->query('from') !== ''
+            ? (string) $request->query('from')
+            : null;
+        $days = $request->has('days')
+            ? (int) $request->query('days')
+            : 14;
+        $filter = (string) $request->query('filter', 'all');
+
+        return response()->json($upcomingQuery->for($timezone, $from, $days, $filter));
     }
 
     public function store(
