@@ -16,6 +16,7 @@ import {
   NoteEditor,
   ROUTES,
   t,
+  tc,
   Toast,
   type AccountSettings,
   type Navigate,
@@ -24,6 +25,7 @@ import {
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { submitNote } from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -349,6 +351,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <NoteEditor
             onClose={closeNoteEditor}
             onDraftRestored={() => showToast(t("note.draft_restored"))}
+            onSubmit={submitNote}
+            // ponytail: interim until IM-43's result screen; counts every change, not only created ones
+            onSubmitted={(result) => {
+              closeNoteEditor();
+              showToast(tc("note.made", result.changes.length));
+            }}
           />
         )}
       </AppShell>

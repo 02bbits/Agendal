@@ -61,6 +61,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - The client generates `client_id` (UUID v4) and `written_at` (with offset), and reads `timezone` from `Intl`.
   - It posts to `POST /notes`, shows `note.reading` after 300 ms, then replaces the editor with the RV screen.
   - A network error or `5xx` queues the note ([NU §3](NU-note-understanding.md#3-state-matrix)).
+  - `client_id` is made when the editor opens and kept for retries ([NC-E10](#nc-e10), [NC-E11](#nc-e11)). Changing the text after a failed send gives the next try a new `client_id`, because the server answers a known id with its stored result and ignores the body ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)).
+  - **Until the result screen ([IM-43](../08-project/tasks.md#im-43)) and the offline queue ([IM-53](../08-project/tasks.md#im-53)) exist:** a success clears the draft, closes the editor and shows `note.made_*`. A network error or `5xx` queues nothing: the text stays, editable, with `note.send_failed` and Retry. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
 - **Offline:**
   - The button reads `note.save_offline`.
   - The note is written to IndexedDB with the same fields and status `pending`.
