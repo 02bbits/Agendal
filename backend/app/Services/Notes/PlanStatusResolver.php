@@ -13,7 +13,7 @@ final class PlanStatusResolver
     /** @param list<SkipReason> $skipReasons */
     public function resolve(int $changes, bool $hasDelete, bool $hasTie, array $skipReasons): PlanStatus
     {
-        if ($hasDelete || $hasTie || $changes > (int) config('notes.changes_before_confirm')) {
+        if ($hasDelete || $hasTie || $changes >= (int) config('notes.changes_to_confirm')) {
             return PlanStatus::Confirm;
         }
         if ($changes > 0) {
