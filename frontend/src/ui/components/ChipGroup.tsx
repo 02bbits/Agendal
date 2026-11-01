@@ -13,6 +13,7 @@ export interface ChipGroupProps<V extends string> {
   options: ReadonlyArray<ChipOption<V>>;
   value: V;
   onChange: (value: V) => void;
+  size?: "sm" | "md";
 }
 
 export function ChipGroup<V extends string>({
@@ -21,6 +22,7 @@ export function ChipGroup<V extends string>({
   options,
   value,
   onChange,
+  size = "sm",
 }: ChipGroupProps<V>) {
   const labelId = useId();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -55,6 +57,7 @@ export function ChipGroup<V extends string>({
           return (
             <Chip
               key={option.value}
+              size={size}
               ref={(el) => {
                 refs.current[index] = el;
               }}
