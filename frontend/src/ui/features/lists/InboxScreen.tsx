@@ -161,7 +161,8 @@ export function InboxScreen({
                   >
                     {t("list.show_all")}
                   </Button>
-                ) : showAllCompleted && INBOX_COMPLETED_PAGE < totalCompleted ? (
+                ) : showAllCompleted &&
+                  INBOX_COMPLETED_PAGE < totalCompleted ? (
                   <Button
                     variant="secondary"
                     className="mt-3 w-full"
