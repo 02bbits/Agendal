@@ -1,8 +1,10 @@
+import { now } from "./clock";
+
 /**
  * UUID v7 (RFC 9562): 48-bit ms timestamp from `at`, version 7, variant 10, random rest.
  * Used for client-generated task and note IDs (TK §7).
  */
-export function uuidv7(at: Date): string {
+export function uuidv7(at: Date = now()): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
 

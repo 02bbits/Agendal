@@ -4,14 +4,14 @@ export class ApiRequestError extends Error {
   readonly requestId?: string;
   /** Seconds to wait before trying again, from `Retry-After` or the body's `retry_after` (429). */
   readonly retryAfter?: number;
-  readonly fields?: Record<string, string[] | string>;
+  readonly fields?: Record<string, string[]>;
 
   constructor(
     code: string,
     status: number,
     requestId?: string,
     retryAfter?: number,
-    fields?: Record<string, string[] | string>,
+    fields?: Record<string, string[]>,
   ) {
     super(code);
     this.name = "ApiRequestError";
@@ -28,7 +28,7 @@ export async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
     let errorCode: string | undefined;
     let requestId: string | undefined;
-    let fields: Record<string, string[] | string> | undefined;
+    let fields: Record<string, string[]> | undefined;
     let retryAfter = Number(response.headers.get("Retry-After"));
     try {
       const data = await response.json();
