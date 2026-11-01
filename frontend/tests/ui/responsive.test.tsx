@@ -8,6 +8,7 @@ import {
   Dialog,
   ScreenHeader,
   Sheet,
+  t,
   Toast,
 } from "../../src/ui";
 
@@ -282,6 +283,45 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     ]);
     expect(links[1].getAttribute("aria-current")).toBe("page");
     expect(links[0].textContent).toContain("5");
+  });
+
+  it("renders projects in the sidebar with onNewProject and counts", () => {
+    const onNewProject = vi.fn();
+    render(
+      <AppShell
+        tab="projects"
+        capture={{ onWrite: () => {} }}
+        sidebar={{
+          accountName: "example",
+          counts: { inbox: 5, projects: 6 },
+          projects: (
+            <ul data-testid="sidebar-projects">
+              <li>
+                <span data-href="/projects/p1">SQL Course 4</span>
+              </li>
+              <li>
+                <span data-href="/projects">No project 2</span>
+              </li>
+            </ul>
+          ),
+          onNewProject,
+        }}
+      >
+        <p>content</p>
+      </AppShell>,
+    );
+    const menu = screen.getByRole("navigation", { name: "Menu" });
+    const links = menu.querySelectorAll("li a");
+    expect(links[0].textContent).toContain("5");
+    expect(links[2].textContent).toContain("6");
+    expect(screen.getByTestId("sidebar-projects")).toBeTruthy();
+    expect(screen.getByText("SQL Course 4")).toBeTruthy();
+    const newProjectBtn = screen.getByRole("button", {
+      name: t("project.new"),
+    });
+    expect(newProjectBtn).toBeTruthy();
+    newProjectBtn.click();
+    expect(onNewProject).toHaveBeenCalled();
   });
 
   it("links Search and the account from the sidebar", () => {
