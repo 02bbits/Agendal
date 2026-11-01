@@ -1,6 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
 import { Button } from "../../../components/Button";
-import { CheckIcon } from "../../../components/icons";
 import { NavBar } from "../../../components/NavBar";
 import { t, type CopyKey } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
@@ -22,6 +21,7 @@ export interface TaskDetailsProps {
   deleteAction?: ReactNode;
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;
+  showSchedule?: boolean;
 }
 
 export function TaskDetails({
@@ -32,6 +32,7 @@ export function TaskDetails({
   deleteAction,
   projectsStatus = "ready",
   onRetryProjects,
+  showSchedule = true,
 }: TaskDetailsProps): ReactElement {
   const store = useTaskStore();
   function save(patch: TaskPatch) {
@@ -49,12 +50,12 @@ export function TaskDetails({
         navigate={navigate}
       />
 
-      <WhenSection task={task} onSave={save} />
+      <WhenSection task={task} onSave={save} showSchedule={showSchedule} />
 
-      <h2 className="overline mt-6 mb-3 text-ink-secondary">
+      <h2 className="mt-6 mb-3 text-xs font-semibold uppercase tracking-wider text-ink-secondary">
         {t("task.section_details")}
       </h2>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-2xl border border-separator/40 bg-surface p-4 shadow-xs">
         <ChoiceField<Priority>
           id="task-priority"
           label={t("task.priority")}
@@ -87,15 +88,12 @@ export function TaskDetails({
         />
       </div>
 
-      <div className="sticky bottom-0 mt-6 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <Button
-          variant="primary"
-          size="lg"
-          fullWidth
-          onClick={() => store.toggle(task)}
-        >
-          <CheckIcon size={18} />
-          {t(task.done ? "task.mark_open" : "task.mark_done")}
+      <div className="sticky bottom-0 mt-8 flex items-center justify-end gap-3 border-t border-separator bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <Button variant="secondary" onClick={onBack}>
+          {t("common.cancel")}
+        </Button>
+        <Button variant="primary" onClick={onBack}>
+          {t("common.save_changes")}
         </Button>
       </div>
     </div>

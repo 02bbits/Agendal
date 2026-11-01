@@ -53,8 +53,8 @@ There are **43 functional requirements** in 8 modules. *Must* is needed for v1, 
 
 | Phase | Contains | Gate |
 |---|---|---|
-| **1. MVP** | Every *Must*: accounts, typed notes, note understanding in English and Vietnamese with review and Undo all, tasks, Inbox/Upcoming/Search, projects, offline, install, themes, a responsive layout from phone to desktop, Edit note, week start and time format | All Must acceptance criteria pass; accessibility audit passes; the note corpus passes its accuracy gates |
-| **2. v1.1** | *Should*: voice notes, files as notes, note names, the "Created by the assistant" label, reminders, project rename and colour | All Should criteria pass |
+| **1. MVP** | Every *Must*: accounts, typed notes, note understanding in English and Vietnamese with review and Undo all, tasks, Inbox/Upcoming/Search, projects with rename, offline, install, themes, a responsive layout from phone to desktop, Edit note, week start and time format | All Must acceptance criteria pass; accessibility audit passes; the note corpus passes its accuracy gates |
+| **2. v1.1** | *Should*: voice notes, files as notes, note names, the "Created by the assistant" label, reminders, project colour | All Should criteria pass |
 | **3. Later** | *Could* and ideas: example chips, calendar view, shared projects, account deletion and export, smarter project suggestions | none |
 
 **Platforms.** Mobile first and responsive. Phones 320 to 480 px wide get a centred column up to 600 px; from 768 px a sidebar replaces the tab bar; from 1280 px a task can open in a side panel. On the last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge. The look is **Graphite**: a monochrome grey palette in light and dark (the accent is ink, status colours are muted and always paired with a word or icon).

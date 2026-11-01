@@ -17,9 +17,14 @@ import { ScheduleFields } from "./ScheduleFields";
 export interface WhenSectionProps {
   task: Task;
   onSave: (patch: TaskPatch) => void;
+  showSchedule?: boolean;
 }
 
-export function WhenSection({ task, onSave }: WhenSectionProps): ReactElement {
+export function WhenSection({
+  task,
+  onSave,
+  showSchedule = true,
+}: WhenSectionProps): ReactElement {
   const store = useTaskStore();
   const isReminderPast = reminderPast(
     task,
@@ -35,19 +40,21 @@ export function WhenSection({ task, onSave }: WhenSectionProps): ReactElement {
 
   return (
     <div>
-      <h2 className="overline mt-6 mb-3 text-ink-secondary">
+      <h2 className="mt-6 mb-3 text-xs font-semibold uppercase tracking-wider text-ink-secondary">
         {t("task.section_when")}
       </h2>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 rounded-2xl border border-separator/40 bg-surface p-4 shadow-xs">
         <DueDateField
           value={task.due_date}
           onSave={(due_date) => onSave({ due_date })}
         />
-        <ScheduleFields
-          startTime={task.start_time}
-          endTime={task.end_time}
-          onSave={onSave}
-        />
+        {showSchedule && (
+          <ScheduleFields
+            startTime={task.start_time}
+            endTime={task.end_time}
+            onSave={onSave}
+          />
+        )}
         <ChoiceField<Reminder>
           id="task-reminder"
           label={t("task.reminder")}

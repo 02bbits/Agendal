@@ -24,8 +24,8 @@ export function TaskHeader({
   const store = useTaskStore();
 
   return (
-    <div>
-      <div className="mt-2 flex items-start gap-3">
+    <div className="rounded-2xl border border-separator/40 bg-surface p-4 shadow-xs">
+      <div className="flex items-start gap-3">
         <button
           type="button"
           role="checkbox"
