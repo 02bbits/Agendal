@@ -37,6 +37,7 @@ export default function Page() {
     "loading",
   );
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [tasksVersion, setTasksVersion] = useState<number>(0);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [subtitle, setSubtitle] = useState<string>("");
 
@@ -58,10 +59,14 @@ export default function Page() {
           ...(inboxData?.completed_today ?? []),
         ]);
         setProjectList(projectsData ?? []);
+        setTasksVersion((v) => v + 1);
         const overdueCount = inboxData?.overdue?.length ?? 0;
         const todayCount = inboxData?.today?.length ?? 0;
         setSubtitle(
-          t("list.inbox_subtitle", { overdue: overdueCount, today: todayCount }),
+          t("list.inbox_subtitle", {
+            overdue: overdueCount,
+            today: todayCount,
+          }),
         );
         setStatus("ready");
       })
@@ -97,7 +102,10 @@ export default function Page() {
 
     return () => {
       window.removeEventListener("agendal:task-created", handleTaskCreated);
-      window.removeEventListener("agendal:projects-changed", handleProjectsChanged);
+      window.removeEventListener(
+        "agendal:projects-changed",
+        handleProjectsChanged,
+      );
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleVisibilityChange);
     };
@@ -143,6 +151,7 @@ export default function Page() {
       )}
       {status === "ready" && (
         <TaskStoreProvider
+          key={tasksVersion}
           api={httpTaskApi}
           clock={clock}
           initialTasks={tasks}
