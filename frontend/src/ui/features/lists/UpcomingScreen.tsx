@@ -35,12 +35,18 @@ function writeFilter(filter: UpcomingFilter) {
   }
 }
 
+export type UpcomingViewMode = "grid" | "list";
+
 export interface UpcomingScreenProps {
   accountInitial?: string;
   navigate?: Navigate;
   onNewTask?: () => void;
   subtitle?: string;
   showHeader?: boolean;
+  filter?: UpcomingFilter;
+  onFilterChange?: (filter: UpcomingFilter) => void;
+  showFilter?: boolean;
+  viewMode?: UpcomingViewMode;
 }
 
 /** Upcoming (LV-2): from tomorrow, grouped by day, 14 days at a time, All / Scheduled / Due only. */
@@ -50,9 +56,14 @@ export function UpcomingScreen({
   onNewTask,
   subtitle,
   showHeader = true,
+  filter: controlledFilter,
+  onFilterChange: controlledOnFilterChange,
+  showFilter = true,
+  viewMode = "grid",
 }: UpcomingScreenProps) {
   const store = useTaskStore();
-  const [filter, setFilter] = useState<UpcomingFilter>(readFilter);
+  const [internalFilter, setInternalFilter] = useState<UpcomingFilter>(readFilter);
+  const filter = controlledFilter !== undefined ? controlledFilter : internalFilter;
   const [pages, setPages] = useState(1);
   const tomorrow = addDays(store.today, 1);
 
@@ -73,7 +84,10 @@ export function UpcomingScreen({
     upcomingPage(store.tasks, tomorrow, "all").days.length > 0;
 
   const choose = (next: UpcomingFilter) => {
-    setFilter(next);
+    if (controlledFilter === undefined) {
+      setInternalFilter(next);
+    }
+    controlledOnFilterChange?.(next);
     setPages(1);
     writeFilter(next);
   };
@@ -130,7 +144,7 @@ export function UpcomingScreen({
         </ScreenHeader>
       )}
 
-      {!showHeader && (
+      {showFilter && !showHeader && (
         <div className="mb-6">
           <ChipGroup
             label={t("list.filter_label")}
@@ -171,26 +185,35 @@ export function UpcomingScreen({
           <EmptyState title={t("list.upcoming_empty")} />
         )
       ) : (
-        <>
-          {loaded.days.map((day) => (
-            <Section
-              key={day.date}
-              title={formatDay(day.date, store.today)}
-              count={day.tasks.length}
-            >
-              {day.tasks.map((x) => (
-                <TaskRow
-                  key={x.id}
-                  task={x}
-                  project={store.projectOf(x)}
-                  today={store.today}
-                  timeFormat={store.timeFormat}
-                  onToggle={store.toggle}
-                  navigate={navigate}
-                />
-              ))}
-            </Section>
-          ))}
+        <div className="space-y-6">
+          <div
+            className={
+              viewMode === "list"
+                ? "space-y-4"
+                : "grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4 items-start"
+            }
+          >
+            {loaded.days.map((day) => (
+              <Section
+                key={day.date}
+                title={formatDay(day.date, store.today)}
+                count={day.tasks.length}
+                className={viewMode === "list" ? undefined : "mb-0"}
+              >
+                {day.tasks.map((x) => (
+                  <TaskRow
+                    key={x.id}
+                    task={x}
+                    project={store.projectOf(x)}
+                    today={store.today}
+                    timeFormat={store.timeFormat}
+                    onToggle={store.toggle}
+                    navigate={navigate}
+                  />
+                ))}
+              </Section>
+            ))}
+          </div>
           {loaded.nextFrom && (
             <Button
               variant="secondary"
@@ -200,7 +223,7 @@ export function UpcomingScreen({
               {t("list.load_more")}
             </Button>
           )}
-        </>
+        </div>
       )}
     </div>
   );
