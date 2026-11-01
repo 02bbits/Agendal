@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { submitNote } from "@/lib/noteApi";
+import {
+  forgetNotes,
+  getNote,
+  recallNote,
+  rememberNote,
+  submitNote,
+} from "@/lib/noteApi";
+import type { NoteResult } from "@/ui";
 import done from "../../../docs/07-architecture/contracts/fixtures/note-result-done.json";
 import locked from "../../../docs/07-architecture/contracts/fixtures/error-locked.json";
 
@@ -88,18 +95,60 @@ describe("submitNote (IM-42)", () => {
     expect(await submitNote("x", ID)).toEqual({ error: "note.send_failed" });
   });
 
-  it("answers from the IM-02 fixture, without a request, when the mock is on", async () => {
+  it("answers from the IM-02 fixture when the mock is on, making its tasks for real", async () => {
     vi.stubEnv("NEXT_PUBLIC_NOTES_MOCK", "1");
     vi.useFakeTimers();
+    fetchMock.mockImplementation(async () => json(201, {}));
 
     const pending = submitNote("call mum", ID);
     await vi.advanceTimersByTimeAsync(600);
-    const result = await pending;
+    const result = (await pending) as NoteResult;
 
-    expect(fetchMock).not.toHaveBeenCalled();
     expect(result).toMatchObject({
       note: { client_id: ID, text: "call mum", status: "done" },
-      changes: done.changes,
     });
+    expect(result.changes.map((c) => c.task.title)).toEqual([
+      "SQL quiz",
+      "HCI reading",
+      "Buy printer ink",
+    ]);
+    // One POST /tasks per task (their ids are fixed, so a repeat is a replay), and no POST /notes
+    const posts = fetchMock.mock.calls.map(([url, init]) => [url, init.method]);
+    expect(posts).toEqual([
+      ["/api/v1/tasks", "POST"],
+      ["/api/v1/tasks", "POST"],
+      ["/api/v1/tasks", "POST"],
+    ]);
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
+    expect(body).toMatchObject({
+      id: result.changes[0]!.task.id,
+      title: "SQL quiz",
+      project_id: null,
+    });
+  });
+
+  it("GET /notes/{id} returns the result, and 404 is an ApiRequestError", async () => {
+    fetchMock.mockResolvedValueOnce(json(200, done));
+    expect(await getNote("n1")).toEqual(done);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1");
+
+    fetchMock.mockResolvedValueOnce(
+      json(404, { error: { code: "error.not_found" } }),
+    );
+    await expect(getNote("n2")).rejects.toMatchObject({ status: 404 });
+  });
+
+  it("the mock answers GET /notes/{id} with the id that was asked for", async () => {
+    vi.stubEnv("NEXT_PUBLIC_NOTES_MOCK", "1");
+    fetchMock.mockImplementation(async () => json(200, {}));
+    expect((await getNote("abc")).note.id).toBe("abc");
+  });
+
+  it("keeps a result made in this session until it is forgotten (SC-19)", () => {
+    const made = done as unknown as NoteResult;
+    rememberNote(made);
+    expect(recallNote(made.note.id)).toBe(made);
+    forgetNotes();
+    expect(recallNote(made.note.id)).toBeUndefined();
   });
 });

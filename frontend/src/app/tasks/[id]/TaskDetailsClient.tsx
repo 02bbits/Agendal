@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
+import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
-  Button,
   TaskDetails,
   TaskStoreProvider,
   t,
@@ -20,25 +20,6 @@ export const SKELETON_DELAY_MS = 300;
 
 interface ClientProps {
   id: string;
-}
-
-function PageMessage({
-  message,
-  actionLabel,
-  onAction,
-}: {
-  message: string;
-  actionLabel: string;
-  onAction: () => void;
-}): ReactElement {
-  return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-      <p className="text-body text-ink-secondary">{message}</p>
-      <Button variant="secondary" onClick={onAction}>
-        {actionLabel}
-      </Button>
-    </div>
-  );
 }
 
 function TaskDetailsContainer({
