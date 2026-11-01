@@ -46,8 +46,8 @@ const SETTING_FIELDS = {
 
 const THEME_KEY = "agendal.theme";
 const PAGE_COLOR = {
-  light: "#f6f5f1",
-  dark: "#121211",
+  light: "#f2f2f2",
+  dark: "#1a1a1a",
 } as const;
 
 // Screens that work signed out. A signed-in user on the first three goes to Inbox; a reset

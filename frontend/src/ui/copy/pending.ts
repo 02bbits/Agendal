@@ -21,6 +21,10 @@ export const pending = {
   "note.capture_open": "Write a note",
   "note.mic": "Dictate a note",
   "note.text_label": "Your note",
+  "note.new_title": "New note",
+  "note.editor_hint":
+    "Write it the way you'd say it. Agendal finds the tasks, dates, times and projects, then shows you everything it made.",
+  "note.examples_title": "Try writing",
   "note.example_1": "sql quiz monday 9am, email the group tonight",
   "note.example_2": "done email the group",
   "note.example_3": "move gym to sunday",

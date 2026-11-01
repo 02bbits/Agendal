@@ -92,13 +92,16 @@ describe("NoteEditor (IM-41)", () => {
     const onClose = vi.fn();
     render(<NoteEditor onClose={onClose} />);
     await userEvent.type(field(), "  ");
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(onClose).toHaveBeenCalledOnce();
     expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it.each([
-    ["×", () => userEvent.click(screen.getByRole("button", { name: "Close" }))],
+    [
+      "×",
+      () => userEvent.click(screen.getByRole("button", { name: "Cancel" })),
+    ],
     ["Escape", () => userEvent.keyboard("{Escape}")],
   ])(
     "%s with text asks first, and Keep editing goes back to the text",
@@ -126,7 +129,7 @@ describe("NoteEditor (IM-41)", () => {
     const onClose = vi.fn();
     const { unmount } = render(<NoteEditor onClose={onClose} />);
     await userEvent.type(field(), "unsent");
-    await userEvent.click(screen.getByRole("button", { name: "Close" }));
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));
     expect(clearDraft).toHaveBeenCalledOnce();
     expect(onClose).toHaveBeenCalledOnce();

@@ -102,13 +102,13 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
         name: "Main",
       }).parentElement!;
       await userEvent.click(opener(bar));
-      const editor = screen.getByRole("dialog", { name: "Write a note" });
+      const editor = screen.getByRole("dialog", { name: "New note" });
       expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
         document.activeElement,
       );
       expect(router.push).not.toHaveBeenCalled();
       await userEvent.click(
-        within(editor).getByRole("button", { name: "Close" }),
+        within(editor).getByRole("button", { name: "Cancel" }),
       );
       expect(screen.queryByRole("dialog")).toBeNull();
     },
