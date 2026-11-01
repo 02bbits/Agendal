@@ -77,7 +77,7 @@ final class NoteSplitter
                         continue;
                     }
                     $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment)
-                        || (NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($current)) && ! $this->startsNewTask($fragment, $projects)));
+                        || ($this->opensList($current) && ! $this->startsNewTask($fragment, $projects)));
                     if ($joins) {
                         $current .= $comma.' '.$fragment;
                     } else {
@@ -115,6 +115,19 @@ final class NoteSplitter
         return '~('.$afterDay.'(?:'.$commas.')|(?:'.$commas.')(?!\d|\s*\d{4}(?!\d)))~iu';
     }
 
+    /** A task verb ("buy milk, eggs") or a command verb ("move report, gym to friday") opens a comma list. */
+    private function opensList(string $item): bool
+    {
+        $item = NoteVocabulary::withoutLeadIn($item);
+
+        return NoteVocabulary::startsWithVerb($item) || $this->startsWithCommand($item);
+    }
+
+    private function startsWithCommand(string $text): bool
+    {
+        return NoteVocabulary::startsWith($text, 'complete_command', 'move_command', 'delete_command');
+    }
+
     /**
      * The fragment starts a task of its own (NU §2.2): it opens with a date, time, priority or repeat word
      * ("26 Oct meeting", "mai gọi mẹ"), a verb, a command or a skip prefix, or it names a project, one of the
@@ -129,9 +142,9 @@ final class NoteSplitter
         if (preg_match('~^(?:'.NoteVocabulary::modifierPattern().')~iu', $text) === 1) {
             return true;
         }
-        $commands = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command', 'skip_prefix']));
         if (NoteVocabulary::startsWithVerb($text)
-            || preg_match('~^(?:'.$commands.')(?![\p{L}\p{N}_])~iu', $text) === 1
+            || $this->startsWithCommand($text)
+            || NoteVocabulary::startsWith($text, 'skip_prefix')
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')$~iu', $text) === 1) {
             return true;
         }

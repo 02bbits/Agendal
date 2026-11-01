@@ -17,6 +17,14 @@ final class CommandMatcher
 {
     private const MINUTES_PER_DAY = 1440;
 
+    private const DAYS_PER_WEEK = 7;
+
+    /** @var list<string>|null */
+    private ?array $stopWords = null;
+
+    /** @var array<string, mixed> what each command text read as, by reading and context; see once() */
+    private array $read = [];
+
     public function __construct(
         private FieldExtractor $extractor,
         private NoteDateParser $dates,
@@ -33,30 +41,40 @@ final class CommandMatcher
      */
     public function words(string $text, NoteContext $context): array
     {
+        return $this->once('words', $text, $context, fn (): array => $this->readWords($text, $context));
+    }
+
+    /** @return list<string> */
+    private function readWords(string $text, NoteContext $context): array
+    {
         // The verb goes first, so a lead-in after it ("done remind me to call mom") starts the text the extractor reads.
-        $starts = implode('|', array_map(NoteVocabulary::phrases(...), ['complete_command', 'move_command', 'delete_command']));
-        $subject = (string) preg_replace('~^\s*(?:'.$starts.')(?![\p{L}\p{N}_])[\p{P}\s]*~iu', '', $this->subject($text, $context));
-        $title = $this->extractor->extract($subject, $context)->title;
+        $title = $this->extractor->extract($this->withoutVerb($this->subject($text, $context)), $context)->title;
         $ends = NoteVocabulary::phrases('complete_suffix').'|'.NoteVocabulary::phrases('complete_suffix_bare');
         $title = (string) preg_replace('~(?<![\p{L}\p{N}_])(?:'.$ends.')[\p{P}\s]*$~iu', ' ', $title);
 
-        return array_values(array_unique(array_diff($this->tokens($title), $this->stopWords())));
+        return array_values(array_unique(array_diff(NoteVocabulary::tokens($title), $this->stopWords())));
     }
 
     /**
-     * Repeat and priority words of the command ("weekly", "urgent"). The extractor reads them as fields, so they
-     * are no meaningful words, yet a title that has them is the closer match: "move weekly report" means
-     * "Weekly report" over "Monthly report", and still matches "Report".
+     * The words the extractor read as fields in the task's name: repeat, priority, date and time ("weekly",
+     * "urgent", "sun" in "sun lotion", "wed" in "wed planning"). They are no meaningful words, yet a title that has
+     * them is the closer match: "move weekly report" means "Weekly report" over "Monthly report", "done sun lotion"
+     * means "Sun lotion" over "Lotion samples", and both still match without the word.
      *
      * @return list<string>
      */
     private function modifierWords(string $text, NoteContext $context): array
     {
-        $categories = ['priority_high', 'priority_low', 'repeat_prefix', ...array_map(fn (string $key): string => 'repeat:'.$key, array_keys(NoteVocabulary::family('repeat')))];
-        $modifiers = $this->tokens(implode(' ', array_merge(...array_map(NoteVocabulary::values(...), $categories))));
-        $present = array_intersect($this->tokens($this->subject($text, $context)), $modifiers);
+        return $this->once('modifiers', $text, $context, fn (): array => $this->readModifierWords($text, $context));
+    }
 
-        return array_values(array_unique(array_diff($present, $this->words($text, $context), $this->stopWords())));
+    /** @return list<string> */
+    private function readModifierWords(string $text, NoteContext $context): array
+    {
+        $ends = NoteVocabulary::phrases('complete_suffix').'|'.NoteVocabulary::phrases('complete_suffix_bare');
+        $name = (string) preg_replace('~(?<![\p{L}\p{N}_])(?:'.$ends.')[\p{P}\s]*$~iu', ' ', $this->withoutVerb($this->subject($text, $context)));
+
+        return array_values(array_unique(array_diff(NoteVocabulary::tokens($name), $this->words($text, $context), $this->stopWords())));
     }
 
     /**
@@ -67,10 +85,28 @@ final class CommandMatcher
      */
     public function score(array $words, string $title, array $modifiers = []): float
     {
-        $found = $this->found($words, $title, $modifiers);
-        $counted = count($words) + $found - count(array_intersect($words, $this->tokens($title)));
+        return $this->closeness($words, $modifiers, NoteVocabulary::tokens($title))['score'];
+    }
 
-        return $counted === 0 ? 0.0 : $found / $counted;
+    /**
+     * How close a title is: the score, words found, and title words the command doesn't name, from one read of it.
+     *
+     * @param  list<string>  $words
+     * @param  list<string>  $modifiers
+     * @param  list<string>  $tokens  the title's words
+     * @return array{score: float, found: int, extra: int}
+     */
+    private function closeness(array $words, array $modifiers, array $tokens): array
+    {
+        $named = count(array_intersect($words, $tokens));
+        $found = $named + count(array_intersect($modifiers, $tokens));
+        $counted = count($words) + $found - $named;
+
+        return [
+            'score' => $counted === 0 ? 0.0 : $found / $counted,
+            'found' => $found,
+            'extra' => count(array_unique(array_diff($tokens, $words, $modifiers, $this->stopWords()))),
+        ];
     }
 
     /**
@@ -87,17 +123,120 @@ final class CommandMatcher
         }
         $best = [$ranked[0]['score'], $ranked[0]['found'], $ranked[0]['extra']];
         $tied = array_column(array_filter($ranked, fn (array $row): bool => [$row['score'], $row['found'], $row['extra']] === $best), 'task');
-        $tiedIds = count($tied) > 1 ? array_slice(array_column($tied, 'id'), 0, (int) config('notes.tie_choices')) : [];
-        // The first tied task the command would change: "move report to friday" means the Report not yet due then.
-        foreach ($tied as $task) {
-            $change = $this->change($text, $action, $task, $context);
-            if ($change !== null) {
-                return CommandMatch::change($change, $tiedIds);
+        $changes = array_filter(array_map(fn (array $task): ?TaskChange => $this->change($text, $action, $task, $context), $tied));
+        $changing = array_keys($changes);
+        if ($changing === []) {
+            // Every match already has the new date and time: nothing to change, like a task already done.
+            return CommandMatch::skip(SkipReason::AlreadyDone);
+        }
+        // A tie always asks (NU-E11). The choices are the tasks the command would change first, so the preselected
+        // one ("move report to friday" means the Report not yet due then) is always listed, soonest due first.
+        $listed = array_slice(array_values(array_unique([...$changing, ...array_keys($tied)])), 0, (int) config('notes.tie_choices'));
+        sort($listed);
+        $tiedIds = count($tied) > 1 ? array_map(fn (int $index): string => $tied[$index]['id'], $listed) : [];
+
+        return CommandMatch::change($changes[$changing[0]], $tiedIds);
+    }
+
+    /**
+     * Each task a command names: "move report and gym to friday" moves both, "move report to friday and gym to
+     * monday" moves each to its own when. A title that has the joiner itself ("Buy milk and eggs") keeps the
+     * command whole, and two names that find the same task change it once.
+     *
+     * @param  list<TaskRow>  $openTasks
+     * @param  list<TaskRow>  $doneTasks
+     * @return list<CommandMatch>
+     */
+    public function matchEach(string $text, CommandAction $action, array $openTasks, array $doneTasks, NoteContext $context): array
+    {
+        [$pieces, $command, $ownWhen] = $this->clauses($text, $context);
+        $matches = [];
+        for ($first = 0; $first < count($pieces); $first = $last + 2) {
+            // The longest run of names one joined title holds whole ("buy milk and eggs" of "Buy milk and eggs"). A
+            // run ends at the first name with its own when: "… eggs to friday and May by 2 days" leaves May apart.
+            $end = $first;
+            while ($end < count($pieces) - 1 && ! $ownWhen($pieces[$end])) {
+                $end += 2;
+            }
+            for ($last = $end; $last > $first; $last -= 2) {
+                if ($this->namesJoinedTitle($command(implode('', array_slice($pieces, $first, $last - $first + 1))), $openTasks, $context)) {
+                    break;
+                }
+            }
+            $match = $this->match($command(implode('', array_slice($pieces, $first, $last - $first + 1))), $action, $openTasks, $doneTasks, $context);
+            $matches[$match->change->taskId ?? 'item '.count($matches)] = $match;
+        }
+
+        return array_values($matches);
+    }
+
+    /**
+     * The meaningful words of the whole command and of each task it names, to fetch candidates for every one
+     * ("move report and gym to friday" needs Gym among the candidates even when many tasks say Report).
+     *
+     * @return list<list<string>>
+     */
+    public function candidateWords(string $text, NoteContext $context): array
+    {
+        [$pieces, $command] = $this->clauses($text, $context);
+        $names = array_filter($pieces, fn (int $index): bool => $index % 2 === 0, ARRAY_FILTER_USE_KEY);
+
+        return array_values(array_unique(array_filter([$this->words($text, $context), ...array_map(fn (string $name): array => $this->words($command($name), $context), $names)]), SORT_REGULAR));
+    }
+
+    /**
+     * The names after the verb, with the joiners between them at the odd indexes, and the command each name (or run
+     * of names) makes: a name with its own when ("report to friday", "gym by 2 days") keeps it; the others take the
+     * when of the last name that has one. A piece of only date, time or priority words ("to friday, 9am") stays
+     * with the name before it.
+     *
+     * @return array{0: list<string>, 1: callable(string): string, 2: callable(string): bool} pieces, command, has its own when
+     */
+    private function clauses(string $text, NoteContext $context): array
+    {
+        $body = $this->withoutVerb($text);
+        $verb = substr($text, 0, strlen($text) - strlen($body));
+        $pieces = [];
+        foreach (preg_split(self::joiner(), $body, flags: PREG_SPLIT_DELIM_CAPTURE) ?: [$body] as $index => $piece) {
+            // Only what the extractor reads leaves no title: "9am" joins the name before it, "May" stays a name.
+            if ($index % 2 === 0 && $pieces !== [] && $this->extractor->extract($piece, $context)->title === '') {
+                $joiner = (string) array_pop($pieces);
+                $pieces[count($pieces) - 1] .= $joiner.$piece;
+
+                continue;
+            }
+            $pieces[] = $piece;
+        }
+        $ownWhen = fn (string $name): bool => $this->target->split($verb.$name, $context) !== null || $this->target->shift($verb.$name) !== null;
+        $tail = '';
+        foreach (array_reverse($pieces, true) as $index => $piece) {
+            if ($index % 2 === 0 && $ownWhen($piece)) {
+                $tail = substr($verb.$piece, strlen($this->subject($verb.$piece, $context)));
+
+                break;
             }
         }
 
-        // Every match already has the new date and time: nothing to change, like a task already done.
-        return CommandMatch::skip(SkipReason::AlreadyDone);
+        return [array_values($pieces), fn (string $name): string => $ownWhen($name) ? $verb.$name : $verb.$name.$tail, $ownWhen];
+    }
+
+    private static function joiner(): string
+    {
+        return '~(\s*(?:'.NoteVocabulary::phrases('comma').')\s*|\s+(?:'.NoteVocabulary::phrases('command_joiner').')\s+)~iu';
+    }
+
+    /**
+     * The best open task for the command, changed or not, has a joiner in its title and holds all the command's
+     * words: "Report and gym", already due Friday, is what "move report and gym to friday" names.
+     *
+     * @param  list<TaskRow>  $openTasks
+     */
+    private function namesJoinedTitle(string $command, array $openTasks, NoteContext $context): bool
+    {
+        $words = $this->words($command, $context);
+        $title = $this->ranked($words, $this->modifierWords($command, $context), $openTasks)[0]['task']['title'] ?? null;
+
+        return $title !== null && preg_match(self::joiner(), ' '.$title.' ') === 1 && array_diff($words, NoteVocabulary::tokens($title)) === [];
     }
 
     /**
@@ -114,10 +253,12 @@ final class CommandMatcher
     {
         $ranked = [];
         foreach ($tasks as $task) {
-            $open = ! ($task['done'] ?? false) && ($task['deleted_at'] ?? null) === null;
-            $score = $this->score($words, $task['title'], $modifiers);
-            if ($open && $score >= (float) config('notes.match_threshold')) {
-                $ranked[] = ['task' => $task, 'score' => $score, 'found' => $this->found($words, $task['title'], $modifiers), 'extra' => $this->extra($words, $task['title'], $modifiers)];
+            if (($task['done'] ?? false) || ($task['deleted_at'] ?? null) !== null) {
+                continue;
+            }
+            $closeness = $this->closeness($words, $modifiers, NoteVocabulary::tokens($task['title']));
+            if ($closeness['score'] >= (float) config('notes.match_threshold')) {
+                $ranked[] = ['task' => $task, ...$closeness];
             }
         }
         usort($ranked, fn (array $a, array $b): int => ($b['score'] <=> $a['score'])
@@ -127,28 +268,6 @@ final class CommandMatcher
             ?: strcmp($a['task']['id'], $b['task']['id']));
 
         return $ranked;
-    }
-
-    /**
-     * @param  list<string>  $words
-     * @param  list<string>  $modifiers
-     */
-    private function found(array $words, string $title, array $modifiers): int
-    {
-        $tokens = $this->tokens($title);
-
-        return count(array_intersect($words, $tokens)) + count(array_intersect($modifiers, $tokens));
-    }
-
-    /**
-     * Meaningful title words the command doesn't name.
-     *
-     * @param  list<string>  $words
-     * @param  list<string>  $modifiers
-     */
-    private function extra(array $words, string $title, array $modifiers): int
-    {
-        return count(array_unique(array_diff($this->tokens($title), $words, $modifiers, $this->stopWords())));
     }
 
     private function dueOrder(?string $a, ?string $b): int
@@ -163,8 +282,7 @@ final class CommandMatcher
 
     /**
      * NU-E12, NU-E29: a done task that matches → already done; a reschedule → a new task with the target
-     * date; a delete with a deadline → that task; otherwise complete or delete → not found (Q17: never a new
-     * task named "Delete …").
+     * date; a complete or delete → not found (Q17: never a new task named "Delete …").
      *
      * @param  list<string>  $words
      * @param  list<string>  $modifiers
@@ -177,20 +295,15 @@ final class CommandMatcher
                 return CommandMatch::skip(SkipReason::AlreadyDone);
             }
         }
-        // "cancel netflix before the 10th" or "drop the kids at school" with no such task is a task to do, not a
-        // lost command: a deadline or a place belongs to an action in the world, which a delete never needs.
-        if ($action === CommandAction::Delete && ($this->hasDeadline($text, $context) || $this->hasPlace($text))) {
-            return CommandMatch::newTask($this->extractor->extract($text, $context));
-        }
-        if ($action !== CommandAction::Reschedule) {
+        // A move by an amount ("lùi standup 30 phút") has no date to give a new task.
+        if ($action !== CommandAction::Reschedule || $this->shift($text, $context) !== null) {
             return CommandMatch::skip(SkipReason::NotFound);
         }
-        // The subject names the task; its own dates and times are the old ones, so only the target's count.
-        $withoutVerb = (string) preg_replace('~^(?:'.NoteVocabulary::phrases('move_command').')\s+~iu', '', trim($this->subject($text, $context)));
-        $fields = $this->extractor->extract($withoutVerb, $context);
-        $at = $this->extractor->extract($fields->title.' '.$this->when($text, $context), $context);
+        // The subject names the task; the target's date wins, and its time too when it gives one (NU-E35).
+        $subject = $this->withoutVerb($this->subject($text, $context));
+        $at = $this->extractor->extract($this->extractor->extract($subject, $context)->title.' '.$this->when($text, $context), $context);
 
-        return CommandMatch::newTask($fields->withWhen($at));
+        return CommandMatch::newTask($this->extractor->withWhen($subject, $at, $context));
     }
 
     /**
@@ -217,10 +330,31 @@ final class CommandMatcher
      */
     private function reschedule(string $text, array $task, NoteContext $context): ?TaskChange
     {
+        $shift = $this->shift($text, $context);
+        $fields = $shift === null ? $this->toWhen($text, $task, $context) : $this->byAmount($shift, $task, $context);
+        if ($fields === []) {
+            return null;
+        }
+        $label = isset($fields['due_date'])
+            ? __('notes.label.due', ['date' => $this->labelDate($fields['due_date']), 'was' => $this->was($task['due_date'] ?? null, $context)])
+            : $task['title'];
+
+        return new TaskChange($task['id'], $label, fields: $fields);
+    }
+
+    /**
+     * "move X to <when>": the fields that change.
+     *
+     * @param  TaskRow  $task
+     * @return array{due_date?: string, start_time?: string, end_time?: ?string}
+     */
+    private function toWhen(string $text, array $task, NoteContext $context): array
+    {
         $when = $this->when($text, $context);
         $at = $this->extractor->extract($when, $context);
         [$oldDate, $oldStart, $oldEnd] = [$task['due_date'] ?? null, $task['start_time'] ?? null, $task['end_time'] ?? null];
-        $statedDate = $this->dates->parse($when, $context, $at->startTime)->date ?? $this->times->parse($when, $context)->date;
+        $parsed = $this->dates->parse($when, $context, $at->startTime);
+        $statedDate = $this->inTaskWeek($when, $parsed, $oldDate, $context) ?? $parsed->date ?? $this->times->parse($when, $context)->date;
         $newDate = $oldDate === null ? $at->dueDate : $statedDate;
         $fields = [];
         if ($newDate !== null && $newDate !== $oldDate) {
@@ -235,14 +369,68 @@ final class CommandMatcher
                 $fields['end_time'] = $newEnd;
             }
         }
-        if ($fields === []) {
+
+        return $fields;
+    }
+
+    /**
+     * "lùi standup 30 phút", "push dentist by a week": the amount is added to the task's own date and time, and
+     * the end moves with the start (NU-E35). Minutes and hours need a task time; a task without a date counts
+     * from today.
+     *
+     * @param  array{subject: string, unit: string, amount: int}  $shift
+     * @param  TaskRow  $task
+     * @return array{due_date?: string, start_time?: string, end_time?: ?string}
+     */
+    private function byAmount(array $shift, array $task, NoteContext $context): array
+    {
+        [$oldDate, $oldStart, $oldEnd] = [$task['due_date'] ?? null, $task['start_time'] ?? null, $task['end_time'] ?? null];
+        $date = $oldDate ?? $context->today()->format('Y-m-d');
+        $step = sprintf('%+d %s', $shift['amount'], $shift['unit']);
+        $underADay = (new DateTimeImmutable('@0'))->modify('+1 '.$shift['unit'])->getTimestamp() < self::MINUTES_PER_DAY * 60;
+        if (! $underADay) {
+            $new = ['due_date' => (new DateTimeImmutable($date))->modify($step)->format('Y-m-d')];
+        } elseif ($oldStart === null) {
+            return [];
+        } else {
+            $at = (new DateTimeImmutable($date.' '.$oldStart))->modify($step);
+            $new = ['due_date' => $at->format('Y-m-d'), 'start_time' => $at->format('H:i')];
+            if ($oldEnd !== null) {
+                $new['end_time'] = $this->movedEnd($oldStart, $oldEnd, $new['start_time']);
+            }
+        }
+        $old = ['due_date' => $oldDate, 'start_time' => $oldStart, 'end_time' => $oldEnd];
+
+        return array_filter($new, fn (?string $value, string $key): bool => $value !== $old[$key], ARRAY_FILTER_USE_BOTH);
+    }
+
+    /**
+     * A bare weekday ("dời họp sang thứ 3") means that day in the week of the task's own date, so a task on Thu 29
+     * moves back to Tue 27 and one on Mon 26 moves on to Wed 28. Null when the target has more ("thứ 3 tuần sau",
+     * "next tuesday"), the task has no future date, or that day is not after today: those follow NU-E2 from today.
+     */
+    private function inTaskWeek(string $when, ParsedDate $parsed, ?string $oldDate, NoteContext $context): ?string
+    {
+        $today = $context->today()->format('Y-m-d');
+        if ($oldDate === null || $parsed->date === null || count($parsed->spans) !== 1 || $oldDate <= $today) {
             return null;
         }
-        $label = isset($fields['due_date'])
-            ? __('notes.label.due', ['date' => $this->labelDate($fields['due_date']), 'was' => $this->was($oldDate, $context)])
-            : $task['title'];
+        [$offset, $length] = $parsed->spans[0];
+        $rest = substr_replace($when, str_repeat(' ', $length), $offset, $length);
+        foreach ($this->times->parse($when, $context)->spans as [$timeOffset, $timeLength]) {
+            $rest = substr_replace($rest, str_repeat(' ', $timeLength), $timeOffset, $timeLength);
+        }
+        $weekday = '~^(?:'.implode('|', NoteVocabulary::family('weekday')).')$~iu';
+        if (preg_replace('~[\s\p{P}]+~u', '', $rest) !== '' || preg_match($weekday, trim(substr($when, $offset, $length))) !== 1) {
+            return null;
+        }
+        $first = $context->weekStart->firstDay();
+        $old = new DateTimeImmutable($oldDate);
+        $target = (int) (new DateTimeImmutable($parsed->date))->format('w');
+        $week = fn (int $day): int => ($day - $first + self::DAYS_PER_WEEK) % self::DAYS_PER_WEEK;
+        $date = $old->modify('-'.$week((int) $old->format('w')).' days')->modify('+'.$week($target).' days')->format('Y-m-d');
 
-        return new TaskChange($task['id'], $label, fields: $fields);
+        return $date <= $today ? null : $date;
     }
 
     private function movedEnd(string $oldStart, string $oldEnd, string $newStart): ?string
@@ -264,30 +452,31 @@ final class CommandMatcher
         return $hour * 60 + $minute;
     }
 
-    /** A deadline word ("before", "trước") followed by a date or time. */
-    private function hasDeadline(string $text, NoteContext $context): bool
+    /** "move: dentist to friday" → "dentist to friday"; the command verb and what sets it off. */
+    private function withoutVerb(string $text): string
     {
-        preg_match_all('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('deadline_prefix').')\s+~iu', $text, $matches, PREG_OFFSET_CAPTURE);
-        foreach ($matches[0] as [$word, $offset]) {
-            $after = substr($text, $offset + strlen($word));
-            if ($this->dates->parse($after, $context, null)->date !== null || $this->times->parse($after, $context)->start !== null) {
-                return true;
-            }
-        }
+        // A direction right after a move verb ("push back", "dời lên", "lùi lại") belongs to the verb, not the name.
+        $direction = NoteVocabulary::phrases('shift_later').'|'.NoteVocabulary::phrases('shift_earlier');
+        $move = '(?:'.NoteVocabulary::phrases('move_command').')(?:\s+(?:'.$direction.')(?![\p{L}\p{N}_]))*';
+        $verbs = $move.'|'.NoteVocabulary::phrases('complete_command').'|'.NoteVocabulary::phrases('delete_command');
 
-        return false;
-    }
-
-    /** A place word followed by a place, not a time: "at school", "ở nhà", but not "at 3pm" or "at noon". */
-    private function hasPlace(string $text): bool
-    {
-        return preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('place_prefix').')\s+(?!'.NoteVocabulary::modifierPattern().')\p{L}~iu', $text) === 1;
+        return (string) preg_replace('~^\s*(?:'.$verbs.')(?![\p{L}\p{N}_])[\p{P}\s]*~iu', '', $text);
     }
 
     /** "move 9am standup to 10am" → "move 9am standup"; the whole text when there is no target. */
     private function subject(string $text, NoteContext $context): string
     {
-        return $this->target->split($text, $context)['subject'] ?? $text;
+        return $this->target->split($text, $context)['subject'] ?? $this->target->shift($text)['subject'] ?? $text;
+    }
+
+    /**
+     * The amount of a move by an amount; null when the command names a when ("move standup to in 2 hours").
+     *
+     * @return array{subject: string, unit: string, amount: int}|null
+     */
+    private function shift(string $text, NoteContext $context): ?array
+    {
+        return $this->target->split($text, $context) === null ? $this->target->shift($text) : null;
     }
 
     /** "move 9am standup to 10am" → "10am"; empty when there is no target. */
@@ -296,10 +485,29 @@ final class CommandMatcher
         return $this->target->split($text, $context)['when'] ?? '';
     }
 
+    /**
+     * A command is read many times while its tasks are ranked and its names grouped; each reading runs once per text
+     * and context.
+     *
+     * @template T
+     *
+     * @param  callable(): T  $read
+     * @return T
+     */
+    private function once(string $reading, string $text, NoteContext $context, callable $read): mixed
+    {
+        $key = $reading.'|'.$context->key().'|'.$text;
+        if (! array_key_exists($key, $this->read)) {
+            $this->read[$key] = $read();
+        }
+
+        return $this->read[$key];
+    }
+
     /** @return list<string> */
     private function stopWords(): array
     {
-        return array_map(mb_strtolower(...), [...NoteVocabulary::values('stop_word'), ...NoteVocabulary::values('reschedule_target')]);
+        return $this->stopWords ??= array_map(mb_strtolower(...), [...NoteVocabulary::values('stop_word'), ...NoteVocabulary::values('reschedule_target')]);
     }
 
     private function was(?string $date, NoteContext $context): string
@@ -315,11 +523,5 @@ final class CommandMatcher
     private function labelDate(string $date): string
     {
         return (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
-    }
-
-    /** @return list<string> */
-    private function tokens(string $text): array
-    {
-        return preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), flags: PREG_SPLIT_NO_EMPTY) ?: [];
     }
 }

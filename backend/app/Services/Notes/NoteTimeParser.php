@@ -18,11 +18,12 @@ final class NoteTimeParser
 
     public function parse(string $text, NoteContext $context): ParsedTime
     {
-        // Compounds such as "tối ưu" are blanked with spaces, so every offset still points into $text.
+        // Compounds such as "tối ưu", and URLs, emails, file and project names, are blanked with spaces, so every
+        // offset still points into $text.
         $readable = (string) preg_replace_callback(
             NoteVocabulary::pattern(NoteVocabulary::phrases('not_time_word')),
             fn (array $word): string => str_repeat(' ', strlen($word[0])),
-            $text,
+            NoteVocabulary::withoutLiterals($text, array_values($context->projects)),
         );
         $relative = $this->relative($readable, $context);
         if ($relative !== null) {

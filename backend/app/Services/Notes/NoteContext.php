@@ -28,6 +28,12 @@ final readonly class NoteContext
         return $this->local()->setTime(0, 0);
     }
 
+    /** What every reading of a text depends on, so a result read under this context can be kept for it. */
+    public function key(): string
+    {
+        return $this->now->format('U').'|'.$this->timezone.'|'.$this->weekStart->value.'|'.json_encode($this->projects);
+    }
+
     /** "H:i" in the note's zone, comparable as a string with parsed times. */
     public function clock(): string
     {

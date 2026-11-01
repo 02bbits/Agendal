@@ -6,6 +6,7 @@ use App\Services\Notes\CommandMatch;
 use App\Services\Notes\CommandMatcher;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteVocabulary;
+use Tests\Support\Cases;
 use Tests\Support\NoteRules;
 use Tests\TestCase;
 
@@ -122,13 +123,15 @@ function ruleCases(string $category, string $template): array
     return array_combine($notes, array_map(fn (string $note): array => [$note], $notes));
 }
 
-it('completes with every complete verb and ending in the rules', function (string $text) {
-    expect(matchCommand($text, CommandAction::Complete, [RENT_TASK])->change?->fields)->toBe(['done' => true]);
-})->with([...ruleCases('complete_command', '{} pay rent'), ...ruleCases('complete_suffix', 'pay rent {}'), ...ruleCases('complete_suffix_bare', 'pay rent {}')]);
+it('completes with every complete verb and ending in the rules', function () {
+    $cases = [...ruleCases('complete_command', '{} pay rent'), ...ruleCases('complete_suffix', 'pay rent {}'), ...ruleCases('complete_suffix_bare', 'pay rent {}')];
 
-it('deletes with every delete verb in the rules', function (string $text) {
-    expect(matchCommand($text, CommandAction::Delete, [RENT_TASK])->change?->delete)->toBeTrue();
-})->with(ruleCases('delete_command', '{} pay rent'));
+    expect(Cases::failing($cases, fn (string $text): ?array => matchCommand($text, CommandAction::Complete, [RENT_TASK])->change?->fields === ['done' => true] ? null : []))->toBe([]);
+});
+
+it('deletes with every delete verb in the rules', function () {
+    expect(Cases::failing(ruleCases('delete_command', '{} pay rent'), fn (string $text): ?bool => matchCommand($text, CommandAction::Delete, [RENT_TASK])->change?->delete ? null : false))->toBe([]);
+});
 
 /** @return array<string, array{string}> every move verb with every target word of the rules */
 function moveWordings(): array
@@ -143,9 +146,13 @@ function moveWordings(): array
     return $cases;
 }
 
-it('reschedules with every move verb and target word in the rules', function (string $text) {
-    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields)->toBe(['due_date' => '2026-11-05']);
-})->with(moveWordings());
+it('reschedules with every move verb and target word in the rules', function () {
+    expect(Cases::failing(moveWordings(), function (string $text): ?array {
+        $fields = matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields;
+
+        return $fields === ['due_date' => '2026-11-05'] ? null : (array) $fields;
+    }))->toBe([]);
+});
 
 /** @return array<string, array{string, string}> the old date written in the subject × the new date in the target */
 function subjectAndTargetDates(): array
@@ -162,9 +169,13 @@ function subjectAndTargetDates(): array
     return $cases;
 }
 
-it('takes the new date from the target whatever the subject says', function (string $text, string $due) {
-    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields)->toBe(['due_date' => $due]);
-})->with(subjectAndTargetDates());
+it('takes the new date from the target whatever the subject says', function () {
+    expect(Cases::failing(subjectAndTargetDates(), function (string $text, string $due): ?array {
+        $fields = matchCommand($text, CommandAction::Reschedule, [RENT_TASK])->change?->fields;
+
+        return $fields === ['due_date' => $due] ? null : (array) $fields;
+    }))->toBe([]);
+});
 
 it('takes the new time from the target and moves or sets the end (NU-E35)', function (string $text, array $fields) {
     expect(matchCommand($text, CommandAction::Reschedule, [STANDUP_TASK])->change?->fields)->toBe($fields);
@@ -212,13 +223,16 @@ function modifierPhrases(): array
     return array_combine($phrases, array_map(fn (string $phrase): array => [$phrase], $phrases));
 }
 
-it('prefers the title with the repeat or priority word, and matches without it', function (string $phrase) {
-    $withWord = ['id' => 'with', 'title' => ucfirst($phrase).' report'];
-    $match = matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report'], $withWord]);
+it('prefers the title with the repeat or priority word, and matches without it', function () {
+    expect(Cases::failing(modifierPhrases(), function (string $phrase): ?array {
+        $withWord = ['id' => 'with', 'title' => ucfirst($phrase).' report'];
+        $match = matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report'], $withWord]);
+        $alone = matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report']])->change?->taskId;
+        $got = [$match->change?->taskId, $match->isTie(), $alone];
 
-    expect([$match->change?->taskId, $match->isTie()])->toBe(['with', false])
-        ->and(matchCommand("done {$phrase} report", CommandAction::Complete, [['id' => 'plain', 'title' => 'Report']])->change?->taskId)->toBe('plain');
-})->with(modifierPhrases());
+        return $got === ['with', false, 'plain'] ? null : $got;
+    }))->toBe([]);
+});
 
 it('prefers the title the command names fully over a longer one, and ties titles equally close', function (string $text, array $titles, ?string $expected, bool $tie) {
     $open = array_map(fn (string $id, string $title): array => ['id' => $id, 'title' => $title], array_keys($titles), $titles);
@@ -241,20 +255,9 @@ it('tells a weekly report from a monthly one', function () {
         ->and(matchCommand('move report to friday', CommandAction::Reschedule, $open)->isTie())->toBeTrue();
 });
 
-it('makes a task of a delete with a deadline when no task matches, and deletes one that does (NU-E29)', function (string $word) {
-    $unmatched = matchCommand("cancel netflix {$word} friday", CommandAction::Delete, [])->newTask;
-    $matched = matchCommand("cancel netflix {$word} friday", CommandAction::Delete, [['id' => 'n', 'title' => 'Netflix']]);
-
-    expect([$unmatched?->title, $unmatched?->dueDate])->toBe(['Cancel netflix', '2026-10-30'])
-        ->and([$matched->change?->taskId, $matched->change?->delete])->toBe(['n', true])
-        ->and(matchCommand("cancel netflix {$word}", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
-})->with(fn (): array => NoteRules::values('deadline_prefix'));
-
-it('makes a task of a delete with a place when no task matches, but not of one with a time (NU-E29)', function (string $word) {
-    expect(matchCommand("drop the kids {$word} school", CommandAction::Delete, [])->newTask?->title)->toBe("Drop the kids {$word} school")
-        ->and(matchCommand("drop the meeting {$word} 3pm", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound)
-        ->and(matchCommand("drop the meeting {$word} noon", CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
-})->with(fn (): array => NoteRules::values('place_prefix'));
+it('skips an unmatched delete even with a deadline or a place (NU-E29, Q17)', function (string $text) {
+    expect(matchCommand($text, CommandAction::Delete, [])->skip)->toBe(SkipReason::NotFound);
+})->with(['cancel netflix before friday', 'drop the kids at school']);
 
 it('builds an unmatched reschedule from the target date, not the subject one (NU-E29)', function () {
     $new = matchCommand('move standup on monday to tuesday 10am', CommandAction::Reschedule, [])->newTask;

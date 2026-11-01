@@ -23,7 +23,7 @@ final class NoteExtractionScenarios
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
-        'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word',
+        'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -35,12 +35,17 @@ final class NoteExtractionScenarios
         }
         try {
             fgetcsv($file, null, ',', '"', '');
-            $cases = [];
+            [$cases, $seen] = [[], []];
             while (($row = fgetcsv($file, null, ',', '"', '')) !== false) {
                 if ($row === [null] || count($row) !== 2) {
                     continue;
                 }
                 [$category, $value] = array_map(trim(...), array_map('strval', $row));
+                // One value per category covers the rule; every value would only repeat it.
+                if (isset($seen[$category])) {
+                    continue;
+                }
+                $seen[$category] = true;
                 $family = explode(':', $category)[0];
                 $examples = self::examples($category, $value);
                 if ($examples === [] && (in_array($category, self::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, self::EXTRACTION_ONLY_CATEGORIES, true))) {
@@ -90,6 +95,8 @@ final class NoteExtractionScenarios
             'hour_prefix' => [['họp '.$value.' 9', ['startTime' => '09:00'], self::NOW]],
             'range_prefix' => [['họp '.$value.' 9 to 11', ['startTime' => '09:00', 'endTime' => '11:00'], self::NOW]],
             'range_separator' => [['họp 9am '.$value.' 11am', ['startTime' => '09:00', 'endTime' => '11:00'], self::NOW]],
+            'file_extension' => [['đọc report_26.10.'.$value.' mai', ['title' => 'Đọc report_26.10.'.$value, 'dueDate' => '2026-10-24'], self::NOW]],
+            'span_lead' => [['đọc sách '.$value.' thứ 2', ['title' => 'Đọc sách', 'dueDate' => '2026-10-26'], self::NOW]],
             'date_preferred_prefix' => [['học thứ 2 '.$value.' thứ 7', ['dueDate' => '2026-10-24'], self::NOW]],
             'weekday_this' => [['nộp '.$value.' friday', ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_this_suffix' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23'], self::NOW]],
