@@ -15,14 +15,14 @@ final class TaskRecurrence
 {
     public function __construct(private ClockInterface $clock, private ReminderCalculator $reminders) {}
 
-    public function next(Task $task): ?Task
+    public function next(Task $task, bool $restoreDeleted = false): ?Task
     {
         $repeat = Repeat::tryFrom((string) $task->repeat) ?? Repeat::Never;
         if ($repeat === Repeat::Never || $task->due_date === null) {
             return null;
         }
         $existing = Task::withTrashed()->where('user_id', $task->user_id)->where('previous_occurrence_id', $task->id)->first();
-        if ($existing !== null) {
+        if ($existing !== null && (! $restoreDeleted || ! $existing->trashed() || $existing->done)) {
             return $existing;
         }
         $zone = (string) User::query()->findOrFail($task->user_id)->timezone;
@@ -51,15 +51,28 @@ final class TaskRecurrence
                 }
             } while ($next->format('Y-m-d') < $today);
         }
-        $copy = $task->replicate(['done_at', 'remind_at', 'deleted_at', 'change_seq']);
+        $copy = $existing ?? $task->replicate(['done_at', 'remind_at', 'deleted_at', 'change_seq']);
+        if ($existing !== null) {
+            $copy->forceFill($task->only([...Task::PATCHABLE, 'user_id', 'created_by', 'source_note_id']));
+        }
         $copy->done = false;
+        $copy->done_at = null;
         $copy->previous_occurrence_id = $task->id;
         $copy->due_date = $next->format('Y-m-d');
         $copy->repeat_anchor = $anchor->format('Y-m-d');
         $copy->remind_at = $this->reminders->compute((string) $copy->due_date, $copy->start_time === null ? null : substr((string) $copy->start_time, 0, 5), (string) $copy->reminder, $zone);
-        $stamp = $this->clock->now()->format(DATE_ATOM);
-        $copy->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
-        $copy->save();
+        $stamp = $this->clock->now();
+        if ($existing !== null) {
+            foreach ($existing->field_updated_at as $value) {
+                $stamp = max($stamp, (new DateTimeImmutable($value))->modify('+1 second'));
+            }
+        }
+        $copy->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp->format(DATE_ATOM));
+        if ($copy->trashed()) {
+            $copy->restore();
+        } else {
+            $copy->save();
+        }
 
         return $copy;
     }

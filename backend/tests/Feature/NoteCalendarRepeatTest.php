@@ -69,3 +69,24 @@ it('does not restart an exhausted series when an old occurrence is completed lat
     $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonMissingPath('next');
     expect(Task::count())->toBe(1);
 });
+
+it('undoes the generated occurrence and recompletes it using the current schedule', function () {
+    $created = $this->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'tập gym 2 4 6 hàng tuần', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertCreated();
+    $id = $created->json('changes.0.task.id');
+    $child = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->json('next.id');
+    $this->postJson("/api/v1/tasks/$id/reopen", ['at' => '2026-11-01T15:11:02Z'])->assertOk()->assertJsonPath('next.id', $child);
+    expect(Task::withTrashed()->findOrFail($child)->trashed())->toBeTrue();
+    $this->patchJson("/api/v1/tasks/$id", ['repeat' => 'daily', 'at' => '2026-11-01T15:11:03Z'])->assertOk();
+    $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:04Z'])->assertOk()
+        ->assertJsonPath('next.id', $child)->assertJsonPath('next.due_date', '2026-11-03')->assertJsonPath('next.repeat', 'daily');
+    expect(Task::count())->toBe(2)->and(Task::withTrashed()->count())->toBe(2);
+});
+
+it('does not resurrect a deliberately deleted next occurrence on a completion retry', function () {
+    $created = $this->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'gym every Monday', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertCreated();
+    $id = $created->json('changes.0.task.id');
+    $child = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->json('next.id');
+    $this->deleteJson("/api/v1/tasks/$child?scope=one")->assertNoContent();
+    $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonMissingPath('next');
+    expect(Task::withTrashed()->findOrFail($child)->trashed())->toBeTrue();
+});

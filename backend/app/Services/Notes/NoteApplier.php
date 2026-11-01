@@ -78,7 +78,7 @@ final class NoteApplier
                 $label = $entry['label'] ?? $task->title;
                 $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'label' => $label];
                 $changes[] = $this->change($changeKind, $task, $label);
-                $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task) : null;
+                $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task, restoreDeleted: true) : null;
                 if ($next !== null) {
                     // TK-4: completing a repeating task creates its next occurrence; undo removes it too.
                     $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'label' => $next->title];

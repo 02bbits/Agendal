@@ -78,7 +78,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **This and all future:** deletes this occurrence. No future ones exist yet, so the series ends.
   - Past completed occurrences are never touched.
 - **Edit scope:** an edit applies to this occurrence and is carried into every later one, because each copies the previous one. There is no "edit all" dialog, since only one open occurrence ever exists.
-- **No repeat end date:** the PRD has none (Later).
+- **Calendar rules from notes (IM-37 extension):** an optional `repeat_rule` stores interval, selected weekdays/month pattern and COUNT or UNTIL. These calendar rules skip impossible dates; enum-only legacy tasks keep the anchor-day clamping above. `repeat_description` makes the actual schedule visible in task details. Custom repeat controls are separate from note recognition.
 
 ### 2.4 Delete (TK-5)
 

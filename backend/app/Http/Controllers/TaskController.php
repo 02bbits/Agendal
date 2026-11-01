@@ -139,8 +139,12 @@ class TaskController extends Controller
 
         return DB::transaction(function () use ($task, $patcher, $recurrence, $at): JsonResponse {
             $locked = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $wasDone = $locked->done;
             $updatedTask = $patcher->complete($locked, $at);
-            $next = $updatedTask->done ? $recurrence->next($updatedTask) : null;
+            $next = $updatedTask->done ? $recurrence->next($updatedTask, restoreDeleted: ! $wasDone) : null;
+            if ($next?->trashed()) {
+                $next = null;
+            }
 
             return response()->json(['task' => new TaskResource($updatedTask), ...($next === null ? [] : ['next' => new TaskResource($next)])]);
         });
@@ -151,14 +155,31 @@ class TaskController extends Controller
         Task $task,
         TaskPatcher $patcher,
     ): JsonResponse {
-        if ($task->done) {
-            OpenTaskLimit::ensureRoom();
-        }
-
         $at = $request->has('at') && is_string($request->input('at')) ? $request->input('at') : null;
-        $updatedTask = $patcher->reopen($task, $at);
 
-        return response()->json(['task' => new TaskResource($updatedTask)]);
+        return DB::transaction(function () use ($task, $patcher, $at): JsonResponse {
+            $locked = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $wasDone = $locked->done;
+            $updatedTask = $patcher->reopen($locked, $at);
+            $next = null;
+            if (! $updatedTask->done) {
+                $child = Task::withTrashed()->where('previous_occurrence_id', $task->id)->lockForUpdate()->first();
+                if ($child !== null && ! $child->done) {
+                    if (! $child->trashed()) {
+                        $fields = $child->field_updated_at;
+                        $fields['deleted'] = $patcher->resolveEffectiveAt($at)->format(DATE_ATOM);
+                        $child->field_updated_at = $fields;
+                        $child->delete();
+                    }
+                    $next = $child;
+                }
+                if ($wasDone) {
+                    OpenTaskLimit::ensureRoom(additional: 0);
+                }
+            }
+
+            return response()->json(['task' => new TaskResource($updatedTask), ...($next === null ? [] : ['next' => new TaskResource($next)])]);
+        });
     }
 
     public function destroy(
