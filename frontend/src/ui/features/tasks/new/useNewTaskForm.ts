@@ -2,7 +2,6 @@ import { useRef, useState, type FormEvent, type KeyboardEvent } from "react";
 import { ApiRequestError } from "../../../../lib/apiError";
 import { today as getToday } from "../../../../lib/clock";
 import { uuidv7 } from "../../../../lib/uuid";
-import { t } from "../../../copy";
 import {
   createBody,
   defaultPriority,
@@ -11,6 +10,7 @@ import {
   type DueChip,
 } from "../../../domain/newTask";
 import type { Priority } from "../../../domain/types";
+import { saveErrorMessage } from "../saveError";
 import type { NewTaskSheetProps } from "./types";
 
 export function useNewTaskForm({
@@ -55,30 +55,29 @@ export function useNewTaskForm({
   const trimmedTitle = title.trim();
   const valid = trimmedTitle.length > 0 && (due !== "pick" || picked !== "");
 
+  const updatePriorityFromDue = (targetDue: DueChip, targetPicked = picked) => {
+    if (!priorityTouched) {
+      const nextDate = dueDateFor(targetDue, todayDate, targetPicked);
+      setPriority(defaultPriority(nextDate, todayDate));
+    }
+  };
+
   const handleDueChange = (nextDue: DueChip) => {
     if (nextDue !== "pick") {
       previousDueRef.current = nextDue;
     }
     setDue(nextDue);
-    if (!priorityTouched) {
-      const nextDate = dueDateFor(nextDue, todayDate, picked);
-      setPriority(defaultPriority(nextDate, todayDate));
-    }
+    updatePriorityFromDue(nextDue);
   };
 
   const handlePickedChange = (nextPicked: string) => {
     setPicked(nextPicked);
-    if (!priorityTouched) {
-      setPriority(defaultPriority(nextPicked || null, todayDate));
-    }
+    updatePriorityFromDue("pick", nextPicked);
   };
 
   const handleCancelPick = () => {
     setDue(previousDueRef.current);
-    if (!priorityTouched) {
-      const nextDate = dueDateFor(previousDueRef.current, todayDate, picked);
-      setPriority(defaultPriority(nextDate, todayDate));
-    }
+    updatePriorityFromDue(previousDueRef.current);
   };
 
   const handlePriorityChange = (nextPriority: Priority) => {
@@ -119,16 +118,15 @@ export function useNewTaskForm({
       onClose();
     } catch (err) {
       setBusy(false);
-      if (err instanceof ApiRequestError) {
-        if (err.status === 422 && err.fields?.title) {
-          setFieldError(err.fields.title[0]);
-        } else if (err.code === "task.limit") {
-          setFormError(t("task.limit"));
-        } else {
-          setFormError(t("error.save_failed"));
-        }
+      if (
+        err instanceof ApiRequestError &&
+        err.status === 422 &&
+        err.fields?.title
+      ) {
+        setFieldError(err.fields.title[0]);
       } else {
-        setFormError(t("error.save_failed"));
+        const { message } = saveErrorMessage(err);
+        setFormError(message);
       }
     }
   };
