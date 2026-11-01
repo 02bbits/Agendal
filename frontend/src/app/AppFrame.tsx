@@ -33,7 +33,7 @@ import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { createProject, listProjects } from "@/lib/projectApi";
-import { inbox } from "@/lib/taskApi";
+import { inbox, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
 import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
@@ -376,6 +376,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const tab = TAB_BY_PATH[pathname];
 
   const [inboxCount, setInboxCount] = useState<number | undefined>(undefined);
+  const [upcomingCount, setUpcomingCount] = useState<number | undefined>(
+    undefined,
+  );
   const [projectsList, setProjectsList] = useState<ProjectWithCounts[]>([]);
   const [noProjectCount, setNoProjectCount] = useState<number | undefined>(
     undefined,
@@ -414,6 +417,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       })
       .catch(() => {});
+
+    upcoming()
+      .then((data) => {
+        if (data) {
+          const count =
+            data.total_count ??
+            data.days.reduce((acc, d) => acc + (d.tasks?.length ?? 0), 0);
+          setUpcomingCount(count);
+        }
+      })
+      .catch(() => {});
   }, [isMainView, pathname]);
 
   useEffect(() => {
@@ -439,11 +453,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
     if (inboxCount !== undefined) {
       counts.inbox = inboxCount;
     }
+    if (upcomingCount !== undefined) {
+      counts.upcoming = upcomingCount;
+    }
     if (projectsList.length > 0) {
       counts.projects = projectsList.length + 1;
     }
     return counts;
-  }, [inboxCount, projectsList.length]);
+  }, [inboxCount, upcomingCount, projectsList.length]);
 
   const sortedSidebarProjects = useMemo(
     () => sortProjects(projectsList),
