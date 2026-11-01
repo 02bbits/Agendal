@@ -14,6 +14,17 @@ export interface InboxData {
   completed_count: number;
 }
 
+export interface UpcomingDay {
+  date: string;
+  tasks: Task[];
+}
+
+export interface UpcomingData {
+  days: UpcomingDay[];
+  next_from: string | null;
+  total_count?: number;
+}
+
 async function postLifecycle<T>(
   id: string,
   action: "complete" | "reopen",
@@ -33,6 +44,19 @@ async function postLifecycle<T>(
 export async function inbox(): Promise<InboxData> {
   const response = await api("/tasks?view=inbox");
   return handleResponse<InboxData>(response);
+}
+
+export async function upcoming(params?: {
+  from?: string;
+  days?: number;
+  filter?: "all" | "scheduled" | "due";
+}): Promise<UpcomingData> {
+  const query = new URLSearchParams({ view: "upcoming" });
+  if (params?.from) query.set("from", params.from);
+  if (params?.days !== undefined) query.set("days", String(params.days));
+  if (params?.filter) query.set("filter", params.filter);
+  const response = await api(`/tasks?${query.toString()}`);
+  return handleResponse<UpcomingData>(response);
 }
 
 export async function getTask(id: string): Promise<Task> {
