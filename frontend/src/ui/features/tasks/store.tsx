@@ -142,8 +142,20 @@ export function TaskStoreProvider({
     lifecycleRef.current = mutateLifecycle;
   }, [mutateLifecycle]);
 
+  const togglingRef = React.useRef<Set<string>>(new Set());
+
   const toggle = React.useCallback(
-    (task: Task) => mutateLifecycle(task.id, task.done ? "reopen" : "complete"),
+    (task: Task) => {
+      if (togglingRef.current.has(task.id)) return;
+      togglingRef.current.add(task.id);
+      try {
+        mutateLifecycle(task.id, task.done ? "reopen" : "complete");
+      } finally {
+        setTimeout(() => {
+          togglingRef.current.delete(task.id);
+        }, 150);
+      }
+    },
     [mutateLifecycle],
   );
 
