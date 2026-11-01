@@ -111,7 +111,8 @@ function undoRows(current: Task[], diff: RowDiff): Task[] {
   return list;
 }
 
-function replace(list: Task[], task: Task): Task[] {
+function replace(list: Task[], task?: Task): Task[] {
+  if (!task?.id) return list;
   return list.map((x) => (x.id === task.id ? task : x));
 }
 
@@ -262,12 +263,19 @@ export function TaskStoreProvider({
   );
 
   const applySaved = useCallback(
-    (res: { task: Task; next?: Task }) =>
-      applyLocal((list) =>
-        res.next
-          ? [...replace(list, res.task), res.next]
-          : replace(list, res.task),
-      ),
+    (res: { task?: Task; next?: Task } | Task) =>
+      applyLocal((list) => {
+        const savedTask =
+          res && "task" in res && res.task
+            ? res.task
+            : res && "id" in res
+              ? (res as Task)
+              : undefined;
+        if (!savedTask) return list;
+        return "next" in res && res.next
+          ? [...replace(list, savedTask), res.next]
+          : replace(list, savedTask);
+      }),
     [applyLocal],
   );
 

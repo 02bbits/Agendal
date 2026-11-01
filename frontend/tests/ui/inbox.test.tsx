@@ -455,4 +455,75 @@ describe("Inbox Page (app/page.tsx)", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("shows completion toast with undo when ticking a task done on the page (UX-04, UX-05)", async () => {
+    const fetchMock = vi.fn().mockImplementation((url: RequestInfo | URL) => {
+      const u =
+        typeof url === "string" ? url : "url" in url ? url.url : url.toString();
+      if (u.includes("/user") || u.includes("/me")) {
+        return new Response(
+          JSON.stringify({ id: 1, email: "test@example.com" }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (u.includes("/tasks?view=inbox")) {
+        return new Response(
+          JSON.stringify({
+            overdue: [],
+            today: [
+              task({ id: "t-toast", title: "Complete me", due_date: TODAY }),
+            ],
+            no_date: [],
+            completed_today: [],
+            progress: { done: 0, total: 1 },
+            no_date_count: 0,
+            completed_count: 0,
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (u.includes("/complete")) {
+        return new Response(
+          JSON.stringify({
+            task: task({
+              id: "t-toast",
+              title: "Complete me",
+              due_date: TODAY,
+              done: true,
+              done_at: "2026-10-23T01:00:00Z",
+            }),
+          }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (u.includes("/projects")) {
+        return new Response("[]", {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      return new Response("{}", { status: 200 });
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      render(
+        <AppFrame>
+          <Page />
+        </AppFrame>,
+      );
+
+      expect(await screen.findByText("Complete me")).toBeTruthy();
+      const checkbox = screen.getByRole("checkbox", { name: /Complete me/ });
+      await userEvent.click(checkbox);
+
+      expect(await screen.findByText("Completed “Complete me”")).toBeTruthy();
+      expect(screen.getByRole("button", { name: "Undo" })).toBeTruthy();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

@@ -6,7 +6,9 @@ import {
   InboxScreen,
   ScreenHeader,
   TaskStoreProvider,
+  Toast,
   t,
+  useTaskStore,
   type Clock,
   type Project,
   type Task,
@@ -22,6 +24,11 @@ const clock: Clock = {
     return timeZone();
   },
 };
+
+function InboxToast() {
+  const { toast, dismissToast } = useTaskStore();
+  return <Toast toast={toast} onDismiss={dismissToast} />;
+}
 
 export default function Page() {
   const { navigate, user, settings } = useAppFrame();
@@ -99,6 +106,7 @@ export default function Page() {
             navigate={navigate}
             showHeader={false}
           />
+          <InboxToast />
         </TaskStoreProvider>
       )}
     </div>
