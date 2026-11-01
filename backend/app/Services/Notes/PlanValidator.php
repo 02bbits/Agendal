@@ -58,9 +58,12 @@ final class PlanValidator
         $refs = [];
         $after = $tasks;
         $setFields = [];
+        $created = [];
         foreach (self::ENTRY_KINDS as $kind) {
             foreach ($this->items($plan[$kind] ?? [], $dropped) as $entry) {
-                if (! $this->entryIsValid($kind, $entry, $projects, $after) || isset($refs[$entry['ref']])) {
+                // Two items of one note that make the very same task make it once.
+                $newTask = $kind === 'create' ? json_encode(array_diff_key($entry, ['ref' => true]), JSON_THROW_ON_ERROR) : '';
+                if (! $this->entryIsValid($kind, $entry, $projects, $after) || isset($refs[$entry['ref']]) || isset($created[$newTask])) {
                     $dropped++;
 
                     continue;
@@ -68,6 +71,8 @@ final class PlanValidator
                 $refs[$entry['ref']] = true;
                 $valid[$kind][] = $entry;
                 if ($kind === 'create') {
+                    $created[$newTask] = true;
+
                     continue;
                 }
                 $id = $entry['task_id'];

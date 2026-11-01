@@ -118,6 +118,13 @@ it('keeps a skip reason it knows, without extra fields, and makes an unknown one
     expect([$result['skipped'], $validator->status($result)])->toBe([[['ref' => 's1', 'text' => 'done x', 'reason' => 'not_found'], ['ref' => 's2', 'text' => 'call the bank', 'reason' => 'skip']], PlanStatus::Followup]);
 });
 
+it('makes the very same task once when a note asks for it twice', function () {
+    $plan = array_replace(emptyNotePlan(), ['create' => [newTaskEntry(), newTaskEntry(['ref' => 'c2']), newTaskEntry(['ref' => 'c3', 'start_time' => '09:00', 'due_date' => '2026-10-26'])]]);
+    $result = app(PlanValidator::class)->validate($plan, [], []);
+
+    expect([$result['dropped'], array_column($result['create'], 'ref')])->toBe([1, ['c1', 'c3']]);
+});
+
 it('keeps a valid create and drops an unknown project', function () {
     $project = (string) Str::uuid();
     $plan = array_replace(emptyNotePlan(), ['create' => [newTaskEntry(['project_id' => $project]), newTaskEntry(['ref' => 'c2', 'project_id' => (string) Str::uuid()])]]);
