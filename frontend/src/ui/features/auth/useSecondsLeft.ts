@@ -6,16 +6,16 @@ const secondsLeft = (until: number | null | undefined) =>
 
 /** Whole seconds until `until` (epoch ms), ticking every second; 0 once it has passed. */
 export function useSecondsLeft(until: number | null | undefined): number {
-  const [left, setLeft] = useState(secondsLeft(until));
+  // Worked out on every render, so the first render with a new `until` already counts down
+  // (held in state, it read 0 for one render: Resend enabled, the lockout "ended")
+  const [, tick] = useState(0);
   useEffect(() => {
-    const tick = () => {
-      const remaining = secondsLeft(until);
-      setLeft(remaining);
-      if (remaining === 0) clearInterval(timer);
-    };
-    const timer = setInterval(tick, 1000);
-    tick();
+    if (!until) return;
+    const timer = setInterval(() => {
+      tick((n) => n + 1);
+      if (secondsLeft(until) === 0) clearInterval(timer);
+    }, 1000);
     return () => clearInterval(timer);
   }, [until]);
-  return left;
+  return secondsLeft(until);
 }

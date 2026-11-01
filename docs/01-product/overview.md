@@ -10,7 +10,7 @@ Agendal is a course demo project (VNUK *Advanced Web Development*). It has no la
 
 1. **Write a note**: typed, dictated, or read from a file, in English or Vietnamese. No fields to fill in.
 2. **Agendal builds a plan**: the tasks to create, change or delete, and any text to skip ([business rules](../02-domain/business-rules.md)).
-3. **Risky plans wait**: any delete, or more than 5 changes, needs *Apply changes* first. A note with nothing actionable gets one question.
+3. **Risky plans wait**: any delete, or 5 or more changes, needs *Apply changes* first. A note with nothing actionable gets one question.
 4. **The result screen** lists every change. **Undo all** reverses the whole note, and **Edit note** re-plans it.
 
 ## Problem
@@ -49,7 +49,7 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 - Shared lists, or assigning tasks to other people
 - Calendar sync
 - Chat with the assistant
-- A desktop-first layout
+- A desktop-only or desktop-first layout. Agendal is mobile first and responsive, so tablet and desktop widths are supported ([NF-8](../05-quality/nfr.md#nf-8), [UX-27](ux-standards.md#ux-27))
 - Native iOS or Android apps
 - Account deletion and data export ([Q7](../08-project/open-questions.md#q7))
 - A user interface in Vietnamese. Notes can be in Vietnamese, but the UI is English ([Q3](../08-project/open-questions.md#q3))
@@ -58,11 +58,11 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 
 | Phase | Scope | Exit criteria |
 |---|---|---|
-| **1. MVP** | Every **Must**: account and access, typed notes, note understanding (English and Vietnamese) with review and Undo all, tasks, Inbox / Upcoming / Search, projects, offline, install, light and dark, editing a note ([RV-5](../03-modules/RV-review-control.md#rv-5)), week start and time format ([AP-5](../03-modules/AP-app-platform.md#ap-5)) | All Must acceptance criteria pass. Accessibility audit passes [NF-1](../05-quality/nfr.md#nf-1) to [NF-3](../05-quality/nfr.md#nf-3). The note corpus passes its accuracy gates |
+| **1. MVP** | Every **Must**: account and access, typed notes, note understanding (English and Vietnamese) with review and Undo all, tasks, Inbox / Upcoming / Search, projects, offline, install, light and dark, a responsive layout from phone to desktop, editing a note ([RV-5](../03-modules/RV-review-control.md#rv-5)), week start and time format ([AP-5](../03-modules/AP-app-platform.md#ap-5)) | All Must acceptance criteria pass. Accessibility audit passes [NF-1](../05-quality/nfr.md#nf-1) to [NF-3](../05-quality/nfr.md#nf-3). The note corpus passes its accuracy gates |
 | **2. v1.1** | **Should** items: voice notes ([NC-3](../03-modules/NC-note-capture.md#nc-3)), files as notes ([NC-4](../03-modules/NC-note-capture.md#nc-4)), note names ([NU-6](../03-modules/NU-note-understanding.md#nu-6)), assistant label ([NU-7](../03-modules/NU-note-understanding.md#nu-7)), reminders ([TK-6](../03-modules/TK-tasks.md#tk-6)), project rename and colour ([PJ-3](../03-modules/PJ-projects.md#pj-3)) | All Should acceptance criteria pass |
-| **3. Later** | **Could** items (examples, [NC-5](../03-modules/NC-note-capture.md#nc-5)) and candidates: calendar view, shared projects, account deletion and export, smarter project suggestions, desktop layout | — |
+| **3. Later** | **Could** items (examples, [NC-5](../03-modules/NC-note-capture.md#nc-5)) and candidates: calendar view, shared projects, account deletion and export, smarter project suggestions | — |
 
-**Platforms:** phones 320–480px wide (360px reference), with a centred column up to 600px ([NF-8](../05-quality/nfr.md#nf-8)). The last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge ([NF-7](../05-quality/nfr.md#nf-7)).
+**Platforms:** mobile first and responsive ([NF-8](../05-quality/nfr.md#nf-8)). Phones 320–480px wide (360px reference) get a centred column up to 600px. From 768px a sidebar replaces the tab bar, and from 1280px a task can open in a side panel ([UX-24](ux-standards.md#ux-24), [UX-27](ux-standards.md#ux-27), [UX-28](ux-standards.md#ux-28)). The last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge ([NF-7](../05-quality/nfr.md#nf-7)).
 
 ## What changed from V1
 
@@ -76,4 +76,4 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 
 ## Design
 
-The look is **Paper & ink**: a calm, flat notebook in light and dark. See the [theme guide](theme-guide.md), the [design system](https://claude.ai/artifact/1tqQg3Ugsmxm6qJWyXaYpu) and the [prototype](https://claude.ai/artifact/7uABDQJSswS3pUAeSFNag8) (sign in with example@gmail.com).
+The look is **Graphite**: the V1 layout in a monochrome grey palette, in light and dark. See the [theme guide](theme-guide.md) for the spec and the shared design canvas link.
