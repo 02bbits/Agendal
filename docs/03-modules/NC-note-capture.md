@@ -42,7 +42,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Editor (NC-1, NC-2, NC-5)
 
-- **Layout:** full screen. A nav bar with Cancel on the left and "✦ New note" in the centre; the "Your note" card (286px minimum, text on ruled lines); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with Make tasks, full width (with the mic and the paperclip beside it once they exist). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
+- **Layout:** full screen. A nav bar with Cancel on the left and "✦ New note" in the centre; the "Your note" card (429px minimum, text on ruled lines); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with Make tasks, full width (with the mic and the paperclip beside it once they exist). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
 - **Focus:** the text area is focused inside the tap handler, so iOS opens the keyboard (focusing after an `await` doesn't).
 - **Examples** show while the text is empty: 3 chips ("sql quiz monday 9am, email the group tonight", "done email the group", "move gym to sunday"). A chip replaces the empty text and keeps focus at the end ([NC-5](#nc-5)).
 - **Make tasks** is enabled when the text has a visible character ([NU-E15](NU-note-understanding.md#nu-e15)), and not while listening or reading a file. Ctrl/Cmd+Enter submits ([UX-12](../01-product/ux-standards.md#ux-12)).

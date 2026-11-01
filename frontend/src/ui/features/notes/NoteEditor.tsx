@@ -164,7 +164,7 @@ export function NoteEditor({
           <span />
         </div>
         <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide">
-          <div className="flex min-h-[286px] flex-col rounded-box bg-surface p-3.5 pb-[18px]">
+          <div className="flex min-h-[429px] flex-col rounded-box bg-surface p-3.5 pb-[18px]">
             <label
               htmlFor={fieldId}
               className="mb-1.5 text-footnote font-medium text-ink-secondary"
@@ -178,7 +178,7 @@ export function NoteEditor({
               onChange={(event) => edit(event.target.value)}
               onKeyDown={onKeyDown}
               placeholder={t("note.placeholder")}
-              className="focus:outline-none min-h-[225px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+              className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
           </div>
           <p className="m-0 text-footnote text-ink-secondary">
