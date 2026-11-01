@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   AppShell,
+  NewTaskSheet,
   NoteEditor,
   ROUTES,
   t,
@@ -25,6 +26,7 @@ import {
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { useNewTask } from "./useNewTask";
 import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
@@ -227,6 +229,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  const { open, openNewTask, sheetProps } = useNewTask({
+    pathname,
+    showToast,
+  });
   // Applies at once, then saves. A refused save puts the old values back; offline the change
   // stays on this device until the sync arrives (IM-52).
   const settingsRef = useRef(settings);
@@ -358,8 +364,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
-        // The + appears with the New task sheet (IM-26)
-        capture={{ onWrite: openNoteEditor }}
+        capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
@@ -385,6 +390,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }}
           />
         )}
+        {open && <NewTaskSheet {...sheetProps} />}
       </AppShell>
     </AppFrameContext.Provider>
   );

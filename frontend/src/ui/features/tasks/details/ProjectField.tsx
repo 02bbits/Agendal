@@ -1,11 +1,12 @@
 import type { ReactElement } from "react";
 import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
-import { useTaskStore } from "../store";
+import type { Project } from "../../../domain/types";
 import { ChoiceField } from "./ChoiceField";
 
 export interface ProjectFieldProps {
   projectId: string | null;
+  projects: Project[];
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;
   onChange: (projectId: string | null) => void;
@@ -13,13 +14,13 @@ export interface ProjectFieldProps {
 
 export function ProjectField({
   projectId,
+  projects,
   projectsStatus = "ready",
   onRetryProjects,
   onChange,
 }: ProjectFieldProps): ReactElement {
-  const store = useTaskStore();
   const knownProject = projectId
-    ? store.projects.find((p) => {
+    ? projects.find((p) => {
         return p.id === projectId;
       })
     : undefined;
@@ -36,7 +37,7 @@ export function ProjectField({
   const options = isNormal
     ? [
         { value: "", label: t("project.none") },
-        ...store.projects.map((p) => ({ value: p.id, label: p.name })),
+        ...projects.map((p) => ({ value: p.id, label: p.name })),
       ]
     : [{ value: projectId ?? "", label: fallbackLabel }];
 

@@ -60,3 +60,4 @@ export {
   TaskDetails,
   type TaskDetailsProps,
 } from "./tasks/details/TaskDetails";
+export { NewTaskSheet, type NewTaskSheetProps } from "./tasks/new/NewTaskSheet";
