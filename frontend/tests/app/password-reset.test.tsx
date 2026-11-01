@@ -181,7 +181,7 @@ describe("Set new password (AA §2.3)", () => {
     expect(save.disabled).toBe(true);
   });
 
-  it("shows the server's breached-password message on the field", async () => {
+  it("A11Y-62: shows the server's breached-password message on the field and focuses it", async () => {
     const breached =
       "This password has appeared in a data breach. Choose another one.";
     reply = () =>

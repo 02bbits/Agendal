@@ -45,7 +45,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
             id={inputId}
             type={type}
             className={cx(
-              "input focus-ring h-[52px] w-full rounded-field border-control bg-surface px-4 text-body text-ink placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40",
+              "input focus-ring h-11 w-full rounded-field border-control bg-surface px-4 text-body text-ink placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40",
               trailing != null && "pr-14",
             )}
             aria-invalid={error ? true : undefined}

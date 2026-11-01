@@ -47,11 +47,11 @@ final class NoteApplier
      * @param  ValidatedPlan  $plan
      * @return array{applied: list<AppliedChange>, changes: list<array<string, mixed>>, skipped: list<array<string, mixed>>}
      */
-    public function apply(Note $note, array $plan, NoteContext $context): array
+    public function apply(Note $note, array $plan): array
     {
         $timezone = (string) User::query()->findOrFail($note->user_id)->timezone;
         $locked = $this->lockTargets($note, $plan);
-        [$plan, $gone] = $this->revalidate($note, $plan, $locked, $context);
+        [$plan, $gone] = $this->revalidate($note, $plan, $locked);
         $this->guardOpenLimit($note, count($plan['create']));
         $applied = [];
         $changes = [];
@@ -104,7 +104,7 @@ final class NoteApplier
      * @param  array<string, Task>  $locked
      * @return array{0: ValidatedPlan, 1: list<array<string, mixed>>}
      */
-    private function revalidate(Note $note, array $plan, array $locked, NoteContext $context): array
+    private function revalidate(Note $note, array $plan, array $locked): array
     {
         $gone = [];
         foreach (['update', 'delete'] as $kind) {
@@ -113,7 +113,7 @@ final class NoteApplier
                 if ($current === null) {
                     $gone[] = ['ref' => $entry['ref'], 'text' => $entry['label'], 'reason' => SkipReason::NotFound->value];
                 } elseif ($kind === 'update' && ! isset($entry['done'])) {
-                    $plan[$kind][$index] = $this->onCurrentSchedule($entry, $current, $context);
+                    $plan[$kind][$index] = $this->onCurrentSchedule($entry, $current);
                 }
             }
         }
@@ -132,11 +132,11 @@ final class NoteApplier
      * @param  array<string, mixed>  $entry
      * @return array<string, mixed>
      */
-    private function onCurrentSchedule(array $entry, Task $task, NoteContext $context): array
+    private function onCurrentSchedule(array $entry, Task $task): array
     {
         $row = $this->row($task);
-        if (isset($entry['due_date'])) {
-            $entry['label'] = $this->schedule->dueLabel($entry['due_date'], $row['due_date'], $context);
+        if (isset($entry['due_date']) || isset($entry['start_time'])) {
+            $entry['label'] = $this->schedule->dueLabel($entry['due_date'] ?? $row['due_date'], $entry['start_time'] ?? $row['start_time']);
         }
         if (isset($entry['start_time']) && $row['start_time'] !== null && $row['end_time'] !== null) {
             $entry['end_time'] = $this->schedule->movedEnd($row['start_time'], $row['end_time'], $entry['start_time']);

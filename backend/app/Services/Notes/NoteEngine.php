@@ -70,9 +70,31 @@ final class NoteEngine
 
         return match ($classification->kind) {
             ItemKind::Skip => $this->skipped($ref, $item, SkipReason::Skip),
-            ItemKind::Command => $this->command($ref, $item, $this->matcher->match($item, $classification->commandAction(), $openTasks, $doneTasks, $context)),
+            ItemKind::Command => $this->commands($ref, $item, $this->matcher->matchEach($item, $classification->commandAction(), $openTasks, $doneTasks, $context)),
             ItemKind::Task => $this->task($ref, $item, $context, $openTasks),
         };
+    }
+
+    /**
+     * One entry per task the command names ("move report and gym to friday"): the first keeps the item's ref, the
+     * others add "-2", "-3", so every entry has its own.
+     *
+     * @param  list<CommandMatch>  $matches
+     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     */
+    private function commands(string $ref, string $item, array $matches): array
+    {
+        $plan = self::EMPTY_PLAN;
+        $low = false;
+        foreach ($matches as $index => $match) {
+            $planned = $this->command($index === 0 ? $ref : $ref.'-'.($index + 1), $item, $match);
+            foreach ($planned['plan'] as $kind => $entries) {
+                $plan[$kind] = [...$plan[$kind], ...$entries];
+            }
+            $low = $low || $planned['low'];
+        }
+
+        return ['plan' => $plan, 'low' => $low];
     }
 
     /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
@@ -85,7 +107,7 @@ final class NoteEngine
         if ($match->newTask !== null) {
             return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'low' => $match->newTask->lowConfidence];
         }
-        // A change that would leave the task as it is comes back as an already_done skip, never empty.
+        // A change that would leave the task as it is comes back as a no_change skip, never empty.
         $change = $match->change;
         assert($change !== null);
         $entry = ['ref' => $ref, 'task_id' => $change->taskId, 'label' => $change->label, ...$change->fields];

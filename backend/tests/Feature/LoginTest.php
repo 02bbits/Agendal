@@ -29,7 +29,7 @@ function wrongPassword(string $ip = '10.0.0.1', string $email = 'example@gmail.c
     return login(['email' => $email, 'password' => 'not my password'], $ip)->assertStatus(422);
 }
 
-it('signs in with a new session ID and returns the user', function () {
+it('T-AA-101: signs in with a new session ID and returns the user, whatever the email case and spaces', function () {
     $before = carryCookies($this->get('/sanctum/csrf-cookie'))[SESSION_COOKIE];
 
     $response = login(['email' => ' Example@Gmail.com'])->assertOk()->assertJsonPath('user.email', 'example@gmail.com');
@@ -61,8 +61,12 @@ it('T-AA-10, SEC-08: a wrong password and an unknown email get the same answer',
 });
 
 describe('lockout', function () {
-    // Each failure waits out Laravel's 200 ms sign-in padding; the limits don't need it
-    beforeEach(fn () => config(['auth.timebox_duration' => 0]));
+    // Each failure waits out Laravel's 200 ms sign-in padding; the limits don't need it. The
+    // clock is frozen so a lock's seconds left can't tick down between the failure and the check
+    beforeEach(function () {
+        config(['auth.timebox_duration' => 0]);
+        $this->freezeTime();
+    });
 
     it('T-AA-20, SEC-05: locks (email, IP) for 60 s after 3 failures, even for the right password', function () {
         wrongPassword();
@@ -76,7 +80,7 @@ describe('lockout', function () {
         login()->assertOk();
     });
 
-    it('SEC-07: a lock on one IP leaves the same email working from another IP', function () {
+    it('T-AA-102, SEC-07: a lock on one IP leaves the same email working from another IP', function () {
         foreach (range(1, 3) as $i) {
             wrongPassword('10.0.0.1');
         }
@@ -106,7 +110,7 @@ describe('lockout', function () {
             wrongPassword();
         }
 
-        expect(DB::table('audit_events')->where('user_id', $this->user->id)->pluck('event')->all())
+        expect(DB::table('audit_events')->where('user_id', $this->user->id)->orderBy('id')->pluck('event')->all())
             ->toBe(['sign_in_failed', 'sign_in_failed', 'sign_in_failed', 'lockout']);
     });
 });

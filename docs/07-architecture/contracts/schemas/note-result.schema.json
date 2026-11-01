@@ -62,7 +62,7 @@
         "properties": {
           "ref": { "type": "string" },
           "text": { "type": "string" },
-          "reason": { "enum": ["skip", "already_done", "not_found"] }
+          "reason": { "enum": ["skip", "already_done", "not_found", "no_change"] }
         }
       }
     },

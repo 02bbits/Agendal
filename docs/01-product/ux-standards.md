@@ -21,7 +21,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-10"></a>UX-10 | Opening a sheet or dialog moves focus to its first field, or to its title if it has no field. Focus is trapped inside. Escape closes it (unless it has unsaved input, then [UX-13](#ux-13)). |
 | <a id="ux-11"></a>UX-11 | Closing a sheet, dialog or pushed screen returns focus to the control that opened it. If that control is gone (the task was deleted), focus goes to the list heading. |
 | <a id="ux-12"></a>UX-12 | **Shortcuts:** Ctrl/Cmd+Enter submits the note editor and every sheet. Enter in a single-line field submits the form. `/` focuses Search on list screens when no field has focus. |
-| <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text saves a draft on the device (restored next time it opens). Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
+| <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text asks "Discard this note?" (Discard / Keep editing). Meanwhile a draft is kept on the device, restored if the app closed mid-note. Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
 | <a id="ux-14"></a>UX-14 | Tab order follows the visual order. Every control has a visible 2px focus ring ([NF-2](../05-quality/nfr.md#nf-2)). |
 
 ## 3. Viewport

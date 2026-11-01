@@ -4,12 +4,105 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+use Normalizer;
 use RuntimeException;
 
 final class NoteVocabulary
 {
     /** @var array<string, list<string>>|null */
     private static ?array $rules = null;
+
+    /**
+     * The words of a text, the one way every matcher reads them: composed (NFC), lower-cased, and split on anything
+     * but letters and digits, so "_", "-", "." and "/" separate words ("Send_invoice" is "send", "invoice").
+     * TaskCandidates::TOKENS reads titles the same way in SQL.
+     *
+     * @return list<string>
+     */
+    public static function tokens(string $text): array
+    {
+        $text = Normalizer::normalize($text, Normalizer::FORM_C) ?: $text;
+
+        return preg_split('/[^\p{L}\p{N}]+/u', mb_strtolower($text), flags: PREG_SPLIT_NO_EMPTY) ?: [];
+    }
+
+    /**
+     * Text kept as written: URLs, emails, file names ("report.pdf") and the given project names. No date, time,
+     * repeat or priority is read inside them, and their casing stays. A project name inside a URL, email or file
+     * name ("notes.daily.md") is part of it, not a project.
+     *
+     * @param  list<string>  $names  project names
+     * @return list<array{0: int, 1: int}> byte offset and length, in text order
+     */
+    public static function literals(string $text, array $names = []): array
+    {
+        $patterns = [
+            '~(?:https?://|www\.)\S+~iu',
+            '~[^\s@]+@[^\s@]+~u',
+            '~(?<![\p{L}\p{N}_])[\p{L}\p{N}_-]+(?:\.[\p{L}\p{N}_-]+)*\.(?:'.self::phrases('file_extension').')(?![\p{L}\p{N}_])~iu',
+        ];
+        $spans = [];
+        foreach ($patterns as $pattern) {
+            preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
+            foreach ($matches[0] as [$literal, $offset]) {
+                $spans[] = [$offset, strlen($literal)];
+            }
+        }
+        if ($names !== []) {
+            $outside = self::withoutLiterals($text);
+            foreach ($names as $name) {
+                preg_match_all(self::pattern(preg_quote($name, '~')), $outside, $matches, PREG_OFFSET_CAPTURE);
+                foreach ($matches[0] as [$literal, $offset]) {
+                    $spans[] = [$offset, strlen($literal)];
+                }
+            }
+        }
+        sort($spans);
+
+        return $spans;
+    }
+
+    /**
+     * The text with its literals blanked by spaces of the same length, so every offset still points into $text.
+     *
+     * @param  list<string>  $names  project names
+     */
+    public static function withoutLiterals(string $text, array $names = []): string
+    {
+        foreach (self::literals($text, $names) as [$offset, $length]) {
+            $text = substr_replace($text, str_repeat(' ', $length), $offset, $length);
+        }
+
+        return $text;
+    }
+
+    /**
+     * $change applied to the text between literals only: "send report.pdf" may become "Send report.pdf", never
+     * "report.PDF".
+     *
+     * @param  list<string>  $names  project names
+     * @param  callable(string): string  $change
+     */
+    public static function outsideLiterals(string $text, array $names, callable $change): string
+    {
+        $result = '';
+        $at = 0;
+        foreach (self::literals($text, $names) as [$offset, $length]) {
+            if ($offset < $at) {
+                continue;
+            }
+            $result .= $change(substr($text, $at, $offset - $at)).substr($text, $offset, $length);
+            $at = $offset + $length;
+        }
+
+        return $result.$change(substr($text, $at));
+    }
+
+    /** The text opens with a whole phrase of one of the categories ("done …", "move …", "idea: …"). */
+    public static function startsWith(string $text, string ...$categories): bool
+    {
+        return preg_match('~^\s*(?:'.implode('|', array_map(self::phrases(...), $categories)).')(?![\p{L}\p{N}_])~iu', $text) === 1;
+    }
 
     public static function pattern(string $phrases): string
     {
