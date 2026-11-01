@@ -21,12 +21,17 @@ final class NoteClassifierScenarios
         }
         try {
             fgetcsv($file, null, ',', '"', '');
-            $cases = [];
+            [$cases, $seen] = [[], []];
             while (($row = fgetcsv($file, null, ',', '"', '')) !== false) {
                 if ($row === [null] || count($row) !== 2) {
                     continue;
                 }
                 [$category, $value] = array_map(trim(...), array_map('strval', $row));
+                // One value per category covers the rule; every value would only repeat it.
+                if (isset($seen[$category])) {
+                    continue;
+                }
+                $seen[$category] = true;
                 $examples = self::examples($category, $value);
                 if ($examples === [] && in_array($category, self::CLASSIFIER_ONLY_CATEGORIES, true)) {
                     throw new RuntimeException('Add classifier templates for rule category '.$category);

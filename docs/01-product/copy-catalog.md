@@ -128,6 +128,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.skipped` † | Not made into tasks | Result section heading for skipped text |
 | `note.skip_already_done` † | Already done: “{title}” | Skipped reason ([NU-E12](../03-modules/NU-note-understanding.md#nu-e12)) |
 | `note.skip_not_found` † | Couldn't find a task matching “{text}” | Skipped reason ([NU-E29](../03-modules/NU-note-understanding.md#nu-e29)) |
+| `note.skip_no_change` † | Already set: “{title}” | Skipped reason: the move changes nothing ([NU §2.4](../03-modules/NU-note-understanding.md#24-command-matching-nu-3)) |
 | `note.duplicate_hint` † | You already have a task like this | Row hint ([NU-E13](../03-modules/NU-note-understanding.md#nu-e13)) |
 | `note.processing_failed` † | I couldn't read this note just now. It's saved, and I'll try again. | Server error, note kept as pending |
 | `task.created_by_assistant` | Created by the assistant | Task details ([NU-7](../03-modules/NU-note-understanding.md#nu-7)) |
