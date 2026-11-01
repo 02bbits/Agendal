@@ -11,12 +11,10 @@ import {
   type Project,
   type Task,
 } from "@/ui";
-import { headerDate } from "./headerDate";
+import { headerDate, subscribeHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi, inbox, projects } from "@/lib/taskApi";
 import { now, timeZone } from "@/lib/clock";
-
-const noSubscription = () => () => {};
 
 const clock: Clock = {
   now,
@@ -34,7 +32,7 @@ export default function Page() {
   const [projectList, setProjectList] = useState<Project[]>([]);
 
   const date = useSyncExternalStore(
-    noSubscription,
+    subscribeHeaderDate,
     () => headerDate(),
     () => undefined,
   );
