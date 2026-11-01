@@ -280,6 +280,28 @@ describe("Inbox screen", () => {
       vi.useRealTimers();
     }
   });
+
+  it("appends new task when agendal:task-created event is received", async () => {
+    const { wrap } = setup([task({ title: "Existing task", due_date: TODAY })]);
+    render(wrap(<InboxScreen accountInitial="e" />));
+
+    expect(screen.getByText("Existing task")).toBeTruthy();
+    expect(screen.queryByText("Dynamically created task")).toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(
+        new CustomEvent("agendal:task-created", {
+          detail: task({
+            id: "t-dyn",
+            title: "Dynamically created task",
+            due_date: TODAY,
+          }),
+        }),
+      );
+    });
+
+    expect(await screen.findByText("Dynamically created task")).toBeTruthy();
+  });
 });
 
 describe("Inbox Page (app/page.tsx)", () => {

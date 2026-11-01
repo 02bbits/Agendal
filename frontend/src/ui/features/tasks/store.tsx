@@ -142,6 +142,23 @@ export function TaskStoreProvider({
     };
   }, []);
 
+  useEffect(() => {
+    const onTaskCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<Task>;
+      const created = customEvent?.detail;
+      if (created) {
+        setTasks((prev) => {
+          if (prev.some((t) => t.id === created.id)) return prev;
+          return [...prev, created];
+        });
+      }
+    };
+    window.addEventListener("agendal:task-created", onTaskCreated);
+    return () => {
+      window.removeEventListener("agendal:task-created", onTaskCreated);
+    };
+  }, []);
+
   const [, setTick] = useState(0);
   const todayDate = today(clock.timeZone, clock.now());
 
