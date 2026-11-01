@@ -9,10 +9,7 @@ use App\Enums\CommandAction;
 /** Skip, command or task, first match wins (NU §2.3); every phrase comes from the shared note rules CSV. */
 final class ItemClassifier
 {
-    public function __construct(
-        private NoteDateParser $dates,
-        private NoteTimeParser $times,
-    ) {}
+    public function __construct(private RescheduleTarget $target) {}
 
     public function classify(string $text, NoteContext $context): ItemClassification
     {
@@ -31,7 +28,7 @@ final class ItemClassifier
      */
     private function isNotATask(string $text): bool
     {
-        return $this->startsWith($text, 'skip_prefix')
+        return NoteVocabulary::startsWith($text, 'skip_prefix')
             || $this->onlyFiller($text)
             || $this->isHeading($text)
             || NoteVocabulary::onlyModifiers($text);
@@ -53,42 +50,33 @@ final class ItemClassifier
 
     private function commandAction(string $text, NoteContext $context): ?CommandAction
     {
-        if ($this->startsWith($text, 'not_command')) {
+        if (NoteVocabulary::startsWith($text, 'not_command')) {
             return null;
         }
 
         return match (true) {
             $this->isComplete($text) => CommandAction::Complete,
-            $this->startsWith($text, 'delete_command') => CommandAction::Delete,
-            $this->startsWith($text, 'move_command') && $this->hasNewDate($text, $context) => CommandAction::Reschedule,
+            NoteVocabulary::startsWith($text, 'delete_command') => CommandAction::Delete,
+            // Reschedule needs a move verb and "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task.
+            $this->target->split($text, $context) !== null || $this->target->shift($text) !== null => CommandAction::Reschedule,
             default => null,
         };
     }
 
-    /** "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done", not "get it done"). */
+    /**
+     * "done X", "X is done", "X xong rồi"; a bare "done"/"xong" ending only after a non-verb ("homework done",
+     * not "get it done") or set off by a dash, colon or comma ("pick up laundry - done", "gọi mẹ: xong"). A hyphen
+     * inside a word ("well-done") sets nothing off.
+     */
     private function isComplete(string $text): bool
     {
         $sentenceEnd = '[\p{P}\s]*$';
+        $bare = '(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd;
+        $notInWord = '(?<![\p{L}\p{N}_])(?<![\p{L}\p{N}]\p{Pd})';
 
-        return $this->startsWith($text, 'complete_command')
+        return NoteVocabulary::startsWith($text, 'complete_command')
             || preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix').')'.$sentenceEnd.'~iu', $text) === 1
-            || (preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('complete_suffix_bare').')'.$sentenceEnd.'~iu', $text) === 1
-                && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
-    }
-
-    /** Reschedule needs "to / sang / qua / đến <when>"; "move the boxes to the garage" stays a task. */
-    private function hasNewDate(string $text, NoteContext $context): bool
-    {
-        if (preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('reschedule_target').')\s+(?<when>.+)$~iu', $text, $match) !== 1) {
-            return false;
-        }
-
-        return $this->dates->parse($match['when'], $context, null)->date !== null
-            || $this->times->parse($match['when'], $context)->start !== null;
-    }
-
-    private function startsWith(string $text, string $category): bool
-    {
-        return preg_match('~^(?:'.NoteVocabulary::phrases($category).')(?![\p{L}\p{N}_])~iu', $text) === 1;
+            || preg_match('~\S(?:\s*(?::|'.NoteVocabulary::phrases('comma').')|\s+\p{Pd}|\p{Pd}(?=\s))\s*'.$bare.'~iu', $text) === 1
+            || (preg_match('~'.$notInWord.$bare.'~iu', $text) === 1 && ! NoteVocabulary::startsWithVerb(NoteVocabulary::withoutLeadIn($text)));
     }
 }

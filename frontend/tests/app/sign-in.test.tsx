@@ -64,13 +64,14 @@ afterEach(() => {
 });
 
 describe("Sign in (AA-2)", () => {
-  it("enables Sign in once both fields have text, including from autofill (AA-E12)", async () => {
+  it("T-AA-112: enables Sign in once both fields have text, including from autofill's input events", async () => {
     const { email, password, submit } = renderPage();
 
+    // A password manager sets the value and fires `input`, with no keystrokes (AA-E12)
     expect(submit.disabled).toBe(true);
-    fireEvent.change(email, { target: { value: "example@gmail.com" } });
+    fireEvent.input(email, { target: { value: "example@gmail.com" } });
     expect(submit.disabled).toBe(true);
-    fireEvent.change(password, { target: { value: "x" } });
+    fireEvent.input(password, { target: { value: "x" } });
     expect(submit.disabled).toBe(false);
   });
 
@@ -106,7 +107,7 @@ describe("Sign in (AA-2)", () => {
     expect(password.type).toBe("text");
   });
 
-  it("T-AA-10: wrong details show auth.invalid, keep the email, clear and focus the password", async () => {
+  it("T-AA-10, A11Y-62: wrong details show auth.invalid, keep the email, clear and focus the password", async () => {
     reply = () => json(422, { error: { code: "auth.invalid" } });
     const user = userEvent.setup();
     const { email, password } = await signIn(user);
@@ -119,7 +120,7 @@ describe("Sign in (AA-2)", () => {
     expect(document.activeElement).toBe(password);
   });
 
-  it("T-AA-111: goes back to a same-origin return path, never another site", async () => {
+  it("T-AA-111, SEC-24: goes back to a same-origin return path, never another site", async () => {
     window.history.replaceState(null, "", "/sign-in?next=%2Fupcoming");
     await signIn(userEvent.setup());
     expect(router.push).toHaveBeenLastCalledWith("/upcoming");
@@ -128,6 +129,7 @@ describe("Sign in (AA-2)", () => {
     expect(safeReturnPath("/\\evil.com")).toBe("/");
     expect(safeReturnPath("/\t/evil.com")).toBe("/");
     expect(safeReturnPath("https://evil.com")).toBe("/");
+    expect(safeReturnPath("javascript:alert(1)")).toBe("/");
     expect(safeReturnPath(null)).toBe("/");
     expect(safeReturnPath("/projects/1?x=2")).toBe("/projects/1?x=2");
   });

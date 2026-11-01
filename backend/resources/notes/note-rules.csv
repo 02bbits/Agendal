@@ -203,6 +203,11 @@ move_command,chuyển
 move_command,hoãn
 move_command,delay
 move_command,lùi
+move_command,đẩy
+move_command,dịch
+move_command,kéo
+move_command,shift
+move_command,bump
 delete_command,delete
 delete_command,cancel
 delete_command,remove
@@ -774,10 +779,35 @@ complete_suffix_bare,xong
 complete_suffix_bare,hoàn thành
 not_command,drop off
 not_command,drop by
+not_command,remove stains
+not_command,remove stain
 heading_suffix,:
 not_command,bỏ rác
 not_command,bỏ thư
 not_command,bỏ tiền
+stop_word,a
+stop_word,an
+stop_word,the
+stop_word,to
+stop_word,for
+stop_word,my
+stop_word,of
+stop_word,on
+stop_word,in
+stop_word,at
+stop_word,with
+stop_word,and
+stop_word,or
+stop_word,task
+stop_word,cái
+stop_word,các
+stop_word,những
+stop_word,của
+stop_word,cho
+stop_word,với
+stop_word,và
+stop_word,là
+stop_word,việc
 vietnamese_ascii_word,mua
 vietnamese_ascii_word,em
 duration_unit:minute,minute
@@ -928,3 +958,103 @@ vietnamese_unaccented_syllable,giat
 vietnamese_unaccented_syllable,quan
 vietnamese_unaccented_syllable,ao
 vietnamese_unaccented_syllable,nau
+deadline_prefix,by
+deadline_prefix,before
+deadline_prefix,until
+deadline_prefix,trước
+deadline_prefix,chậm nhất
+span_lead,from
+span_lead,until
+span_lead,till
+span_lead,to
+span_lead,từ
+span_lead,đến
+span_lead,tới
+shift_prefix,by
+shift_prefix,thêm
+shift_later,later
+shift_later,nữa
+shift_later,sau
+shift_later,back
+shift_later,lại
+shift_later,lùi
+shift_later,muộn
+shift_later,muộn hơn
+shift_later,trễ
+shift_later,trễ hơn
+shift_earlier,earlier
+shift_earlier,sớm
+shift_earlier,sớm hơn
+shift_earlier,lên
+shift_earlier,sooner
+shift_earlier,forward
+shift_earlier,ahead
+shift_earlier,up
+shift_earlier,trước
+amount_one,a
+amount_one,an
+amount_one,one
+amount_one,một
+amount_half,half an
+amount_half,half a
+amount_half,half
+amount_half,nửa
+amount:2,two
+amount:2,hai
+amount:3,three
+amount:3,ba
+amount:4,four
+amount:4,bốn
+amount:5,five
+amount:5,năm
+amount:6,six
+amount:6,sáu
+amount:7,seven
+amount:7,bảy
+amount:8,eight
+amount:8,tám
+amount:9,nine
+amount:9,chín
+amount:10,ten
+amount:10,mười
+amount:15,fifteen
+amount:15,mười lăm
+amount:20,twenty
+amount:20,hai mươi
+amount:30,thirty
+amount:30,ba mươi
+shift_unit:hour,giờ
+shift_unit:hour,h
+shift_unit:minute,p
+shift_unit:minute,ph
+command_joiner,and
+command_joiner,&
+command_joiner,và
+command_joiner,plus
+file_extension,pdf
+file_extension,doc
+file_extension,docx
+file_extension,xls
+file_extension,xlsx
+file_extension,ppt
+file_extension,pptx
+file_extension,txt
+file_extension,csv
+file_extension,md
+file_extension,png
+file_extension,jpg
+file_extension,jpeg
+file_extension,gif
+file_extension,svg
+file_extension,zip
+file_extension,rar
+file_extension,mp3
+file_extension,mp4
+file_extension,mov
+file_extension,html
+file_extension,json
+file_extension,sql
+file_extension,py
+file_extension,js
+file_extension,ts
+file_extension,php

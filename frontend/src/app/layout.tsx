@@ -1,18 +1,13 @@
 import type { Metadata, Viewport } from "next";
-import { Instrument_Sans, Newsreader } from "next/font/google";
+import { Inter } from "next/font/google";
 import { AppFrame } from "./AppFrame";
 import "./globals.css";
 
-// Paper & ink fonts, self-hosted at build time (no request to Google from the browser)
-const sans = Instrument_Sans({
-  subsets: ["latin", "latin-ext"],
-  variable: "--font-instrument-sans",
-  display: "swap",
-});
-const serif = Newsreader({
+// Graphite font, self-hosted at build time (no request to Google from the browser)
+const sans = Inter({
   subsets: ["latin", "latin-ext", "vietnamese"],
-  axes: ["opsz"],
-  variable: "--font-newsreader",
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-inter",
   display: "swap",
 });
 
@@ -31,11 +26,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     // AppFrame sets data-theme on the client when Appearance isn't System
-    <html
-      lang="en"
-      className={`${sans.variable} ${serif.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
         {/* Blocking on purpose: sets the theme before first paint (AP-3, T-AP-22) */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}

@@ -4,6 +4,7 @@ use App\Enums\WeekStart;
 use App\Services\Notes\ExtractedFields;
 use App\Services\Notes\FieldExtractor;
 use App\Services\Notes\NoteContext;
+use Tests\Support\Cases;
 use Tests\Support\NoteExtractionScenarios;
 use Tests\TestCase;
 
@@ -37,16 +38,13 @@ function sortedFields(array $expected): array
     return $expected;
 }
 
-dataset('extraction rules', function (): array {
-    // Datasets build before the app boots, so read the config file directly.
-    $config = require __DIR__.'/../../../config/notes.php';
+it('reads every extraction rule in the shared rules CSV', function () {
+    expect(Cases::failing(NoteExtractionScenarios::generate(config('notes.rules')), function (string $note, array $expected, string $now): ?array {
+        $got = selectedFields(extractFields($note, [], $now), $expected);
 
-    return NoteExtractionScenarios::generate($config['rules']);
+        return $got === sortedFields($expected) ? null : $got;
+    }))->toBe([]);
 });
-
-it('reads every extraction rule in the shared rules CSV', function (string $note, array $expected, string $now) {
-    expect(selectedFields(extractFields($note, [], $now), $expected))->toBe(sortedFields($expected));
-})->with('extraction rules');
 
 it('extracts English and accented Vietnamese fields (T-NU-10–18)', function (string $text, array $expected) {
     expect(selectedFields(extractFields($text), $expected))->toBe(sortedFields($expected));
@@ -62,6 +60,14 @@ it('extracts English and accented Vietnamese fields (T-NU-10–18)', function (s
     ['take medicine at 8am and 8pm', ['title' => 'Take medicine', 'startTime' => '08:00', 'lowConfidence' => true]],
     ['meet at 9am, 9am sharp', ['startTime' => '09:00', 'lowConfidence' => false]],
     ['pay rent on the 26th of October 2027', ['title' => 'Pay rent', 'dueDate' => '2027-10-26']],
+    ['buy flowers for mom bday 11/15', ['title' => 'Buy flowers for mom bday', 'dueDate' => '2026-11-15']],
+    ['renew lease 12/31/2026', ['title' => 'Renew lease', 'dueDate' => '2026-12-31']],
+    ['call bank 5/11', ['dueDate' => '2026-11-05']],
+    ['đóng học phí trước ngày 10.', ['title' => 'Đóng học phí', 'dueDate' => '2026-11-10']],
+    ['nộp bài ngày 10 - gấp', ['title' => 'Nộp bài', 'dueDate' => '2026-11-10', 'priority' => 'high']],
+    'a day range is no single date' => ['họp ngày 10-11', ['dueDate' => null]],
+    ['renew lease until friday', ['title' => 'Renew lease', 'dueDate' => '2026-10-30']],
+    ['nộp báo cáo chậm nhất thứ 6', ['title' => 'Nộp báo cáo', 'dueDate' => '2026-10-30']],
     ['read chapter 5 in 3 days', ['title' => 'Read chapter 5', 'dueDate' => '2026-10-26', 'startTime' => null]],
     ['đọc sách 3 ngày nữa', ['title' => 'Đọc sách', 'dueDate' => '2026-10-26']],
     ['read in a week', ['title' => 'Read', 'dueDate' => '2026-10-30']],

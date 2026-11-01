@@ -48,7 +48,7 @@ final class NoteSplitterScenarios
             if ($header !== ['category', 'value']) {
                 throw new RuntimeException('Invalid rules CSV header');
             }
-            $cases = [];
+            [$cases, $seen] = [[], []];
             while (($row = fgetcsv($file, null, ',', '"', '')) !== false) {
                 if ($row === [null]) {
                     continue;
@@ -57,6 +57,11 @@ final class NoteSplitterScenarios
                     throw new RuntimeException('Invalid rules CSV row');
                 }
                 [$category, $value] = $row;
+                // One value per category covers the rule; every value would only repeat it.
+                if (isset($seen[$category])) {
+                    continue;
+                }
+                $seen[$category] = true;
                 $project = str_starts_with($category, 'project_keyword:') ? substr($category, strlen('project_keyword:')) : null;
                 $family = explode(':', $category)[0];
                 $examples = match (true) {
@@ -75,6 +80,8 @@ final class NoteSplitterScenarios
                     in_array($category, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) || in_array($family, NoteExtractionScenarios::EXTRACTION_ONLY_CATEGORIES, true) => [],
                     // Read only by the item classifier; NoteClassifierScenarios covers them.
                     in_array($category, NoteClassifierScenarios::CLASSIFIER_ONLY_CATEGORIES, true) => [],
+                    // Read only by the command matcher (stop and shift words) or the date parser (deadline words).
+                    in_array($family, ['stop_word', 'deadline_prefix', 'shift_prefix', 'shift_later', 'shift_earlier', 'shift_unit', 'amount', 'amount_one', 'amount_half', 'command_joiner'], true) => [],
                     default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {

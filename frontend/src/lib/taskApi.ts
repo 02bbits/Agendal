@@ -1,5 +1,7 @@
 import { api } from "./api";
-import type { TaskApi } from "../ui/domain/api";
+import { handleResponse } from "./apiError";
+import type { TaskApi, TaskPatch } from "../ui/domain/api";
+import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { Project, Task } from "../ui/domain/types";
 
 export interface InboxData {
@@ -10,21 +12,6 @@ export interface InboxData {
   progress: { done: number; total: number };
   no_date_count: number;
   completed_count: number;
-}
-
-async function handleResponse<T>(response: Response): Promise<T> {
-  if (!response.ok) {
-    let errorCode: string | undefined;
-    try {
-      const data = await response.json();
-      errorCode = data?.error?.code;
-    } catch {
-      // Body is not JSON
-    }
-    throw new Error(errorCode || "error.generic");
-  }
-
-  return response.json();
 }
 
 async function postLifecycle<T>(
@@ -48,9 +35,42 @@ export async function inbox(): Promise<InboxData> {
   return handleResponse<InboxData>(response);
 }
 
+export async function getTask(id: string): Promise<Task> {
+  const response = await api(`/tasks/${encodeURIComponent(id)}`);
+  return handleResponse<Task>(response);
+}
+
 export async function projects(): Promise<Project[]> {
   const response = await api("/projects");
   return handleResponse<Project[]>(response);
+}
+
+export async function patch(
+  id: string,
+  fields: TaskPatch,
+  at: string,
+): Promise<Task> {
+  const response = await api(`/tasks/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ ...fields, at }),
+  });
+
+  return handleResponse<Task>(response);
+}
+
+export async function createTask(body: CreateTaskBody): Promise<Task> {
+  const response = await api("/tasks", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+
+  return handleResponse<Task>(response);
 }
 
 export const httpTaskApi: TaskApi = {
@@ -60,5 +80,9 @@ export const httpTaskApi: TaskApi = {
 
   reopen(id: string, at: string): Promise<{ task: Task; next?: Task }> {
     return postLifecycle(id, "reopen", at);
+  },
+
+  patch(id: string, fields: TaskPatch, at: string): Promise<Task> {
+    return patch(id, fields, at);
   },
 };

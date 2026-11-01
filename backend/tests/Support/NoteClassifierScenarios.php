@@ -21,12 +21,17 @@ final class NoteClassifierScenarios
         }
         try {
             fgetcsv($file, null, ',', '"', '');
-            $cases = [];
+            [$cases, $seen] = [[], []];
             while (($row = fgetcsv($file, null, ',', '"', '')) !== false) {
                 if ($row === [null] || count($row) !== 2) {
                     continue;
                 }
                 [$category, $value] = array_map(trim(...), array_map('strval', $row));
+                // One value per category covers the rule; every value would only repeat it.
+                if (isset($seen[$category])) {
+                    continue;
+                }
+                $seen[$category] = true;
                 $examples = self::examples($category, $value);
                 if ($examples === [] && in_array($category, self::CLASSIFIER_ONLY_CATEGORIES, true)) {
                     throw new RuntimeException('Add classifier templates for rule category '.$category);
@@ -50,7 +55,7 @@ final class NoteClassifierScenarios
             'filler' => [[$value.'!', 'skip'], ['read '.$value.' notes', 'task']],
             'complete_command' => [[$value.' report', 'command/complete']],
             'complete_suffix' => [['report '.$value, 'command/complete']],
-            'complete_suffix_bare' => [['report '.$value, 'command/complete'], ['get report '.$value, 'task']],
+            'complete_suffix_bare' => [['report '.$value, 'command/complete'], ['get report '.$value, 'task'], ['get report - '.$value, 'command/complete'], ['get report: '.$value, 'command/complete']],
             'delete_command' => [[$value.' report', 'command/delete']],
             'move_command' => [[$value.' report to friday', 'command/reschedule'], [$value.' report', 'task']],
             'reschedule_target' => [['move report '.$value.' friday', 'command/reschedule'], ['move boxes '.$value.' garage', 'task']],
