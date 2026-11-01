@@ -26,7 +26,7 @@ One YAML list per file (`*.yaml`). Each case:
          project: SQL Course, repeat: never, reminder: 1d}
     update: []                     # {task: t1, done: true} or {task: t1, due: ..., start: ..., label: ...}
     delete: []                     # [t1]
-    skipped: []                    # {text: ..., reason: skip|already_done|not_found}
+    skipped: []                    # {text: ..., reason: skip|already_done|not_found|no_change}
     ambiguous: []                  # tie cases: {candidates: [t4, t5], preselected: t4}
 ```
 

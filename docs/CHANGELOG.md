@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-01
+
+- **Moves that change nothing (IM-35).** [NU §2.4](03-modules/NU-note-understanding.md#24-command-matching-nu-3): a move to the date and time the task already has is skipped with the new reason `no_change`; [NU §2.6](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01-br-02) counts it like `already_done` and `not_found`. The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json), NU §7 enums, the [note corpus](06-testing/note-corpus/README.md) format, [RV](03-modules/RV-review-control.md) and the [copy catalog](01-product/copy-catalog.md) add `no_change` and `note.skip_no_change`.
+
 ## 2026-10-29
 
 - **16:10 (UTC+7) · Layout docs match the built shell.** [UX-24](01-product/ux-standards.md#ux-24): the phone header keeps Search and the avatar. [UX-26](01-product/ux-standards.md#ux-26): the tab bar shrinks to 48px when the viewport is 480px tall or less, and a phone 768px wide or more sideways gets the sidebar. [UX-27](01-product/ux-standards.md#ux-27): follows the Figma desktop frames; sidebar and side panel on `surface`, content on `paper`, capture bar over a paper fade, header without Search and avatar, toasts centred on the column, no sidebar on signed-out screens. [UX-28](01-product/ux-standards.md#ux-28): panel as tall as the window. The UX rows are back in ID order. [Traceability matrix](06-testing/traceability-matrix.md), NF-8 row: adds the 915×412 sideways check. The [UI README](../frontend/src/ui/README.md) lists `AppShell`, `Sidebar`, `px-gutter-wide` and the fonts loaded with `next/font`.

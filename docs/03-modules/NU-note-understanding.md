@@ -88,7 +88,7 @@ In this order, first match wins:
 - **Score** = meaningful words found in the task title ÷ meaningful words in the command. A task matches when the score is ≥ 0.6.
 - **Best match wins.** On equal scores, the title with more of the command's words wins, then the title with fewer words the command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"). Two or more tasks still equal after that is a tie ([NU-E11](#nu-e11)).
 - **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. A delete with a deadline (*before / by / until / trước \<when>*, "cancel netflix before the 10th") or a place (*at / ở / tại \<place>*, "drop the kids at school") → that task, since a delete never needs either. Other complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
-- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`.
+- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`. A move to the date and time the task already has changes nothing → skip `no_change` (`note.skip_no_change`).
 - **Repeating tasks:** "done" completes this occurrence and creates the next one ([TK-4](TK-tasks.md#tk-4)). "move" moves only this occurrence ([NU-E36](#nu-e36)).
 
 ### 2.5 Extraction (NU-2)
@@ -120,7 +120,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
 | Any delete, any tie ([NU-E11](#nu-e11)), or more than 5 changes (creates + updates + deletes) | `confirm` |
 | At least one change | `done` |
-| No changes, and every skip is `already_done` or `not_found` | `done` with zero changes. The result shows the skipped section |
+| No changes, and every skip is `already_done`, `not_found` or `no_change` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
 
 Skipped items never count as changes. A `confirm` plan is re-validated when it is applied ([NU-E38](#nu-e38)).
@@ -185,7 +185,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 
 ## 5. Copy keys
 
-`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
+`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
 
 ## 6. Accessibility
 
@@ -267,7 +267,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `priority`: `low`, `medium`, `high`
   - `repeat`: `never`, `daily`, `weekly`, `monthly`, `yearly`
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
-  - `reason`: `skip`, `already_done`, `not_found`
+  - `reason`: `skip`, `already_done`, `not_found`, `no_change`
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ## 8. Data, validation and authorization
