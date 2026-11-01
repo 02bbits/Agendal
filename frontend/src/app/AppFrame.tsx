@@ -21,14 +21,13 @@ import {
   Toast,
   type AccountSettings,
   type Navigate,
-  type Project,
   type TabId,
   type ToastData,
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { submitNote } from "@/lib/noteApi";
-import { createTask, projects as fetchProjects } from "@/lib/taskApi";
+import { useNewTask } from "./useNewTask";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -196,26 +195,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [editing, setEditing] = useState(false);
   const openNoteEditor = useCallback(() => setEditing(true), []);
   const closeNoteEditor = useCallback(() => setEditing(false), []);
-  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
-  const [taskProjects, setTaskProjects] = useState<Project[]>([]);
-  const [taskProjectsStatus, setTaskProjectsStatus] = useState<
-    "ready" | "failed"
-  >("ready");
-  const loadProjects = useCallback(() => {
-    fetchProjects()
-      .then((p) => {
-        setTaskProjects(p);
-        setTaskProjectsStatus("ready");
-      })
-      .catch(() => {
-        setTaskProjectsStatus("failed");
-      });
-  }, []);
-  const openNewTask = useCallback(() => {
-    setTaskSheetOpen(true);
-    loadProjects();
-  }, [loadProjects]);
-  const closeNewTask = useCallback(() => setTaskSheetOpen(false), []);
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
@@ -230,6 +209,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  const { open, openNewTask, sheetProps } = useNewTask({
+    pathname,
+    showToast,
+  });
   // Applies at once, then saves. A refused save puts the old values back; offline the change
   // stays on this device until the sync arrives (IM-52).
   const settingsRef = useRef(settings);
@@ -381,18 +364,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }}
           />
         )}
-        {taskSheetOpen && (
-          <NewTaskSheet
-            open={taskSheetOpen}
-            pathname={pathname}
-            projects={taskProjects}
-            projectsStatus={taskProjectsStatus}
-            onRetryProjects={loadProjects}
-            onCreate={createTask}
-            onAdded={(title) => showToast(t("task.added", { title }))}
-            onClose={closeNewTask}
-          />
-        )}
+        {open && <NewTaskSheet {...sheetProps} />}
       </AppShell>
     </AppFrameContext.Provider>
   );
