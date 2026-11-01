@@ -62,8 +62,10 @@ export function UpcomingScreen({
   viewMode = "grid",
 }: UpcomingScreenProps) {
   const store = useTaskStore();
-  const [internalFilter, setInternalFilter] = useState<UpcomingFilter>(readFilter);
-  const filter = controlledFilter !== undefined ? controlledFilter : internalFilter;
+  const [internalFilter, setInternalFilter] =
+    useState<UpcomingFilter>(readFilter);
+  const filter =
+    controlledFilter !== undefined ? controlledFilter : internalFilter;
   const [pages, setPages] = useState(1);
   const tomorrow = addDays(store.today, 1);
 
