@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../../copy";
+import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox } from "../../domain/lists";
@@ -11,6 +12,8 @@ import { ProgressSummary } from "../tasks/ProgressSummary";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import { Section } from "./Section";
+
+export const INBOX_COMPLETED_PAGE = 5;
 
 export interface InboxScreenProps {
   accountInitial?: string;
@@ -25,6 +28,7 @@ export function InboxScreen({
   showHeader = true,
 }: InboxScreenProps) {
   const store = useTaskStore();
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
   const view = buildInbox(store.tasks, store.today, {
     completedToday: store.completedToday,
     isSettling: store.isSettling,
@@ -39,6 +43,13 @@ export function InboxScreen({
     if (prevOpen.current > 0 && openCount === 0) doneHeading.current?.focus();
     prevOpen.current = openCount;
   }, [openCount]);
+
+  const totalCompleted = view.completed.length;
+  const visibleCompleted = showAllCompleted
+    ? view.completed
+    : view.completed.slice(0, INBOX_COMPLETED_PAGE);
+  const hasHiddenCompleted =
+    !showAllCompleted && totalCompleted > INBOX_COMPLETED_PAGE;
 
   const row = (
     task: (typeof view.today)[number],
@@ -141,8 +152,27 @@ export function InboxScreen({
               title={t("list.completed")}
               count={view.completed.length}
               collapsible
+              footer={
+                hasHiddenCompleted ? (
+                  <Button
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    onClick={() => setShowAllCompleted(true)}
+                  >
+                    {t("list.show_all")}
+                  </Button>
+                ) : showAllCompleted && totalCompleted > INBOX_COMPLETED_PAGE ? (
+                  <Button
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    onClick={() => setShowAllCompleted(false)}
+                  >
+                    {t("list.show_less")}
+                  </Button>
+                ) : null
+              }
             >
-              {view.completed.map((x) => row(x))}
+              {visibleCompleted.map((x) => row(x))}
             </Section>
           )}
         </>
