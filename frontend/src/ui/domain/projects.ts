@@ -51,7 +51,9 @@ export function defaultProjectColour(
 }
 
 /** Alphabetical, locale-aware and case-insensitive (PJ §2.2). */
-export function sortProjects(projects: readonly Project[] = []): Project[] {
+export function sortProjects<T extends Project>(
+  projects: readonly T[] = [],
+): T[] {
   if (!Array.isArray(projects)) return [];
   return [...projects].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
