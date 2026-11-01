@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { t, type CopyKey } from "../../copy";
 import { EmptyState } from "../../components/EmptyState";
 import type { TabId } from "./routes";
@@ -11,6 +12,12 @@ export const EMPTY_STATE: Record<TabId | "search", CopyKey> = {
   search: "search.hint",
 };
 
-export function RouteEmptyState({ route }: { route: TabId | "search" }) {
-  return <EmptyState title={t(EMPTY_STATE[route])} />;
+export function RouteEmptyState({
+  route,
+  action,
+}: {
+  route: TabId | "search";
+  action?: ReactNode;
+}) {
+  return <EmptyState title={t(EMPTY_STATE[route])} action={action} />;
 }

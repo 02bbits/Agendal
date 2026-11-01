@@ -1,7 +1,8 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { useHistoryEntry } from "../../src/ui/components/useHistoryEntry";
 import { Button, Dialog, Sheet } from "../../src/ui";
 
 // AP-4, AP-E9: Back closes the open sheet or dialog and stays on the screen (T-AP-106)
@@ -90,5 +91,21 @@ describe("history entries for sheets and dialogs", () => {
     await userEvent.click(screen.getByText("Open sheet"));
 
     expect(window.history.state.__NA).toBe(true);
+  });
+
+  it("an onClose that returns false refuses Back and puts the entry back", async () => {
+    const refuse = vi.fn(() => false);
+    const Guarded = () => {
+      useHistoryEntry(true, refuse);
+      return <p>Guarded</p>;
+    };
+    const before = window.history.length;
+    render(<Guarded />);
+    expect(window.history.length).toBe(before + 1);
+    await goBack();
+    expect(refuse).toHaveBeenCalledOnce();
+    expect(window.history.state?.agendalModal).toBeTruthy();
+    await goBack();
+    expect(refuse).toHaveBeenCalledTimes(2);
   });
 });

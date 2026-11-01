@@ -17,7 +17,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|
 | <a id="rv-1"></a>RV-1 | Show what happened after every note | Must | The result screen lists each created, changed and deleted task with a CREATED / UPDATED / DELETED badge and its meta; created and changed tasks open their details; created tasks with no date offer When? chips ([Q4](../08-project/open-questions.md#q4)) |
 | <a id="rv-2"></a>RV-2 | Undo a whole note in one tap | Must | Undo all removes created tasks, reverts changes and restores deleted tasks; the note is kept and marked Undone |
-| <a id="rv-3"></a>RV-3 | Resolve unclear notes | Must | Return message "I couldn't find a task in this note.", offer an option to return and edit the note  |
+| <a id="rv-3"></a>RV-3 | Resolve unclear notes | Must | The screen says "I couldn't find a task in this note." and offers Keep it as task or Edit the note |
 | <a id="rv-4"></a>RV-4 | Keep every note | Must | The Notes tab lists notes newest first with time, name, excerpt and task count; a card opens its result |
 | <a id="rv-5"></a>RV-5 | Edit a note to re-plan it ([Q1](../08-project/open-questions.md#q1)) | Must | Edit note opens the note's text in the editor; Make tasks undoes what the note applied and plans the new text under the same safety rules; the card shows Edited |
 
@@ -47,11 +47,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Each row has a badge, the task title and its meta.
   - Created and changed rows open Task details. Deleted rows don't open.
   - A task removed since (by hand or by another note) shows `note.gone_since` and doesn't open.
-  - Changed rows show the label with the old value ("Due Fri (was today)").
+  - The meta is the row's `label` from the server ("Mon 26 Oct · 09:00 · SQL Course"). Changed rows add the old value: "Fri 30 Oct · HCI · was Wed 28 Oct".
+  - A row's accessible name reads its badge, title and meta: "Created: SQL quiz, Mon 26 Oct · 09:00 · SQL Course" (A11Y-21).
 - **Skipped section** (`note.skipped`): each skipped item with its reason (`note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`), or the plain text for `skip`.
 - **Hints:** a duplicate row carries `note.duplicate_hint` ([NU-E13](NU-note-understanding.md#nu-e13)).
 - **When? chips ([Q4](../08-project/open-questions.md#q4)):** a created row whose task has no due date shows `note.ask_when` with chips Today, Tomorrow, Next week and Pick date…. A chip sets the due date like an edit in Task details (`PATCH /tasks/{id}`), and the row's meta updates. The chips disappear once the task has a date, and after Undo all.
-- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5).
+- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). Until Undo all ([IM-44](../08-project/tasks.md#im-44)) and Edit note ([IM-47](../08-project/tasks.md#im-47)) are built, the screen has **Done** only.
+- **Where the data comes from:** after Make tasks the note is already in hand and isn't asked for again; opened by link, the note is loaded first. Either way each created and changed task is read by its id, so a task removed since shows `note.gone_since` and the When? chips follow the task's real date. The result takes the editor's place in the history, so Back goes to where the editor was opened ([RV-E12](#rv-e12)).
 - **After undo:**
   - The overline says `Undone`.
   - Rows are muted and stop opening.
@@ -73,12 +75,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3 Follow-up (RV-3)
 
-- **Contents:** `note.followup_title`, the note quoted in full, then Keep as note (secondary) and Make it a task (primary).
-- **Make it a task:**
-  - The task's title is the note's first line, cut per [NU-E16](NU-note-understanding.md#nu-e16). The rest of the text goes into the task notes. No fields are extracted.
-  - The note becomes `done`, with one created change, so Undo all works.
+- **Contents:** `note.followup_title`, the note quoted in full, then Edit the note (secondary) and Keep it as task (primary).
+- **Keep it as task:**
+  - The task's title is the note's whole text, with line breaks turned into spaces. Over 200 characters it is cut at a word boundary and the rest goes into the task notes ([NU-E16](NU-note-understanding.md#nu-e16)). No fields are extracted.
+  - The note becomes `done`, with one created change, so Undo all works. Its name is the task's title ([naming rules](../02-domain/business-rules.md#naming-a-note-nu-6)).
   - Task details then opens for the new task, so the user can add a date.
-- **Keep as note:** the status becomes `kept`, and the screen returns to where the editor was opened from.
+- **Edit the note:** opens the note's text in the editor, exactly like [Edit note](#25-edit-note-rv-5), with Make tasks reading `note.replan`. The status stays `followup` until Make tasks plans the new text. Closing the editor without Make tasks leaves the note as it was.
+- **No other way out:** there is no "keep as a note" option. A note the user doesn't act on stays `followup`, and its Notes card shows `note.needs_look_one` until they choose one of the two.
 
 ### 2.4 Undo all (RV-2): answers to Q9 and Q10 (Q20)
 
@@ -96,7 +99,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Restored task whose project is gone:** it goes to No project, and the result row says so (`note.project_gone`).
 - **Atomic:** one transaction, in reverse log order. The note becomes `undone`.
 - **Toast:** `note.undone` with Undo. That **redo** replays the undo's own log, restores the note to `done`, and is available while the toast is open ([UX-04](../01-product/ux-standards.md#ux-04)).
-- **Needs a connection:** Undo all, Apply changes, Keep as note and Make it a task all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`.
+- **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`.
 
 ### 2.5 Edit note (RV-5)
 
@@ -143,7 +146,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 |---|---|---|---|---|---|---|
 | Result | — | Skeleton after 300 ms (deep link only. Arriving from the editor, the data is already there) | Rows and buttons | Some rows `note.gone_since`. Skipped section shown | `404` → `error.not_found` with Back. `5xx` → `error.generic` with Retry | Cached result shown. Undo all disabled with `note.needs_connection` |
 | Check this first | — | Same | Rows with checkboxes | Ties shown as radio groups | Apply fails: rows kept, `error.save_failed` with Retry | Apply and Cancel disabled with `note.needs_connection` |
-| Follow-up | — | Same | Question and two buttons | — | Same as result | Buttons disabled with `note.needs_connection` |
+| Follow-up | — | Same | Question and two buttons (Keep it as task, Edit the note) | — | Same as result | Buttons disabled with `note.needs_connection` |
 | Notes tab | `note.list_empty` | Skeleton cards after 300 ms | Cards | Pending cards mixed in | Load-more failure: inline Retry at the end of the list | Cached notes plus pending ones. Older pages: `app.offline_body` at the end of the list |
 
 ## 4. Edge cases
@@ -160,7 +163,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | <a id="rv-e8"></a>RV-E8 | A task the note deleted was purged | Can't happen within 30 days ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md) keeps tombstones while a note can be undone) | T-RV-108 |
 | <a id="rv-e9"></a>RV-E9 | Apply changes with every row unticked | Apply is disabled. To keep the note, use Cancel | T-RV-109 |
 | <a id="rv-e10"></a>RV-E10 | A `confirm` note is applied days later, and its tasks changed | [NU-E38](NU-note-understanding.md#nu-e38): re-validated. The result lists the skipped entries | T-RV-110 |
-| <a id="rv-e11"></a>RV-E11 | Make it a task on a note longer than 200 characters on its first line | Title cut at a word boundary. The rest goes into the task notes | T-RV-111 |
+| <a id="rv-e11"></a>RV-E11 | Keep it as task on a note longer than 200 characters | Title cut at a word boundary. The rest goes into the task notes | T-RV-111 |
 | <a id="rv-e12"></a>RV-E12 | Back from the result screen | Returns to the screen the editor was opened from, never to the editor (the editor was replaced in history) | T-RV-112 |
 | <a id="rv-e13"></a>RV-E13 | A result row for a task deleted since | `note.gone_since`, doesn't open | T-RV-113 |
 | <a id="rv-e14"></a>RV-E14 | A note's result opened on a second device before sync | The result comes from the server, and the lists pull the new tasks ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)) | T-RV-114 |
@@ -173,7 +176,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 ## 5. Copy keys
 
-`note.made_one`, `note.made_other`, `note.overline_updated`, `note.overline_deleted`, `note.badge_created`, `note.badge_updated`, `note.badge_deleted`, `note.was`, `note.from_file`, `note.skipped`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.gone_since`, `note.project_gone`, `note.undo_all`, `note.undone`, `note.undone_label`, `note.undo_expired`, `note.undo_conflict_title`, `note.undo_conflict_body`, `note.confirm_title`, `note.confirm_body_one`, `note.confirm_body_other`, `note.apply`, `note.cancel_keep`, `note.pick_task`, `note.followup_title`, `note.keep`, `note.make_one`, `note.kept_label`, `note.needs_look_one`, `note.needs_look_other`, `note.needs_connection`, `note.list_empty`, `note.waiting`, `note.ask_when`, `note.edit`, `note.replan`, `note.edited_label`, `common.done`, `common.undo`, `error.not_found`, `error.generic`, `error.save_failed`.
+`note.made_one`, `note.made_other`, `note.overline_updated`, `note.overline_deleted`, `note.badge_created`, `note.badge_updated`, `note.badge_deleted`, `note.was`, `note.from_file`, `note.skipped`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.gone_since`, `note.project_gone`, `note.undo_all`, `note.undone`, `note.undone_label`, `note.undo_expired`, `note.undo_conflict_title`, `note.undo_conflict_body`, `note.confirm_title`, `note.confirm_body_one`, `note.confirm_body_other`, `note.apply`, `note.cancel_keep`, `note.pick_task`, `note.followup_title`, `note.followup_edit`, `note.make_one`, `note.kept_label`, `note.needs_look_one`, `note.needs_look_other`, `note.needs_connection`, `note.list_empty`, `note.waiting`, `note.ask_when`, `note.edit`, `note.replan`, `note.edited_label`, `common.done`, `common.undo`, `error.not_found`, `error.generic`, `error.save_failed`.
 
 ## 6. Accessibility
 
@@ -191,8 +194,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | `GET /notes/{id}` | — | `200` note result ([NU §7](NU-note-understanding.md#7-api-contract)) | `401`, `404` |
 | `POST /notes/{id}/apply` | `{choices: {ref: task_id}, exclude: [ref]}` | `200` note result, status `done` | `409 note.wrong_status` (not `confirm`), `422` (a choice outside the candidates, every row excluded) |
 | `POST /notes/{id}/cancel` | — | `200`, status `kept` | `409 note.wrong_status` |
-| `POST /notes/{id}/keep` | — | `200`, status `kept` | `409 note.wrong_status` (not `followup`) |
-| `POST /notes/{id}/make-task` | — | `201 {note, task}` | `409 note.wrong_status` |
+| `POST /notes/{id}/make-task` | — | `201 {note, task}`. This is Keep it as task | `409 note.wrong_status` (not `followup`) |
 | `POST /notes/{id}/undo` | `{confirm_conflicts: bool}` | `200` note result, status `undone`, plus `redo_until` | `409 note.undo_conflicts {tasks: [id, title]}` when there are conflicts and `confirm_conflicts` is false. `409 note.undo_expired` |
 | `POST /notes/{id}/redo` | — | `200`, status `done` | `409 note.wrong_status` (not `undone`), `409 note.redo_expired` (past `redo_until` = undo + 10 s) |
 | `PUT /notes/{id}` | `{text, written_at, timezone, confirm_conflicts: bool}` | `200` note result ([NU §7](NU-note-understanding.md#7-api-contract)) for the new plan, status `done`, `confirm` or `followup` | `409 note.wrong_status` (`pending` or `new`), `409 note.undo_conflicts`, `409 note.undo_expired`, `422` as for `POST /notes` |
@@ -233,7 +235,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | [RV-2](#rv-2) | Undo all removes created tasks, reverts changes, restores deleted tasks | T-RV-10 (API, one test per change kind), T-RV-11 (E2E [WF-04](../04-workflows/WF-04-undo-a-note.md)) |
 | [RV-2](#rv-2) | The note is kept and marked Undone | T-RV-12 |
 | [RV-2](#rv-2) | Undo is atomic and exact ([NF-11](../05-quality/nfr.md#nf-11)) | T-RV-13 (a failure injected mid-undo → nothing changes) |
-| [RV-3](#rv-3) | "I couldn't find a task in this note." offers Keep as note or Make it a task | T-RV-20 (component), T-RV-21 (keep → `kept`), T-RV-22 (make → task created and details open) |
+| [RV-3](#rv-3) | "I couldn't find a task in this note." offers Keep it as task or Edit the note | T-RV-20 (component), T-RV-22 (Keep it as task → one task titled with the whole text, details open), T-RV-23 (Edit the note → editor opens with the text, status stays `followup`). T-RV-21 is retired |
 | [RV-4](#rv-4) | The Notes tab lists notes newest first with time, name, excerpt and task count | T-RV-30 (order, including pending notes), T-RV-31 (card contents per status), T-RV-32 (pagination) |
 | [RV-4](#rv-4) | A card opens its result | T-RV-33 |
 | [RV-1](#rv-1) | Created tasks with no date offer When? chips ([Q4](../08-project/open-questions.md#q4)) | T-RV-04 (chips shown only without a date), T-RV-05 (a chip sets the date) |
