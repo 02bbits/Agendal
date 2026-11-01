@@ -19,8 +19,8 @@ Assumptions, constraints and risks. Decisions still open are in [open questions]
 
 | Type | Constraint | Source |
 |---|---|---|
-| Product | Mobile web app (PWA), phones 320–480px, no native apps | PRD, [NF-7](../05-quality/nfr.md#nf-7), [NF-8](../05-quality/nfr.md#nf-8) |
-| Design | Paper & ink theme, Agendal design system, WCAG 2.2 AA | [theme guide](../01-product/theme-guide.md), [NF-1](../05-quality/nfr.md#nf-1)–3 |
+| Product | Mobile-first web app (PWA), responsive from 320px phones up to desktop, no native apps | PRD, [NF-7](../05-quality/nfr.md#nf-7), [NF-8](../05-quality/nfr.md#nf-8) |
+| Design | Graphite theme, Agendal design system, WCAG 2.2 AA | [theme guide](../01-product/theme-guide.md), [NF-1](../05-quality/nfr.md#nf-1)–3 |
 | Content | Sentence case, 24-hour times by default, short dates, no emoji | [NF-12](../05-quality/nfr.md#nf-12) |
 | Privacy | No note or task text in logs. Files discarded after extraction | [NF-9](../05-quality/nfr.md#nf-9) |
 | Academic | Course demo for VNUK *Advanced Web Development*. The course sets the schedule and team size | — |
@@ -32,7 +32,7 @@ Confirmed with the stack ([Q13](open-questions.md#q13)).
 
 | Area | Convention |
 |---|---|
-| Frontend | Next.js, React, TypeScript strict, ESLint and Prettier. Components from the Agendal design system |
+| Frontend | Next.js, React, TypeScript strict, ESLint and Prettier. Tailwind CSS with daisyUI, themed with the Graphite tokens. Components from the Agendal design system |
 | Backend | Laravel, policies for authorization, business logic in services/actions, PSR-12 (Pint) |
 | Database | PostgreSQL. Migrations in Laravel |
 | Tests | See the [test strategy](../06-testing/test-strategy.md) |

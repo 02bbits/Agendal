@@ -7,21 +7,21 @@ export type ButtonSize = "lg" | "md" | "sm";
 // daisyUI's btn, sized and coloured to the theme guide (not daisyUI defaults)
 const VARIANT: Record<ButtonVariant, string> = {
   primary: "btn-primary",
-  secondary: "bg-fill text-ink",
-  outline:
-    "bg-transparent text-ink shadow-[inset_0_0_0_1px_var(--color-control)]",
+  secondary: "bg-primary-tint text-primary",
+  outline: "bg-fill text-ink",
   destructive: "bg-danger-tint text-error",
 };
 const SIZE: Record<ButtonSize, string> = {
-  lg: "h-[52px] min-h-[52px] text-heading",
+  lg: "h-11 min-h-11 text-callout",
   md: "h-11 min-h-11 text-callout",
-  sm: "h-10 min-h-10 px-4 text-callout",
+  sm: "h-[34px] min-h-[34px] rounded-full! px-4 text-footnote",
 };
 
 export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: ButtonVariant;
   size?: ButtonSize;
   fullWidth?: boolean;
+  pill?: boolean;
   /** Request in flight: shows a spinner, keeps the label for screen readers and ignores taps (UX-06). */
   busy?: boolean;
 }
@@ -32,9 +32,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       variant = "secondary",
       size = "md",
       fullWidth = false,
+      pill = false,
       busy = false,
       type = "button",
       className,
+      style,
       children,
       onClick,
       ...rest
@@ -49,17 +51,24 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       onClick?.(event);
     };
 
+    const isPill = pill || className?.includes("rounded-full");
+
     return (
       <button
         ref={ref}
         type={type}
         className={cx(
-          "btn focus-ring gap-2 rounded-field border-0 px-5 font-semibold shadow-none disabled:opacity-40 aria-busy:cursor-progress",
+          "btn focus-ring gap-2 border-0 px-5 font-semibold shadow-none disabled:opacity-40 aria-busy:cursor-progress",
+          isPill ? "rounded-full!" : "rounded-xl",
           VARIANT[variant],
           SIZE[size],
           fullWidth && "w-full",
           className,
         )}
+        style={{
+          ...(isPill ? { borderRadius: 9999 } : {}),
+          ...style,
+        }}
         data-variant={variant}
         aria-busy={busy || undefined}
         onClick={handleClick}

@@ -86,7 +86,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.5 Session lifetime
 
-- **Remember me on:** a rolling 30 days. **Off:** the browser session, plus a 2-hour idle timeout ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
+- **Remember me on:** 30 days from sign-in. **Off:** the browser session, plus a 2-hour idle timeout ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
 - **Expiry while using the app:** [UX-44](../01-product/ux-standards.md#ux-44). The queued data stays, tagged with the user ID, and syncs after the same user signs back in. If a *different* user signs in on that device, the old data is wiped first.
 
 ## 3. State matrix
@@ -106,7 +106,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="aa-e1"></a>AA-E1 | Email typed with capitals or spaces | Trimmed and lower-cased everywhere: sign-up, sign-in, reset | T-AA-101 |
 | <a id="aa-e2"></a>AA-E2 | Locked on this IP | Another IP (the victim's phone on mobile data) can still sign in ([SC-03](../07-architecture/security.md#sc-03)) | T-AA-102, SEC-07 |
 | <a id="aa-e3"></a>AA-E3 | Reloading during the lockout | The countdown continues from the server's `retry_after` | T-AA-103 |
-| <a id="aa-e4"></a>AA-E4 | Reset requested twice | Both links work until one is used. Using one invalidates every outstanding token | T-AA-104 |
+| <a id="aa-e4"></a>AA-E4 | Reset requested twice | The new request replaces the old link, so only the newest link works, once. Requests within 45 s send nothing ([Laravel's reset broker](../07-architecture/data-model.md)) | T-AA-104 |
 | <a id="aa-e5"></a>AA-E5 | Reset link opened on another device | Works. The other device's sessions end, and the new device is signed in | T-AA-105 |
 | <a id="aa-e6"></a>AA-E6 | Password changed while another device is offline | That device gets `401` on next sync → [UX-44](../01-product/ux-standards.md#ux-44). Its queue is kept for the same user | T-AA-106 |
 | <a id="aa-e7"></a>AA-E7 | A different user signs in on a device holding another user's unsynced data | That data is wiped before the new session loads. It can't sync into the wrong account | T-AA-107, SEC-52 |
@@ -142,7 +142,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 8. Data, validation and authorization
 
-- `users.email` is unique and lower-case. `password_hash` uses Argon2id. `password_resets.token_hash` holds a SHA-256 of a 32-byte token.
+- `users.email` is unique and lower-case. `password_hash` uses Argon2id. `password_reset_tokens` (Laravel's reset broker) holds one hashed token per email: 32 random bytes, 60 minutes, single use.
 - `audit_events` records: sign-up, sign-in success and failure, lockout, reset requested and used, password changed, sign out everywhere ([NF-20](../05-quality/nfr.md#nf-20)). It stores the email's hash, never the password.
 - `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `timezone` (a valid IANA name), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`).
 

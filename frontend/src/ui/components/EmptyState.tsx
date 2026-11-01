@@ -25,7 +25,7 @@ export function EmptyState({
           {icon}
         </span>
       )}
-      <Heading className="m-0 font-serif text-dialog font-semibold text-balance focus:outline-none">
+      <Heading className="m-0 text-dialog font-semibold text-balance focus:outline-none">
         {title}
       </Heading>
       {body && (

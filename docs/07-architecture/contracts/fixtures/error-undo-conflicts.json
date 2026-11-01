@@ -1,0 +1,13 @@
+{
+  "error": {
+    "code": "note.undo_conflicts",
+    "message": "Some tasks from this note were edited since.",
+    "request_id": "req_9Kd4",
+    "tasks": [
+      {
+        "id": "019a1c00-0000-7000-8000-000000000201",
+        "title": "SQL quiz"
+      }
+    ]
+  }
+}

@@ -12,53 +12,119 @@ import {
   projectNameValid,
 } from "../../domain/projects";
 import type { Project, ProjectColor } from "../../domain/types";
-import { uuidv7 } from "../../domain/uuid";
-import { useTaskStore } from "../tasks/store";
+import { now } from "../../../lib/clock";
+import { uuidv7 } from "../../../lib/uuid";
 
 export interface ProjectSheetProps {
   open: boolean;
+  projects?: readonly Project[];
+  /** When editing an existing project, pass it here */
+  project?: Project | null;
   onClose: () => void;
   /** Gets the new project: open it, or select it in the picker that opened the sheet (PJ-1). */
-  onCreated: (project: Project) => void;
+  onCreate?(project: {
+    id: string;
+    name: string;
+    colour: ProjectColor;
+  }): Promise<Project> | Project;
+  onUpdate?(
+    id: string,
+    patch: { name: string; colour: ProjectColor },
+  ): Promise<Project> | Project;
+  onCreated?: (project: Project) => void;
+  onUpdated?: (project: Project) => void;
+  clock?: { now: () => Date };
 }
 
-/** New project: name and one of 8 colours. */
-export function ProjectSheet({ open, onClose, onCreated }: ProjectSheetProps) {
-  const store = useTaskStore();
-  const [name, setName] = useState("");
-  const [colour, setColour] = useState<ProjectColor>(() =>
-    defaultProjectColour(store.projects),
-  );
+/** New project / Rename project: name and one of 8 colours. */
+export function ProjectSheet({
+  open,
+  projects = [],
+  project,
+  onClose,
+  onCreate,
+  onUpdate,
+  onCreated,
+  onUpdated,
+  clock,
+}: ProjectSheetProps) {
+  const isEdit = Boolean(project);
+  const [name, setName] = useState(project ? project.name : "");
+  const [colour, setColour] = useState(function () {
+    return project ? project.colour : defaultProjectColour(projects);
+  });
   const [touched, setTouched] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
   const colourName = useId();
-  const atLimit = store.projects.length >= PROJECT_LIMIT;
-  const taken = projectNameError(name, store.projects);
+  const atLimit = !isEdit && projects.length >= PROJECT_LIMIT;
+  const taken = projectNameError(name, projects, project?.id);
   const error = atLimit
     ? t("project.limit")
-    : touched && taken
-      ? t(taken, { name: name.trim() })
-      : undefined;
-  const valid = !atLimit && projectNameValid(name) && !taken;
+    : serverError
+      ? serverError
+      : touched && taken
+        ? t(taken, { name: name.trim() })
+        : undefined;
+  const valid = !atLimit && !submitting && projectNameValid(name) && !taken;
 
-  const submit = () => {
+  const submit = async () => {
     setTouched(true);
     if (!valid) return;
-    onCreated(
-      store.createProject({
-        id: uuidv7(store.clock.now().getTime()),
-        name,
-        colour,
-      }),
-    );
-    onClose();
+    setSubmitting(true);
+    setServerError(null);
+
+    const currentDate = clock?.now?.() ?? now();
+    const projectPayload = {
+      name: name.trim(),
+      colour,
+    };
+
+    try {
+      if (isEdit && project) {
+        if (onUpdate) {
+          const updated = await onUpdate(project.id, projectPayload);
+          onUpdated?.(updated);
+        } else {
+          onUpdated?.({
+            ...project,
+            ...projectPayload,
+          });
+        }
+      } else {
+        const newProjectData = {
+          id: uuidv7(currentDate),
+          ...projectPayload,
+        };
+        if (onCreate) {
+          const created = await onCreate(newProjectData);
+          onCreated?.(created);
+        } else {
+          onCreated?.({
+            ...newProjectData,
+            created_at: currentDate.toISOString(),
+          });
+        }
+      }
+      onClose();
+    } catch (err: unknown) {
+      if (err && typeof err === "object" && "message" in err) {
+        setServerError(String((err as { message: string }).message));
+      } else {
+        setServerError(t("error.save_failed"));
+      }
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <Sheet
       open={open}
-      title={t("project.new")}
+      title={isEdit ? t("project.rename") : t("project.new")}
       closeLabel={t("common.close")}
-      confirmLabel={t("common.create")}
+      confirmLabel={isEdit ? t("common.save") : t("common.create")}
       confirmDisabled={!valid}
       onConfirm={submit}
       onClose={onClose}
@@ -76,9 +142,12 @@ export function ProjectSheet({ open, onClose, onCreated }: ProjectSheetProps) {
           maxLength={PROJECT_NAME_MAX}
           autoComplete="off"
           enterKeyHint="done"
-          disabled={atLimit}
+          disabled={atLimit || submitting}
           error={error}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setServerError(null);
+          }}
           onBlur={() => setTouched(true)}
         />
         <fieldset className="m-0 flex flex-wrap gap-2 border-0 p-0 [&>legend]:mb-1.5 [&>legend]:p-0">

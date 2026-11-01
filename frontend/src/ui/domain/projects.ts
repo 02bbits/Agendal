@@ -4,6 +4,11 @@ import type { Project, ProjectColor, Task } from "./types";
 
 export const PROJECT_LIMIT = 50;
 export const PROJECT_NAME_MAX = 40;
+export type ProjectTaskAction = "move" | "delete";
+export type DeleteProjectHandler = (
+  action: ProjectTaskAction,
+) => void | Promise<void>;
+export type LoadMoreCompletedHandler = () => void | Promise<void>;
 export const PROJECT_COLOR_ORDER: readonly ProjectColor[] = [
   "blue",
   "red",
@@ -46,7 +51,10 @@ export function defaultProjectColour(
 }
 
 /** Alphabetical, locale-aware and case-insensitive (PJ §2.2). */
-export function sortProjects(projects: readonly Project[]): Project[] {
+export function sortProjects<T extends Project>(
+  projects: readonly T[] = [],
+): T[] {
+  if (!Array.isArray(projects)) return [];
   return [...projects].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: "base" }),
   );
@@ -68,7 +76,7 @@ export function sortOpenByDue(tasks: readonly Task[]): Task[] {
   return [...tasks].sort(
     (a, b) =>
       (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999") ||
-      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      PRIORITY_RANK[a.priority ?? "low"] - PRIORITY_RANK[b.priority ?? "low"] ||
       a.created_at.localeCompare(b.created_at),
   );
 }

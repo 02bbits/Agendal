@@ -415,7 +415,7 @@ describe("EmptyState", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Nothing left for today" })
         .className,
-    ).toContain("font-serif");
+    ).toContain("font-semibold");
     expect(screen.getByText("Group tasks by area or goal.")).toBeTruthy();
     await expectAxeCleanInBothThemes();
   });

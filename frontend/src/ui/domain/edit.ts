@@ -1,15 +1,31 @@
+import { localTime, now, timeZone, today } from "../../lib/clock";
 import type { CopyKey } from "../copy";
-import type { TaskPatch } from "./api";
+import type { TaskPatch, TaskUpdateErrors } from "./api";
 import { addDays } from "./dates";
 import type { Reminder, Task } from "./types";
 
 export const TITLE_MAX = 200;
 export const NOTES_MAX = 5000;
 
+/**
+ * Formats an ISO instant into floating local date (YYYY-MM-DD) and time (HH:mm)
+ * in the given time zone (ADR-006).
+ */
+export function localDateTime(
+  instant: string,
+  zone: string,
+): { date: string; time: string } {
+  const d = new Date(instant);
+  return {
+    date: today(zone, d),
+    time: localTime(zone, d),
+  };
+}
+
 /** TK-3: an end not after the start is an error (also a DB CHECK). */
 export function scheduleError(
-  start: string | null,
-  end: string | null,
+  start: string | null | undefined,
+  end: string | null | undefined,
 ): CopyKey | null {
   return start && end && end <= start ? "task.end_before_start" : null;
 }
@@ -25,21 +41,27 @@ export function scheduleError(
 export function normalizePatch(
   task: Task,
   patch: TaskPatch,
-  today: string,
+  todayDate: string,
 ): TaskPatch {
   const next: TaskPatch = { ...patch };
   const due = "due_date" in next ? next.due_date : task.due_date;
 
-  if ("title" in next && next.title !== undefined)
+  if ("title" in next && next.title !== undefined) {
     next.title = next.title.trim();
-  if ("notes" in next) next.notes = next.notes?.trim() ? next.notes : null;
+  }
+  if ("notes" in next) {
+    next.notes = next.notes?.trim() ? next.notes : null;
+  }
   if (
     !due &&
     ((next.start_time ?? null) !== null ||
       (next.repeat && next.repeat !== "never"))
-  )
-    next.due_date = today;
-  if ("start_time" in next && !next.start_time) next.end_time = null;
+  ) {
+    next.due_date = todayDate;
+  }
+  if ("start_time" in next && !next.start_time) {
+    next.end_time = null;
+  }
   if ("due_date" in next && !next.due_date) {
     next.start_time = null;
     next.end_time = null;
@@ -47,24 +69,27 @@ export function normalizePatch(
   }
 
   for (const key of Object.keys(next) as Array<keyof TaskPatch>) {
-    if (next[key] === task[key]) delete next[key];
+    if (next[key] === task[key]) {
+      delete next[key];
+    }
   }
   return next;
 }
 
 /** Validates a normalized patch against the task; returns field errors as copy keys. */
-export function patchErrors(
-  task: Task,
-  patch: TaskPatch,
-): Partial<Record<keyof TaskPatch, CopyKey>> {
+export function patchErrors(task: Task, patch: TaskPatch): TaskUpdateErrors {
   const merged = { ...task, ...patch };
-  const errors: Partial<Record<keyof TaskPatch, CopyKey>> = {};
-  if ("title" in patch && (!merged.title || merged.title.length > TITLE_MAX))
+  const errors: TaskUpdateErrors = {};
+  if ("title" in patch && !merged.title) {
     errors.title = "task.title_required";
+  }
   const schedule = scheduleError(merged.start_time, merged.end_time);
-  if (schedule) errors.end_time = schedule;
-  if (merged.reminder !== "none" && !merged.due_date)
+  if (schedule) {
+    errors.end_time = schedule;
+  }
+  if (merged.reminder !== "none" && !merged.due_date) {
     errors.reminder = "task.reminder_needs_date";
+  }
   return errors;
 }
 
@@ -97,20 +122,16 @@ export function reminderAt(
   return `${date}T${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
 
-/** Local `YYYY-MM-DDTHH:MM` for an instant in a zone (ADR-006). */
-export function localDateTime(now: Date, timeZone: string): string {
-  const parts = Object.fromEntries(
-    new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    })
-      .formatToParts(now)
-      .map((p) => [p.type, p.value]),
-  );
-  return `${parts.year}-${parts.month}-${parts.day}T${parts.hour}:${parts.minute}`;
+/**
+ * Whether the reminder time has already passed (BR-12, TK-E4).
+ */
+export function reminderPast(
+  task: Pick<Task, "due_date" | "start_time" | "reminder">,
+  at: Date = now(),
+  zone: string = timeZone(),
+): boolean {
+  const fires = reminderAt(task);
+  if (!fires) return false;
+  const current = `${today(zone, at)}T${localTime(zone, at)}`;
+  return fires < current;
 }

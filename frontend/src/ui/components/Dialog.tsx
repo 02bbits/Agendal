@@ -1,4 +1,5 @@
-import { useId, useRef, type ReactNode, type RefObject } from "react";
+import { useId, useRef, type ReactNode } from "react";
+import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
 export interface DialogProps {
@@ -11,8 +12,8 @@ export interface DialogProps {
   /** Stacked buttons; the safe exit (Cancel) goes last and destructive buttons are never the default. */
   actions: ReactNode;
   children?: ReactNode;
-  /** Where focus starts; defaults to the title. Scope dialogs start on Cancel (A11Y-42). */
-  initialFocusRef?: RefObject<HTMLElement | null>;
+  /** Takes a history entry so Back closes it. Off when the dialog sits over a screen that has its own entry. */
+  history?: boolean;
 }
 
 export function Dialog({
@@ -22,18 +23,19 @@ export function Dialog({
   onClose,
   actions,
   children,
-  initialFocusRef,
+  history = true,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  useModalFocus(dialogRef, titleRef, open, onClose, initialFocusRef);
+  useModalFocus(dialogRef, titleRef, open, onClose);
+  useHistoryEntry(open && history, onClose);
 
   if (!open) return null;
 
   return (
-    <div className="modal modal-open bg-scrim px-5">
+    <div className="modal modal-open bg-scrim px-gutter">
       <div
         ref={dialogRef}
         className="modal-box flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-lg motion-reduce:transition-none"
@@ -45,7 +47,7 @@ export function Dialog({
         <h2
           ref={titleRef}
           id={titleId}
-          className="m-0 font-serif text-dialog font-semibold text-balance focus:outline-none"
+          className="m-0 text-dialog font-semibold text-balance focus:outline-none"
           tabIndex={-1}
         >
           {title}

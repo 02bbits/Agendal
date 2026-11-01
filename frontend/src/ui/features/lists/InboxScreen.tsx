@@ -1,5 +1,6 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { t } from "../../copy";
+import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox } from "../../domain/lists";
@@ -12,14 +13,54 @@ import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import { Section } from "./Section";
 
+export const INBOX_COMPLETED_PAGE = 5;
+
 export interface InboxScreenProps {
-  accountInitial: string;
+  accountInitial?: string;
   navigate?: Navigate;
+  showHeader?: boolean;
 }
 
 /** Inbox (LV-1): today's progress, Overdue before Today, No date and Completed collapsed. */
-export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
+export function InboxScreen({
+  accountInitial = "",
+  navigate,
+  showHeader = true,
+}: InboxScreenProps) {
   const store = useTaskStore();
+  const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [openNoDate, setOpenNoDate] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:no_date");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return false;
+  });
+  const [openCompleted, setOpenCompleted] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:completed");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return false;
+  });
+
+  const handleToggleNoDate = (next: boolean) => {
+    setOpenNoDate(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:no_date", String(next));
+    } catch {}
+  };
+
+  const handleToggleCompleted = (next: boolean) => {
+    setOpenCompleted(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:completed", String(next));
+    } catch {}
+  };
   const view = buildInbox(store.tasks, store.today, {
     completedToday: store.completedToday,
     isSettling: store.isSettling,
@@ -34,6 +75,13 @@ export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
     if (prevOpen.current > 0 && openCount === 0) doneHeading.current?.focus();
     prevOpen.current = openCount;
   }, [openCount]);
+
+  const totalCompleted = view.completed.length;
+  const visibleCompleted = showAllCompleted
+    ? view.completed
+    : view.completed.slice(0, INBOX_COMPLETED_PAGE);
+  const hasHiddenCompleted =
+    !showAllCompleted && INBOX_COMPLETED_PAGE < totalCompleted;
 
   const row = (
     task: (typeof view.today)[number],
@@ -53,12 +101,14 @@ export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
 
   return (
     <div className="pb-8">
-      <ScreenHeader
-        overline={formatLongDate(store.today)}
-        title={t("nav.inbox")}
-        accountInitial={accountInitial}
-        navigate={navigate}
-      />
+      {showHeader && (
+        <ScreenHeader
+          overline={formatLongDate(store.today)}
+          title={t("nav.inbox")}
+          accountInitial={accountInitial}
+          navigate={navigate}
+        />
+      )}
 
       {view.empty ? (
         <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
@@ -73,6 +123,7 @@ export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
               progress={view.progress}
               next={nextUp(
                 [...view.today, ...view.overdue].filter((x) => !x.done),
+                store.today,
               )}
               timeFormat={store.timeFormat}
             />
@@ -124,6 +175,8 @@ export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
               title={t("list.no_date")}
               count={view.noDate.length}
               collapsible
+              open={openNoDate}
+              onToggle={handleToggleNoDate}
             >
               {view.noDate.map((x) => row(x, { showDue: true }))}
             </Section>
@@ -133,8 +186,30 @@ export function InboxScreen({ accountInitial, navigate }: InboxScreenProps) {
               title={t("list.completed")}
               count={view.completed.length}
               collapsible
+              open={openCompleted}
+              onToggle={handleToggleCompleted}
+              footer={
+                hasHiddenCompleted ? (
+                  <Button
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    onClick={() => setShowAllCompleted(true)}
+                  >
+                    {t("list.show_all")}
+                  </Button>
+                ) : showAllCompleted &&
+                  INBOX_COMPLETED_PAGE < totalCompleted ? (
+                  <Button
+                    variant="secondary"
+                    className="mt-3 w-full"
+                    onClick={() => setShowAllCompleted(false)}
+                  >
+                    {t("list.show_less")}
+                  </Button>
+                ) : null
+              }
             >
-              {view.completed.map((x) => row(x))}
+              {visibleCompleted.map((x) => row(x))}
             </Section>
           )}
         </>

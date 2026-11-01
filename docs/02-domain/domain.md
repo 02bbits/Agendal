@@ -38,8 +38,8 @@ Domain terms, used the same way in requirements, UI copy, and code. For acronyms
 | Change | One applied create, change or delete, with enough data to undo it |
 | Result screen | Lists every change from a note with CREATED / UPDATED / DELETED badges ([RV-1](../03-modules/RV-review-control.md#rv-1)) |
 | Undo all | Reverses every change from one note. The note is kept and marked Undone ([RV-2](../03-modules/RV-review-control.md#rv-2)) |
-| Check this first | The confirmation shown before a risky plan: any delete, or more than 5 changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
-| Follow-up | The one question for a note with nothing actionable: Keep as note, or Make it a task ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| Check this first | The confirmation shown before a risky plan: any delete, or 5 or more changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
+| Follow-up | The one question for a note with nothing actionable: Keep it as task, or Edit the note ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
 | Note name | A name generated from the plan, e.g. "This week" or "SQL Course to-dos" ([NU-6](../03-modules/NU-note-understanding.md#nu-6)) |
 | Pending note | A note saved offline, shown as "Waiting for connection" ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
 | Due date | When the task must be done |
@@ -128,8 +128,8 @@ flowchart TD
   S -- on reconnect --> P
   B -- yes --> P["Build a plan<br/>Tasks to create, change, delete"]
   P --> C{Anything to do?}
-  C -- no --> Q["Ask one question<br/>Keep as note, or make it a task"]
-  C -- yes --> R{"Any delete or 6+ changes?"}
+  C -- no --> Q["Ask one question<br/>Keep it as task, or edit the note"]
+  C -- yes --> R{"Any delete or 5+ changes?"}
   R -- yes --> K["Check this first<br/>Apply, or Cancel to keep the note"]
   K -- Apply changes --> AP
   R -- no --> AP["Apply the plan<br/>Tasks created, changed, deleted"]
@@ -159,8 +159,8 @@ All three are due within 7 days, so the note is named **"This week"**. 3 changes
 | `new` | Being processed | `done`, `confirm` or `followup` |
 | `done` | Plan applied | `undone` (Undo all), `new` (Edit note) |
 | `confirm` | Plan waits for Apply changes | `done` (Apply), `kept` (Cancel), `new` (Edit note) |
-| `followup` | Nothing actionable found | `kept` (Keep as note), `done` (Make it a task), `new` (Edit note) |
-| `kept` | Saved as a note only | `new` (Edit note) |
+| `followup` | Nothing actionable found | `done` (Keep it as task), `new` (Edit the note) |
+| `kept` | Saved as a note only, after Cancel in Check this first | `new` (Edit note) |
 | `undone` | Applied, then reversed | `done` (redo from the toast, within 10 s), `new` (Edit note) |
 
 ```mermaid
@@ -169,12 +169,11 @@ stateDiagram-v2
     [*] --> new : Make tasks (online)
     pending --> new : reconnect
     new --> done : plan is safe
-    new --> confirm : any delete or > 5 changes
+    new --> confirm : any delete or 5+ changes
     new --> followup : nothing actionable
     confirm --> done : Apply changes
     confirm --> kept : Cancel
-    followup --> done : Make it a task
-    followup --> kept : Keep as note
+    followup --> done : Keep it as task
     done --> undone : Undo all
     undone --> done : redo (toast, 10 s)
     done --> new : Edit note

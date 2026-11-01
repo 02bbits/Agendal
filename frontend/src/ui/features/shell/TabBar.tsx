@@ -4,7 +4,7 @@ import {
   CalendarIcon,
   FolderIcon,
   InboxIcon,
-  PencilIcon,
+  NotesIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
@@ -14,7 +14,7 @@ const ICONS: Record<TabId, ReactNode> = {
   inbox: <InboxIcon size={22} />,
   upcoming: <CalendarIcon size={22} />,
   projects: <FolderIcon size={22} />,
-  notes: <PencilIcon size={22} />,
+  notes: <NotesIcon size={22} />,
 };
 
 export interface TabBarProps {
@@ -26,7 +26,7 @@ export interface TabBarProps {
 export function TabBar({ active, navigate }: TabBarProps) {
   return (
     <nav
-      className="grid grid-cols-4 border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
+      className="grid grid-cols-4 px-safe md:hidden border-t border-separator bg-bar pb-[env(safe-area-inset-bottom)] backdrop-blur-lg"
       aria-label={t("nav.tabs")}
     >
       {TABS.map((tab) => (
@@ -35,7 +35,7 @@ export function TabBar({ active, navigate }: TabBarProps) {
           href={tab.href}
           navigate={navigate}
           className={cx(
-            "focus-ring flex min-h-14 flex-col items-center justify-center gap-0.5 rounded-field text-ink-secondary",
+            "focus-ring flex min-h-[62px] flex-col [@media(max-height:480px)]:min-h-12 items-center justify-center gap-0.5 rounded-field text-ink-secondary",
             tab.id === active && "text-primary!",
           )}
           aria-current={tab.id === active ? "page" : undefined}
