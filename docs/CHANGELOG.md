@@ -6,6 +6,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 - **Graphite design (V2.1, #97).** [Theme guide](01-product/theme-guide.md) is rewritten for Graphite (monochrome greys, Inter) and replaces Paper & ink; the reference package is not in git and is linked from the guide. [Screens](01-product/screens.md): no serif, "Made from your note" link, round + button. [Overview](01-product/overview.md) and [project](08-project/project.md) name Graphite. [Tasks](08-project/tasks.md) IM-06 maps the Graphite tokens. The UI rework is #98; the `task.created_by_assistant` string changes with it.
 - **Note editor layout (#98).** [NC §2.1](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5): the editor follows the Graphite New note screen: Cancel and "✦ New note" bar, "Your note" card, helper line, "Try writing" examples, full-width Make tasks. Cancel replaces ×.
+- **Submitting a note (IM-42).** [NC §2.2](03-modules/NC-note-capture.md#22-submit): the editor sends `POST /notes` and, until the result screen ([IM-43](08-project/tasks.md#im-43)) and the offline queue ([IM-53](08-project/tasks.md#im-53)) exist, a success closes the editor with the `note.made_*` toast and a failed send keeps the text with Retry. A new `client_id` is made when the text changes after a failed send. New copy key `note.send_failed` ("Couldn't send your note. Check your connection and try again."), pending in the front end until it joins the [copy catalog](01-product/copy-catalog.md); IM-53 goes back to `note.processing_failed`.
 
 ## 2026-10-31
 
