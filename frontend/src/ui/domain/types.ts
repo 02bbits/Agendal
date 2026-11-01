@@ -5,6 +5,23 @@
 export type Priority = "low" | "medium" | "high";
 export type Repeat = "never" | "daily" | "weekly" | "monthly" | "yearly";
 export type Reminder = "none" | "5m" | "15m" | "30m" | "1h" | "1d";
+
+export const PRIORITIES: readonly Priority[] = ["low", "medium", "high"];
+export const REPEATS: readonly Repeat[] = [
+  "never",
+  "daily",
+  "weekly",
+  "monthly",
+  "yearly",
+];
+export const REMINDERS: readonly Reminder[] = [
+  "none",
+  "5m",
+  "15m",
+  "30m",
+  "1h",
+  "1d",
+];
 export type ProjectColor =
   "blue" | "red" | "orange" | "yellow" | "green" | "teal" | "purple" | "gray";
 
@@ -39,3 +56,35 @@ export interface Project {
 
 export type TimeFormat = "24h" | "12h";
 export type WeekStart = "mon" | "sun";
+
+/** One applied change of a note (NU §7). `label` is what the result row shows, `was` the old value of an update. */
+export interface NoteChange {
+  kind: "created" | "updated" | "deleted";
+  task: Task;
+  label: string;
+  was?: string;
+}
+
+/** Text the note made no task from, and why (NU §7). */
+export interface SkippedItem {
+  ref: string;
+  text: string;
+  reason: "skip" | "already_done" | "not_found";
+}
+
+/** The part of a note result (`POST /notes`, `GET /notes/{id}`, NU §7) the app reads so far. */
+export interface NoteResult {
+  note: {
+    id: string;
+    client_id: string;
+    status: "done" | "confirm" | "followup" | "kept" | "undone";
+    name: string | null;
+    text: string;
+    source_file_name: string | null;
+    written_at: string;
+    processed_at: string;
+    edited_at?: string | null;
+  };
+  changes: NoteChange[];
+  skipped: SkippedItem[];
+}

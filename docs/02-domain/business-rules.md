@@ -56,8 +56,8 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 
 | ID | Rule | Ref |
 |---|---|---|
-| <a id="br-01"></a>BR-01 | Any delete, or more than 5 changes across all notes (files edit, file add, each operation is counted as 1), needs Apply changes before anything happens | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
-| <a id="br-02"></a>BR-02 | A note with no actionable item gets a notification that No actionable item found and offer user to edit the note | [RV-3](../03-modules/RV-review-control.md#rv-3) |
+| <a id="br-01"></a>BR-01 | Any delete, or 5 or more changes in one note, needs Apply changes before anything happens. A change is one task the note creates, updates or deletes. A task counts once however many of its fields change, and skipped text doesn't count | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
+| <a id="br-02"></a>BR-02 | A note with no actionable item gets one follow-up question, "I couldn't find a task in this note.", with Keep it as task or Edit the note | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | <a id="br-03"></a>BR-03 | Every applied note can be undone as a whole from its result screen | [RV-2](../03-modules/RV-review-control.md#rv-2), [NF-11](../05-quality/nfr.md#nf-11) |
 | <a id="br-04"></a>BR-04 | Offline notes wait. They are processed on reconnect, in order, under the same rules | [NC-6](../03-modules/NC-note-capture.md#nc-6) |
 
@@ -72,7 +72,7 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 | All tasks due the same day | Today's plan / Tomorrow's plan / weekday + plan | Monday plan |
 | All due within 7 days | This week | This week |
 | Anything else | First title + "+ N more" | Call mum + 1 more |
-| Nothing actionable | Reject the note, pop up the notification and provide option to edit the note | (None) |
+| Nothing actionable, until the user chooses | Its first 6 words. After Keep it as task, the task's title | Idea: dark mode for the portfolio |
 
 The first row that matches wins. Names longer than 34 characters are cut at a word boundary with an ellipsis.
 

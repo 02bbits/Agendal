@@ -64,9 +64,7 @@ export function AccountScreen({
           {name.slice(0, 1).toUpperCase()}
         </span>
         <div>
-          <p className="font-serif text-[19px] leading-[26px] font-semibold">
-            {name}
-          </p>
+          <p className="text-heading font-semibold">{name}</p>
           <p className="text-footnote text-ink-secondary">{email}</p>
         </div>
       </section>

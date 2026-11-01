@@ -13,16 +13,19 @@ import {
 } from "react";
 import {
   AppShell,
+  NoteEditor,
   ROUTES,
   t,
+  tc,
   Toast,
   type AccountSettings,
   type Navigate,
   type TabId,
   type ToastData,
 } from "@/ui";
-import { api } from "@/lib/api";
-import { wipeDevice } from "@/lib/device";
+import { api, SESSION_EXPIRED } from "@/lib/api";
+import { claimDevice, wipeDevice } from "@/lib/device";
+import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -45,8 +48,8 @@ const SETTING_FIELDS = {
 
 const THEME_KEY = "agendal.theme";
 const PAGE_COLOR = {
-  light: "#f6f5f1",
-  dark: "#121211",
+  light: "#f2f2f2",
+  dark: "#1a1a1a",
 } as const;
 
 // Screens that work signed out. A signed-in user on the first three goes to Inbox; a reset
@@ -98,6 +101,8 @@ interface AppFrameValue {
   changeSettings: (patch: Partial<AccountSettings>) => void;
   /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
   showToast: (message: string) => void;
+  /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
+  openNoteEditor: () => void;
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
@@ -121,7 +126,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
-  const [user, setUser] = useState<SignedInUser | null>(null);
+  const [user, setUserState] = useState<SignedInUser | null>(null);
+  // Read by the session-expired handler, which mustn't wait for a render
+  const userRef = useRef<SignedInUser | null>(null);
+  const setUser = useCallback((next: SignedInUser | null) => {
+    userRef.current = next;
+    setUserState(next);
+  }, []);
+  // Counts changes made on this device, so a session check sent before one can't undo it
+  const settingsEdits = useRef(0);
 
   // Auth gate (AA §1): a signed-out visit opens Sign in and comes back afterwards. Offline,
   // the request fails and nothing moves, so the app keeps working from the device.
@@ -129,13 +142,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
     let current = true;
     const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
     const publicPage = PUBLIC_PATHS.includes(pathname);
+    const editsBefore = settingsEdits.current;
     api("/me")
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
           const me: SignedInUser = await response.json();
+          await claimDevice(me.id);
+          if (!current) return;
           setUser(me);
-          setSettings(settingsOf(me));
+          if (settingsEdits.current === editsBefore)
+            setSettings(settingsOf(me));
           if (signedOutPage) router.replace(ROUTES.inbox);
         } else if (response.status === 401) {
           setUser(null);
@@ -149,7 +166,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [pathname, router]);
+  }, [pathname, router, setUser]);
 
   // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
   // that tab's root instead of out of the app (AP §2.4)
@@ -173,6 +190,29 @@ export function AppFrame({ children }: { children: ReactNode }) {
     if (arrivedByDeepLink.current) router.replace(tabRootOf(pathname));
     else router.back();
   }, [router, pathname]);
+  const [editing, setEditing] = useState(false);
+  const openNoteEditor = useCallback(() => setEditing(true), []);
+  const closeNoteEditor = useCallback(() => setEditing(false), []);
+  // Closing the editor takes its history entry off with history.back(), which is only done a
+  // moment later. The result goes on top of where the editor was opened once that has happened,
+  // so Back from the result returns there and never to the editor (RV-E12). A router.replace
+  // over the editor's entry would be undone by that back
+  const openResult = useCallback(
+    (id: string) => {
+      let done = false;
+      const go = () => {
+        if (done) return;
+        done = true;
+        window.removeEventListener("popstate", go);
+        router.push(ROUTES.note(id));
+      };
+      window.addEventListener("popstate", go);
+      // The entry wasn't on top (nothing to take off): no popstate comes
+      setTimeout(go, 250);
+      setEditing(false);
+    },
+    [router],
+  );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
     (message: string) =>
@@ -192,6 +232,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const settingsRef = useRef(settings);
   const changeSettings = useCallback(
     (patch: Partial<AccountSettings>) => {
+      settingsEdits.current += 1;
       const before = settingsRef.current;
       const revert = Object.fromEntries(
         Object.keys(patch).map((key) => [
@@ -239,21 +280,38 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
+      forgetNotes();
       setUser(null);
       settingsRef.current = DEFAULT_SETTINGS;
       setSettings(DEFAULT_SETTINGS);
       document.documentElement.removeAttribute("data-theme");
       router.replace(ROUTES.signIn);
     },
-    [router, showToast],
+    [router, showToast, setUser],
   );
+
+  // UX-44, AA-E6: a session that ended elsewhere opens Sign in and comes back to this screen
+  // afterwards. Nothing is wiped: the same account signing in again keeps its unsynced changes.
+  useEffect(() => {
+    const expired = () => {
+      // Signed out already: a plain visit is the auth gate's job, without the toast
+      if (!userRef.current) return;
+      setUser(null);
+      showToast(t("auth.session_expired"));
+      const here = window.location.pathname + window.location.search;
+      router.replace(`${ROUTES.signIn}?next=${encodeURIComponent(here)}`);
+    };
+    window.addEventListener(SESSION_EXPIRED, expired);
+    return () => window.removeEventListener(SESSION_EXPIRED, expired);
+  }, [router, showToast, setUser]);
 
   // Appearance: System leaves data-theme off so daisyUI follows the device setting. The choice is
   // also kept for /theme.js, which applies it before the next first paint (AP-3)
   useEffect(() => {
     settingsRef.current = settings;
-    // Until /me answers these are only defaults, and would undo what /theme.js applied
-    if (!user) return;
+    // Until /me answers or the user picks one, these are only defaults and would undo what
+    // /theme.js applied
+    if (!user && settingsEdits.current === 0) return;
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
@@ -278,10 +336,20 @@ export function AppFrame({ children }: { children: ReactNode }) {
       settings,
       changeSettings,
       showToast,
+      openNoteEditor,
       user,
       signOut,
     }),
-    [navigate, back, settings, changeSettings, showToast, user, signOut],
+    [
+      navigate,
+      back,
+      settings,
+      changeSettings,
+      showToast,
+      openNoteEditor,
+      user,
+      signOut,
+    ],
   );
   const tab = TAB_BY_PATH[pathname];
 
@@ -290,8 +358,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
-        // The note editor (IM-41) opens from Notes for now; the + appears with the New task sheet (IM-26)
-        capture={{ onWrite: () => navigate(ROUTES.notes) }}
+        // The + appears with the New task sheet (IM-26)
+        capture={{ onWrite: openNoteEditor }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
@@ -300,6 +368,23 @@ export function AppFrame({ children }: { children: ReactNode }) {
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
+        {editing && (
+          <NoteEditor
+            onClose={closeNoteEditor}
+            onDraftRestored={() => showToast(t("note.draft_restored"))}
+            onSubmit={submitNote}
+            onSubmitted={(result) => {
+              if (result.note.status === "done") {
+                rememberNote(result);
+                openResult(result.note.id);
+                return;
+              }
+              // ponytail: Check this first (IM-45) and the follow-up (IM-46) have no screen yet
+              closeNoteEditor();
+              showToast(tc("note.made", result.changes.length));
+            }}
+          />
+        )}
       </AppShell>
     </AppFrameContext.Provider>
   );

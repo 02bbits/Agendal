@@ -74,7 +74,7 @@ export function SignInScreen({
 
   return (
     <form className="flex flex-col gap-5 pt-12" onSubmit={submit} noValidate>
-      <h1 className="m-0 font-serif text-display font-semibold text-ink">
+      <h1 className="m-0 text-display font-bold text-ink">
         {t("auth.sign_in")}
       </h1>
       {locked > 0 && (

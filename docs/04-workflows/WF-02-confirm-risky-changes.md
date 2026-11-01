@@ -1,6 +1,6 @@
 # WF-02 — Confirm Risky Changes
 
-**Trigger:** A plan has any delete, or more than 5 changes ([BR-01](../02-domain/business-rules.md#br-01)).
+**Trigger:** A plan has any delete, or 5 or more changes ([BR-01](../02-domain/business-rules.md#br-01)).
 
 ## Main flow
 
