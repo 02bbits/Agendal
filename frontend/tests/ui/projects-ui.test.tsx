@@ -122,6 +122,37 @@ describe("ProjectScreen (PJ-2, T-PJ-10, T-PJ-11)", () => {
     await userEvent.click(button);
     expect(screen.getAllByRole("checkbox")).toHaveLength(12);
   });
+
+  it("calls onLoadMoreCompleted when Show completed is clicked with hasMoreCompleted", async () => {
+    const project = seedProjects[1]!;
+    const tenCompleted = Array.from({ length: 10 }, (_, i) =>
+      task({
+        title: `Done ${i}`,
+        project_id: "p-web",
+        done: true,
+        done_at: `2026-10-${String(10 + i).padStart(2, "0")}T08:00:00Z`,
+      }),
+    );
+    let called = false;
+    render(
+      <ProjectScreen
+        project={project}
+        openTasks={[]}
+        completedTasks={tenCompleted}
+        hasMoreCompleted
+        onLoadMoreCompleted={() => {
+          called = true;
+        }}
+        today="2026-10-23"
+        onBack={() => {}}
+      />,
+    );
+
+    const button = screen.getByRole("button", { name: "Show completed" });
+    expect(button).toBeTruthy();
+    await userEvent.click(button);
+    expect(called).toBe(true);
+  });
 });
 
 describe("ProjectSheet (PJ-1, T-PJ-01)", () => {

@@ -71,6 +71,7 @@ export {
   COMPLETED_PAGE,
   type ProjectScreenProps,
 } from "./projects/ProjectScreen";
+export type { LoadMoreCompletedHandler } from "../domain/projects";
 export { ProjectSheet, type ProjectSheetProps } from "./projects/ProjectSheet";
 export {
   DeleteProjectDialog,

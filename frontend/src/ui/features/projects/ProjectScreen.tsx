@@ -5,14 +5,16 @@ import { EmptyState } from "../../components/EmptyState";
 import { IconButton } from "../../components/IconButton";
 import { TrashIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
-import { sortCompleted, sortOpenByDue } from "../../domain/projects";
+import {
+  sortCompleted,
+  sortOpenByDue,
+  type DeleteProjectHandler,
+  type LoadMoreCompletedHandler,
+} from "../../domain/projects";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
 import { TaskRow } from "../tasks/TaskRow";
-import {
-  DeleteProjectDialog,
-  type DeleteProjectHandler,
-} from "./DeleteProjectDialog";
+import { DeleteProjectDialog } from "./DeleteProjectDialog";
 
 /** Completed tasks shown before "Show completed" (PJ §2.3). */
 export const COMPLETED_PAGE = 10;
@@ -22,6 +24,9 @@ export interface ProjectScreenProps {
   progress?: { done: number; total: number };
   openTasks?: Task[];
   completedTasks?: Task[];
+  hasMoreCompleted?: boolean;
+  onLoadMoreCompleted?: LoadMoreCompletedHandler;
+  loadingMore?: boolean;
   today: string;
   timeFormat?: TimeFormat;
   onToggleTask?: (task: Task) => void;
@@ -37,6 +42,9 @@ export function ProjectScreen({
   progress: explicitProgress,
   openTasks = [],
   completedTasks = [],
+  hasMoreCompleted: explicitHasMoreCompleted,
+  onLoadMoreCompleted,
+  loadingMore = false,
   today,
   timeFormat = "24h",
   onToggleTask,
@@ -50,7 +58,12 @@ export function ProjectScreen({
   const open = sortOpenByDue(openTasks);
   const completed = sortCompleted(completedTasks);
   const totalTasks = openTasks.length + completedTasks.length;
-  const hasMoreCompleted = shown < completed.length;
+  const hasMore =
+    explicitHasMoreCompleted !== undefined
+      ? explicitHasMoreCompleted
+      : shown < completed.length;
+  const visibleCompleted =
+    onLoadMoreCompleted !== undefined ? completed : completed.slice(0, shown);
 
   const progress = explicitProgress ?? {
     done: completedTasks.length,
@@ -130,7 +143,7 @@ export function ProjectScreen({
                 {t("list.completed")}
               </h2>
               <ul className="m-0 list-none p-0">
-                {completed.slice(0, shown).map((x) => (
+                {visibleCompleted.map((x) => (
                   <TaskRow
                     key={x.id}
                     task={x}
@@ -143,11 +156,18 @@ export function ProjectScreen({
                   />
                 ))}
               </ul>
-              {hasMoreCompleted && (
+              {hasMore && (
                 <Button
                   variant="secondary"
                   className="mt-3 w-full"
-                  onClick={() => setShown((n) => n + 50)}
+                  disabled={loadingMore}
+                  onClick={async () => {
+                    if (onLoadMoreCompleted) {
+                      await onLoadMoreCompleted();
+                    } else {
+                      setShown((n) => n + 50);
+                    }
+                  }}
                 >
                   {t("project.show_completed")}
                 </Button>

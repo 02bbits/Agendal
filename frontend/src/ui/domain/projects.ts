@@ -8,6 +8,7 @@ export type ProjectTaskAction = "move" | "delete";
 export type DeleteProjectHandler = (
   action: ProjectTaskAction,
 ) => void | Promise<void>;
+export type LoadMoreCompletedHandler = () => void | Promise<void>;
 export const PROJECT_COLOR_ORDER: readonly ProjectColor[] = [
   "blue",
   "red",
