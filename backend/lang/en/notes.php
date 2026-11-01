@@ -4,10 +4,7 @@
 return [
     'label' => [
         'completed' => 'Completed',
-        'due' => 'Due :date (was :was)',
+        'due' => 'Due :when',
         'date_format' => 'D j M',
-        'was_no_date' => 'no date',
-        'was_today' => 'today',
-        'was_tomorrow' => 'tomorrow',
     ],
 ];

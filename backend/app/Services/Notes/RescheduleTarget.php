@@ -118,9 +118,8 @@ final class RescheduleTarget
      */
     private function step(string $amount, string $unit): ?array
     {
-        $smaller = ['hour' => ['minute', 60], 'day' => ['hour', 24]];
         if (preg_match('~^(?:'.NoteVocabulary::phrases('amount_half').')$~iu', $amount) === 1) {
-            return isset($smaller[$unit]) ? ['unit' => $smaller[$unit][0], 'amount' => intdiv($smaller[$unit][1], 2)] : null;
+            return NoteDurations::half($unit);
         }
         if (ctype_digit($amount)) {
             return ['unit' => $unit, 'amount' => (int) $amount];

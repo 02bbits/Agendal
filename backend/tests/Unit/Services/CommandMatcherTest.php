@@ -28,21 +28,21 @@ it('completes the matching task in every phrasing (T-NU-20)', function (string $
     expect([$match->change?->taskId, $match->change?->fields, $match->change?->label])->toBe(['m', ['done' => true], 'Completed']);
 })->with(['done call mum', 'finished call mum', 'did call mum', 'call mum is done', 'call mum done', 'đã xong call mum', 'call mum xong rồi', 'Done: the call mum task']);
 
-it('reschedules with the was-label and keeps or moves the times (T-NU-21, NU-E35)', function (string $text, array $fields, string $label) {
+it('reschedules with the new when as label and the old one as was, keeping or moving the times (T-NU-21, NU-E35)', function (string $text, array $fields, string $label) {
     $match = matchCommand($text, CommandAction::Reschedule, [EMAIL_TASK]);
 
-    expect([$match->change?->fields, $match->change?->label])->toBe([$fields, $label]);
+    expect([$match->change?->fields, $match->change?->label, $match->change?->was])->toBe([$fields, $label, 'Fri 23 Oct 09:00']);
 })->with([
-    'date and time move the end too' => ['move email group to tomorrow 2pm', ['due_date' => '2026-10-24', 'start_time' => '14:00', 'end_time' => '15:00'], 'Due Sat 24 Oct (was today)'],
-    'a date alone keeps the times' => ['move email group to Friday', ['due_date' => '2026-10-30'], 'Due Fri 30 Oct (was today)'],
-    'a time alone keeps the date' => ['move email group to 2pm', ['start_time' => '14:00', 'end_time' => '15:00'], 'Email the group'],
-    'an end past midnight is dropped' => ['move email group to 11:30pm', ['start_time' => '23:30', 'end_time' => null], 'Email the group'],
+    'date and time move the end too' => ['move email group to tomorrow 2pm', ['due_date' => '2026-10-24', 'start_time' => '14:00', 'end_time' => '15:00'], 'Due Sat 24 Oct 14:00'],
+    'a date alone keeps the times' => ['move email group to Friday', ['due_date' => '2026-10-30'], 'Due Fri 30 Oct 09:00'],
+    'a time alone keeps the date' => ['move email group to 2pm', ['start_time' => '14:00', 'end_time' => '15:00'], 'Due Fri 23 Oct 14:00'],
+    'an end past midnight is dropped' => ['move email group to 11:30pm', ['start_time' => '23:30', 'end_time' => null], 'Due Fri 23 Oct 23:30'],
 ]);
 
-it('labels a task that had no date', function () {
+it('gives no was to a task that had no date', function () {
     $match = matchCommand('dời đọc sách sang thứ 2', CommandAction::Reschedule, [['id' => 'b', 'title' => 'Đọc sách']]);
 
-    expect($match->change?->label)->toBe('Due Mon 26 Oct (was no date)');
+    expect([$match->change?->label, $match->change?->was])->toBe(['Due Mon 26 Oct', null]);
 });
 
 it('deletes the matching task (T-NU-22)', function () {
@@ -56,7 +56,11 @@ it('matches at 60% and not below (T-NU-23)', function () {
 
     expect($matcher->score(['a', 'b', 'c', 'd', 'e'], 'a b c'))->toBe(0.6)
         ->and(matchCommand('done alpha beta gamma delta epsilon', CommandAction::Complete, [['id' => 'x', 'title' => 'alpha beta gamma']])->change?->taskId)->toBe('x')
-        ->and(matchCommand('done alpha beta gamma delta epsilon', CommandAction::Complete, [['id' => 'x', 'title' => 'alpha beta']])->skip)->toBe(SkipReason::NotFound);
+        ->and(matchCommand('done alpha beta gamma delta epsilon', CommandAction::Complete, [['id' => 'x', 'title' => 'alpha beta']])->skip)->toBe(SkipReason::NotFound)
+        // A command that names no task is skipped (NU-E32), never a new task with an empty title.
+        ->and(matchCommand('move to friday', CommandAction::Reschedule, [])->skip)->toBe(SkipReason::Skip)
+        // A modifier the title shares ("weekly") never lifts 2 of 4 meaningful words over the threshold.
+        ->and(matchCommand('done weekly sales report review meeting', CommandAction::Complete, [['id' => 'w', 'title' => 'Weekly sales report']])->skip)->toBe(SkipReason::NotFound);
 });
 
 it('ignores done and deleted tasks among the open candidates (T-NU-24)', function () {
@@ -204,7 +208,7 @@ it('keeps the date of a dated task when only a time is given (NU-E35)', function
 });
 
 it('changes nothing when the task already has the new date and time', function (string $text) {
-    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK, STANDUP_TASK]))->toMatchObject(['change' => null, 'skip' => SkipReason::AlreadyDone]);
+    expect(matchCommand($text, CommandAction::Reschedule, [RENT_TASK, STANDUP_TASK]))->toMatchObject(['change' => null, 'skip' => SkipReason::NoChange]);
 })->with(['move pay rent to 1/11', 'move pay rent to the 1st', 'move standup to 9am', 'move standup to monday 9am', 'move standup to 9-9:15am', 'chuyển standup sang thứ 2 9h']);
 
 it('picks the tied task the reschedule would change', function () {

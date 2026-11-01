@@ -72,7 +72,7 @@ it('prints what the engine makes of each note in notes.txt', function () {
                 ItemKind::Task => 'task '.manualFields(app(FieldExtractor::class)->extract($item, $context)),
                 ItemKind::Command => $kind->action->value.' → '.implode(' + ', array_map(function ($match) use ($titles): string {
                     $what = match (true) {
-                        $match->change !== null => '"'.$titles[$match->change->taskId].'" '.json_encode($match->change->fields ?: ($match->change->delete ? 'deleted' : []), JSON_UNESCAPED_UNICODE).' label "'.$match->change->label.'"',
+                        $match->change !== null => '"'.$titles[$match->change->taskId].'" '.json_encode($match->change->fields ?: ($match->change->delete ? 'deleted' : []), JSON_UNESCAPED_UNICODE).' label "'.$match->change->label.'"'.($match->change->was === null ? '' : ' was "'.$match->change->was.'"'),
                         $match->newTask !== null => 'new task '.manualFields($match->newTask),
                         default => 'skip '.$match->skip?->value,
                     };

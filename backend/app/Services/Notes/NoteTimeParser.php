@@ -11,9 +11,6 @@ final class NoteTimeParser
 
     private const HALF_DAY = 12;
 
-    /** Duration units this parser reads; days and longer belong to the date parser. */
-    private const MINUTES_PER_UNIT = ['minute' => 1, 'hour' => 60];
-
     public function __construct(private NoteDurations $durations) {}
 
     public function parse(string $text, NoteContext $context): ParsedTime
@@ -44,9 +41,8 @@ final class NoteTimeParser
     private function relative(string $text, NoteContext $context): ?ParsedTime
     {
         foreach ($this->durations->findAll($text) as $duration) {
-            $perUnit = self::MINUTES_PER_UNIT[$duration['unit']] ?? null;
-            if ($perUnit !== null) {
-                $at = $context->local()->modify('+'.($duration['amount'] * $perUnit).' minutes');
+            if (NoteDurations::isClock($duration['unit'])) {
+                $at = NoteDurations::add($context->local(), $duration['amount'], $duration['unit']);
 
                 return new ParsedTime($at->format('H:i'), spans: [[$duration['offset'], $duration['length']]], date: $at->format('Y-m-d'));
             }

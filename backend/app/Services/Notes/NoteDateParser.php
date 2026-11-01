@@ -23,9 +23,6 @@ final class NoteDateParser
     /** Enough months ahead to reach a 31st from any month. */
     private const MONTHS_TO_FIND_A_DAY = 2;
 
-    /** Duration units this parser reads, in "+N <unit>" steps; minutes and hours belong to the time parser. */
-    private const DATE_UNITS = ['day' => 'days', 'week' => 'weeks', 'month' => 'months'];
-
     public function __construct(private NoteDurations $durations) {}
 
     public function parse(string $text, NoteContext $context, ?string $startTime): ParsedDate
@@ -112,9 +109,9 @@ final class NoteDateParser
     {
         $found = [];
         foreach ($this->durations->findAll($text) as $duration) {
-            $step = self::DATE_UNITS[$duration['unit']] ?? null;
-            if ($step !== null) {
-                $date = $context->today()->modify('+'.$duration['amount'].' '.$step)->format('Y-m-d');
+            // Minutes and hours are times (NoteTimeParser); a month ends on a shorter month's last day.
+            if (! NoteDurations::isClock($duration['unit'])) {
+                $date = NoteDurations::add($context->today(), $duration['amount'], $duration['unit'])->format('Y-m-d');
                 $found[] = ['date' => $date, 'phrase' => substr($text, $duration['offset'], $duration['length']), 'offset' => $duration['offset']];
             }
         }

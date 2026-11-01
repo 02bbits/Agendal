@@ -139,6 +139,10 @@ function shiftCommands(): array
         'lùi gym nửa ngày' => [],
         // A when after "to / sang" is a time, never an amount.
         'dời họp nhóm sang 2 giờ' => ['start_time' => '02:00', 'end_time' => '03:00'],
+        // A month keeps the day, or ends on a shorter month's last day.
+        'push rent by 1 month' => ['due_date' => '2027-02-28'], 'lùi rent 1 tháng' => ['due_date' => '2027-02-28'],
+        // An end not after the new start is dropped (TK-3), as the database requires.
+        'move call to 5pm' => ['start_time' => '17:00', 'end_time' => null],
     ];
 
     return array_combine(array_keys($cases), array_map(fn (string $command, array $fields): array => [$command, $fields], array_keys($cases), $cases));
@@ -150,6 +154,9 @@ it('moves by every amount, unit and direction wording, English and Vietnamese', 
         ['id' => 'standup', 'title' => 'Standup', 'due_date' => '2026-11-18', 'start_time' => '09:00', 'end_time' => '09:30'],
         ['id' => 'hop', 'title' => 'Họp nhóm', 'due_date' => '2026-11-18', 'start_time' => '09:00', 'end_time' => '10:00'],
         ['id' => 'gym', 'title' => 'Gym', 'due_date' => '2026-11-18'],
+        ['id' => 'rent', 'title' => 'Rent', 'due_date' => '2027-01-31'],
+        // Only an end, as data from elsewhere may have.
+        ['id' => 'call', 'title' => 'Call', 'due_date' => '2026-11-18', 'end_time' => '10:00'],
     ];
 
     expect(Cases::failing(shiftCommands(), function (string $command, array $fields) use ($context, $tasks): ?array {

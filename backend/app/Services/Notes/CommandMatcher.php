@@ -15,8 +15,6 @@ use DateTimeImmutable;
  */
 final class CommandMatcher
 {
-    private const MINUTES_PER_DAY = 1440;
-
     private const DAYS_PER_WEEK = 7;
 
     /** @var list<string>|null */
@@ -78,7 +76,8 @@ final class CommandMatcher
     }
 
     /**
-     * Words found in the title ÷ words that count. A modifier word counts only when the title has it.
+     * Meaningful words found in the title ÷ meaningful words in the command (NU §2.4). Modifier words never change
+     * it; they only rank titles that already match (closeness()['found']).
      *
      * @param  list<string>  $words
      * @param  list<string>  $modifiers
@@ -89,7 +88,9 @@ final class CommandMatcher
     }
 
     /**
-     * How close a title is: the score, words found, and title words the command doesn't name, from one read of it.
+     * How close a title is, from one read of it: the score against the threshold (meaningful words only), the words
+     * found with the modifiers the title also has (to rank equal scores: "Weekly report" over "Monthly report"),
+     * and title words the command doesn't name.
      *
      * @param  list<string>  $words
      * @param  list<string>  $modifiers
@@ -99,12 +100,10 @@ final class CommandMatcher
     private function closeness(array $words, array $modifiers, array $tokens): array
     {
         $named = count(array_intersect($words, $tokens));
-        $found = $named + count(array_intersect($modifiers, $tokens));
-        $counted = count($words) + $found - $named;
 
         return [
-            'score' => $counted === 0 ? 0.0 : $found / $counted,
-            'found' => $found,
+            'score' => $words === [] ? 0.0 : $named / count($words),
+            'found' => $named + count(array_intersect($modifiers, $tokens)),
             'extra' => count(array_unique(array_diff($tokens, $words, $modifiers, $this->stopWords()))),
         ];
     }
@@ -126,8 +125,8 @@ final class CommandMatcher
         $changes = array_filter(array_map(fn (array $task): ?TaskChange => $this->change($text, $action, $task, $context), $tied));
         $changing = array_keys($changes);
         if ($changing === []) {
-            // Every match already has the new date and time: nothing to change, like a task already done.
-            return CommandMatch::skip(SkipReason::AlreadyDone);
+            // Every match already has the new date and time: the task stays open with nothing to change.
+            return CommandMatch::skip(SkipReason::NoChange);
         }
         // A tie always asks (NU-E11). The choices are the tasks the command would change first, so the preselected
         // one ("move report to friday" means the Report not yet due then) is always listed, soonest due first.
@@ -290,6 +289,10 @@ final class CommandMatcher
      */
     private function withoutOpenMatch(string $text, CommandAction $action, array $words, array $modifiers, array $doneTasks, NoteContext $context): CommandMatch
     {
+        // A command that names no task ("move to friday", "done") is an item with no title words: skipped (NU-E32).
+        if ($words === []) {
+            return CommandMatch::skip(SkipReason::Skip);
+        }
         foreach ($doneTasks as $task) {
             if ($this->score($words, $task['title'], $modifiers) >= (float) config('notes.match_threshold')) {
                 return CommandMatch::skip(SkipReason::AlreadyDone);
@@ -331,15 +334,15 @@ final class CommandMatcher
     private function reschedule(string $text, array $task, NoteContext $context): ?TaskChange
     {
         $shift = $this->shift($text, $context);
-        $fields = $shift === null ? $this->toWhen($text, $task, $context) : $this->byAmount($shift, $task, $context);
+        $fields = $this->withValidEnd($shift === null ? $this->toWhen($text, $task, $context) : $this->byAmount($shift, $task, $context), $task);
         if ($fields === []) {
             return null;
         }
-        $label = isset($fields['due_date'])
-            ? __('notes.label.due', ['date' => $this->labelDate($fields['due_date']), 'was' => $this->was($task['due_date'] ?? null, $context)])
-            : $task['title'];
+        // The new date and time, and the old ones as "was" (T-NU-21): "Due Fri 30 Oct 09:00", was "Fri 23 Oct 09:00".
+        $old = [$task['due_date'] ?? null, $task['start_time'] ?? null];
+        $new = $this->scheduled($fields['due_date'] ?? $old[0], array_key_exists('start_time', $fields) ? $fields['start_time'] : $old[1]);
 
-        return new TaskChange($task['id'], $label, fields: $fields);
+        return new TaskChange($task['id'], __('notes.label.due', ['when' => $new]), fields: $fields, was: $this->scheduled(...$old) ?: null);
     }
 
     /**
@@ -386,14 +389,12 @@ final class CommandMatcher
     {
         [$oldDate, $oldStart, $oldEnd] = [$task['due_date'] ?? null, $task['start_time'] ?? null, $task['end_time'] ?? null];
         $date = $oldDate ?? $context->today()->format('Y-m-d');
-        $step = sprintf('%+d %s', $shift['amount'], $shift['unit']);
-        $underADay = (new DateTimeImmutable('@0'))->modify('+1 '.$shift['unit'])->getTimestamp() < self::MINUTES_PER_DAY * 60;
-        if (! $underADay) {
-            $new = ['due_date' => (new DateTimeImmutable($date))->modify($step)->format('Y-m-d')];
+        if (! NoteDurations::isClock($shift['unit'])) {
+            $new = ['due_date' => NoteDurations::add(new DateTimeImmutable($date), $shift['amount'], $shift['unit'])->format('Y-m-d')];
         } elseif ($oldStart === null) {
             return [];
         } else {
-            $at = (new DateTimeImmutable($date.' '.$oldStart))->modify($step);
+            $at = NoteDurations::add(new DateTimeImmutable($date.' '.$oldStart), $shift['amount'], $shift['unit']);
             $new = ['due_date' => $at->format('Y-m-d'), 'start_time' => $at->format('H:i')];
             if ($oldEnd !== null) {
                 $new['end_time'] = $this->movedEnd($oldStart, $oldEnd, $new['start_time']);
@@ -435,21 +436,31 @@ final class CommandMatcher
 
     private function movedEnd(string $oldStart, string $oldEnd, string $newStart): ?string
     {
-        $duration = $this->minutes($oldEnd) - $this->minutes($oldStart);
-        $end = $this->minutes($newStart) + $duration;
-        if ($duration <= 0 || $end >= self::MINUTES_PER_DAY) {
-            return null;
-        }
+        $duration = NoteDurations::clockMinutes($oldEnd) - NoteDurations::clockMinutes($oldStart);
 
-        return sprintf('%02d:%02d', intdiv($end, 60), $end % 60);
+        return $duration <= 0 ? null : NoteDurations::clockTime(NoteDurations::clockMinutes($newStart) + $duration);
     }
 
-    /** "09:30" → 570. */
-    private function minutes(string $time): int
+    /**
+     * An end not after the start is dropped (TK-3, NU-E30), whichever way the start moved: a task with only an end
+     * at 10:00 moved to 5pm keeps no end, as the database requires.
+     *
+     * @param  array{due_date?: string, start_time?: string, end_time?: ?string}  $fields
+     * @param  TaskRow  $task
+     * @return array{due_date?: string, start_time?: string, end_time?: ?string}
+     */
+    private function withValidEnd(array $fields, array $task): array
     {
-        [$hour, $minute] = array_map(intval(...), explode(':', $time));
+        $start = array_key_exists('start_time', $fields) ? $fields['start_time'] : ($task['start_time'] ?? null);
+        $end = array_key_exists('end_time', $fields) ? $fields['end_time'] : ($task['end_time'] ?? null);
+        if ($start !== null && $end !== null && $end <= $start) {
+            $fields['end_time'] = null;
+        }
+        if (array_key_exists('end_time', $fields) && $fields['end_time'] === ($task['end_time'] ?? null)) {
+            unset($fields['end_time']);
+        }
 
-        return $hour * 60 + $minute;
+        return $fields;
     }
 
     /** "move: dentist to friday" → "dentist to friday"; the command verb and what sets it off. */
@@ -510,18 +521,11 @@ final class CommandMatcher
         return $this->stopWords ??= array_map(mb_strtolower(...), [...NoteVocabulary::values('stop_word'), ...NoteVocabulary::values('reschedule_target')]);
     }
 
-    private function was(?string $date, NoteContext $context): string
+    /** "Fri 30 Oct 09:00", "Fri 30 Oct", "09:00"; empty for neither. */
+    private function scheduled(?string $date, ?string $start): string
     {
-        return match ($date) {
-            null => __('notes.label.was_no_date'),
-            $context->today()->format('Y-m-d') => __('notes.label.was_today'),
-            $context->today()->modify('+1 day')->format('Y-m-d') => __('notes.label.was_tomorrow'),
-            default => $this->labelDate($date),
-        };
-    }
+        $day = $date === null ? '' : (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
 
-    private function labelDate(string $date): string
-    {
-        return (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
+        return trim($day.' '.$start);
     }
 }
