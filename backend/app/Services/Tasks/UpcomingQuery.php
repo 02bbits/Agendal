@@ -93,9 +93,7 @@ final class UpcomingQuery
         foreach ($tasks as $task) {
             $dueDate = substr((string) $task->due_date, 0, 10);
             if ($dueDate > $lastDate) {
-                if ($nextFrom === null) {
-                    $nextFrom = $dueDate;
-                }
+                $nextFrom = $dueDate;
                 break;
             }
 
