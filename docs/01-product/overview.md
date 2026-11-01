@@ -76,4 +76,4 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 
 ## Design
 
-The look is **Paper & ink**: a calm, flat notebook in light and dark. See the [theme guide](theme-guide.md), the [design system](https://claude.ai/artifact/1tqQg3Ugsmxm6qJWyXaYpu) and the [prototype](https://claude.ai/artifact/7uABDQJSswS3pUAeSFNag8) (sign in with example@gmail.com).
+The look is **Graphite**: the V1 layout in a monochrome grey palette, in light and dark. See the [theme guide](theme-guide.md) for the spec and the shared design canvas link.
