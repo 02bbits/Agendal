@@ -4,6 +4,16 @@ import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { Project, Task } from "../ui/domain/types";
 
+export interface InboxData {
+  overdue: Task[];
+  today: Task[];
+  no_date: Task[];
+  completed_today: Task[];
+  progress: { done: number; total: number };
+  no_date_count: number;
+  completed_count: number;
+}
+
 async function postLifecycle<T>(
   id: string,
   action: "complete" | "reopen",
@@ -18,6 +28,11 @@ async function postLifecycle<T>(
   });
 
   return handleResponse<T>(response);
+}
+
+export async function inbox(): Promise<InboxData> {
+  const response = await api("/tasks?view=inbox");
+  return handleResponse<InboxData>(response);
 }
 
 export async function getTask(id: string): Promise<Task> {
