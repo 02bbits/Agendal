@@ -30,6 +30,12 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
 
   useEffect(() => {
+    rowsRef.current = initialTasks;
+    syncState.current = createTaskSyncState(initialTasks);
+    setTasks(initialTasks);
+  }, [initialTasks]);
+
+  useEffect(() => {
     const onTaskCreated = (e: Event) => {
       const customEvent = e as CustomEvent<Task>;
       const created = customEvent?.detail;
