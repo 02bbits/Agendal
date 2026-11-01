@@ -40,6 +40,15 @@ export interface ListOptions {
   isSettling?: (id: string) => boolean;
 }
 
+function dedupeTasks(tasks: readonly Task[]): Task[] {
+  const seen = new Set<string>();
+  return tasks.filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+}
+
 /**
  * Inbox sections (LV-1): Overdue (oldest first) before Today, then No date
  * (priority, newest first) and tasks completed today. Overdue is by date only,
@@ -50,12 +59,13 @@ export function buildInbox(
   today: string,
   opts: ListOptions,
 ): InboxView {
+  const uniqueTasks = dedupeTasks(tasks);
   const settling = opts.isSettling ?? (() => false);
-  const open = tasks.filter((t) => !t.done || settling(t.id));
+  const open = uniqueTasks.filter((t) => !t.done || settling(t.id));
   const overdue = open.filter((t) => t.due_date && t.due_date < today);
   const dueToday = open.filter((t) => t.due_date === today);
   const noDate = open.filter((t) => !t.due_date);
-  const completed = tasks.filter(
+  const completed = uniqueTasks.filter(
     (t) => t.done && !settling(t.id) && opts.completedToday(t),
   );
   return {
@@ -73,7 +83,7 @@ export function buildInbox(
     completed: [...completed].sort((a, b) =>
       (b.done_at ?? "").localeCompare(a.done_at ?? ""),
     ),
-    progress: inboxProgress(tasks, today, opts.completedToday),
-    empty: tasks.length === 0,
+    progress: inboxProgress(uniqueTasks, today, opts.completedToday),
+    empty: uniqueTasks.length === 0,
   };
 }
