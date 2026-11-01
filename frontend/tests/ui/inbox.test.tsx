@@ -302,6 +302,85 @@ describe("Inbox screen", () => {
 
     expect(await screen.findByText("Dynamically created task")).toBeTruthy();
   });
+
+  it("caps completed tasks at 5 initially and expands when Show all is clicked", async () => {
+    const completedTasks = Array.from({ length: 8 }, (_, i) =>
+      task({
+        id: `t-comp-${i}`,
+        title: `Completed Task ${i + 1}`,
+        due_date: TODAY,
+        done: true,
+        done_at: `2026-10-23T0${i}:00:00Z`,
+      }),
+    );
+    const { wrap } = setup(completedTasks);
+    render(wrap(<InboxScreen accountInitial="e" />));
+
+    const completedBtn = screen.getByRole("button", {
+      name: /Completed, 8 tasks/,
+    });
+    await userEvent.click(completedBtn);
+
+    // Initial 5 visible (newest first: Task 8 to Task 4)
+    expect(screen.getByRole("link", { name: /Completed Task 8/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Completed Task 4/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Completed Task 3/ })).toBeNull();
+
+    const showAllBtn = screen.getByRole("button", { name: "Show all" });
+    expect(showAllBtn).toBeTruthy();
+
+    await userEvent.click(showAllBtn);
+    expect(screen.getByRole("link", { name: /Completed Task 3/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Completed Task 1/ })).toBeTruthy();
+
+    // Clicking Show less collapses back to 5
+    const showLessBtn = screen.getByRole("button", { name: "Show less" });
+    await userEvent.click(showLessBtn);
+    expect(screen.queryByRole("link", { name: /Completed Task 3/ })).toBeNull();
+  });
+
+  it("replenishes hidden completed task and removes Show all when undo drops count to <= 5", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const completedTasks = Array.from({ length: 6 }, (_, i) =>
+        task({
+          id: `t-comp-${i}`,
+          title: `Completed Task ${i + 1}`,
+          due_date: TODAY,
+          done: true,
+          done_at: `2026-10-23T0${i}:00:00Z`,
+        }),
+      );
+      const { wrap } = setup(completedTasks);
+      render(wrap(<InboxScreen accountInitial="e" />));
+
+      const completedBtn = screen.getByRole("button", {
+        name: /Completed, 6 tasks/,
+      });
+      await userEvent.click(completedBtn);
+
+      // 6 tasks total: 5 shown, 1 hidden. Task 1 is hidden (oldest completion).
+      expect(
+        screen.queryByRole("link", { name: /Completed Task 1/ }),
+      ).toBeNull();
+      expect(screen.getByRole("button", { name: "Show all" })).toBeTruthy();
+
+      // Undo one of the visible tasks (Task 6)
+      const reopenBox = screen.getByRole("checkbox", {
+        name: "Reopen Completed Task 6",
+      });
+      await userEvent.click(reopenBox);
+
+      // Now only 5 completed remain: Task 1 should be replenished into the visible 5 slots!
+      expect(
+        screen.getByRole("link", { name: /Completed Task 1/ }),
+      ).toBeTruthy();
+      // Show all button should now be gone because completed count <= 5
+      expect(screen.queryByRole("button", { name: "Show all" })).toBeNull();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
 
 describe("Inbox Page (app/page.tsx)", () => {
