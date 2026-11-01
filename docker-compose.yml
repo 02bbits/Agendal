@@ -1,4 +1,15 @@
-# Local services only. Laravel and Next.js run on the host (see README).
+# `docker compose up` runs the whole app: http://localhost:3000 (see README).
+x-api: &api
+  build: docker/api
+  user: "${UID:-1000}:${GID:-1000}"
+  working_dir: /repo/backend
+  # The whole repo: tests read contract schemas from docs/.
+  volumes:
+    - .:/repo
+  environment:
+    DB_HOST: db
+    MAIL_HOST: mail
+
 services:
   db:
     image: postgres:18
@@ -23,5 +34,52 @@ services:
       - "1025:1025" # SMTP
       - "8025:8025" # web inbox
 
+  api:
+    <<: *api
+    command: /repo/docker/api/start.sh
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "php",
+          "-r",
+          "exit(@file_get_contents('http://localhost:8000/api/v1/health') === false ? 1 : 0);",
+        ]
+      interval: 60s
+      timeout: 3s
+      start_period: 5m
+      start_interval: 3s
+
+  queue:
+    <<: *api
+    command: php artisan queue:listen --tries=1
+    depends_on:
+      api:
+        condition: service_healthy
+
+  web:
+    image: node:22
+    working_dir: /repo/frontend
+    # The whole repo: the dev notes mock imports fixtures from docs/.
+    volumes:
+      - .:/repo
+      - web-node-modules:/repo/frontend/node_modules
+      - web-next:/repo/frontend/.next
+    environment:
+      API_URL: http://api:8000
+    command: sh -c "npm ci && npm run dev"
+    ports:
+      - "3000:3000"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   db-data:
+  web-node-modules:
+  web-next:
