@@ -187,12 +187,12 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     expect(router.push).toHaveBeenLastCalledWith("/account");
   });
 
-  it("the capture bar stays on the screen it was on, and hides + until New task exists", async () => {
+  it("the capture bar stays on the screen it was on, and the + now opens New task on tab screens", async () => {
     renderAt("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Write a note" }));
     expect(router.push).not.toHaveBeenCalled();
     expect(router.replace).not.toHaveBeenCalled();
-    expect(screen.queryByRole("button", { name: "Add a task" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Add a task" })).toBeTruthy();
   });
 });
 
