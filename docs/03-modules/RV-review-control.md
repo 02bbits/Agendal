@@ -47,11 +47,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Each row has a badge, the task title and its meta.
   - Created and changed rows open Task details. Deleted rows don't open.
   - A task removed since (by hand or by another note) shows `note.gone_since` and doesn't open.
-  - Changed rows show the label with the old value ("Due Fri (was today)").
+  - The meta is the row's `label` from the server ("Mon 26 Oct · 09:00 · SQL Course"). Changed rows add the old value: "Fri 30 Oct · HCI · was Wed 28 Oct".
+  - A row's accessible name reads its badge, title and meta: "Created: SQL quiz, Mon 26 Oct · 09:00 · SQL Course" (A11Y-21).
 - **Skipped section** (`note.skipped`): each skipped item with its reason (`note.skip_already_done`, `note.skip_not_found`), or the plain text for `skip`.
 - **Hints:** a duplicate row carries `note.duplicate_hint` ([NU-E13](NU-note-understanding.md#nu-e13)).
 - **When? chips ([Q4](../08-project/open-questions.md#q4)):** a created row whose task has no due date shows `note.ask_when` with chips Today, Tomorrow, Next week and Pick date…. A chip sets the due date like an edit in Task details (`PATCH /tasks/{id}`), and the row's meta updates. The chips disappear once the task has a date, and after Undo all.
-- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5).
+- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). Until Undo all ([IM-44](../08-project/tasks.md#im-44)) and Edit note ([IM-47](../08-project/tasks.md#im-47)) are built, the screen has **Done** only.
+- **Where the data comes from:** after Make tasks the note is already in hand and isn't asked for again; opened by link, the note is loaded first. Either way each created and changed task is read by its id, so a task removed since shows `note.gone_since` and the When? chips follow the task's real date. The result takes the editor's place in the history, so Back goes to where the editor was opened ([RV-E12](#rv-e12)).
 - **After undo:**
   - The overline says `Undone`.
   - Rows are muted and stop opening.

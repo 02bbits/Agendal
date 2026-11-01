@@ -28,6 +28,9 @@ export const pending = {
   "note.example_1": "sql quiz monday 9am, email the group tonight",
   "note.example_2": "done email the group",
   "note.example_3": "move gym to sunday",
+  "note.result_hint": "Tap a task to change it.",
+  "note.show_all": "Show all",
+  "note.show_less": "Show less",
   "note.send_failed":
     "Couldn't send your note. Check your connection and try again.",
   "task.add_by_hand": "Add a task",
