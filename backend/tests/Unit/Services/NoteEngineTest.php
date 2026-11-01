@@ -31,7 +31,7 @@ it('plans skips, commands and tasks from one note', function () {
     $open = [['id' => 'a0000000-0000-4000-8000-000000000001', 'title' => 'Call mum'], ['id' => 'a0000000-0000-4000-8000-000000000002', 'title' => 'Gym', 'due_date' => '2026-10-24']];
     $build = app(NoteEngine::class)->build("ok thanks\ndone call mum\nmove gym to tomorrow\nbuy milk, eggs tomorrow", engineContext(), $open);
 
-    expect(array_column($build->plan['skipped'], 'reason'))->toBe(['skip', 'already_done'])
+    expect(array_column($build->plan['skipped'], 'reason'))->toBe(['skip', 'no_change'])
         ->and(array_column($build->plan['update'], 'task_id'))->toBe(['a0000000-0000-4000-8000-000000000001'])
         ->and(array_column($build->plan['create'], 'title'))->toBe(['Buy milk, eggs'])
         ->and($build->status)->toBe(PlanStatus::Done)
