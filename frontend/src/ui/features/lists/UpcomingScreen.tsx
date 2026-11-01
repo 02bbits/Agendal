@@ -3,7 +3,7 @@ import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { ChipGroup } from "../../components/ChipGroup";
 import { EmptyState } from "../../components/EmptyState";
-import { CalendarIcon, ClockIcon } from "../../components/icons";
+import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
 import { addDays, formatDay } from "../../domain/dates";
 import {
   upcomingPage,
@@ -36,14 +36,20 @@ function writeFilter(filter: UpcomingFilter) {
 }
 
 export interface UpcomingScreenProps {
-  accountInitial: string;
+  accountInitial?: string;
   navigate?: Navigate;
+  onNewTask?: () => void;
+  subtitle?: string;
+  showHeader?: boolean;
 }
 
 /** Upcoming (LV-2): from tomorrow, grouped by day, 14 days at a time, All / Scheduled / Due only. */
 export function UpcomingScreen({
-  accountInitial,
+  accountInitial = "",
   navigate,
+  onNewTask,
+  subtitle,
+  showHeader = true,
 }: UpcomingScreenProps) {
   const store = useTaskStore();
   const [filter, setFilter] = useState<UpcomingFilter>(readFilter);
@@ -76,13 +82,56 @@ export function UpcomingScreen({
 
   return (
     <div className="pb-8">
-      <ScreenHeader
-        overline={t("list.from_tomorrow")}
-        title={t("nav.upcoming")}
-        accountInitial={accountInitial}
-        navigate={navigate}
-      >
-        <div className="mt-4">
+      {showHeader && (
+        <ScreenHeader
+          overline={t("list.from_tomorrow")}
+          title={t("nav.upcoming")}
+          accountInitial={accountInitial}
+          navigate={navigate}
+          actions={
+            onNewTask ? (
+              <Button
+                variant="primary"
+                pill
+                className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+                onClick={onNewTask}
+              >
+                <PlusIcon size={16} />
+                {t("task.new")}
+              </Button>
+            ) : undefined
+          }
+        >
+          {subtitle && (
+            <p className="m-0 mt-1 text-footnote text-ink-secondary">
+              {subtitle}
+            </p>
+          )}
+          <div className="mt-4">
+            <ChipGroup
+              label={t("list.filter_label")}
+              value={filter}
+              onChange={choose}
+              options={[
+                { value: "all", label: t("list.filter_all") },
+                {
+                  value: "scheduled",
+                  label: t("list.filter_scheduled"),
+                  icon: <ClockIcon size={14} />,
+                },
+                {
+                  value: "due",
+                  label: t("list.filter_due"),
+                  icon: <CalendarIcon size={14} />,
+                },
+              ]}
+            />
+          </div>
+        </ScreenHeader>
+      )}
+
+      {!showHeader && (
+        <div className="mb-6">
           <ChipGroup
             label={t("list.filter_label")}
             value={filter}
@@ -102,7 +151,7 @@ export function UpcomingScreen({
             ]}
           />
         </div>
-      </ScreenHeader>
+      )}
 
       {loaded.days.length === 0 ? (
         anyUnfiltered ? (
