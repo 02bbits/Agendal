@@ -1,10 +1,10 @@
 import type { ReactNode } from "react";
-import { ApiRequestError } from "../../../lib/apiError";
 import { today } from "../../../lib/clock";
 import type { ToastData } from "../../components/Toast";
-import { isCopyKey, t } from "../../copy";
+import { t } from "../../copy";
 import type { TaskApi, TaskUpdateFn } from "../../domain/api";
 import type { Project, Task, TimeFormat } from "../../domain/types";
+import { saveErrorMessage } from "./saveError";
 import type { UseTaskSyncReturn } from "./useTaskSync";
 
 export function isTaskCompletedToday(
@@ -64,19 +64,16 @@ export function formatSaveErrorToast(
   error: unknown,
   retry: () => void,
 ): Omit<ToastData, "id"> {
-  if (
-    error instanceof ApiRequestError &&
-    error.status < 500 &&
-    error.code !== "error.generic" &&
-    isCopyKey(error.code)
-  ) {
-    return { message: t(error.code) };
+  const result = saveErrorMessage(error);
+  if (!result.retry) {
+    return { message: result.message };
   }
   return {
-    message: t("error.save_failed"),
+    message: result.message,
     actionLabel: t("common.retry"),
     onAction: retry,
   };
 }
 
+export { saveErrorMessage, type SaveErrorMessageResult } from "./saveError";
 export type { TaskUpdateFn };

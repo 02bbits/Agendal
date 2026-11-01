@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/lib/apiError";
-import { getTask, httpTaskApi, patch, projects } from "@/lib/taskApi";
+import {
+  createTask,
+  getTask,
+  httpTaskApi,
+  patch,
+  projects,
+} from "@/lib/taskApi";
 
 describe("httpTaskApi (Refs #21, Refs #22)", () => {
   const fetchMock = vi.fn();
@@ -304,5 +310,93 @@ describe("httpTaskApi (Refs #21, Refs #22)", () => {
     await httpTaskApi.complete("a/b", "2026-10-23T08:00:00Z");
     const [url] = fetchMock.mock.calls[0];
     expect(url).toBe("/api/v1/tasks/a%2Fb/complete");
+  });
+});
+
+describe("createTask (Refs #25)", () => {
+  const fetchMock = vi.fn();
+
+  beforeEach(() => {
+    fetchMock.mockReset();
+    vi.stubGlobal("fetch", fetchMock);
+    document.cookie = "XSRF-TOKEN=test-token";
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("calls POST /api/v1/tasks with JSON body and returns created task", async () => {
+    const fakeTask = {
+      id: "0192e21b-6800-7000-8000-000000000001",
+      title: "Call mum",
+      due_date: "2026-10-23",
+      priority: "medium",
+      project_id: "p-1",
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(fakeTask), {
+        status: 201,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const body = {
+      id: "0192e21b-6800-7000-8000-000000000001",
+      title: "Call mum",
+      due_date: "2026-10-23",
+      priority: "medium" as const,
+      project_id: "p-1",
+    };
+
+    const result = await createTask(body);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/tasks");
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual(body);
+
+    const headers = new Headers(init.headers);
+    expect(headers.get("Content-Type")).toBe("application/json");
+    expect(headers.get("Accept")).toBe("application/json");
+    expect(headers.get("X-Timezone")).toBeTruthy();
+
+    expect(result).toEqual(fakeTask);
+  });
+
+  it("rejects with ApiRequestError on 422 with fields and requestId", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          error: {
+            code: "error.invalid",
+            request_id: "req-422",
+            fields: { title: ["The title field is required."] },
+          },
+        }),
+        {
+          status: 422,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    try {
+      await createTask({
+        id: "0192e21b-6800-7000-8000-000000000001",
+        title: "",
+      });
+      expect.unreachable("should have thrown");
+    } catch (err) {
+      expect(err).toBeInstanceOf(ApiRequestError);
+      const apiErr = err as ApiRequestError;
+      expect(apiErr.code).toBe("error.invalid");
+      expect(apiErr.status).toBe(422);
+      expect(apiErr.requestId).toBe("req-422");
+      expect(apiErr.fields).toEqual({
+        title: ["The title field is required."],
+      });
+    }
   });
 });

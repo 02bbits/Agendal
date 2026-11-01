@@ -13,6 +13,7 @@ import {
 } from "react";
 import {
   AppShell,
+  NewTaskSheet,
   NoteEditor,
   ROUTES,
   t,
@@ -25,6 +26,7 @@ import {
 } from "@/ui";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { useNewTask } from "./useNewTask";
 import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
@@ -100,7 +102,7 @@ interface AppFrameValue {
   settings: AccountSettings;
   changeSettings: (patch: Partial<AccountSettings>) => void;
   /** One app-wide toast; it survives navigation, e.g. the welcome after sign-up (UX-04). */
-  showToast: (message: string) => void;
+  showToast: (messageOrDraft: string | Omit<ToastData, "id">) => void;
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
   /** Null until the session check answers, or when signed out. */
@@ -215,11 +217,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
-    (message: string) =>
-      setToast((current) => ({
-        id: typeof current?.id === "number" ? current.id + 1 : 1,
-        message,
-      })),
+    (messageOrDraft: string | Omit<ToastData, "id">) =>
+      setToast((current) => {
+        const nextId = typeof current?.id === "number" ? current.id + 1 : 1;
+        if (typeof messageOrDraft === "string") {
+          return { id: nextId, message: messageOrDraft };
+        }
+        return { ...messageOrDraft, id: nextId };
+      }),
     [],
   );
   const dismissToast = useCallback(
@@ -227,6 +232,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  const { open, openNewTask, sheetProps } = useNewTask({
+    pathname,
+    showToast,
+  });
   // Applies at once, then saves. A refused save puts the old values back; offline the change
   // stays on this device until the sync arrives (IM-52).
   const settingsRef = useRef(settings);
@@ -358,8 +367,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
-        // The + appears with the New task sheet (IM-26)
-        capture={{ onWrite: openNoteEditor }}
+        capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined
@@ -385,6 +393,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }}
           />
         )}
+        {open && <NewTaskSheet {...sheetProps} />}
       </AppShell>
     </AppFrameContext.Provider>
   );

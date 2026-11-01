@@ -67,6 +67,7 @@ export function TaskDetails({
         />
         <ProjectField
           projectId={task.project_id}
+          projects={store.projects}
           projectsStatus={projectsStatus}
           onRetryProjects={onRetryProjects}
           onChange={(project_id) => save({ project_id })}
