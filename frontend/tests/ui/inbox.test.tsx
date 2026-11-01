@@ -1,6 +1,6 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InboxScreen,
   TaskStoreProvider,
@@ -113,6 +113,9 @@ describe("buildInbox (LV-1)", () => {
 });
 
 describe("Inbox screen", () => {
+  beforeEach(() => {
+    sessionStorage.clear();
+  });
   it("matches the design: date overline, progress, Overdue then Today (T-LV-01, T-LV-02)", async () => {
     const { wrap } = setup(designTasks());
     render(wrap(<InboxScreen accountInitial="example" />));
@@ -380,6 +383,40 @@ describe("Inbox screen", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("preserves expanded state of No date and Completed across remounts via sessionStorage", () => {
+    sessionStorage.setItem("agendal:inbox:open:no_date", "true");
+    sessionStorage.setItem("agendal:inbox:open:completed", "true");
+
+    const tasks = [
+      task({ id: "t-no-date", title: "Task without date", due_date: null }),
+      task({
+        id: "t-done",
+        title: "Completed Task 1",
+        due_date: TODAY,
+        done: true,
+        done_at: "2026-10-23T08:00:00Z",
+      }),
+    ];
+
+    const { wrap } = setup(tasks);
+    const { unmount } = render(wrap(<InboxScreen accountInitial="e" />));
+
+    expect(
+      screen
+        .getByRole("button", { name: /No date, 1 task/ })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: /Completed, 1 task/ })
+        .getAttribute("aria-expanded"),
+    ).toBe("true");
+    expect(screen.getByText("Task without date")).toBeTruthy();
+    expect(screen.getByText("Completed Task 1")).toBeTruthy();
+
+    unmount();
   });
 });
 
