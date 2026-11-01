@@ -56,3 +56,13 @@ export interface Project {
 
 export type TimeFormat = "24h" | "12h";
 export type WeekStart = "mon" | "sun";
+
+/** The part of `POST /notes`' answer the app reads so far (NU §7); the result screen is IM-43. */
+export interface NoteResult {
+  note: {
+    id: string;
+    client_id: string;
+    status: "done" | "confirm" | "followup";
+  };
+  changes: { kind: "created" | "updated" | "deleted" }[];
+}

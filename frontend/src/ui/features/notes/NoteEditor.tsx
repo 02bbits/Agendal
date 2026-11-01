@@ -7,7 +7,9 @@ import {
   type KeyboardEvent,
 } from "react";
 import { clearDraft, loadDraft, saveDraft } from "../../../lib/draft";
+import type { NoteSubmission, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t } from "../../copy";
+import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { Dialog } from "../../components/Dialog";
@@ -29,9 +31,17 @@ export interface NoteEditorProps {
   onClose: () => void;
   /** An earlier unsent note was put back in the editor (`note.draft_restored`). */
   onDraftRestored?: () => void;
-  /** Make tasks, and Ctrl/Cmd+Enter (UX-12). Submitting is IM-42. */
-  onSubmit?: (text: string) => void;
+  /**
+   * Make tasks, and Ctrl/Cmd+Enter (UX-12): sends the note (NC §2.2) and answers with the result,
+   * or why it wasn't made. `clientId` stays the same for a retry, so one note is made at most once.
+   */
+  onSubmit?: (text: string, clientId: string) => NoteSubmission;
+  /** The note was made. The draft is already cleared; the editor stays until this closes it. */
+  onSubmitted?: (result: NoteResult) => void;
 }
+
+/** The reading line shows only when the answer takes longer than this (NC §2.2). */
+const READING_AFTER_MS = 300;
 
 /**
  * Full-screen note editor (NC-1, NC-2): the ruled note card with the cursor in it, three
@@ -41,14 +51,28 @@ export function NoteEditor({
   onClose,
   onDraftRestored,
   onSubmit,
+  onSubmitted,
 }: NoteEditorProps) {
   const [text, setText] = useState("");
   const latest = useRef(text);
   const dirty = useRef(false);
+  const clientId = useRef(crypto.randomUUID());
+  const sending = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [reading, setReading] = useState(false);
+  const [failure, setFailure] = useState<NoteSubmitFailure | null>(null);
+  // Seconds until a rate-limited note may be sent again (429)
+  const [wait, setWait] = useState(0);
+  const errorId = useId();
   const edit = (next: string, saved = false) => {
     latest.current = next;
     dirty.current = !saved;
     setText(next);
+    if (saved) return;
+    // New words are a new note: the server would answer an old id with the old text (ADR-003).
+    // A rate limit is about the user, not the text, so its countdown stays.
+    clientId.current = crypto.randomUUID();
+    setFailure((f) => (f?.error === "error.rate_limited" ? f : null));
   };
   const editorRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
@@ -57,6 +81,8 @@ export function NoteEditor({
   const [confirming, setConfirming] = useState(false);
   // ×, Escape and Back ask first when there is text; the draft only guards against a crash
   const requestClose = () => {
+    // Closing mid-request would leave the answer with nowhere to go
+    if (sending.current) return false;
     if (confirming) setConfirming(false);
     else if (VISIBLE.test(latest.current)) setConfirming(true);
     else return onClose();
@@ -117,16 +143,46 @@ export function NoteEditor({
     };
   }, []);
 
-  const canSubmit = VISIBLE.test(text);
-  const submit = () => {
-    if (canSubmit) onSubmit?.(text);
+  useEffect(() => {
+    if (wait <= 0) return;
+    const timer = setTimeout(() => setWait(wait - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [wait]);
+
+  const canSubmit = VISIBLE.test(text) && wait <= 0;
+  const submit = async () => {
+    // The ref, not `busy`: a second tap lands before React has re-rendered
+    if (!canSubmit || !onSubmit || sending.current) return;
+    sending.current = true;
+    setBusy(true);
+    setFailure(null);
+    const timer = setTimeout(() => setReading(true), READING_AFTER_MS);
+    const result = await onSubmit(latest.current, clientId.current);
+    clearTimeout(timer);
+    sending.current = false;
+    setBusy(false);
+    setReading(false);
+    if ("error" in result) {
+      setFailure(result);
+      setWait(result.retryAfter ?? 0);
+      return;
+    }
+    // Same order as discard(): without dirty = false the unmount would save the text again
+    dirty.current = false;
+    clearDraft().catch(() => {});
+    onSubmitted?.(result);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
-      submit();
+      void submit();
     }
   };
+  // A finished countdown clears itself; every other failure stays until the next try or edit
+  const message =
+    failure && (failure.error !== "error.rate_limited" || wait > 0)
+      ? t(failure.error, { seconds: wait, count: text.length })
+      : null;
   const fillExample = (example: string) => {
     edit(example);
     const field = textRef.current;
@@ -177,6 +233,9 @@ export function NoteEditor({
               value={text}
               onChange={(event) => edit(event.target.value)}
               onKeyDown={onKeyDown}
+              readOnly={busy}
+              aria-invalid={message ? true : undefined}
+              aria-describedby={message ? errorId : undefined}
               placeholder={t("note.placeholder")}
               className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
@@ -184,6 +243,25 @@ export function NoteEditor({
           <p className="m-0 text-footnote text-ink-secondary">
             {t("note.editor_hint")}
           </p>
+          <p role="status" className="m-0 text-footnote text-ink-secondary">
+            {reading ? t("note.reading") : ""}
+          </p>
+          {message && (
+            <div className="flex items-center justify-between gap-3 pb-2">
+              <p
+                id={errorId}
+                role="alert"
+                className="m-0 text-footnote text-error"
+              >
+                {message}
+              </p>
+              {failure?.error === "note.send_failed" && (
+                <Button variant="secondary" size="sm" onClick={submit}>
+                  {t("common.retry")}
+                </Button>
+              )}
+            </div>
+          )}
           {!VISIBLE.test(text) && (
             <div>
               <p className="m-0 mb-2 text-overline font-semibold text-ink-secondary uppercase">
@@ -205,6 +283,7 @@ export function NoteEditor({
               variant="primary"
               size="lg"
               fullWidth
+              busy={busy}
               disabled={!canSubmit}
               onClick={submit}
             >
