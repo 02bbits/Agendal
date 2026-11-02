@@ -86,9 +86,4 @@ final class RepeatSchedule
 
         return null;
     }
-
-    public static function describe(string $rule, string $anchor): string
-    {
-        return self::rule($rule, $anchor)->humanReadable(['locale' => 'en', 'include_start' => false]);
-    }
 }

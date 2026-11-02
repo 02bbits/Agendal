@@ -1,5 +1,6 @@
 import { t, type CopyKey } from "../copy";
 import { formatDay, formatTimeRange } from "./dates";
+import { describeRepeat } from "./repeat";
 import type { Project, Task, TimeFormat } from "./types";
 
 /** Accessible name of a task row (A11Y-51): "{title}, {due}, {time}, {project}, {priority} priority, reminder set, repeats {repeat}". */
@@ -27,7 +28,7 @@ export function taskAccessibleName(
     parts.push(
       t("task.repeats", {
         repeat:
-          task.repeat_description ??
+          describeRepeat(task) ??
           t(`repeat.${task.repeat}` as CopyKey).toLowerCase(),
       }),
     );

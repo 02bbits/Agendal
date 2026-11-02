@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { t, type CopyKey } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import { reminderPast } from "../../../domain/edit";
+import { describeRepeat } from "../../../domain/repeat";
 import {
   REMINDERS,
   REPEATS,
@@ -64,7 +65,7 @@ export function WhenSection({ task, onSave }: WhenSectionProps): ReactElement {
           id="task-repeat"
           label={t("task.repeat")}
           value={task.repeat}
-          helper={task.repeat_description}
+          helper={describeRepeat(task)}
           options={REPEATS.map((r) => ({
             value: r,
             label: t(`repeat.${r}` as CopyKey),

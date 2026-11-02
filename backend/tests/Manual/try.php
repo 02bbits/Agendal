@@ -82,7 +82,8 @@ $repeatLabel = function (array $entry): string {
     }
     $date = new DateTimeImmutable($entry['due_date']);
     if (isset($entry['repeat_rule'])) {
-        return ' · '.RepeatSchedule::describe($entry['repeat_rule'], $entry['due_date']);
+        // PHP-only development preview; production presentation belongs to the frontend formatter.
+        return ' · '.RepeatSchedule::rule($entry['repeat_rule'], $entry['due_date'])->humanReadable(['locale' => 'en', 'include_start' => false]);
     }
 
     return ' · '.match ($entry['repeat']) {

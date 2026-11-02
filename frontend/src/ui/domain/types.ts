@@ -36,7 +36,6 @@ export interface Task {
   project_id: string | null;
   repeat: Repeat;
   repeat_rule?: string | null;
-  repeat_description?: string | null;
   reminder: Reminder;
   notes: string | null;
   done: boolean;

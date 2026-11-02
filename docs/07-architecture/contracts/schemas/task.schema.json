@@ -16,7 +16,7 @@
     "project_id": { "$ref": "#/$defs/uuid_or_null" },
     "repeat": { "$ref": "#/$defs/repeat" },
     "repeat_rule": { "$ref": "#/$defs/repeat_rule" },
-    "repeat_description": { "type": ["string", "null"] },
+    "repeat_anchor": { "$ref": "#/$defs/date" },
     "reminder": { "$ref": "#/$defs/reminder" },
     "notes": { "$ref": "#/$defs/notes" },
     "done": { "type": "boolean" },

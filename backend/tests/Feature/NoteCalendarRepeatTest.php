@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Note;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
@@ -22,13 +23,21 @@ it('persists selected weekdays and advances the same series without duplicate ch
     $input = ['client_id' => (string) Str::uuid(), 'text' => 'tập gym 2 4 6 hàng tuần', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'];
     $created = $this->postJson('/api/v1/notes', $input)->assertCreated()
         ->assertJsonPath('changes.0.task.due_date', '2026-11-02')
+        ->assertJsonPath('changes.0.task.repeat_anchor', '2026-11-02')
+        ->assertJsonMissingPath('changes.0.task.repeat_description')
         ->assertJsonPath('changes.0.task.repeat_rule', 'FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE,FR');
     $id = $created->json('changes.0.task.id');
     $next = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()
         ->assertJsonPath('next.due_date', '2026-11-04')->json('next.id');
     $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonPath('next.id', $next);
     $this->postJson("/api/v1/tasks/$next/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonPath('next.due_date', '2026-11-06');
-    $this->postJson('/api/v1/notes', $input)->assertOk()->assertJsonPath('changes.0.task.id', $id);
+    $note = Note::findOrFail($created->json('note.id'));
+    $plan = $note->plan;
+    $plan['changes'][0]['task']['repeat_description'] = 'Old server description';
+    $note->plan = $plan;
+    $note->save();
+    $this->postJson('/api/v1/notes', $input)->assertOk()->assertJsonPath('changes.0.task.id', $id)
+        ->assertJsonMissingPath('changes.0.task.repeat_description');
     expect(Task::count())->toBe(3)->and(Task::findOrFail($next)->repeat_anchor)->toBe('2026-11-02');
 });
 
