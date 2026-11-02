@@ -1,12 +1,16 @@
-import { useState, type ChangeEvent, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { cx } from "../../../components/cx";
 import { ClockIcon } from "../../../components/icons";
+import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
 import { scheduleError } from "../../../domain/edit";
+import type { TimeFormat } from "../../../domain/types";
+import { buildTimeOptions } from "./timeOptions";
 
 export interface ScheduleFieldsProps {
   startTime: string | null;
   endTime: string | null;
+  timeFormat?: TimeFormat;
   onSave: (patch: {
     start_time: string | null;
     end_time: string | null;
@@ -17,12 +21,15 @@ export interface ScheduleFieldsProps {
 export function ScheduleFields({
   startTime,
   endTime,
+  timeFormat = "24h",
   onSave,
   variant = "panel",
 }: ScheduleFieldsProps): ReactElement {
   const [start, setStart] = useState(startTime ?? "");
   const [end, setEnd] = useState(endTime ?? "");
-  const [error, setError] = useState<CopyKey | null>(null);
+  const [error, setError] = useState<CopyKey | null>(() =>
+    scheduleError(startTime, endTime),
+  );
   const [prevStart, setPrevStart] = useState(startTime);
   const [prevEnd, setPrevEnd] = useState(endTime);
 
@@ -34,8 +41,7 @@ export function ScheduleFields({
     setError(scheduleError(startTime, endTime));
   }
 
-  const handleStartChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const nextStart = e.target.value;
+  const handleStartChange = (nextStart: string) => {
     setStart(nextStart);
     if (!nextStart) {
       setEnd("");
@@ -50,17 +56,23 @@ export function ScheduleFields({
     }
   };
 
-  const handleEndChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const nextEnd = e.target.value;
+  const handleEndChange = (nextEnd: string) => {
     setEnd(nextEnd);
-    const err = scheduleError(start || null, nextEnd || null);
+    if (!nextEnd) {
+      setError(null);
+      onSave({ start_time: start || null, end_time: null });
+      return;
+    }
+    const err = scheduleError(start || null, nextEnd);
     setError(err);
     if (!err) {
-      onSave({ start_time: start || null, end_time: nextEnd || null });
+      onSave({ start_time: start || null, end_time: nextEnd });
     }
   };
 
   const isScreen = variant === "screen";
+  const startOptions = buildTimeOptions(null, start, timeFormat);
+  const endOptions = buildTimeOptions(start || null, end, timeFormat);
 
   return (
     <div
@@ -84,37 +96,26 @@ export function ScheduleFields({
         </div>
 
         <div className="flex items-center gap-1.5">
-          <input
+          <Picker<string>
             id="task-start"
-            type="time"
-            aria-label={t("task.start")}
+            label={t("task.start")}
             value={start}
+            options={startOptions}
             onChange={handleStartChange}
-            className={cx(
-              "focus-ring cursor-pointer text-ink focus:outline-none",
-              isScreen
-                ? "bg-transparent text-body text-ink-secondary"
-                : "rounded-full bg-fill px-3 py-1 text-footnote font-medium",
-            )}
+            variant={variant}
           />
           <span className="text-ink-secondary" aria-hidden="true">
             {"–"}
           </span>
-          <input
+          <Picker<string>
             id="task-end"
-            type="time"
-            aria-label={t("task.end")}
+            label={t("task.end")}
             value={end}
+            options={endOptions}
             disabled={!start}
-            aria-invalid={error ? true : undefined}
-            aria-describedby={error ? "task-end-error" : undefined}
             onChange={handleEndChange}
-            className={cx(
-              "focus-ring cursor-pointer text-ink disabled:opacity-40 focus:outline-none",
-              isScreen
-                ? "bg-transparent text-body text-ink-secondary"
-                : "rounded-full bg-fill px-3 py-1 text-footnote font-medium",
-            )}
+            variant={variant}
+            ariaDescribedBy={error ? "task-end-error" : undefined}
           />
         </div>
       </div>

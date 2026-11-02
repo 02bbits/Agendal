@@ -25,6 +25,7 @@ export interface PickerProps<V extends string> {
   helper?: ReactNode;
   id?: string;
   className?: string;
+  ariaDescribedBy?: string;
 }
 
 export function findTypeaheadMatch<V extends string>(

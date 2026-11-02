@@ -7,7 +7,7 @@ import {
 } from "react";
 import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
-import type { Project } from "../../../domain/types";
+import type { Project, WeekStart } from "../../../domain/types";
 import { useTaskStore } from "../store";
 import { PanelHeader } from "./PanelHeader";
 import { TaskDetails } from "./TaskDetails";
@@ -19,6 +19,7 @@ export interface TaskPanelProps {
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;
   onDelete?: () => void;
+  weekStart?: WeekStart;
 }
 
 export function TaskPanel({
@@ -28,6 +29,7 @@ export function TaskPanel({
   projectsStatus,
   onRetryProjects,
   onDelete,
+  weekStart,
 }: TaskPanelProps): ReactElement | null {
   const store = useTaskStore();
   const task = store.tasks.find((t) => {
@@ -73,6 +75,7 @@ export function TaskPanel({
           onRetryProjects={onRetryProjects}
           onDelete={onDelete}
           autoFocusTitle
+          weekStart={weekStart}
         />
       ) : (
         <div className="flex h-full flex-col">

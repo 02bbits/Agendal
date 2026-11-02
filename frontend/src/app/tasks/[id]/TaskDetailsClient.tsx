@@ -51,6 +51,7 @@ function TaskDetailsContainer({
   projects,
   projectsStatus,
   onRetryProjects,
+  weekStart,
 }: {
   initialTask: Task;
   back: () => void;
@@ -58,6 +59,7 @@ function TaskDetailsContainer({
   projects: Project[];
   projectsStatus: "ready" | "failed";
   onRetryProjects: () => void;
+  weekStart?: "mon" | "sun";
 }): ReactElement {
   const store = useTaskStore();
 
@@ -73,6 +75,7 @@ function TaskDetailsContainer({
       onRetryProjects={onRetryProjects}
       variant="screen"
       backLabel={getBackLabel()}
+      weekStart={weekStart}
     />
   );
 }
@@ -215,6 +218,7 @@ export default function TaskDetailsClient({
         projects={projectList}
         projectsStatus={projectsStatus}
         onRetryProjects={reloadProjects}
+        weekStart={settings.weekStart}
       />
     </TaskStoreProvider>
   );

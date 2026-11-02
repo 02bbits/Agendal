@@ -24,6 +24,7 @@ export function WhenSection({
       projects={store.projects}
       todayDate={store.today}
       clock={store.clock}
+      timeFormat={store.timeFormat}
       showSchedule={showSchedule}
       onSave={onSave}
       variant={variant}

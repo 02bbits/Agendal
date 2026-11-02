@@ -1,6 +1,7 @@
 import { useId, type ReactElement } from "react";
 import { cx } from "./cx";
-import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from "./icons";
+import { CheckIcon } from "./icons";
+import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
 import {
   usePickerKeyboard,
@@ -21,6 +22,7 @@ export function Picker<V extends string>({
   helper,
   id,
   className,
+  ariaDescribedBy,
 }: PickerProps<V>): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `picker-${autoId}`;
@@ -50,43 +52,22 @@ export function Picker<V extends string>({
         triggerRef={triggerRef}
         align={isScreen ? "right" : "left"}
         trigger={
-          <button
-            ref={triggerRef}
+          <PickerTrigger
+            triggerRef={triggerRef}
             id={pickerId}
-            type="button"
-            aria-label={label}
-            aria-haspopup="listbox"
-            aria-expanded={open}
-            aria-controls={listboxId}
-            aria-describedby={helperId}
+            label={label}
+            haspopup="listbox"
+            open={open}
+            controls={listboxId}
+            describedBy={ariaDescribedBy ?? helperId}
             disabled={disabled}
-            onClick={() => !disabled && setOpen((o) => !o)}
+            isScreen={isScreen}
+            onToggle={() => setOpen((o) => !o)}
             onKeyDown={onTriggerKeyDown}
-            className={cx(
-              "focus-ring cursor-pointer border-0 text-ink focus:outline-none disabled:cursor-not-allowed disabled:opacity-40",
-              isScreen
-                ? "relative inline-flex items-center justify-end gap-1 bg-transparent py-1 pr-5 text-right text-body text-ink-secondary"
-                : "relative inline-flex items-center gap-1.5 rounded-full bg-fill py-1 pl-3 pr-6 text-footnote font-medium",
-            )}
+            leading={selectedOption?.leading}
           >
-            {selectedOption?.leading && (
-              <span className="shrink-0">{selectedOption.leading}</span>
-            )}
-            <span className={cx(isScreen && "text-ink-secondary")}>
-              {selectedOption ? selectedOption.label : value}
-            </span>
-            {isScreen ? (
-              <ChevronRightIcon
-                size={16}
-                className="pointer-events-none absolute right-0 text-ink-tertiary"
-              />
-            ) : (
-              <ChevronDownIcon
-                size={14}
-                className="pointer-events-none absolute right-2 text-ink-secondary"
-              />
-            )}
-          </button>
+            {selectedOption ? selectedOption.label : value}
+          </PickerTrigger>
         }
       >
         <div

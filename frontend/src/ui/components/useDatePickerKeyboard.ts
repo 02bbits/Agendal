@@ -4,24 +4,10 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
-  type ReactNode,
 } from "react";
 import { addDays, startOfWeek } from "../domain/dates";
 import type { WeekStart } from "../domain/types";
 import { shiftMonth } from "./calendar";
-import type { PickerVariant } from "./usePickerKeyboard";
-
-export interface DatePickerProps {
-  label: string;
-  value?: string | null;
-  onChange: (value: string) => void;
-  weekStart?: WeekStart;
-  variant?: PickerVariant;
-  disabled?: boolean;
-  helper?: ReactNode;
-  id?: string;
-  className?: string;
-}
 
 export interface UseDatePickerKeyboardOptions {
   value?: string | null;

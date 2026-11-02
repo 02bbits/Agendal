@@ -1,20 +1,29 @@
-import { useId, type ReactElement } from "react";
+import { useId, type ReactElement, type ReactNode } from "react";
 import { today as getToday } from "@/lib/clock";
 import { formatDay } from "../domain/dates";
 import { dueDateFor } from "../domain/newTask";
+import type { WeekStart } from "../domain/types";
 import { t } from "../copy";
 import { cx } from "./cx";
-import { ChevronDownIcon, ChevronRightIcon } from "./icons";
+import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
 import { Chip } from "./Chip";
 import { buildMonthGrid, getWeekdayLabels } from "./calendar";
 import { CalendarMonth } from "./CalendarMonth";
-import {
-  useDatePickerKeyboard,
-  type DatePickerProps,
-} from "./useDatePickerKeyboard";
+import { useDatePickerKeyboard } from "./useDatePickerKeyboard";
+import type { PickerVariant } from "./usePickerKeyboard";
 
-export type { DatePickerProps };
+export interface DatePickerProps {
+  label: string;
+  value?: string | null;
+  onChange: (value: string) => void;
+  weekStart?: WeekStart;
+  variant?: PickerVariant;
+  disabled?: boolean;
+  helper?: ReactNode;
+  id?: string;
+  className?: string;
+}
 
 export function DatePicker({
   label,
@@ -53,9 +62,19 @@ export function DatePicker({
 
   const isScreen = variant === "screen" || variant === "row";
   const displayValue = value ? formatDay(value, todayStr) : label;
-  const todayDate = dueDateFor("today", todayStr)!;
-  const tomorrowDate = dueDateFor("tomorrow", todayStr)!;
-  const nextWeekDate = dueDateFor("next_week", todayStr)!;
+  const chips = [
+    { k: "today", d: dueDateFor("today", todayStr)!, l: t("date.today") },
+    {
+      k: "tomorrow",
+      d: dueDateFor("tomorrow", todayStr)!,
+      l: t("date.tomorrow"),
+    },
+    {
+      k: "next_week",
+      d: dueDateFor("next_week", todayStr)!,
+      l: t("task.next_week"),
+    },
+  ] as const;
 
   return (
     <div className={cx("inline-flex flex-col", className)}>
@@ -67,61 +86,33 @@ export function DatePicker({
         align={isScreen ? "right" : "left"}
         popoverClassName="w-[308px] p-3"
         trigger={
-          <button
-            ref={triggerRef}
+          <PickerTrigger
+            triggerRef={triggerRef}
             id={pickerId}
-            type="button"
-            aria-label={label}
-            aria-haspopup="dialog"
-            aria-expanded={open}
-            aria-describedby={helperId}
+            label={label}
+            haspopup="dialog"
+            open={open}
+            describedBy={helperId}
             disabled={disabled}
-            onClick={() => !disabled && setOpen((o) => !o)}
+            isScreen={isScreen}
+            onToggle={() => setOpen((o) => !o)}
             onKeyDown={onTriggerKeyDown}
-            className={cx(
-              "focus-ring cursor-pointer border-0 text-ink focus:outline-none disabled:cursor-not-allowed disabled:opacity-40",
-              isScreen
-                ? "relative inline-flex items-center justify-end gap-1 bg-transparent py-1 pr-5 text-right text-body text-ink-secondary"
-                : "relative inline-flex items-center gap-1.5 rounded-full bg-fill py-1 pl-3 pr-6 text-footnote font-medium",
-            )}
           >
-            <span className={cx(isScreen && "text-ink-secondary")}>
-              {displayValue}
-            </span>
-            {isScreen ? (
-              <ChevronRightIcon
-                size={16}
-                className="pointer-events-none absolute right-0 text-ink-tertiary"
-              />
-            ) : (
-              <ChevronDownIcon
-                size={14}
-                className="pointer-events-none absolute right-2 text-ink-secondary"
-              />
-            )}
-          </button>
+            {displayValue}
+          </PickerTrigger>
         }
       >
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-1.5">
-            <Chip
-              selected={value === todayDate}
-              onClick={() => selectAndClose(todayDate)}
-            >
-              {t("date.today")}
-            </Chip>
-            <Chip
-              selected={value === tomorrowDate}
-              onClick={() => selectAndClose(tomorrowDate)}
-            >
-              {t("date.tomorrow")}
-            </Chip>
-            <Chip
-              selected={value === nextWeekDate}
-              onClick={() => selectAndClose(nextWeekDate)}
-            >
-              {t("task.next_week")}
-            </Chip>
+            {chips.map((c) => (
+              <Chip
+                key={c.k}
+                selected={value === c.d}
+                onClick={() => selectAndClose(c.d)}
+              >
+                {c.l}
+              </Chip>
+            ))}
           </div>
 
           <CalendarMonth

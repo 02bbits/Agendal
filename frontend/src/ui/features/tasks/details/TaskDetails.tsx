@@ -4,7 +4,7 @@ import { TrashIcon } from "../../../components/icons";
 import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
-import type { Project, Task } from "../../../domain/types";
+import type { Project, Task, WeekStart } from "../../../domain/types";
 import type { Navigate } from "../../shell/routes";
 import { useTaskStore } from "../store";
 import { DetailsFooter } from "./DetailsFooter";
@@ -28,6 +28,7 @@ export interface TaskDetailsProps {
   variant?: "panel" | "screen";
   backLabel?: string;
   autoFocusTitle?: boolean;
+  weekStart?: WeekStart;
 }
 
 export function TaskDetails({
@@ -44,6 +45,7 @@ export function TaskDetails({
   variant = "panel",
   backLabel,
   autoFocusTitle,
+  weekStart,
 }: TaskDetailsProps): ReactElement {
   const store = useTaskStore();
   const currentProjects = projects ?? store.projects;
@@ -98,6 +100,8 @@ export function TaskDetails({
           onRetryProjects={onRetryProjects}
           todayDate={store.today}
           clock={store.clock}
+          timeFormat={store.timeFormat}
+          weekStart={weekStart}
           showSchedule={showSchedule}
           onSave={save}
           variant={variant}
@@ -125,9 +129,7 @@ export function TaskDetails({
           >
             {t("common.clear")}
           </Button>
-          {deleteAction ? (
-            deleteAction
-          ) : (
+          {deleteAction ?? (
             <Button
               variant="destructive"
               fullWidth
