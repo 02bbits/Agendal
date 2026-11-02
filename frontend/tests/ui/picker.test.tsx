@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Picker } from "../../src/ui/components/Picker";
+import { Sheet } from "../../src/ui/components/Sheet";
 import { type PickerOption } from "../../src/ui/components/usePickerKeyboard";
 import { expectAxeCleanInBothThemes } from "./axe";
 
@@ -185,6 +186,36 @@ describe("Picker", () => {
     }) as HTMLButtonElement;
     expect(trigger.disabled).toBe(true);
     expect(screen.getByText("Choose your preferred fruit")).not.toBeNull();
+  });
+
+  it("opens popover inside closest modal, selects an option and leaves the sheet open", async () => {
+    const onSheetClose = vi.fn();
+    const onPickerChange = vi.fn();
+    render(
+      <Sheet open title="Test Sheet" onClose={onSheetClose} closeLabel="Close">
+        <Picker
+          label="Fruit"
+          value="apple"
+          options={OPTIONS}
+          onChange={onPickerChange}
+        />
+      </Sheet>,
+    );
+
+    const trigger = screen.getByRole("button", { name: "Fruit" });
+    await userEvent.click(trigger);
+
+    const listbox = screen.getByRole("listbox", { name: "Fruit" });
+    const modal = trigger.closest(".modal");
+    expect(modal).not.toBeNull();
+    expect(modal?.contains(listbox)).toBe(true);
+
+    const cherryOption = screen.getByRole("option", { name: "Cherry" });
+    await userEvent.click(cherryOption);
+
+    expect(onPickerChange).toHaveBeenCalledWith("cherry");
+    expect(onSheetClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog")).not.toBeNull();
   });
 
   it("is axe clean in both themes when closed and open", async () => {
