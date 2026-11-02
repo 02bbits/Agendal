@@ -163,6 +163,66 @@ describe("Task details fields (T-TK-10)", () => {
     );
   });
 
+  it("set repeat weekly, Clear sits next to Delete and resets repeat to never, Undo restores all five", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        due_date: "2026-10-30",
+        start_time: "09:00",
+        end_time: "10:00",
+        reminder: "15m",
+        repeat: "weekly",
+      }),
+    );
+
+    // Clear sits in footer beside Delete
+    const clearBtn = screen.getByRole("button", { name: t("common.clear") });
+    const deleteBtn = screen.getByRole("button", { name: t("common.delete") });
+    expect(clearBtn.parentElement).toBe(deleteBtn.parentElement);
+
+    // Click Clear
+    await userEvent.click(clearBtn);
+
+    // One PATCH with due_date null, start/end null, reminder none, repeat never
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          due_date: null,
+          start_time: null,
+          end_time: null,
+          reminder: "none",
+          repeat: "never",
+        },
+        expect.any(String),
+      ),
+    );
+
+    // No error shown, Undo toast is present
+    expect(screen.queryByText(t("error.save_failed"))).toBeNull();
+    expect(screen.getByText(t("task.due_cleared"))).toBeTruthy();
+
+    // Clear is now disabled
+    expect(clearBtn.hasAttribute("disabled")).toBe(true);
+
+    // Undo restores all five
+    const undoBtn = screen.getByRole("button", { name: t("common.undo") });
+    await userEvent.click(undoBtn);
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          due_date: "2026-10-30",
+          start_time: "09:00",
+          end_time: "10:00",
+          reminder: "15m",
+          repeat: "weekly",
+        },
+        expect.any(String),
+      ),
+    );
+  });
+
   it.each(REMINDERS)("saves reminder %s", async (reminder) => {
     const { patchSpy } = open(
       task({

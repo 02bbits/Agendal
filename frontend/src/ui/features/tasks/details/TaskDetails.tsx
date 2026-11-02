@@ -113,7 +113,18 @@ export function TaskDetails({
           sourceNote={sourceNote}
         />
 
-        <div className={cx(isScreen ? "mt-auto pt-4" : "mt-auto pt-4")}>
+        <div className="mt-auto flex items-center gap-3 pt-4">
+          <Button
+            type="button"
+            variant="secondary"
+            fullWidth
+            disabled={!task.due_date}
+            aria-disabled={!task.due_date ? "true" : undefined}
+            onClick={() => save({ due_date: null })}
+            className="flex-1"
+          >
+            {t("common.clear")}
+          </Button>
           {deleteAction ? (
             deleteAction
           ) : (
@@ -123,7 +134,7 @@ export function TaskDetails({
               disabled={!onDelete}
               aria-disabled={!onDelete ? "true" : undefined}
               onClick={onDelete}
-              className="gap-2"
+              className="flex-1 gap-2"
             >
               <TrashIcon size={16} />
               <span>{isScreen ? t("task.delete") : t("common.delete")}</span>

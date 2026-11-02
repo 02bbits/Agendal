@@ -1,5 +1,4 @@
 import type { ReactElement } from "react";
-import { Button } from "../../../components/Button";
 import { CalendarIcon } from "../../../components/icons";
 import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
@@ -37,20 +36,6 @@ export function DueDateField({
     </div>
   );
 
-  const clearAction = (
-    <Button
-      type="button"
-      variant="secondary"
-      size="sm"
-      disabled={!value}
-      aria-label={t("common.clear")}
-      onClick={() => onSave(null)}
-      className="h-7 min-h-7 px-2.5 text-xs"
-    >
-      {t("common.clear")}
-    </Button>
-  );
-
   return (
     <SettingsRow
       variant={variant}
@@ -58,7 +43,6 @@ export function DueDateField({
       tileBg="bg-project-red/15 text-project-red"
       label={t("task.due")}
       control={control}
-      extraAction={clearAction}
     />
   );
 }
