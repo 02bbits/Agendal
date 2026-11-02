@@ -84,7 +84,7 @@ export function DatePicker({
         label={label}
         triggerRef={triggerRef}
         align={isScreen ? "right" : "left"}
-        popoverClassName="w-[308px] p-3"
+        popoverClassName="max-h-[calc(100vh-16px)] w-[308px] p-3"
         trigger={
           <PickerTrigger
             triggerRef={triggerRef}
