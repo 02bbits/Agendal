@@ -51,6 +51,7 @@ export {
   type PickerOption,
   type PickerVariant,
 } from "./components/Picker";
+export { DatePicker, type DatePickerProps } from "./components/DatePicker";
 export {
   PopoverOrSheet,
   type PopoverOrSheetProps,

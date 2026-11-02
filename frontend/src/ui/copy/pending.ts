@@ -87,6 +87,8 @@ export const pending = {
   "date.today": "Today",
   "date.tomorrow": "Tomorrow",
   "date.yesterday": "Yesterday",
+  "date.prev_month": "Previous month",
+  "date.next_month": "Next month",
   "list.next": "Next: {title}",
   "list.next_at": "Next: {title} at {time}",
   "list.section_count_one": "{section}, 1 task",
