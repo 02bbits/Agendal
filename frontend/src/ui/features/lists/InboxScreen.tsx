@@ -99,6 +99,7 @@ export function InboxScreen({
       onToggle={store.toggle}
       navigate={navigate}
       selected={task.id === selectedTaskId}
+      settling={store.isSettling(task.id)}
       {...opts}
     />
   );
