@@ -72,6 +72,8 @@ Example response fragment:
 - A winning `PATCH` of `repeat` without a winning `repeat_rule` clears the custom rule, even if the enum value is unchanged. To preserve or change a custom rule while writing the frequency, send both fields with consistent `at` timestamps. A `repeat_rule`-only patch is checked against the merged frequency.
 - `repeat_anchor` is maintained by the server: enabling recurrence sets it from the due date, disabling recurrence clears it, and moving an occurrence preserves it. Calendar rules skip dates that do not exist; legacy enum-only monthly/yearly tasks keep their month-end clamping. See [TK §2.3](../03-modules/TK-tasks.md#23-repeating-tasks-tk-4).
 
+The anchor is stored separately from the current occurrence's `due_date`. For example, a legacy monthly series anchored on `2026-01-31` has an occurrence due on `2026-02-28`; its anchor remains `2026-01-31`, so March returns to day 31. The same distinction lets the frontend describe the original schedule after a single occurrence is moved.
+
 | Rule example | Meaning |
 |---|---|
 | `FREQ=MONTHLY;BYDAY=2MO` | The second Monday of each month |
@@ -90,4 +92,4 @@ Each operation applies per-field LWW and runs in a transaction. A stale `at` can
 
 ### Presentation
 
-`repeat_description` is not part of the API, including replays of older notes. The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_rule` and `repeat_anchor` into English/Vietnamese text; it does not calculate future occurrences. Backend scheduling remains authoritative. The PHP-only Try notes development page uses the RRULE library's own preview text.
+The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_rule` and `repeat_anchor` into English/Vietnamese text. Backend scheduling is authoritative. The PHP-only Try notes development page uses the RRULE library's own preview text.
