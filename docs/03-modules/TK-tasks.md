@@ -70,9 +70,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - It comes from the **due date**, not the completion date.
   - It is the first date in the series **after the current due date and on or after today**. Missed occurrences are skipped, so they never pile up as overdue.
 - **Anchor:** each series keeps `repeat_anchor`, its first due date.
-  - Monthly uses the anchor's day, capped at the month's last day: 31 Jan → 28 Feb → 31 Mar.
-  - Yearly on 29 Feb → 28 Feb in non-leap years.
-- **What the next occurrence copies:** title, project, priority, start and end times, reminder offset, repeat, notes, anchor and `created_by`. It sets `previous_occurrence_id` (used by RV undo).
+  - Enum-only monthly schedules use the anchor's day, capped at the month's last day: 31 Jan → 28 Feb → 31 Mar.
+  - Enum-only yearly schedules on 29 Feb use 28 Feb in non-leap years.
+- **What the next occurrence copies:** title, project, priority, start and end times, reminder offset, repeat frequency/rule, notes, anchor and `created_by`. It sets `previous_occurrence_id` (used by RV undo).
 - **Delete** asks `task.repeat_scope_title`:
   - **This task only:** deletes this occurrence and creates the next one, so the series continues.
   - **This and all future:** deletes this occurrence. No future ones exist yet, so the series ends.

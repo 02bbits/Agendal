@@ -102,7 +102,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). Ranges set both start and end ([NU-E30](#nu-e30)) |
 | Priority | High words win over Low words ([NU-E24](#nu-e24)). Default: Medium if due today, otherwise Low. Content words that set High (*deadline, exam, quiz, submit*) stay in the title. Pure priority words (*urgent, asap, important, high/low priority, whenever, someday, maybe*) are removed |
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
-| Repeat | Calendar recurrence: daily/weekly/monthly/yearly, every N periods, selected weekdays (including Vietnamese shorthand 2 4 6), weekdays/weekends, monthly dates or ordinal weekdays, an inclusive end date or total occurrence count. The plan carries an optional `repeat_rule` (RRULE); `repeat` remains its frequency. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
+| Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
 | Reminder | *exam* or *quiz* → 1 day before. Otherwise, any task with a time → 15 min before. Otherwise none. A reminder that would fall before `now` → none ([NU-E25](#nu-e25)) |
 | Title | Remove date, time, pure priority and repeat phrases, and lead-ins. Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
 
@@ -112,6 +112,24 @@ The business-rules table is the phrase list. The precise semantics:
 - No verb and no object left in the title (single-word titles from the keyword list, such as "Gym", are fine)
 - Text in a language other than English or Vietnamese ([NU-E28](#nu-e28))
 - Vietnamese typed without diacritics ([NU-E40](#nu-e40))
+
+#### Calendar recurrence
+
+English and Vietnamese repeat phrases can specify a frequency/interval, selected weekdays, monthly dates or ordinal weekdays, and an end condition:
+
+| Example note | Schedule |
+|---|---|
+| `gym every 3 days` | Once every three days |
+| `tập gym 2 4 6 hàng tuần` | Monday, Wednesday and Friday each week |
+| `gym every 2 weeks on Monday and Wednesday` | Those two weekdays in every second week |
+| `pay rent every month on the 15th` | The 15th of each month |
+| `test every second monday of month` | The second Monday of each month |
+| `họp thứ sáu cuối cùng mỗi tháng` | The last Friday of each month |
+| `birthday every year on February 29` | February 29 in leap years |
+| `gym every 3 days for 5 occurrences` | Five occurrences, including the first |
+| `tập gym mỗi 2 ngày đến 15/11/2026` | Every two days through the named date |
+
+The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text stays low confidence.
 
 ### 2.6 Safety and status (NU-5, BR-01, BR-02)
 
@@ -347,14 +365,3 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | — | The apply step is atomic | T-NU-73 (a failure injected after the 2nd task → nothing persisted) |
 | — | API contract: statuses and error codes in §7 | T-NU-80–86 (one per status code) |
 | — | Edge cases [NU-E1](#nu-e1)–[NU-E41](#nu-e41) | T-NU-101–141 (§4) |
-
-### Calendar recurrence details (IM-37 extension)
-
-- `repeat_rule` uses the RRULE components documented by [Google Calendar](https://developers.google.com/workspace/calendar/api/concepts/events-calendars): FREQ, INTERVAL, BYDAY, BYMONTHDAY, BYMONTH, WKST, COUNT and UNTIL. Date-only rules use floating local dates, so a task keeps its local clock time across DST.
-- Weekly examples: `tập gym 2 4 6 hàng tuần`, `gym every 2 weeks on Monday and Wednesday`, `gym every weekday`.
-- Monthly examples: `pay rent every month on the 15th`, `test every second monday of month`, `họp thứ sáu cuối cùng mỗi tháng`, `pay bills every last day of month`.
-- Ending examples: `gym every 3 days for 5 occurrences`, `tập gym mỗi 2 ngày đến 15/11/2026`. COUNT includes the first occurrence. UNTIL includes the named local date. Using both is unresolved.
-- Calendar rules skip impossible dates: day 31 skips months without a 31st; February 29 repeats in leap years; a fifth weekday skips months without it. This is distinct from legacy tasks without `repeat_rule`, which retain TK's end-of-month clamping.
-- `repeat_anchor` remains the first date of the series. Completing a task advances to the next matching date on or after today, keeps the original interval and end condition, and returns no next task after the series ends. A repeated completion reuses its existing child.
-- Task responses include `repeat_rule` and the original `repeat_anchor`. The frontend's shared `describeRepeat` formatter produces English/Vietnamese descriptions for task details and accessible names. The PHP-only Try notes development page uses the RRULE library's preview text.
-- This extends repeat configuration for notes, not Calendar's event-management features. Instance exclusions and editing an entire future series require the corresponding task flow; unrecognised exclusion text is marked low confidence.
