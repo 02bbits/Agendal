@@ -119,6 +119,7 @@ function InboxContent() {
               projects={projectList}
               projectsStatus={projectsStatus}
               onRetryProjects={handleRetryProjects}
+              weekStart={settings.weekStart}
             />
           )}
           <InboxToast />
