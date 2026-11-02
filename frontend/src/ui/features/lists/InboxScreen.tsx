@@ -8,6 +8,7 @@ import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 import { ScreenHeader } from "../shell/ScreenHeader";
+import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { ProgressSummary } from "../tasks/ProgressSummary";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
@@ -19,6 +20,7 @@ export interface InboxScreenProps {
   accountInitial?: string;
   navigate?: Navigate;
   showHeader?: boolean;
+  selectedTaskId?: string | null;
 }
 
 /** Inbox (LV-1): today's progress, Overdue before Today, No date and Completed collapsed. */
@@ -26,6 +28,7 @@ export function InboxScreen({
   accountInitial = "",
   navigate,
   showHeader = true,
+  selectedTaskId,
 }: InboxScreenProps) {
   const store = useTaskStore();
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -95,6 +98,7 @@ export function InboxScreen({
       timeFormat={store.timeFormat}
       onToggle={store.toggle}
       navigate={navigate}
+      selected={task.id === selectedTaskId}
       {...opts}
     />
   );
@@ -117,7 +121,7 @@ export function InboxScreen({
           </h2>
         </section>
       ) : (
-        <>
+        <div className={TASK_COLUMN_CLASS}>
           {!allDone && (
             <ProgressSummary
               progress={view.progress}
@@ -212,7 +216,7 @@ export function InboxScreen({
               {visibleCompleted.map((x) => row(x))}
             </Section>
           )}
-        </>
+        </div>
       )}
     </div>
   );
