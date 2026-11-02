@@ -94,6 +94,17 @@ class ProjectController extends Controller
         });
     }
 
+    public function none(Request $request): JsonResponse
+    {
+        $cursor = $request->query('cursor');
+        $taskLists = $this->projectTaskLists->build(null, is_string($cursor) ? $cursor : null);
+
+        return response()->json([
+            'project' => null,
+            ...$taskLists,
+        ]);
+    }
+
     public function show(Request $request, Project $project): JsonResponse
     {
         $this->ensureNotDeleted($project);
