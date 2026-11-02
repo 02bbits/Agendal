@@ -38,6 +38,9 @@ export const pending = {
   "note.send_failed":
     "Couldn't send your note. Check your connection and try again.",
   "task.add_by_hand": "Add a task",
+  "task.heading": "Task",
+  "task.description": "Description",
+  "task.made_from_note": "Made from your note “{name}”",
   "task.complete": "Complete {title}",
   "task.reopen": "Reopen {title}",
   "task.mark_done": "Mark done",

@@ -1,7 +1,7 @@
 import type { ReactElement, ReactNode } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "../../../components/icons";
 import { cx } from "../../../components/cx";
-import { Field } from "./Field";
-import { CONTROL_CLASS } from "./control";
+import { SettingsRow } from "./SettingsRow";
 
 export interface ChoiceOption<V extends string> {
   value: V;
@@ -15,7 +15,10 @@ export interface ChoiceFieldProps<V extends string> {
   options: readonly ChoiceOption<V>[];
   disabled?: boolean;
   helper?: ReactNode;
+  icon: ReactNode;
+  tileBg?: string;
   onChange: (value: V) => void;
+  variant?: "panel" | "screen";
 }
 
 export function ChoiceField<V extends string>({
@@ -25,21 +28,27 @@ export function ChoiceField<V extends string>({
   options,
   disabled,
   helper,
+  icon,
+  tileBg,
   onChange,
+  variant = "panel",
 }: ChoiceFieldProps<V>): ReactElement {
-  const helperId = helper ? `${id}-helper` : undefined;
+  const isScreen = variant === "screen";
 
-  return (
-    <Field id={id} label={label} helper={helper} helperId={helperId}>
+  const control = (
+    <div className="relative inline-flex items-center">
       <select
         id={id}
+        aria-label={label}
         value={value}
         disabled={disabled}
-        aria-describedby={helperId}
+        aria-describedby={helper ? `${id}-helper` : undefined}
         onChange={(e) => onChange(e.target.value as V)}
         className={cx(
-          CONTROL_CLASS,
-          "focus-ring cursor-pointer border disabled:cursor-not-allowed disabled:opacity-40",
+          "focus-ring cursor-pointer appearance-none border-0 text-ink focus:outline-none disabled:cursor-not-allowed disabled:opacity-40",
+          isScreen
+            ? "bg-transparent py-1 pr-5 text-right text-body text-ink-secondary"
+            : "rounded-full bg-fill py-1 pl-3 pr-6 text-footnote font-medium",
         )}
       >
         {options.map((option) => (
@@ -48,6 +57,29 @@ export function ChoiceField<V extends string>({
           </option>
         ))}
       </select>
-    </Field>
+      {isScreen ? (
+        <ChevronRightIcon
+          size={16}
+          className="pointer-events-none absolute right-0 text-ink-tertiary"
+        />
+      ) : (
+        <ChevronDownIcon
+          size={14}
+          className="pointer-events-none absolute right-2 text-ink-secondary"
+        />
+      )}
+    </div>
+  );
+
+  return (
+    <SettingsRow
+      variant={variant}
+      icon={icon}
+      tileBg={tileBg}
+      label={label}
+      control={control}
+      helper={helper}
+      helperId={helper ? `${id}-helper` : undefined}
+    />
   );
 }

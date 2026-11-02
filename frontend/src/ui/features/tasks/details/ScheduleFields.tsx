@@ -1,9 +1,8 @@
 import { useState, type ChangeEvent, type ReactElement } from "react";
 import { cx } from "../../../components/cx";
+import { ClockIcon } from "../../../components/icons";
 import { t, type CopyKey } from "../../../copy";
 import { scheduleError } from "../../../domain/edit";
-import { Field } from "./Field";
-import { CONTROL_CLASS } from "./control";
 
 export interface ScheduleFieldsProps {
   startTime: string | null;
@@ -12,12 +11,14 @@ export interface ScheduleFieldsProps {
     start_time: string | null;
     end_time: string | null;
   }) => void;
+  variant?: "panel" | "screen";
 }
 
 export function ScheduleFields({
   startTime,
   endTime,
   onSave,
+  variant = "panel",
 }: ScheduleFieldsProps): ReactElement {
   const [start, setStart] = useState(startTime ?? "");
   const [end, setEnd] = useState(endTime ?? "");
@@ -59,49 +60,73 @@ export function ScheduleFields({
     }
   };
 
-  const fields = [
-    {
-      id: "task-start",
-      label: t("task.start"),
-      value: start,
-      disabled: false,
-      error: undefined,
-      onChange: handleStartChange,
-    },
-    {
-      id: "task-end",
-      label: t("task.end"),
-      value: end,
-      disabled: !start,
-      error: error ? t(error) : undefined,
-      onChange: handleEndChange,
-    },
-  ];
+  const isScreen = variant === "screen";
 
   return (
-    <div className="flex flex-col gap-3">
-      {fields.map((field) => (
-        <Field
-          key={field.id}
-          id={field.id}
-          label={field.label}
-          error={field.error}
-        >
+    <div
+      className={cx(
+        "flex flex-col py-2.5",
+        isScreen ? "px-4" : "border-b border-separator last:border-b-0",
+      )}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-body text-ink">
+          {isScreen ? (
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-tile bg-project-blue/15 text-project-blue">
+              <ClockIcon size={18} />
+            </div>
+          ) : (
+            <span className="flex items-center justify-center text-ink-tertiary">
+              <ClockIcon size={18} />
+            </span>
+          )}
+          <span className="font-normal">{t("task.schedule")}</span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
           <input
-            id={field.id}
+            id="task-start"
             type="time"
-            value={field.value}
-            disabled={field.disabled}
-            aria-invalid={field.error ? true : undefined}
-            aria-describedby={field.error ? `${field.id}-error` : undefined}
+            aria-label={t("task.start")}
+            value={start}
+            onChange={handleStartChange}
             className={cx(
-              CONTROL_CLASS,
-              "input focus-ring aria-invalid:border-error disabled:opacity-40",
+              "focus-ring cursor-pointer text-ink focus:outline-none",
+              isScreen
+                ? "bg-transparent text-body text-ink-secondary"
+                : "rounded-full bg-fill px-3 py-1 text-footnote font-medium",
             )}
-            onChange={field.onChange}
           />
-        </Field>
-      ))}
+          <span className="text-ink-secondary" aria-hidden="true">
+            {"–"}
+          </span>
+          <input
+            id="task-end"
+            type="time"
+            aria-label={t("task.end")}
+            value={end}
+            disabled={!start}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={error ? "task-end-error" : undefined}
+            onChange={handleEndChange}
+            className={cx(
+              "focus-ring cursor-pointer text-ink disabled:opacity-40 focus:outline-none",
+              isScreen
+                ? "bg-transparent text-body text-ink-secondary"
+                : "rounded-full bg-fill px-3 py-1 text-footnote font-medium",
+            )}
+          />
+        </div>
+      </div>
+      {error && (
+        <p
+          id="task-end-error"
+          role="alert"
+          className="mt-1 text-footnote text-error"
+        >
+          {t(error)}
+        </p>
+      )}
     </div>
   );
 }

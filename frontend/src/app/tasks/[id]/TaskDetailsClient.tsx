@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
@@ -26,24 +26,18 @@ function TaskDetailsContainer({
   initialTask,
   back,
   navigate,
+  projects,
   projectsStatus,
   onRetryProjects,
-  onRegisterStore,
 }: {
   initialTask: Task;
   back: () => void;
   navigate?: Navigate;
+  projects: Project[];
   projectsStatus: "ready" | "failed";
   onRetryProjects: () => void;
-  onRegisterStore: (
-    setter: (updater: (prev: Project[]) => Project[]) => void,
-  ) => void;
 }): ReactElement {
   const store = useTaskStore();
-
-  useEffect(() => {
-    onRegisterStore(store.setProjects);
-  }, [store.setProjects, onRegisterStore]);
 
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
@@ -52,6 +46,7 @@ function TaskDetailsContainer({
       task={currentTask}
       onBack={back}
       navigate={navigate}
+      projects={projects}
       projectsStatus={projectsStatus}
       onRetryProjects={onRetryProjects}
     />
@@ -76,15 +71,11 @@ export default function TaskDetailsClient({
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const storeProjectsRef = useRef<
-    ((updater: (prev: Project[]) => Project[]) => void) | null
-  >(null);
-
   const reloadProjects = () => {
     return projects()
       .then((pData) => {
         setProjectsStatus("ready");
-        storeProjectsRef.current?.(() => pData);
+        setProjectList(pData);
       })
       .catch(() => {
         setProjectsStatus("failed");
@@ -197,11 +188,9 @@ export default function TaskDetailsClient({
         initialTask={task}
         back={back}
         navigate={navigate}
+        projects={projectList}
         projectsStatus={projectsStatus}
         onRetryProjects={reloadProjects}
-        onRegisterStore={(setter) => {
-          storeProjectsRef.current = setter;
-        }}
       />
     </TaskStoreProvider>
   );
