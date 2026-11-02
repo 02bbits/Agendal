@@ -1,10 +1,12 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { UpcomingScreen, addDays, upcomingPage } from "../../src/ui";
+import { TASK_COLUMN_CLASS } from "../../src/ui/features/tasks/layout";
 import { expectAxeCleanInBothThemes } from "./axe";
-import { task } from "./fixtures";
+import { projects, task } from "./fixtures";
 import { TODAY, setup } from "./harness";
+import { createMemoryApi } from "./memoryApi";
 
 const tomorrow = addDays(TODAY, 1);
 
@@ -177,5 +179,39 @@ describe("Upcoming screen", () => {
     );
     expect(screen.getByText("Later")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Show more days" })).toBeNull();
+  });
+
+  it("completing a row keeps it ticked with aria-disabled='true' and Completed toast; second click sends no reopen", async () => {
+    const fakeTask = task({
+      id: "t-up-1",
+      title: "Complete me",
+      due_date: "2026-10-24",
+    });
+    const memory = createMemoryApi({ tasks: [fakeTask], projects });
+    const reopenSpy = vi.spyOn(memory.api, "reopen");
+    const { wrap } = setup([fakeTask], memory.api);
+
+    render(wrap(<UpcomingScreen accountInitial="e" />));
+
+    const checkBtn = screen.getByRole("checkbox", {
+      name: "Complete Complete me",
+    });
+    await userEvent.click(checkBtn);
+
+    expect(checkBtn.getAttribute("aria-checked")).toBe("true");
+    expect(checkBtn.getAttribute("aria-disabled")).toBe("true");
+    expect(screen.getByText(/Completed [“"]Complete me[”"]/)).toBeTruthy();
+
+    await userEvent.click(checkBtn);
+    expect(reopenSpy).not.toHaveBeenCalled();
+  });
+
+  it("list mode wrapper has TASK_COLUMN_CLASS", () => {
+    const { wrap } = setup([task({ title: "Task 1", due_date: "2026-10-24" })]);
+    const { container } = render(
+      wrap(<UpcomingScreen accountInitial="e" viewMode="list" />),
+    );
+    const wrapper = container.querySelector(".space-y-6");
+    expect(wrapper?.className).toContain(TASK_COLUMN_CLASS);
   });
 });

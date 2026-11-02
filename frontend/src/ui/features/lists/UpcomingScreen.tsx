@@ -2,6 +2,7 @@ import { useState } from "react";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { ChipGroup } from "../../components/ChipGroup";
+import { cx } from "../../components/cx";
 import { EmptyState } from "../../components/EmptyState";
 import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
 import { addDays, formatDay } from "../../domain/dates";
@@ -12,6 +13,7 @@ import {
 } from "../../domain/lists";
 import type { Navigate } from "../shell/routes";
 import { ScreenHeader } from "../shell/ScreenHeader";
+import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import { Section } from "./Section";
@@ -189,7 +191,9 @@ export function UpcomingScreen({
           <EmptyState title={t("list.upcoming_empty")} />
         )
       ) : (
-        <div className="space-y-6">
+        <div
+          className={cx("space-y-6", viewMode === "list" && TASK_COLUMN_CLASS)}
+        >
           <div
             className={
               viewMode === "list"
@@ -214,6 +218,7 @@ export function UpcomingScreen({
                     onToggle={store.toggle}
                     navigate={navigate}
                     selected={x.id === selectedTaskId}
+                    settling={store.isSettling(x.id)}
                   />
                 ))}
               </Section>
