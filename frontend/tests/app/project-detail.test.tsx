@@ -299,7 +299,7 @@ describe("Project detail page /projects/[id]", () => {
     ).toBeNull();
   });
 
-  it("project detail rows wrapper has max-w-[720px] cap and AppShell column has lg:max-w-none", async () => {
+  it("project detail rows wrapper has max-w-[820px] cap and AppShell column has lg:max-w-none", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/v1/me")
         return json(200, { id: 1, email: "u@test.com" });
