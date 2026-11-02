@@ -149,7 +149,12 @@ export function TaskStoreProvider({
   }, [mutateLifecycle]);
 
   const toggle = React.useCallback(
-    (task: Task) => mutateLifecycle(task.id, task.done ? "reopen" : "complete"),
+    (task: Task) => {
+      // A task that is settling after Complete ignores more clicks on its
+      // tick until it moves down; Undo in the toast still reopens it
+      if (settleTimers.current.has(task.id)) return;
+      mutateLifecycle(task.id, task.done ? "reopen" : "complete");
+    },
     [mutateLifecycle],
   );
 

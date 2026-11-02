@@ -86,7 +86,7 @@ it("shows the generated occurrence, removes it on Undo and restores it once on r
   ).toHaveLength(1);
 });
 
-it("fast complete → reopen → complete keeps exactly one generated occurrence", async () => {
+it("fast complete → Undo → complete keeps exactly one generated occurrence", async () => {
   // The server answers in order; every answer only arrives after all three clicks
   const n1: Task = { ...next, id: "n1", title: "Gym n1" };
   const n2: Task = { ...next, id: "n2", title: "Gym n2" };
@@ -118,8 +118,9 @@ it("fast complete → reopen → complete keeps exactly one generated occurrence
       <CalendarRows />
     </TaskStoreProvider>,
   );
+  // Complete, Undo from the toast, complete again — all before any answer
   fireEvent.click(screen.getByRole("button", { name: "Gym: open" }));
-  fireEvent.click(screen.getByRole("button", { name: "Gym: done" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
   fireEvent.click(screen.getByRole("button", { name: "Gym: open" }));
   release();
   await screen.findByRole("button", { name: "Gym n2: open" });
@@ -127,4 +128,34 @@ it("fast complete → reopen → complete keeps exactly one generated occurrence
     expect(screen.queryByRole("button", { name: "Gym n1: open" })).toBeNull(),
   );
   expect(screen.getAllByRole("button", { name: /^Gym n/ })).toHaveLength(1);
+});
+
+it("ignores more clicks on a task's tick while it settles after Complete", async () => {
+  const api: TaskApi = {
+    complete: vi.fn(async () => ({
+      task: { ...task, done: true },
+      next: null,
+    })),
+    reopen: vi.fn(async () => ({ task, next: null })),
+    patch: vi.fn(async () => task),
+  };
+  render(
+    <TaskStoreProvider
+      api={api}
+      clock={{
+        now: () => new Date("2026-11-01T15:11:00Z"),
+        timeZone: "Asia/Ho_Chi_Minh",
+      }}
+      initialTasks={[task]}
+      initialProjects={[]}
+    >
+      <CalendarRows />
+    </TaskStoreProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Gym: open" }));
+  fireEvent.click(screen.getByRole("button", { name: "Gym: done" }));
+  fireEvent.click(screen.getByRole("button", { name: "Gym: done" }));
+  await waitFor(() => expect(api.complete).toHaveBeenCalledTimes(1));
+  expect(api.reopen).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Gym: done" })).toBeTruthy();
 });

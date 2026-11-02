@@ -25,6 +25,8 @@ export interface TaskRowProps {
   onToggle: (task: Task) => void;
   navigate?: Navigate;
   selected?: boolean;
+  /** Just completed and about to move: the tick is locked so it can't be spammed. */
+  settling?: boolean;
   /** Search highlights matched words in the title (LV-3). */
   renderTitle?: (title: string) => ReactNode;
 }
@@ -38,6 +40,7 @@ export function TaskRow({
   showDue = false,
   overdue = false,
   selected = false,
+  settling = false,
   onToggle,
   navigate,
   renderTitle,
@@ -70,8 +73,14 @@ export function TaskRow({
         aria-label={t(task.done ? "task.reopen" : "task.complete", {
           title: task.title,
         })}
-        className="group/check inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary"
-        onClick={() => onToggle(task)}
+        aria-disabled={settling || undefined}
+        className={cx(
+          "group/check inline-flex size-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary",
+          settling ? "cursor-default" : "cursor-pointer",
+        )}
+        onClick={() => {
+          if (!settling) onToggle(task);
+        }}
       >
         <span
           className={cx(
