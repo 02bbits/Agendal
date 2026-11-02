@@ -94,7 +94,7 @@ export function ProjectScreen({
         />
         {project.name}
       </h1>
-      <div className="w-full max-w-[720px] xl:max-w-[min(720px,calc(100vw-248px-400px-80px))]">
+      <div className="w-full max-w-[820px] xl:max-w-[min(820px,calc(100vw-248px-400px-80px))]">
         <ProjectProgressBar
           colour={project.colour}
           done={progress.done}
