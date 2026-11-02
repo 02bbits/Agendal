@@ -10,6 +10,7 @@ import type { Project } from "../../domain/types";
 import { ROUTES, type Navigate } from "../shell/routes";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { ProjectCard } from "./ProjectCard";
+import { ProjectMobileList } from "./ProjectMobileList";
 
 export interface ProjectWithCounts extends Project {
   open?: number;
@@ -84,36 +85,43 @@ export function ProjectsScreen({
       {sortedProjects.length === 0 ? (
         <EmptyState title={t("project.list_empty")} />
       ) : (
-        <ul className="m-0 grid grid-cols-1 gap-4 p-0 sm:grid-cols-2">
-          {sortedProjects.map((p) => {
-            const done = p.done ?? 0;
-            const open = p.open ?? 0;
-            const progress: Progress = { done, total: done + open };
-            return (
-              <ProjectCard
-                key={p.id}
-                href={ROUTES.project(p.id)}
-                name={p.name}
-                colour={p.colour}
-                progress={progress}
-                nextText={p.next}
-                onRename={
-                  onRenameProject ? () => onRenameProject(p) : undefined
-                }
-                onDelete={
-                  onDeleteProject ? () => onDeleteProject(p) : undefined
-                }
-                navigate={navigate}
-              />
-            );
-          })}
-          <ProjectCard
-            name={t("project.none")}
-            colour="gray"
-            progress={noProjectProgress}
-            label={`${t("project.none")}, ${t("project.progress", { done: noProjectProgress.done, total: noProjectProgress.total })}`}
+        <>
+          <ProjectMobileList
+            projects={sortedProjects}
+            noProjectCounts={noProjectCounts}
+            navigate={navigate}
           />
-        </ul>
+          <ul className="m-0 hidden grid-cols-1 gap-4 p-0 md:grid md:grid-cols-2">
+            {sortedProjects.map((p) => {
+              const done = p.done ?? 0;
+              const open = p.open ?? 0;
+              const progress: Progress = { done, total: done + open };
+              return (
+                <ProjectCard
+                  key={p.id}
+                  href={ROUTES.project(p.id)}
+                  name={p.name}
+                  colour={p.colour}
+                  progress={progress}
+                  nextText={p.next}
+                  onRename={
+                    onRenameProject ? () => onRenameProject(p) : undefined
+                  }
+                  onDelete={
+                    onDeleteProject ? () => onDeleteProject(p) : undefined
+                  }
+                  navigate={navigate}
+                />
+              );
+            })}
+            <ProjectCard
+              name={t("project.none")}
+              colour="gray"
+              progress={noProjectProgress}
+              label={`${t("project.none")}, ${t("project.progress", { done: noProjectProgress.done, total: noProjectProgress.total })}`}
+            />
+          </ul>
+        </>
       )}
     </div>
   );

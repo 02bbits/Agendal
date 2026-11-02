@@ -69,6 +69,10 @@ export {
   type ProjectWithCounts,
 } from "./projects/ProjectsScreen";
 export {
+  ProjectMobileList,
+  type ProjectMobileListProps,
+} from "./projects/ProjectMobileList";
+export {
   ProjectScreen,
   COMPLETED_PAGE,
   type ProjectScreenProps,

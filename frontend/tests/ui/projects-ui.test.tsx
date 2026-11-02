@@ -12,6 +12,7 @@ import {
   type Task,
 } from "../../src/ui";
 import { projects as seedProjects, task } from "./fixtures";
+import { expectAxeCleanInBothThemes } from "./axe";
 
 const seedTasks = (): Task[] => [
   task({
@@ -126,6 +127,57 @@ describe("ProjectsScreen (PJ §2.2)", () => {
     expect(screen.getByRole("menu")).toBeTruthy();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("renders phone grouped list with progress, coloured bar, 2/6, and No project card", async () => {
+    const list = [
+      { ...seedProjects[0]!, open: 4, done: 2 }, // SQL Course (blue)
+    ];
+    const { container } = render(
+      <ProjectsScreen
+        projects={list}
+        noProjectCounts={{ open: 2, done: 1 }}
+        accountInitial="E"
+        onNewProject={() => {}}
+      />,
+    );
+
+    // Grouped list for mobile
+    const mobileContainer = container.querySelector(
+      '[data-slot="project-mobile-list"]',
+    )!;
+    expect(mobileContainer).toBeTruthy();
+
+    // Project row in grouped card has link, name, 2/6, progressbar with coloured bar
+    const projectLink = within(mobileContainer as HTMLElement).getByRole(
+      "link",
+      {
+        name: /SQL Course/,
+      },
+    );
+    expect(within(projectLink).getByText("2/6")).toBeTruthy();
+
+    const progressbar = within(projectLink).getByRole("progressbar");
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("2");
+    expect(progressbar.getAttribute("aria-valuemax")).toBe("6");
+    expect(progressbar.getAttribute("aria-valuetext")).toBe(
+      "2 of 6 tasks completed",
+    );
+
+    const bar = progressbar.querySelector('[data-slot="bar"]') as HTMLElement;
+    expect(bar.style.background).toContain("var(--color-project-blue)");
+
+    // No project card in its own card below with task count
+    const noProjectCard = within(mobileContainer as HTMLElement).getByRole(
+      "group",
+      {
+        name: /No project/,
+      },
+    );
+    expect(within(noProjectCard).getByText("No project")).toBeTruthy();
+    expect(within(noProjectCard).getByText("2 tasks")).toBeTruthy();
+
+    await expectAxeCleanInBothThemes(container);
   });
 });
 
