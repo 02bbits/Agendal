@@ -67,7 +67,7 @@ function InboxContent() {
         title={t("nav.inbox")}
         accountInitial={accountInitial}
         navigate={navigate}
-        actions={
+        action={
           <Button
             variant="primary"
             pill

@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
 import InboxPage from "../../src/app/page";
 import { setTimeZone } from "../../src/lib/clock";
-import { t } from "../../src/ui";
+import { ScreenHeader, t } from "../../src/ui";
 import { TASK_COLUMN_CLASS } from "../../src/ui/features/tasks/layout";
 import { expectAxeCleanInBothThemes } from "../ui/axe";
 import { task } from "../ui/fixtures";
@@ -217,5 +217,29 @@ describe("Inbox task panel integration", () => {
     expect(wrapper?.className).toContain(TASK_COLUMN_CLASS);
 
     await expectAxeCleanInBothThemes(container!);
+  });
+
+  it("subtitle stays under the title in the left column with action vertically centred", () => {
+    render(
+      <ScreenHeader
+        title="Inbox"
+        accountInitial="T"
+        action={<button>New task</button>}
+      >
+        <p>1 overdue · 4 due today</p>
+      </ScreenHeader>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 1, name: "Inbox" });
+    const subtitle = screen.getByText("1 overdue · 4 due today");
+    const actionBtn = screen.getByRole("button", { name: "New task" });
+
+    expect(heading.parentElement).toBe(subtitle.parentElement);
+
+    const flexRow = heading.parentElement?.parentElement;
+    expect(flexRow?.className).toContain("flex");
+    expect(flexRow?.className).toContain("items-center");
+    expect(flexRow?.contains(actionBtn)).toBe(true);
+    expect(actionBtn.parentElement).not.toBe(heading.parentElement);
   });
 });
