@@ -18,6 +18,15 @@ class NoteResultResource extends JsonResource
     public function toArray(Request $request): array
     {
         $plan = $this->plan ?? [];
+        // Older notes stored a rendered description in their task snapshots.
+        // Keep the audit snapshot intact; expose only structured repeat data.
+        $changes = array_map(static function (array $change): array {
+            if (is_array($change['task'] ?? null)) {
+                unset($change['task']['repeat_description']);
+            }
+
+            return $change;
+        }, $plan['changes'] ?? []);
 
         return [
             'note' => [
@@ -25,7 +34,7 @@ class NoteResultResource extends JsonResource
                 'text' => $this->text, 'source_file_name' => $this->source_file_name,
                 'written_at' => $this->written_at->format(DATE_ATOM), 'processed_at' => $this->processed_at->format(DATE_ATOM), 'engine' => $this->engine,
             ],
-            'changes' => $plan['changes'] ?? [],
+            'changes' => $changes,
             'plan' => $this->status === PlanStatus::Confirm->value ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
             'skipped' => $plan['skipped'] ?? [], 'ambiguous' => $plan['ambiguous'] ?? [],
         ];

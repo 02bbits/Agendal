@@ -8,6 +8,7 @@ use App\Enums\PlanStatus;
 use App\Enums\Reminder;
 use App\Enums\Repeat;
 use App\Enums\SkipReason;
+use App\Services\Tasks\RepeatSchedule;
 use Opis\JsonSchema\Validator;
 
 /**
@@ -168,7 +169,8 @@ final class PlanValidator
         }
         $result = $kind === 'create' ? $entry : array_replace($tasks[$entry['task_id']], $entry);
 
-        return $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($result);
+        return RepeatSchedule::validFor($result['repeat_rule'] ?? null, $result['repeat'] ?? 'never')
+            && $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($result);
     }
 
     /**

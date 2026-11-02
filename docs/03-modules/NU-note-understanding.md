@@ -63,10 +63,12 @@ Every note goes through the same steps, on the server, in one request:
 - Split on newlines, `;`, `,` (not between digits, [NU-E18](#nu-e18)), and `. ` or a full stop at the end of the text (not after a known abbreviation, [NU-E19](#nu-e19)). A dot followed by anything other than a space or the end (`9.30`, `report.pdf`, `a.b@x.com`) never splits.
 - Split on the **whole word** "then", in any case ([NU-E17](#nu-e17)), and on "sau đó" or "rồi" when words follow them ([NU-E41](#nu-e41)). "and" and "và" never split.
 - **Merge comma lists ([NU-E33](#nu-e33), [Q17](../08-project/open-questions.md#q17)).** A fragment after a comma joins the item before it when both of these hold:
-  - The item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
+  - After leading date/time/priority phrases and lead-ins, the item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
   - The fragment **starts no task of its own**: it doesn't open with a task verb, command verb, skip prefix, or a date, time, priority or repeat phrase ("mai gọi mẹ", "26 Oct meeting"), and it names no project, project keyword the user has, or task word (*exam, quiz, deadline, submit* …). Date, time, priority and repeat phrases that **close** the fragment describe the whole list: "mua sữa, trứng và bánh mì sáng mai" is one task for tomorrow morning.
-  - A fragment of **only** date, time, priority and repeat phrases ("tomorrow 9am", "không gấp") always joins the item before it.
+  - A fragment of **only** date, time, priority and repeat phrases ("tomorrow 9am", "không gấp", "lặp lại 3 lần") joins the item before it. If the item so far contains only modifiers, it joins the following task across a comma; explicit command/skip prefixes keep their boundary. Exclusion and series-end clauses stay attached to their task, including any explanation.
   
+  Calendar lists are read as a whole before comma splitting, independently of the task verb: `gym 2, 4, 6 hàng tuần` and `gym every month on day 1, 15, 25` each describe one task. A following independent task still splits. Commas inside URLs, emails and project names preserve their original text.
+
   Only commas merge. Newlines, semicolons, full stops and "then" always split. When unsure, the rule splits, as the PRD does. The 30-item limit counts items after merging.
 - At the start of each line, strip bullets (`-`, `*`, `•`, `–`), numbering (`1.`, `1)`, `a)`) and checkboxes (`[ ]`, `[x]`) ([NU-E20](#nu-e20)).
 - Trim each item and drop empty ones. Known abbreviations: Dr, Prof, Mr, Mrs, Ms, St, No, vs, etc, e.g, i.e.
@@ -102,9 +104,9 @@ The business-rules table is the phrase list. The precise semantics:
 | Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). Ranges set both start and end ([NU-E30](#nu-e30)) |
 | Priority | High words win over Low words ([NU-E24](#nu-e24)). Default: Medium if due today, otherwise Low. Content words that set High (*deadline, exam, quiz, submit*) stay in the title. Pure priority words (*urgent, asap, important, high/low priority, whenever, someday, maybe*) are removed |
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
-| Repeat | *every day / daily* → Daily. *every week / weekly* → Weekly. *every \<weekday>* → Weekly, starting per [NU-E8](#nu-e8). *every month / monthly* → Monthly. Other patterns → low confidence |
+| Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
 | Reminder | *exam* or *quiz* → 1 day before. Otherwise, any task with a time → 15 min before. Otherwise none. A reminder that would fall before `now` → none ([NU-E25](#nu-e25)) |
-| Title | Remove date, time, pure priority and repeat phrases, and lead-ins. Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
+| Title | Remove the chosen date phrase, time, pure priority and repeat phrases, and lead-ins. With several dates, keep the other date phrases per [NU-E6](#nu-e6). Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
 
 **Low confidence** (sent to the LLM when it's enabled, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)):
 - A date- or time-like token the rules couldn't parse (`31/2`, `3pmish`)
@@ -112,6 +114,35 @@ The business-rules table is the phrase list. The precise semantics:
 - No verb and no object left in the title (single-word titles from the keyword list, such as "Gym", are fine)
 - Text in a language other than English or Vietnamese ([NU-E28](#nu-e28))
 - Vietnamese typed without diacritics ([NU-E40](#nu-e40))
+
+#### Relative time
+
+Relative durations share the quantity/unit vocabulary with modifier detection: `sau nửa tiếng`, `nửa tiếng sau`, `in half an hour` and `in thirty minutes` all mean 30 minutes from `written_at`. Vietnamese `giờ` and `tiếng` share the hour unit; a trailing `rưỡi` adds half of that unit (`một giờ rưỡi` = 90 minutes). Fractional months and sub-minute results remain unresolved because the contract cannot represent them exactly. Clock durations use elapsed time across a clock change; whole days/weeks/months retain calendar arithmetic. Unsupported quantities remain low confidence instead of consuming a known fragment of the duration.
+
+A relative clock timestamp fixes its own date. A weekday/rule that would move it onto another date, an unallocated time for several copies, or a repeated DST minute that cannot round-trip through the floating-time contract keeps the scheduling text for fallback, without applying a partial date/time/rule. The [complex manual cases](../../backend/tests/Manual/complex-note-cases.md) cover midnight, date boundaries and mixed notes.
+
+#### Calendar recurrence
+
+English and Vietnamese repeat phrases can specify a frequency/interval, selected weekdays, monthly dates or ordinal weekdays, and an end condition:
+
+| Example note | Schedule |
+|---|---|
+| `gym every 3 days` | Once every three days |
+| `tập gym 2 4 6 hàng tuần` | Monday, Wednesday and Friday each week |
+| `gym every 2 weeks on Monday and Wednesday` | Those two weekdays in every second week |
+| `gym every month on day 1, 15, 25` | Days 1, 15 and 25 of each month |
+| `gym every first Monday, last Friday of month` | The first Monday and last Friday of each month |
+| `pay rent every month on the 15th` | The 15th of each month |
+| `gym every month on first and third Monday` | The first and third Mondays; shared-weekday ordinal lists also accept commas |
+| `test every second monday of month` | The second Monday of each month |
+| `họp thứ sáu cuối cùng mỗi tháng` | The last Friday of each month |
+| `birthday every year on February 29` | February 29 in leap years |
+| `gym every 3 days for 5 occurrences` | Five occurrences, including the first |
+| `tập gym mỗi 2 ngày đến 15/11/2026` | Every two days through the named date |
+
+**Multiple tasks per scheduled day.** `visit house 3 times every day`, `visit house three times a day` and `đi gym mỗi ngày 3 lần` create three independent daily series, labelled `Visit house (1/3)`, `(2/3)` and `(3/3)`, without inventing times. A series-end count is separate: `every day for 3 occurrences` creates one series ending after three dates; `3 times every day for 2 occurrences` creates three series, each ending after two dates. The expanded creates count toward the 30-item limit and the usual confirmation threshold. Conflicting counts or incomplete time allocations keep the original text as low confidence.
+
+The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text (including `trừ`, `except` and `not on`) stays intact and low confidence, without choosing one of its excluded dates. Ambiguous repeat words such as `biweekly` also stay low confidence. A [manual case list](../../backend/tests/Manual/note-cases.md) records inputs and expected results for dates, title cleanup, recurrence, splitting and commands.
 
 ### 2.6 Safety and status (NU-5, BR-01, BR-02)
 
@@ -269,6 +300,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
   - `reason`: `skip`, `already_done`, `not_found`, `no_change`
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
+- Plan `create` and `update` entries may include nullable `repeat_rule`, following the [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37); its FREQ must match the resulting task's `repeat`. The applier derives the read-only `repeat_anchor` when creating the task, so it is not a plan field. Returned `changes[].task` carries the structured task fields; older snapshots may omit the rule/anchor. Presentation belongs to the frontend formatter.
 
 ## 8. Data, validation and authorization
 

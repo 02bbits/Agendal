@@ -1,0 +1,87 @@
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+import { afterEach, expect, it, vi } from "vitest";
+import type { TaskApi } from "../../src/ui/domain/api";
+import type { Task } from "../../src/ui/domain/types";
+import {
+  TaskStoreProvider,
+  useTaskStore,
+} from "../../src/ui/features/tasks/store";
+
+afterEach(cleanup);
+
+const task: Task = {
+  id: "root",
+  title: "Gym",
+  due_date: "2026-11-02",
+  start_time: null,
+  end_time: null,
+  priority: "low",
+  project_id: null,
+  repeat: "weekly",
+  reminder: "none",
+  notes: null,
+  done: false,
+  done_at: null,
+  created_by: "assistant",
+  created_at: "2026-11-01T15:11:00Z",
+};
+const next: Task = {
+  ...task,
+  id: "next",
+  title: "Next gym",
+  due_date: "2026-11-04",
+};
+
+function CalendarRows() {
+  const store = useTaskStore();
+  return (
+    <>
+      {store.tasks.map((row) => (
+        <button key={row.id} onClick={() => store.toggle(row)}>
+          {row.title}: {row.done ? "done" : "open"}
+        </button>
+      ))}
+      {store.toast?.onAction && (
+        <button onClick={store.toast.onAction}>Undo</button>
+      )}
+    </>
+  );
+}
+
+it("shows the generated occurrence, removes it on Undo and restores it once on recompletion", async () => {
+  const api: TaskApi = {
+    complete: vi.fn(async () => ({ task: { ...task, done: true }, next })),
+    reopen: vi.fn(async () => ({ task, next })),
+    patch: vi.fn(async () => task),
+  };
+  render(
+    <TaskStoreProvider
+      api={api}
+      clock={{
+        now: () => new Date("2026-11-01T15:11:00Z"),
+        timeZone: "Asia/Ho_Chi_Minh",
+      }}
+      initialTasks={[task]}
+      initialProjects={[]}
+    >
+      <CalendarRows />
+    </TaskStoreProvider>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Gym: open" }));
+  await screen.findByRole("button", { name: "Next gym: open" });
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("button", { name: "Next gym: open" })).toBeNull(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Gym: open" }));
+  await screen.findByRole("button", { name: "Next gym: open" });
+  expect(
+    screen.getAllByRole("button", { name: "Next gym: open" }),
+  ).toHaveLength(1);
+});

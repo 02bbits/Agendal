@@ -132,9 +132,19 @@ export function ProjectClient({ id }: { id: string }) {
 
       try {
         const res = await httpTaskApi.complete(task.id, at);
-        if (res.next && res.next.project_id === data.project.id) {
+        if (
+          res.next &&
+          !res.next.done &&
+          res.next.project_id === data.project.id
+        ) {
           setData((prev) => {
             if (!prev) return prev;
+            if (
+              [...prev.open, ...prev.completed].some(
+                (row) => row.id === res.next!.id,
+              )
+            )
+              return prev;
             return {
               ...prev,
               open: [...prev.open, res.next!],
@@ -207,7 +217,30 @@ export function ProjectClient({ id }: { id: string }) {
       });
 
       try {
-        await httpTaskApi.reopen(task.id, at);
+        const res = await httpTaskApi.reopen(task.id, at);
+        if (res.next) {
+          setData((prev) => {
+            if (!prev) return prev;
+            const open = prev.open.filter((row) => row.id !== res.next!.id);
+            const completed = prev.completed.filter(
+              (row) => row.id !== res.next!.id,
+            );
+            const removed =
+              prev.open.length +
+              prev.completed.length -
+              open.length -
+              completed.length;
+            return {
+              ...prev,
+              open,
+              completed,
+              progress: {
+                ...prev.progress,
+                total: prev.progress.total - removed,
+              },
+            };
+          });
+        }
       } catch {
         setData((prev) => {
           if (!prev) return prev;

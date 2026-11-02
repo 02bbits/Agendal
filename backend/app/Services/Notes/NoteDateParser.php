@@ -29,6 +29,9 @@ final class NoteDateParser
     {
         // No date inside a URL, email, file name or project name ("https://x.com/2026/10/26", project "Friday").
         $text = NoteVocabulary::withoutLiterals($text, array_values($context->projects));
+        if ($this->durations->unreadable($text)) {
+            return new ParsedDate(unreadable: true);
+        }
         $unreadable = false;
         $best = null;
         foreach ($this->candidates($text, $context, $startTime) as $candidate) {
@@ -164,6 +167,8 @@ final class NoteDateParser
             $next = $this->endsWith($before, NoteVocabulary::phrases('weekday_next'));
             $thisSuffix = preg_match('~^\s+(?:'.NoteVocabulary::phrases('weekday_this_suffix').')(?![\p{L}\p{N}_])~iu', $after, $suffix) === 1 ? $suffix[0] : '';
             $prefix = $repeat ?? $thisPrefix ?? $next ?? '';
+            $dayWord = $this->endsWith(substr($before, 0, strlen($before) - strlen($prefix)), NoteVocabulary::phrases('date_day_word')) ?? '';
+            $prefix = $dayWord.$prefix;
             $days = $this->daysUntil($today, (int) $day);
             $todayAllowed = $thisPrefix !== null || $thisSuffix !== '' || ($repeat !== null && ($startTime === null || $startTime > $context->clock()));
             $found[] = [
