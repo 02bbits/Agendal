@@ -44,7 +44,7 @@ export function AppShell({
       className={
         "min-h-dvh bg-paper md:flex" +
         (sidebar ? " md:[--sidebar-w:248px]" : "") +
-        " has-[#task-panel-slot:not(:empty)]:xl:[--panel-w:400px]"
+        (aside ? " xl:[--panel-w:400px]" : "")
       }
     >
       {sidebar && (
@@ -52,7 +52,7 @@ export function AppShell({
           <Sidebar active={tab} navigate={navigate} {...sidebar} />
         </div>
       )}
-      <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1">
+      <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px]">
         <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6">
           {banner}
           {children}
@@ -65,12 +65,11 @@ export function AppShell({
         )}
         {toast}
       </div>
-      <div
-        id="task-panel-slot"
-        className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:not-empty:block"
-      >
-        {aside}
-      </div>
+      {aside && (
+        <div className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">
+          {aside}
+        </div>
+      )}
     </div>
   );
 }

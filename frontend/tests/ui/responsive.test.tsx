@@ -9,10 +9,8 @@ import {
   ScreenHeader,
   Sheet,
   t,
-  TaskPanel,
   Toast,
 } from "../../src/ui";
-import { setup } from "./harness";
 
 const theme = readFileSync(join(process.cwd(), "src/ui/theme.css"), "utf8");
 
@@ -361,23 +359,8 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     renderWide(<p>Task detail</p>);
     const panel = screen.getByText("Task detail").parentElement!;
     expect(panel.className).toContain("hidden");
-    expect(panel.className).toContain("xl:not-empty:block");
+    expect(panel.className).toContain("xl:block");
     expect(panel.className).toContain("w-[400px]");
-  });
-
-  it("hides the empty panel column on wide screens and avoids double borders", () => {
-    renderWide();
-    const slot = document.getElementById("task-panel-slot")!;
-    expect(slot.className).toContain("xl:not-empty:block");
-    expect(slot.className).not.toContain("empty:hidden");
-    expect(slot.className.split(/\s+/)).not.toContain("xl:block");
-
-    const { wrap } = setup([]);
-    render(wrap(<TaskPanel taskId="missing" onClose={() => {}} />));
-    const aside = screen.getByRole("complementary", {
-      name: t("task.heading"),
-    });
-    expect(aside.className).not.toContain("border-l");
   });
 
   it("leaves the sidebar out on signed-out screens", () => {

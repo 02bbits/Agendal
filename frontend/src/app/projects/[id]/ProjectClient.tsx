@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   ProjectScreen,
   ProjectSheet,
@@ -33,7 +33,7 @@ import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDial
 export const SKELETON_DELAY_MS = 300;
 
 export function ProjectClient({ id }: { id: string }) {
-  const { navigate, back, showToast, settings } = useAppFrame();
+  const { navigate, showToast, settings } = useAppFrame();
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -199,7 +199,7 @@ export function ProjectClient({ id }: { id: string }) {
       <PageMessage
         message={t("error.not_found")}
         actionLabel={t("common.back")}
-        onAction={back}
+        onAction={() => navigate(ROUTES.projects)}
       />
     );
   }
@@ -221,7 +221,7 @@ export function ProjectClient({ id }: { id: string }) {
           loadingMore={loadingMore}
           today={today}
           timeFormat={settings.timeFormat}
-          onBack={back}
+          onBack={() => navigate(ROUTES.projects)}
           onRenameProject={() => setRenaming(true)}
           onDeleteProject={handleDelete}
           navigate={navigate}
@@ -285,26 +285,24 @@ function ProjectContent({
   const isWide = useMediaQuery("(min-width: 1280px)");
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
 
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(() => {
-    if (typeof window !== "undefined") {
-      return new URLSearchParams(window.location.search).get("task");
-    }
-    return null;
-  });
+  const selectedTaskId = searchParams.get("task");
+  const pushedTaskRef = useRef(false);
 
   useEffect(() => {
-    const handlePopState = () => {
-      const taskParam = new URLSearchParams(window.location.search).get("task");
-      setSelectedTaskId(taskParam);
-    };
-    window.addEventListener("popstate", handlePopState);
-    return () => window.removeEventListener("popstate", handlePopState);
-  }, []);
+    if (!selectedTaskId) {
+      pushedTaskRef.current = false;
+    }
+  }, [selectedTaskId]);
 
   const handleClosePanel = useCallback(() => {
-    setSelectedTaskId(null);
-    router.push(pathname);
+    if (pushedTaskRef.current) {
+      pushedTaskRef.current = false;
+      router.back();
+    } else {
+      router.replace(pathname);
+    }
   }, [pathname, router]);
 
   const handleNavigate: Navigate = useCallback(
@@ -312,13 +310,17 @@ function ProjectContent({
       const taskMatch = href.match(/^\/tasks\/([^/?#]+)/);
       if (taskMatch && isWide) {
         const taskId = decodeURIComponent(taskMatch[1]!);
-        setSelectedTaskId(taskId);
-        router.push(`${pathname}?task=${encodeURIComponent(taskId)}`);
+        if (selectedTaskId) {
+          router.replace(`${pathname}?task=${encodeURIComponent(taskId)}`);
+        } else {
+          pushedTaskRef.current = true;
+          router.push(`${pathname}?task=${encodeURIComponent(taskId)}`);
+        }
         return true;
       }
       return navigate(href);
     },
-    [isWide, pathname, router, navigate],
+    [isWide, pathname, router, navigate, selectedTaskId],
   );
 
   const openTasks = store.tasks.filter((t) => !t.done);

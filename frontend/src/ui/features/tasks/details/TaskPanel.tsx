@@ -2,11 +2,9 @@ import {
   useCallback,
   useEffect,
   useRef,
-  useSyncExternalStore,
   type KeyboardEvent,
   type ReactElement,
 } from "react";
-import { createPortal } from "react-dom";
 import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
 import type { Project } from "../../../domain/types";
@@ -23,10 +21,6 @@ export interface TaskPanelProps {
   onDelete?: () => void;
 }
 
-function emptySubscribe() {
-  return () => {};
-}
-
 export function TaskPanel({
   taskId,
   onClose,
@@ -40,15 +34,6 @@ export function TaskPanel({
     return t.id === taskId;
   });
   const triggerRef = useRef<HTMLElement | null>(null);
-  const mounted = useSyncExternalStore(
-    emptySubscribe,
-    () => {
-      return true;
-    },
-    () => {
-      return false;
-    },
-  );
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -69,16 +54,12 @@ export function TaskPanel({
     [onClose],
   );
 
-  if (!mounted) {
-    return null;
-  }
-
-  const content = (
+  return (
     <aside
       aria-label={t("task.heading")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="motion-safe:animate-slide-in-right flex h-full w-full flex-col bg-surface outline-none"
+      className="fixed inset-y-0 right-0 z-40 flex w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
     >
       {task ? (
         <TaskDetails
@@ -108,11 +89,4 @@ export function TaskPanel({
       )}
     </aside>
   );
-
-  const slot =
-    typeof document !== "undefined"
-      ? document.getElementById("task-panel-slot")
-      : null;
-
-  return slot ? createPortal(content, slot) : content;
 }
