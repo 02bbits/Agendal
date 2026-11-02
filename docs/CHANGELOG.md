@@ -4,6 +4,8 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-02
 
+- **Calendar shorthand and manual checks.** Monthly dates accept ordinal numbers without `the`; weekday ordinals can share one weekday (`first and third Monday`). Unresolved repeat words stay low confidence. [67 manual HTTP cases](../backend/tests/Manual/note-cases.md) include title cleanup and the existing NU-E6 rule for multiple dates.
+
 - **Calendar list parsing and repeated copies.** The splitter preserves weekday/month-date lists and literal commas before finding task boundaries. Notes can create numbered daily series from an explicit per-day count, separately from the series-end count. Vietnamese weekday introducers leave no stray title text. Unsupported time allocations preserve the full request. See [NU extraction](03-modules/NU-note-understanding.md#25-extraction-nu-2) and the [API contract](07-architecture/api.md#notes-with-multiple-tasks-per-scheduled-day).
 
 - **Calendar recurrence contract (IM-37, #117).** [API](07-architecture/api.md#task-recurrence-contract-im-37), [TK §7–8](03-modules/TK-tasks.md#7-api-contract) and [NU §2.5/7](03-modules/NU-note-understanding.md#25-extraction-nu-2) distinguish the frequency `repeat`, nullable RRULE `repeat_rule` and server-maintained `repeat_anchor`. The [data model](07-architecture/data-model.md), [task schema](07-architecture/contracts/schemas/task.schema.json), [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) and task fixtures follow. The API reference owns validation limits, PATCH clearing rules and compatibility details; NU keeps note-recognition examples.

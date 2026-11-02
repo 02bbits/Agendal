@@ -32,6 +32,10 @@ it('keeps calendar lists together but splits the following independent task', fu
     ['gym every Monday, Wednesday until 2026-12-31', 'weekly', 'UNTIL=20261231T235959Z', '2026-11-02'],
     ['gym every Monday, Wednesday for 3 occurrences', 'weekly', 'COUNT=3', '2026-11-02'],
     ['gym every month on day 1, 15, 25', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
+    ['gym every month on 1st, 15th and 25th', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
+    ['gym monthly 1st, 15th and 25th', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
+    ['gym every month on first and third Monday', 'monthly', 'BYDAY=1MO,3MO', '2026-11-02'],
+    ['gym every month on first, third and last Monday', 'monthly', 'BYDAY=1MO,3MO,-1MO', '2026-11-02'],
     ['gym every month on the 1st, 15th and 25th', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
     ['gym ngày 1, 15, 25 hàng tháng', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
     ['gym every first Monday, last Friday of month', 'monthly', 'BYDAY=1MO,-1FR', '2026-11-02'],
@@ -104,6 +108,8 @@ it('preserves unsupported or conflicting recurrence text without scheduling a pa
         ->and($build->plan['create'][0]['repeat'])->toBe('never')
         ->and(mb_strtolower($build->plan['create'][0]['title']))->toBe(mb_strtolower($text));
 })->with([
+    'gym biweekly',
+    'gym daily biweekly',
     'gym 0 times every day',
     'gym 31 times every day',
     'gym -3 times every day',
@@ -149,5 +155,23 @@ it('retains all title text when numbering maximum-length repeated tasks', functi
     foreach ($build->plan['create'] as $task) {
         expect(mb_strlen($task['title']))->toBe(200)
             ->and(mb_strtolower(preg_replace('/ \(\d\/3\)$/', '', $task['title']).$task['notes']))->toBe($title);
+    }
+});
+
+it('reads every selection of shared monthly ordinals without dropping qualifiers', function () {
+    $ordinals = ['first', 'second', 'third', 'fourth', 'last'];
+    $numbers = [1, 2, 3, 4, -1];
+    foreach (range(1, 31) as $mask) {
+        $selected = array_keys(array_filter($ordinals, fn (string $ordinal, int $i): bool => ($mask & (1 << $i)) !== 0, ARRAY_FILTER_USE_BOTH));
+        foreach ([', ', ' and '] as $joiner) {
+            $phrase = implode($joiner, array_intersect_key($ordinals, array_flip($selected)));
+            $text = 'gym every month on '.$phrase.' Monday';
+            $build = app(NoteEngine::class)->build($text, grammarContext(), budgetMs: 60000);
+            $expected = implode(',', array_map(fn (int $i): string => $numbers[$i].'MO', $selected));
+            expect($build->lowConfidence, $text)->toBe([])
+                ->and($build->plan['create'], $text)->toHaveCount(1)
+                ->and($build->plan['create'][0]['title'])->toBe('Gym')
+                ->and($build->plan['create'][0]['repeat_rule'])->toContain('BYDAY='.$expected);
+        }
     }
 });

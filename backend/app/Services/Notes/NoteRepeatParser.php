@@ -11,6 +11,8 @@ final class NoteRepeatParser
 {
     private const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
+    private const ORDINALS = ['first' => 1, 'second' => 2, 'third' => 3, 'fourth' => 4, 'fifth' => 5, 'last' => -1, '1st' => 1, '2nd' => 2, '3rd' => 3, '4th' => 4, '5th' => 5];
+
     public function __construct(private NoteDateParser $dates) {}
 
     /**
@@ -22,12 +24,13 @@ final class NoteRepeatParser
     public static function listSpans(string $text): array
     {
         $weekdays = implode('|', NoteVocabulary::family('weekday'));
-        $ordinal = 'first|second|third|fourth|fifth|last|[1-5](?:st|nd|rd|th)';
+        $ordinal = implode('|', array_keys(self::ORDINALS));
         $viOrdinal = 'đầu tiên|đầu|thứ nhất|thứ hai|thứ ba|thứ tư|thứ năm|cuối cùng|cuối';
         $day = '(?:(?:'.$ordinal.')\s+)?(?:'.$weekdays.')(?:\s+(?:'.$viOrdinal.'))?'
             .'|(?:(?:ngày|days?|the|thứ)\s+)?\d{1,2}(?:st|nd|rd|th)?';
-        $joiner = '(?:\s*(?:'.NoteVocabulary::phrases('comma').')\s*(?:(?:and|và)\s+)?|\s+(?:and|và|&)\s+)';
-        $pattern = '~(?<![\p{L}\p{N}:/-])(?:'.$day.')(?:'.$joiner.'(?:'.$day.'))+(?![\p{L}\p{N}:/-])~iu';
+        $joiner = self::listJoiner();
+        $ordinalList = '(?:'.$ordinal.')(?:'.$joiner.'(?:'.$ordinal.'))+\s+(?:'.$weekdays.')';
+        $pattern = '~(?<![\p{L}\p{N}:/-])(?:(?:'.$day.')(?:'.$joiner.'(?:'.$day.'))+|'.$ordinalList.')(?![\p{L}\p{N}:/-])~iu';
         preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
         $frequency = implode('|', NoteVocabulary::family('repeat'));
         $prefix = '(?:every\s+other|'.NoteVocabulary::phrases('repeat_prefix').'|'.$frequency.'|(?:every|mỗi)\s+\d+\s+(?:days?|weeks?|months?|years?|ngày|tuần|tháng|năm))';
@@ -51,6 +54,11 @@ final class NoteRepeatParser
         }
 
         return $spans;
+    }
+
+    private static function listJoiner(): string
+    {
+        return '(?:\s*(?:'.NoteVocabulary::phrases('comma').')\s*(?:(?:and|và)\s+)?|\s+(?:and|và|&)\s+)';
     }
 
     /** @return array{string, int}|null */
@@ -154,14 +162,17 @@ final class NoteRepeatParser
             $spans[] = [$m[0][1], strlen($m[0][0])];
         }
         $weekdayPattern = implode('|', NoteVocabulary::family('weekday'));
-        $ordinals = ['first' => 1, 'second' => 2, 'third' => 3, 'fourth' => 4, 'fifth' => 5, 'last' => -1, '1st' => 1, '2nd' => 2, '3rd' => 3, '4th' => 4, '5th' => 5];
-        $ordinalPattern = '~(?<![\p{L}\p{N}])(?<ordinal>'.implode('|', array_keys($ordinals)).')\s+(?<day>'.$weekdayPattern.')(?![\p{L}\p{N}])~iu';
+        $ordinal = implode('|', array_keys(self::ORDINALS));
+        $ordinalPattern = '~(?<![\p{L}\p{N}])(?<ordinal>(?:'.$ordinal.')(?:'.self::listJoiner().'(?:'.$ordinal.'))*)\s+(?<day>'.$weekdayPattern.')(?![\p{L}\p{N}])~iu';
         $monthly = preg_match('~(?:of\s+(?:the\s+)?month|(?:every|each)\s+month|(?:mỗi|hàng|hằng)\s+tháng)~iu', $scheduleText) === 1 || $repeat === Repeat::Monthly;
         if ($monthly && preg_match_all($ordinalPattern, $scheduleText, $ordinalMatches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE) > 0) {
             $ordinalDays = [];
             foreach ($ordinalMatches as $m) {
                 $day = NoteVocabulary::findAll('weekday', $m['day'][0])[0];
-                $ordinalDays[] = $ordinals[mb_strtolower($m['ordinal'][0])].self::DAYS[(int) $day['key']];
+                preg_match_all(NoteVocabulary::pattern($ordinal), $m['ordinal'][0], $selectedOrdinals);
+                foreach ($selectedOrdinals[0] as $selected) {
+                    $ordinalDays[] = self::ORDINALS[mb_strtolower($selected)].self::DAYS[(int) $day['key']];
+                }
                 $spans[] = [$m[0][1], strlen($m[0][0])];
             }
             $m = $ordinalMatches[0];
@@ -195,7 +206,7 @@ final class NoteRepeatParser
             $parts['BYMONTHDAY'] = '-1';
             $spans[] = [$m[0][1], strlen($m[0][0])];
         }
-        if ($repeat === Repeat::Monthly && preg_match('~(?<![\p{L}\p{N}])(?:ngày|days?|the)\s+(\d{1,2}(?:st|nd|rd|th)?(?:(?:\s*,\s*(?:(?:and|và)\s+)?|\s+(?:and|và)\s+)(?:(?:ngày|days?|the)\s+)?\d{1,2}(?:st|nd|rd|th)?)*)(?![\p{L}\p{N}/])~iu', $scheduleText, $m, PREG_OFFSET_CAPTURE) === 1) {
+        if ($repeat === Repeat::Monthly && preg_match('~(?<![\p{L}\p{N}])(?:(?:ngày|days?|the|on)\s+|(?=\d{1,2}(?:st|nd|rd|th)))(\d{1,2}(?:st|nd|rd|th)?(?:(?:\s*,\s*(?:(?:and|và)\s+)?|\s+(?:and|và)\s+)(?:(?:ngày|days?|the)\s+)?\d{1,2}(?:st|nd|rd|th)?)*)(?![\p{L}\p{N}/])~iu', $scheduleText, $m, PREG_OFFSET_CAPTURE) === 1) {
             preg_match_all('/\d+/', $m[1][0], $numbers);
             $invalid = $invalid || isset($parts['BYDAY']) || isset($parts['BYMONTHDAY']);
             $parts['BYMONTHDAY'] = implode(',', array_unique($numbers[0]));
@@ -282,7 +293,7 @@ final class NoteRepeatParser
             $invalid = true;
         }
         if ($repeat === Repeat::Never && ! $hasPrefix) {
-            return ['repeat' => $repeat, 'spans' => [], 'unreadable' => $invalid, 'rule' => null];
+            return ['repeat' => $repeat, 'spans' => [], 'unreadable' => $invalid || NoteVocabulary::contains('repeat_unsupported', $text), 'rule' => null];
         }
         if ($repeat !== Repeat::Never) {
             if (preg_match('~(?:for|(?:ends?\s+)?after|trong|(?:kết thúc\s+)?sau)\s+(\d+)\s+(?:times?|occurrences?|lần)(?!\p{L})~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
@@ -318,6 +329,7 @@ final class NoteRepeatParser
         }
         $invalid = $invalid || $repeat === Repeat::Never || $interval < 1 || $interval > 999
             || NoteVocabulary::contains('repeat_prefix', $remaining)
+            || NoteVocabulary::contains('repeat_unsupported', $remaining)
             || preg_match('~\d[\d.,/+-]*\s+(?:times?|lần)(?!\p{L})~iu', $remaining) === 1
             || ($repeat === Repeat::Monthly && isset($parts['BYDAY']) && NoteVocabulary::findAll('weekday', $remaining) !== [])
             || preg_match('~(?<!\p{L})(?:except|excluding|ngoại trừ|bỏ qua|kết thúc|ends)(?!\p{L})~iu', $remaining) === 1

@@ -106,7 +106,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
 | Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
 | Reminder | *exam* or *quiz* → 1 day before. Otherwise, any task with a time → 15 min before. Otherwise none. A reminder that would fall before `now` → none ([NU-E25](#nu-e25)) |
-| Title | Remove date, time, pure priority and repeat phrases, and lead-ins. Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
+| Title | Remove the chosen date phrase, time, pure priority and repeat phrases, and lead-ins. With several dates, keep the other date phrases per [NU-E6](#nu-e6). Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
 
 **Low confidence** (sent to the LLM when it's enabled, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)):
 - A date- or time-like token the rules couldn't parse (`31/2`, `3pmish`)
@@ -127,6 +127,7 @@ English and Vietnamese repeat phrases can specify a frequency/interval, selected
 | `gym every month on day 1, 15, 25` | Days 1, 15 and 25 of each month |
 | `gym every first Monday, last Friday of month` | The first Monday and last Friday of each month |
 | `pay rent every month on the 15th` | The 15th of each month |
+| `gym every month on first and third Monday` | The first and third Mondays; shared-weekday ordinal lists also accept commas |
 | `test every second monday of month` | The second Monday of each month |
 | `họp thứ sáu cuối cùng mỗi tháng` | The last Friday of each month |
 | `birthday every year on February 29` | February 29 in leap years |
@@ -135,7 +136,7 @@ English and Vietnamese repeat phrases can specify a frequency/interval, selected
 
 **Multiple tasks per scheduled day.** `visit house 3 times every day`, `visit house three times a day` and `đi gym mỗi ngày 3 lần` create three independent daily series, labelled `Visit house (1/3)`, `(2/3)` and `(3/3)`, without inventing times. A series-end count is separate: `every day for 3 occurrences` creates one series ending after three dates; `3 times every day for 2 occurrences` creates three series, each ending after two dates. The expanded creates count toward the 30-item limit and the usual confirmation threshold. Conflicting counts or incomplete time allocations keep the original text as low confidence.
 
-The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text stays low confidence.
+The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text stays low confidence. Ambiguous repeat words such as `biweekly` also stay low confidence. A [manual case list](../../backend/tests/Manual/note-cases.md) records inputs and expected results for dates, title cleanup, recurrence, splitting and commands.
 
 ### 2.6 Safety and status (NU-5, BR-01, BR-02)
 
