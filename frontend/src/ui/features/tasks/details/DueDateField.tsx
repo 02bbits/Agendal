@@ -1,7 +1,8 @@
 import type { ReactElement } from "react";
+import { DatePicker } from "../../../components/DatePicker";
 import { CalendarIcon } from "../../../components/icons";
-import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
+import type { WeekStart } from "../../../domain/types";
 import { SettingsRow } from "./SettingsRow";
 
 export interface DueDateFieldProps {
@@ -9,31 +10,24 @@ export interface DueDateFieldProps {
   todayDate: string;
   onSave: (due_date: string | null) => void;
   variant?: "panel" | "screen";
+  weekStart?: WeekStart;
 }
 
 export function DueDateField({
   value,
   onSave,
   variant = "panel",
+  weekStart = "mon",
 }: DueDateFieldProps): ReactElement {
-  const isScreen = variant === "screen";
-
   const control = (
-    <div className="relative inline-flex items-center">
-      <input
-        id="task-due"
-        type="date"
-        aria-label={t("task.due")}
-        value={value ?? ""}
-        onChange={(e) => onSave(e.target.value || null)}
-        className={cx(
-          "focus-ring cursor-pointer border-0 text-ink focus:outline-none",
-          isScreen
-            ? "bg-transparent py-1 text-right text-body text-ink-secondary"
-            : "rounded-full bg-fill px-3 py-1 text-footnote font-medium",
-        )}
-      />
-    </div>
+    <DatePicker
+      id="task-due"
+      label={t("task.due")}
+      value={value}
+      onChange={(val) => onSave(val || null)}
+      weekStart={weekStart}
+      variant={variant}
+    />
   );
 
   return (

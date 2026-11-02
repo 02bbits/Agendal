@@ -86,8 +86,10 @@ describe("Task details fields (T-TK-10)", () => {
 
   it("saves start time", async () => {
     const { patchSpy } = open(task({ title: "Task", due_date: TODAY }));
-    const input = screen.getByLabelText(t("task.start"));
-    fireEvent.change(input, { target: { value: "09:00" } });
+    const trigger = screen.getByRole("button", { name: t("task.start") });
+    await userEvent.click(trigger);
+    const option = screen.getByRole("option", { name: "09:00" });
+    await userEvent.click(option);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -101,8 +103,10 @@ describe("Task details fields (T-TK-10)", () => {
     const { patchSpy } = open(
       task({ title: "Task", due_date: TODAY, start_time: "09:00" }),
     );
-    const input = screen.getByLabelText(t("task.end"));
-    fireEvent.change(input, { target: { value: "10:00" } });
+    const trigger = screen.getByRole("button", { name: t("task.end") });
+    await userEvent.click(trigger);
+    const option = screen.getByRole("option", { name: "10:00" });
+    await userEvent.click(option);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -122,8 +126,13 @@ describe("Task details fields (T-TK-10)", () => {
         reminder: "15m",
       }),
     );
-    const dateInput = screen.getByLabelText(t("task.due"));
-    fireEvent.change(dateInput, { target: { value: "2026-11-01" } });
+    const trigger = screen.getByRole("button", { name: t("task.due") });
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByRole("button", { name: t("date.next_month") }),
+    );
+    const day1 = screen.getAllByRole("gridcell", { name: "1" })[0]!;
+    await userEvent.click(day1);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -231,8 +240,10 @@ describe("Task details fields (T-TK-10)", () => {
         reminder: reminder === "none" ? "15m" : "none",
       }),
     );
-    const select = screen.getByLabelText(t("task.reminder"));
-    await userEvent.selectOptions(select, reminder);
+    const trigger = screen.getByRole("button", { name: t("task.reminder") });
+    await userEvent.click(trigger);
+    const optionLabel = t(`reminder.${reminder}` as CopyKey);
+    await userEvent.click(screen.getByRole("option", { name: optionLabel }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -250,8 +261,10 @@ describe("Task details fields (T-TK-10)", () => {
         repeat: repeat === "never" ? "daily" : "never",
       }),
     );
-    const select = screen.getByLabelText(t("task.repeat"));
-    await userEvent.selectOptions(select, repeat);
+    const trigger = screen.getByRole("button", { name: t("task.repeat") });
+    await userEvent.click(trigger);
+    const optionLabel = t(`repeat.${repeat}` as CopyKey);
+    await userEvent.click(screen.getByRole("option", { name: optionLabel }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -283,8 +296,9 @@ describe("Task details fields (T-TK-10)", () => {
 
   it("moves task to a project and back to No project", async () => {
     const { patchSpy } = open(task({ title: "Task", project_id: null }));
-    const select = screen.getByLabelText(t("task.project"));
-    await userEvent.selectOptions(select, "p-hci");
+    const trigger = screen.getByRole("button", { name: t("task.project") });
+    await userEvent.click(trigger);
+    await userEvent.click(screen.getByRole("option", { name: "HCI" }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -293,7 +307,10 @@ describe("Task details fields (T-TK-10)", () => {
       ),
     );
 
-    await userEvent.selectOptions(select, "");
+    await userEvent.click(trigger);
+    await userEvent.click(
+      screen.getByRole("option", { name: t("project.none") }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -305,11 +322,11 @@ describe("Task details fields (T-TK-10)", () => {
 
   it("shows project name when projects are loaded and contain task's project", () => {
     open(task({ title: "Task with Project", project_id: "p-hci" }));
-    const select = screen.getByLabelText(
-      t("task.project"),
-    ) as HTMLSelectElement;
-    expect(select.disabled).toBe(false);
-    expect(select.value).toBe("p-hci");
+    const trigger = screen.getByRole("button", {
+      name: t("task.project"),
+    }) as HTMLButtonElement;
+    expect(trigger.disabled).toBe(false);
+    expect(trigger.textContent).toContain("HCI");
     expect(screen.getByText("HCI")).toBeTruthy();
   });
 
@@ -318,10 +335,10 @@ describe("Task details fields (T-TK-10)", () => {
       task({ title: "No Project Task", project_id: null }),
       { projectsStatus: "failed" },
     );
-    const select = screen.getByLabelText(
-      t("task.project"),
-    ) as HTMLSelectElement;
-    expect(select.disabled).toBe(true);
+    const trigger = screen.getByRole("button", {
+      name: t("task.project"),
+    }) as HTMLButtonElement;
+    expect(trigger.disabled).toBe(true);
     expect(
       screen.getAllByText(t("project.load_failed")).length,
     ).toBeGreaterThan(0);
@@ -344,34 +361,33 @@ describe("Task details fields (T-TK-10)", () => {
 });
 
 describe("Schedule validation (T-TK-20)", () => {
-  it("shows end_before_start linked by aria-describedby with role alert and sends no patch", async () => {
+  it("offers only end times after start, so the UI can't break TK-3", async () => {
+    open(
+      task({ title: "Schedule Task", due_date: TODAY, start_time: "14:00" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: t("task.end") }));
+    expect(screen.queryByRole("option", { name: "13:00" })).toBeNull();
+    expect(screen.queryByRole("option", { name: "14:00" })).toBeNull();
+    expect(screen.getByRole("option", { name: "14:15" })).toBeTruthy();
+  });
+
+  it("shows end_before_start for a stored bad schedule, linked by aria-describedby, and a valid end clears it", async () => {
     const { patchSpy } = open(
       task({
         title: "Schedule Task",
         due_date: TODAY,
         start_time: "14:00",
-        end_time: null,
+        end_time: "13:00",
       }),
     );
-    const endInput = screen.getByLabelText(t("task.end"));
-
-    // End earlier than start
-    fireEvent.change(endInput, { target: { value: "13:00" } });
+    const end = screen.getByRole("button", { name: t("task.end") });
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toBe(t("task.end_before_start"));
-    expect(endInput.getAttribute("aria-describedby")).toBe("task-end-error");
-    expect(endInput.getAttribute("aria-invalid")).toBe("true");
+    expect(end.getAttribute("aria-describedby")).toBe("task-end-error");
     expect(patchSpy).not.toHaveBeenCalled();
 
-    // End equal to start
-    fireEvent.change(endInput, { target: { value: "14:00" } });
-    expect(screen.getByRole("alert").textContent).toBe(
-      t("task.end_before_start"),
-    );
-    expect(patchSpy).not.toHaveBeenCalled();
-
-    // Valid end time clears error and sends patch
-    fireEvent.change(endInput, { target: { value: "15:00" } });
+    await userEvent.click(end);
+    await userEvent.click(screen.getByRole("option", { name: "15:00" }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -409,10 +425,10 @@ describe("Field edge cases and accessibility", () => {
 
   it("disables reminder without a due date and shows explanation", () => {
     open(task({ title: "No Date", due_date: null }));
-    const select = screen.getByLabelText(
-      t("task.reminder"),
-    ) as HTMLSelectElement;
-    expect(select.disabled).toBe(true);
+    const trigger = screen.getByRole("button", {
+      name: t("task.reminder"),
+    }) as HTMLButtonElement;
+    expect(trigger.disabled).toBe(true);
     expect(screen.getByText(t("task.reminder_needs_date"))).toBeTruthy();
   });
 

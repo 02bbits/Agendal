@@ -71,7 +71,7 @@ describe("Task details page /tasks/[id]", () => {
 
     const titleInput = await screen.findByDisplayValue("Buy groceries");
     expect(titleInput).toBeTruthy();
-    expect(screen.getByDisplayValue("2026-10-31")).toBeTruthy();
+    expect(screen.getByRole("button", { name: t("task.due") })).toBeTruthy();
     expect(screen.getByLabelText(t("task.priority"))).toBeTruthy();
   });
 
@@ -319,7 +319,7 @@ describe("Task details page /tasks/[id]", () => {
     expect(screen.getAllByText("Alpha Project").length).toBeGreaterThanOrEqual(
       1,
     );
-    expect(select.value).toBe("p-1");
+    expect(select.textContent).toContain("Alpha Project");
 
     // No PATCH was sent
     const patchCalls = fetchMock.mock.calls.filter(

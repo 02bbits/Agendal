@@ -14,6 +14,7 @@ import {
   type Project,
   type Task,
   type TimeFormat,
+  type WeekStart,
 } from "@/ui";
 import { useAppFrame } from "../../AppFrame";
 import {
@@ -220,6 +221,7 @@ export function ProjectClient({ id }: { id: string }) {
           loadingMore={loadingMore}
           today={today}
           timeFormat={settings.timeFormat}
+          weekStart={settings.weekStart}
           onBack={() => navigate(ROUTES.projects)}
           onRenameProject={() => setRenaming(true)}
           onDeleteProject={handleDelete}
@@ -264,6 +266,7 @@ function ProjectContent({
   loadingMore,
   today,
   timeFormat,
+  weekStart,
   onBack,
   onRenameProject,
   onDeleteProject,
@@ -275,6 +278,7 @@ function ProjectContent({
   loadingMore: boolean;
   today: string;
   timeFormat: TimeFormat;
+  weekStart: WeekStart;
   onBack: () => void;
   onRenameProject: () => void;
   onDeleteProject: (action: ProjectTaskAction) => Promise<void>;
@@ -318,6 +322,7 @@ function ProjectContent({
           taskId={selectedTaskId}
           onClose={handleClosePanel}
           projects={[project]}
+          weekStart={weekStart}
         />
       )}
     </>
