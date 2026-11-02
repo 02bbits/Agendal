@@ -32,7 +32,7 @@ import {
 import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
-import { createProject, listProjects } from "@/lib/projectApi";
+import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
@@ -393,20 +393,20 @@ export function AppFrame({ children }: { children: ReactNode }) {
       })
       .catch(() => {});
 
+    getProject("none")
+      .then((data) => {
+        if (data && data.progress) {
+          setNoProjectCount(data.progress.total - data.progress.done);
+        }
+      })
+      .catch(() => {});
+
     inbox()
       .then((data) => {
         if (data) {
           const overdue = data.overdue?.length ?? 0;
           const today = data.today?.length ?? 0;
           setInboxCount(overdue + today);
-
-          const allTasks = [
-            ...(data.overdue ?? []),
-            ...(data.today ?? []),
-            ...(data.no_date ?? []),
-          ];
-          const unassigned = allTasks.filter((t) => !t.project_id && !t.done);
-          setNoProjectCount(unassigned.length);
         }
       })
       .catch(() => {});
@@ -486,7 +486,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         })}
         <li key="no-project">
           <Link
-            href={ROUTES.projects}
+            href={ROUTES.noProject}
             navigate={navigate}
             className="focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill"
           >

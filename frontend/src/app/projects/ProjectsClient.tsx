@@ -9,7 +9,7 @@ import {
   type ProjectWithCounts,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
-import { listProjects } from "@/lib/projectApi";
+import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
 import { ProjectsModals } from "./ProjectsModals";
@@ -17,6 +17,10 @@ import { ProjectsModals } from "./ProjectsModals";
 export function ProjectsClient() {
   const { navigate, user, showToast } = useAppFrame();
   const [projects, setProjects] = useState<ProjectWithCounts[]>([]);
+  const [noProjectCounts, setNoProjectCounts] = useState<{
+    open: number;
+    done: number;
+  }>({ open: 0, done: 0 });
   const [creating, setCreating] = useState(false);
   const [editingProject, setEditingProject] =
     useState<ProjectWithCounts | null>(null);
@@ -29,6 +33,17 @@ export function ProjectsClient() {
     listProjects()
       .then((data) => {
         if (Array.isArray(data)) setProjects(data);
+      })
+      .catch(() => {});
+
+    getProject("none")
+      .then((res) => {
+        if (res && res.progress) {
+          setNoProjectCounts({
+            open: res.progress.total - res.progress.done,
+            done: res.progress.done,
+          });
+        }
       })
       .catch(() => {});
   }, []);
@@ -74,6 +89,7 @@ export function ProjectsClient() {
     <>
       <ProjectsScreen
         projects={projects}
+        noProjectCounts={noProjectCounts}
         accountInitial={accountInitial}
         overline={formatLongDate(today)}
         onNewProject={() => setCreating(true)}

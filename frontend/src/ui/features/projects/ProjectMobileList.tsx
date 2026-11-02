@@ -76,24 +76,30 @@ export function ProjectMobileList({
 
       {/* No project card */}
       <div
-        className="mt-3 flex items-center justify-between rounded-2xl border border-separator bg-surface p-4 shadow-xs"
+        className="mt-3 overflow-hidden rounded-2xl border border-separator bg-surface shadow-xs"
         role="group"
         aria-label={`${t("project.none")}, ${tc("project.task_count", noProjectTaskCount)}`}
       >
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span
-            className="inline-block size-2.5 shrink-0 rounded-full"
-            style={{ background: "var(--color-project-gray)" }}
-            aria-hidden="true"
-          />
-          <span className="truncate text-body font-semibold text-ink">
-            {t("project.none")}
-          </span>
-        </div>
-        <div className="flex shrink-0 items-center gap-2 text-footnote text-ink-secondary">
-          <span>{tc("project.task_count", noProjectTaskCount)}</span>
-          <ChevronRightIcon size={18} className="text-ink-tertiary" />
-        </div>
+        <Link
+          href={ROUTES.noProject}
+          navigate={navigate}
+          className="focus-ring flex items-center justify-between p-4 transition-colors hover:bg-fill-secondary"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span
+              className="inline-block size-2.5 shrink-0 rounded-full"
+              style={{ background: "var(--color-project-gray)" }}
+              aria-hidden="true"
+            />
+            <span className="truncate text-body font-semibold text-ink">
+              {t("project.none")}
+            </span>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-footnote text-ink-secondary">
+            <span>{tc("project.task_count", noProjectTaskCount)}</span>
+            <ChevronRightIcon size={18} className="text-ink-tertiary" />
+          </div>
+        </Link>
       </div>
     </div>
   );
