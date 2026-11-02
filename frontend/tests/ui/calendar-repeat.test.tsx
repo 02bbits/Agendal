@@ -134,9 +134,8 @@ it("ignores more clicks on a task's tick while it settles after Complete", async
   const api: TaskApi = {
     complete: vi.fn(async () => ({
       task: { ...task, done: true },
-      next: null,
     })),
-    reopen: vi.fn(async () => ({ task, next: null })),
+    reopen: vi.fn(async () => ({ task })),
     patch: vi.fn(async () => task),
   };
   render(
