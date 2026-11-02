@@ -20,6 +20,7 @@ export interface UseTaskSyncReturn {
     onError?: TaskSaveErrorCallback,
   ) => void;
   getTask: (id: string) => Task | undefined;
+  acceptOccurrence: (task: Task, remove: boolean) => void;
 }
 
 export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
@@ -38,6 +39,18 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
     (id: string) => rowsRef.current.find((t) => t.id === id),
     [],
   );
+
+  const acceptOccurrence = useCallback((task: Task, remove: boolean) => {
+    if (remove) {
+      rowsRef.current = rowsRef.current.filter((row) => row.id !== task.id);
+      syncState.current.confirmed.delete(task.id);
+      syncState.current.writers.delete(task.id);
+    } else if (!rowsRef.current.some((row) => row.id === task.id)) {
+      rowsRef.current = [...rowsRef.current, task];
+      syncState.current.confirmed.set(task.id, task);
+    }
+    setTasks(rowsRef.current);
+  }, []);
 
   const change = useCallback(
     (
@@ -101,5 +114,5 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
     [replaceRow],
   );
 
-  return { tasks, change, getTask };
+  return { tasks, change, getTask, acceptOccurrence };
 }

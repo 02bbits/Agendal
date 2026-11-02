@@ -477,7 +477,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
     expect(items[2]).toContain("Task 3");
   });
 
-  it("review 2: a `next` in the response is not added to the list (Refs #21)", async () => {
+  it("adds the generated calendar occurrence returned by the server", async () => {
     const tasks = [task({ id: "t-1", title: "Task 1", due_date: TODAY })];
     const deferred = deferredApi({ tasks });
     const { wrap } = setup(tasks, deferred.api);
@@ -502,7 +502,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
       });
     });
 
-    expect(screen.queryByText("Recurring next instance")).toBeNull();
+    expect(screen.getByText("Recurring next instance")).toBeTruthy();
   });
 
   it("bug 3: a field changed while complete is in flight survives its failure (Refs #21)", async () => {

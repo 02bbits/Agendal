@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+use App\Services\Clock\WallTime;
+
 final class NoteTimeParser
 {
     /** NU-E7: a bare hour from 1 to this one means the afternoon ("at 2" → 14:00); 7–11 stay morning. */
@@ -22,6 +24,9 @@ final class NoteTimeParser
             fn (array $word): string => str_repeat(' ', strlen($word[0])),
             NoteVocabulary::withoutLiterals($text, array_values($context->projects)),
         );
+        if ($this->durations->unreadable($readable)) {
+            return new ParsedTime(unreadable: true);
+        }
         $relative = $this->relative($readable, $context);
         if ($relative !== null) {
             return $relative;
@@ -42,7 +47,21 @@ final class NoteTimeParser
     {
         foreach ($this->durations->findAll($text) as $duration) {
             if (NoteDurations::isClock($duration['unit'])) {
-                $at = NoteDurations::add($context->local(), $duration['amount'], $duration['unit']);
+                $now = $context->local();
+                $secondsPerUnit = NoteDurations::MINUTES[$duration['unit']] * 60;
+                if ($duration['amount'] > intdiv(PHP_INT_MAX - $now->getTimestamp(), $secondsPerUnit)) {
+                    return new ParsedTime(unreadable: true);
+                }
+                // Relative clock durations are elapsed time, including a DST clock change.
+                $at = $now->setTimestamp($now->getTimestamp() + $duration['amount'] * $secondsPerUnit);
+                if ((int) $at->format('Y') > 9999) {
+                    return new ParsedTime(unreadable: true);
+                }
+                $encoded = WallTime::toUtc($at->format('Y-m-d'), $at->format('H:i'), $context->timezone);
+                if ($encoded->getTimestamp() !== $at->getTimestamp() - (int) $at->format('s')) {
+                    // A second DST occurrence cannot be expressed by this floating-minute contract.
+                    return new ParsedTime(unreadable: true);
+                }
 
                 return new ParsedTime($at->format('H:i'), spans: [[$duration['offset'], $duration['length']]], date: $at->format('Y-m-d'));
             }
