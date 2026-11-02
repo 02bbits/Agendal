@@ -81,6 +81,10 @@ The anchor is stored separately from the current occurrence's `due_date`. For ex
 | `FREQ=DAILY;INTERVAL=3;COUNT=5` | Every three days, five occurrences in total |
 | `FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231T235959Z` | Mondays through 31 December 2026; no occurrence after that local date |
 
+### Notes with multiple tasks per scheduled day
+
+`POST /notes` expands an explicit per-day count into separate ordinary plan `create` entries. For example, `visit house 3 times every day` produces refs `i1`, `i1-2`, `i1-3`, numbered titles and three independent daily rules, with `start_time: null`. Each saved task follows the same complete/reopen contract below. The expanded creates count toward the note limit of 30; exceeding it returns `422 note.too_many_items` without applying a partial plan. A per-day count is distinct from RRULE `COUNT`, which limits the number of recurrence dates in each series.
+
 ### Completing and reopening
 
 Both endpoints return `200 {task, next?}`, with different meanings for `next`:

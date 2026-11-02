@@ -67,6 +67,8 @@ Every note goes through the same steps, on the server, in one request:
   - The fragment **starts no task of its own**: it doesn't open with a task verb, command verb, skip prefix, or a date, time, priority or repeat phrase ("mai gọi mẹ", "26 Oct meeting"), and it names no project, project keyword the user has, or task word (*exam, quiz, deadline, submit* …). Date, time, priority and repeat phrases that **close** the fragment describe the whole list: "mua sữa, trứng và bánh mì sáng mai" is one task for tomorrow morning.
   - A fragment of **only** date, time, priority and repeat phrases ("tomorrow 9am", "không gấp") always joins the item before it.
   
+  Calendar lists are read as a whole before comma splitting, independently of the task verb: `gym 2, 4, 6 hàng tuần` and `gym every month on day 1, 15, 25` each describe one task. A following independent task still splits. Commas inside URLs, emails and project names preserve their original text.
+
   Only commas merge. Newlines, semicolons, full stops and "then" always split. When unsure, the rule splits, as the PRD does. The 30-item limit counts items after merging.
 - At the start of each line, strip bullets (`-`, `*`, `•`, `–`), numbering (`1.`, `1)`, `a)`) and checkboxes (`[ ]`, `[x]`) ([NU-E20](#nu-e20)).
 - Trim each item and drop empty ones. Known abbreviations: Dr, Prof, Mr, Mrs, Ms, St, No, vs, etc, e.g, i.e.
@@ -122,12 +124,16 @@ English and Vietnamese repeat phrases can specify a frequency/interval, selected
 | `gym every 3 days` | Once every three days |
 | `tập gym 2 4 6 hàng tuần` | Monday, Wednesday and Friday each week |
 | `gym every 2 weeks on Monday and Wednesday` | Those two weekdays in every second week |
+| `gym every month on day 1, 15, 25` | Days 1, 15 and 25 of each month |
+| `gym every first Monday, last Friday of month` | The first Monday and last Friday of each month |
 | `pay rent every month on the 15th` | The 15th of each month |
 | `test every second monday of month` | The second Monday of each month |
 | `họp thứ sáu cuối cùng mỗi tháng` | The last Friday of each month |
 | `birthday every year on February 29` | February 29 in leap years |
 | `gym every 3 days for 5 occurrences` | Five occurrences, including the first |
 | `tập gym mỗi 2 ngày đến 15/11/2026` | Every two days through the named date |
+
+**Multiple tasks per scheduled day.** `visit house 3 times every day`, `visit house three times a day` and `đi gym mỗi ngày 3 lần` create three independent daily series, labelled `Visit house (1/3)`, `(2/3)` and `(3/3)`, without inventing times. A series-end count is separate: `every day for 3 occurrences` creates one series ending after three dates; `3 times every day for 2 occurrences` creates three series, each ending after two dates. The expanded creates count toward the 30-item limit and the usual confirmation threshold. Conflicting counts or incomplete time allocations keep the original text as low confidence.
 
 The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text stays low confidence.
 

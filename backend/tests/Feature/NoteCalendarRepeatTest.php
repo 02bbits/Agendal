@@ -99,3 +99,41 @@ it('does not resurrect a deliberately deleted next occurrence on a completion re
     $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonMissingPath('next');
     expect(Task::withTrashed()->findOrFail($child)->trashed())->toBeTrue();
 });
+
+it('persists three independent daily series and replays the same note without creating more', function () {
+    $input = ['client_id' => (string) Str::uuid(), 'text' => 'visit house 3 times every day', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'];
+    $response = $this->postJson('/api/v1/notes', $input)->assertCreated()
+        ->assertJsonPath('note.status', 'done')->assertJsonCount(3, 'changes');
+    $ids = array_column(array_column($response->json('changes'), 'task'), 'id');
+    expect(array_unique($ids))->toHaveCount(3);
+    foreach ($ids as $i => $id) {
+        $task = Task::findOrFail($id);
+        expect($task->title)->toBe('Visit house ('.($i + 1).'/3)')
+            ->and($task->start_time)->toBeNull()->and($task->repeat_rule)->toBe('FREQ=DAILY;INTERVAL=1;WKST=MO');
+        $next = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()
+            ->assertJsonPath('next.due_date', '2026-11-02')->json('next.id');
+        $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonPath('next.id', $next);
+    }
+    $this->postJson('/api/v1/notes', [...$input, 'text' => 'ignored replay'])->assertOk()->assertJsonCount(3, 'changes');
+    expect(Task::count())->toBe(6);
+});
+
+it('applies a comma-separated monthly calendar as one series', function () {
+    $response = $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => 'gym every month on day 1, 15, 25',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(1, 'changes')
+        ->assertJsonPath('changes.0.task.repeat_rule', 'FREQ=MONTHLY;INTERVAL=1;WKST=MO;BYMONTHDAY=1,15,25');
+    $id = $response->json('changes.0.task.id');
+    $next = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()
+        ->assertJsonPath('next.due_date', '2026-11-15')->json('next.id');
+    $this->postJson("/api/v1/tasks/$next/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonPath('next.due_date', '2026-11-25');
+});
+
+it('rejects multiplicity exceeding one note limit without persisting partial tasks', function () {
+    $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => 'gym 20 times every day; visit house 20 times every day',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertUnprocessable()->assertJsonPath('error.code', 'note.too_many_items');
+    expect(Task::count())->toBe(0)->and(Note::count())->toBe(0);
+});

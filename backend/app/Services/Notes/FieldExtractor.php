@@ -40,6 +40,11 @@ final class FieldExtractor
         $repeat = $this->repeats->parse($readable, $context);
         // An unsupported recurrence must not become a one-off date from a weekday inside it.
         $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($readable, $context);
+        if (($repeat['rule'] !== null && $time->unreadable) || ($repeat['copies'] > 1 && $time->start !== null)) {
+            // One supplied time does not tell us when the other copies happen. Preserve the whole request.
+            $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
+            $time = new ParsedTime;
+        }
         $dateText = $readable;
         foreach ($repeat['spans'] as [$offset, $length]) {
             $dateText = substr_replace($dateText, str_repeat(' ', $length), $offset, $length);
@@ -81,6 +86,7 @@ final class FieldExtractor
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
                 || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null),
             repeatRule: $repeat['rule'],
+            copies: $repeat['copies'] ?? 1,
         );
     }
 
@@ -115,6 +121,7 @@ final class FieldExtractor
             reminder: $this->reminder($readable, $at->dueDate, $start, $context),
             lowConfidence: $fields->lowConfidence || $at->lowConfidence,
             repeatRule: $fields->repeatRule,
+            copies: $fields->copies,
         );
     }
 

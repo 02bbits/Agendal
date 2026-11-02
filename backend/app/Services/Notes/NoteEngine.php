@@ -7,6 +7,7 @@ namespace App\Services\Notes;
 use App\Enums\ItemKind;
 use App\Enums\NoteEngineKind;
 use App\Enums\SkipReason;
+use Illuminate\Validation\ValidationException;
 
 /**
  * NU §2.1 steps 3–10 in rules mode: split, classify, extract, match, validate, status and name.
@@ -52,6 +53,9 @@ final class NoteEngine
             $planned = $expired
                 ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'low' => false]
                 : $this->planItem($ref, $item, $context, $openTasks, $doneTasks);
+            if (count($plan['create']) + count($planned['plan']['create']) > (int) config('notes.max_items')) {
+                throw ValidationException::withMessages(['text' => ['note.too_many_items']]);
+            }
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
@@ -132,9 +136,23 @@ final class NoteEngine
         if ($fields->title === '') {
             return $this->skipped($ref, $item, SkipReason::Skip);
         }
-        $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
+        $entries = [];
+        $duplicate = $this->duplicateOf($fields, $openTasks, $context);
+        for ($copy = 1; $copy <= $fields->copies; $copy++) {
+            $entry = $this->createEntry($copy === 1 ? $ref : $ref.'-'.$copy, $fields, $duplicate);
+            if ($fields->copies > 1) {
+                $suffix = ' ('.$copy.'/'.$fields->copies.')';
+                $limit = (int) config('notes.title_limit') - mb_strlen($suffix);
+                $entry['title'] = mb_substr($fields->title, 0, $limit).$suffix;
+                $overflow = mb_substr($fields->title, $limit);
+                if ($overflow !== '') {
+                    $entry['notes'] = trim($overflow.' '.($fields->notes ?? ''));
+                }
+            }
+            $entries[] = $entry;
+        }
 
-        return ['plan' => [...self::EMPTY_PLAN, 'create' => [$entry]], 'low' => $fields->lowConfidence];
+        return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'low' => $fields->lowConfidence];
     }
 
     /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
