@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Activity, Suspense } from "react";
 import {
   act,
   fireEvent,
@@ -467,5 +467,84 @@ describe("Task details page /tasks/[id]", () => {
 
     await screen.findByDisplayValue("Mobile Axe Task");
     await expectAxeCleanInBothThemes(view!.container);
+  });
+
+  it("ticking done shows the Completed toast with Undo", async () => {
+    const open = task({ id: "t-1", title: "Buy groceries" });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-1") return json(200, open);
+      if (url === "/api/v1/tasks/t-1/complete")
+        return json(200, { task: { ...open, done: true } });
+      if (url === "/api/v1/projects") return json(200, []);
+      return json(404, {});
+    });
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: t("task.complete", { title: "Buy groceries" }),
+      }),
+    );
+    expect(
+      await screen.findByText(t("task.completed", { title: "Buy groceries" })),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: t("common.undo") })).toBeTruthy();
+  });
+
+  it("shows the server's state again when the hidden page comes back (reopened elsewhere)", async () => {
+    let server = task({ id: "t-1", title: "Buy groceries" });
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-1") return json(200, server);
+      if (url === "/api/v1/tasks/t-1/complete") {
+        server = { ...server, done: true };
+        return json(200, { task: server });
+      }
+      if (url === "/api/v1/projects") return json(200, []);
+      return json(404, {});
+    });
+    // Next keeps a left route mounted inside a hidden <Activity>
+    const page = (mode: "visible" | "hidden") => (
+      <AppFrame>
+        <Suspense>
+          <Activity mode={mode}>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-1" })} />
+          </Activity>
+        </Suspense>
+      </AppFrame>
+    );
+    let view!: ReturnType<typeof render>;
+    await act(async () => {
+      view = render(page("visible"));
+    });
+    await userEvent.click(
+      await screen.findByRole("checkbox", {
+        name: t("task.complete", { title: "Buy groceries" }),
+      }),
+    );
+    await screen.findByRole("checkbox", {
+      name: t("task.reopen", { title: "Buy groceries" }),
+    });
+
+    // Leave, reopen the task from the project list, come back
+    await act(async () => view.rerender(page("hidden")));
+    server = { ...server, done: false, done_at: null };
+    await act(async () => view.rerender(page("visible")));
+
+    const tick = await screen.findByRole("checkbox", {
+      name: t("task.complete", { title: "Buy groceries" }),
+    });
+    expect(tick.getAttribute("aria-checked")).toBe("false");
   });
 });

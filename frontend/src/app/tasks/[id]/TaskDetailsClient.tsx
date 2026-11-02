@@ -11,6 +11,7 @@ import {
   TaskStoreProvider,
   t,
   useTaskStore,
+  Toast,
   type Project,
   type Task,
 } from "../../../ui";
@@ -66,17 +67,21 @@ function TaskDetailsContainer({
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
   return (
-    <TaskDetails
-      task={currentTask}
-      onBack={back}
-      navigate={navigate}
-      projects={projects}
-      projectsStatus={projectsStatus}
-      onRetryProjects={onRetryProjects}
-      variant="screen"
-      backLabel={getBackLabel()}
-      weekStart={weekStart}
-    />
+    <>
+      <TaskDetails
+        task={currentTask}
+        onBack={back}
+        navigate={navigate}
+        projects={projects}
+        projectsStatus={projectsStatus}
+        onRetryProjects={onRetryProjects}
+        variant="screen"
+        backLabel={getBackLabel()}
+        weekStart={weekStart}
+      />
+      {/* "Completed …" with Undo, like the lists */}
+      <Toast toast={store.toast} onDismiss={store.dismissToast} />
+    </>
   );
 }
 
@@ -97,6 +102,10 @@ export default function TaskDetailsClient({
     message?: string;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  // Bumped on every load. Next keeps this page mounted but hidden after we
+  // leave (cacheComponents), and the load runs again when we come back; a new
+  // store key makes that fresh task replace the store's old copy
+  const [loadSeq, setLoadSeq] = useState(0);
 
   const reloadProjects = () => {
     return projects()
@@ -123,6 +132,7 @@ export default function TaskDetailsClient({
         setTask(tData);
         setProjectList(pRes.data);
         setProjectsStatus(pRes.status);
+        setLoadSeq((n) => n + 1);
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -205,6 +215,7 @@ export default function TaskDetailsClient({
 
   return (
     <TaskStoreProvider
+      key={loadSeq}
       api={httpTaskApi}
       clock={appClock}
       initialTasks={[task]}
