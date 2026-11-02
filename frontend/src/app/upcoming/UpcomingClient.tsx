@@ -10,11 +10,13 @@ import {
   ListIcon,
   PlusIcon,
   ScreenHeader,
+  TaskPanel,
   TaskStoreProvider,
   Toast,
   UpcomingScreen,
   addDays,
   t,
+  useTaskPanel,
   useTaskStore,
   type Clock,
   type Project,
@@ -40,7 +42,8 @@ function UpcomingToast() {
 }
 
 export function UpcomingClient() {
-  const { navigate, user, settings, openNewTask } = useAppFrame();
+  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
     "loading",
   );
@@ -51,6 +54,9 @@ export function UpcomingClient() {
   const [loadSeq, setLoadSeq] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
+    "ready",
+  );
   const [subtitle, setSubtitle] = useState<string>("");
   const [filter, setFilter] = useState<UpcomingFilter>(() => {
     if (typeof window !== "undefined") {
@@ -91,12 +97,24 @@ export function UpcomingClient() {
     }
   };
 
+  const handleRetryProjects = () => {
+    projects()
+      .then((pData) => {
+        setProjectList(pData ?? []);
+        setProjectsStatus("ready");
+      })
+      .catch(() => {
+        setProjectsStatus("failed");
+      });
+  };
+
   const fetchData = () => {
     Promise.all([upcoming({ days: 365 }), projects()])
       .then(([upcomingData, projectsData]) => {
         const flatTasks = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
         setTasks(flatTasks);
         setProjectList(projectsData ?? []);
+        setProjectsStatus("ready");
 
         const todayStr = today(timeZone(), now());
         const limitDate = addDays(todayStr, 7);
@@ -306,7 +324,18 @@ export function UpcomingClient() {
             filter={filter}
             onFilterChange={handleFilterChange}
             viewMode={viewMode}
+            selectedTaskId={selectedTaskId}
           />
+          {isWide && selectedTaskId && (
+            <TaskPanel
+              taskId={selectedTaskId}
+              onClose={closePanel}
+              projects={projectList}
+              projectsStatus={projectsStatus}
+              onRetryProjects={handleRetryProjects}
+              weekStart={settings.weekStart}
+            />
+          )}
           <UpcomingToast />
         </TaskStoreProvider>
       )}

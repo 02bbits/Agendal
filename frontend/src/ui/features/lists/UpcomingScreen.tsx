@@ -47,6 +47,7 @@ export interface UpcomingScreenProps {
   onFilterChange?: (filter: UpcomingFilter) => void;
   showFilter?: boolean;
   viewMode?: UpcomingViewMode;
+  selectedTaskId?: string | null;
 }
 
 /** Upcoming (LV-2): from tomorrow, grouped by day, 14 days at a time, All / Scheduled / Due only. */
@@ -60,6 +61,7 @@ export function UpcomingScreen({
   onFilterChange: controlledOnFilterChange,
   showFilter = true,
   viewMode = "grid",
+  selectedTaskId,
 }: UpcomingScreenProps) {
   const store = useTaskStore();
   const [internalFilter, setInternalFilter] =
@@ -211,6 +213,7 @@ export function UpcomingScreen({
                     timeFormat={store.timeFormat}
                     onToggle={store.toggle}
                     navigate={navigate}
+                    selected={x.id === selectedTaskId}
                   />
                 ))}
               </Section>

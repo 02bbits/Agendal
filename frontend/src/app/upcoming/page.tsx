@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { UpcomingClient } from "./UpcomingClient";
 
 export default function Page() {
-  return <UpcomingClient />;
+  return (
+    <Suspense fallback={null}>
+      <UpcomingClient />
+    </Suspense>
+  );
 }
