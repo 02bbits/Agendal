@@ -363,6 +363,25 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(panel.className).toContain("w-[400px]");
   });
 
+  it("keeps the wide layout on large screens with no reserved lane", () => {
+    const { unmount } = render(
+      <AppShell tab="inbox">
+        <p>content</p>
+      </AppShell>,
+    );
+    const contentCol = screen.getByRole("main").parentElement!;
+    expect(contentCol.className).toContain("lg:max-w-none");
+    expect(screen.getByRole("main").closest(".xl\\:pr-\\[400px\\]")).toBeNull();
+
+    unmount();
+    render(
+      <AppShell tab="inbox" aside={<p>Task detail</p>}>
+        <p>content</p>
+      </AppShell>,
+    );
+    expect(screen.getByRole("main").closest(".xl\\:pr-\\[400px\\]")).toBeNull();
+  });
+
   it("leaves the sidebar out on signed-out screens", () => {
     render(
       <AppShell>

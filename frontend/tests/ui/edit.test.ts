@@ -81,6 +81,24 @@ describe("normalizePatch (TK §2.2)", () => {
     });
   });
 
+  it("clearing the due date with repeat set resets repeat to never", () => {
+    const repeating = task({
+      title: "Repeating Task",
+      due_date: TODAY,
+      start_time: "09:00",
+      end_time: "10:00",
+      reminder: "15m",
+      repeat: "weekly",
+    });
+    expect(normalizePatch(repeating, { due_date: null }, TODAY)).toEqual({
+      due_date: null,
+      start_time: null,
+      end_time: null,
+      reminder: "none",
+      repeat: "never",
+    });
+  });
+
   it("drops unchanged values so no empty patch is sent (TK-E16)", () => {
     const t = task({
       title: "Same Title",

@@ -46,6 +46,7 @@ export {
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
+export { useMediaQuery } from "./tasks/useMediaQuery";
 export {
   SETTLE_MS,
   type TaskStore,
@@ -62,12 +63,17 @@ export {
   TaskDetails,
   type TaskDetailsProps,
 } from "./tasks/details/TaskDetails";
+export { TaskPanel, type TaskPanelProps } from "./tasks/details/TaskPanel";
 export { NewTaskSheet, type NewTaskSheetProps } from "./tasks/new/NewTaskSheet";
 export {
   ProjectsScreen,
   type ProjectsScreenProps,
   type ProjectWithCounts,
 } from "./projects/ProjectsScreen";
+export {
+  ProjectMobileList,
+  type ProjectMobileListProps,
+} from "./projects/ProjectMobileList";
 export {
   ProjectScreen,
   COMPLETED_PAGE,

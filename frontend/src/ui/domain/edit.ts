@@ -66,6 +66,7 @@ export function normalizePatch(
     next.start_time = null;
     next.end_time = null;
     next.reminder = "none";
+    next.repeat = "never";
   }
 
   for (const key of Object.keys(next) as Array<keyof TaskPatch>) {

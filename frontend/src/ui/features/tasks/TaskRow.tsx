@@ -24,6 +24,7 @@ export interface TaskRowProps {
   overdue?: boolean;
   onToggle: (task: Task) => void;
   navigate?: Navigate;
+  selected?: boolean;
   /** Search highlights matched words in the title (LV-3). */
   renderTitle?: (title: string) => ReactNode;
 }
@@ -36,6 +37,7 @@ export function TaskRow({
   timeFormat,
   showDue = false,
   overdue = false,
+  selected = false,
   onToggle,
   navigate,
   renderTitle,
@@ -56,6 +58,7 @@ export function TaskRow({
     <li
       className={cx(
         "group/task relative flex min-h-[56px] items-center gap-3 border-b border-separator/60 px-4 py-3 transition-colors hover:bg-surface-hover/40 last:border-b-0",
+        selected && "bg-surface-hover/60",
         task.done && "is-done",
         overdue && "is-overdue",
       )}
@@ -90,6 +93,7 @@ export function TaskRow({
         navigate={navigate}
         className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink"
         aria-label={accessibleName}
+        aria-current={selected ? "true" : undefined}
       >
         <span
           className="line-clamp-2 text-body font-medium group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"

@@ -1,23 +1,45 @@
-import { useState, type ReactElement } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ReactElement,
+} from "react";
 import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import { NOTES_MAX } from "../../../domain/edit";
-import { Field } from "./Field";
-import { CONTROL_CLASS } from "./control";
 
 export interface NotesFieldProps {
   value: string | null;
   onSave: (notes: string | null) => void;
+  variant?: "panel" | "screen";
 }
 
-export function NotesField({ value, onSave }: NotesFieldProps): ReactElement {
+export function NotesField({
+  value,
+  onSave,
+  variant = "panel",
+}: NotesFieldProps): ReactElement {
   const [notes, setNotes] = useState(value ?? "");
   const [prevValue, setPrevValue] = useState(value);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   if (value !== prevValue) {
     setPrevValue(value);
     setNotes(value ?? "");
   }
+
+  const resize = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.max(el.scrollHeight, 100)}px`;
+  }, []);
+
+  useEffect(() => {
+    resize();
+  }, [notes, resize]);
 
   const handleBlur = () => {
     const trimmed = notes.trim() ? notes : null;
@@ -27,21 +49,38 @@ export function NotesField({ value, onSave }: NotesFieldProps): ReactElement {
     }
   };
 
+  const handleInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
+    setNotes(e.target.value);
+    resize();
+  };
+
+  const isPanel = variant === "panel";
+
   return (
-    <Field id="task-notes" label={t("task.notes")}>
+    <div className="flex flex-col gap-1.5">
+      {isPanel && (
+        <label
+          htmlFor="task-notes"
+          className="text-footnote font-medium text-ink-secondary"
+        >
+          {t("task.description")}
+        </label>
+      )}
       <textarea
+        ref={textareaRef}
         id="task-notes"
-        rows={4}
+        rows={3}
         maxLength={NOTES_MAX}
         value={notes}
         placeholder={t("task.notes_add")}
+        aria-label={t("task.notes")}
         className={cx(
-          CONTROL_CLASS,
-          "textarea focus-ring min-h-[120px] resize-y border py-3 placeholder:text-ink-tertiary aria-invalid:border-error disabled:opacity-40 [field-sizing:content]",
+          "focus-ring w-full rounded-field border border-control bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-tertiary disabled:opacity-40",
+          !isPanel && "border-0 shadow-xs",
         )}
-        onChange={(e) => setNotes(e.target.value)}
+        onChange={handleInput}
         onBlur={handleBlur}
       />
-    </Field>
+    </div>
   );
 }

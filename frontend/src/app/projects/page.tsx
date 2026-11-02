@@ -1,5 +1,10 @@
+import { Suspense } from "react";
 import { ProjectsClient } from "./ProjectsClient";
 
 export default function Page() {
-  return <ProjectsClient />;
+  return (
+    <Suspense fallback={null}>
+      <ProjectsClient />
+    </Suspense>
+  );
 }

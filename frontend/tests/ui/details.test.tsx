@@ -5,9 +5,12 @@ import {
   PRIORITIES,
   REMINDERS,
   REPEATS,
+  ProjectScreen,
   TaskDetails,
+  TaskPanel,
   t,
   useTaskStore,
+  type CopyKey,
   type Task,
 } from "../../src/ui";
 import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
@@ -160,6 +163,66 @@ describe("Task details fields (T-TK-10)", () => {
     );
   });
 
+  it("set repeat weekly, Clear sits next to Delete and resets repeat to never, Undo restores all five", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        due_date: "2026-10-30",
+        start_time: "09:00",
+        end_time: "10:00",
+        reminder: "15m",
+        repeat: "weekly",
+      }),
+    );
+
+    // Clear sits in footer beside Delete
+    const clearBtn = screen.getByRole("button", { name: t("common.clear") });
+    const deleteBtn = screen.getByRole("button", { name: t("common.delete") });
+    expect(clearBtn.parentElement).toBe(deleteBtn.parentElement);
+
+    // Click Clear
+    await userEvent.click(clearBtn);
+
+    // One PATCH with due_date null, start/end null, reminder none, repeat never
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          due_date: null,
+          start_time: null,
+          end_time: null,
+          reminder: "none",
+          repeat: "never",
+        },
+        expect.any(String),
+      ),
+    );
+
+    // No error shown, Undo toast is present
+    expect(screen.queryByText(t("error.save_failed"))).toBeNull();
+    expect(screen.getByText(t("task.due_cleared"))).toBeTruthy();
+
+    // Clear is now disabled
+    expect(clearBtn.hasAttribute("disabled")).toBe(true);
+
+    // Undo restores all five
+    const undoBtn = screen.getByRole("button", { name: t("common.undo") });
+    await userEvent.click(undoBtn);
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          due_date: "2026-10-30",
+          start_time: "09:00",
+          end_time: "10:00",
+          reminder: "15m",
+          repeat: "weekly",
+        },
+        expect.any(String),
+      ),
+    );
+  });
+
   it.each(REMINDERS)("saves reminder %s", async (reminder) => {
     const { patchSpy } = open(
       task({
@@ -205,8 +268,10 @@ describe("Task details fields (T-TK-10)", () => {
         priority: priority === "low" ? "high" : "low",
       }),
     );
-    const select = screen.getByLabelText(t("task.priority"));
-    await userEvent.selectOptions(select, priority);
+    const radio = screen.getByRole("radio", {
+      name: t(`priority.${priority}` as CopyKey),
+    });
+    await userEvent.click(radio);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -363,16 +428,14 @@ describe("Field edge cases and accessibility", () => {
     expect(screen.getByText(t("task.reminder_past"))).toBeTruthy();
   });
 
-  it("shows assistant tag as text with note link (A11Y-43)", () => {
+  it("shows assistant footnote as text (A11Y-43)", () => {
     open(task({ title: "Assistant Task", created_by: "assistant" }));
-    expect(screen.getByText(t("task.created_by_assistant"))).toBeTruthy();
     expect(
-      screen
-        .getByRole("link", {
-          name: t("task.from_note", { name: "This week" }),
-        })
-        .getAttribute("href"),
-    ).toBe("/notes/n1");
+      screen.getByText(
+        new RegExp(t("task.made_from_note", { name: "This week" })),
+      ),
+    ).toBeTruthy();
+    expect(screen.queryByRole("link")).toBeNull();
   });
 
   it("Task header checkbox completes the task", async () => {
@@ -429,5 +492,246 @@ describe("DetailsFooter", () => {
     );
     // With today 2026-10-24, created 2026-10-22 (Thu) is 2 days ago -> "Created Thu 22 Oct"
     expect(screen.getByText(/Created Thu 22 Oct/)).toBeTruthy();
+  });
+
+  it("hides 'Edited …' when updated_at === created_at", () => {
+    render(
+      <DetailsFooter
+        createdAt="2026-10-21T20:00:00Z"
+        updatedAt="2026-10-21T20:00:00Z"
+        todayDate="2026-10-24"
+        timeZone="Asia/Ho_Chi_Minh"
+        timeFormat="24h"
+      />,
+    );
+    expect(screen.queryByText(/Edited/)).toBeNull();
+    expect(screen.getByText(/Created Thu 22 Oct/)).toBeTruthy();
+  });
+});
+
+describe("Graphite design elements and review nits", () => {
+  it("has no 'Mark complete' button, Save changes, or Cancel buttons", () => {
+    open(task({ title: "Task" }));
+    expect(
+      screen.queryByRole("button", { name: t("task.mark_done") }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: t("common.save_changes") }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: t("common.cancel") }),
+    ).toBeNull();
+  });
+
+  it("renders Delete disabled with aria-disabled without onDelete, enabled with onDelete", async () => {
+    const onDelete = vi.fn();
+    const current = task({ title: "Delete Me" });
+    const ctx = setup([current]);
+    const { rerender } = render(
+      ctx.wrap(<TaskDetails task={current} onBack={() => {}} />),
+    );
+    const deleteBtn = screen.getByRole("button", { name: t("common.delete") });
+    expect(deleteBtn).toBeTruthy();
+    expect(deleteBtn.hasAttribute("disabled")).toBe(true);
+    expect(deleteBtn.getAttribute("aria-disabled")).toBe("true");
+
+    rerender(
+      ctx.wrap(
+        <TaskDetails task={current} onBack={() => {}} onDelete={onDelete} />,
+      ),
+    );
+    const enabledBtn = screen.getByRole("button", { name: t("common.delete") });
+    expect(enabledBtn.hasAttribute("disabled")).toBe(false);
+    await userEvent.click(enabledBtn);
+    expect(onDelete).toHaveBeenCalled();
+  });
+
+  it("notes textarea grows with scrollHeight on input", () => {
+    open(task({ title: "Task with Notes", notes: "Short note" }));
+    const textarea = screen.getByLabelText(
+      t("task.notes"),
+    ) as HTMLTextAreaElement;
+    expect(textarea.style.height).toBe("100px");
+    fireEvent.change(textarea, {
+      target: { value: "Line 1\nLine 2\nLine 3\nLine 4\nLine 5" },
+    });
+    expect(textarea.value).toBe("Line 1\nLine 2\nLine 3\nLine 4\nLine 5");
+  });
+
+  it("screen variant renders settings rows and saves", async () => {
+    const current = task({ title: "Screen Variant Task", priority: "low" });
+    const ctx = setup([current]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+    render(
+      ctx.wrap(
+        <TaskDetails task={current} onBack={() => {}} variant="screen" />,
+      ),
+    );
+    // Delete task button on screen variant
+    const deleteBtn = screen.getByRole("button", { name: t("task.delete") });
+    expect(deleteBtn).toBeTruthy();
+    expect(deleteBtn.hasAttribute("disabled")).toBe(true);
+
+    // Segmented priority on screen variant
+    const highRadio = screen.getByRole("radio", { name: t("priority.high") });
+    await userEvent.click(highRadio);
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { priority: "high" },
+        expect.any(String),
+      ),
+    );
+  });
+});
+
+describe("Side panel from 1280px (TaskPanel & navigation)", () => {
+  it("wide: clicking a row adds ?task=, panel shows with role region + title focus, Escape/× close and returns focus, edit updates row", async () => {
+    const t1 = task({ id: "t-wide-1", title: "Wide Task 1" });
+    const ctx = setup([t1]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+
+    let selectedId: string | null = null;
+    const routerPush = vi.fn();
+
+    function ProjectWithPanel({ isWide }: { isWide: boolean }) {
+      const store = useTaskStore();
+      const openTasks = store.tasks.filter((t) => !t.done);
+      return (
+        <div>
+          <ProjectScreen
+            project={{
+              id: "p-1",
+              name: "P1",
+              colour: "blue",
+              created_at: "2026-09-01T08:00:00Z",
+            }}
+            openTasks={openTasks}
+            today={TODAY}
+            onBack={() => {}}
+            selectedTaskId={selectedId}
+            navigate={(href) => {
+              const match = href.match(/^\/tasks\/([^/?#]+)/);
+              if (match && isWide) {
+                selectedId = match[1]!;
+                routerPush(`/projects/p-1?task=${match[1]}`);
+                return true;
+              }
+              routerPush(href);
+              return true;
+            }}
+          />
+          {isWide && selectedId && (
+            <TaskPanel
+              taskId={selectedId}
+              onClose={() => {
+                selectedId = null;
+                routerPush("/projects/p-1");
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const { rerender } = render(ctx.wrap(<ProjectWithPanel isWide={true} />));
+
+    const taskLink = screen.getByRole("link", { name: /Wide Task 1/ });
+    await userEvent.click(taskLink);
+
+    expect(routerPush).toHaveBeenCalledWith("/projects/p-1?task=t-wide-1");
+
+    rerender(ctx.wrap(<ProjectWithPanel isWide={true} />));
+
+    const panel = screen.getByRole("complementary", {
+      name: t("task.heading"),
+    });
+    expect(panel).toBeTruthy();
+
+    expect(taskLink.getAttribute("aria-current")).toBe("true");
+
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute("aria-label")).toBe(
+        t("task.title"),
+      );
+    });
+
+    const titleInput = screen.getByLabelText(t("task.title"));
+    fireEvent.change(titleInput, { target: { value: "Updated via Panel" } });
+    fireEvent.blur(titleInput);
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { title: "Updated via Panel" },
+        expect.any(String),
+      );
+    });
+
+    fireEvent.keyDown(panel, { key: "Escape" });
+    expect(routerPush).toHaveBeenCalledWith("/projects/p-1");
+
+    rerender(ctx.wrap(<ProjectWithPanel isWide={true} />));
+    expect(
+      screen.queryByRole("complementary", { name: t("task.heading") }),
+    ).toBeNull();
+  });
+
+  it("narrow: clicking a row goes to /tasks/{id}", async () => {
+    const t1 = task({ id: "t-narrow-1", title: "Narrow Task 1" });
+    const ctx = setup([t1]);
+    const navigate = vi.fn();
+
+    render(
+      ctx.wrap(
+        <ProjectScreen
+          project={{
+            id: "p-1",
+            name: "P1",
+            colour: "blue",
+            created_at: "2026-09-01T08:00:00Z",
+          }}
+          openTasks={[t1]}
+          today={TODAY}
+          onBack={() => {}}
+          navigate={(href) => {
+            const isWide = false;
+            const match = href.match(/^\/tasks\/([^/?#]+)/);
+            if (match && isWide) {
+              return true;
+            }
+            navigate(href);
+            return true;
+          }}
+        />,
+      ),
+    );
+
+    const taskLink = screen.getByRole("link", { name: /Narrow Task 1/ });
+    await userEvent.click(taskLink);
+
+    expect(navigate).toHaveBeenCalledWith("/tasks/t-narrow-1");
+  });
+
+  it("unknown/deleted task id shows error.not_found with close button", async () => {
+    const ctx = setup([]);
+    const onClose = vi.fn();
+
+    render(ctx.wrap(<TaskPanel taskId="t-missing" onClose={onClose} />));
+
+    expect(screen.getByText(t("error.not_found"))).toBeTruthy();
+    const closeButtons = screen.getAllByRole("button", {
+      name: t("common.close"),
+    });
+    expect(closeButtons.length).toBeGreaterThanOrEqual(1);
+    await userEvent.click(closeButtons[0]!);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("TaskPanel is axe clean in both themes", async () => {
+    const t1 = task({ id: "t-axe", title: "Axe Task" });
+    const ctx = setup([t1]);
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />));
+    await expectAxeCleanInBothThemes();
   });
 });

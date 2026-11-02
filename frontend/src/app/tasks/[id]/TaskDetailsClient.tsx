@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
@@ -22,28 +22,44 @@ interface ClientProps {
   id: string;
 }
 
+function getBackLabel(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const fromParam = new URLSearchParams(window.location.search).get("from");
+  if (fromParam === "inbox") return t("nav.inbox");
+  if (fromParam === "upcoming") return t("nav.upcoming");
+  if (fromParam === "projects") return t("nav.projects");
+
+  if (document.referrer) {
+    try {
+      const url = new URL(document.referrer);
+      if (url.origin === window.location.origin) {
+        if (url.pathname === "/" || url.pathname === "") return t("nav.inbox");
+        if (url.pathname.startsWith("/upcoming")) return t("nav.upcoming");
+        if (url.pathname.startsWith("/projects")) return t("nav.projects");
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return undefined;
+}
+
 function TaskDetailsContainer({
   initialTask,
   back,
   navigate,
+  projects,
   projectsStatus,
   onRetryProjects,
-  onRegisterStore,
 }: {
   initialTask: Task;
   back: () => void;
   navigate?: Navigate;
+  projects: Project[];
   projectsStatus: "ready" | "failed";
   onRetryProjects: () => void;
-  onRegisterStore: (
-    setter: (updater: (prev: Project[]) => Project[]) => void,
-  ) => void;
 }): ReactElement {
   const store = useTaskStore();
-
-  useEffect(() => {
-    onRegisterStore(store.setProjects);
-  }, [store.setProjects, onRegisterStore]);
 
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
@@ -52,8 +68,11 @@ function TaskDetailsContainer({
       task={currentTask}
       onBack={back}
       navigate={navigate}
+      projects={projects}
       projectsStatus={projectsStatus}
       onRetryProjects={onRetryProjects}
+      variant="screen"
+      backLabel={getBackLabel()}
     />
   );
 }
@@ -76,15 +95,11 @@ export default function TaskDetailsClient({
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
-  const storeProjectsRef = useRef<
-    ((updater: (prev: Project[]) => Project[]) => void) | null
-  >(null);
-
   const reloadProjects = () => {
     return projects()
       .then((pData) => {
         setProjectsStatus("ready");
-        storeProjectsRef.current?.(() => pData);
+        setProjectList(pData);
       })
       .catch(() => {
         setProjectsStatus("failed");
@@ -197,11 +212,9 @@ export default function TaskDetailsClient({
         initialTask={task}
         back={back}
         navigate={navigate}
+        projects={projectList}
         projectsStatus={projectsStatus}
         onRetryProjects={reloadProjects}
-        onRegisterStore={(setter) => {
-          storeProjectsRef.current = setter;
-        }}
       />
     </TaskStoreProvider>
   );

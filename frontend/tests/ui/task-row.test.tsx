@@ -221,6 +221,18 @@ describe("TaskRow (LV-4)", () => {
     expect(screen.getByRole("link").getAttribute("href")).toBe("/tasks/abc");
   });
 
+  it("marks the selected row with aria-current on the link and grey background", () => {
+    const { container } = renderRow(
+      task({ title: "Selected task", id: "sel-1" }),
+      { selected: true },
+    );
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("aria-current")).toBe("true");
+    expect(container.querySelector("li")!.className).toContain(
+      "bg-surface-hover/60",
+    );
+  });
+
   it("is axe clean in both themes, open and done", async () => {
     render(
       <main>

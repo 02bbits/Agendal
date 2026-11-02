@@ -48,6 +48,7 @@ export function useTaskEdit({
           start_time: row.start_time,
           end_time: row.end_time,
           reminder: row.reminder,
+          repeat: row.repeat,
         };
         showToast({
           message: t("task.due_cleared"),
