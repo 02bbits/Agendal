@@ -5,6 +5,7 @@ import { dueDateFor } from "../domain/newTask";
 import type { WeekStart } from "../domain/types";
 import { t } from "../copy";
 import { cx } from "./cx";
+import { CalendarIcon } from "./icons";
 import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
 import { Chip } from "./Chip";
@@ -61,6 +62,7 @@ export function DatePicker({
   });
 
   const isScreen = variant === "screen" || variant === "row";
+  const isIcon = variant === "icon";
   const displayValue = value ? formatDay(value, todayStr) : label;
   const chips = [
     { k: "today", d: dueDateFor("today", todayStr)!, l: t("date.today") },
@@ -83,7 +85,7 @@ export function DatePicker({
         onClose={() => setOpen(false)}
         label={label}
         triggerRef={triggerRef}
-        align={isScreen ? "right" : "left"}
+        align={isScreen || isIcon ? "right" : "left"}
         popoverClassName="max-h-[calc(100vh-16px)] w-[308px] p-3"
         trigger={
           <PickerTrigger
@@ -95,10 +97,11 @@ export function DatePicker({
             describedBy={helperId}
             disabled={disabled}
             isScreen={isScreen}
+            isIcon={isIcon}
             onToggle={() => setOpen((o) => !o)}
             onKeyDown={onTriggerKeyDown}
           >
-            {displayValue}
+            {isIcon ? <CalendarIcon size={16} /> : displayValue}
           </PickerTrigger>
         }
       >
