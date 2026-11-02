@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
 import ProjectPage from "../../src/app/projects/[id]/page";
 import { t } from "../../src/ui";
+import { TASK_COLUMN_CLASS } from "../../src/ui/features/tasks/layout";
 import { task } from "../ui/fixtures";
 
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
@@ -326,6 +327,7 @@ describe("Project detail page /projects/[id]", () => {
 
     const rowsWrapper = document.querySelector(".max-w-\\[820px\\]");
     expect(rowsWrapper).toBeTruthy();
+    expect(rowsWrapper?.className).toContain(TASK_COLUMN_CLASS);
     expect(contentCol.contains(rowsWrapper)).toBe(true);
   });
 

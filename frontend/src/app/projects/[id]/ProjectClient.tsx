@@ -1,7 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import {
   ProjectScreen,
   ProjectSheet,
@@ -10,7 +9,7 @@ import {
   TaskStoreProvider,
   Toast,
   t,
-  useMediaQuery,
+  useTaskPanel,
   useTaskStore,
   type Navigate,
   type Project,
@@ -326,46 +325,12 @@ function ProjectContent({
   navigate: Navigate;
 }) {
   const store = useTaskStore();
-  const isWide = useMediaQuery("(min-width: 1280px)");
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const selectedTaskId = searchParams.get("task");
-  const pushedTaskRef = useRef(false);
-
-  useEffect(() => {
-    if (!selectedTaskId) {
-      pushedTaskRef.current = false;
-    }
-  }, [selectedTaskId]);
-
-  const handleClosePanel = useCallback(() => {
-    if (pushedTaskRef.current) {
-      pushedTaskRef.current = false;
-      router.back();
-    } else {
-      router.replace(pathname);
-    }
-  }, [pathname, router]);
-
-  const handleNavigate: Navigate = useCallback(
-    (href: string) => {
-      const taskMatch = href.match(/^\/tasks\/([^/?#]+)/);
-      if (taskMatch && isWide) {
-        const taskId = decodeURIComponent(taskMatch[1]!);
-        if (selectedTaskId) {
-          router.replace(`${pathname}?task=${encodeURIComponent(taskId)}`);
-        } else {
-          pushedTaskRef.current = true;
-          router.push(`${pathname}?task=${encodeURIComponent(taskId)}`);
-        }
-        return true;
-      }
-      return navigate(href);
-    },
-    [isWide, pathname, router, navigate, selectedTaskId],
-  );
+  const {
+    selectedTaskId,
+    isWide,
+    navigate: handleNavigate,
+    closePanel: handleClosePanel,
+  } = useTaskPanel(navigate);
 
   // A task moved to another project leaves this screen. A task just completed
   // stays in Open with its tick while it settles, like the Inbox (LV-1)

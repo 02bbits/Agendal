@@ -59,10 +59,11 @@ describe("ProjectsScreen (PJ §2.2)", () => {
     const newProjectBtn = screen.getByRole("button", {
       name: t("project.new"),
     });
-    expect(title.parentElement).toBe(newProjectBtn.parentElement);
-    expect(title.parentElement?.className).toContain("flex");
-    expect(title.parentElement?.className).toContain("items-center");
-    expect(title.parentElement?.className).toContain("justify-between");
+    const headerRow = title.parentElement?.parentElement;
+    expect(headerRow?.contains(newProjectBtn)).toBe(true);
+    expect(headerRow?.className).toContain("flex");
+    expect(headerRow?.className).toContain("items-center");
+    expect(headerRow?.className).toContain("justify-between");
   });
 
   it("renders projects list with progress, alphabetical order and fixed No project", () => {

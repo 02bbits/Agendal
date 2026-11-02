@@ -18,6 +18,7 @@ const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const doneToday = (x: { done_at: string | null }) =>

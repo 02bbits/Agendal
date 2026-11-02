@@ -155,7 +155,7 @@ export function UpcomingClient() {
         title={t("nav.upcoming")}
         accountInitial={accountInitial}
         navigate={navigate}
-        actions={
+        action={
           <div className="flex items-center gap-3">
             <div className="hidden md:block">
               <ChipGroup

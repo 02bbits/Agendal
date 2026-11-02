@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import {
   Button,
   InboxScreen,
   PlusIcon,
   ScreenHeader,
+  TaskPanel,
   TaskStoreProvider,
   Toast,
   t,
+  useTaskPanel,
   useTaskStore,
   type Clock,
-  type Project,
-  type Task,
 } from "@/ui";
 import { headerDate, subscribeHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
-import { httpTaskApi, inbox, projects } from "@/lib/taskApi";
+import { httpTaskApi } from "@/lib/taskApi";
 import { now, timeZone } from "@/lib/clock";
+import { useInboxData } from "./useInboxData";
 
 const clock: Clock = {
   now,
@@ -32,80 +33,32 @@ function InboxToast() {
 }
 
 export default function Page() {
-  const { navigate, user, settings, openNewTask } = useAppFrame();
-  const [status, setStatus] = useState<"loading" | "error" | "ready">(
-    "loading",
+  return (
+    <Suspense fallback={null}>
+      <InboxContent />
+    </Suspense>
   );
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [projectList, setProjectList] = useState<Project[]>([]);
-  const [subtitle, setSubtitle] = useState<string>("");
+}
+
+function InboxContent() {
+  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
+  const {
+    status,
+    tasks,
+    projectList,
+    projectsStatus,
+    subtitle,
+    handleRetry,
+    handleRetryProjects,
+  } = useInboxData();
 
   const date = useSyncExternalStore(
     subscribeHeaderDate,
     () => headerDate(),
     () => undefined,
   );
-
   const accountInitial = user?.display_name || user?.email || "";
-
-  const fetchData = () => {
-    Promise.all([inbox(), projects()])
-      .then(([inboxData, projectsData]) => {
-        setTasks([
-          ...(inboxData?.overdue ?? []),
-          ...(inboxData?.today ?? []),
-          ...(inboxData?.no_date ?? []),
-          ...(inboxData?.completed_today ?? []),
-        ]);
-        setProjectList(projectsData ?? []);
-        const overdueCount = inboxData?.overdue?.length ?? 0;
-        const todayCount = inboxData?.today?.length ?? 0;
-        setSubtitle(
-          t("list.inbox_subtitle", {
-            overdue: overdueCount,
-            today: todayCount,
-          }),
-        );
-        setStatus("ready");
-      })
-      .catch(() => {
-        setStatus("error");
-      });
-  };
-
-  const handleRetry = () => {
-    setStatus("loading");
-    fetchData();
-  };
-
-  useEffect(() => {
-    fetchData();
-
-    const handleTaskCreated = () => {
-      fetchData();
-    };
-    const handleProjectsChanged = () => {
-      fetchData();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchData();
-      }
-    };
-
-    window.addEventListener("agendal:task-created", handleTaskCreated);
-    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("agendal:task-created", handleTaskCreated);
-      window.removeEventListener(
-        "agendal:projects-changed",
-        handleProjectsChanged,
-      );
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
 
   return (
     <div className="pb-8">
@@ -114,7 +67,7 @@ export default function Page() {
         title={t("nav.inbox")}
         accountInitial={accountInitial}
         navigate={navigate}
-        actions={
+        action={
           <Button
             variant="primary"
             pill
@@ -157,7 +110,18 @@ export default function Page() {
             accountInitial={accountInitial}
             navigate={navigate}
             showHeader={false}
+            selectedTaskId={selectedTaskId}
           />
+          {isWide && selectedTaskId && (
+            <TaskPanel
+              taskId={selectedTaskId}
+              onClose={closePanel}
+              projects={projectList}
+              projectsStatus={projectsStatus}
+              onRetryProjects={handleRetryProjects}
+              weekStart={settings.weekStart}
+            />
+          )}
           <InboxToast />
         </TaskStoreProvider>
       )}

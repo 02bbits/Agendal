@@ -104,7 +104,7 @@ export function UpcomingScreen({
           title={t("nav.upcoming")}
           accountInitial={accountInitial}
           navigate={navigate}
-          actions={
+          action={
             onNewTask ? (
               <Button
                 variant="primary"

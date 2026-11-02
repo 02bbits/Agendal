@@ -64,7 +64,7 @@ export function Section({
         {collapsible ? (
           <button
             type="button"
-            className="focus-ring flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-tile border-0 border-t border-separator bg-transparent p-0 text-left text-ink"
+            className="focus-ring flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-tile border-0 border-b border-separator bg-transparent p-0 text-left text-ink"
             aria-expanded={open}
             aria-controls={listId}
             onClick={handleToggle}

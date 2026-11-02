@@ -3,6 +3,7 @@ import { t } from "../../copy";
 import { EmptyState } from "../../components/EmptyState";
 import { NavBar } from "../../components/NavBar";
 import { sortCompleted, sortOpenByDue } from "../../domain/projects";
+import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
 import { ProjectHeaderMenu } from "./ProjectHeaderMenu";
 import { ProjectOpenList } from "./ProjectOpenList";
@@ -72,7 +73,7 @@ export function ProjectScreen({
         />
         {project.name}
       </h1>
-      <div className="w-full max-w-[820px] xl:max-w-[min(820px,calc(100vw-248px-400px-80px))]">
+      <div className={TASK_COLUMN_CLASS}>
         <ProjectProgressBar
           colour={project.colour}
           done={progress.done}
