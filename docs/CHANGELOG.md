@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-02
+
+- **10:45 (UTC+7) · Task details panel opens from the right with ?task= (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the panel slides in from the right, the list row shows as selected, the URL carries `?task={id}` (Back closes it), and Escape and × close it.
+
 ## 2026-11-01
 
 - **Project completed paging, undo consistency and Figma D14 styling (Refs #26).** [PJ §2.3](03-modules/PJ-projects.md#23-project-screen-pj-2): "Show completed" button strictly displays only when hidden completed tasks remain (`effectiveShown < totalDone`). Undoing a completed task synchronizes with the server to pull remaining hidden completed tasks into visible slots. Rapid-toggle race conditions are guarded with deduplication by task ID. [PJ §2.4](03-modules/PJ-projects.md#24-rename-and-recolour-pj-3-should): Rename is supported in project card menus and project detail action bar via `ProjectSheet`. Task lists use elevated card containers matching Figma prototype D14.
