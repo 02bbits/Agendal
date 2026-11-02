@@ -51,6 +51,7 @@ export function Picker<V extends string>({
         label={label}
         triggerRef={triggerRef}
         align={isScreen ? "right" : "left"}
+        popoverClassName="max-h-[min(320px,calc(100vh-16px))]"
         trigger={
           <PickerTrigger
             triggerRef={triggerRef}

@@ -1,12 +1,10 @@
 import type { ReactElement, ReactNode } from "react";
-import { Button } from "../../../components/Button";
-import { TrashIcon } from "../../../components/icons";
 import { cx } from "../../../components/cx";
-import { t } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import type { Project, Task, WeekStart } from "../../../domain/types";
 import type { Navigate } from "../../shell/routes";
 import { useTaskStore } from "../store";
+import { DetailsActions } from "./DetailsActions";
 import { DetailsFooter } from "./DetailsFooter";
 import { NotesField } from "./NotesField";
 import { PriorityField } from "./PriorityField";
@@ -117,32 +115,13 @@ export function TaskDetails({
           sourceNote={sourceNote}
         />
 
-        <div className="mt-auto flex items-center gap-3 pt-4">
-          <Button
-            type="button"
-            variant="secondary"
-            fullWidth
-            disabled={!task.due_date}
-            aria-disabled={!task.due_date ? "true" : undefined}
-            onClick={() => save({ due_date: null })}
-            className="flex-1"
-          >
-            {t("common.clear")}
-          </Button>
-          {deleteAction ?? (
-            <Button
-              variant="destructive"
-              fullWidth
-              disabled={!onDelete}
-              aria-disabled={!onDelete ? "true" : undefined}
-              onClick={onDelete}
-              className="flex-1 gap-2"
-            >
-              <TrashIcon size={16} />
-              <span>{isScreen ? t("task.delete") : t("common.delete")}</span>
-            </Button>
-          )}
-        </div>
+        <DetailsActions
+          canClear={Boolean(task.due_date)}
+          onClear={() => save({ due_date: null })}
+          deleteAction={deleteAction}
+          onDelete={onDelete}
+          isScreen={isScreen}
+        />
       </div>
     </div>
   );
