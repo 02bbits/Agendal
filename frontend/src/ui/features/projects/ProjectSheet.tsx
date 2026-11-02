@@ -14,6 +14,7 @@ import {
 import type { Project, ProjectColor } from "../../domain/types";
 import { now } from "../../../lib/clock";
 import { uuidv7 } from "../../../lib/uuid";
+import { saveErrorMessage } from "../tasks/saveError";
 
 export interface ProjectSheetProps {
   open: boolean;
@@ -109,11 +110,8 @@ export function ProjectSheet({
       }
       onClose();
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "message" in err) {
-        setServerError(String((err as { message: string }).message));
-      } else {
-        setServerError(t("error.save_failed"));
-      }
+      // Codes like project.name_taken become their sentence, never the raw code
+      setServerError(saveErrorMessage(err, { name: name.trim() }).message);
     } finally {
       setSubmitting(false);
     }
