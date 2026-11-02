@@ -137,3 +137,54 @@ it('rejects multiplicity exceeding one note limit without persisting partial tas
     ])->assertUnprocessable()->assertJsonPath('error.code', 'note.too_many_items');
     expect(Task::count())->toBe(0)->and(Note::count())->toBe(0);
 });
+
+it('applies a spelled relative time and a date-led shopping list without phantom items', function () {
+    $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(),
+        'text' => 'nhớ gọi mẹ sau nửa tiếng để hỏi thăm sức khỏe; ngày mai mua sữa, trứng và bánh mì',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(2, 'changes')
+        ->assertJsonPath('changes.0.task.title', 'Gọi mẹ để hỏi thăm sức khỏe')
+        ->assertJsonPath('changes.0.task.due_date', '2026-11-01')
+        ->assertJsonPath('changes.0.task.start_time', '22:41')
+        ->assertJsonPath('changes.1.task.title', 'Mua sữa, trứng và bánh mì')
+        ->assertJsonPath('changes.1.task.due_date', '2026-11-02');
+    expect(Task::count())->toBe(2);
+});
+
+it('applies scheduling fragments as three independent weekly tasks', function () {
+    $response = $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => 'lặp lại 3 lần, gọi mẹ, thứ 3 mỗi tuần',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(3, 'changes');
+    foreach ($response->json('changes') as $i => $change) {
+        expect($change['task']['title'])->toBe('Gọi mẹ ('.($i + 1).'/3)')
+            ->and($change['task']['due_date'])->toBe('2026-11-03')
+            ->and($change['task']['repeat_rule'])->toContain('BYDAY=TU');
+    }
+    expect(Task::count())->toBe(3);
+});
+
+it('retains unsupported exclusions without applying the excluded date as a schedule', function () {
+    $text = 'tập plank mỗi thứ 3 hàng tuần, trừ ngày 10/11/2026 và 24/11/2026 vì đi công tác';
+    $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => $text.'; buy milk tomorrow',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(2, 'changes')
+        ->assertJsonPath('changes.0.task.title', mb_strtoupper(mb_substr($text, 0, 1)).mb_substr($text, 1))
+        ->assertJsonPath('changes.0.task.due_date', null)
+        ->assertJsonPath('changes.0.task.repeat', 'never')
+        ->assertJsonPath('changes.0.task.repeat_rule', null)
+        ->assertJsonPath('changes.1.task.due_date', '2026-11-02');
+});
+
+it('does not persist a shifted timestamp when a relative time conflicts with the weekly day', function () {
+    $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => 'call mum in half an hour every Tuesday',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(1, 'changes')
+        ->assertJsonPath('changes.0.task.title', 'Call mum in half an hour every Tuesday')
+        ->assertJsonPath('changes.0.task.due_date', null)
+        ->assertJsonPath('changes.0.task.start_time', null)
+        ->assertJsonPath('changes.0.task.repeat', 'never');
+});

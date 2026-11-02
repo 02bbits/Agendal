@@ -19,7 +19,7 @@ final class NoteExtractionScenarios
 
     /** Categories only the field extractor reads; the splitter generator skips them. */
     public const EXTRACTION_ONLY_CATEGORIES = [
-        'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
+        'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
@@ -78,6 +78,7 @@ final class NoteExtractionScenarios
             'weekend' => [['đọc sách '.$value, ['dueDate' => '2026-10-24'], self::NOW]],
             'count_word' => [['uống thuốc ngày 2 '.$value, ['dueDate' => null], self::NOW]],
             'month_end' => [['đọc sách '.$value, ['dueDate' => '2026-10-31'], self::NOW]],
+            'repeat_exclusion' => [['tập gym every Monday '.$value.' 2026-11-10', ['repeat' => 'never', 'dueDate' => null, 'lowConfidence' => true], self::NOW]],
             'repeat_unsupported' => [['tập gym '.$value, ['repeat' => 'never', 'lowConfidence' => true], self::NOW]],
             'priority_high' => [['đọc sách '.$value, ['priority' => 'high', 'title' => 'Đọc sách'], self::NOW]],
             'priority_high_content' => [['đọc sách '.$value, ['priority' => 'high'], self::NOW]],

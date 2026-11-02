@@ -50,7 +50,8 @@ final class FieldExtractor
             $dateText = substr_replace($dateText, str_repeat(' ', $length), $offset, $length);
         }
         $date = $repeat['unreadable'] ? new ParsedDate(unreadable: true) : $this->dates->parse($dateText, $context, $time->start);
-        if ($date->unreadable && $repeat['rule'] !== null) {
+        if (($date->unreadable && $repeat['rule'] !== null)
+            || ($time->date !== null && $date->date !== null && $time->date !== $date->date)) {
             $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
             $time = new ParsedTime;
             $date = new ParsedDate(unreadable: true);
@@ -65,7 +66,8 @@ final class FieldExtractor
             } catch (InvalidArgumentException) {
                 $dueDate = null;
             }
-            if ($dueDate === null) {
+            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date)) {
+                $dueDate = null;
                 $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
                 $time = new ParsedTime;
                 $date = new ParsedDate(unreadable: true);

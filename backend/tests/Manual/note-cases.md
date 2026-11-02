@@ -140,3 +140,7 @@ done: Pay rent
 - `gym every month on 1st, 15th and 25th`: trước đây chỉ lấy ngày 1 và để lại `15th and 25th` trong tiêu đề. Nay tạo một lịch có cả ba ngày.
 - `gym every month on first and third Monday`: trước đây chỉ lấy lần thứ ba. Nay giữ cả thứ Hai thứ nhất và thứ ba; danh sách dùng dấu phẩy cũng được đọc chung.
 - `gym biweekly`: trước đây được coi là việc thường đã hiểu rõ. Nay giữ nguyên và đánh dấu low confidence vì từ này có thể mang hai nghĩa.
+
+## Câu dài và phức tạp
+
+Xem [70 lượt thử mở rộng](complex-note-cases.md): khoảng thời gian bằng chữ, hoán đổi vị trí metadata, danh sách có ngày đứng đầu, câu có ngoại lệ và các đoạn trộn nhiều task/lệnh.

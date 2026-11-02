@@ -11,6 +11,8 @@ final class NoteRepeatParser
 {
     private const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
+    private const FREQUENCY_UNITS = ['day' => 'daily', 'days' => 'daily', 'ngày' => 'daily', 'week' => 'weekly', 'weeks' => 'weekly', 'tuần' => 'weekly', 'month' => 'monthly', 'months' => 'monthly', 'tháng' => 'monthly', 'year' => 'yearly', 'years' => 'yearly', 'năm' => 'yearly'];
+
     private const ORDINALS = ['first' => 1, 'second' => 2, 'third' => 3, 'fourth' => 4, 'fifth' => 5, 'last' => -1, '1st' => 1, '2nd' => 2, '3rd' => 3, '4th' => 4, '5th' => 5];
 
     public function __construct(private NoteDateParser $dates) {}
@@ -33,7 +35,7 @@ final class NoteRepeatParser
         $pattern = '~(?<![\p{L}\p{N}:/-])(?:(?:'.$day.')(?:'.$joiner.'(?:'.$day.'))+|'.$ordinalList.')(?![\p{L}\p{N}:/-])~iu';
         preg_match_all($pattern, $text, $matches, PREG_OFFSET_CAPTURE);
         $frequency = implode('|', NoteVocabulary::family('repeat'));
-        $prefix = '(?:every\s+other|'.NoteVocabulary::phrases('repeat_prefix').'|'.$frequency.'|(?:every|mỗi)\s+\d+\s+(?:days?|weeks?|months?|years?|ngày|tuần|tháng|năm))';
+        $prefix = '(?:every\s+other|'.NoteVocabulary::phrases('repeat_prefix').'|'.$frequency.'|(?:every|mỗi)\s+(?:'.NoteVocabulary::integerPattern().')\s+(?:'.implode('|', array_keys(self::FREQUENCY_UNITS)).'))';
         $link = '(?:on|vào|the|ngày|days?|thứ)';
         $spans = [];
         foreach ($matches[0] as [$list, $offset]) {
@@ -47,7 +49,7 @@ final class NoteRepeatParser
             $tail = (string) preg_replace('~^\s*(?:of\s+(?:the\s+)?month)(?!\p{L})~iu', '', $tail);
             $tail = (string) preg_replace('~^\s*(?:(?:'.NoteVocabulary::phrases('span_lead').'|'.NoteVocabulary::phrases('time_prefix').')\s+)+~iu', '', $tail);
             $tail = (string) preg_replace('~(?:for|after|trong|sau)\s+\d+\s+(?:times?|occurrences?|lần)(?!\p{L})~iu', '', $tail);
-            $qualifier = preg_match('~^\s*(?:except|excluding|ngoại trừ|bỏ qua|never ends|không kết thúc|vô thời hạn)(?!\p{L})~iu', $tail) === 1;
+            $qualifier = self::startsQualifier($tail) || preg_match('~^\s*(?:never ends|không kết thúc|vô thời hạn)(?!\p{L})~iu', $tail) === 1;
             if (($hasPrefix || $hasSuffix) && ($qualifier || NoteVocabulary::onlyModifiers($tail))) {
                 $spans[] = [$offset, strlen($list)];
             }
@@ -59,6 +61,23 @@ final class NoteRepeatParser
     private static function listJoiner(): string
     {
         return '(?:\s*(?:'.NoteVocabulary::phrases('comma').')\s*(?:(?:and|và)\s+)?|\s+(?:and|và|&)\s+)';
+    }
+
+    /** Count/end modifiers have the same lexical boundaries in the splitter and classifier. */
+    public static function modifierExpression(): string
+    {
+        $count = '(?:'.NoteVocabulary::integerPattern().')\s+(?:times?|occurrences?|lần)';
+        $prefix = '(?:'.NoteVocabulary::phrases('repeat_prefix').'|(?:ends?\s+)?after|for|trong|(?:kết thúc\s+)?sau)';
+
+        $interval = '(?:every|mỗi)\s+(?:other|'.NoteVocabulary::integerPattern().')\s+(?:'.implode('|', array_keys(self::FREQUENCY_UNITS)).')';
+
+        return '(?<![\p{L}\p{N}])(?:'.$interval.'|(?:(?:'.$prefix.')\s+)?(?:'.$count.'|once|twice))(?![\p{L}\p{N}])';
+    }
+
+    public static function startsQualifier(string $text): bool
+    {
+        return NoteVocabulary::startsWith($text, 'repeat_exclusion')
+            || preg_match('~^\s*(?:kết thúc|ends? (?:after|on)|until)(?!\p{L})~iu', $text) === 1;
     }
 
     /** @return array{string, int}|null */
@@ -83,8 +102,8 @@ final class NoteRepeatParser
     /** @return array{repeat: Repeat, spans: list<array{int, int}>, unreadable: bool, rule: ?string, copies: int} */
     public function parse(string $text, NoteContext $context): array
     {
-        $amounts = implode('|', NoteVocabulary::family('amount')).'|'.NoteVocabulary::phrases('amount_one');
-        $pattern = '~(?<![\p{L}\p{N}.,/+\-])(?:(?<amount>\d+|'.$amounts.')\s+(?:times?|lần)|(?<adverb>once|twice))(?![\p{L}\p{N}])~iu';
+        $amounts = NoteVocabulary::integerPattern();
+        $pattern = '~(?<![\p{L}\p{N}.,/+\-])(?:(?<amount>'.$amounts.')\s+(?:times?|lần)|(?<adverb>once|twice))(?![\p{L}\p{N}])~iu';
         preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
         $counts = [];
         $readable = $text;
@@ -95,7 +114,7 @@ final class NoteRepeatParser
                 continue;
             }
             $word = mb_strtolower($match['amount'][0]);
-            $count = is_numeric($word) ? (int) $word : (int) (NoteVocabulary::findAll('amount', $word)[0]['key'] ?? 1);
+            $count = NoteVocabulary::integer($word) ?? 0;
             if (($match['adverb'][0] ?? '') !== '') {
                 $count = mb_strtolower($match['adverb'][0]) === 'twice' ? 2 : 1;
             }
@@ -140,16 +159,16 @@ final class NoteRepeatParser
         foreach ($named as $match) {
             $spans[] = [$match['offset'], strlen($match['phrase'])];
         }
-        $units = ['day' => 'daily', 'days' => 'daily', 'ngày' => 'daily', 'week' => 'weekly', 'weeks' => 'weekly', 'tuần' => 'weekly', 'month' => 'monthly', 'months' => 'monthly', 'tháng' => 'monthly', 'year' => 'yearly', 'years' => 'yearly', 'năm' => 'yearly'];
+        $units = self::FREQUENCY_UNITS;
         if ($hasMultiplicity && preg_match('~(?<![\p{L}\p{N}])(?:per\s+|each\s+|a\s+|/\s*)('.implode('|', array_keys($units)).')(?![\p{L}\p{N}])~iu', $text, $perPeriod, PREG_OFFSET_CAPTURE) === 1) {
             $frequency = Repeat::from($units[mb_strtolower($perPeriod[1][0])]);
             $invalid = $invalid || ($repeat !== Repeat::Never && $repeat !== $frequency);
             $repeat = $frequency;
             $spans[] = [$perPeriod[0][1], strlen($perPeriod[0][0])];
         }
-        $intervalPattern = '~(?<![\p{L}\p{N}])(?:every|mỗi)\s+(\d+|other)\s+('.implode('|', array_keys($units)).')(?![\p{L}\p{N}])~iu';
+        $intervalPattern = '~(?<![\p{L}\p{N}])(?:every|mỗi)\s+('.NoteVocabulary::integerPattern().'|other)\s+('.implode('|', array_keys($units)).')(?![\p{L}\p{N}])~iu';
         if (preg_match($intervalPattern, $text, $m, PREG_OFFSET_CAPTURE) === 1) {
-            $interval = mb_strtolower($m[1][0]) === 'other' ? 2 : (int) $m[1][0];
+            $interval = mb_strtolower($m[1][0]) === 'other' ? 2 : (NoteVocabulary::integer($m[1][0]) ?? 0);
             $frequency = Repeat::from($units[mb_strtolower($m[2][0])]);
             $invalid = $invalid || ($repeat !== Repeat::Never && $repeat !== $frequency);
             $repeat = $frequency;
@@ -296,8 +315,8 @@ final class NoteRepeatParser
             return ['repeat' => $repeat, 'spans' => [], 'unreadable' => $invalid || NoteVocabulary::contains('repeat_unsupported', $text), 'rule' => null];
         }
         if ($repeat !== Repeat::Never) {
-            if (preg_match('~(?:for|(?:ends?\s+)?after|trong|(?:kết thúc\s+)?sau)\s+(\d+)\s+(?:times?|occurrences?|lần)(?!\p{L})~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
-                $parts['COUNT'] = $m[1][0];
+            if (preg_match('~(?:for|(?:ends?\s+)?after|trong|(?:kết thúc\s+)?sau)\s+('.NoteVocabulary::integerPattern().')\s+(?:times?|occurrences?|lần)(?!\p{L})~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
+                $parts['COUNT'] = (string) (NoteVocabulary::integer($m[1][0]) ?? 0);
                 $spans[] = [$m[0][1], strlen($m[0][0])];
             }
             if (preg_match('~(?:until|ends? on|đến|tới|kết thúc(?: vào)?)(?:\s+ngày)?\s+(.+)$~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
@@ -332,7 +351,8 @@ final class NoteRepeatParser
             || NoteVocabulary::contains('repeat_unsupported', $remaining)
             || preg_match('~\d[\d.,/+-]*\s+(?:times?|lần)(?!\p{L})~iu', $remaining) === 1
             || ($repeat === Repeat::Monthly && isset($parts['BYDAY']) && NoteVocabulary::findAll('weekday', $remaining) !== [])
-            || preg_match('~(?<!\p{L})(?:except|excluding|ngoại trừ|bỏ qua|kết thúc|ends)(?!\p{L})~iu', $remaining) === 1
+            || NoteVocabulary::contains('repeat_exclusion', $remaining)
+            || preg_match('~(?<!\p{L})(?:kết thúc|ends)(?!\p{L})~iu', $remaining) === 1
             || (isset($parts['COUNT']) && ((int) $parts['COUNT'] < 1 || (int) $parts['COUNT'] > 10000));
         if ($invalid) {
             return ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];

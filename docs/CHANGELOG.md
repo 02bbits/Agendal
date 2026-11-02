@@ -4,6 +4,8 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-02
 
+- **Composable note modifiers.** Relative durations, repeat intervals/counts and comma boundaries share quantity grammar. Scheduling-only fragments bind to their task, and leading dates preserve shopping lists. Unresolved quantities, exclusions and conflicting relative timestamps keep their full constraints for fallback. [NU](03-modules/NU-note-understanding.md#relative-time) and [70 complex HTTP cases](../backend/tests/Manual/complex-note-cases.md) describe the behavior.
+
 - **Calendar shorthand and manual checks.** Monthly dates accept ordinal numbers without `the`; weekday ordinals can share one weekday (`first and third Monday`). Unresolved repeat words stay low confidence. [67 manual HTTP cases](../backend/tests/Manual/note-cases.md) include title cleanup and the existing NU-E6 rule for multiple dates.
 
 - **Calendar list parsing and repeated copies.** The splitter preserves weekday/month-date lists and literal commas before finding task boundaries. Notes can create numbered daily series from an explicit per-day count, separately from the series-end count. Vietnamese weekday introducers leave no stray title text. Unsupported time allocations preserve the full request. See [NU extraction](03-modules/NU-note-understanding.md#25-extraction-nu-2) and the [API contract](07-architecture/api.md#notes-with-multiple-tasks-per-scheduled-day).

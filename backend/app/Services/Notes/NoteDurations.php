@@ -9,7 +9,7 @@ use RuntimeException;
 
 /**
  * Relative amounts of time: "in 2 hours", "trong 30 phút", "3 ngày nữa", "after 2 weeks". The unit comes from
- * the "duration_unit:<unit>" family; a lead word (in, trong, sau …) or a trailing "nữa" marks it as relative.
+ * the "duration_unit:<unit>" family; a lead word (in, trong, sau …) or a trailing relative marker (nữa, sau, later) marks it as relative.
  */
 final class NoteDurations
 {
@@ -70,21 +70,86 @@ final class NoteDurations
         return sprintf('%02d:%02d', intdiv($minutes, self::MINUTES['hour']), $minutes % self::MINUTES['hour']);
     }
 
+    /** The same relative-duration grammar is used for extraction and comma boundaries. */
+    public static function expression(): string
+    {
+        $amount = '(?:'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
+        $unit = '(?:'.implode('|', NoteVocabulary::family('duration_unit')).')';
+        $quantity = $amount.'\s*'.$unit;
+
+        return '(?<![\p{L}\p{N}.,/+\-])(?:(?:'.NoteVocabulary::phrases('duration_prefix').')\s+'.$quantity.'(?:\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))?'
+            .'|'.$quantity.'\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))(?![\p{L}\p{N}])';
+    }
+
+    public function unreadable(string $text): bool
+    {
+        $durations = $this->findAll($text);
+        preg_match_all('~'.self::expression().'~iu', $text, $matches);
+        if (count($matches[0]) !== count($durations)) {
+            return true;
+        }
+        // A relative clause containing an unknown/composite quantity must not be read only in part.
+        $number = '(?:[+\-]?\d+(?:[.,]\d+)?|'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
+        $quantity = '(?:'.$number.'(?:\s+(?:(?:and|và)\s+)?'.$number.')*|\p{L}+)';
+        $unit = '(?:'.implode('|', NoteVocabulary::family('duration_unit')).')';
+        $pair = $quantity.'\s*'.$unit;
+        $sequence = $pair.'(?:\s+(?:(?:and|và)\s+)?'.$pair.')*';
+        $hint = '(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('duration_prefix').')\s+'.$sequence.'(?:\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))?'
+            .'|'.$sequence.'\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))(?![\p{L}\p{N}])';
+        // Complete calendar phrases such as 'tuần sau' are dates, not unknown quantities.
+        $dates = implode('|', NoteVocabulary::family('date_offset'));
+        foreach (['week_next', 'week_end', 'weekend', 'month_end'] as $category) {
+            $dates .= '|'.NoteVocabulary::phrases($category);
+        }
+        $hintsText = (string) preg_replace_callback(NoteVocabulary::pattern($dates), fn (array $match): string => str_repeat(' ', strlen($match[0])), $text);
+        preg_match_all('~'.$hint.'~iu', $hintsText, $hints, PREG_OFFSET_CAPTURE);
+        foreach ($hints[0] as [$phrase, $offset]) {
+            $covered = false;
+            foreach ($durations as $duration) {
+                $covered = $covered || ($duration['offset'] === $offset
+                    && $duration['length'] === strlen($phrase));
+            }
+            if (! $covered) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     /** @return list<array{unit: string, amount: int, offset: int, length: int}> in text order */
     public function findAll(string $text): array
     {
+        preg_match_all('~'.self::expression().'~iu', $text, $matches, PREG_OFFSET_CAPTURE);
         $found = [];
-        foreach (NoteVocabulary::family('duration_unit') as $unit => $words) {
-            $pattern = '~(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('duration_prefix').')\s+(?<before>\d+)\s*(?:'.$words.')'
-                .'|(?<after>\d+)\s*(?:'.$words.')\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))(?![\p{L}\p{N}])~iu';
-            preg_match_all($pattern, $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
-            foreach ($matches as $m) {
-                $amount = ($m['before'][0] ?? '') !== '' ? $m['before'][0] : $m['after'][0];
-                $found[] = ['unit' => (string) $unit, 'amount' => (int) $amount, 'offset' => $m[0][1], 'length' => strlen($m[0][0])];
+        $quantity = '(?<amount>'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
+        foreach ($matches[0] as [$phrase, $offset]) {
+            foreach (NoteVocabulary::family('duration_unit') as $unit => $words) {
+                if (preg_match('~(?<![\p{L}\p{N}])'.$quantity.'\s*(?:'.$words.')(?![\p{L}\p{N}])~iu', $phrase, $match) !== 1) {
+                    continue;
+                }
+                $half = preg_match('~^(?:'.NoteVocabulary::phrases('amount_half').')$~iu', $match['amount']) === 1;
+                $number = NoteVocabulary::integer($match['amount']);
+                $value = $half ? $this->exactHalf($unit) : ($number === null ? null : ['unit' => $unit, 'amount' => $number]);
+                if ($value !== null) {
+                    $found[] = [...$value, 'offset' => $offset, 'length' => strlen($phrase)];
+                }
+                break;
             }
         }
-        usort($found, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
 
         return $found;
+    }
+
+    /**
+     * A fractional month or sub-minute interval has no exact representation in this contract.
+     *
+     * @return array{unit: string, amount: int}|null
+     */
+    private function exactHalf(string $unit): ?array
+    {
+        $half = self::half($unit);
+
+        return $half !== null && $half['amount'] > 0 ? $half : null;
     }
 }

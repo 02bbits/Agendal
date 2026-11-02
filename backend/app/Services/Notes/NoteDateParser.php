@@ -29,6 +29,9 @@ final class NoteDateParser
     {
         // No date inside a URL, email, file name or project name ("https://x.com/2026/10/26", project "Friday").
         $text = NoteVocabulary::withoutLiterals($text, array_values($context->projects));
+        if ($this->durations->unreadable($text)) {
+            return new ParsedDate(unreadable: true);
+        }
         $unreadable = false;
         $best = null;
         foreach ($this->candidates($text, $context, $startTime) as $candidate) {

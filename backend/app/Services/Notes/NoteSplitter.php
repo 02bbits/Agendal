@@ -86,7 +86,12 @@ final class NoteSplitter
                     if (preg_match(self::VISIBLE, $fragment) !== 1) {
                         continue;
                     }
-                    $joins = $current !== '' && (NoteVocabulary::onlyModifiers($fragment) || ($this->opensList($current) && ! $this->startsNewTask($fragment, $projects)));
+                    $leading = NoteVocabulary::onlyModifiers($current, $projects)
+                        && ! $this->startsWithCommand(NoteVocabulary::withoutLeadIn($fragment))
+                        && ! NoteVocabulary::startsWith($fragment, 'skip_prefix');
+                    $joins = $current !== '' && ($leading || NoteVocabulary::onlyModifiers($fragment, $projects)
+                        || NoteRepeatParser::startsQualifier($fragment)
+                        || ($this->opensList($current, $projects) && ! $this->startsNewTask($fragment, $projects)));
                     if ($joins) {
                         $current .= $comma.' '.$fragment;
                     } else {
@@ -124,10 +129,14 @@ final class NoteSplitter
         return '~('.$afterDay.'(?:'.$commas.')|(?:'.$commas.')(?!\d|\s*\d{4}(?!\d)))~iu';
     }
 
-    /** A task verb ("buy milk, eggs") or a command verb ("move report, gym to friday") opens a comma list. */
-    private function opensList(string $item): bool
+    /**
+     * A task verb ("buy milk, eggs") or a command verb ("move report, gym to friday") opens a comma list.
+     *
+     * @param  list<string>  $projects
+     */
+    private function opensList(string $item, array $projects): bool
     {
-        $item = NoteVocabulary::withoutLeadIn($item);
+        $item = NoteVocabulary::withoutLeadIn(NoteVocabulary::withoutLeadingModifiers(NoteVocabulary::withoutLeadIn($item), $projects));
 
         return NoteVocabulary::startsWithVerb($item) || $this->startsWithCommand($item);
     }
