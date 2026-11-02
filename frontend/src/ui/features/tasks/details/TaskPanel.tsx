@@ -23,7 +23,9 @@ export interface TaskPanelProps {
   onDelete?: () => void;
 }
 
-const emptySubscribe = () => () => {};
+function emptySubscribe() {
+  return () => {};
+}
 
 export function TaskPanel({
   taskId,
@@ -34,12 +36,18 @@ export function TaskPanel({
   onDelete,
 }: TaskPanelProps): ReactElement | null {
   const store = useTaskStore();
-  const task = store.tasks.find((t) => t.id === taskId);
+  const task = store.tasks.find((t) => {
+    return t.id === taskId;
+  });
   const triggerRef = useRef<HTMLElement | null>(null);
   const mounted = useSyncExternalStore(
     emptySubscribe,
-    () => true,
-    () => false,
+    () => {
+      return true;
+    },
+    () => {
+      return false;
+    },
   );
 
   useEffect(() => {
