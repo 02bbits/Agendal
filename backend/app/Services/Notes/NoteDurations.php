@@ -75,7 +75,7 @@ final class NoteDurations
     {
         $amount = '(?:'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
         $unit = '(?:'.implode('|', NoteVocabulary::family('duration_unit')).')';
-        $quantity = $amount.'\s*'.$unit;
+        $quantity = $amount.'\s*'.$unit.'(?:\s+(?:'.NoteVocabulary::phrases('duration_fraction_suffix').'))?';
 
         return '(?<![\p{L}\p{N}.,/+\-])(?:(?:'.NoteVocabulary::phrases('duration_prefix').')\s+'.$quantity.'(?:\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))?'
             .'|'.$quantity.'\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))(?![\p{L}\p{N}])';
@@ -92,7 +92,7 @@ final class NoteDurations
         $number = '(?:[+\-]?\d+(?:[.,]\d+)?|'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
         $quantity = '(?:'.$number.'(?:\s+(?:(?:and|và)\s+)?'.$number.')*|\p{L}+)';
         $unit = '(?:'.implode('|', NoteVocabulary::family('duration_unit')).')';
-        $pair = $quantity.'\s*'.$unit;
+        $pair = $quantity.'\s*'.$unit.'(?:\s+(?:'.NoteVocabulary::phrases('duration_fraction_suffix').'))?';
         $sequence = $pair.'(?:\s+(?:(?:and|và)\s+)?'.$pair.')*';
         $hint = '(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('duration_prefix').')\s+'.$sequence.'(?:\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))?'
             .'|'.$sequence.'\s+(?:'.NoteVocabulary::phrases('duration_suffix').'))(?![\p{L}\p{N}])';
@@ -125,12 +125,19 @@ final class NoteDurations
         $quantity = '(?<amount>'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
         foreach ($matches[0] as [$phrase, $offset]) {
             foreach (NoteVocabulary::family('duration_unit') as $unit => $words) {
-                if (preg_match('~(?<![\p{L}\p{N}])'.$quantity.'\s*(?:'.$words.')(?![\p{L}\p{N}])~iu', $phrase, $match) !== 1) {
+                if (preg_match('~(?<![\p{L}\p{N}])'.$quantity.'\s*(?:'.$words.')(?![\p{L}\p{N}])(?:\s+(?<fraction>'.NoteVocabulary::phrases('duration_fraction_suffix').'))?~iu', $phrase, $match) !== 1) {
                     continue;
                 }
                 $half = preg_match('~^(?:'.NoteVocabulary::phrases('amount_half').')$~iu', $match['amount']) === 1;
                 $number = NoteVocabulary::integer($match['amount']);
                 $value = $half ? $this->exactHalf($unit) : ($number === null ? null : ['unit' => $unit, 'amount' => $number]);
+                if (($match['fraction'] ?? '') !== '') {
+                    $extra = $this->exactHalf($unit);
+                    $value = ! $half && $number !== null && $extra !== null
+                        && $number <= intdiv(PHP_INT_MAX - $extra['amount'], self::MINUTES[$unit])
+                        ? ['unit' => $extra['unit'], 'amount' => $number * self::MINUTES[$unit] + $extra['amount']]
+                        : null;
+                }
                 if ($value !== null) {
                     $found[] = [...$value, 'offset' => $offset, 'length' => strlen($phrase)];
                 }

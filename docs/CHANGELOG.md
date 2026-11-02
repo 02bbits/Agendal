@@ -4,6 +4,8 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-02
 
+- **Relative hour aliases and fractional suffixes.** `giờ` shares the hour grammar with `tiếng`; `rưỡi` adds an exact half-unit through the shared duration reader. Generated alias/unit checks and an API case cover fractional hours and crossing midnight. Unrepresentable fractional months/minutes retain their text for fallback. See [NU relative time](03-modules/NU-note-understanding.md#relative-time).
+
 - **Composable note modifiers.** Relative durations, repeat intervals/counts and comma boundaries share quantity grammar. Scheduling-only fragments bind to their task, and leading dates preserve shopping lists. Unresolved quantities, exclusions and conflicting relative timestamps keep their full constraints for fallback. [NU](03-modules/NU-note-understanding.md#relative-time) and [70 complex HTTP cases](../backend/tests/Manual/complex-note-cases.md) describe the behavior.
 
 - **Calendar shorthand and manual checks.** Monthly dates accept ordinal numbers without `the`; weekday ordinals can share one weekday (`first and third Monday`). Unresolved repeat words stay low confidence. [67 manual HTTP cases](../backend/tests/Manual/note-cases.md) include title cleanup and the existing NU-E6 rule for multiple dates.

@@ -117,7 +117,7 @@ The business-rules table is the phrase list. The precise semantics:
 
 #### Relative time
 
-Relative durations share the quantity/unit vocabulary with modifier detection: `sau nửa tiếng`, `nửa tiếng sau`, `in half an hour` and `in thirty minutes` all mean 30 minutes from `written_at`. Clock durations use elapsed time across a clock change; whole days/weeks/months retain calendar arithmetic. Unsupported quantities remain low confidence instead of consuming a known fragment of the duration.
+Relative durations share the quantity/unit vocabulary with modifier detection: `sau nửa tiếng`, `nửa tiếng sau`, `in half an hour` and `in thirty minutes` all mean 30 minutes from `written_at`. Vietnamese `giờ` and `tiếng` share the hour unit; a trailing `rưỡi` adds half of that unit (`một giờ rưỡi` = 90 minutes). Fractional months and sub-minute results remain unresolved because the contract cannot represent them exactly. Clock durations use elapsed time across a clock change; whole days/weeks/months retain calendar arithmetic. Unsupported quantities remain low confidence instead of consuming a known fragment of the duration.
 
 A relative clock timestamp fixes its own date. A weekday/rule that would move it onto another date, an unallocated time for several copies, or a repeated DST minute that cannot round-trip through the floating-time contract keeps the scheduling text for fallback, without applying a partial date/time/rule. The [complex manual cases](../../backend/tests/Manual/complex-note-cases.md) cover midnight, date boundaries and mixed notes.
 

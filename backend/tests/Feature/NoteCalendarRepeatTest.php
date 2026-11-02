@@ -188,3 +188,16 @@ it('does not persist a shifted timestamp when a relative time conflicts with the
         ->assertJsonPath('changes.0.task.start_time', null)
         ->assertJsonPath('changes.0.task.repeat', 'never');
 });
+
+it('persists hour aliases and fractional suffixes across midnight', function () {
+    $this->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(), 'text' => 'gọi mẹ sau một giờ rưỡi; gọi bố sau hai giờ',
+        'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated()->assertJsonCount(2, 'changes')
+        ->assertJsonPath('changes.0.task.title', 'Gọi mẹ')
+        ->assertJsonPath('changes.0.task.due_date', '2026-11-01')
+        ->assertJsonPath('changes.0.task.start_time', '23:41')
+        ->assertJsonPath('changes.1.task.title', 'Gọi bố')
+        ->assertJsonPath('changes.1.task.due_date', '2026-11-02')
+        ->assertJsonPath('changes.1.task.start_time', '00:11');
+});

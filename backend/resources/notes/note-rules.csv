@@ -1088,3 +1088,5 @@ repeat_exclusion,but not
 repeat_exclusion,not on
 repeat_exclusion,không vào
 repeat_exclusion,không tính
+duration_unit:hour,giờ
+duration_fraction_suffix,rưỡi

@@ -165,3 +165,36 @@ it('uses the same quantity aliases for recurrence boundaries, intervals and tota
     ['call mum every Tuesday, for three occurrences', 'COUNT=3'],
     ['call mum mỗi thứ 3, kết thúc sau ba lần', 'COUNT=3'],
 ]);
+
+it('applies fractional suffixes to every representable fixed unit and quantity alias', function () {
+    foreach (NoteVocabulary::family('amount') as $number => $_) {
+        foreach (NoteVocabulary::values('amount:'.$number) as $amount) {
+            foreach (['hour', 'day', 'week'] as $unit) {
+                foreach (NoteVocabulary::values('duration_unit:'.$unit) as $word) {
+                    $minutes = (int) $number * NoteDurations::MINUTES[$unit] + intdiv(NoteDurations::MINUTES[$unit], 2);
+                    foreach (['sau '.$amount.' '.$word.' rưỡi', $amount.' '.$word.' rưỡi sau'] as $text) {
+                        expect(app(NoteDurations::class)->unreadable($text), $text)->toBeFalse()
+                            ->and(app(NoteDurations::class)->findAll($text))->toBe([
+                                ['unit' => 'minute', 'amount' => $minutes, 'offset' => 0, 'length' => strlen($text)],
+                            ]);
+                    }
+                }
+            }
+        }
+    }
+});
+
+it('treats hour aliases and fractional forms consistently in full task extraction', function (string $phrase, string $time) {
+    $fields = app(FieldExtractor::class)->extract('gọi mẹ '.$phrase, complexContext());
+    expect($fields->title)->toBe('Gọi mẹ')->and($fields->dueDate)->toBe('2026-11-02')
+        ->and($fields->startTime)->toBe($time)->and($fields->lowConfidence)->toBeFalse();
+})->with([
+    ['sau 2 giờ', '14:51'], ['sau hai giờ', '14:51'], ['hai giờ nữa', '14:51'],
+    ['sau một tiếng rưỡi', '14:21'], ['một tiếng rưỡi sau', '14:21'], ['sau 3 giờ rưỡi', '16:21'],
+]);
+
+it('retains fractional units which cannot be represented exactly as calendar dates or whole minutes', function (string $phrase) {
+    $fields = app(FieldExtractor::class)->extract('gọi mẹ '.$phrase, complexContext());
+    expect($fields->title)->toBe('Gọi mẹ '.$phrase)->and($fields->dueDate)->toBeNull()
+        ->and($fields->startTime)->toBeNull()->and($fields->lowConfidence)->toBeTrue();
+})->with(['sau một tháng rưỡi', 'sau một phút rưỡi']);

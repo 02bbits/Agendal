@@ -231,3 +231,16 @@ please read https://example.com/today and tomorrow.md to prepare the presentatio
 - create: "Buy milk, eggs and bread" 2026-11-07 08:00 · reminder 15m
 - update: "Report" → {"due_date":"2026-11-06","start_time":"10:00"} · label "Due Fri 6 Nov 10:00"
 
+
+## Kiểm tra thêm các cách nói tương đương
+
+Written at **2026-11-02T12:51**, Asia/Ho_Chi_Minh. Mỗi câu dùng hành động `gọi mẹ` rồi tới cụm dưới đây; tiêu đề sau đọc lịch là `Gọi mẹ`.
+
+| Cụm thời gian | Kỳ vọng |
+|---|---|
+| `sau 15 phút` | 02/11 13:06 |
+| `nửa tiếng sau` / `nửa tiếng nữa` | 02/11 13:21 |
+| `sau 2 giờ` / `sau hai giờ` / `hai giờ nữa` | 02/11 14:51 |
+| `sau một tiếng rưỡi` / `một tiếng rưỡi sau` | 02/11 14:21 |
+| `sau 3 giờ rưỡi` | 02/11 16:21 |
+| `sau một tháng rưỡi` / `sau một phút rưỡi` | Giữ nguyên cụm thời gian và low confidence, chưa gán ngày/giờ |
