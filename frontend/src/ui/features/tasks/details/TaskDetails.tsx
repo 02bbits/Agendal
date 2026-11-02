@@ -27,6 +27,7 @@ export interface TaskDetailsProps {
   showSchedule?: boolean;
   variant?: "panel" | "screen";
   backLabel?: string;
+  autoFocusTitle?: boolean;
 }
 
 export function TaskDetails({
@@ -42,6 +43,7 @@ export function TaskDetails({
   showSchedule = true,
   variant = "panel",
   backLabel,
+  autoFocusTitle,
 }: TaskDetailsProps): ReactElement {
   const store = useTaskStore();
   const currentProjects = projects ?? store.projects;
@@ -68,6 +70,7 @@ export function TaskDetails({
         backLabel={backLabel}
         variant={variant}
         project={project}
+        autoFocusTitle={autoFocusTitle}
       />
 
       <div

@@ -15,12 +15,14 @@ export interface TitleFieldProps {
   value: string;
   onSave: (title: string) => void;
   variant?: "panel" | "screen";
+  autoFocusTitle?: boolean;
 }
 
 export function TitleField({
   value,
   onSave,
   variant = "panel",
+  autoFocusTitle,
 }: TitleFieldProps): ReactElement {
   const [title, setTitle] = useState(value);
   const [prevValue, setPrevValue] = useState(value);
@@ -42,6 +44,12 @@ export function TitleField({
   useEffect(() => {
     resize();
   }, [title, resize]);
+
+  useEffect(() => {
+    if (autoFocusTitle) {
+      textareaRef.current?.focus();
+    }
+  }, [autoFocusTitle]);
 
   const handleBlur = () => {
     const trimmed = title.trim();

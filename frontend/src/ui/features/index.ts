@@ -46,6 +46,7 @@ export {
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
+export { useMediaQuery } from "./tasks/useMediaQuery";
 export {
   SETTLE_MS,
   type TaskStore,
@@ -60,6 +61,7 @@ export {
   TaskDetails,
   type TaskDetailsProps,
 } from "./tasks/details/TaskDetails";
+export { TaskPanel, type TaskPanelProps } from "./tasks/details/TaskPanel";
 export { NewTaskSheet, type NewTaskSheetProps } from "./tasks/new/NewTaskSheet";
 export {
   ProjectsScreen,

@@ -44,7 +44,7 @@ export function AppShell({
       className={
         "min-h-dvh bg-paper md:flex" +
         (sidebar ? " md:[--sidebar-w:248px]" : "") +
-        (aside ? " xl:[--panel-w:400px]" : "")
+        " has-[#task-panel-slot:not(:empty)]:xl:[--panel-w:400px]"
       }
     >
       {sidebar && (
@@ -65,11 +65,12 @@ export function AppShell({
         )}
         {toast}
       </div>
-      {aside && (
-        <div className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">
-          {aside}
-        </div>
-      )}
+      <div
+        id="task-panel-slot"
+        className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface empty:hidden xl:block"
+      >
+        {aside}
+      </div>
     </div>
   );
 }

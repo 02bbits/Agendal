@@ -1,9 +1,10 @@
 import type { ReactElement } from "react";
 import { cx } from "../../../components/cx";
-import { CheckIcon, ChevronLeftIcon, XIcon } from "../../../components/icons";
+import { CheckIcon, ChevronLeftIcon } from "../../../components/icons";
 import { t } from "../../../copy";
 import type { Project, Task } from "../../../domain/types";
 import { useTaskStore } from "../store";
+import { PanelHeader } from "./PanelHeader";
 import { TitleField } from "./TitleField";
 
 export interface TaskHeaderProps {
@@ -14,6 +15,7 @@ export interface TaskHeaderProps {
   backLabel?: string;
   variant?: "panel" | "screen";
   project?: Project | null;
+  autoFocusTitle?: boolean;
 }
 
 export function TaskHeader({
@@ -24,6 +26,7 @@ export function TaskHeader({
   backLabel,
   variant = "panel",
   project,
+  autoFocusTitle,
 }: TaskHeaderProps): ReactElement {
   const store = useTaskStore();
   const isScreen = variant === "screen";
@@ -65,19 +68,7 @@ export function TaskHeader({
           </button>
         </div>
       ) : (
-        <div className="flex h-11 items-center justify-between border-b border-separator px-4">
-          <span className="text-footnote font-semibold text-ink">
-            {t("task.heading")}
-          </span>
-          <button
-            type="button"
-            aria-label={t("common.close")}
-            className="focus-ring inline-flex size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:text-ink"
-            onClick={onClose ?? onBack}
-          >
-            <XIcon size={18} />
-          </button>
-        </div>
+        <PanelHeader onClose={onClose ?? onBack} />
       )}
 
       <div className="px-4 pt-4">
@@ -88,6 +79,7 @@ export function TaskHeader({
               value={task.title}
               onSave={onSaveTitle}
               variant={variant}
+              autoFocusTitle={autoFocusTitle}
             />
           </div>
         </div>

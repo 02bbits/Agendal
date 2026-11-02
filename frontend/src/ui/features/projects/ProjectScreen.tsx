@@ -34,6 +34,7 @@ export interface ProjectScreenProps {
   onDeleteProject?: DeleteProjectHandler;
   onRenameProject?: () => void;
   navigate?: Navigate;
+  selectedTaskId?: string | null;
 }
 
 function dedupeTasks(tasks: Task[]): Task[] {
@@ -61,6 +62,7 @@ export function ProjectScreen({
   onDeleteProject,
   onRenameProject,
   navigate,
+  selectedTaskId,
 }: ProjectScreenProps) {
   const [shown, setShown] = useState(COMPLETED_PAGE);
   const [deleting, setDeleting] = useState(false);
@@ -168,6 +170,7 @@ export function ProjectScreen({
                     today={today}
                     timeFormat={timeFormat}
                     showDue
+                    selected={x.id === selectedTaskId}
                     onToggle={onToggleTask ?? (() => {})}
                     navigate={navigate}
                   />
@@ -190,6 +193,7 @@ export function ProjectScreen({
                       today={today}
                       timeFormat={timeFormat}
                       showDue
+                      selected={x.id === selectedTaskId}
                       onToggle={onToggleTask ?? (() => {})}
                       navigate={navigate}
                     />

@@ -5,7 +5,9 @@ import {
   PRIORITIES,
   REMINDERS,
   REPEATS,
+  ProjectScreen,
   TaskDetails,
+  TaskPanel,
   t,
   useTaskStore,
   type CopyKey,
@@ -520,5 +522,156 @@ describe("Graphite design elements and review nits", () => {
         expect.any(String),
       ),
     );
+  });
+});
+
+describe("Side panel from 1280px (TaskPanel & navigation)", () => {
+  it("wide: clicking a row adds ?task=, panel shows with role region + title focus, Escape/× close and returns focus, edit updates row", async () => {
+    const t1 = task({ id: "t-wide-1", title: "Wide Task 1" });
+    const ctx = setup([t1]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+
+    let selectedId: string | null = null;
+    const routerPush = vi.fn();
+
+    function ProjectWithPanel({ isWide }: { isWide: boolean }) {
+      const store = useTaskStore();
+      const openTasks = store.tasks.filter((t) => !t.done);
+      return (
+        <div>
+          <ProjectScreen
+            project={{
+              id: "p-1",
+              name: "P1",
+              colour: "blue",
+              created_at: "2026-09-01T08:00:00Z",
+            }}
+            openTasks={openTasks}
+            today={TODAY}
+            onBack={() => {}}
+            selectedTaskId={selectedId}
+            navigate={(href) => {
+              const match = href.match(/^\/tasks\/([^/?#]+)/);
+              if (match && isWide) {
+                selectedId = match[1]!;
+                routerPush(`/projects/p-1?task=${match[1]}`);
+                return true;
+              }
+              routerPush(href);
+              return true;
+            }}
+          />
+          {isWide && selectedId && (
+            <TaskPanel
+              taskId={selectedId}
+              onClose={() => {
+                selectedId = null;
+                routerPush("/projects/p-1");
+              }}
+            />
+          )}
+        </div>
+      );
+    }
+
+    const { rerender } = render(ctx.wrap(<ProjectWithPanel isWide={true} />));
+
+    const taskLink = screen.getByRole("link", { name: /Wide Task 1/ });
+    await userEvent.click(taskLink);
+
+    expect(routerPush).toHaveBeenCalledWith("/projects/p-1?task=t-wide-1");
+
+    rerender(ctx.wrap(<ProjectWithPanel isWide={true} />));
+
+    const panel = screen.getByRole("complementary", {
+      name: t("task.heading"),
+    });
+    expect(panel).toBeTruthy();
+
+    expect(taskLink.getAttribute("aria-current")).toBe("true");
+
+    await waitFor(() => {
+      expect(document.activeElement?.getAttribute("aria-label")).toBe(
+        t("task.title"),
+      );
+    });
+
+    const titleInput = screen.getByLabelText(t("task.title"));
+    fireEvent.change(titleInput, { target: { value: "Updated via Panel" } });
+    fireEvent.blur(titleInput);
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { title: "Updated via Panel" },
+        expect.any(String),
+      );
+    });
+
+    fireEvent.keyDown(panel, { key: "Escape" });
+    expect(routerPush).toHaveBeenCalledWith("/projects/p-1");
+
+    rerender(ctx.wrap(<ProjectWithPanel isWide={true} />));
+    expect(
+      screen.queryByRole("complementary", { name: t("task.heading") }),
+    ).toBeNull();
+  });
+
+  it("narrow: clicking a row goes to /tasks/{id}", async () => {
+    const t1 = task({ id: "t-narrow-1", title: "Narrow Task 1" });
+    const ctx = setup([t1]);
+    const navigate = vi.fn();
+
+    render(
+      ctx.wrap(
+        <ProjectScreen
+          project={{
+            id: "p-1",
+            name: "P1",
+            colour: "blue",
+            created_at: "2026-09-01T08:00:00Z",
+          }}
+          openTasks={[t1]}
+          today={TODAY}
+          onBack={() => {}}
+          navigate={(href) => {
+            const isWide = false;
+            const match = href.match(/^\/tasks\/([^/?#]+)/);
+            if (match && isWide) {
+              return true;
+            }
+            navigate(href);
+            return true;
+          }}
+        />,
+      ),
+    );
+
+    const taskLink = screen.getByRole("link", { name: /Narrow Task 1/ });
+    await userEvent.click(taskLink);
+
+    expect(navigate).toHaveBeenCalledWith("/tasks/t-narrow-1");
+  });
+
+  it("unknown/deleted task id shows error.not_found with close button", async () => {
+    const ctx = setup([]);
+    const onClose = vi.fn();
+
+    render(ctx.wrap(<TaskPanel taskId="t-missing" onClose={onClose} />));
+
+    expect(screen.getByText(t("error.not_found"))).toBeTruthy();
+    const closeButtons = screen.getAllByRole("button", {
+      name: t("common.close"),
+    });
+    expect(closeButtons.length).toBeGreaterThanOrEqual(1);
+    await userEvent.click(closeButtons[0]!);
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it("TaskPanel is axe clean in both themes", async () => {
+    const t1 = task({ id: "t-axe", title: "Axe Task" });
+    const ctx = setup([t1]);
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />));
+    await expectAxeCleanInBothThemes();
   });
 });

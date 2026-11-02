@@ -200,6 +200,7 @@
   /* Motion (UX-50): fades and slides, 150–200 ms */
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-slide-up: slide-up 180ms ease-out;
+  --animate-slide-in-right: slide-in-right 200ms ease-out;
   --animate-fade-quick: fade-in 100ms linear;
 
   @keyframes fade-in {
@@ -211,6 +212,14 @@
     from {
       transform: translateY(16px);
       opacity: 0;
+    }
+  }
+  @keyframes slide-in-right {
+    from {
+      transform: translateX(100%);
+    }
+    to {
+      transform: translateX(0);
     }
   }
 }
