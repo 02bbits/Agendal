@@ -28,7 +28,8 @@ export function TaskStoreProvider({
   timeFormat = "24h",
   children,
 }: types.TaskStoreProviderProps) {
-  const { tasks, change, getTask } = useTaskSync(initialTasks);
+  const { tasks, change, getTask, acceptOccurrence } =
+    useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
@@ -119,15 +120,20 @@ export function TaskStoreProvider({
         ? { done: true, done_at: at }
         : { done: false, done_at: null };
       const req = () =>
-        (isComplete ? api.complete(id, at) : api.reopen(id, at)).then(
-          (r) => r.task,
-        );
+        (isComplete ? api.complete(id, at) : api.reopen(id, at)).then((r) => {
+          // Requests for one task run in order, so every answer is applied:
+          // complete adds the next occurrence, reopen removes the one the
+          // server deleted. Skipping a stale answer left a duplicate row
+          if (r.next) acceptOccurrence(r.next, !isComplete);
+          return r.task;
+        });
       change(id, fields, req, (err) =>
         handleSaveError(err, () => lifecycleRef.current(id, action)),
       );
     },
     [
       api,
+      acceptOccurrence,
       change,
       clearSettle,
       clock,
@@ -143,7 +149,12 @@ export function TaskStoreProvider({
   }, [mutateLifecycle]);
 
   const toggle = React.useCallback(
-    (task: Task) => mutateLifecycle(task.id, task.done ? "reopen" : "complete"),
+    (task: Task) => {
+      // A task that is settling after Complete ignores more clicks on its
+      // tick until it moves down; Undo in the toast still reopens it
+      if (settleTimers.current.has(task.id)) return;
+      mutateLifecycle(task.id, task.done ? "reopen" : "complete");
+    },
     [mutateLifecycle],
   );
 

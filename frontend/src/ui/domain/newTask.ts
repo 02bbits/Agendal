@@ -60,6 +60,9 @@ export function defaultsFor(pathname: string): NewTaskDefaults {
   }
   const match = pathname.match(/^\/projects\/([^/]+)/);
   if (match && match[1]) {
+    if (match[1] === "none") {
+      return { chip: "none" };
+    }
     return { chip: "none", projectId: match[1] };
   }
   return { chip: "none" };

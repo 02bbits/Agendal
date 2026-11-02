@@ -183,7 +183,7 @@ describe("TaskRow (LV-4)", () => {
       { showDue: true },
     );
     expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
-      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly",
+      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly on Monday",
     );
   });
 
@@ -219,6 +219,18 @@ describe("TaskRow (LV-4)", () => {
   it("opens details through a real link", () => {
     renderRow(task({ title: "Renew gym membership", id: "abc" }));
     expect(screen.getByRole("link").getAttribute("href")).toBe("/tasks/abc");
+  });
+
+  it("marks the selected row with aria-current on the link and grey background", () => {
+    const { container } = renderRow(
+      task({ title: "Selected task", id: "sel-1" }),
+      { selected: true },
+    );
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("aria-current")).toBe("true");
+    expect(container.querySelector("li")!.className).toContain(
+      "bg-surface-hover/60",
+    );
   });
 
   it("is axe clean in both themes, open and done", async () => {

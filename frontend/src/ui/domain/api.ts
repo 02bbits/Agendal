@@ -27,7 +27,7 @@ export type TaskPatch = Partial<
 export interface TaskApi {
   /** `POST /tasks/{id}/complete` → the task, and the next occurrence for a repeating task. */
   complete(id: string, at: string): ReturnType<TaskRequest>;
-  /** `POST /tasks/{id}/reopen` → the task, and the next occurrence for a repeating task. */
+  /** `POST /tasks/{id}/reopen` → the task, and the generated occurrence removed by Undo. */
   reopen(id: string, at: string): ReturnType<TaskRequest>;
   /** `PATCH /tasks/{id}` → the updated task. */
   patch(id: string, fields: TaskPatch, at: string): PatchTaskResponse;

@@ -5,6 +5,22 @@ import { saveErrorMessage } from "../../src/ui/features/tasks/saveError";
 import { formatSaveErrorToast } from "../../src/ui/features/tasks/types";
 
 describe("saveErrorMessage pure helper (TK §7, UX standards)", () => {
+  it("maps 429 to error.rate_limited with the seconds to wait, never the raw code", () => {
+    const error = new ApiRequestError("error.rate_limited", 429, "r", 12);
+    expect(saveErrorMessage(error)).toEqual({
+      message: t("error.rate_limited", { seconds: 12 }),
+      retry: false,
+    });
+    expect(saveErrorMessage(error).message).not.toContain("{seconds}");
+  });
+
+  it("fills the copy's placeholders, e.g. project.name_taken with the name", () => {
+    const error = new ApiRequestError("project.name_taken", 422);
+    const { message } = saveErrorMessage(error, { name: "HCI" });
+    expect(message).toBe(t("project.name_taken", { name: "HCI" }));
+    expect(message).not.toContain("project.name_taken");
+  });
+
   it("maps error.not_found (< 500) to 'This item no longer exists.' with no retry", () => {
     const error = new ApiRequestError("error.not_found", 404);
     const result = saveErrorMessage(error);

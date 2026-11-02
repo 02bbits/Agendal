@@ -57,6 +57,12 @@ describe("New task rules (Refs #25)", () => {
       });
     });
 
+    it("No project (/projects/none) defaults to No date and no project", () => {
+      expect(defaultsFor("/projects/none")).toEqual({
+        chip: "none",
+      });
+    });
+
     it("Anywhere else defaults to No date and no project", () => {
       expect(defaultsFor("/notes")).toEqual({ chip: "none" });
       expect(defaultsFor("/search")).toEqual({ chip: "none" });

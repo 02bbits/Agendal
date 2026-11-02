@@ -12,6 +12,14 @@ final class NoteVocabulary
     /** @var array<string, list<string>>|null */
     private static ?array $rules = null;
 
+    /** @var array<string, string> Grammar derived from the immutable rules, not from note context. */
+    private static array $phrasePatterns = [];
+
+    /** @var array<string, array<string, string>> */
+    private static array $families = [];
+
+    private static ?string $modifierExpression = null;
+
     /**
      * The words of a text, the one way every matcher reads them: composed (NFC), lower-cased, and split on anything
      * but letters and digits, so "_", "-", "." and "/" separate words ("Send_invoice" is "send", "invoice").
@@ -120,7 +128,7 @@ final class NoteVocabulary
      */
     public static function phrases(string $category): string
     {
-        return self::alternation(self::values($category));
+        return self::$phrasePatterns[$category] ??= self::alternation(self::values($category));
     }
 
     /** @param list<string> $values */
@@ -129,6 +137,31 @@ final class NoteVocabulary
         usort($values, fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
 
         return implode('|', array_map(fn (string $phrase): string => str_replace("'", "['’]", (string) preg_replace('/\s+/', '\s+', preg_quote($phrase, '~'))), $values));
+    }
+
+    /** A whole-number quantity, shared by durations, repeat counts and modifier boundaries. */
+    public static function integerPattern(): string
+    {
+        return '\d+|'.self::phrases('amount_one').'|'.implode('|', self::family('amount'));
+    }
+
+    public static function integer(string $text): ?int
+    {
+        if (ctype_digit($text)) {
+            $number = filter_var(ltrim($text, '0') ?: '0', FILTER_VALIDATE_INT);
+
+            return $number === false ? null : $number;
+        }
+        if (preg_match('~^(?:'.self::phrases('amount_one').')$~iu', $text) === 1) {
+            return 1;
+        }
+        foreach (self::family('amount') as $number => $words) {
+            if (preg_match('~^(?:'.$words.')$~iu', $text) === 1) {
+                return (int) $number;
+            }
+        }
+
+        return null;
     }
 
     /** Date, time, priority and repeat words: they describe a task rather than name one (NU §2.2). */
@@ -148,18 +181,48 @@ final class NoteVocabulary
      */
     public static function modifierPattern(): string
     {
-        return '(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.self::modifiers().')(?![\p{L}\p{N}_])'
-            .'|\d+(?:(?:'.self::phrases('time_separator').')\d+)+'
+        if (self::$modifierExpression !== null) {
+            return self::$modifierExpression;
+        }
+        $atom = NoteDurations::expression().'|'.NoteRepeatParser::modifierExpression()
+            .'|(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.self::modifiers().')(?![\p{L}\p{N}_])'
+            .'|\d+(?:(?:'.self::phrases('time_separator').'|'.self::phrases('full_date_separator').')\d+)+'
             .'|\d+\s*(?:'.self::phrases('time_unit').')(?![\p{L}_])'
             .'|(?<![\p{L}\p{N}_])(?:'.self::phrases('time_prefix').')\s+\d{1,2}(?!\d)';
+        $link = self::phrases('span_lead').'|'.self::phrases('time_prefix');
+
+        return self::$modifierExpression = '(?:(?<![\p{L}\p{N}_])(?:'.$link.')\s+)*(?:'.$atom.')';
     }
 
-    /** "tomorrow 9am", "không gấp": nothing but date, time, priority and repeat words. */
-    public static function onlyModifiers(string $text): bool
+    /** @param list<string> $names */
+    public static function withoutModifiers(string $text, array $names = []): string
     {
-        $rest = (string) preg_replace('~'.self::modifierPattern().'~iu', ' ', self::withoutLeadIn($text));
+        return self::outsideLiterals($text, $names, fn (string $part): string => (string) preg_replace('~'.self::modifierPattern().'~iu', ' ', $part));
+    }
 
-        return preg_match('/[\p{L}\p{N}\p{So}]/u', $rest) !== 1;
+    /**
+     * "tomorrow 9am", "lặp lại 3 lần": nothing but scheduling, priority and repeat phrases.
+     *
+     * @param  list<string>  $names
+     */
+    public static function onlyModifiers(string $text, array $names = []): bool
+    {
+        return preg_match('/[\p{L}\p{N}\p{So}]/u', self::withoutModifiers(self::withoutLeadIn($text), $names)) !== 1;
+    }
+
+    /**
+     * A leading date/priority does not hide the task verb in "tomorrow buy milk, eggs".
+     *
+     * @param  list<string>  $names
+     */
+    public static function withoutLeadingModifiers(string $text, array $names = []): string
+    {
+        $literal = self::literals($text, $names)[0] ?? null;
+        if ($literal !== null && $literal[0] === 0) {
+            return $text;
+        }
+
+        return trim((string) preg_replace('~^(?:\s*(?:'.self::modifierPattern().')\s*(?:(?:'.self::phrases('comma').')\s*)?)+~iu', '', $text));
     }
 
     /** The text after any lead-ins ("please", "nhớ"), list joiners ("and") and leading fillers ("thì"). */
@@ -198,6 +261,9 @@ final class NoteVocabulary
      */
     public static function family(string $family): array
     {
+        if (isset(self::$families[$family])) {
+            return self::$families[$family];
+        }
         self::$rules ??= self::load();
         $phrases = [];
         foreach (array_keys(self::$rules) as $category) {
@@ -206,7 +272,7 @@ final class NoteVocabulary
             }
         }
 
-        return $phrases;
+        return self::$families[$family] = $phrases;
     }
 
     /**

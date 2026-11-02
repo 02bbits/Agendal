@@ -13,6 +13,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * @property array<string, string> $field_updated_at
+ * @property string|null $repeat_rule
  */
 class Task extends Model
 {
@@ -26,6 +27,7 @@ class Task extends Model
         'priority',
         'reminder',
         'repeat',
+        'repeat_rule',
         'notes',
         'project_id',
     ];
@@ -44,6 +46,7 @@ class Task extends Model
         'priority',
         'reminder',
         'repeat',
+        'repeat_rule',
         'notes',
         'project_id',
     ];

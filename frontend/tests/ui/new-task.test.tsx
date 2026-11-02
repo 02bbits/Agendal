@@ -120,8 +120,19 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     const { sheet } = await renderSheet({ onCreate: onCreatePick });
     await userEvent.type(within(sheet).getByLabelText("Title"), "Dentist");
     await userEvent.click(radio("Due", "Pick date…"));
-    const dateInput = within(sheet).getByLabelText("Pick date…");
-    fireEvent.change(dateInput, { target: { value: "2026-11-12" } });
+    const day = within(sheet).getByRole("spinbutton", { name: "Day" });
+    const month = within(sheet).getByRole("spinbutton", { name: "Month" });
+    const year = within(sheet).getByRole("spinbutton", { name: "Year" });
+    day.focus();
+    fireEvent.keyDown(day, { key: "1" });
+    fireEvent.keyDown(day, { key: "2" });
+    fireEvent.keyDown(month, { key: "1" });
+    fireEvent.keyDown(month, { key: "1" });
+    fireEvent.keyDown(year, { key: "2" });
+    fireEvent.keyDown(year, { key: "0" });
+    fireEvent.keyDown(year, { key: "2" });
+    fireEvent.keyDown(year, { key: "6" });
+    fireEvent.keyDown(year, { key: "Enter" });
     await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
     expect(sentPickBody?.due_date).toBe("2026-11-12");
   });
@@ -136,18 +147,18 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(radio("Due", "Pick date…").getAttribute("aria-checked")).toBe(
       "true",
     );
-    const dateInput = within(sheet).getByLabelText("Pick date…");
+    const day = within(sheet).getByRole("spinbutton", { name: "Day" });
 
     // Cancel by blurring without picking a date
-    fireEvent.blur(dateInput);
+    fireEvent.blur(day);
     expect(radio("Due", "Today").getAttribute("aria-checked")).toBe("true");
 
     // Change to Tomorrow, then select Pick date… and cancel via blur
     await userEvent.click(radio("Due", "Tomorrow"));
     expect(radio("Due", "Tomorrow").getAttribute("aria-checked")).toBe("true");
     await userEvent.click(radio("Due", "Pick date…"));
-    const dateInput2 = within(sheet).getByLabelText("Pick date…");
-    fireEvent.blur(dateInput2);
+    const day2 = within(sheet).getByRole("spinbutton", { name: "Day" });
+    fireEvent.blur(day2);
     expect(radio("Due", "Tomorrow").getAttribute("aria-checked")).toBe("true");
   });
 

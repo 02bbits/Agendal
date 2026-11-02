@@ -1058,3 +1058,35 @@ file_extension,py
 file_extension,js
 file_extension,ts
 file_extension,php
+
+repeat:yearly,every year
+repeat:yearly,yearly
+repeat:yearly,annually
+repeat:yearly,mỗi năm
+repeat:yearly,hàng năm
+repeat:yearly,hằng năm
+repeat_prefix,lặp lại
+span_lead,on
+span_lead,vào
+span_lead,starting from
+span_lead,starting
+span_lead,bắt đầu từ
+span_lead,bắt đầu
+span_lead,on the
+
+duration_suffix,sau
+duration_suffix,later
+repeat_exclusion,except
+repeat_exclusion,excluding
+repeat_exclusion,other than
+repeat_exclusion,ngoại trừ
+repeat_exclusion,trừ
+repeat_exclusion,bỏ qua
+repeat_exclusion,không lặp vào
+repeat_exclusion,except for
+repeat_exclusion,but not
+repeat_exclusion,not on
+repeat_exclusion,không vào
+repeat_exclusion,không tính
+duration_unit:hour,giờ
+duration_fraction_suffix,rưỡi

@@ -5,6 +5,7 @@ export const ROUTES = {
   inbox: "/",
   upcoming: "/upcoming",
   projects: "/projects",
+  noProject: "/projects/none",
   notes: "/notes",
   search: "/search",
   account: "/account",

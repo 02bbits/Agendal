@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactElement } from "react";
+import { useEffect, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
@@ -11,6 +11,7 @@ import {
   TaskStoreProvider,
   t,
   useTaskStore,
+  Toast,
   type Project,
   type Task,
 } from "../../../ui";
@@ -22,39 +23,65 @@ interface ClientProps {
   id: string;
 }
 
+function getBackLabel(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const fromParam = new URLSearchParams(window.location.search).get("from");
+  if (fromParam === "inbox") return t("nav.inbox");
+  if (fromParam === "upcoming") return t("nav.upcoming");
+  if (fromParam === "projects") return t("nav.projects");
+
+  if (document.referrer) {
+    try {
+      const url = new URL(document.referrer);
+      if (url.origin === window.location.origin) {
+        if (url.pathname === "/" || url.pathname === "") return t("nav.inbox");
+        if (url.pathname.startsWith("/upcoming")) return t("nav.upcoming");
+        if (url.pathname.startsWith("/projects")) return t("nav.projects");
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return undefined;
+}
+
 function TaskDetailsContainer({
   initialTask,
   back,
   navigate,
+  projects,
   projectsStatus,
   onRetryProjects,
-  onRegisterStore,
+  weekStart,
 }: {
   initialTask: Task;
   back: () => void;
   navigate?: Navigate;
+  projects: Project[];
   projectsStatus: "ready" | "failed";
   onRetryProjects: () => void;
-  onRegisterStore: (
-    setter: (updater: (prev: Project[]) => Project[]) => void,
-  ) => void;
+  weekStart?: "mon" | "sun";
 }): ReactElement {
   const store = useTaskStore();
-
-  useEffect(() => {
-    onRegisterStore(store.setProjects);
-  }, [store.setProjects, onRegisterStore]);
 
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
   return (
-    <TaskDetails
-      task={currentTask}
-      onBack={back}
-      navigate={navigate}
-      projectsStatus={projectsStatus}
-      onRetryProjects={onRetryProjects}
-    />
+    <>
+      <TaskDetails
+        task={currentTask}
+        onBack={back}
+        navigate={navigate}
+        projects={projects}
+        projectsStatus={projectsStatus}
+        onRetryProjects={onRetryProjects}
+        variant="screen"
+        backLabel={getBackLabel()}
+        weekStart={weekStart}
+      />
+      {/* "Completed …" with Undo, like the lists */}
+      <Toast toast={store.toast} onDismiss={store.dismissToast} />
+    </>
   );
 }
 
@@ -75,16 +102,16 @@ export default function TaskDetailsClient({
     message?: string;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
-
-  const storeProjectsRef = useRef<
-    ((updater: (prev: Project[]) => Project[]) => void) | null
-  >(null);
+  // Bumped on every load. Next keeps this page mounted but hidden after we
+  // leave (cacheComponents), and the load runs again when we come back; a new
+  // store key makes that fresh task replace the store's old copy
+  const [loadSeq, setLoadSeq] = useState(0);
 
   const reloadProjects = () => {
     return projects()
       .then((pData) => {
         setProjectsStatus("ready");
-        storeProjectsRef.current?.(() => pData);
+        setProjectList(pData);
       })
       .catch(() => {
         setProjectsStatus("failed");
@@ -105,6 +132,7 @@ export default function TaskDetailsClient({
         setTask(tData);
         setProjectList(pRes.data);
         setProjectsStatus(pRes.status);
+        setLoadSeq((n) => n + 1);
         setLoading(false);
       })
       .catch((err: unknown) => {
@@ -187,6 +215,7 @@ export default function TaskDetailsClient({
 
   return (
     <TaskStoreProvider
+      key={loadSeq}
       api={httpTaskApi}
       clock={appClock}
       initialTasks={[task]}
@@ -197,11 +226,10 @@ export default function TaskDetailsClient({
         initialTask={task}
         back={back}
         navigate={navigate}
+        projects={projectList}
         projectsStatus={projectsStatus}
         onRetryProjects={reloadProjects}
-        onRegisterStore={(setter) => {
-          storeProjectsRef.current = setter;
-        }}
+        weekStart={settings.weekStart}
       />
     </TaskStoreProvider>
   );

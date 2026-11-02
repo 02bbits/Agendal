@@ -72,6 +72,7 @@ class TaskPatcher
             'priority' => $task->priority,
             'reminder' => $origReminder,
             'repeat' => $origRepeat,
+            'repeat_rule' => $task->repeat_rule,
             'notes' => $task->notes,
             'project_id' => $task->project_id,
         ];
@@ -142,6 +143,10 @@ class TaskPatcher
         //   due_date changes while repeating → keep the anchor.
         $repeatAnchor = $origRepeatAnchor;
         $newRepeat = (string) $merged['repeat'];
+        if (isset($appliedFields['repeat']) && ! isset($appliedFields['repeat_rule'])) {
+            $merged['repeat_rule'] = null;
+            $fieldUpdatedAt['repeat_rule'] = $fieldUpdatedAt['repeat'];
+        }
 
         if ($origRepeat === 'never' && $newRepeat !== 'never') {
             $repeatAnchor = $merged['due_date'];
@@ -157,6 +162,9 @@ class TaskPatcher
 
         // 8. Validation on the merged state
         $errors = [];
+        if (! RepeatSchedule::validFor($merged['repeat_rule'], $newRepeat)) {
+            $errors['repeat_rule'] = ['The repeat rule must match the repeat frequency.'];
+        }
         $startTime = $merged['start_time'];
         $endTime = $merged['end_time'];
         $reminder = (string) $merged['reminder'];
@@ -204,6 +212,7 @@ class TaskPatcher
         $task->priority = $merged['priority'];
         $task->reminder = (string) $merged['reminder'];
         $task->repeat = (string) $merged['repeat'];
+        $task->repeat_rule = $merged['repeat_rule'];
         $task->notes = $merged['notes'];
         $task->project_id = $merged['project_id'];
         $task->repeat_anchor = $repeatAnchor;

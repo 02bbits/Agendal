@@ -1,18 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  CheckCircleIcon,
   ProjectScreen,
   ProjectSheet,
   ROUTES,
+  TaskPanel,
+  TaskStoreProvider,
+  Toast,
   t,
+  useMediaQuery,
+  useTaskStore,
+  type Navigate,
+  type Project,
   type Task,
+  type TimeFormat,
+  type WeekStart,
 } from "@/ui";
 import { useAppFrame } from "../../AppFrame";
 import {
   deleteProject,
   getProject,
+  listProjects,
   restoreProject,
   updateProject,
   type ProjectDetailResponse,
@@ -26,13 +36,19 @@ import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDial
 export const SKELETON_DELAY_MS = 300;
 
 export function ProjectClient({ id }: { id: string }) {
-  const { navigate, back, showToast, settings } = useAppFrame();
+  const { navigate, showToast, settings } = useAppFrame();
+  const isNoProject = id === "none";
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped on every load: Next keeps this page hidden while we're on a task
+  // and loads again when we come back, so a new store key shows fresh rows
+  const [loadSeq, setLoadSeq] = useState(0);
+  // Every project, so the task panel can move a task to another one
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [showSkeleton, setShowSkeleton] = useState(false);
 
   const today = useToday(appClock);
@@ -47,11 +63,36 @@ export function ProjectClient({ id }: { id: string }) {
 
   useEffect(() => {
     let active = true;
+    listProjects()
+      .then((list) => {
+        if (active) setAllProjects(list);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
     getProject(id)
       .then((res) => {
         if (!active) return;
-        setData(res);
+        const project =
+          res.project ??
+          ({
+            id: "none",
+            name: t("project.none"),
+            colour: "gray",
+            open: res.progress.total - res.progress.done,
+            done: res.progress.done,
+          } as Project & { open: number; done: number });
+        setData({
+          ...res,
+          project,
+        });
         setNextCursor(res.next_cursor);
+        setLoadSeq((n) => n + 1);
         setLoading(false);
       })
       .catch((err) => {
@@ -68,7 +109,10 @@ export function ProjectClient({ id }: { id: string }) {
     const onTaskCreated = (e: Event) => {
       const customEvent = e as CustomEvent<Task>;
       const created = customEvent.detail;
-      if (created && created.project_id === id) {
+      const matches = isNoProject
+        ? !created?.project_id || created?.project_id === "none"
+        : created?.project_id === id;
+      if (created && matches) {
         setData((prev) => {
           if (!prev) return prev;
           if (prev.open.some((t) => t.id === created.id)) return prev;
@@ -87,56 +131,7 @@ export function ProjectClient({ id }: { id: string }) {
     return () => {
       window.removeEventListener("agendal:task-created", onTaskCreated);
     };
-  }, [id]);
-
-  const settleTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
-    new Map(),
-  );
-  const togglingRef = useRef<Set<string>>(new Set());
-
-  const syncProjectData = async () => {
-    try {
-      const res = await getProject(id);
-      setData((prev) => {
-        if (!prev) return res;
-        const settlingIds = new Set(settleTimers.current.keys());
-        const settlingOpenTasks = prev.open.filter((t) =>
-          settlingIds.has(t.id),
-        );
-        const settlingOpenIds = new Set(settlingOpenTasks.map((t) => t.id));
-
-        const serverOpen = res.open.filter((t) => !settlingOpenIds.has(t.id));
-        const open = [...settlingOpenTasks, ...serverOpen];
-
-        const resCompletedIds = new Set(res.completed.map((t) => t.id));
-        const olderCompleted = prev.completed.filter(
-          (t) =>
-            !resCompletedIds.has(t.id) &&
-            !settlingOpenIds.has(t.id) &&
-            !open.some((o) => o.id === t.id),
-        );
-        const completed = [...res.completed, ...olderCompleted];
-
-        return {
-          ...res,
-          open,
-          completed,
-          next_cursor: res.next_cursor,
-        };
-      });
-      setNextCursor(res.next_cursor);
-    } catch {
-      // Ignore background sync errors
-    }
-  };
-
-  useEffect(() => {
-    const timers = settleTimers.current;
-    return () => {
-      timers.forEach((timer) => clearTimeout(timer));
-      timers.clear();
-    };
-  }, []);
+  }, [id, isNoProject]);
 
   const handleLoadMoreCompleted = async () => {
     if (!nextCursor || loadingMore || !data) return;
@@ -160,188 +155,6 @@ export function ProjectClient({ id }: { id: string }) {
       showToast(t("error.save_failed"));
     } finally {
       setLoadingMore(false);
-    }
-  };
-
-  const handleToggleTask = async (task: Task) => {
-    if (!data) return;
-    if (togglingRef.current.has(task.id)) return;
-    togglingRef.current.add(task.id);
-
-    try {
-      const isComplete = !task.done;
-      const at = appClock.now().toISOString();
-
-      // Cancel any active settle timer for this task
-      const activeTimer = settleTimers.current.get(task.id);
-      if (activeTimer) {
-        clearTimeout(activeTimer);
-        settleTimers.current.delete(task.id);
-      }
-
-      if (isComplete) {
-        const updatedTask: Task = { ...task, done: true, done_at: at };
-        setData((prev) => {
-          if (!prev) return prev;
-          const hasInOpen = prev.open.some((t) => t.id === task.id);
-          return {
-            ...prev,
-            open: hasInOpen
-              ? prev.open.map((t) => (t.id === task.id ? updatedTask : t))
-              : [...prev.open, updatedTask],
-            completed: prev.completed.filter((t) => t.id !== task.id),
-            progress: {
-              done: prev.progress.done + 1,
-              total: prev.progress.total,
-            },
-          };
-        });
-
-        const timer = setTimeout(() => {
-          settleTimers.current.delete(task.id);
-          setData((prev) => {
-            if (!prev) return prev;
-            const currentInOpen = prev.open.find((t) => t.id === task.id);
-            if (!currentInOpen || !currentInOpen.done) {
-              return prev;
-            }
-            const openWithout = prev.open.filter((t) => t.id !== task.id);
-            const alreadyInCompleted = prev.completed.some(
-              (t) => t.id === task.id,
-            );
-            return {
-              ...prev,
-              open: openWithout,
-              completed: alreadyInCompleted
-                ? prev.completed.map((t) =>
-                    t.id === task.id ? updatedTask : t,
-                  )
-                : [updatedTask, ...prev.completed],
-            };
-          });
-          syncProjectData();
-        }, 600);
-        settleTimers.current.set(task.id, timer);
-
-        try {
-          const res = await httpTaskApi.complete(task.id, at);
-          if (res.next && res.next.project_id === data.project.id) {
-            setData((prev) => {
-              if (!prev) return prev;
-              if (prev.open.some((t) => t.id === res.next!.id)) return prev;
-              return {
-                ...prev,
-                open: [...prev.open, res.next!],
-                progress: {
-                  done: prev.progress.done,
-                  total: prev.progress.total + 1,
-                },
-              };
-            });
-          }
-
-          showToast({
-            message: t("task.completed", { title: task.title }),
-            icon: <CheckCircleIcon size={18} />,
-            actionLabel: t("common.undo"),
-            onAction: async () => {
-              const timerToCancel = settleTimers.current.get(task.id);
-              if (timerToCancel) {
-                clearTimeout(timerToCancel);
-                settleTimers.current.delete(task.id);
-              }
-              const reopenedAt = appClock.now().toISOString();
-              const reopenedTask: Task = {
-                ...task,
-                done: false,
-                done_at: null,
-              };
-              setData((prev) => {
-                if (!prev) return prev;
-                const hasInOpen = prev.open.some((t) => t.id === task.id);
-                return {
-                  ...prev,
-                  open: hasInOpen
-                    ? prev.open.map((t) =>
-                        t.id === task.id ? reopenedTask : t,
-                      )
-                    : [reopenedTask, ...prev.open],
-                  completed: prev.completed.filter((t) => t.id !== task.id),
-                  progress: {
-                    done: Math.max(0, prev.progress.done - 1),
-                    total: prev.progress.total,
-                  },
-                };
-              });
-              try {
-                await httpTaskApi.reopen(task.id, reopenedAt);
-                syncProjectData();
-              } catch {
-                showToast(t("error.save_failed"));
-              }
-            },
-          });
-        } catch {
-          const timerToCancel = settleTimers.current.get(task.id);
-          if (timerToCancel) {
-            clearTimeout(timerToCancel);
-            settleTimers.current.delete(task.id);
-          }
-          setData((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              open: prev.open.map((t) => (t.id === task.id ? task : t)),
-              completed: prev.completed.filter((t) => t.id !== task.id),
-              progress: {
-                done: Math.max(0, prev.progress.done - 1),
-                total: prev.progress.total,
-              },
-            };
-          });
-          showToast(t("error.save_failed"));
-        }
-      } else {
-        const reopenedTask: Task = { ...task, done: false, done_at: null };
-        setData((prev) => {
-          if (!prev) return prev;
-          const hasInOpen = prev.open.some((t) => t.id === task.id);
-          return {
-            ...prev,
-            completed: prev.completed.filter((t) => t.id !== task.id),
-            open: hasInOpen
-              ? prev.open.map((t) => (t.id === task.id ? reopenedTask : t))
-              : [reopenedTask, ...prev.open],
-            progress: {
-              done: Math.max(0, prev.progress.done - 1),
-              total: prev.progress.total,
-            },
-          };
-        });
-
-        try {
-          await httpTaskApi.reopen(task.id, at);
-          syncProjectData();
-        } catch {
-          setData((prev) => {
-            if (!prev) return prev;
-            return {
-              ...prev,
-              open: prev.open.filter((t) => t.id !== task.id),
-              completed: prev.completed.some((t) => t.id === task.id)
-                ? prev.completed
-                : [task, ...prev.completed],
-              progress: {
-                done: prev.progress.done + 1,
-                total: prev.progress.total,
-              },
-            };
-          });
-          showToast(t("error.save_failed"));
-        }
-      }
-    } finally {
-      togglingRef.current.delete(task.id);
     }
   };
 
@@ -423,33 +236,41 @@ export function ProjectClient({ id }: { id: string }) {
       <PageMessage
         message={t("error.not_found")}
         actionLabel={t("common.back")}
-        onAction={back}
+        onAction={() => navigate(ROUTES.projects)}
       />
     );
   }
 
   return (
     <>
-      <ProjectScreen
-        project={data.project}
-        progress={data.progress}
-        openTasks={data.open}
-        completedTasks={data.completed}
-        hasMoreCompleted={Boolean(nextCursor)}
-        onLoadMoreCompleted={handleLoadMoreCompleted}
-        loadingMore={loadingMore}
-        today={today}
+      <TaskStoreProvider
+        key={`${data.project.id}-${loadSeq}-${data.open.length}`}
+        api={httpTaskApi}
+        clock={appClock}
+        initialTasks={[...data.open, ...data.completed]}
+        initialProjects={isNoProject ? [] : [data.project]}
         timeFormat={settings.timeFormat}
-        onToggleTask={handleToggleTask}
-        onBack={back}
-        onRenameProject={() => setRenaming(true)}
-        onDeleteProject={handleDelete}
-        navigate={navigate}
-      />
+      >
+        <ProjectContent
+          project={data.project}
+          hasMoreCompleted={Boolean(nextCursor)}
+          onLoadMoreCompleted={handleLoadMoreCompleted}
+          loadingMore={loadingMore}
+          today={today}
+          timeFormat={settings.timeFormat}
+          weekStart={settings.weekStart}
+          allProjects={allProjects}
+          onBack={() => navigate(ROUTES.projects)}
+          onRenameProject={isNoProject ? undefined : () => setRenaming(true)}
+          onDeleteProject={isNoProject ? undefined : handleDelete}
+          navigate={navigate}
+        />
+      </TaskStoreProvider>
       {renaming && (
         <ProjectSheet
           open
           project={data.project}
+          projects={allProjects}
           onClose={() => setRenaming(false)}
           clock={appClock}
           onUpdate={updateProject}
@@ -473,6 +294,121 @@ export function ProjectClient({ id }: { id: string }) {
           }}
         />
       )}
+    </>
+  );
+}
+
+function ProjectContent({
+  project,
+  hasMoreCompleted,
+  onLoadMoreCompleted,
+  loadingMore,
+  today,
+  timeFormat,
+  weekStart,
+  allProjects,
+  onBack,
+  onRenameProject,
+  onDeleteProject,
+  navigate,
+}: {
+  project: Project;
+  hasMoreCompleted: boolean;
+  onLoadMoreCompleted: () => Promise<void>;
+  loadingMore: boolean;
+  today: string;
+  timeFormat: TimeFormat;
+  weekStart: WeekStart;
+  allProjects: Project[];
+  onBack: () => void;
+  onRenameProject?: () => void;
+  onDeleteProject?: (action: ProjectTaskAction) => Promise<void>;
+  navigate: Navigate;
+}) {
+  const store = useTaskStore();
+  const isWide = useMediaQuery("(min-width: 1280px)");
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const selectedTaskId = searchParams.get("task");
+  const pushedTaskRef = useRef(false);
+
+  useEffect(() => {
+    if (!selectedTaskId) {
+      pushedTaskRef.current = false;
+    }
+  }, [selectedTaskId]);
+
+  const handleClosePanel = useCallback(() => {
+    if (pushedTaskRef.current) {
+      pushedTaskRef.current = false;
+      router.back();
+    } else {
+      router.replace(pathname);
+    }
+  }, [pathname, router]);
+
+  const handleNavigate: Navigate = useCallback(
+    (href: string) => {
+      const taskMatch = href.match(/^\/tasks\/([^/?#]+)/);
+      if (taskMatch && isWide) {
+        const taskId = decodeURIComponent(taskMatch[1]!);
+        if (selectedTaskId) {
+          router.replace(`${pathname}?task=${encodeURIComponent(taskId)}`);
+        } else {
+          pushedTaskRef.current = true;
+          router.push(`${pathname}?task=${encodeURIComponent(taskId)}`);
+        }
+        return true;
+      }
+      return navigate(href);
+    },
+    [isWide, pathname, router, navigate, selectedTaskId],
+  );
+
+  // A task moved to another project leaves this screen. A task just completed
+  // stays in Open with its tick while it settles, like the Inbox (LV-1)
+  const isNoProject = project.id === "none";
+  const tasks = store.tasks.filter((t) =>
+    isNoProject ? !t.project_id : t.project_id === project.id,
+  );
+  const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
+  const completedTasks = tasks.filter((t) => t.done && !store.isSettling(t.id));
+
+  return (
+    <>
+      <ProjectScreen
+        project={project}
+        progress={{
+          done: completedTasks.length,
+          total: openTasks.length + completedTasks.length,
+        }}
+        openTasks={openTasks}
+        completedTasks={completedTasks}
+        hasMoreCompleted={hasMoreCompleted}
+        onLoadMoreCompleted={onLoadMoreCompleted}
+        loadingMore={loadingMore}
+        today={today}
+        timeFormat={timeFormat}
+        onToggleTask={(task) => store.toggle(task)}
+        isSettling={store.isSettling}
+        onBack={onBack}
+        onRenameProject={onRenameProject}
+        onDeleteProject={onDeleteProject}
+        navigate={handleNavigate}
+        selectedTaskId={selectedTaskId}
+      />
+      {isWide && selectedTaskId && (
+        <TaskPanel
+          taskId={selectedTaskId}
+          onClose={handleClosePanel}
+          projects={allProjects.length > 0 ? allProjects : [project]}
+          weekStart={weekStart}
+        />
+      )}
+      {/* "Completed …" with Undo, like the Inbox */}
+      <Toast toast={store.toast} onDismiss={store.dismissToast} />
     </>
   );
 }

@@ -14,6 +14,7 @@ export interface ChipGroupProps<V extends string> {
   value: V;
   onChange: (value: V) => void;
   size?: "sm" | "md";
+  itemRef?: (value: V, el: HTMLButtonElement | null) => void;
 }
 
 export function ChipGroup<V extends string>({
@@ -23,6 +24,7 @@ export function ChipGroup<V extends string>({
   value,
   onChange,
   size = "sm",
+  itemRef,
 }: ChipGroupProps<V>) {
   const labelId = useId();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -60,6 +62,7 @@ export function ChipGroup<V extends string>({
               size={size}
               ref={(el) => {
                 refs.current[index] = el;
+                itemRef?.(option.value, el);
               }}
               role="radio"
               aria-checked={checked}

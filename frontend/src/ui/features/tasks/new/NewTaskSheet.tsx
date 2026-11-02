@@ -23,6 +23,7 @@ export function NewTaskSheet({
   onRetryProjects,
   onCreate,
   onAdded,
+  weekStart = "mon",
 }: NewTaskSheetProps): ReactElement | null {
   const form = useNewTaskForm({
     pathname,
@@ -66,6 +67,7 @@ export function NewTaskSheet({
             onChange={form.handleDueChange}
             onPickedChange={form.handlePickedChange}
             onCancelPick={form.handleCancelPick}
+            weekStart={weekStart}
           />
 
           <PriorityChips

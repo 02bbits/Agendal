@@ -50,10 +50,12 @@ return Application::configure(basePath: dirname(__DIR__))
                 $e instanceof HttpExceptionInterface => $e->getStatusCode(),
                 default => 500,
             };
+            $noteError = $e instanceof ValidationException ? ($e->errors()['text'][0] ?? null) : null;
             [$code, $message] = match ($status) {
                 401 => ['auth.session_expired', "You've been signed out. Sign in to continue."],
                 404 => ['error.not_found', 'This item no longer exists.'],
-                422 => ['error.invalid', 'Check the highlighted fields.'],
+                // A note's own validation codes (note.empty, note.too_long, …) are the error code (NU §7).
+                422 => [is_string($noteError) && str_starts_with($noteError, 'note.') ? $noteError : 'error.invalid', 'Check the highlighted fields.'],
                 429 => ['error.rate_limited', "You're going a bit fast. Try again shortly."],
                 default => ['error.generic', 'Something went wrong. Try again.'],
             };

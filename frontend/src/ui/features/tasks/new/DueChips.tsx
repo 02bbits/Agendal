@@ -1,6 +1,6 @@
-import type { ReactElement } from "react";
+import { useRef, type ReactElement } from "react";
 import { ChipGroup, type ChipOption } from "../../../components/ChipGroup";
-import { TextField } from "../../../components/TextField";
+import { DateField } from "../../../components/DateField";
 import { t } from "../../../copy";
 import type { DueChip } from "../../../domain/newTask";
 import type { DueChipsProps } from "./types";
@@ -11,7 +11,10 @@ export function DueChips({
   onChange,
   onPickedChange,
   onCancelPick,
+  weekStart = "mon",
 }: DueChipsProps): ReactElement {
+  const pickChipRef = useRef<HTMLButtonElement | null>(null);
+
   const options: ReadonlyArray<ChipOption<DueChip>> = [
     { value: "today", label: t("date.today") },
     { value: "tomorrow", label: t("date.tomorrow") },
@@ -28,22 +31,24 @@ export function DueChips({
         options={options}
         value={value}
         onChange={onChange}
+        itemRef={(v, el) => {
+          if (v === "pick") {
+            pickChipRef.current = el;
+          }
+        }}
       />
       {value === "pick" && (
-        <TextField
+        <DateField
           label={t("task.pick_date")}
-          type="date"
-          value={picked}
-          onChange={(e) => onPickedChange(e.target.value)}
-          onBlur={() => {
+          value={picked || null}
+          onChange={(v) => onPickedChange(v ?? "")}
+          onCommit={() => pickChipRef.current?.focus()}
+          onCancel={onCancelPick}
+          onLeave={() => {
             if (!picked) onCancelPick();
           }}
-          onKeyDown={(e) => {
-            if (e.key === "Escape") {
-              e.stopPropagation();
-              onCancelPick();
-            }
-          }}
+          weekStart={weekStart}
+          autoFocus
         />
       )}
     </div>
