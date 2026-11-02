@@ -47,6 +47,7 @@ export {
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
 export { useMediaQuery } from "./tasks/useMediaQuery";
+export { useTaskPanel, type TaskPanelState } from "./tasks/useTaskPanel";
 export {
   SETTLE_MS,
   type TaskStore,
