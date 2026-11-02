@@ -10,6 +10,7 @@ export interface ScreenHeaderProps {
   title: string;
   /** The account avatar shows the first letter of the name. */
   accountInitial: string;
+  action?: ReactNode;
   navigate?: Navigate;
   children?: ReactNode;
 }
@@ -17,7 +18,7 @@ export interface ScreenHeaderProps {
 /** Tab-screen header: overline, display title, Search and Account at the top right. */
 export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
   function ScreenHeader(
-    { overline, title, accountInitial, navigate, children },
+    { overline, title, accountInitial, action, navigate, children },
     ref,
   ) {
     return (
@@ -48,13 +49,16 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
             </Link>
           </div>
         </div>
-        <h1
-          ref={ref}
-          className="mt-1 text-display font-bold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary"
-          tabIndex={-1}
-        >
-          {title}
-        </h1>
+        <div className="mt-1 flex items-center justify-between gap-4">
+          <h1
+            ref={ref}
+            className="text-display font-bold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary m-0"
+            tabIndex={-1}
+          >
+            {title}
+          </h1>
+          {action}
+        </div>
         {children}
       </header>
     );

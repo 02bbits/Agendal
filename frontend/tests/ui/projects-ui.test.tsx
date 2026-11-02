@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   COMPLETED_PAGE,
   DeleteProjectDialog,
@@ -30,7 +30,40 @@ const seedTasks = (): Task[] => [
   task({ title: "Loose task" }),
 ];
 
+afterEach(() => {
+  vi.useRealTimers();
+});
+
 describe("ProjectsScreen (PJ §2.2)", () => {
+  it("shows today's date overline from fake clock and New project in the same header row as title", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-23T10:00:00Z"));
+
+    render(
+      <ProjectsScreen
+        projects={[]}
+        accountInitial="E"
+        onNewProject={() => {}}
+      />,
+    );
+
+    // Overline shows today's date
+    expect(screen.getByText("Friday, 23 October")).toBeTruthy();
+
+    // New project is in the same header row as the title
+    const title = screen.getByRole("heading", {
+      level: 1,
+      name: t("nav.projects"),
+    });
+    const newProjectBtn = screen.getByRole("button", {
+      name: t("project.new"),
+    });
+    expect(title.parentElement).toBe(newProjectBtn.parentElement);
+    expect(title.parentElement?.className).toContain("flex");
+    expect(title.parentElement?.className).toContain("items-center");
+    expect(title.parentElement?.className).toContain("justify-between");
+  });
+
   it("renders projects list with progress, alphabetical order and fixed No project", () => {
     const list = [
       { ...seedProjects[1]!, open: 5, done: 3 }, // Adv Web (red)
