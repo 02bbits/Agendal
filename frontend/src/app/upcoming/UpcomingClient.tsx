@@ -25,6 +25,7 @@ import {
 import { useAppFrame } from "../AppFrame";
 import { httpTaskApi, projects, upcoming } from "@/lib/taskApi";
 import { now, timeZone, today } from "@/lib/clock";
+import { ApiRequestError } from "@/lib/apiError";
 
 const clock: Clock = {
   now,
@@ -43,6 +44,11 @@ export function UpcomingClient() {
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
     "loading",
   );
+  const [errorMessage, setErrorMessage] = useState<string>("");
+  // Bumped on every load: Next keeps this page mounted but hidden after we
+  // leave (cacheComponents), and the load runs again when we come back; a new
+  // store key makes fresh tasks replace the store's old copy
+  const [loadSeq, setLoadSeq] = useState(0);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [subtitle, setSubtitle] = useState<string>("");
@@ -107,9 +113,19 @@ export function UpcomingClient() {
             ? t("list.upcoming_subtitle_one", { count: 1 })
             : t("list.upcoming_subtitle", { count }),
         );
+        setLoadSeq((n) => n + 1);
         setStatus("ready");
       })
-      .catch(() => {
+      .catch((err: unknown) => {
+        if (err instanceof ApiRequestError) {
+          setErrorMessage(
+            t("error.generic", {
+              request_id: err.requestId ?? err.code,
+            }),
+          );
+        } else {
+          setErrorMessage(t("app.offline"));
+        }
         setStatus("error");
       });
   };
@@ -269,14 +285,13 @@ export function UpcomingClient() {
       )}
       {status === "error" && (
         <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-          <p className="text-callout text-ink-secondary">
-            {t("error.generic")}
-          </p>
+          <p className="text-callout text-ink-secondary">{errorMessage}</p>
           <Button onClick={handleRetry}>{t("common.retry")}</Button>
         </div>
       )}
       {status === "ready" && (
         <TaskStoreProvider
+          key={loadSeq}
           api={httpTaskApi}
           clock={clock}
           initialTasks={tasks}
