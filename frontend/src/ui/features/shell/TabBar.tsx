@@ -35,12 +35,22 @@ export function TabBar({ active, navigate }: TabBarProps) {
           href={tab.href}
           navigate={navigate}
           className={cx(
-            "focus-ring flex min-h-[62px] flex-col [@media(max-height:480px)]:min-h-12 items-center justify-center gap-0.5 rounded-field text-ink-secondary",
+            "group focus-ring flex min-h-[62px] flex-col [@media(max-height:480px)]:min-h-12 items-center justify-center gap-0.5 rounded-field text-ink-secondary transition-colors active:text-ink",
             tab.id === active && "text-primary!",
           )}
           aria-current={tab.id === active ? "page" : undefined}
         >
-          <span aria-hidden="true">{ICONS[tab.id]}</span>
+          {/* A pill behind the icon: filled for the current tab, and on hover
+              or press, so a tap shows at once where it went */}
+          <span
+            aria-hidden="true"
+            className={cx(
+              "inline-flex h-7 w-14 items-center justify-center rounded-full transition-[background-color,transform] duration-150 group-hover:bg-fill group-active:scale-95 group-active:bg-fill-2 motion-reduce:transition-none",
+              tab.id === active && "bg-fill",
+            )}
+          >
+            {ICONS[tab.id]}
+          </span>
           <span className="text-tab font-medium">{t(tab.label)}</span>
         </Link>
       ))}
