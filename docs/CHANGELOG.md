@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-02
 
+- **12:50 (UTC+7) · Task panel overlay and URL behaviour (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the task panel is a fixed overlay on the right, the content column doesn't resize, the URL uses `?task={id}`, and closing does Back when the panel added the entry, else replace.
 - **10:45 (UTC+7) · Task details panel opens from the right with ?task= (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the panel slides in from the right, the list row shows as selected, the URL carries `?task={id}` (Back closes it), and Escape and × close it.
 
 ## 2026-11-01
