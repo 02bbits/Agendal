@@ -24,6 +24,7 @@ export interface DatePickerProps {
   helper?: ReactNode;
   id?: string;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function DatePicker({
@@ -36,6 +37,7 @@ export function DatePicker({
   helper,
   id,
   className,
+  onOpenChange,
 }: DatePickerProps): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `datepicker-${autoId}`;
@@ -59,6 +61,7 @@ export function DatePicker({
     weekStart,
     onChange,
     disabled,
+    onOpenChange,
   });
 
   const isScreen = variant === "screen" || variant === "row";
@@ -98,7 +101,7 @@ export function DatePicker({
             disabled={disabled}
             isScreen={isScreen}
             isIcon={isIcon}
-            onToggle={() => setOpen((o) => !o)}
+            onToggle={() => setOpen(!open)}
             onKeyDown={onTriggerKeyDown}
           >
             {isIcon ? <CalendarIcon size={16} /> : displayValue}

@@ -15,6 +15,7 @@ export interface UseDatePickerKeyboardOptions {
   weekStart: WeekStart;
   onChange: (date: string) => void;
   disabled?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function useDatePickerKeyboard({
@@ -23,6 +24,7 @@ export function useDatePickerKeyboard({
   weekStart,
   onChange,
   disabled = false,
+  onOpenChange,
 }: UseDatePickerKeyboardOptions) {
   const [open, setOpen] = useState(false);
   const initialDate = value || todayDate;
@@ -32,10 +34,18 @@ export function useDatePickerKeyboard({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const dayRefs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
+  const changeOpen = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
+
   const closeAndFocus = useCallback(() => {
-    setOpen(false);
+    changeOpen(false);
     triggerRef.current?.focus();
-  }, []);
+  }, [changeOpen]);
 
   const selectAndClose = useCallback(
     (date: string) => {
@@ -106,13 +116,13 @@ export function useDatePickerKeyboard({
   const onTriggerKeyDown = (e: KeyboardEvent<HTMLButtonElement>) => {
     if (!disabled && ["ArrowDown", "Enter", " "].includes(e.key)) {
       e.preventDefault();
-      setOpen(true);
+      changeOpen(true);
     }
   };
 
   return {
     open,
-    setOpen,
+    setOpen: changeOpen,
     viewMonth,
     setViewMonth,
     focusedDate,

@@ -247,6 +247,55 @@ describe("DateField", () => {
     expect(onCommit).toHaveBeenCalledWith("2026-10-15");
   });
 
+  it("onLeave fires when focus leaves the field, not when moving between segments or into the open calendar", async () => {
+    const onLeave = vi.fn();
+
+    render(
+      <div>
+        <button type="button">Outside Before</button>
+        <DateField
+          label="Pick date"
+          value={null}
+          onChange={() => {}}
+          onLeave={onLeave}
+          weekStart="mon"
+        />
+        <button type="button">Outside After</button>
+      </div>,
+    );
+
+    const day = screen.getByRole("spinbutton", { name: "Day" });
+    const month = screen.getByRole("spinbutton", { name: "Month" });
+    const outsideAfter = screen.getByRole("button", { name: "Outside After" });
+
+    // Focus day segment
+    day.focus();
+    expect(onLeave).not.toHaveBeenCalled();
+
+    // Moving between segments does not fire onLeave
+    fireEvent.blur(day, { relatedTarget: month });
+    month.focus();
+    expect(onLeave).not.toHaveBeenCalled();
+
+    // Opening the calendar does not fire onLeave
+    const calBtn = screen.getByRole("button", { name: "Choose a date" });
+    await userEvent.click(calBtn);
+    expect(onLeave).not.toHaveBeenCalled();
+
+    // Moving focus inside the calendar popover does not fire onLeave
+    const cell15 = screen.getByRole("gridcell", { name: "15" });
+    fireEvent.blur(calBtn, { relatedTarget: cell15 });
+    cell15.focus();
+    expect(onLeave).not.toHaveBeenCalled();
+
+    // Close calendar by pressing Escape
+    fireEvent.keyDown(cell15, { key: "Escape" });
+
+    // Focus leaving the field entirely fires onLeave
+    outsideAfter.focus();
+    expect(onLeave).toHaveBeenCalledTimes(1);
+  });
+
   it("is axe clean in both themes", async () => {
     const { container } = render(
       <main>

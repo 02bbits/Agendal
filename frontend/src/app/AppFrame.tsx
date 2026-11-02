@@ -562,7 +562,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }}
           />
         )}
-        {open && <NewTaskSheet {...sheetProps} />}
+        {open && (
+          <NewTaskSheet {...sheetProps} weekStart={settings.weekStart} />
+        )}
         {creatingProject && (
           <ProjectSheet
             open

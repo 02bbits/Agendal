@@ -1,4 +1,4 @@
-import { useId, type ReactElement } from "react";
+import { useId, useRef, type ReactElement } from "react";
 import type { WeekStart } from "../domain/types";
 import { t } from "../copy";
 import { cx } from "./cx";
@@ -12,6 +12,7 @@ export interface DateFieldProps {
   onChange: (value: string | null) => void;
   onCommit?: (value: string) => void;
   onCancel?: () => void;
+  onLeave?: () => void;
   weekStart: WeekStart;
   autoFocus?: boolean;
   className?: string;
@@ -23,6 +24,7 @@ export function DateField({
   onChange,
   onCommit,
   onCancel,
+  onLeave,
   weekStart,
   autoFocus,
   className,
@@ -30,6 +32,7 @@ export function DateField({
   const autoId = useId();
   const labelId = `datefield-label-${autoId}`;
   const errorId = `datefield-error-${autoId}`;
+  const calendarOpen = useRef(false);
 
   const {
     segments,
@@ -96,6 +99,11 @@ export function DateField({
         role="group"
         aria-labelledby={labelId}
         aria-describedby={error ? errorId : undefined}
+        onBlur={(e) => {
+          if (calendarOpen.current) return;
+          if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+          onLeave?.();
+        }}
         className={cx(
           "flex h-11 w-full items-center rounded-field border border-control bg-surface px-3 text-body text-ink tabular-nums",
           focusedSegment !== null &&
@@ -121,6 +129,9 @@ export function DateField({
             onChange={applyIso}
             weekStart={weekStart}
             variant="icon"
+            onOpenChange={(o) => {
+              calendarOpen.current = o;
+            }}
           />
         </div>
       </div>
