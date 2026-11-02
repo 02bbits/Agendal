@@ -401,4 +401,102 @@ describe("Project detail page /projects/[id]", () => {
     expect(sidebarNoProjectLink?.textContent).toContain("No project");
     expect(sidebarNoProjectLink?.textContent).toContain("1");
   });
+
+  it("task panel lists every project and moving a task takes it off this project", async () => {
+    searchParams = new URLSearchParams("task=t-1");
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-1") return json(200, mockProject);
+      if (url === "/api/v1/projects")
+        return json(200, [
+          { id: "p-1", name: "Test Project", colour: "blue", open: 2, done: 0 },
+          { id: "p-2", name: "Personal", colour: "purple", open: 0, done: 0 },
+        ]);
+      if (url === "/api/v1/tasks/t-1" && init?.method === "PATCH")
+        return json(
+          200,
+          task({ id: "t-1", title: "First Task", project_id: "p-2" }),
+        );
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await screen.findByRole("link", { name: /First Task/ });
+    const panel = screen.getByRole("complementary", {
+      name: t("task.heading"),
+    });
+    await userEvent.click(
+      within(panel).getByRole("button", { name: t("task.project") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Personal" }),
+    );
+
+    const patch = fetchMock.mock.calls.find(
+      ([url, init]) => url === "/api/v1/tasks/t-1" && init?.method === "PATCH",
+    );
+    expect(JSON.parse(String(patch?.[1]?.body))).toMatchObject({
+      project_id: "p-2",
+    });
+    expect(screen.queryByRole("link", { name: /First Task/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Second Task/ })).toBeTruthy();
+  });
+
+  it("a task completed on a project screen keeps its row with the tick while it settles", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-1") return json(200, mockProject);
+      if (url === "/api/v1/tasks/t-1/complete")
+        return json(200, {
+          task: task({
+            id: "t-1",
+            title: "First Task",
+            project_id: "p-1",
+            done: true,
+          }),
+          next: null,
+        });
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await screen.findByRole("link", { name: /First Task/ });
+    expect(screen.queryByRole("heading", { name: /Completed/ })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("checkbox", {
+        name: t("task.complete", { title: "First Task" }),
+      }),
+    );
+
+    // Still in Open, ticked (now offers Reopen), with no Completed section yet
+    expect(
+      screen
+        .getByRole("checkbox", {
+          name: t("task.reopen", { title: "First Task" }),
+        })
+        .getAttribute("aria-checked"),
+    ).toBe("true");
+    expect(screen.queryByRole("heading", { name: /Completed/ })).toBeNull();
+    expect(screen.getAllByRole("link", { name: /First Task/ })).toHaveLength(1);
+  });
 });
