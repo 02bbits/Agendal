@@ -363,6 +363,27 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(panel.className).toContain("w-[400px]");
   });
 
+  it("reserves a 400px lane on wide screens whether or not a panel is open", () => {
+    const { unmount } = render(
+      <AppShell tab="inbox">
+        <p>content</p>
+      </AppShell>,
+    );
+    expect(
+      screen.getByRole("main").closest(".xl\\:pr-\\[400px\\]"),
+    ).toBeTruthy();
+
+    unmount();
+    render(
+      <AppShell tab="inbox" aside={<p>Task detail</p>}>
+        <p>content</p>
+      </AppShell>,
+    );
+    expect(
+      screen.getByRole("main").closest(".xl\\:pr-\\[400px\\]"),
+    ).toBeTruthy();
+  });
+
   it("leaves the sidebar out on signed-out screens", () => {
     render(
       <AppShell>

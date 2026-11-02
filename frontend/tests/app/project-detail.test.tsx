@@ -298,4 +298,30 @@ describe("Project detail page /projects/[id]", () => {
       document.querySelector(`[aria-label="${t("task.heading")}"]`),
     ).toBeNull();
   });
+
+  it("project screen content wrapper has max-width class and ⋯ button is inside it", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-1") return json(200, mockProject);
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    const moreBtn = await screen.findByRole("button", {
+      name: t("project.menu"),
+    });
+    const contentCol = screen.getByRole("main").parentElement!;
+    expect(contentCol.className).toContain("md:max-w-[792px]");
+    expect(contentCol.contains(moreBtn)).toBe(true);
+  });
 });

@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   COMPLETED_PAGE,
   DeleteProjectDialog,
@@ -97,6 +97,28 @@ describe("ProjectsScreen (PJ §2.2)", () => {
 });
 
 describe("ProjectScreen (PJ-2, T-PJ-10, T-PJ-11)", () => {
+  it("opens project menu on ⋯ click and triggers rename and delete", async () => {
+    const onRename = vi.fn();
+    const onDelete = vi.fn();
+    render(
+      <ProjectScreen
+        project={seedProjects[0]!}
+        onBack={() => {}}
+        onRenameProject={onRename}
+        onDeleteProject={onDelete}
+        today="2026-10-23"
+      />,
+    );
+    const menuBtn = screen.getByRole("button", { name: t("project.menu") });
+    await userEvent.click(menuBtn);
+    expect(screen.getByRole("menu")).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: t("project.rename") }),
+    );
+    expect(onRename).toHaveBeenCalledOnce();
+  });
+
   it("renders project header, progress, open tasks and completed tasks", () => {
     const project = seedProjects[0]!;
     const tasks = seedTasks().filter((t) => t.project_id === "p-sql");
