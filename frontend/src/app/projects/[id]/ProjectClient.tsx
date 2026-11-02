@@ -21,6 +21,7 @@ import { useAppFrame } from "../../AppFrame";
 import {
   deleteProject,
   getProject,
+  listProjects,
   restoreProject,
   updateProject,
   type ProjectDetailResponse,
@@ -42,6 +43,8 @@ export function ProjectClient({ id }: { id: string }) {
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Every project, so the task panel can move a task to another one
+  const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [showSkeleton, setShowSkeleton] = useState(false);
 
   const today = useToday(appClock);
@@ -53,6 +56,18 @@ export function ProjectClient({ id }: { id: string }) {
     }, SKELETON_DELAY_MS);
     return () => clearTimeout(timer);
   }, [loading]);
+
+  useEffect(() => {
+    let active = true;
+    listProjects()
+      .then((list) => {
+        if (active) setAllProjects(list);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -239,6 +254,7 @@ export function ProjectClient({ id }: { id: string }) {
           today={today}
           timeFormat={settings.timeFormat}
           weekStart={settings.weekStart}
+          allProjects={allProjects}
           onBack={() => navigate(ROUTES.projects)}
           onRenameProject={isNoProject ? undefined : () => setRenaming(true)}
           onDeleteProject={isNoProject ? undefined : handleDelete}
@@ -284,6 +300,7 @@ function ProjectContent({
   today,
   timeFormat,
   weekStart,
+  allProjects,
   onBack,
   onRenameProject,
   onDeleteProject,
@@ -296,6 +313,7 @@ function ProjectContent({
   today: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
+  allProjects: Project[];
   onBack: () => void;
   onRenameProject?: () => void;
   onDeleteProject?: (action: ProjectTaskAction) => Promise<void>;
@@ -343,8 +361,14 @@ function ProjectContent({
     [isWide, pathname, router, navigate, selectedTaskId],
   );
 
-  const openTasks = store.tasks.filter((t) => !t.done);
-  const completedTasks = store.tasks.filter((t) => t.done);
+  // A task moved to another project leaves this screen. A task just completed
+  // stays in Open with its tick while it settles, like the Inbox (LV-1)
+  const isNoProject = project.id === "none";
+  const tasks = store.tasks.filter((t) =>
+    isNoProject ? !t.project_id : t.project_id === project.id,
+  );
+  const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
+  const completedTasks = tasks.filter((t) => t.done && !store.isSettling(t.id));
 
   return (
     <>
@@ -372,7 +396,7 @@ function ProjectContent({
         <TaskPanel
           taskId={selectedTaskId}
           onClose={handleClosePanel}
-          projects={[project]}
+          projects={allProjects.length > 0 ? allProjects : [project]}
           weekStart={weekStart}
         />
       )}
