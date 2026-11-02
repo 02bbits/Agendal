@@ -1,5 +1,6 @@
 # Try notes by hand. Edit this file, then from backend/ run:
 #   php vendor/bin/pest tests/Manual
+# Or try one note at a time in the browser: php -S localhost:8090 tests/Manual/try.php, then open http://localhost:8090
 #
 # task: Title | due date | start-end    an open task the notes below can match (date and times optional)
 # done: Title | due date | start-end    a done task (for "already done")

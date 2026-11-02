@@ -6,6 +6,17 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 - **12:50 (UTC+7) · Task panel overlay and URL behaviour (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the task panel is a fixed overlay on the right, the content column doesn't resize, the URL uses `?task={id}`, and closing does Back when the panel added the entry, else replace.
 - **10:45 (UTC+7) · Task details panel opens from the right with ?task= (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the panel slides in from the right, the list row shows as selected, the URL carries `?task={id}` (Back closes it), and Escape and × close it.
+- **Relative hour aliases and fractional suffixes.** `giờ` shares the hour grammar with `tiếng`; `rưỡi` adds an exact half-unit through the shared duration reader. Generated alias/unit checks and an API case cover fractional hours and crossing midnight. Unrepresentable fractional months/minutes retain their text for fallback. See [NU relative time](03-modules/NU-note-understanding.md#relative-time).
+
+- **Composable note modifiers.** Relative durations, repeat intervals/counts and comma boundaries share quantity grammar. Scheduling-only fragments bind to their task, and leading dates preserve shopping lists. Unresolved quantities, exclusions and conflicting relative timestamps keep their full constraints for fallback. [NU](03-modules/NU-note-understanding.md#relative-time) and [70 complex HTTP cases](../backend/tests/Manual/complex-note-cases.md) describe the behavior.
+
+- **Calendar shorthand and manual checks.** Monthly dates accept ordinal numbers without `the`; weekday ordinals can share one weekday (`first and third Monday`). Unresolved repeat words stay low confidence. [67 manual HTTP cases](../backend/tests/Manual/note-cases.md) include title cleanup and the existing NU-E6 rule for multiple dates.
+
+- **Calendar list parsing and repeated copies.** The splitter preserves weekday/month-date lists and literal commas before finding task boundaries. Notes can create numbered daily series from an explicit per-day count, separately from the series-end count. Vietnamese weekday introducers leave no stray title text. Unsupported time allocations preserve the full request. See [NU extraction](03-modules/NU-note-understanding.md#25-extraction-nu-2) and the [API contract](07-architecture/api.md#notes-with-multiple-tasks-per-scheduled-day).
+
+- **Calendar recurrence contract (IM-37, #117).** [API](07-architecture/api.md#task-recurrence-contract-im-37), [TK §7–8](03-modules/TK-tasks.md#7-api-contract) and [NU §2.5/7](03-modules/NU-note-understanding.md#25-extraction-nu-2) distinguish the frequency `repeat`, nullable RRULE `repeat_rule` and server-maintained `repeat_anchor`. The [data model](07-architecture/data-model.md), [task schema](07-architecture/contracts/schemas/task.schema.json), [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) and task fixtures follow. The API reference owns validation limits, PATCH clearing rules and compatibility details; NU keeps note-recognition examples.
+- **Frontend presentation (#117).** Shared `describeRepeat(task, locale)` formats structured recurrence data into English/Vietnamese text for task details and accessible names. Backend scheduling remains authoritative.
+- **Completion and Undo (#117).** The API documents the different meanings of `next` in complete/reopen responses, idempotent retries and recompletion. Calendar rules skip missing dates; legacy enum-only tasks retain month-end clamping.
 
 ## 2026-11-01
 

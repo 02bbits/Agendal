@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests;
 
 use App\Services\Tasks\DueDateFallback;
+use App\Services\Tasks\RepeatSchedule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Validator;
 
@@ -45,6 +46,7 @@ class StoreTaskRequest extends FormRequest
             'priority' => ['nullable', 'in:low,medium,high'],
             'reminder' => ['nullable', 'in:none,5m,15m,30m,1h,1d'],
             'repeat' => ['nullable', 'in:never,daily,weekly,monthly,yearly'],
+            'repeat_rule' => ['nullable', 'string', 'max:300'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'project_id' => ['nullable', 'uuid'],
         ];
@@ -87,6 +89,10 @@ class StoreTaskRequest extends FormRequest
                 $dueDateStr = is_string($dueDate) ? $dueDate : null;
                 $startTimeStr = is_string($startTime) ? $startTime : null;
                 $repeatStr = is_string($repeat) ? $repeat : 'never';
+                $rule = $this->input('repeat_rule');
+                if (is_string($rule) && ! RepeatSchedule::validFor($rule, $repeatStr)) {
+                    $validator->errors()->add('repeat_rule', 'The repeat rule must match the repeat frequency.');
+                }
 
                 if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($dueDate)) {
                     if (! DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {

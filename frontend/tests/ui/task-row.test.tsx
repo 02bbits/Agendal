@@ -183,7 +183,7 @@ describe("TaskRow (LV-4)", () => {
       { showDue: true },
     );
     expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
-      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly",
+      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly on Monday",
     );
   });
 

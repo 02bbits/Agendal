@@ -40,3 +40,60 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `GET /sync?cursor=&limit=` | Pull changes since a cursor. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
 | `POST /auth/logout-everywhere` | End all sessions (Should) | [ADR-007](decisions/ADR-007-session-and-auth.md) |
+
+## Task recurrence contract (IM-37)
+
+These fields apply to task responses, including `changes[].task` in a note result. Full examples: [task.json](contracts/fixtures/task.json) (no recurrence) and [task-recurring.json](contracts/fixtures/task-recurring.json) (Monday/Wednesday/Friday).
+
+| Field | Shape | Meaning / ownership |
+|---|---|---|
+| `repeat` | `never`, `daily`, `weekly`, `monthly`, `yearly` | Frequency. Accepted by task create/patch and present in note plan create/update entries. It remains an enum. |
+| `repeat_rule` | RRULE string, at most 300 characters, or `null` | Calendar configuration: interval, selected weekdays/month dates and an optional end. Accepted by task create/patch and present in note plan create/update entries. `null` uses the legacy enum-only schedule. |
+| `repeat_anchor` | Local `YYYY-MM-DD` or `null` | Original date of the series, set by the server. Exposed on tasks; not writable by clients or note plan entries. Moving one occurrence does not move this anchor. |
+
+Current task responses include both nullable fields. Their schema properties remain optional for older task snapshots embedded in note results. Clients must tolerate their absence there.
+
+Example response fragment:
+
+```json
+{
+  "due_date": "2026-11-02",
+  "repeat": "weekly",
+  "repeat_rule": "FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE,FR",
+  "repeat_anchor": "2026-11-02"
+}
+```
+
+### Writing a rule
+
+- Use uppercase RRULE keys/values, with `FREQ` first and matching `repeat`. The supported components are `FREQ`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `BYMONTH`, `WKST`, `COUNT` and `UNTIL`; keys cannot repeat. The backend checks RRULE semantics in addition to the JSON Schema's string shape.
+- `INTERVAL` is 1–999 (default 1). `COUNT` is 1–10,000 and includes the first occurrence. Use either COUNT or UNTIL, never both. UNTIL is a UTC RRULE date-time; note date-only ends are encoded as `YYYYMMDDT235959Z`, inclusive of that floating local date.
+- Invalid rules or a frequency mismatch in `POST/PATCH /tasks` return `422`, with a `repeat_rule` field error. A rule cannot accompany `repeat: never`.
+- A winning `PATCH` of `repeat` without a winning `repeat_rule` clears the custom rule, even if the enum value is unchanged. To preserve or change a custom rule while writing the frequency, send both fields with consistent `at` timestamps. A `repeat_rule`-only patch is checked against the merged frequency.
+- `repeat_anchor` is maintained by the server: enabling recurrence sets it from the due date, disabling recurrence clears it, and moving an occurrence preserves it. Calendar rules skip dates that do not exist; legacy enum-only monthly/yearly tasks keep their month-end clamping. See [TK §2.3](../03-modules/TK-tasks.md#23-repeating-tasks-tk-4).
+
+The anchor is stored separately from the current occurrence's `due_date`. For example, a legacy monthly series anchored on `2026-01-31` has an occurrence due on `2026-02-28`; its anchor remains `2026-01-31`, so March returns to day 31. The same distinction lets the frontend describe the original schedule after a single occurrence is moved.
+
+| Rule example | Meaning |
+|---|---|
+| `FREQ=MONTHLY;BYDAY=2MO` | The second Monday of each month |
+| `FREQ=MONTHLY;BYMONTHDAY=-1` | The last day of each month |
+| `FREQ=DAILY;INTERVAL=3;COUNT=5` | Every three days, five occurrences in total |
+| `FREQ=WEEKLY;BYDAY=MO;UNTIL=20261231T235959Z` | Mondays through 31 December 2026; no occurrence after that local date |
+
+### Notes with multiple tasks per scheduled day
+
+`POST /notes` expands an explicit per-day count into separate ordinary plan `create` entries. For example, `visit house 3 times every day` produces refs `i1`, `i1-2`, `i1-3`, numbered titles and three independent daily rules, with `start_time: null`. Each saved task follows the same complete/reopen contract below. The expanded creates count toward the note limit of 30; exceeding it returns `422 note.too_many_items` without applying a partial plan. A per-day count is distinct from RRULE `COUNT`, which limits the number of recurrence dates in each series.
+
+### Completing and reopening
+
+Both endpoints return `200 {task, next?}`, with different meanings for `next`:
+
+- `POST /tasks/{id}/complete`: `task` is the saved task; `next`, when present, is the generated occurrence to add/merge by id. A retry reuses the existing occurrence. Exhausted rules and a deliberately deleted child produce no `next`.
+- `POST /tasks/{id}/reopen`: `task` is the reopened task; `next`, when present, is the uncompleted generated occurrence withdrawn by Undo, so clients remove it by id. An already-completed child is preserved. Recompletion can restore the withdrawn child using the task's current schedule without creating a duplicate.
+
+Each operation applies per-field LWW and runs in a transaction. A stale `at` can leave the task unchanged. Reopening still enforces the 5,000-open-task limit after withdrawing the generated child.
+
+### Presentation
+
+The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_rule` and `repeat_anchor` into English/Vietnamese text. Backend scheduling is authoritative. The PHP-only Try notes development page uses the RRULE library's own preview text.
