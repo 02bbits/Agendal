@@ -7,6 +7,7 @@ import {
   ROUTES,
   TaskPanel,
   TaskStoreProvider,
+  Toast,
   t,
   useTaskPanel,
   useTaskStore,
@@ -351,6 +352,7 @@ function ProjectContent({
         today={today}
         timeFormat={timeFormat}
         onToggleTask={(task) => store.toggle(task)}
+        isSettling={store.isSettling}
         onBack={onBack}
         onRenameProject={onRenameProject}
         onDeleteProject={onDeleteProject}
@@ -365,6 +367,8 @@ function ProjectContent({
           weekStart={weekStart}
         />
       )}
+      {/* "Completed …" with Undo, like the Inbox */}
+      <Toast toast={store.toast} onDismiss={store.dismissToast} />
     </>
   );
 }
