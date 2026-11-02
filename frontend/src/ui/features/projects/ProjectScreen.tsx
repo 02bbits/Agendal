@@ -67,11 +67,9 @@ export function ProjectScreen({
     done: completedTasks.length,
     total: totalTasks,
   };
-  const totalDone = explicitProgress
-    ? explicitProgress.done
-    : explicitHasMoreCompleted
-      ? completed.length + 1
-      : completed.length;
+  const totalDone =
+    explicitProgress?.done ??
+    (explicitHasMoreCompleted ? completed.length + 1 : completed.length);
 
   return (
     <div className="pb-8">
@@ -96,32 +94,19 @@ export function ProjectScreen({
         />
         {project.name}
       </h1>
-      <ProjectProgressBar
-        colour={project.colour}
-        done={progress.done}
-        total={progress.total}
-      />
+      <div className="w-full max-w-[720px] xl:max-w-[min(720px,calc(100vw-248px-400px-80px))]">
+        <ProjectProgressBar
+          colour={project.colour}
+          done={progress.done}
+          total={progress.total}
+        />
 
-      {totalTasks === 0 ? (
-        <EmptyState title={t("project.empty")} />
-      ) : (
-        <>
-          <ProjectOpenList
-            tasks={open}
-            project={project}
-            today={today}
-            timeFormat={timeFormat}
-            selectedTaskId={selectedTaskId}
-            onToggleTask={onToggleTask}
-            navigate={navigate}
-          />
-          {completed.length > 0 && (
-            <ProjectCompletedList
-              completed={completed}
-              hasMoreCompleted={explicitHasMoreCompleted}
-              totalDone={totalDone}
-              onLoadMoreCompleted={onLoadMoreCompleted}
-              loadingMore={loadingMore}
+        {totalTasks === 0 ? (
+          <EmptyState title={t("project.empty")} />
+        ) : (
+          <>
+            <ProjectOpenList
+              tasks={open}
               project={project}
               today={today}
               timeFormat={timeFormat}
@@ -129,9 +114,24 @@ export function ProjectScreen({
               onToggleTask={onToggleTask}
               navigate={navigate}
             />
-          )}
-        </>
-      )}
+            {completed.length > 0 && (
+              <ProjectCompletedList
+                completed={completed}
+                hasMoreCompleted={explicitHasMoreCompleted}
+                totalDone={totalDone}
+                onLoadMoreCompleted={onLoadMoreCompleted}
+                loadingMore={loadingMore}
+                project={project}
+                today={today}
+                timeFormat={timeFormat}
+                selectedTaskId={selectedTaskId}
+                onToggleTask={onToggleTask}
+                navigate={navigate}
+              />
+            )}
+          </>
+        )}
+      </div>
 
       <DeleteProjectDialog
         open={deleting}
@@ -140,9 +140,7 @@ export function ProjectScreen({
         onCancel={() => setDeleting(false)}
         onConfirm={async (action) => {
           setDeleting(false);
-          if (onDeleteProject) {
-            await onDeleteProject(action);
-          }
+          await onDeleteProject?.(action);
         }}
       />
     </div>

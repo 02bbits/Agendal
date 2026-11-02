@@ -44,7 +44,7 @@ export function AppShell({
       className={
         "min-h-dvh bg-paper md:flex" +
         (sidebar ? " md:[--sidebar-w:248px]" : "") +
-        " xl:[--panel-w:400px]"
+        (aside ? " xl:[--panel-w:400px]" : "")
       }
     >
       {sidebar && (
@@ -52,23 +52,21 @@ export function AppShell({
           <Sidebar active={tab} navigate={navigate} {...sidebar} />
         </div>
       )}
-      <div className="flex-1 min-w-0 xl:pr-[400px]">
-        <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px]">
-          <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6">
-            {banner}
-            {children}
-          </main>
-          {tab && (
-            <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
-              {capture && <CaptureBar {...capture} />}
-              <TabBar active={tab} navigate={navigate} />
-            </div>
-          )}
-          {toast}
-        </div>
+      <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1">
+        <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6">
+          {banner}
+          {children}
+        </main>
+        {tab && (
+          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
+            {capture && <CaptureBar {...capture} />}
+            <TabBar active={tab} navigate={navigate} />
+          </div>
+        )}
+        {toast}
       </div>
       {aside && (
-        <div className="fixed inset-y-0 right-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">
+        <div className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">
           {aside}
         </div>
       )}

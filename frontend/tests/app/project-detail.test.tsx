@@ -299,7 +299,7 @@ describe("Project detail page /projects/[id]", () => {
     ).toBeNull();
   });
 
-  it("project screen content wrapper has max-width class and ⋯ button is inside it", async () => {
+  it("project detail rows wrapper has max-w-[720px] cap and AppShell column has lg:max-w-none", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/v1/me")
         return json(200, { id: 1, email: "u@test.com" });
@@ -321,7 +321,11 @@ describe("Project detail page /projects/[id]", () => {
       name: t("project.menu"),
     });
     const contentCol = screen.getByRole("main").parentElement!;
-    expect(contentCol.className).toContain("md:max-w-[792px]");
+    expect(contentCol.className).toContain("lg:max-w-none");
     expect(contentCol.contains(moreBtn)).toBe(true);
+
+    const rowsWrapper = document.querySelector(".max-w-\\[720px\\]");
+    expect(rowsWrapper).toBeTruthy();
+    expect(contentCol.contains(rowsWrapper)).toBe(true);
   });
 });
