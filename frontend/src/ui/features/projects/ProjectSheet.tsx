@@ -14,10 +14,13 @@ import {
 import type { Project, ProjectColor } from "../../domain/types";
 import { now } from "../../../lib/clock";
 import { uuidv7 } from "../../../lib/uuid";
+import { saveErrorMessage } from "../tasks/saveError";
 
 export interface ProjectSheetProps {
   open: boolean;
   projects?: readonly Project[];
+  /** When editing an existing project, pass it here */
+  project?: Project | null;
   onClose: () => void;
   /** Gets the new project: open it, or select it in the picker that opened the sheet (PJ-1). */
   onCreate?(project: {
@@ -25,30 +28,39 @@ export interface ProjectSheetProps {
     name: string;
     colour: ProjectColor;
   }): Promise<Project> | Project;
-  onCreated: (project: Project) => void;
+  onUpdate?(
+    id: string,
+    patch: { name: string; colour: ProjectColor },
+  ): Promise<Project> | Project;
+  onCreated?: (project: Project) => void;
+  onUpdated?: (project: Project) => void;
   clock?: { now: () => Date };
 }
 
-/** New project: name and one of 8 colours. */
+/** New project / Rename project: name and one of 8 colours. */
 export function ProjectSheet({
   open,
   projects = [],
+  project,
   onClose,
   onCreate,
+  onUpdate,
   onCreated,
+  onUpdated,
   clock,
 }: ProjectSheetProps) {
-  const [name, setName] = useState("");
+  const isEdit = Boolean(project);
+  const [name, setName] = useState(project ? project.name : "");
   const [colour, setColour] = useState(function () {
-    return defaultProjectColour(projects);
+    return project ? project.colour : defaultProjectColour(projects);
   });
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
   const colourName = useId();
-  const atLimit = projects.length >= PROJECT_LIMIT;
-  const taken = projectNameError(name, projects);
+  const atLimit = !isEdit && projects.length >= PROJECT_LIMIT;
+  const taken = projectNameError(name, projects, project?.id);
   const error = atLimit
     ? t("project.limit")
     : serverError
@@ -65,29 +77,41 @@ export function ProjectSheet({
     setServerError(null);
 
     const currentDate = clock?.now?.() ?? now();
-    const newProjectData = {
-      id: uuidv7(currentDate),
+    const projectPayload = {
       name: name.trim(),
       colour,
     };
 
     try {
-      if (onCreate) {
-        const created = await onCreate(newProjectData);
-        onCreated(created);
+      if (isEdit && project) {
+        if (onUpdate) {
+          const updated = await onUpdate(project.id, projectPayload);
+          onUpdated?.(updated);
+        } else {
+          onUpdated?.({
+            ...project,
+            ...projectPayload,
+          });
+        }
       } else {
-        onCreated({
-          ...newProjectData,
-          created_at: currentDate.toISOString(),
-        });
+        const newProjectData = {
+          id: uuidv7(currentDate),
+          ...projectPayload,
+        };
+        if (onCreate) {
+          const created = await onCreate(newProjectData);
+          onCreated?.(created);
+        } else {
+          onCreated?.({
+            ...newProjectData,
+            created_at: currentDate.toISOString(),
+          });
+        }
       }
       onClose();
     } catch (err: unknown) {
-      if (err && typeof err === "object" && "message" in err) {
-        setServerError(String((err as { message: string }).message));
-      } else {
-        setServerError(t("error.save_failed"));
-      }
+      // Codes like project.name_taken become their sentence, never the raw code
+      setServerError(saveErrorMessage(err, { name: name.trim() }).message);
     } finally {
       setSubmitting(false);
     }
@@ -96,9 +120,9 @@ export function ProjectSheet({
   return (
     <Sheet
       open={open}
-      title={t("project.new")}
+      title={isEdit ? t("project.rename") : t("project.new")}
       closeLabel={t("common.close")}
-      confirmLabel={t("common.create")}
+      confirmLabel={isEdit ? t("common.save") : t("common.create")}
       confirmDisabled={!valid}
       onConfirm={submit}
       onClose={onClose}

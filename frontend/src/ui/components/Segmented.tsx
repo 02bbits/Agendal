@@ -6,7 +6,8 @@ export interface SegmentedOption<V extends string> {
 }
 
 export interface SegmentedProps<V extends string> {
-  label: string;
+  label?: string;
+  "aria-labelledby"?: string;
   options: ReadonlyArray<SegmentedOption<V>>;
   value: V;
   onChange: (value: V) => void;
@@ -15,11 +16,13 @@ export interface SegmentedProps<V extends string> {
 /** Segmented control as a radio group: arrow keys move and select (roving tabindex). */
 export function Segmented<V extends string>({
   label,
+  "aria-labelledby": ariaLabelledBy,
   options,
   value,
   onChange,
 }: SegmentedProps<V>) {
-  const labelId = useId();
+  const autoLabelId = useId();
+  const labelId = ariaLabelledBy ?? autoLabelId;
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const onKeyDown = (event: KeyboardEvent, index: number) => {
@@ -42,9 +45,11 @@ export function Segmented<V extends string>({
       role="radiogroup"
       aria-labelledby={labelId}
     >
-      <span id={labelId} className="sr-only">
-        {label}
-      </span>
+      {!ariaLabelledBy && label && (
+        <span id={autoLabelId} className="sr-only">
+          {label}
+        </span>
+      )}
       {options.map((option, index) => {
         const checked = option.value === value;
         return (
