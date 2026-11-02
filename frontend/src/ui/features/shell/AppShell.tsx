@@ -67,7 +67,7 @@ export function AppShell({
       </div>
       <div
         id="task-panel-slot"
-        className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface empty:hidden xl:block"
+        className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:not-empty:block"
       >
         {aside}
       </div>

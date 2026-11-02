@@ -78,7 +78,7 @@ export function TaskPanel({
       aria-label={t("task.heading")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="motion-safe:animate-slide-in-right flex h-full w-full flex-col border-l border-separator bg-surface outline-none"
+      className="motion-safe:animate-slide-in-right flex h-full w-full flex-col bg-surface outline-none"
     >
       {task ? (
         <TaskDetails
