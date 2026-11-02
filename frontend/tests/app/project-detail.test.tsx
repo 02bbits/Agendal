@@ -324,7 +324,7 @@ describe("Project detail page /projects/[id]", () => {
     expect(contentCol.className).toContain("lg:max-w-none");
     expect(contentCol.contains(moreBtn)).toBe(true);
 
-    const rowsWrapper = document.querySelector(".max-w-\\[720px\\]");
+    const rowsWrapper = document.querySelector(".max-w-\\[820px\\]");
     expect(rowsWrapper).toBeTruthy();
     expect(contentCol.contains(rowsWrapper)).toBe(true);
   });
