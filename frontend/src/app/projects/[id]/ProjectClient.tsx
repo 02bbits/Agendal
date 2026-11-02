@@ -44,6 +44,9 @@ export function ProjectClient({ id }: { id: string }) {
   const [renaming, setRenaming] = useState(false);
   const [error, setError] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  // Bumped on every load: Next keeps this page hidden while we're on a task
+  // and loads again when we come back, so a new store key shows fresh rows
+  const [loadSeq, setLoadSeq] = useState(0);
   // Every project, so the task panel can move a task to another one
   const [allProjects, setAllProjects] = useState<Project[]>([]);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -89,6 +92,7 @@ export function ProjectClient({ id }: { id: string }) {
           project,
         });
         setNextCursor(res.next_cursor);
+        setLoadSeq((n) => n + 1);
         setLoading(false);
       })
       .catch((err) => {
@@ -240,7 +244,7 @@ export function ProjectClient({ id }: { id: string }) {
   return (
     <>
       <TaskStoreProvider
-        key={`${data.project.id}-${data.open.length}`}
+        key={`${data.project.id}-${loadSeq}-${data.open.length}`}
         api={httpTaskApi}
         clock={appClock}
         initialTasks={[...data.open, ...data.completed]}
@@ -266,6 +270,7 @@ export function ProjectClient({ id }: { id: string }) {
         <ProjectSheet
           open
           project={data.project}
+          projects={allProjects}
           onClose={() => setRenaming(false)}
           clock={appClock}
           onUpdate={updateProject}
