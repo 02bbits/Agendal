@@ -8,7 +8,9 @@ use App\Enums\Priority;
 use App\Enums\Reminder;
 use App\Enums\Repeat;
 use App\Services\Clock\ReminderCalculator;
+use App\Services\Tasks\RepeatSchedule;
 use DateTimeImmutable;
+use InvalidArgumentException;
 
 /** Reads a task item's fields per NU §2.5; every phrase comes from the shared note rules CSV. */
 final class FieldExtractor
@@ -20,6 +22,7 @@ final class FieldExtractor
         private NoteDateParser $dates,
         private NoteTimeParser $times,
         private ReminderCalculator $reminders,
+        private NoteRepeatParser $repeats,
     ) {}
 
     /** @var array<string, ExtractedFields> fields by context and text: a command reads its name many times */
@@ -34,10 +37,42 @@ final class FieldExtractor
     {
         // Literals (URLs, emails, file and project names) hold no field: project "Daily" repeats nothing.
         $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
-        $time = $this->times->parse($readable, $context);
-        $date = $this->dates->parse($readable, $context, $time->start);
-        $repeat = $this->repeat($readable);
-        $dueDate = $date->date ?? $time->date ?? $this->impliedDate($time, $repeat['repeat'], $context);
+        $repeat = $this->repeats->parse($readable, $context);
+        // An unsupported recurrence must not become a one-off date from a weekday inside it.
+        $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($readable, $context);
+        if (($repeat['rule'] !== null && $time->unreadable) || ($repeat['copies'] > 1 && $time->start !== null)) {
+            // One supplied time does not tell us when the other copies happen. Preserve the whole request.
+            $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
+            $time = new ParsedTime;
+        }
+        $dateText = $readable;
+        foreach ($repeat['spans'] as [$offset, $length]) {
+            $dateText = substr_replace($dateText, str_repeat(' ', $length), $offset, $length);
+        }
+        $date = $repeat['unreadable'] ? new ParsedDate(unreadable: true) : $this->dates->parse($dateText, $context, $time->start);
+        if (($date->unreadable && $repeat['rule'] !== null)
+            || ($time->date !== null && $date->date !== null && $time->date !== $date->date)) {
+            $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
+            $time = new ParsedTime;
+            $date = new ParsedDate(unreadable: true);
+        }
+        $dueDate = $repeat['unreadable'] ? null : ($date->date ?? $time->date ?? $this->impliedDate($time, $repeat['repeat'], $context));
+        if ($repeat['rule'] !== null) {
+            $anchor = $dueDate ?? $context->today()->format('Y-m-d');
+            try {
+                // The first matching day starts the series; the interval counts from that first occurrence.
+                $firstRule = (string) preg_replace('/;INTERVAL=\d+/', ';INTERVAL=1', $repeat['rule']);
+                $dueDate = RepeatSchedule::onOrAfter($firstRule, $anchor, $anchor);
+            } catch (InvalidArgumentException) {
+                $dueDate = null;
+            }
+            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date)) {
+                $dueDate = null;
+                $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
+                $time = new ParsedTime;
+                $date = new ParsedDate(unreadable: true);
+            }
+        }
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
 
         return new ExtractedFields(
@@ -52,7 +87,17 @@ final class FieldExtractor
             reminder: $this->reminder($readable, $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
                 || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null),
+            repeatRule: $repeat['rule'],
+            copies: $repeat['copies'] ?? 1,
         );
+    }
+
+    /** The text as a task title with nothing else read, for items left when the rules budget is spent (SEC-23). */
+    public function plain(string $text): ExtractedFields
+    {
+        [$title, $notes] = $this->cut(trim($text));
+
+        return new ExtractedFields($title, $notes, null, null, null, Priority::Low, null, Repeat::Never, Reminder::None, false);
     }
 
     /**
@@ -77,6 +122,8 @@ final class FieldExtractor
             repeat: $fields->repeat,
             reminder: $this->reminder($readable, $at->dueDate, $start, $context),
             lowConfidence: $fields->lowConfidence || $at->lowConfidence,
+            repeatRule: $fields->repeatRule,
+            copies: $fields->copies,
         );
     }
 
@@ -100,52 +147,6 @@ final class FieldExtractor
     private function hasAccentedLetters(string $text): bool
     {
         return preg_match('/[^\P{L}\x00-\x7F]/u', $text) === 1;
-    }
-
-    /**
-     * "every day" → Daily, "every Monday" → Weekly (the date parser sets its first date). Other
-     * patterns ("every 2 weeks", "every other day") stay Never and make the item low confidence.
-     *
-     * @return array{repeat: Repeat, spans: list<array{0: int, 1: int}>, unreadable: bool}
-     */
-    private function repeat(string $text): array
-    {
-        $named = NoteVocabulary::findAll('repeat', $text)[0] ?? null;
-        if ($named !== null) {
-            return ['repeat' => Repeat::from($named['key']), 'spans' => [[$named['offset'], strlen($named['phrase'])]], 'unreadable' => false];
-        }
-        $unsupported = $this->unsupportedRepeat($text);
-        if ($unsupported !== null) {
-            return ['repeat' => Repeat::Never, 'spans' => [$unsupported], 'unreadable' => true];
-        }
-        $weekdays = implode('|', NoteVocabulary::family('weekday'));
-        $weekly = preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('repeat_prefix').')\s+(?:'.$weekdays.')(?![\p{L}\p{N}_])~iu', $text) === 1;
-
-        return ['repeat' => $weekly ? Repeat::Weekly : Repeat::Never, 'spans' => [], 'unreadable' => false];
-    }
-
-    /**
-     * "every 2 weeks", "every other day", "mỗi thứ 3 và thứ 5": one Repeat value can't hold them.
-     *
-     * @return array{0: int, 1: int}|null the phrase's byte offset and length
-     */
-    private function unsupportedRepeat(string $text): ?array
-    {
-        $prefix = NoteVocabulary::phrases('repeat_prefix');
-        $weekday = implode('|', NoteVocabulary::family('weekday'));
-        $joiner = NoteVocabulary::phrases('list_joiner').'|'.NoteVocabulary::phrases('comma');
-        $patterns = [
-            NoteVocabulary::pattern(NoteVocabulary::phrases('repeat_unsupported')),
-            '~(?<![\p{L}\p{N}_])(?:'.$prefix.')\s+\d+\s*\p{L}*~iu',
-            '~(?<![\p{L}\p{N}_])(?:'.$prefix.')\s+(?:'.$weekday.')(?:\s*(?:'.$joiner.')\s*(?:'.$weekday.'))+(?![\p{L}\p{N}_])~iu',
-        ];
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, $text, $match, PREG_OFFSET_CAPTURE) === 1) {
-                return [$match[0][1], strlen($match[0][0])];
-            }
-        }
-
-        return null;
     }
 
     /** NU-E5: no date but a time or repeat → today, or tomorrow when that time has passed. */

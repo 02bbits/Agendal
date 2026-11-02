@@ -29,27 +29,48 @@ final class ProjectTaskLists
      *     next_cursor: string|null,
      * }
      */
-    public function build(Project $project, ?string $cursor = null): array
+    public function build(?Project $project, ?string $cursor = null): array
     {
-        $this->projectCounts->load(collect([$project]));
-        $openCount = (int) $project->getAttribute('open');
-        $doneCount = (int) $project->getAttribute('done');
+        if ($project !== null) {
+            $this->projectCounts->load(collect([$project]));
+            $openCount = (int) $project->getAttribute('open');
+            $doneCount = (int) $project->getAttribute('done');
+        } else {
+            /** @var Task|null $counts */
+            $counts = Task::query()
+                ->whereNull('project_id')
+                ->selectRaw('count(*) filter (where not done) as open_count, count(*) filter (where done) as done_count')
+                ->first();
+            $openCount = $counts instanceof Task ? (int) $counts->getAttribute('open_count') : 0;
+            $doneCount = $counts instanceof Task ? (int) $counts->getAttribute('done_count') : 0;
+        }
 
-        /** @var Collection<int, Task> $openTasks */
-        $openTasks = Task::query()
-            ->where('project_id', $project->id)
+        $openQuery = Task::query()
             ->where('done', false)
             ->orderByRaw('due_date asc nulls last')
             ->orderByRaw("case priority when 'high' then 1 when 'medium' then 2 when 'low' then 3 else 4 end asc")
             ->orderBy('created_at', 'asc')
-            ->orderBy('id', 'asc')
-            ->get();
+            ->orderBy('id', 'asc');
+
+        if ($project !== null) {
+            $openQuery->where('project_id', $project->id);
+        } else {
+            $openQuery->whereNull('project_id');
+        }
+
+        /** @var Collection<int, Task> $openTasks */
+        $openTasks = $openQuery->get();
 
         $completedQuery = Task::query()
-            ->where('project_id', $project->id)
             ->where('done', true)
             ->orderBy('done_at', 'desc')
             ->orderBy('id', 'desc');
+
+        if ($project !== null) {
+            $completedQuery->where('project_id', $project->id);
+        } else {
+            $completedQuery->whereNull('project_id');
+        }
 
         $hasCursor = is_string($cursor) && $cursor !== '';
         if ($hasCursor) {

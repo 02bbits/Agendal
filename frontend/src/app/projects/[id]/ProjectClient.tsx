@@ -34,6 +34,7 @@ export const SKELETON_DELAY_MS = 300;
 
 export function ProjectClient({ id }: { id: string }) {
   const { navigate, showToast, settings } = useAppFrame();
+  const isNoProject = id === "none";
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loadingMore, setLoadingMore] = useState(false);
@@ -57,7 +58,19 @@ export function ProjectClient({ id }: { id: string }) {
     getProject(id)
       .then((res) => {
         if (!active) return;
-        setData(res);
+        const project =
+          res.project ??
+          ({
+            id: "none",
+            name: t("project.none"),
+            colour: "gray",
+            open: res.progress.total - res.progress.done,
+            done: res.progress.done,
+          } as Project & { open: number; done: number });
+        setData({
+          ...res,
+          project,
+        });
         setNextCursor(res.next_cursor);
         setLoading(false);
       })
@@ -75,7 +88,10 @@ export function ProjectClient({ id }: { id: string }) {
     const onTaskCreated = (e: Event) => {
       const customEvent = e as CustomEvent<Task>;
       const created = customEvent.detail;
-      if (created && created.project_id === id) {
+      const matches = isNoProject
+        ? !created?.project_id || created?.project_id === "none"
+        : created?.project_id === id;
+      if (created && matches) {
         setData((prev) => {
           if (!prev) return prev;
           if (prev.open.some((t) => t.id === created.id)) return prev;
@@ -94,7 +110,7 @@ export function ProjectClient({ id }: { id: string }) {
     return () => {
       window.removeEventListener("agendal:task-created", onTaskCreated);
     };
-  }, [id]);
+  }, [id, isNoProject]);
 
   const handleLoadMoreCompleted = async () => {
     if (!nextCursor || loadingMore || !data) return;
@@ -211,7 +227,7 @@ export function ProjectClient({ id }: { id: string }) {
         api={httpTaskApi}
         clock={appClock}
         initialTasks={[...data.open, ...data.completed]}
-        initialProjects={[data.project]}
+        initialProjects={isNoProject ? [] : [data.project]}
         timeFormat={settings.timeFormat}
       >
         <ProjectContent
@@ -223,8 +239,8 @@ export function ProjectClient({ id }: { id: string }) {
           timeFormat={settings.timeFormat}
           weekStart={settings.weekStart}
           onBack={() => navigate(ROUTES.projects)}
-          onRenameProject={() => setRenaming(true)}
-          onDeleteProject={handleDelete}
+          onRenameProject={isNoProject ? undefined : () => setRenaming(true)}
+          onDeleteProject={isNoProject ? undefined : handleDelete}
           navigate={navigate}
         />
       </TaskStoreProvider>
@@ -280,8 +296,8 @@ function ProjectContent({
   timeFormat: TimeFormat;
   weekStart: WeekStart;
   onBack: () => void;
-  onRenameProject: () => void;
-  onDeleteProject: (action: ProjectTaskAction) => Promise<void>;
+  onRenameProject?: () => void;
+  onDeleteProject?: (action: ProjectTaskAction) => Promise<void>;
   navigate: Navigate;
 }) {
   const store = useTaskStore();

@@ -13,7 +13,7 @@ export interface PickerOption<V extends string> {
   leading?: ReactNode;
 }
 
-export type PickerVariant = "panel" | "screen" | "pill" | "row";
+export type PickerVariant = "panel" | "screen" | "pill" | "row" | "icon";
 
 export interface PickerProps<V extends string> {
   label: string;

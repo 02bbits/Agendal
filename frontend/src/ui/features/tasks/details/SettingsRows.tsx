@@ -5,6 +5,7 @@ import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import { reminderPast } from "../../../domain/edit";
+import { describeRepeat } from "../../../domain/repeat";
 import {
   REMINDERS,
   REPEATS,
@@ -55,6 +56,8 @@ export function SettingsRows({
     : isReminderPast
       ? t("task.reminder_past")
       : undefined;
+
+  const repeatHelper = describeRepeat(task);
 
   const isScreen = variant === "screen";
 
@@ -117,6 +120,8 @@ export function SettingsRows({
         icon={<RepeatIcon size={18} />}
         tileBg="bg-fill text-ink-secondary"
         label={t("task.repeat")}
+        helper={repeatHelper}
+        helperId="task-repeat-helper"
         control={
           <Picker<Repeat>
             id="task-repeat"
@@ -128,6 +133,7 @@ export function SettingsRows({
             }))}
             onChange={(repeat) => onSave({ repeat })}
             variant={variant}
+            ariaDescribedBy={repeatHelper ? "task-repeat-helper" : undefined}
           />
         }
       />

@@ -330,4 +330,75 @@ describe("Project detail page /projects/[id]", () => {
     expect(rowsWrapper?.className).toContain(TASK_COLUMN_CLASS);
     expect(contentCol.contains(rowsWrapper)).toBe(true);
   });
+
+  it("No project screen /projects/none lists open and completed tasks with no menu", async () => {
+    pathname = "/projects/none";
+    const noneProjectData = {
+      project: null,
+      progress: { done: 1, total: 2 },
+      open: [
+        task({
+          id: "t-none-1",
+          title: "Unassigned Open Task",
+          project_id: null,
+          priority: "high",
+        }),
+      ],
+      completed: [
+        task({
+          id: "t-none-2",
+          title: "Unassigned Done Task",
+          project_id: null,
+          done: true,
+          done_at: "2026-10-23T10:00:00Z",
+        }),
+      ],
+      next_cursor: null,
+    };
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/none") return json(200, noneProjectData);
+      if (url === "/api/v1/projects")
+        return json(200, [
+          { id: "p-1", name: "Work", colour: "blue", open: 1, done: 0 },
+        ]);
+      if (url === "/api/v1/tasks/inbox") return json(200, {});
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "none" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    // Heading shows "No project" with grey dot
+    const heading = await screen.findByRole("heading", { level: 1 });
+    expect(heading.textContent).toContain("No project");
+    const dot = heading.querySelector("span");
+    expect(dot?.getAttribute("style")).toContain("var(--color-project-gray)");
+
+    // Lists open and completed tasks
+    expect(screen.getByText("Unassigned Open Task")).toBeTruthy();
+    expect(screen.getByText("Unassigned Done Task")).toBeTruthy();
+
+    // No menu (no rename, no delete)
+    expect(
+      screen.queryByRole("button", { name: t("project.menu") }),
+    ).toBeNull();
+
+    // Sidebar link points to /projects/none and shows count
+    const sidebarNoProjectLink = document.querySelector(
+      'a[href="/projects/none"]',
+    );
+    expect(sidebarNoProjectLink).not.toBeNull();
+    expect(sidebarNoProjectLink?.textContent).toContain("No project");
+    expect(sidebarNoProjectLink?.textContent).toContain("1");
+  });
 });

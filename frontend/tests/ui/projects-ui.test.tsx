@@ -90,6 +90,9 @@ describe("ProjectsScreen (PJ §2.2)", () => {
     expect(within(items[0]!).getByText("3/8")).toBeTruthy();
     expect(within(items[1]!).getByText("2/6")).toBeTruthy();
     expect(within(items[2]!).getByText("1/3")).toBeTruthy();
+
+    const noProjectLink = within(items[2]!).getByRole("link");
+    expect(noProjectLink.getAttribute("href")).toBe("/projects/none");
   });
 
   it("renders empty state when no projects exist", () => {

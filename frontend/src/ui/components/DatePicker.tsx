@@ -5,6 +5,7 @@ import { dueDateFor } from "../domain/newTask";
 import type { WeekStart } from "../domain/types";
 import { t } from "../copy";
 import { cx } from "./cx";
+import { CalendarIcon } from "./icons";
 import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
 import { Chip } from "./Chip";
@@ -23,6 +24,7 @@ export interface DatePickerProps {
   helper?: ReactNode;
   id?: string;
   className?: string;
+  onOpenChange?: (open: boolean) => void;
 }
 
 export function DatePicker({
@@ -35,6 +37,7 @@ export function DatePicker({
   helper,
   id,
   className,
+  onOpenChange,
 }: DatePickerProps): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `datepicker-${autoId}`;
@@ -58,9 +61,11 @@ export function DatePicker({
     weekStart,
     onChange,
     disabled,
+    onOpenChange,
   });
 
   const isScreen = variant === "screen" || variant === "row";
+  const isIcon = variant === "icon";
   const displayValue = value ? formatDay(value, todayStr) : label;
   const chips = [
     { k: "today", d: dueDateFor("today", todayStr)!, l: t("date.today") },
@@ -83,7 +88,7 @@ export function DatePicker({
         onClose={() => setOpen(false)}
         label={label}
         triggerRef={triggerRef}
-        align={isScreen ? "right" : "left"}
+        align={isScreen || isIcon ? "right" : "left"}
         popoverClassName="max-h-[calc(100vh-16px)] w-[308px] p-3"
         trigger={
           <PickerTrigger
@@ -95,10 +100,11 @@ export function DatePicker({
             describedBy={helperId}
             disabled={disabled}
             isScreen={isScreen}
-            onToggle={() => setOpen((o) => !o)}
+            isIcon={isIcon}
+            onToggle={() => setOpen(!open)}
             onKeyDown={onTriggerKeyDown}
           >
-            {displayValue}
+            {isIcon ? <CalendarIcon size={16} /> : displayValue}
           </PickerTrigger>
         }
       >

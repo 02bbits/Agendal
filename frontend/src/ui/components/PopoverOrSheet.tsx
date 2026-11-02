@@ -3,6 +3,7 @@ import {
   useEffect,
   useLayoutEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type ReactNode,
   type RefObject,
@@ -44,7 +45,14 @@ export function PopoverOrSheet({
   align = "left",
   closeLabel,
 }: PopoverOrSheetProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  // The nearest daisyUI .modal (Sheet, Dialog): the popover goes inside it so it
+  // stacks above the modal and stays in its focus trap; else document.body.
+  const [modalHost, setModalHost] = useState<Element | null>(null);
+  const setContainer = useCallback((el: HTMLDivElement | null) => {
+    containerRef.current = el;
+    setModalHost(el?.closest(".modal") ?? null);
+  }, []);
   const popoverRef = useRef<HTMLDivElement>(null);
   const isWide = useMediaQuery("(min-width: 768px)");
   const showPopover = open && isWide;
@@ -107,7 +115,7 @@ export function PopoverOrSheet({
   };
 
   return (
-    <div ref={containerRef} className={cx("relative inline-block", className)}>
+    <div ref={setContainer} className={cx("relative inline-block", className)}>
       {trigger}
       {showPopover &&
         createPortal(
@@ -123,7 +131,7 @@ export function PopoverOrSheet({
           >
             {children}
           </div>,
-          document.body,
+          modalHost ?? document.body,
         )}
       {open && !isWide && (
         <Sheet

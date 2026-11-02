@@ -28,7 +28,8 @@ export function TaskStoreProvider({
   timeFormat = "24h",
   children,
 }: types.TaskStoreProviderProps) {
-  const { tasks, change, getTask } = useTaskSync(initialTasks);
+  const { tasks, change, getTask, acceptOccurrence } =
+    useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
@@ -119,15 +120,19 @@ export function TaskStoreProvider({
         ? { done: true, done_at: at }
         : { done: false, done_at: null };
       const req = () =>
-        (isComplete ? api.complete(id, at) : api.reopen(id, at)).then(
-          (r) => r.task,
-        );
+        (isComplete ? api.complete(id, at) : api.reopen(id, at)).then((r) => {
+          if (r.next && getTask(id)?.done === isComplete) {
+            acceptOccurrence(r.next, !isComplete);
+          }
+          return r.task;
+        });
       change(id, fields, req, (err) =>
         handleSaveError(err, () => lifecycleRef.current(id, action)),
       );
     },
     [
       api,
+      acceptOccurrence,
       change,
       clearSettle,
       clock,

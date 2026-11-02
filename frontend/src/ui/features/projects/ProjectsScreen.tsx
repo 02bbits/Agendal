@@ -115,6 +115,8 @@ export function ProjectsScreen({
               );
             })}
             <ProjectCard
+              href={ROUTES.noProject}
+              navigate={navigate}
               name={t("project.none")}
               colour="gray"
               progress={noProjectProgress}
