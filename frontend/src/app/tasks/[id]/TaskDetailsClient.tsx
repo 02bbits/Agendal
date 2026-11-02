@@ -22,6 +22,28 @@ interface ClientProps {
   id: string;
 }
 
+function getBackLabel(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const fromParam = new URLSearchParams(window.location.search).get("from");
+  if (fromParam === "inbox") return t("nav.inbox");
+  if (fromParam === "upcoming") return t("nav.upcoming");
+  if (fromParam === "projects") return t("nav.projects");
+
+  if (document.referrer) {
+    try {
+      const url = new URL(document.referrer);
+      if (url.origin === window.location.origin) {
+        if (url.pathname === "/" || url.pathname === "") return t("nav.inbox");
+        if (url.pathname.startsWith("/upcoming")) return t("nav.upcoming");
+        if (url.pathname.startsWith("/projects")) return t("nav.projects");
+      }
+    } catch {
+      // Ignore
+    }
+  }
+  return undefined;
+}
+
 function TaskDetailsContainer({
   initialTask,
   back,
@@ -49,6 +71,8 @@ function TaskDetailsContainer({
       projects={projects}
       projectsStatus={projectsStatus}
       onRetryProjects={onRetryProjects}
+      variant="screen"
+      backLabel={getBackLabel()}
     />
   );
 }
