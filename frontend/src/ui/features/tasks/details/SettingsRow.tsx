@@ -28,9 +28,16 @@ export function SettingsRow({
 }: SettingsRowProps): ReactElement {
   const isScreen = variant === "screen";
 
-  if (isScreen) {
-    return (
-      <div className="flex flex-col py-3.5 px-4">
+  return (
+    <div
+      className={cx(
+        "flex flex-col",
+        isScreen
+          ? "py-3.5 px-4"
+          : "border-b border-separator py-2.5 last:border-b-0",
+      )}
+    >
+      {isScreen ? (
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div
@@ -48,38 +55,20 @@ export function SettingsRow({
             {extraAction}
           </div>
         </div>
-        {error && (
-          <p
-            id={errorId}
-            role="alert"
-            className="mt-1 text-footnote text-error"
-          >
-            {error}
-          </p>
-        )}
-        {helper && !error && (
-          <p id={helperId} className="mt-1 text-footnote text-ink-secondary">
-            {helper}
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="flex flex-col border-b border-separator py-2.5 last:border-b-0">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-body text-ink">
-          <span className="flex items-center justify-center text-ink-tertiary">
-            {icon}
-          </span>
-          <span>{label}</span>
+      ) : (
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2 text-body text-ink">
+            <span className="flex items-center justify-center text-ink-tertiary">
+              {icon}
+            </span>
+            <span>{label}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            {control}
+            {extraAction}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {control}
-          {extraAction}
-        </div>
-      </div>
+      )}
       {error && (
         <p id={errorId} role="alert" className="mt-1 text-footnote text-error">
           {error}

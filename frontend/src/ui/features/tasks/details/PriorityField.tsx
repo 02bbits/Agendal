@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useId, type ReactElement } from "react";
 import { cx } from "../../../components/cx";
 import { Segmented } from "../../../components/Segmented";
 import { t, type CopyKey } from "../../../copy";
@@ -10,16 +10,24 @@ export interface PriorityFieldProps {
   variant?: "panel" | "screen";
 }
 
+const PRIORITY_COPY_KEYS: Record<Priority, CopyKey> = {
+  low: "priority.low",
+  medium: "priority.medium",
+  high: "priority.high",
+};
+
 export function PriorityField({
   value,
   onChange,
   variant = "panel",
 }: PriorityFieldProps): ReactElement {
   const isScreen = variant === "screen";
+  const labelId = useId();
 
   return (
     <div className="flex flex-col gap-1.5">
-      <label
+      <p
+        id={labelId}
         className={cx(
           isScreen
             ? "text-overline font-semibold uppercase tracking-wider text-ink-secondary"
@@ -27,13 +35,13 @@ export function PriorityField({
         )}
       >
         {t("task.priority")}
-      </label>
+      </p>
       <Segmented<Priority>
-        label={t("task.priority")}
+        aria-labelledby={labelId}
         value={value}
         options={PRIORITIES.map((p) => ({
           value: p,
-          label: t(`priority.${p}` as CopyKey),
+          label: t(PRIORITY_COPY_KEYS[p]),
         }))}
         onChange={onChange}
       />
