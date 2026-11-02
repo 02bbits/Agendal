@@ -496,5 +496,21 @@ describe("Project detail page /projects/[id]", () => {
     ).toBe("true");
     expect(screen.queryByRole("heading", { name: /Completed/ })).toBeNull();
     expect(screen.getAllByRole("link", { name: /First Task/ })).toHaveLength(1);
+
+    // The "Completed …" toast with Undo shows, like the Inbox
+    expect(
+      await screen.findByText(t("task.completed", { title: "First Task" })),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: t("common.undo") })).toBeTruthy();
+
+    // The tick is locked while it settles: another click sends nothing
+    const tick = screen.getByRole("checkbox", {
+      name: t("task.reopen", { title: "First Task" }),
+    });
+    expect(tick.getAttribute("aria-disabled")).toBe("true");
+    await userEvent.click(tick);
+    expect(
+      fetchMock.mock.calls.some(([url]) => String(url).endsWith("/reopen")),
+    ).toBe(false);
   });
 });

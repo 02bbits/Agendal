@@ -9,6 +9,7 @@ export interface ProjectOpenListProps {
   timeFormat?: TimeFormat;
   selectedTaskId?: string | null;
   onToggleTask?: (task: Task) => void;
+  isSettling?: (id: string) => boolean;
   navigate?: Navigate;
 }
 
@@ -19,6 +20,7 @@ export function ProjectOpenList({
   timeFormat = "24h",
   selectedTaskId,
   onToggleTask,
+  isSettling,
   navigate,
 }: ProjectOpenListProps) {
   if (tasks.length === 0) return null;
@@ -34,6 +36,7 @@ export function ProjectOpenList({
             timeFormat={timeFormat}
             showDue
             selected={x.id === selectedTaskId}
+            settling={isSettling?.(x.id) ?? false}
             onToggle={onToggleTask ?? (() => {})}
             navigate={navigate}
           />

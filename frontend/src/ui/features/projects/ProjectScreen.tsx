@@ -2,14 +2,7 @@ import { useState } from "react";
 import { t } from "../../copy";
 import { EmptyState } from "../../components/EmptyState";
 import { NavBar } from "../../components/NavBar";
-import {
-  sortCompleted,
-  sortOpenByDue,
-  type DeleteProjectHandler,
-  type LoadMoreCompletedHandler,
-} from "../../domain/projects";
-import type { Project, Task, TimeFormat } from "../../domain/types";
-import type { Navigate } from "../shell/routes";
+import { sortCompleted, sortOpenByDue } from "../../domain/projects";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
 import { ProjectHeaderMenu } from "./ProjectHeaderMenu";
 import { ProjectOpenList } from "./ProjectOpenList";
@@ -19,26 +12,10 @@ import {
   dedupeTasks,
   ProjectCompletedList,
 } from "./ProjectCompletedList";
+import type { ProjectScreenProps } from "./types";
 
 export { COMPLETED_PAGE };
-
-export interface ProjectScreenProps {
-  project: Project;
-  progress?: { done: number; total: number };
-  openTasks?: Task[];
-  completedTasks?: Task[];
-  hasMoreCompleted?: boolean;
-  onLoadMoreCompleted?: LoadMoreCompletedHandler;
-  loadingMore?: boolean;
-  today: string;
-  timeFormat?: TimeFormat;
-  onToggleTask?: (task: Task) => void;
-  onBack: () => void;
-  onDeleteProject?: DeleteProjectHandler;
-  onRenameProject?: () => void;
-  navigate?: Navigate;
-  selectedTaskId?: string | null;
-}
+export type { ProjectScreenProps };
 
 /** One project's tasks with its progress bar; menu with Delete (PJ-2, PJ-4). */
 export function ProjectScreen({
@@ -52,6 +29,7 @@ export function ProjectScreen({
   today,
   timeFormat = "24h",
   onToggleTask,
+  isSettling,
   onBack,
   onDeleteProject,
   onRenameProject,
@@ -112,6 +90,7 @@ export function ProjectScreen({
               timeFormat={timeFormat}
               selectedTaskId={selectedTaskId}
               onToggleTask={onToggleTask}
+              isSettling={isSettling}
               navigate={navigate}
             />
             {completed.length > 0 && (
