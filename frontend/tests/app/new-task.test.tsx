@@ -20,6 +20,7 @@ let currentPathname = "/";
 vi.mock("next/navigation", () => ({
   usePathname: () => currentPathname,
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderPage(path: string, Page: ComponentType = () => null) {

@@ -16,6 +16,7 @@ let pathname = "/";
 vi.mock("next/navigation", () => ({
   usePathname: () => pathname,
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderAt(path: string, Page: ComponentType) {
