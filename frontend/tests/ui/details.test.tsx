@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -141,8 +147,16 @@ describe("Task details fields (T-TK-10)", () => {
       ),
     );
 
+    patchSpy.mockClear();
     const clearBtn = screen.getByRole("button", { name: t("common.clear") });
     await userEvent.click(clearBtn);
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.clear_title"),
+    });
+    expect(patchSpy).not.toHaveBeenCalled();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("common.clear") }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -191,8 +205,13 @@ describe("Task details fields (T-TK-10)", () => {
 
     // Click Clear
     await userEvent.click(clearBtn);
-
-    // One PATCH with due_date null, start/end null, reminder none, repeat never
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.clear_title"),
+    });
+    expect(patchSpy).not.toHaveBeenCalled();
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("common.clear") }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
@@ -230,6 +249,32 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
       ),
     );
+  });
+
+  it("cancel closes the Clear dialog without patching and returns focus to the Clear button (UX-11)", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        due_date: "2026-10-30",
+      }),
+    );
+
+    const clearBtn = screen.getByRole("button", { name: t("common.clear") });
+    await userEvent.click(clearBtn);
+
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.clear_title"),
+    });
+    expect(patchSpy).not.toHaveBeenCalled();
+
+    const cancelBtn = within(dialog).getByRole("button", {
+      name: t("common.cancel"),
+    });
+    await userEvent.click(cancelBtn);
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(patchSpy).not.toHaveBeenCalled();
+    expect(document.activeElement).toBe(clearBtn);
   });
 
   it.each(REMINDERS)("saves reminder %s", async (reminder) => {

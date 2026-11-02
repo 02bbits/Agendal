@@ -89,6 +89,9 @@ export const pending = {
   "date.yesterday": "Yesterday",
   "date.prev_month": "Previous month",
   "date.next_month": "Next month",
+  "task.clear_title": "Clear this task's dates?",
+  "task.clear_body":
+    "The due date, schedule, reminder and repeat will be removed. You can undo it.",
   "list.next": "Next: {title}",
   "list.next_at": "Next: {title} at {time}",
   "list.section_count_one": "{section}, 1 task",
