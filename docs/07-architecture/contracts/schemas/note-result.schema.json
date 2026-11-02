@@ -95,7 +95,7 @@
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
         "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
         "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
-        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule" },
+        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule", "description": "Optional calendar configuration for the new task. The applier derives repeat_anchor from its first due date; plan entries cannot set the anchor." },
         "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
         "notes": { "$ref": "task.schema.json#/$defs/notes" },
         "duplicate_of": { "$ref": "task.schema.json#/$defs/uuid_or_null" }
@@ -119,7 +119,7 @@
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
         "project_id": { "$ref": "task.schema.json#/$defs/uuid_or_null" },
         "repeat": { "$ref": "task.schema.json#/$defs/repeat" },
-        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule" },
+        "repeat_rule": { "$ref": "task.schema.json#/$defs/repeat_rule", "description": "Optional calendar configuration. FREQ must match the resulting task's repeat. When changing a custom schedule's frequency, provide the matching repeat and repeat_rule together." },
         "reminder": { "$ref": "task.schema.json#/$defs/reminder" },
         "notes": { "$ref": "task.schema.json#/$defs/notes" }
       }

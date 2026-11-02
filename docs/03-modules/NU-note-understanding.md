@@ -269,6 +269,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
   - `reason`: `skip`, `already_done`, `not_found`, `no_change`
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
+- Plan `create` and `update` entries may include nullable `repeat_rule`, following the [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37); its FREQ must match the resulting task's `repeat`. The applier derives the read-only `repeat_anchor` when creating the task, so it is not a plan field. Returned `changes[].task` carries the structured task fields; older snapshots may omit the rule/anchor. `repeat_description` is omitted even when replaying an older stored result. Presentation belongs to the frontend formatter.
 
 ## 8. Data, validation and authorization
 

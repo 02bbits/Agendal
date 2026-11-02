@@ -1,0 +1,20 @@
+{
+  "id": "019a1c00-0000-7000-8000-000000000202",
+  "title": "Gym",
+  "due_date": "2026-11-02",
+  "start_time": "09:00",
+  "end_time": null,
+  "priority": "low",
+  "project_id": null,
+  "repeat": "weekly",
+  "repeat_rule": "FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE,FR",
+  "repeat_anchor": "2026-11-02",
+  "reminder": "15m",
+  "notes": null,
+  "done": false,
+  "done_at": null,
+  "created_by": "assistant",
+  "source_note_id": "019a1c00-0000-7000-8000-000000000301",
+  "created_at": "2026-11-01T15:11:00Z",
+  "updated_at": "2026-11-01T15:11:00Z"
+}
