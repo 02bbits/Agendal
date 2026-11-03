@@ -225,6 +225,21 @@ class TaskPatcher
         return $task;
     }
 
+    /**
+     * Last write wins per field (TK). A note is a server action on the locked current row, so it must win
+     * even when the task was written in the same second: one second after the newest field stamp, or now.
+     */
+    public function afterLastWrite(Task $task): string
+    {
+        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+        foreach ($task->field_updated_at ?? [] as $stamp) {
+            $next = (new DateTimeImmutable((string) $stamp))->setTimezone(new DateTimeZone('UTC'))->modify('+1 second');
+            $at = max($at, $next);
+        }
+
+        return $at->format('Y-m-d\TH:i:s\Z');
+    }
+
     public function resolveFieldEffectiveAt(string $field, mixed $atPayload): DateTimeImmutable
     {
         if (is_array($atPayload)) {

@@ -62,6 +62,8 @@ function resultOf(
 function open(result: NoteResult, props: Partial<NoteResultScreenProps> = {}) {
   const onDone = vi.fn();
   const onSetDue = vi.fn();
+  const onUndo = vi.fn();
+  const onCancelUndo = vi.fn();
   render(
     <main>
       <NoteResultScreen
@@ -72,11 +74,13 @@ function open(result: NoteResult, props: Partial<NoteResultScreenProps> = {}) {
         weekStart="mon"
         onDone={onDone}
         onSetDue={onSetDue}
+        onUndo={onUndo}
+        onCancelUndo={onCancelUndo}
         {...props}
       />
     </main>,
   );
-  return { onDone, onSetDue };
+  return { onDone, onSetDue, onUndo, onCancelUndo };
 }
 
 describe("Note result (IM-43, RV-1)", () => {
@@ -273,6 +277,71 @@ describe("Note result (IM-43, RV-1)", () => {
       ),
     );
     await expectAxeCleanInBothThemes();
+  });
+
+  describe("Undo all (IM-44, RV-2)", () => {
+    it("offers Undo all next to Done and asks to undo without confirming", async () => {
+      const { onUndo } = open(resultOf([sql]));
+      await userEvent.click(
+        screen.getByRole("button", { name: t("note.undo_all") }),
+      );
+      expect(onUndo).toHaveBeenCalledWith(false);
+    });
+
+    it("T-RV-12: an undone note says Undone, mutes its rows and hides Undo all", () => {
+      open(resultOf([sql, ink], [], { status: "undone" }));
+      expect(screen.getByText("Today 08:12 · Undone")).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: t("note.undo_all") }),
+      ).toBeNull();
+      expect(screen.queryByRole("link")).toBeNull();
+      expect(
+        screen.queryByRole("group", { name: t("note.ask_when") }),
+      ).toBeNull();
+    });
+
+    it("RV-E2: after 30 days the note shows note.undo_expired instead of Undo all", () => {
+      open(resultOf([sql], [], { processed_at: "2026-09-20T08:12:01+07:00" }));
+      expect(screen.getByText(t("note.undo_expired"))).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: t("note.undo_all") }),
+      ).toBeNull();
+    });
+
+    it("offline, Undo all is disabled and says it needs a connection", () => {
+      open(resultOf([sql]), { offline: true });
+      expect(
+        (
+          screen.getByRole("button", {
+            name: t("note.undo_all"),
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
+      expect(screen.getByText(t("note.needs_connection"))).toBeTruthy();
+    });
+
+    it("conflicts open the dialog: Undo all confirms, Cancel closes", async () => {
+      const { onUndo, onCancelUndo } = open(resultOf([sql]), { conflicts: 2 });
+      const dialog = screen.getByRole("alertdialog");
+      expect(
+        within(dialog).getByText(t("note.undo_conflict_body", { count: 2 })),
+      ).toBeTruthy();
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: t("note.undo_all") }),
+      );
+      expect(onUndo).toHaveBeenCalledWith(true);
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: t("common.cancel") }),
+      );
+      expect(onCancelUndo).toHaveBeenCalled();
+    });
+
+    it("is axe clean undone, and with the dialog open", async () => {
+      open(resultOf([sql, hci, old], [], { status: "undone" }), {
+        conflicts: 1,
+      });
+      await expectAxeCleanInBothThemes();
+    });
   });
 });
 

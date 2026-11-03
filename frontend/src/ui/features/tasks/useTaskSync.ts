@@ -30,6 +30,23 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
 
+  // A refetch hands in the server's rows: they replace the list, except a task still saving keeps
+  // its local row. Compared by content, since some callers build a new array every render.
+  // ponytail: JSON compare per render; key the rows by updated_at if lists get large
+  const seen = useRef(JSON.stringify(initialTasks));
+  useEffect(() => {
+    const next = JSON.stringify(initialTasks);
+    if (next === seen.current) return;
+    seen.current = next;
+    rowsRef.current = initialTasks.map((task) => {
+      if (taskQueue.current.has(task.id))
+        return rowsRef.current.find((row) => row.id === task.id) ?? task;
+      syncState.current.confirmed.set(task.id, task);
+      return task;
+    });
+    setTasks(rowsRef.current);
+  }, [initialTasks]);
+
   useEffect(() => {
     const onTaskCreated = (e: Event) => {
       const customEvent = e as CustomEvent<Task>;

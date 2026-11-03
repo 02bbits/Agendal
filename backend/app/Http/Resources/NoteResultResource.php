@@ -35,6 +35,7 @@ class NoteResultResource extends JsonResource
                 'written_at' => $this->written_at->format(DATE_ATOM), 'processed_at' => $this->processed_at->format(DATE_ATOM), 'engine' => $this->engine,
             ],
             'changes' => $changes,
+            'redo_until' => $this->when($this->undo_log !== null, $this->undo_log['redo_until'] ?? null),
             'plan' => $this->status === PlanStatus::Confirm->value ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
             'skipped' => $plan['skipped'] ?? [], 'ambiguous' => $plan['ambiguous'] ?? [],
         ];

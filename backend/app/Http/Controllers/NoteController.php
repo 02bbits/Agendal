@@ -10,6 +10,7 @@ use App\Models\Note;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Notes\NoteConfirm;
+use App\Services\Notes\NoteUndo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -40,5 +41,15 @@ class NoteController extends Controller
     public function cancel(Note $note, NoteConfirm $confirm): NoteResultResource
     {
         return new NoteResultResource($confirm->cancel($note));
+    }
+
+    public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource
+    {
+        return new NoteResultResource($undo->undo($note, $request->boolean('confirm_conflicts')));
+    }
+
+    public function redo(Note $note, NoteUndo $undo): NoteResultResource
+    {
+        return new NoteResultResource($undo->redo($note));
     }
 }
