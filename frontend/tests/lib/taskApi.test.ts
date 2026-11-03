@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/lib/apiError";
 import {
   createTask,
+  deleteTask,
   getTask,
   httpTaskApi,
   patch,
   projects,
+  restoreTask,
 } from "@/lib/taskApi";
 
 describe("httpTaskApi (Refs #21, Refs #22)", () => {
@@ -398,5 +400,54 @@ describe("createTask (Refs #25)", () => {
         title: ["The title field is required."],
       });
     }
+  });
+
+  it("calls DELETE /api/v1/tasks/<id> and handles 204 No Content without throwing", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(null, {
+        status: 204,
+      }),
+    );
+
+    const result = await deleteTask("t-123");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/tasks/t-123");
+    expect(init.method).toBe("DELETE");
+    expect(result).toBeUndefined();
+  });
+
+  it("calls DELETE /api/v1/tasks/<id>?scope=one for repeating tasks", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(null, {
+        status: 204,
+      }),
+    );
+
+    await deleteTask("t-123", "one");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/tasks/t-123?scope=one");
+    expect(init.method).toBe("DELETE");
+  });
+
+  it("calls POST /api/v1/tasks/<id>/restore returning restored task", async () => {
+    const fakeTask = { id: "t-123", title: "Restored Task" };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(fakeTask), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await restoreTask("t-123");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/tasks/t-123/restore");
+    expect(init.method).toBe("POST");
+    expect(result).toEqual(fakeTask);
   });
 });

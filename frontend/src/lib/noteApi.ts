@@ -162,6 +162,8 @@ export function previewTaskApi(result: NoteResult) {
     },
     complete: refuse,
     reopen: refuse,
+    remove: refuse,
+    restore: refuse,
   };
   return { api, edits };
 }

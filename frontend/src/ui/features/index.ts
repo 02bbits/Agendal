@@ -65,6 +65,11 @@ export {
   TaskDetails,
   type TaskDetailsProps,
 } from "./tasks/details/TaskDetails";
+export { DeleteTask, type DeleteTaskProps } from "./tasks/DeleteTask";
+export {
+  RepeatScopeDialog,
+  type RepeatScopeDialogProps,
+} from "./tasks/RepeatScopeDialog";
 export { TaskPanel, type TaskPanelProps } from "./tasks/details/TaskPanel";
 export { NewTaskSheet, type NewTaskSheetProps } from "./tasks/new/NewTaskSheet";
 export {

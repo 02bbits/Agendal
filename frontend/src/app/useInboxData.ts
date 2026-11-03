@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ApiRequestError } from "@/lib/apiError";
 import { inbox, projects } from "@/lib/taskApi";
 import { t, type Project, type Task } from "@/ui";
 
@@ -6,6 +7,7 @@ export function useInboxData() {
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
     "loading",
   );
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
@@ -41,7 +43,18 @@ export function useInboxData() {
         );
         setStatus("ready");
       })
-      .catch(() => setStatus("error"));
+      .catch((err: unknown) => {
+        if (err instanceof ApiRequestError) {
+          setErrorMessage(
+            t("error.generic", {
+              request_id: err.requestId ?? "",
+            }),
+          );
+        } else {
+          setErrorMessage(t("error.generic"));
+        }
+        setStatus("error");
+      });
   };
 
   const handleRetry = () => {
@@ -67,6 +80,7 @@ export function useInboxData() {
 
   return {
     status,
+    errorMessage,
     tasks,
     projectList,
     projectsStatus,

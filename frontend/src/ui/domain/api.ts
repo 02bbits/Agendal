@@ -25,6 +25,8 @@ export type TaskPatch = Partial<
   >
 >;
 
+export type DeleteScope = "one" | "future";
+
 export interface TaskApi {
   /** `POST /tasks/{id}/complete` → the task, and the next occurrence for a repeating task. */
   complete(id: string, at: string): ReturnType<TaskRequest>;
@@ -32,4 +34,8 @@ export interface TaskApi {
   reopen(id: string, at: string): ReturnType<TaskRequest>;
   /** `PATCH /tasks/{id}` → the updated task. */
   patch(id: string, fields: TaskPatch, at: string): PatchTaskResponse;
+  /** `DELETE /tasks/{id}?scope=one|future` (soft delete). */
+  remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void>;
+  /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
+  restore(id: string): Promise<Task>;
 }
