@@ -57,10 +57,14 @@ export function SearchScreen({
   const activeSearch = searchFn ?? (!offline ? store.api.search : undefined);
 
   const [remoteResults, setRemoteResults] = useState<{
+    query: string;
+    status: SearchStatus;
     items: Task[];
     counts: { all: number; open: number; completed: number };
     nextCursor: string | null;
   }>({
+    query: "",
+    status: "all",
     items: [],
     counts: { all: 0, open: 0, completed: 0 },
     nextCursor: null,
@@ -99,6 +103,8 @@ export function SearchScreen({
         clearTimeout(skeletonTimer);
         if (cancelled) return;
         setRemoteResults({
+          query: query.trim(),
+          status,
           items: res.items,
           counts: res.counts,
           nextCursor: res.next_cursor,
@@ -121,15 +127,23 @@ export function SearchScreen({
   }, [activeSearch, query, status, hasQuery, retrySeq]);
 
   const localResult = searchTasks(store.tasks, query, status);
+  const matchingRemote =
+    activeSearch &&
+    remoteResults.query === query.trim() &&
+    remoteResults.status === status;
   const items = !hasQuery
     ? []
     : activeSearch
-      ? remoteResults.items
+      ? matchingRemote
+        ? remoteResults.items
+        : []
       : localResult.items;
   const counts = !hasQuery
     ? { all: 0, open: 0, completed: 0 }
     : activeSearch
-      ? remoteResults.counts
+      ? matchingRemote
+        ? remoteResults.counts
+        : { all: 0, open: 0, completed: 0 }
       : localResult.counts;
   const pageKey = `${status}:${query}`;
   const shown = paging.key === pageKey ? paging.shown : SEARCH_PAGE;
@@ -149,6 +163,7 @@ export function SearchScreen({
           cursor: remoteResults.nextCursor,
         });
         setRemoteResults((prev) => ({
+          ...prev,
           items: [...prev.items, ...res.items],
           counts: res.counts,
           nextCursor: res.next_cursor,
@@ -254,7 +269,7 @@ export function SearchScreen({
             {t("common.retry")}
           </Button>
         </div>
-      ) : loading && showSkeleton ? (
+      ) : loading && showSkeleton && items.length === 0 ? (
         <div
           className="mt-3 flex flex-col gap-2"
           role="status"
