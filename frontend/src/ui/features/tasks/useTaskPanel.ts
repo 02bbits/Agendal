@@ -10,6 +10,10 @@ export interface TaskPanelState {
   closePanel: () => void;
 }
 
+// Opening, switching or closing the panel only changes ?task=; the list must
+// stay where the user scrolled (Next scrolls to the top by default)
+const KEEP_SCROLL = { scroll: false } as const;
+
 export function useTaskPanel(baseNavigate?: Navigate): TaskPanelState {
   const isWide = useMediaQuery("(min-width: 1280px)");
   const router = useRouter();
@@ -30,7 +34,7 @@ export function useTaskPanel(baseNavigate?: Navigate): TaskPanelState {
       pushedTaskRef.current = false;
       router.back();
     } else {
-      router.replace(pathname);
+      router.replace(pathname, KEEP_SCROLL);
     }
   }, [pathname, router]);
 
@@ -40,10 +44,16 @@ export function useTaskPanel(baseNavigate?: Navigate): TaskPanelState {
       if (taskMatch && isWide) {
         const taskId = decodeURIComponent(taskMatch[1]!);
         if (selectedTaskId) {
-          router.replace(`${pathname}?task=${encodeURIComponent(taskId)}`);
+          router.replace(
+            `${pathname}?task=${encodeURIComponent(taskId)}`,
+            KEEP_SCROLL,
+          );
         } else {
           pushedTaskRef.current = true;
-          router.push(`${pathname}?task=${encodeURIComponent(taskId)}`);
+          router.push(
+            `${pathname}?task=${encodeURIComponent(taskId)}`,
+            KEEP_SCROLL,
+          );
         }
         return true;
       }

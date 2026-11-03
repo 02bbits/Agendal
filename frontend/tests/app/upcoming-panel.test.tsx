@@ -104,7 +104,9 @@ describe("Upcoming task panel integration (Refs #28)", () => {
     expect(rowLink.getAttribute("aria-current")).toBeNull();
 
     await userEvent.click(rowLink);
-    expect(router.push).toHaveBeenCalledWith("/upcoming?task=t-1");
+    expect(router.push).toHaveBeenCalledWith("/upcoming?task=t-1", {
+      scroll: false,
+    });
 
     searchParams = new URLSearchParams("task=t-1");
     await act(async () => {
