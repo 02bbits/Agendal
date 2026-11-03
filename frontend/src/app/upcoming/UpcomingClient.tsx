@@ -6,14 +6,13 @@ import {
   CalendarIcon,
   ChipGroup,
   ClockIcon,
-  GridIcon,
-  ListIcon,
   PlusIcon,
   ScreenHeader,
   TaskPanel,
   TaskStoreProvider,
   Toast,
   UpcomingScreen,
+  UpcomingViewSwitch,
   addDays,
   t,
   useTaskPanel,
@@ -28,6 +27,8 @@ import { useAppFrame } from "../AppFrame";
 import { httpTaskApi, projects, upcoming } from "@/lib/taskApi";
 import { now, timeZone, today } from "@/lib/clock";
 import { ApiRequestError } from "@/lib/apiError";
+import { headerDate, subscribeHeaderDate } from "../headerDate";
+import { useSyncExternalStore } from "react";
 
 const clock: Clock = {
   now,
@@ -58,24 +59,27 @@ export function UpcomingClient() {
     "ready",
   );
   const [subtitle, setSubtitle] = useState<string>("");
-  const [filter, setFilter] = useState<UpcomingFilter>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("agendal.upcoming.filter");
-        return saved === "scheduled" || saved === "due" ? saved : "all";
-      } catch {}
-    }
-    return "all";
-  });
-  const [viewMode, setViewMode] = useState<UpcomingViewMode>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem("agendal.upcoming.view_mode");
-        return saved === "list" ? "list" : "grid";
-      } catch {}
-    }
-    return "grid";
-  });
+  const [filter, setFilter] = useState<UpcomingFilter>("all");
+  const [viewMode, setViewMode] = useState<UpcomingViewMode>("list");
+
+  useEffect(() => {
+    try {
+      const savedFilter = localStorage.getItem("agendal.upcoming.filter");
+      if (savedFilter === "scheduled" || savedFilter === "due") {
+        setFilter(savedFilter);
+      }
+      const savedMode = localStorage.getItem("agendal.upcoming.view_mode");
+      if (savedMode === "board" || savedMode === "grid") {
+        setViewMode("board");
+      }
+    } catch {}
+  }, []);
+
+  const date = useSyncExternalStore(
+    subscribeHeaderDate,
+    () => headerDate(),
+    () => "",
+  );
 
   const accountInitial = user?.display_name || user?.email || "";
 
@@ -109,20 +113,20 @@ export function UpcomingClient() {
   };
 
   const fetchData = () => {
-    Promise.all([upcoming({ days: 365 }), projects()])
+    const todayStr = today(timeZone(), now());
+    Promise.all([upcoming({ from: todayStr, days: 366 }), projects()])
       .then(([upcomingData, projectsData]) => {
         const flatTasks = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
         setTasks(flatTasks);
         setProjectList(projectsData ?? []);
         setProjectsStatus("ready");
 
-        const todayStr = today(timeZone(), now());
         const limitDate = addDays(todayStr, 7);
         const next7DaysTasks = flatTasks.filter(
           (x) =>
             !x.done &&
             x.due_date &&
-            x.due_date > todayStr &&
+            x.due_date >= todayStr &&
             x.due_date <= limitDate,
         );
         const count = next7DaysTasks.length;
@@ -185,7 +189,7 @@ export function UpcomingClient() {
   return (
     <div className="pb-8">
       <ScreenHeader
-        overline=""
+        overline={date}
         title={t("nav.upcoming")}
         accountInitial={accountInitial}
         navigate={navigate}
@@ -212,40 +216,10 @@ export function UpcomingClient() {
                 ]}
               />
             </div>
-            <div
-              role="group"
-              aria-label="Chế độ xem"
-              className="hidden h-10 items-center rounded-full border border-separator/60 bg-surface p-1 shadow-2xs md:inline-flex"
-            >
-              <button
-                type="button"
-                onClick={() => handleViewModeChange("grid")}
-                className={`focus-ring inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-0 px-3 text-footnote font-medium transition-colors ${
-                  viewMode === "grid"
-                    ? "bg-primary text-primary-content"
-                    : "bg-transparent text-ink-secondary hover:bg-surface-hover/50 hover:text-ink"
-                }`}
-                aria-pressed={viewMode === "grid"}
-                title="Chế độ ngang (Lưới)"
-              >
-                <GridIcon size={14} />
-                <span>Ngang</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => handleViewModeChange("list")}
-                className={`focus-ring inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-0 px-3 text-footnote font-medium transition-colors ${
-                  viewMode === "list"
-                    ? "bg-primary text-primary-content"
-                    : "bg-transparent text-ink-secondary hover:bg-surface-hover/50 hover:text-ink"
-                }`}
-                aria-pressed={viewMode === "list"}
-                title="Chế độ dọc (Danh sách)"
-              >
-                <ListIcon size={14} />
-                <span>Dọc</span>
-              </button>
-            </div>
+            <UpcomingViewSwitch
+              viewMode={viewMode}
+              onChange={handleViewModeChange}
+            />
             <Button
               variant="primary"
               pill
@@ -324,7 +298,11 @@ export function UpcomingClient() {
             filter={filter}
             onFilterChange={handleFilterChange}
             viewMode={viewMode}
+            onViewModeChange={handleViewModeChange}
             selectedTaskId={selectedTaskId}
+            weekStart={settings.weekStart}
+            onAddTask={(date) => openNewTask({ dueDate: date })}
+            onNewTask={() => openNewTask()}
           />
           {isWide && selectedTaskId && (
             <TaskPanel

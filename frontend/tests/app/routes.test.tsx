@@ -166,7 +166,7 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
   });
 
   it("other tabs leave the overline empty", () => {
-    renderAt("/upcoming", UpcomingPage);
+    renderAt("/notes", NotesPage);
     expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
   });
 
