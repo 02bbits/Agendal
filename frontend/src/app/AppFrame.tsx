@@ -382,7 +382,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onDraftRestored={() => showToast(t("note.draft_restored"))}
             onSubmit={submitNote}
             onSubmitted={(result) => {
-              if (result.note.status === "done") {
+              if (
+                result.note.status === "done" ||
+                result.note.status === "followup"
+              ) {
                 rememberNote(result);
                 openResult(result.note.id);
                 return;

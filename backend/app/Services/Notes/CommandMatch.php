@@ -15,6 +15,7 @@ final readonly class CommandMatch
         public array $tiedTaskIds = [],
         public ?ExtractedFields $newTask = null,
         public ?SkipReason $skip = null,
+        public ?string $sourceText = null,
     ) {}
 
     /** @param list<string> $tiedTaskIds */
@@ -36,5 +37,10 @@ final readonly class CommandMatch
     public function isTie(): bool
     {
         return count($this->tiedTaskIds) > 1;
+    }
+
+    public function withSourceText(string $text): self
+    {
+        return new self($this->change, $this->tiedTaskIds, $this->newTask, $this->skip, $text);
     }
 }

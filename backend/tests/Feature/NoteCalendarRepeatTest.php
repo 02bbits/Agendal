@@ -170,23 +170,20 @@ it('retains unsupported exclusions without applying the excluded date as a sched
     $this->postJson('/api/v1/notes', [
         'client_id' => (string) Str::uuid(), 'text' => $text.'; buy milk tomorrow',
         'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
-    ])->assertCreated()->assertJsonCount(2, 'changes')
-        ->assertJsonPath('changes.0.task.title', mb_strtoupper(mb_substr($text, 0, 1)).mb_substr($text, 1))
-        ->assertJsonPath('changes.0.task.due_date', null)
-        ->assertJsonPath('changes.0.task.repeat', 'never')
-        ->assertJsonPath('changes.0.task.repeat_rule', null)
-        ->assertJsonPath('changes.1.task.due_date', '2026-11-02');
+    ])->assertCreated()->assertJsonCount(0, 'changes')->assertJsonPath('note.status', 'followup')
+        ->assertJsonPath('skipped.0.text', $text)->assertJsonPath('skipped.0.reason', 'unclear');
+    expect(Task::count())->toBe(0)
+        ->and(Note::firstOrFail()->plan['create'][0]['due_date'])->toBe('2026-11-02');
 });
 
 it('does not persist a shifted timestamp when a relative time conflicts with the weekly day', function () {
     $this->postJson('/api/v1/notes', [
         'client_id' => (string) Str::uuid(), 'text' => 'call mum in half an hour every Tuesday',
         'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
-    ])->assertCreated()->assertJsonCount(1, 'changes')
-        ->assertJsonPath('changes.0.task.title', 'Call mum in half an hour every Tuesday')
-        ->assertJsonPath('changes.0.task.due_date', null)
-        ->assertJsonPath('changes.0.task.start_time', null)
-        ->assertJsonPath('changes.0.task.repeat', 'never');
+    ])->assertCreated()->assertJsonCount(0, 'changes')->assertJsonPath('note.status', 'followup')
+        ->assertJsonPath('skipped.0.text', 'call mum in half an hour every Tuesday')
+        ->assertJsonPath('skipped.0.reason', 'unclear');
+    expect(Task::count())->toBe(0);
 });
 
 it('persists hour aliases and fractional suffixes across midnight', function () {

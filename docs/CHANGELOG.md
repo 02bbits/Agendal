@@ -2,7 +2,23 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-03
+
+- **Field-level fallback merge (IM-38).** Explicit, reliable fields survive whole-item low confidence and are sent as `known_fields`. A model may clean the title without replacing a known date/time/range, recurrence, priority or project. Date-dependent defaults use the final merged schedule; default reminders survive a model's empty override. Ambiguous/name spans, implied dates and unresolved unaccented day periods remain unknown. API/preview metadata adds `mixed` and per-field authority. Prompt v6 and adversarial regression tests cover "Mai tao phải đi chơi 7 giờ" with wrong/missing model dates and clocks.
+
+- **Fallback outcomes and provisional-write guard (IM-38).** Each low item records source, status and a bounded reason (`processing` in the response). Failed, missing and rejected model proposals no longer execute provisional rules writes; original text is held for follow-up, while known sibling targets and existing skip reasons remain intact. The preview distinguishes final actions from rules-only previews and shows each outcome. Understood time/recurrence proposals receive deterministic missing first dates; explicit clock disagreements are rejected. Modal observations stay low instead of using frequency alone as evidence of task intent. Prompt v5 distinguishes observations and conflicting weekday/daily constraints, and states the existing clock convention. Provider/config/budget errors get a separate message from unclear user wording.
+
+- **Unclear asks for clarification (IM-38, user approved).** `unclear` is a separate skipped reason and model action for requests whose meaning is unresolved. It holds the whole plan in `followup`, including mixed notes, instead of creating placeholder tasks. The result asks for a specific revised note and submits it to `POST /notes/{id}/clarify`, which re-plans the same user-owned note with replay protection. Prompt v4 documents the distinction from ordinary `skip`. See [NU](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01), [RV](03-modules/RV-review-control.md) and the [API](07-architecture/api.md).
+
+- **English and accented Vietnamese low-confidence checks (IM-38).** The manual runner's `--languages` suite checks polite requests, create/delete/reschedule intent, and unresolved references in both languages. References such as "that thing" and "cái đó" remain low confidence even after a supported verb; literal project/file names are excluded from that check. Live results distinguish routing from semantic correctness and provider timeouts.
+
+- **Confidence routing (IM-38).** Unsupported task prefixes remain low confidence despite a recognized time or an embedded task word. Relevant candidate IDs are available for unrecognized commands. Mixed commands route only unresolved target clauses and preserve known siblings. Budget-expired plain titles are uncertain. [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md) records these boundaries; the live experiment includes unaccented and mistyped commands.
+
 ## 2026-11-02
+
+- **Live fallback checks (IM-38).** A bounded CLI experiment under `backend/tests/Manual/llm-live.php` reports synthetic-note plans, elapsed time and HTTP status without credentials. Reasoning is configurable for supporting providers. Unaccented Vietnamese syllables are kept out of English temporal alias matching, so an unavailable LLM cannot turn Vietnamese `thu` into an unintended Thursday deadline; numeric dates/times and explicit English modifiers remain supported.
+
+- **LLM calendar integration (IM-38).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md) documents prompt v2, validated calendar recurrence and independent copies. Model replacement covers all refs belonging to one item, respects the total note limit and preserves known command targets when one proposed action cannot represent the whole item. Provider behavior and corpus accuracy still require a live model run.
 
 - **Relative hour aliases and fractional suffixes.** `giờ` shares the hour grammar with `tiếng`; `rưỡi` adds an exact half-unit through the shared duration reader. Generated alias/unit checks and an API case cover fractional hours and crossing midnight. Unrepresentable fractional months/minutes retain their text for fallback. See [NU relative time](03-modules/NU-note-understanding.md#relative-time).
 

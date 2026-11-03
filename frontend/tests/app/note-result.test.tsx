@@ -90,6 +90,45 @@ afterEach(() => {
 });
 
 describe("Note result page /notes/[id] (IM-43)", () => {
+  it("answers a followup on the same saved note and shows the returned changes", async () => {
+    const followup: NoteResult = {
+      ...result,
+      note: { ...result.note, status: "followup", text: "do that thing" },
+      changes: [],
+      skipped: [{ ref: "i1", text: "do that thing", reason: "unclear" }],
+    };
+    rememberNote(followup);
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/notes/n1/clarify" && init?.method === "POST")
+        return json(200, result);
+      return json(404, {});
+    });
+    await open();
+    const input = await screen.findByRole("textbox", {
+      name: t("note.clarify_label"),
+    });
+    await userEvent.clear(input);
+    await userEvent.type(input, "buy milk");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.clarify_submit") }),
+    );
+    expect(await screen.findByRole("link", { name: /SQL quiz/ })).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("heading", { level: 1 }),
+    );
+    const submissions = calls("POST", "/api/v1/notes/n1/clarify");
+    expect(submissions).toHaveLength(1);
+    expect(JSON.parse(String(submissions[0]![1].body))).toMatchObject({
+      client_id: "c1",
+      text: "buy milk",
+    });
+    expect(calls("POST", "/api/v1/notes")).toHaveLength(1);
+    expect(
+      screen.queryByRole("textbox", { name: t("note.clarify_label") }),
+    ).toBeNull();
+  });
   it("a deep link loads the note and shows its rows", async () => {
     serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result));
     await open();

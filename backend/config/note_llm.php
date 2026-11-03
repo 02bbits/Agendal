@@ -13,10 +13,10 @@ return [
 
     'url' => env('NOTE_LLM_URL', 'https://openrouter.ai/api/v1/chat/completions'),
 
-    // Seconds per note; on timeout the rules result stands (engine = rules_fallback).
+    // Seconds per note; on timeout confident rules remain, while uncertain writes wait (rules_fallback).
     'timeout_seconds' => (float) env('NOTE_LLM_TIMEOUT_SECONDS', 1.5),
 
-    // Open-task titles a command-like item may show the model.
+    // Relevant open-task titles an uncertain item may show the model.
     'candidate_limit' => (int) env('NOTE_LLM_CANDIDATE_LIMIT', 20),
 
     // Model calls one user may make per day, and tokens all users may spend per day.
@@ -25,7 +25,10 @@ return [
 
     'max_completion_tokens' => (int) env('NOTE_LLM_MAX_COMPLETION_TOKENS', 2048),
 
+    // Optional: omit for models without this parameter; false disables reasoning on models that support it.
+    'reasoning_enabled' => env('NOTE_LLM_REASONING_ENABLED'),
+
     // The versioned prompt in resources/prompts, recorded on each note that used it.
-    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v1'),
+    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v6'),
 
 ];

@@ -127,6 +127,12 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.cancel_keep` † | Cancel and keep the note | Confirm secondary |
 | `note.pick_task` † | Which task did you mean? | Tie ([NU-E11](../03-modules/NU-note-understanding.md#nu-e11)): candidates as radio buttons |
 | `note.followup_title` | I couldn't find a task in this note. | Follow-up ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| `note.clarify_question` | What exactly would you like to do? | Unclear item follow-up question |
+| `note.processing_unavailable` | Automatic processing couldn't finish. Try again or edit the note. | Provider/config/budget failure; does not blame the user's wording |
+| `note.clarify_hint` | Make the unclear parts specific in the note below. No changes have been applied. | Follow-up explanation |
+| `note.clarify_label` | Clarify your note | Follow-up textarea label |
+| `note.clarify_submit` | Review this note again | Submit clarification |
+| `note.skip_unclear` | Please clarify: “{text}” | Unclear item's original text |
 | `note.followup_edit` † | Edit the note | Follow-up secondary ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
 | `note.make_one` † | Keep it as task | Follow-up primary |
 | `note.skipped` † | Not made into tasks | Result section heading for skipped text |

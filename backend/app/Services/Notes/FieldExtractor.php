@@ -74,6 +74,32 @@ final class FieldExtractor
             }
         }
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
+        $trusted = [];
+        if (! $repeat['unreadable']) {
+            if (! $date->unreadable && (($date->date !== null && $this->reliableDateSpans($date->spans, $readable)) || $time->date !== null)) {
+                $trusted['due_date'] = $dueDate;
+            }
+            if (! $time->unreadable && $time->start !== null && $this->reliableTime($time, $readable, $text)) {
+                $trusted['start_time'] = $time->start;
+                if ($time->end !== null) {
+                    $trusted['end_time'] = $time->end;
+                }
+            }
+            if ($repeat['spans'] !== [] && $repeat['repeat'] !== Repeat::Never) {
+                $trusted['repeat'] = $repeat['repeat']->value;
+                $trusted['repeat_rule'] = $repeat['rule'];
+            }
+            if (($repeat['copies'] ?? 1) > 1) {
+                $trusted['copies'] = $repeat['copies'];
+            }
+        }
+        if (NoteVocabulary::contains('priority_high', $readable) || NoteVocabulary::contains('priority_high_content', $readable) || NoteVocabulary::contains('priority_low', $readable)) {
+            $trusted['priority'] = $this->priority($readable, $dueDate, $context)->value;
+        }
+        $project = $this->project($text, $context);
+        if ($project !== null) {
+            $trusted['project'] = $context->projects[$project];
+        }
 
         return new ExtractedFields(
             title: $title,
@@ -82,14 +108,61 @@ final class FieldExtractor
             startTime: $time->start,
             endTime: $time->end,
             priority: $this->priority($readable, $dueDate, $context),
-            projectId: $this->project($text, $context),
+            projectId: $project,
             repeat: $repeat['repeat'],
             reminder: $this->reminder($readable, $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
-                || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null),
+                || $this->unaccentedVietnamese($text) || $this->unknownTask($title, $context),
             repeatRule: $repeat['rule'],
             copies: $repeat['copies'] ?? 1,
+            trustedFields: $trusted,
         );
+    }
+
+    /**
+     * A bare English weekday alias that is also a Vietnamese syllable ("thu") is not reliable evidence in
+     * a low-confidence sentence. This does not promote implied dates or unreadable name/date spans.
+     *
+     * @param  list<array{0: int, 1: int}>  $spans
+     */
+    private function reliableDateSpans(array $spans, string $text): bool
+    {
+        $weekdays = implode('|', NoteVocabulary::family('weekday'));
+        $syllables = array_map(mb_strtolower(...), NoteVocabulary::values('vietnamese_unaccented_syllable'));
+        foreach ($spans as [$offset, $length]) {
+            $phrase = mb_strtolower(trim(substr($text, $offset, $length)));
+            if (in_array($phrase, $syllables, true) && preg_match('~^(?:'.$weekdays.')$~iu', $phrase) === 1) {
+                return false;
+            }
+        }
+
+        return $spans !== [];
+    }
+
+    private function reliableTime(ParsedTime $time, string $readable, string $original): bool
+    {
+        if (! $this->unaccentedVietnamese($original) || (int) substr((string) $time->start, 0, 2) >= 13) {
+            return true;
+        }
+        // An unaccented day period outside the readable grammar can change a 12-hour clock's meaning.
+        // Explicit recognized AM/PM remains reliable; otherwise leave that field for interpretation.
+        foreach ($time->spans as [$offset, $length]) {
+            $phrase = substr($readable, $offset, $length);
+            if (NoteVocabulary::contains('period_am', $phrase) || NoteVocabulary::contains('period_pm', $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array{priority: string, reminder: string} Defaults depend on the final merged schedule. */
+    public function scheduleDefaults(string $text, ?string $date, ?string $start, NoteContext $context): array
+    {
+        $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
+
+        return ['priority' => $this->priority($readable, $date, $context)->value,
+            'reminder' => $this->reminder($readable, $date, $start, $context)->value];
     }
 
     /** The text as a task title with nothing else read, for items left when the rules budget is spent (SEC-23). */
@@ -97,7 +170,7 @@ final class FieldExtractor
     {
         [$title, $notes] = $this->cut(trim($text));
 
-        return new ExtractedFields($title, $notes, null, null, null, Priority::Low, null, Repeat::Never, Reminder::None, false);
+        return new ExtractedFields($title, $notes, null, null, null, Priority::Low, null, Repeat::Never, Reminder::None, true);
     }
 
     /**
@@ -124,6 +197,7 @@ final class FieldExtractor
             lowConfidence: $fields->lowConfidence || $at->lowConfidence,
             repeatRule: $fields->repeatRule,
             copies: $fields->copies,
+            trustedFields: [...$fields->trustedFields, ...array_intersect_key($at->trustedFields, array_flip(['due_date', 'start_time', 'end_time']))],
         );
     }
 
@@ -137,11 +211,22 @@ final class FieldExtractor
             return $text;
         }
 
-        return (string) preg_replace_callback(
+        $unaccented = $this->unaccentedVietnamese($text);
+        $blank = fn (array $word): string => str_repeat(' ', strlen($word[0]));
+        $text = (string) preg_replace_callback(
             NoteVocabulary::pattern(NoteVocabulary::phrases('vietnamese_ascii_word')),
-            fn (array $word): string => str_repeat(' ', strlen($word[0])),
+            $blank,
             $text,
         );
+        if ($unaccented) {
+            // NU-E40: only blank weekday aliases that are also Vietnamese syllables, not explicit English modifiers.
+            $syllables = array_map(mb_strtolower(...), NoteVocabulary::values('vietnamese_unaccented_syllable'));
+            $weekdays = implode('|', NoteVocabulary::family('weekday'));
+            $text = (string) preg_replace_callback(NoteVocabulary::pattern($weekdays),
+                fn (array $word): string => in_array(mb_strtolower($word[0]), $syllables, true) ? $blank($word) : $word[0], $text);
+        }
+
+        return $text;
     }
 
     private function hasAccentedLetters(string $text): bool
@@ -304,6 +389,7 @@ final class FieldExtractor
         }
         $known = implode('|', [
             NoteVocabulary::phrases('task_verb'),
+            NoteVocabulary::phrases('task_subject'),
             NoteVocabulary::phrases('priority_high_content'),
             NoteVocabulary::phrases('acronym'),
             ...array_values(NoteVocabulary::projectKeywords()),
@@ -330,22 +416,29 @@ final class FieldExtractor
     }
 
     /**
-     * NU-E28: unaccented text where the rules know no word and read no date or time may be another language
-     * ("comprar leche"); "team meeting 3pm" is understood through its time.
+     * A date, time, accent or known word inside an unknown sentence does not establish task intent.
+     * After removing supported lead-ins and modifiers, require a supported task phrase at the start.
      */
-    private function unknownLanguage(string $text, bool $readDateOrTime): bool
+    private function unknownTask(string $title, NoteContext $context): bool
     {
-        if ($readDateOrTime || $this->hasAccentedLetters($text)) {
-            return false;
+        if ($this->hasUnresolvedReference($title, $context)
+            || NoteVocabulary::contains('uncertain_intent', NoteVocabulary::withoutLiterals($title, array_values($context->projects)))) {
+            return true;
         }
         $known = implode('|', [
             NoteVocabulary::phrases('task_verb'),
-            NoteVocabulary::phrases('lead_in'),
+            NoteVocabulary::phrases('task_subject'),
             NoteVocabulary::phrases('acronym'),
-            NoteVocabulary::signals(),
+            NoteVocabulary::phrases('priority_high_content'),
             ...array_values(NoteVocabulary::projectKeywords()),
+            ...array_map(fn (string $name): string => preg_quote($name, '~'), array_values($context->projects)),
         ]);
 
-        return preg_match(NoteVocabulary::pattern($known), $text) !== 1;
+        return preg_match('~^(?:'.$known.')(?![\p{L}\p{N}_])~iu', $title) !== 1;
+    }
+
+    public function hasUnresolvedReference(string $text, NoteContext $context): bool
+    {
+        return NoteVocabulary::contains('unresolved_reference', NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
     }
 }

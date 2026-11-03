@@ -41,16 +41,28 @@ class ProcessNote
      * @param  array<string, mixed>  $input
      * @return array{note: Note, replay: bool}
      */
-    public function handle(User $user, array $input): array
+    public function handle(User $user, array $input, ?string $followupId = null): array
     {
         Validator::make($input, ['client_id' => ['required', 'uuid:4']])->validate();
 
-        return DB::transaction(function () use ($user, $input): array {
+        return DB::transaction(function () use ($user, $input, $followupId): array {
             // Serializes client-id replays, open-task limits and notes from multiple devices.
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $existing = Note::query()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
-            if ($existing !== null) {
-                return ['note' => $existing, 'replay' => true];
+            $note = null;
+            if ($followupId !== null) {
+                $note = Note::query()->where('user_id', $user->id)->findOrFail($followupId);
+                abort_if($note->client_id !== $input['client_id'], 409);
+                if ($note->status !== PlanStatus::Followup->value) {
+                    $sameText = is_string($input['text'] ?? null) && $this->splitter->normalize($input['text']) === $note->text;
+                    abort_unless($sameText, 409);
+
+                    return ['note' => $note, 'replay' => true];
+                }
+            } else {
+                $existing = Note::query()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
+                if ($existing !== null) {
+                    return ['note' => $existing, 'replay' => true];
+                }
             }
             Validator::make($input, [
                 'text' => ['required', 'string'],
@@ -88,19 +100,21 @@ class ProcessNote
             if ($build->plan['dropped'] > 0) {
                 Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
             }
-            $note = new Note;
-            $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;
+            $note ??= new Note;
+            $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : $note->source_file_name;
             $note->forceFill([
                 'user_id' => $user->id, 'client_id' => $input['client_id'], 'text' => $text, 'name' => $build->name,
                 'status' => $build->status->value, 'engine' => $build->engine->value, 'prompt_version' => $build->promptVersion,
                 'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
                 'written_at' => $clientClock->now(), 'written_tz' => $zone, 'processed_at' => $this->clock->now(),
-                'plan' => $build->plan, 'applied' => [],
+                'plan' => [...$build->plan, 'processing' => array_map(
+                    fn (string $ref, array $outcome): array => ['ref' => $ref, ...$outcome],
+                    array_keys($build->itemOutcomes), array_values($build->itemOutcomes))], 'applied' => [],
             ])->save();
             if ($build->status === PlanStatus::Done) {
                 $applied = $this->applier->apply($note, $build->plan);
                 $note->applied = $applied['applied'];
-                $note->plan = [...$build->plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
+                $note->plan = [...($note->plan ?? []), 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
                 $note->save();
             }
 

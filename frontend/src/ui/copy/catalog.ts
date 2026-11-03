@@ -121,6 +121,14 @@ export const catalog = {
   "note.cancel_keep": "Cancel and keep the note",
   "note.pick_task": "Which task did you mean?",
   "note.followup_title": "I couldn't find a task in this note.",
+  "note.clarify_question": "What exactly would you like to do?",
+  "note.processing_unavailable":
+    "Automatic processing couldn't finish. Try again or edit the note.",
+  "note.clarify_hint":
+    "Make the unclear parts specific in the note below. No changes have been applied.",
+  "note.clarify_label": "Clarify your note",
+  "note.clarify_submit": "Review this note again",
+  "note.skip_unclear": "Please clarify: “{text}”",
   "note.followup_edit": "Edit the note",
   "note.make_one": "Keep it as task",
   "note.skipped": "Not made into tasks",

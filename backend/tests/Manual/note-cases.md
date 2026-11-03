@@ -8,7 +8,7 @@ Từ `backend/`, chạy `php -S localhost:8091 tests/Manual/try.php`, rồi mở
 
 - Written at: **2026-11-02T12:51** (thứ Hai).
 - Time zone: **Asia/Ho_Chi_Minh**; Week starts: **Monday**.
-- Mỗi hàng là một lần gửi riêng. Trang này chạy rules và không ghi cơ sở dữ liệu.
+- Mỗi hàng là một lần gửi riêng. Chọn **Rules only** để tái hiện bộ rules; chọn **Rules + LLM** và provider/model để thử fallback. Trang không ghi cơ sở dữ liệu. Các cột Source/Outcome phân biệt kết quả rules, model đã chấp nhận, mục chưa xử lý và lỗi; bảng rules gốc chỉ dùng đối chiếu. Key lấy từ `backend/.env`, không gửi xuống trình duyệt.
 - Giữ danh sách Existing tasks dưới đây cho các ca lệnh. Các ca tạo việc mới có thể hiện gợi ý trùng với việc đang mở; việc vẫn được tạo theo NU-E13.
 
 ```text

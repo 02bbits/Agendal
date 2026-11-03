@@ -149,12 +149,17 @@ The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contr
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
+| Any skipped item has reason `unclear` (approved 2026-11-03) | `followup`: ask the user to clarify; hold the whole plan without applying any changes, including known creates/deletes |
 | Any delete, any tie ([NU-E11](#nu-e11)), or 5 or more changes (creates + updates + deletes) | `confirm` |
 | At least one change | `done` |
 | No changes, and every skip is `already_done`, `not_found` or `no_change` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
 
 Skipped items never count as changes. A `confirm` plan is re-validated when it is applied ([NU-E38](#nu-e38)).
+
+Low-confidence rules writes are provisional. If the model is disabled, unavailable, rejects the input/output, or omits a proposal, those uncertain writes are not applied. Their original text is retained for follow-up; known sibling targets and existing not-found/no-change skips retain their meanings. Optional response `processing[]` records each low ref's `source`, `status` and diagnostic `reason`, separating provider/config/budget errors from an actual `unclear` interpretation. An understood recurrence/time with no first date gets the same deterministic date default as rules; reliable explicit clocks remain authoritative; incompatible unresolved fields are held rather than silently changing AM/PM.
+
+Field-level authority supersedes whole-item replacement for reliable evidence: a low title/intent may coexist with a known explicit date or clock. Such fields are retained in the merged result while the model interprets unknown parts. Implied/default dates and unreadable/ambiguous spans are not locked. Calendar defaults are recomputed from the merged schedule, so title cleanup cannot remove the rules' default reminder or change tomorrow into today. `processing[].source = mixed` and optional `field_sources` expose rules/model/server authority; see [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md).
 
 ## 3. State matrix
 
@@ -298,7 +303,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `priority`: `low`, `medium`, `high`
   - `repeat`: `never`, `daily`, `weekly`, `monthly`, `yearly`
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
-  - `reason`: `skip`, `already_done`, `not_found`, `no_change`
+  - `reason`: `skip`, `unclear`, `already_done`, `not_found`, `no_change`. `unclear` means a request lacks enough meaning to execute, unlike `skip` for non-actionable content. Keep its original text, ask the user to make it specific, and never turn it into a placeholder task. An unresolved reference such as "do that thing" / "làm cái đó" without resolving context remains unclear even if the model returns a valid create proposal.
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 - Plan `create` and `update` entries may include nullable `repeat_rule`, following the [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37); its FREQ must match the resulting task's `repeat`. The applier derives the read-only `repeat_anchor` when creating the task, so it is not a plan field. Returned `changes[].task` carries the structured task fields; older snapshots may omit the rule/anchor. Presentation belongs to the frontend formatter.
 

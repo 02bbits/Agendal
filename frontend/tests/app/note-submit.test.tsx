@@ -94,11 +94,12 @@ describe("Make tasks hands over to the result (IM-43)", () => {
     expect(recallNote("n7")?.changes).toHaveLength(1);
   });
 
-  it("a note that needs a look keeps the interim until Check this first and the follow-up exist", async () => {
+  it("a followup opens its saved result so the user can answer the question", async () => {
     await makeTasks(result("followup"));
 
-    expect(await screen.findByText("0 tasks made")).toBeTruthy();
-    expect(router.push).not.toHaveBeenCalled();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/notes/n7"));
+    expect(recallNote("n7")?.note.status).toBe("followup");
+    expect(screen.queryByText("0 tasks made")).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Your note" })).toBeNull();
   });
 });

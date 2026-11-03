@@ -17,6 +17,7 @@ final readonly class NoteBuild
     /**
      * @param  ValidatedPlan  $plan
      * @param  array<string, string>  $lowConfidence  item ref => item text, for the LLM fallback (ADR-008)
+     * @param  array<string, array{source: string, status: string, reason: string, field_sources?: array<string, string>}>  $itemOutcomes
      */
     public function __construct(
         public array $plan,
@@ -25,11 +26,7 @@ final readonly class NoteBuild
         public NoteEngineKind $engine,
         public array $lowConfidence,
         public ?string $promptVersion = null,
+        public array $itemOutcomes = [],
     ) {}
 
-    /** The same plan, marked as the rules result kept after the model was not used or failed. */
-    public function asFallback(): self
-    {
-        return new self($this->plan, $this->status, $this->name, NoteEngineKind::RulesFallback, $this->lowConfidence, $this->promptVersion);
-    }
 }

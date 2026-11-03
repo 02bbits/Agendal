@@ -5,7 +5,7 @@ import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
-import { getNote, recallNote } from "../../../lib/noteApi";
+import { clarifyNote, getNote, recallNote } from "../../../lib/noteApi";
 import { getTask, httpTaskApi } from "../../../lib/taskApi";
 import {
   NoteResultScreen,
@@ -63,12 +63,14 @@ function ResultContainer({
   back,
   navigate,
   weekStart,
+  onClarify,
 }: {
   result: NoteResult;
   gone: ReadonlySet<string>;
   back: () => void;
   navigate?: Navigate;
   weekStart: "mon" | "sun";
+  onClarify: (text: string) => Promise<void>;
 }): ReactElement {
   const store = useTaskStore();
   const live = useMemo(
@@ -88,6 +90,7 @@ function ResultContainer({
       weekStart={weekStart}
       onDone={back}
       onSetDue={(task, date) => store.update(task, { due_date: date })}
+      onClarify={onClarify}
       navigate={navigate}
     />
   );
@@ -178,6 +181,7 @@ export default function NoteResultClient({
 
   return (
     <TaskStoreProvider
+      key={`${loaded.result.note.id}:${loaded.result.note.status}:${loaded.result.note.processed_at}`}
       api={httpTaskApi}
       clock={appClock}
       initialTasks={loaded.tasks}
@@ -190,6 +194,14 @@ export default function NoteResultClient({
         back={back}
         navigate={navigate}
         weekStart={settings.weekStart}
+        onClarify={async (text) => {
+          const result = await clarifyNote(loaded.result.note, text);
+          setLoaded({
+            result,
+            tasks: touched(result).map((change) => change.task),
+            gone: new Set(),
+          });
+        }}
       />
     </TaskStoreProvider>
   );

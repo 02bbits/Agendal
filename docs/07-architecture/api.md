@@ -27,6 +27,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `GET /notes`, `GET /notes/{id}` | Notes tab and a note's result | [RV-4](../03-modules/RV-review-control.md#rv-4), [RV-1](../03-modules/RV-review-control.md#rv-1) |
 | `POST /notes/{id}/apply` · `/cancel` | Confirm or cancel a `confirm` plan | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
 | `POST /notes/{id}/make-task` | Keep a `followup` as a task (Edit the note uses `PUT /notes/{id}`) | [RV-3](../03-modules/RV-review-control.md#rv-3) |
+| `POST /notes/{id}/clarify` | Clarify a `followup` using `{client_id, text, written_at, timezone}`. `client_id` must match the stored note. The full revised note is re-planned under the same ID; nothing is applied while any item is `unclear`. A retry of an already-resolved identical answer returns its stored result; a different answer on a resolved note returns `409`. Other users' notes return `404`. | Unclear follow-up, approved 2026-11-03 |
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
 | `POST /files/extract` | File (≤ 5 MB) → text. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
 | `GET /tasks?view=inbox\|upcoming&filter=` | Lists | [LV-1](../03-modules/LV-lists-search.md#lv-1), [LV-2](../03-modules/LV-lists-search.md#lv-2) |

@@ -37,6 +37,7 @@ class NoteResultResource extends JsonResource
             'changes' => $changes,
             'plan' => $this->status === PlanStatus::Confirm->value ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
             'skipped' => $plan['skipped'] ?? [], 'ambiguous' => $plan['ambiguous'] ?? [],
+            'processing' => $plan['processing'] ?? [],
         ];
     }
 }

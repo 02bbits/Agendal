@@ -2,11 +2,25 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agendal.app/schemas/note-result.schema.json",
   "title": "NoteResult",
-  "description": "Returned by POST /notes, GET /notes/{id} and the note actions (ADR-001, NU §7, RV §7). `done`: `changes` lists what was applied, `plan` is null. `confirm`: `changes` is empty, `plan` holds the proposal. `followup`: nothing actionable.",
+  "description": "Returned by POST /notes, GET /notes/{id} and the note actions (ADR-001, NU §7, RV §7). `done`: `changes` lists what was applied, `plan` is null. `confirm`: `changes` is empty, `plan` holds the proposal. `followup`: needs clarification or has no actionable content; no changes have been applied, including known parts held alongside an unclear item.",
   "type": "object",
   "required": ["note", "changes", "plan", "skipped", "ambiguous"],
   "additionalProperties": false,
   "properties": {
+    "processing": {
+      "type": "array",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["ref", "source", "status", "reason"],
+        "properties": {
+          "ref": { "type": "string" },
+          "source": { "enum": ["llm", "mixed", "pending"] },
+          "field_sources": { "type": "object", "additionalProperties": { "enum": ["rules", "llm", "server"] } },
+          "status": { "enum": ["accepted", "skipped", "unclear", "rejected", "missing", "unavailable"] },
+          "reason": { "type": "string" }
+        }
+      }
+    },
     "note": {
       "type": "object",
       "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine"],
@@ -62,7 +76,7 @@
         "properties": {
           "ref": { "type": "string" },
           "text": { "type": "string" },
-          "reason": { "enum": ["skip", "already_done", "not_found", "no_change"] }
+          "reason": { "enum": ["skip", "unclear", "already_done", "not_found", "no_change"] }
         }
       }
     },

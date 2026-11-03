@@ -19,7 +19,7 @@ final class NoteExtractionScenarios
 
     /** Categories only the field extractor reads; the splitter generator skips them. */
     public const EXTRACTION_ONLY_CATEGORIES = [
-        'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
+        'task_subject', 'unresolved_reference', 'uncertain_intent', 'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
@@ -68,6 +68,9 @@ final class NoteExtractionScenarios
         [$family, $key] = array_pad(explode(':', $category, 2), 2, '');
 
         return match ($family) {
+            'task_subject' => [[$value.' 9am', ['lowConfidence' => false, 'startTime' => '09:00'], self::NOW]],
+            'unresolved_reference' => [['do '.$value.' 9am', ['lowConfidence' => true], self::NOW]],
+            'uncertain_intent' => [['walk '.$value.' improve health', ['lowConfidence' => true], self::NOW]],
             'date_offset' => [['đọc sách '.$value, ['dueDate' => self::day((int) $key)], self::NOW]],
             'weekday' => [['đọc sách '.$value, ['dueDate' => self::day(self::daysUntilWeekday((int) $key) ?: 7)], self::NOW]],
             'month' => [['đọc sách 15 '.$value, ['dueDate' => self::yearlessDate(15, (int) $key)], self::NOW]],

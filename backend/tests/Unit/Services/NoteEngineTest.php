@@ -62,6 +62,26 @@ it('collects low-confidence items for the LLM fallback (ADR-008)', function () {
     expect($build->lowConfidence)->toBe(['i1' => 'comprar leche']);
 });
 
+it('routes unsupported phrasing using the original text despite recognized words or times', function (string $text) {
+    $build = app(NoteEngine::class)->build($text, engineContext());
+
+    expect($build->lowConfidence)->toBe(['i1' => $text]);
+})->with([
+    'hop team 9h', 'xoa call mum', 'doi call mum sang thu tu', 'xoaa call mum', 'blargh 9h', 'tào lao 9h',
+    'could you remove the Call mum task please',
+    'could you push my Call mum task back to Wednesday please',
+    'would you remind me to buy milk tomorrow at 9am',
+    'Bạn bỏ giúp mình task Call mum nhé',
+    'Bạn chuyển lịch Call mum qua thứ tư giúp mình nhé',
+    'Bạn giúp mình ghé siêu thị mua sữa sáng mai lúc 9h nhé',
+    'do that thing whenever', 'làm cái đó lúc nào cũng được',
+]);
+
+it('marks budget-expired plain titles as uncertain', function () {
+    $text = 'call mum tomorrow';
+    expect(app(NoteEngine::class)->build($text, engineContext(), budgetMs: 0)->lowConfidence)->toBe(['i1' => $text]);
+});
+
 it('reads the rules budget from config', function () {
     config(['notes.engine_budget_ms' => 0]);
 

@@ -1,4 +1,16 @@
 category,value
+uncertain_intent,could
+uncertain_intent,might
+uncertain_intent,có thể
+task_subject,team meeting
+task_subject,team standup
+task_subject,sinh nhật
+unresolved_reference,that thing
+unresolved_reference,this thing
+unresolved_reference,cái đó
+unresolved_reference,cái này
+unresolved_reference,việc đó
+unresolved_reference,việc này
 task_verb,buy
 task_verb,call
 task_verb,email

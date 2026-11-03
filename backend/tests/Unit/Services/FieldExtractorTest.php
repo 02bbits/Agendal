@@ -10,6 +10,17 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
+it('separates explicit calendar evidence from whole-item confidence and implied defaults', function () {
+    $fields = extractFields('Mai tao phải đi chơi 7 giờ', [], '2026-11-03T10:00:00+07:00');
+    expect($fields->lowConfidence)->toBeTrue()->and($fields->trustedFields)
+        ->toMatchArray(['due_date' => '2026-11-04', 'start_time' => '07:00'])
+        ->not->toHaveKeys(['title', 'priority', 'reminder', 'end_time']);
+    expect(extractFields('toi can mua sua 9am', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('gặp chị Mai', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('doi call mum sang thu tu', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('toi muon di cho 7h chieu', [])->trustedFields)->not->toHaveKey('start_time');
+});
+
 /** Friday 23 Oct 2026, 08:12 in Ho Chi Minh City, as in the note corpus. */
 const EXTRACTOR_NOW = '2026-10-23T08:12:00+07:00';
 
@@ -229,4 +240,27 @@ it('honors week start and note local time (T-NU-110)', function () {
         ->and(extractFields('clean room end of the week', [], $lateFriday, WeekStart::Sunday)->dueDate)->toBe('2026-10-24')
         ->and(extractFields('read tonight', [], $lateFriday)->startTime)->toBeNull()
         ->and(extractFields('read tomorrow 9am', [], $lateFriday)->reminder->value)->toBe('15m');
+});
+
+it('preserves unaccented Vietnamese weekday words instead of reading them as English aliases', function () {
+    $text = 'toi can tap gym moi thu hai va thu tu luc 9 gio sang';
+    $fields = extractFields($text);
+
+    expect($fields->title)->toBe('Toi can tap gym moi thu hai va thu tu luc 9 gio sang')
+        ->and($fields->dueDate)->toBeNull()->and($fields->repeatRule)->toBeNull()
+        ->and($fields->lowConfidence)->toBeTrue();
+});
+
+it('still reads numeric dates and times in unaccented Vietnamese', function () {
+    $fields = extractFields('toi can mua sua 2026-11-03 9h');
+
+    expect($fields->dueDate)->toBe('2026-11-03')->and($fields->startTime)->toBe('09:00')
+        ->and($fields->lowConfidence)->toBeTrue();
+});
+
+it('keeps explicit English duration modifiers in a mixed Vietnamese note', function () {
+    $fields = extractFields('toi can mua sua in an hour');
+
+    expect($fields->dueDate)->toBe('2026-10-23')->and($fields->startTime)->toBe('09:12')
+        ->and($fields->lowConfidence)->toBeTrue();
 });

@@ -16,7 +16,8 @@ final class LlmBudget
 
     public function __construct(private ClockInterface $clock) {}
 
-    public function reserve(int $userId, int $tokens): bool
+    /** The UTC day of a successful reservation, so a late response cannot refund another day's budget. */
+    public function reserve(int $userId, int $tokens): string|false
     {
         $day = $this->day();
 
@@ -32,13 +33,16 @@ final class LlmBudget
             Cache::put($tokensKey, $used + $tokens, $this->untilTomorrow());
 
             return true;
-        }) === true;
+        }) === true ? $day : false;
     }
 
     /** Replace a reservation with the tokens the provider reported, never more than reserved. */
-    public function settle(int $reserved, int $used): void
+    public function settle(int $reserved, int $used, string $day): void
     {
-        $day = $this->day();
+        // The old day's counters have expired; leave today's reservations untouched.
+        if ($day !== $this->day()) {
+            return;
+        }
         Cache::lock('note-llm:budget:'.$day, self::LOCK_SECONDS)->get(function () use ($reserved, $used, $day): void {
             $key = 'note-llm:tokens:'.$day;
             $settled = (int) Cache::get($key, 0) - $reserved + min($reserved, max(0, $used));

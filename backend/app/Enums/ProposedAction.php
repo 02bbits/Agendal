@@ -12,4 +12,5 @@ enum ProposedAction: string
     case Reschedule = 'reschedule';
     case Delete = 'delete';
     case Skip = 'skip';
+    case Unclear = 'unclear';
 }

@@ -22,6 +22,10 @@ import type {
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
+interface ClarificationHandler {
+  (text: string): Promise<void>;
+}
+
 export interface NoteResultScreenProps {
   result: NoteResultData;
   /**
@@ -36,6 +40,7 @@ export interface NoteResultScreenProps {
   onDone: () => void;
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
+  onClarify?: ClarificationHandler;
   navigate?: Navigate;
 }
 
@@ -69,6 +74,7 @@ export function NoteResultScreen({
   weekStart,
   onDone,
   onSetDue,
+  onClarify,
   navigate,
 }: NoteResultScreenProps) {
   const overlineId = useId();
@@ -76,9 +82,15 @@ export function NoteResultScreen({
   const heading = useRef<HTMLHeadingElement>(null);
   const [expanded, setExpanded] = useState(false);
   // A11Y-20, UX-61: focus goes to the heading, whose name includes the overline
-  useEffect(() => heading.current?.focus(), []);
+  useEffect(
+    () => heading.current?.focus(),
+    [result.note.status, result.note.processed_at],
+  );
 
   const { note, changes, skipped } = result;
+  const processingUnavailable = result.processing?.some(
+    (item) => item.source === "pending",
+  );
   const written = localDateTime(note.processed_at, timeZone);
   const count = (kind: NoteChange["kind"]) =>
     changes.filter((change) => change.kind === kind).length;
@@ -113,7 +125,13 @@ export function NoteResultScreen({
         aria-labelledby={`${overlineId} ${titleId}`}
         className="mt-1 mb-0 text-display font-bold focus:outline-none"
       >
-        {nameOf(result)}
+        {note.status === "followup"
+          ? t(
+              processingUnavailable
+                ? "note.processing_unavailable"
+                : "note.clarify_question",
+            )
+          : nameOf(result)}
       </h1>
       {note.source_file_name && (
         <p className="mt-2 mb-0 text-footnote text-ink-secondary">
@@ -163,17 +181,27 @@ export function NoteResultScreen({
           <ul className="m-0 list-none p-0 text-footnote text-ink-secondary">
             {skipped.map((item) => (
               <li key={item.ref} className="py-1">
-                {item.reason === "already_done"
-                  ? t("note.skip_already_done", { title: item.text })
-                  : item.reason === "not_found"
-                    ? t("note.skip_not_found", { text: item.text })
-                    : item.reason === "no_change"
-                      ? t("note.skip_no_change", { title: item.text })
-                      : item.text}
+                {item.reason === "unclear"
+                  ? t("note.skip_unclear", { text: item.text })
+                  : item.reason === "already_done"
+                    ? t("note.skip_already_done", { title: item.text })
+                    : item.reason === "not_found"
+                      ? t("note.skip_not_found", { text: item.text })
+                      : item.reason === "no_change"
+                        ? t("note.skip_no_change", { title: item.text })
+                        : item.text}
               </li>
             ))}
           </ul>
         </section>
+      )}
+
+      {note.status === "followup" && (
+        <ClarificationForm
+          key={note.processed_at}
+          text={note.text}
+          onClarify={onClarify}
+        />
       )}
 
       {changes.length > 0 && (
@@ -182,12 +210,77 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <div className="sticky bottom-0 mt-6 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <Button variant="primary" size="lg" fullWidth onClick={onDone}>
-          {t("common.done")}
-        </Button>
-      </div>
+      {note.status !== "followup" && (
+        <div className="sticky bottom-0 mt-6 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          <Button variant="primary" size="lg" fullWidth onClick={onDone}>
+            {t("common.done")}
+          </Button>
+        </div>
+      )}
     </div>
+  );
+}
+
+function ClarificationForm({
+  text,
+  onClarify,
+}: {
+  text: string;
+  onClarify?: ClarificationHandler;
+}) {
+  const id = useId();
+  const [answer, setAnswer] = useState(text);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
+  return (
+    <form
+      className="mt-6 space-y-3"
+      aria-busy={busy}
+      onSubmit={async (event) => {
+        event.preventDefault();
+        if (busy || !onClarify || !answer.trim()) return;
+        setBusy(true);
+        setFailed(false);
+        try {
+          await onClarify(answer.trim());
+        } catch {
+          setFailed(true);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <p id={`${id}-hint`} className="text-footnote text-ink-secondary">
+        {t("note.clarify_hint")}
+      </p>
+      <label htmlFor={id} className="block font-semibold">
+        {t("note.clarify_label")}
+      </label>
+      <textarea
+        id={id}
+        aria-describedby={`${id}-hint`}
+        className="focus-ring min-h-32 w-full rounded-box border border-separator bg-surface p-3 text-ink"
+        maxLength={5000}
+        required
+        value={answer}
+        disabled={busy}
+        onChange={(event) => setAnswer(event.target.value)}
+      />
+      {failed && (
+        <p role="alert" className="text-footnote text-error">
+          {t("note.send_failed")}
+        </p>
+      )}
+      <Button
+        type="submit"
+        variant="primary"
+        fullWidth
+        busy={busy}
+        disabled={busy || !onClarify || !answer.trim()}
+      >
+        {t("note.clarify_submit")}
+      </Button>
+    </form>
   );
 }
 

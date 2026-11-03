@@ -60,6 +60,27 @@ export function rememberNote(result: NoteResult) {
   recent.set(result.note.id, result);
 }
 
+/** Resolves a saved follow-up in place; retries never create another note. */
+export async function clarifyNote(
+  note: NoteResult["note"],
+  text: string,
+): Promise<NoteResult> {
+  const result = await handleResponse<NoteResult>(
+    await api(`/notes/${encodeURIComponent(note.id)}/clarify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_id: note.client_id,
+        text,
+        written_at: now().toISOString(),
+        timezone: timeZone(),
+      }),
+    }),
+  );
+  rememberNote(result);
+  return result;
+}
+
 /** The result of a note made in this session, or undefined (a deep link, a reload). */
 export function recallNote(id: string): NoteResult | undefined {
   return recent.get(id);

@@ -80,6 +80,91 @@ function open(result: NoteResult, props: Partial<NoteResultScreenProps> = {}) {
 }
 
 describe("Note result (IM-43, RV-1)", () => {
+  it("distinguishes provider unavailability from unclear user wording", () => {
+    const result = resultOf(
+      [],
+      [{ ref: "i1", text: "buy something", reason: "unclear" }],
+      { status: "followup" },
+    );
+    result.processing = [
+      {
+        ref: "i1",
+        source: "pending",
+        status: "unavailable",
+        reason: "http_429",
+      },
+    ];
+    open(result);
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      t("note.processing_unavailable"),
+    );
+  });
+  it("asks about unclear text and keeps the full note ready for clarification", async () => {
+    const onClarify = vi.fn().mockResolvedValue(undefined);
+    open(
+      resultOf([], [{ ref: "i2", text: "do that thing", reason: "unclear" }], {
+        status: "followup",
+        text: "buy milk; do that thing",
+      }),
+      { onClarify },
+    );
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      t("note.clarify_question"),
+    );
+    const input = screen.getByRole("textbox", {
+      name: t("note.clarify_label"),
+    });
+    expect((input as HTMLTextAreaElement).value).toBe(
+      "buy milk; do that thing",
+    );
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+    await userEvent.clear(input);
+    await userEvent.type(input, "buy milk; call dad");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.clarify_submit") }),
+    );
+    expect(onClarify).toHaveBeenCalledTimes(1);
+    expect(onClarify).toHaveBeenCalledWith("buy milk; call dad");
+  });
+
+  it("keeps the answer and offers retry after a clarification fails", async () => {
+    const onClarify = vi.fn().mockRejectedValue(new Error("offline"));
+    open(
+      resultOf([], [{ ref: "i1", text: "do that thing", reason: "unclear" }], {
+        status: "followup",
+        text: "do that thing",
+      }),
+      { onClarify },
+    );
+    const input = screen.getByRole("textbox", {
+      name: t("note.clarify_label"),
+    });
+    await userEvent.clear(input);
+    await userEvent.type(input, "call mum");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.clarify_submit") }),
+    );
+    expect(await screen.findByRole("alert")).toBeTruthy();
+    expect((input as HTMLTextAreaElement).value).toBe("call mum");
+    expect(
+      (
+        screen.getByRole("button", {
+          name: t("note.clarify_submit"),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("has accessible clarification fields and feedback in both themes", async () => {
+    open(
+      resultOf([], [{ ref: "i1", text: "do that thing", reason: "unclear" }], {
+        status: "followup",
+        text: "do that thing",
+      }),
+      { onClarify: vi.fn().mockResolvedValue(undefined) },
+    );
+    await expectAxeCleanInBothThemes();
+  });
   it("T-RV-01: every kind of change has its badge as text", () => {
     open(resultOf([sql, hci, old]));
     const rows = screen.getAllByRole("listitem");

@@ -111,7 +111,7 @@ it('keeps markup as text (T-NU-139)', function () {
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote($text))->assertCreated()->assertJsonPath('note.text', $text);
     expect(Note::firstOrFail()->text)->toBe($text);
     expect(app(TaskCandidates::class)->find($this->owner->id, []))->toBe([]);
-    expect(app(TaskRecurrence::class)->next(Task::firstOrFail()))->toBeNull();
+    expect(Task::count())->toBe(0)->and(Note::firstOrFail()->plan['skipped'][0]['text'])->toBe($text);
 });
 
 it('interprets the written zone and schedules reminders in the current zone (T-NU-126)', function () {

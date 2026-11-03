@@ -70,11 +70,18 @@ export interface NoteChange {
 export interface SkippedItem {
   ref: string;
   text: string;
-  reason: "skip" | "already_done" | "not_found" | "no_change";
+  reason: "skip" | "unclear" | "already_done" | "not_found" | "no_change";
 }
 
 /** The part of a note result (`POST /notes`, `GET /notes/{id}`, NU §7) the app reads so far. */
 export interface NoteResult {
+  processing?: {
+    ref: string;
+    source: "llm" | "mixed" | "pending";
+    field_sources?: Record<string, "rules" | "llm" | "server">;
+    status: string;
+    reason: string;
+  }[];
   note: {
     id: string;
     client_id: string;

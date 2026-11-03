@@ -83,6 +83,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Edit the note:** opens the note's text in the editor, exactly like [Edit note](#25-edit-note-rv-5), with Make tasks reading `note.replan`. The status stays `followup` until Make tasks plans the new text. Closing the editor without Make tasks leaves the note as it was.
 - **No other way out:** there is no "keep as a note" option. A note the user doesn't act on stays `followup`, and its Notes card shows `note.needs_look_one` until they choose one of the two.
 
+### 2.3.1 Unclear asks for clarification
+
+**Unclear follow-up extension (approved 2026-11-03):** a skipped `unclear` item asks "What exactly would you like to do?", displays its original text, and opens the full note in a labelled clarification field. No part of the plan is applied while anything remains unclear. The user makes the unclear parts specific and submits `POST /notes/{id}/clarify`; the server re-plans the same note with all normal ownership, validation and confirmation rules. A still-unclear answer stays in follow-up. Network errors retain the answer for retry. Retrying an already-applied answer returns the stored result without duplicate tasks. This explicit clarification path does not automatically offer a placeholder task for an unclear reference.
+
 ### 2.4 Undo all (RV-2): answers to Q9 and Q10 (Q20)
 
 - **Window:** a note can be undone for **30 days** after it was processed. That matches the tombstone purge ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). After 30 days, Undo all is replaced by `note.undo_expired`.

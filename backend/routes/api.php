@@ -24,6 +24,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [MeController::class, 'show']);
     Route::patch('me', [MeController::class, 'update']);
     Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
+    Route::get('notes/{id}', [NoteController::class, 'show'])->whereUuid('id');
+    Route::post('notes/{id}/clarify', [NoteController::class, 'clarify'])->whereUuid('id')->middleware('throttle:notes');
     Route::get('projects', [ProjectController::class, 'index']);
     Route::post('projects', [ProjectController::class, 'store']);
     Route::get('projects/{project}', [ProjectController::class, 'show']);

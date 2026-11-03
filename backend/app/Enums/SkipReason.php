@@ -8,6 +8,7 @@ namespace App\Enums;
 enum SkipReason: string
 {
     case Skip = 'skip';
+    case Unclear = 'unclear';
     case AlreadyDone = 'already_done';
     case NotFound = 'not_found';
     // A move to the date and time the task already has: still open, nothing to change.
