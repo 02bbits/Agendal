@@ -50,7 +50,9 @@ describe("useTaskPanel", () => {
       expect(handled).toBe(true);
     });
 
-    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1");
+    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1", {
+      scroll: false,
+    });
     expect(router.replace).not.toHaveBeenCalled();
     expect(baseNavigate).not.toHaveBeenCalled();
   });
@@ -67,7 +69,9 @@ describe("useTaskPanel", () => {
       expect(handled).toBe(true);
     });
 
-    expect(router.replace).toHaveBeenCalledWith("/projects/p-1?task=t-2");
+    expect(router.replace).toHaveBeenCalledWith("/projects/p-1?task=t-2", {
+      scroll: false,
+    });
     expect(router.push).not.toHaveBeenCalled();
     expect(baseNavigate).not.toHaveBeenCalled();
   });
@@ -79,7 +83,9 @@ describe("useTaskPanel", () => {
     act(() => {
       result.current.navigate("/tasks/t-1");
     });
-    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1");
+    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1", {
+      scroll: false,
+    });
 
     act(() => {
       result.current.closePanel();
@@ -98,7 +104,9 @@ describe("useTaskPanel", () => {
       result.current.closePanel();
     });
 
-    expect(router.replace).toHaveBeenCalledWith("/projects/p-1");
+    expect(router.replace).toHaveBeenCalledWith("/projects/p-1", {
+      scroll: false,
+    });
     expect(router.back).not.toHaveBeenCalled();
   });
 

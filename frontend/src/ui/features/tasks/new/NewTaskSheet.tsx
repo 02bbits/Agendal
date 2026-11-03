@@ -18,6 +18,7 @@ export function NewTaskSheet({
   onClose,
   pathname = "/",
   today,
+  initialDueDate,
   projects = [],
   projectsStatus = "ready",
   onRetryProjects,
@@ -28,6 +29,7 @@ export function NewTaskSheet({
   const form = useNewTaskForm({
     pathname,
     today,
+    initialDueDate,
     onCreate,
     onAdded,
     onClose,

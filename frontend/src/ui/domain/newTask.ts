@@ -8,6 +8,22 @@ export interface NewTaskDefaults {
   projectId?: string;
 }
 
+/**
+ * Resolves chip and picked date for an initial due date.
+ */
+export function chipForDate(
+  date: string,
+  today: string,
+): { chip: DueChip; picked: string } {
+  if (date === today) {
+    return { chip: "today", picked: "" };
+  }
+  if (date === addDays(today, 1)) {
+    return { chip: "tomorrow", picked: "" };
+  }
+  return { chip: "pick", picked: date };
+}
+
 export interface CreateTaskInput {
   id: string;
   title: string;
