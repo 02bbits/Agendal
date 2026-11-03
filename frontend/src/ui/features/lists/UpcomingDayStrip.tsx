@@ -33,24 +33,25 @@ export function UpcomingDayStrip({
           <button
             key={date}
             type="button"
-            disabled={isPast}
+            disabled={isPast || isToday}
             onClick={() => onPickDay(date)}
             aria-current={ariaCurrent}
             aria-label={t("list.day_with_count", { day: heading, count })}
             className={cx(
               "focus-ring relative flex flex-col items-center justify-center rounded-xl border-0 bg-transparent py-1.5 transition-colors",
-              isPast
-                ? "cursor-default opacity-50"
+              isPast || isToday
+                ? "cursor-default"
                 : "cursor-pointer hover:bg-surface-hover/50",
+              (isPast || isToday) && "opacity-50",
             )}
           >
             <div className="flex flex-col items-center justify-center md:flex-row md:gap-1.5">
               <span
                 className={cx(
                   "text-footnote",
-                  isPast
+                  isPast || isToday
                     ? "text-ink-tertiary"
-                    : isActive || isToday
+                    : isActive
                       ? "font-semibold text-ink"
                       : "text-ink-secondary",
                 )}
@@ -58,12 +59,12 @@ export function UpcomingDayStrip({
                 {weekday}
               </span>
 
-              {isActive ? (
-                <span className="rounded-md bg-primary px-1.5 text-footnote font-semibold text-primary-content">
+              {isToday ? (
+                <span className="rounded-md bg-fill px-1.5 text-footnote text-ink-tertiary">
                   {day}
                 </span>
-              ) : isToday ? (
-                <span className="rounded-md bg-fill px-1.5 text-footnote font-semibold text-ink">
+              ) : isActive ? (
+                <span className="rounded-md bg-primary px-1.5 text-footnote font-semibold text-primary-content">
                   {day}
                 </span>
               ) : (

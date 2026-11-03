@@ -40,7 +40,7 @@ export function UpcomingWeekNav({
           onClick={onToday}
           className="focus-ring inline-flex h-8 items-center rounded-full border-0 bg-transparent px-3 text-footnote font-medium text-ink-secondary transition-colors hover:text-ink"
         >
-          {t("date.today")}
+          {t("date.tomorrow")}
         </button>
         <span className="h-4 w-px bg-separator/60" aria-hidden="true" />
         <button

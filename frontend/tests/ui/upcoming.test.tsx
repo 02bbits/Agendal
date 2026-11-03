@@ -18,11 +18,6 @@ import { TaskStoreProvider } from "../../src/ui/features/tasks/store";
 
 const tomorrow = addDays(TODAY, 1);
 
-const mondayClock: Clock = {
-  now: () => new Date("2026-11-02T01:00:00Z"),
-  timeZone: "Asia/Ho_Chi_Minh",
-};
-
 const tuesdayClock: Clock = {
   now: () => new Date("2026-11-03T01:00:00Z"),
   timeZone: "Asia/Ho_Chi_Minh",
@@ -92,7 +87,7 @@ class MockResizeObserver implements ResizeObserver {
 function setupUpcoming(
   tasks: Task[] = [],
   customApi?: TaskApi,
-  customClock: Clock = mondayClock,
+  customClock: Clock = tuesdayClock,
 ) {
   const memory = createMemoryApi({ tasks, projects });
   const api = customApi ?? memory.api;
@@ -207,7 +202,7 @@ describe("upcomingPage (LV-2, T-LV-10)", () => {
 });
 
 describe("Upcoming screen (Section 8)", () => {
-  it("the week bar shows Mon 2 … Sun 8, Mon 2 is today (badge), month label November 2026, prev disabled", () => {
+  it("the week bar shows Mon 2 … Sun 8, Tue 3 is today (marker), month label November 2026, prev disabled", () => {
     const { wrap } = setupUpcoming();
     render(wrap(<UpcomingScreen accountInitial="e" />));
 
@@ -223,13 +218,19 @@ describe("Upcoming screen (Section 8)", () => {
     }) as HTMLButtonElement;
     expect(nextBtn.disabled).toBe(false);
 
-    const mon2Btn = screen.getByRole("button", {
-      name: /^2 Nov · Today · Monday,/,
-    });
-    expect(within(mon2Btn).getByText("Mon")).toBeTruthy();
-    const badge = within(mon2Btn).getByText("2");
-    expect(badge.className).toContain("bg-primary");
-    expect(badge.className).toContain("text-primary-content");
+    const tue3Btn = screen.getByRole("button", {
+      name: /^3 Nov · Today · Tuesday,/,
+    }) as HTMLButtonElement;
+    expect(within(tue3Btn).getByText("Tue")).toBeTruthy();
+    expect(tue3Btn.getAttribute("aria-current")).toBe("date");
+    expect(tue3Btn.disabled).toBe(true);
+    const badge = within(tue3Btn).getByText("3");
+    expect(badge.className).toContain("bg-fill");
+
+    const wed4Btn = screen.getByRole("button", {
+      name: /^4 Nov · Tomorrow · Wednesday,/,
+    }) as HTMLButtonElement;
+    expect(wed4Btn.disabled).toBe(false);
 
     for (const d of [2, 3, 4, 5, 6, 7, 8]) {
       expect(
@@ -238,7 +239,7 @@ describe("Upcoming screen (Section 8)", () => {
     }
   });
 
-  it("next week shows Mon 9 … Sun 15 and previous becomes enabled; Today returns", async () => {
+  it("next week shows Mon 9 … Sun 15 and previous becomes enabled; Tomorrow returns", async () => {
     const { wrap } = setupUpcoming();
     render(wrap(<UpcomingScreen accountInitial="e" />));
 
@@ -255,7 +256,7 @@ describe("Upcoming screen (Section 8)", () => {
       ).toBeTruthy();
     }
 
-    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
     expect(
       (
         screen.getByRole("button", {
@@ -264,22 +265,25 @@ describe("Upcoming screen (Section 8)", () => {
       ).disabled,
     ).toBe(true);
     expect(
-      screen.getByRole("button", { name: /^2 Nov · Today · Monday,/ }),
+      screen.getByRole("button", { name: /^3 Nov · Today · Tuesday,/ }),
     ).toBeTruthy();
   });
 
-  it("every visible day has a heading (2 Nov · Today · Monday, 3 Nov · Tomorrow · Tuesday) and Add task button, even without tasks", () => {
+  it("No 3 Nov · Today section and no Add task on 3 Nov … button; the first day section is 4 Nov · Tomorrow · Wednesday", () => {
     const { wrap } = setupUpcoming();
     render(wrap(<UpcomingScreen accountInitial="e" />));
 
     expect(
-      screen.getByRole("heading", { name: "2 Nov · Today · Monday" }),
-    ).toBeTruthy();
+      screen.queryByRole("heading", { name: /^3 Nov · Today\b/ }),
+    ).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "3 Nov · Tomorrow · Tuesday" }),
-    ).toBeTruthy();
+      screen.queryByRole("button", {
+        name: /^Add task on 3 Nov\b/,
+      }),
+    ).toBeNull();
+
     expect(
-      screen.getByRole("heading", { name: "4 Nov · Wednesday" }),
+      screen.getByRole("heading", { name: "4 Nov · Tomorrow · Wednesday" }),
     ).toBeTruthy();
     expect(
       screen.getByRole("heading", { name: "5 Nov · Thursday" }),
@@ -296,12 +300,7 @@ describe("Upcoming screen (Section 8)", () => {
 
     expect(
       screen.getByRole("button", {
-        name: "Add task on 2 Nov · Today · Monday",
-      }),
-    ).toBeTruthy();
-    expect(
-      screen.getByRole("button", {
-        name: "Add task on 3 Nov · Tomorrow · Tuesday",
+        name: "Add task on 4 Nov · Tomorrow · Wednesday",
       }),
     ).toBeTruthy();
     expect(
@@ -322,7 +321,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(onAddTask).toHaveBeenCalledWith("2026-11-05");
   });
 
-  it("with weekStart sun and today Monday, Sunday 1 is shown in the strip but disabled and has no section", () => {
+  it("with weekStart sun and today Tuesday, Sunday 1, Monday 2 and Tuesday 3 are disabled; 4 Nov is the first section", () => {
     const { wrap } = setupUpcoming();
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="sun" />));
 
@@ -331,17 +330,26 @@ describe("Upcoming screen (Section 8)", () => {
     }) as HTMLButtonElement;
     expect(sun1Btn.disabled).toBe(true);
 
+    const mon2Btn = screen.getByRole("button", {
+      name: /^2 Nov.*tasks$/,
+    }) as HTMLButtonElement;
+    expect(mon2Btn.disabled).toBe(true);
+
+    const tue3Btn = screen.getByRole("button", {
+      name: /^3 Nov.*tasks$/,
+    }) as HTMLButtonElement;
+    expect(tue3Btn.disabled).toBe(true);
+
     expect(screen.queryByRole("heading", { name: /^1 Nov\b/ })).toBeNull();
-    expect(
-      screen.queryByRole("button", { name: /Add task on 1 Nov\b/ }),
-    ).toBeNull();
+    expect(screen.queryByRole("heading", { name: /^2 Nov\b/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
 
     expect(
-      screen.getByRole("heading", { name: "2 Nov · Today · Monday" }),
+      screen.getByRole("heading", { name: "4 Nov · Tomorrow · Wednesday" }),
     ).toBeTruthy();
   });
 
-  it("Board: switching to Board (labels List/Board, no Vietnamese) shows one column per visible day; choice remembered; old stored grid opens Board", async () => {
+  it("Board: switching to Board (labels List/Board, no Vietnamese) shows columns starting 4 Nov; choice remembered; old stored grid opens Board", async () => {
     const { wrap } = setupUpcoming();
     const { unmount } = render(wrap(<UpcomingScreen accountInitial="e" />));
 
@@ -354,12 +362,12 @@ describe("Upcoming screen (Section 8)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Board" }));
     expect(localStorage.getItem("agendal.upcoming.view_mode")).toBe("board");
 
-    expect(screen.getByRole("heading", { name: "2 Nov · Today" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
     expect(
-      screen.getByRole("heading", { name: "3 Nov · Tomorrow" }),
+      screen.getByRole("heading", { name: "4 Nov · Tomorrow" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "4 Nov · Wednesday" }),
+      screen.getByRole("heading", { name: "5 Nov · Thursday" }),
     ).toBeTruthy();
 
     unmount();
@@ -371,12 +379,112 @@ describe("Upcoming screen (Section 8)", () => {
         .getByRole("button", { name: "Board" })
         .getAttribute("aria-pressed"),
     ).toBe("true");
-    expect(screen.getByRole("heading", { name: "2 Nov · Today" })).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "4 Nov · Tomorrow" }),
+    ).toBeTruthy();
+  });
+
+  it("List: with one overdue task (due 2026-11-01), an Overdue 1 section comes before 4 Nov with showDue and overdue style, and no Add task button; without overdue tasks: no Overdue section", () => {
+    const overdueTask = task({
+      id: "t-overdue",
+      title: "Overdue item",
+      due_date: "2026-11-01",
+    });
+    const upcomingTask = task({
+      id: "t-up-1",
+      title: "Tomorrow item",
+      due_date: "2026-11-04",
+    });
+    const { wrap } = setupUpcoming([overdueTask, upcomingTask]);
+    const { unmount } = render(wrap(<UpcomingScreen accountInitial="e" />));
+
+    const overdueHeading = screen.getByRole("heading", { name: /^Overdue 1/ });
+    expect(overdueHeading).toBeTruthy();
+    expect(overdueHeading.id).toBe("day-overdue");
+    expect(overdueHeading.className).toContain("text-error");
+
+    const overdueSection = overdueHeading.closest("section");
+    expect(overdueSection).toBeTruthy();
+    expect(
+      within(overdueSection!).getByRole("link", { name: /Overdue item/ }),
+    ).toBeTruthy();
+    expect(
+      within(overdueSection!).queryByRole("button", { name: /Add task/ }),
+    ).toBeNull();
+
+    const row = within(overdueSection!)
+      .getByRole("link", { name: /Overdue item/ })
+      .closest("li");
+    expect(
+      row?.querySelector(".is-overdue") ??
+        row?.className.includes("is-overdue"),
+    ).toBeTruthy();
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent);
+    const overdueIdx = headings.findIndex((h) => h?.includes("Overdue"));
+    const nov4Idx = headings.findIndex((h) => h?.includes("4 Nov"));
+    expect(overdueIdx).toBeLessThan(nov4Idx);
+
+    unmount();
+
+    const { wrap: wrapNoOverdue } = setupUpcoming([upcomingTask]);
+    render(wrapNoOverdue(<UpcomingScreen accountInitial="e" />));
+    expect(screen.queryByRole("heading", { name: /Overdue/ })).toBeNull();
+  });
+
+  it("Board: first column 'Overdue' when overdue tasks exist, then 4 Nov …; no 3 Nov column", () => {
+    const overdueTask = task({
+      id: "t-overdue",
+      title: "Overdue board item",
+      due_date: "2026-11-01",
+    });
+    const { wrap } = setupUpcoming([overdueTask]);
+    render(
+      wrap(
+        <UpcomingScreen accountInitial="e" weekStart="mon" viewMode="board" />,
+      ),
+    );
+
+    const headings = screen
+      .getAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent);
+    expect(headings[0]).toContain("Overdue");
+    expect(headings[1]).toContain("4 Nov");
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
+
+    const overdueCol = screen
+      .getByRole("heading", { name: "Overdue" })
+      .closest("section");
+    expect(overdueCol).toBeTruthy();
+    expect(
+      within(overdueCol!).getByRole("link", { name: /Overdue board item/ }),
+    ).toBeTruthy();
+    expect(
+      within(overdueCol!).queryByRole("button", { name: /Add task/ }),
+    ).toBeNull();
+  });
+
+  it("Strip: Tue 3 has aria-current='date' and is disabled; Wed 4 is enabled", () => {
+    const { wrap } = setupUpcoming();
+    render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+    const tue3Btn = screen.getByRole("button", {
+      name: /^3 Nov.*tasks$/,
+    }) as HTMLButtonElement;
+    expect(tue3Btn.getAttribute("aria-current")).toBe("date");
+    expect(tue3Btn.disabled).toBe(true);
+
+    const wed4Btn = screen.getByRole("button", {
+      name: /^4 Nov.*tasks$/,
+    }) as HTMLButtonElement;
+    expect(wed4Btn.disabled).toBe(false);
   });
 
   it("axe clean in both themes for List view", async () => {
     const { wrap } = setupUpcoming([
-      task({ title: "Task 1", due_date: "2026-11-02" }),
+      task({ title: "Task 1", due_date: "2026-11-04" }),
     ]);
     render(wrap(<UpcomingScreen accountInitial="e" viewMode="list" />));
     await expectAxeCleanInBothThemes();
@@ -384,7 +492,7 @@ describe("Upcoming screen (Section 8)", () => {
 
   it("axe clean in both themes for Board view", async () => {
     const { wrap } = setupUpcoming([
-      task({ title: "Task 1", due_date: "2026-11-02" }),
+      task({ title: "Task 1", due_date: "2026-11-04" }),
     ]);
     render(wrap(<UpcomingScreen accountInitial="e" viewMode="board" />));
     await expectAxeCleanInBothThemes();
@@ -394,7 +502,7 @@ describe("Upcoming screen (Section 8)", () => {
     const fakeTask = task({
       id: "t-up-1",
       title: "Complete me",
-      due_date: "2026-11-02",
+      due_date: "2026-11-04",
     });
     const memory = createMemoryApi({ tasks: [fakeTask], projects });
     const reopenSpy = vi.spyOn(memory.api, "reopen");
@@ -414,14 +522,15 @@ describe("Upcoming screen (Section 8)", () => {
     expect(reopenSpy).not.toHaveBeenCalled();
   });
 
-  it("List: renders exactly the days of the anchor week + next week from today (today Tue 2026-11-03, weekStart mon -> 3 Nov … 15 Nov, 13 days); no 16 Nov; no sentinel; › -> 9 Nov … 22 Nov window and ‹ enabled; Today -> back", async () => {
+  it("List: renders exactly the days of the anchor week + next week from today (today Tue 2026-11-03, weekStart mon -> 4 Nov … 15 Nov, 12 days); no 16 Nov; no sentinel; › -> 9 Nov … 22 Nov window and ‹ enabled; Tomorrow -> back", async () => {
     const { wrap } = setupUpcoming([], undefined, tuesdayClock);
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
     expect(screen.queryByTestId("upcoming-sentinel")).toBeNull();
     expect(screen.queryByRole("heading", { name: /^2 Nov\b/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
 
-    for (const d of [3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
+    for (const d of [4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]) {
       expect(
         screen.getByRole("heading", { name: new RegExp(`^${d} Nov\\b`) }),
       ).toBeTruthy();
@@ -444,13 +553,14 @@ describe("Upcoming screen (Section 8)", () => {
     expect(screen.queryByRole("heading", { name: /^8 Nov\b/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /^23 Nov\b/ })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+    await userEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
     expect(prevBtn.disabled).toBe(true);
-    expect(screen.getByRole("heading", { name: /^3 Nov\b/ })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /^4 Nov\b/ })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /^16 Nov\b/ })).toBeNull();
   });
 
-  it("Board: no day-strip buttons, Days of the week group absent in Board; columns 3 Nov … 8 Nov; › -> 9 … 15 Nov", async () => {
+  it("Board: no day-strip buttons, Days of the week group absent in Board; columns 4 Nov … 8 Nov; › -> 9 … 15 Nov", async () => {
     const { wrap } = setupUpcoming([], undefined, tuesdayClock);
     render(
       wrap(
@@ -463,12 +573,13 @@ describe("Upcoming screen (Section 8)", () => {
     ).toBeNull();
     expect(screen.queryByRole("button", { name: /^3 Nov.*tasks$/ })).toBeNull();
 
-    for (const d of [3, 4, 5, 6, 7, 8]) {
+    for (const d of [4, 5, 6, 7, 8]) {
       expect(
         screen.getByRole("heading", { name: new RegExp(`^${d} Nov\\b`) }),
       ).toBeTruthy();
     }
     expect(screen.queryByRole("heading", { name: /^2 Nov\b/ })).toBeNull();
+    expect(screen.queryByRole("heading", { name: /^3 Nov\b/ })).toBeNull();
     expect(screen.queryByRole("heading", { name: /^9 Nov\b/ })).toBeNull();
 
     await userEvent.click(screen.getByRole("button", { name: "Next week" }));
@@ -482,7 +593,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(screen.queryByRole("heading", { name: /^16 Nov\b/ })).toBeNull();
   });
 
-  it("Strip: when the active day is Thu 5, today's (Tue 3) number has the soft pill class (bg-fill) and the active one has bg-primary", () => {
+  it("Strip: when the active day is Thu 5, today's (Tue 3) number keeps the soft pill (bg-fill) and the active one has bg-primary", () => {
     const originalIO = window.IntersectionObserver;
     window.IntersectionObserver =
       MockIntersectionObserver as unknown as typeof IntersectionObserver;
@@ -640,7 +751,7 @@ describe("Upcoming screen (Section 8)", () => {
     const { wrap } = setupUpcoming([], undefined, tuesdayClock);
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
-    const listHeading = document.getElementById("day-2026-11-03");
+    const listHeading = document.getElementById("day-2026-11-04");
     expect(listHeading?.className).toContain(
       "scroll-mt-[calc(var(--upcoming-bar-h",
     );
@@ -648,7 +759,7 @@ describe("Upcoming screen (Section 8)", () => {
     const boardBtn = screen.getByRole("button", { name: "Board" });
     await userEvent.click(boardBtn);
 
-    const boardHeading = document.getElementById("day-2026-11-03");
+    const boardHeading = document.getElementById("day-2026-11-04");
     expect(boardHeading?.className).toContain(
       "scroll-mt-[calc(var(--upcoming-bar-h",
     );
@@ -755,7 +866,7 @@ describe("Upcoming screen (Section 8)", () => {
       });
 
       const listWrapper = document
-        .getElementById("day-2026-11-03")
+        .getElementById("day-2026-11-04")
         ?.closest(".mt-6");
       expect(listWrapper?.getAttribute("style")).toContain(
         "--upcoming-bar-h: 135px",
