@@ -18,6 +18,11 @@ export function visibleDays(week: string[], today: string): string[] {
   return week.filter((d) => d >= today);
 }
 
+/** The days > today (today and past days are hidden for Upcoming). */
+export function daysAfter(week: string[], today: string): string[] {
+  return week.filter((d) => d > today);
+}
+
 /** Shift anchor date by `delta` weeks (7 * delta days). */
 export function shiftWeek(anchor: string, delta: number): string {
   return addDays(anchor, 7 * delta);

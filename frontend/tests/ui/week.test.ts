@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  daysAfter,
   dayHeading,
   dayHeadingShort,
   isCurrentWeek,
@@ -49,6 +50,27 @@ describe("week model pure helpers (Section 2)", () => {
 
     const monWeek = weekOf(today, "mon");
     expect(visibleDays(monWeek, today)).toEqual(monWeek);
+  });
+
+  it("daysAfter hides today and days before today", () => {
+    const sunWeek = weekOf(today, "sun");
+    expect(daysAfter(sunWeek, today)).toEqual([
+      "2026-11-03",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+    ]);
+
+    const monWeek = weekOf(today, "mon");
+    expect(daysAfter(monWeek, today)).toEqual([
+      "2026-11-03",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+    ]);
   });
 
   it("shiftWeek adds or subtracts weeks", () => {
