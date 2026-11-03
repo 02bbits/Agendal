@@ -42,16 +42,16 @@ export function UpcomingDayStrip({
               isPast || isToday
                 ? "cursor-default"
                 : "cursor-pointer hover:bg-surface-hover/50",
-              (isPast || isToday) && "opacity-50",
+              isPast && "opacity-50",
             )}
           >
             <div className="flex flex-col items-center justify-center md:flex-row md:gap-1.5">
               <span
                 className={cx(
                   "text-footnote",
-                  isPast || isToday
+                  isPast
                     ? "text-ink-tertiary"
-                    : isActive
+                    : isToday || isActive
                       ? "font-semibold text-ink"
                       : "text-ink-secondary",
                 )}
@@ -60,9 +60,15 @@ export function UpcomingDayStrip({
               </span>
 
               {isToday ? (
-                <span className="rounded-md bg-fill px-1.5 text-footnote text-ink-tertiary">
-                  {day}
-                </span>
+                <>
+                  <span className="rounded-md bg-fill px-1.5 text-footnote font-semibold text-ink">
+                    {day}
+                  </span>
+                  {/* Tells the reader which day is today */}
+                  <span className="text-caption text-ink-tertiary">
+                    {t("list.strip_today")}
+                  </span>
+                </>
               ) : isActive ? (
                 <span className="rounded-md bg-primary px-1.5 text-footnote font-semibold text-primary-content">
                   {day}
