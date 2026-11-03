@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  confirmNote,
   forgetNotes,
   getNote,
   recallNote,
@@ -95,38 +96,6 @@ describe("submitNote (IM-42)", () => {
     expect(await submitNote("x", ID)).toEqual({ error: "note.send_failed" });
   });
 
-  it("answers from the IM-02 fixture when the mock is on, making its tasks for real", async () => {
-    vi.stubEnv("NEXT_PUBLIC_NOTES_MOCK", "1");
-    vi.useFakeTimers();
-    fetchMock.mockImplementation(async () => json(201, {}));
-
-    const pending = submitNote("call mum", ID);
-    await vi.advanceTimersByTimeAsync(600);
-    const result = (await pending) as NoteResult;
-
-    expect(result).toMatchObject({
-      note: { client_id: ID, text: "call mum", status: "done" },
-    });
-    expect(result.changes.map((c) => c.task.title)).toEqual([
-      "SQL quiz",
-      "HCI reading",
-      "Buy printer ink",
-    ]);
-    // One POST /tasks per task (their ids are fixed, so a repeat is a replay), and no POST /notes
-    const posts = fetchMock.mock.calls.map(([url, init]) => [url, init.method]);
-    expect(posts).toEqual([
-      ["/api/v1/tasks", "POST"],
-      ["/api/v1/tasks", "POST"],
-      ["/api/v1/tasks", "POST"],
-    ]);
-    const body = JSON.parse(fetchMock.mock.calls[0]![1].body);
-    expect(body).toMatchObject({
-      id: result.changes[0]!.task.id,
-      title: "SQL quiz",
-      project_id: null,
-    });
-  });
-
   it("GET /notes/{id} returns the result, and 404 is an ApiRequestError", async () => {
     fetchMock.mockResolvedValueOnce(json(200, done));
     expect(await getNote("n1")).toEqual(done);
@@ -138,17 +107,30 @@ describe("submitNote (IM-42)", () => {
     await expect(getNote("n2")).rejects.toMatchObject({ status: 404 });
   });
 
-  it("the mock answers GET /notes/{id} with the id that was asked for", async () => {
-    vi.stubEnv("NEXT_PUBLIC_NOTES_MOCK", "1");
-    fetchMock.mockImplementation(async () => json(200, {}));
-    expect((await getNote("abc")).note.id).toBe("abc");
-  });
-
   it("keeps a result made in this session until it is forgotten (SC-19)", () => {
     const made = done as unknown as NoteResult;
     rememberNote(made);
     expect(recallNote(made.note.id)).toBe(made);
     forgetNotes();
     expect(recallNote(made.note.id)).toBeUndefined();
+  });
+
+  it("apply and cancel post to the note, keep the answer, and map failures to copy", async () => {
+    fetchMock.mockResolvedValueOnce(json(200, done));
+    expect(await confirmNote("n1", "apply")).toEqual(done);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/apply");
+    expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
+
+    fetchMock.mockResolvedValueOnce(
+      json(409, { error: { code: "note.wrong_status" } }),
+    );
+    expect(await confirmNote("n1", "cancel")).toEqual({
+      error: "note.wrong_status",
+    });
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    expect(await confirmNote("n1", "apply")).toEqual({
+      error: "note.needs_connection",
+    });
   });
 });

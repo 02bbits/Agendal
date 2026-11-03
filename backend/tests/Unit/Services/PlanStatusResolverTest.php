@@ -12,9 +12,8 @@ it('picks the plan status in the NU §2.6 order (T-NU-33, T-NU-40, T-NU-41)', fu
 })->with([
     'any delete → confirm' => [1, true, false, [], PlanStatus::Confirm],
     'a tie → confirm' => [0, false, true, [], PlanStatus::Confirm],
-    '5 changes → confirm' => [5, false, false, [], PlanStatus::Confirm],
-    '4 changes → done' => [4, false, false, [], PlanStatus::Done],
-    'changes beat skips' => [1, false, false, [SkipReason::Skip], PlanStatus::Done],
+    'one change → confirm' => [1, false, false, [], PlanStatus::Confirm],
+    'changes beat skips' => [1, false, false, [SkipReason::Skip], PlanStatus::Confirm],
     'only unmatched commands → done' => [0, false, false, [SkipReason::AlreadyDone, SkipReason::NotFound], PlanStatus::Done],
     'a plain skip → followup' => [0, false, false, [SkipReason::NotFound, SkipReason::Skip], PlanStatus::Followup],
     'only skips → followup' => [0, false, false, [SkipReason::Skip], PlanStatus::Followup],

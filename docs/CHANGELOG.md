@@ -2,6 +2,16 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-03
+
+- **Every note confirms first (Refs #44).**
+  - [BR-01](02-domain/business-rules.md#br-01), [NU-5](03-modules/NU-note-understanding.md#nu-5), [NU §2.6](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01-br-02) and T-NU-41: any change gives `confirm`.
+  - [WF-01](04-workflows/WF-01-capture-and-process-note.md) step 5 and [WF-02](04-workflows/WF-02-confirm-risky-changes.md): Apply goes back to the list with `note.made_*`, and Edit note keeps the note (`kept`) and reopens the editor with its text.
+  - [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5), the RV state matrix and §10: rows are a preview, Cancel becomes Edit note, and tick boxes and the tie picker are deferred.
+  - The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) description: `confirm` carries `changes` as a preview.
+  - [IM-45](08-project/tasks.md#im-45) row: reshaped scope.
+  - [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5) and [RV §7](03-modules/RV-review-control.md#7-api-contract): rows open Task details and offer When? on the planned task, and the edits go with Apply as `edits` by entry `ref`. The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) gives each change its `ref`.
+
 ## 2026-11-02
 
 - **Inbox completed pagination, card styling and desktop header subtitle (Refs #27).** [LV §2.1](03-modules/LV-lists-search.md#21-inbox-lv-1): Completed tasks section caps at 5 tasks initially with "Show all" (`list.show_all`) and "Show less" (`list.show_less`) toggle; sections use Figma D14 elevated card layout containers (`rounded-2xl border border-separator/50 bg-surface shadow-xs`); desktop header includes overdue/today count subtitle (`list.inbox_subtitle`) and pill button; real-time event sync and section expanded state persistence in sessionStorage documented.

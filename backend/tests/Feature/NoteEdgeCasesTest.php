@@ -18,6 +18,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
     $this->owner = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    // These exercise the applier: notes apply straight away, as with the old 5-change threshold. NoteConfirmTest covers Apply changes.
+    config(['notes.changes_to_confirm' => 5]);
 });
 
 function edgeNote(string $text, string $writtenAt = '2026-10-23T08:12:00+07:00'): array

@@ -53,14 +53,15 @@ final class NoteApplier
 
     /**
      * @param  ValidatedPlan  $plan
+     * @param  array<string, array<string, mixed>>  $edits  Fields the user changed on Check this first, by entry ref
      * @return array{applied: list<AppliedChange>, changes: list<array<string, mixed>>, skipped: list<array<string, mixed>>}
      */
-    public function apply(Note $note, array $plan): array
+    public function apply(Note $note, array $plan, array $edits = []): array
     {
         $user = User::query()->findOrFail($note->user_id);
         $timezone = (string) $user->timezone;
         $locked = $this->lockTargets($note, $plan);
-        [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked);
+        [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked, $edits);
         if ($plan['dropped'] > 0) {
             Log::info('note_plan_validation', ['dropped' => $plan['dropped'], 'at' => 'apply']);
         }
@@ -77,7 +78,7 @@ final class NoteApplier
                 };
                 $label = $entry['label'] ?? $task->title;
                 $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'label' => $label];
-                $changes[] = $this->change($changeKind, $task, $label);
+                $changes[] = $this->change($changeKind, $task, $label, $entry['ref']);
                 $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task, restoreDeleted: true) : null;
                 if ($next !== null) {
                     // TK-4: completing a repeating task creates its next occurrence; undo removes it too.
@@ -114,9 +115,10 @@ final class NoteApplier
      *
      * @param  ValidatedPlan  $plan
      * @param  array<string, Task>  $locked
+     * @param  array<string, array<string, mixed>>  $edits
      * @return array{0: ValidatedPlan, 1: list<array<string, mixed>>}
      */
-    private function revalidate(Note $note, User $user, array $plan, array $locked): array
+    private function revalidate(Note $note, User $user, array $plan, array $locked, array $edits): array
     {
         $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
         $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
@@ -128,7 +130,7 @@ final class NoteApplier
                 $item = $items[NoteEngine::itemIndex($entry['ref']) ?? -1] ?? null;
                 if ($current === null) {
                     $gone[] = ['ref' => $entry['ref'], 'text' => $item ?? $entry['label'], 'reason' => SkipReason::NotFound->value];
-                } elseif ($kind === 'update' && array_intersect_key($entry, array_flip(self::MOVE_FIELDS)) !== []) {
+                } elseif ($kind === 'update' && array_intersect_key($entry, array_flip(self::MOVE_FIELDS)) !== [] && array_intersect_key($edits[$entry['ref']] ?? [], array_flip(self::MOVE_FIELDS)) === []) {
                     $moved = $item === null ? $entry : $this->movedNow($item, $entry, $current, $context);
                     if ($moved === null) {
                         $gone[] = ['ref' => $entry['ref'], 'text' => $item, 'reason' => SkipReason::NoChange->value];
@@ -143,6 +145,12 @@ final class NoteApplier
         foreach ($plan['create'] as $index => $entry) {
             if (isset($entry['duplicate_of']) && ! isset($locked[$entry['duplicate_of']])) {
                 $plan['create'][$index]['duplicate_of'] = null;
+            }
+        }
+        // The user's edits go in before the last validation, so an edited value is checked like a planned one.
+        foreach (['create', 'update'] as $kind) {
+            foreach ($plan[$kind] as $index => $entry) {
+                $plan[$kind][$index] = [...$entry, ...$edits[$entry['ref']] ?? []];
             }
         }
         $rows = array_map(fn (Task $task): array => $this->row($task), $locked);
@@ -249,8 +257,10 @@ final class NoteApplier
     }
 
     /** @return array<string, mixed> one change in the note result */
-    private function change(ChangeKind $kind, Task $task, string $label): array
+    private function change(ChangeKind $kind, Task $task, string $label, ?string $ref = null): array
     {
-        return ['kind' => $kind->value, 'task' => (new TaskResource($task))->toArray(Request::create('/')), 'label' => $label];
+        $change = ['kind' => $kind->value, 'task' => (new TaskResource($task))->toArray(Request::create('/')), 'label' => $label];
+
+        return $ref === null ? $change : [...$change, 'ref' => $ref];
     }
 }

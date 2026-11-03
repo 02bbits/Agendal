@@ -218,3 +218,108 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     expect(router.replace).toHaveBeenCalledWith("/notes");
   });
 });
+
+describe("Check this first /notes/[id] (IM-45)", () => {
+  const pending: NoteResult = {
+    ...result,
+    note: { ...result.note, status: "confirm" },
+  };
+  // The server's answer to apply and cancel
+  function serveConfirm() {
+    serve({}, () => json(200, pending));
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/notes/n1/apply")
+        return json(200, { ...result, note: { ...result.note } });
+      if (url === "/api/v1/notes/n1/cancel")
+        return json(200, {
+          ...pending,
+          note: { ...pending.note, status: "kept" },
+        });
+      return base(url, init);
+    });
+  }
+
+  it("doesn't look up the previewed tasks: they don't exist yet", async () => {
+    serveConfirm();
+    await open();
+    await screen.findByText(t("note.confirm_title"));
+    expect(calls("GET", "/api/v1/tasks/")).toHaveLength(0);
+  });
+
+  it("Apply changes applies the note, shows the toast and goes back", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply") }),
+    );
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
+    expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(1);
+    expect(
+      await screen.findByText(t("note.made_other", { count: 2 })),
+    ).toBeTruthy();
+  });
+
+  it("Edit note keeps the note and reopens the editor", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.edit") }),
+    );
+
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(1);
+    expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(0);
+    expect(await screen.findByRole("textbox")).toBeTruthy();
+  });
+
+  it("edits made in Task details go with Apply, by entry ref, and nothing else is saved", async () => {
+    serveConfirm();
+    const refd = {
+      ...pending,
+      changes: changes.map((c, i) => ({ ...c, ref: `i${i + 1}` })),
+    };
+    fetchMock.mockImplementation(
+      ((base) => async (url: string, init?: RequestInit) =>
+        url === "/api/v1/notes/n1" ? json(200, refd) : base(url, init))(
+        fetchMock.getMockImplementation()!,
+      ),
+    );
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.click(screen.getByRole("radio", { name: /high/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.apply") }),
+    );
+
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(1),
+    );
+    expect(
+      JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
+    ).toEqual({
+      edits: { i1: { priority: "high" } },
+    });
+    expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
+  });
+
+  it("a failed apply stays on the screen and says why", async () => {
+    serve({}, () => json(200, pending));
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      url === "/api/v1/notes/n1/apply"
+        ? Promise.reject(new TypeError("Failed to fetch"))
+        : base(url, init),
+    );
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply") }),
+    );
+
+    expect(await screen.findByText(t("note.needs_connection"))).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalled();
+  });
+});
