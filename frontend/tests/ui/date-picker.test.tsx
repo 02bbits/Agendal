@@ -34,6 +34,27 @@ describe("DatePicker", () => {
     setTimeZone(undefined);
   });
 
+  it("a clearable picker has a No date chip that clears the value", async () => {
+    const onChange = vi.fn();
+    render(
+      <DatePicker
+        label="Start date"
+        value="2026-10-23"
+        onChange={onChange}
+        clearable
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Start date" }));
+    await userEvent.click(screen.getByRole("button", { name: "No date" }));
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("has no No date chip unless clearable", async () => {
+    render(<DatePicker label="Due date" value={null} onChange={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: "Due date" }));
+    expect(screen.queryByRole("button", { name: "No date" })).toBeNull();
+  });
+
   it("chips set the right dates for fake clock today 2026-10-23", async () => {
     const onChange = vi.fn();
     const { unmount } = render(

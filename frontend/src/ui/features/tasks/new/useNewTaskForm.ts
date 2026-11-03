@@ -10,6 +10,8 @@ import {
   dueDateFor,
   type DueChip,
 } from "../../../domain/newTask";
+import type { CopyKey } from "../../../copy";
+import { startAfterDue } from "../../../domain/edit";
 import type { Priority } from "../../../domain/types";
 import { saveErrorMessage } from "../saveError";
 import type { NewTaskSheetProps } from "./types";
@@ -45,6 +47,9 @@ export function useNewTaskForm({
     defaultPriority(initialDueDateValue, todayDate),
   );
   const [priorityTouched, setPriorityTouched] = useState(false);
+  const [dueTime, setDueTime] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [startTime, setStartTime] = useState("");
   const [projectId, setProjectId] = useState<string | null>(
     defaults.projectId ?? null,
   );
@@ -61,10 +66,27 @@ export function useNewTaskForm({
     due !== startingDue ||
     priorityTouched ||
     (projectId !== null && projectId !== (defaults.projectId ?? null)) ||
-    picked !== startingPicked;
+    picked !== startingPicked ||
+    dueTime !== "" ||
+    startDate !== "";
+
+  const dueDate = dueDateFor(due, todayDate, picked);
+  // A time only counts with its date; start must be before due (TK-3).
+  const dates = {
+    start_date: startDate || null,
+    start_time: (startDate && startTime) || null,
+    due_date: dueDate,
+    due_time: (dueDate && dueTime) || null,
+  };
+  const datesError: CopyKey | null = startAfterDue(dates)
+    ? "task.start_after_due"
+    : null;
 
   const trimmedTitle = title.trim();
-  const valid = trimmedTitle.length > 0 && (due !== "pick" || picked !== "");
+  const valid =
+    trimmedTitle.length > 0 &&
+    (due !== "pick" || picked !== "") &&
+    datesError === null;
 
   const updatePriorityFromDue = (targetDue: DueChip, targetPicked = picked) => {
     if (!priorityTouched) {
@@ -113,11 +135,13 @@ export function useNewTaskForm({
     setFieldError(undefined);
     setFormError(undefined);
 
-    const calculatedDueDate = dueDateFor(due, todayDate, picked);
     const body = createBody({
       id: idRef.current,
       title: trimmedTitle,
-      dueDate: calculatedDueDate,
+      dueDate: dates.due_date,
+      dueTime: dates.due_time,
+      startDate: dates.start_date,
+      startTime: dates.start_time,
       priority,
       projectId,
     });
@@ -157,6 +181,17 @@ export function useNewTaskForm({
     priority,
     projectId,
     setProjectId,
+    dueDate,
+    dueTime,
+    setDueTime,
+    startDate,
+    setStartDate: (value: string) => {
+      setStartDate(value);
+      if (!value) setStartTime("");
+    },
+    startTime,
+    setStartTime,
+    datesError,
     busy,
     valid,
     fieldError,

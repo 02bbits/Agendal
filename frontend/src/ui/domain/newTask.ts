@@ -28,6 +28,9 @@ export interface CreateTaskInput {
   id: string;
   title: string;
   dueDate?: string | null;
+  dueTime?: string | null;
+  startDate?: string | null;
+  startTime?: string | null;
   priority?: Priority;
   projectId?: string | null;
 }
@@ -35,7 +38,10 @@ export interface CreateTaskInput {
 export interface CreateTaskBody {
   id: string;
   title: string;
+  start_date?: string;
   due_date?: string;
+  start_time?: string;
+  due_time?: string;
   priority?: Priority;
   project_id?: string;
 }
@@ -96,11 +102,15 @@ export function defaultPriority(
 
 /**
  * Builds the `POST /tasks` payload: trimmed title, omitting nulls/undefined.
+ * A time is only sent with its date (TK §8).
  */
 export function createBody({
   id,
   title,
   dueDate,
+  dueTime,
+  startDate,
+  startTime,
   priority,
   projectId,
 }: CreateTaskInput): CreateTaskBody {
@@ -108,8 +118,13 @@ export function createBody({
     id,
     title: title.trim(),
   };
+  if (startDate) {
+    body.start_date = startDate;
+    if (startTime) body.start_time = startTime;
+  }
   if (dueDate) {
     body.due_date = dueDate;
+    if (dueTime) body.due_time = dueTime;
   }
   if (priority) {
     body.priority = priority;

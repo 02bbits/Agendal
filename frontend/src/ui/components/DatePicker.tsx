@@ -26,6 +26,8 @@ export interface DatePickerProps {
   id?: string;
   className?: string;
   onOpenChange?: (open: boolean) => void;
+  /** Adds a "No date" chip that clears the value. */
+  clearable?: boolean;
 }
 
 export function DatePicker({
@@ -40,6 +42,7 @@ export function DatePicker({
   id,
   className,
   onOpenChange,
+  clearable = false,
 }: DatePickerProps): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `datepicker-${autoId}`;
@@ -112,7 +115,12 @@ export function DatePicker({
         }
       >
         <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            {clearable && (
+              <Chip selected={!value} onClick={() => selectAndClose("")}>
+                {t("task.no_date")}
+              </Chip>
+            )}
             {chips.map((c) => (
               <Chip
                 key={c.k}

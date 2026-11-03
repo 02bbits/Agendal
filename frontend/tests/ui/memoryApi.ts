@@ -49,10 +49,10 @@ export function createMemoryApi(seed: Partial<MemoryDb> = {}) {
       const merged = { ...task, ...fields };
       if (
         merged.start_time &&
-        merged.end_time &&
-        merged.end_time <= merged.start_time
+        merged.due_time &&
+        merged.due_time <= merged.start_time
       ) {
-        throw Object.assign(new Error("task.end_before_start"), {
+        throw Object.assign(new Error("task.start_after_due"), {
           status: 422,
         });
       }

@@ -14,7 +14,11 @@ export function taskAccessibleName(
     parts.push(formatDay(task.due_date, opts.today));
   if (task.start_time)
     parts.push(
-      formatTimeRange(task.start_time, task.end_time, opts.timeFormat),
+      formatTimeRange(
+        task.start_time,
+        task.start_date === task.due_date ? task.due_time : null,
+        opts.timeFormat,
+      ),
     );
   parts.push(project ? project.name : t("project.none"));
   if (task.priority === "medium" || task.priority === "high")
