@@ -1,5 +1,13 @@
 # Golden Note Corpus
 
+Run `cd backend && php vendor/bin/pest tests/Unit/Services/NoteCorpusTest.php` to check coverage and accuracy in rules mode. The runner lives in `backend/tests/Support/NoteCorpus.php` and runs in the normal Pest CI job.
+
+The corpus contains 429 cases: 51 seed examples, 357 variations and 21 additional edge decisions. Every represented non-edge category has at least eight cases, and all 41 NU edges are represented. Variations expand the same patterns; they are regression coverage, not an independent holdout set.
+
+**LLM temporarily disabled (2026-11-03).** IM-38 is excluded from this integration. The runner uses only `NoteEngine`, makes no provider calls and has no LLM nightly workflow. LLM accuracy and live-provider validation remain deferred under IM-38 / IM-39 (#37 / #38); the original both-mode acceptance criterion is not complete.
+
+Expected statuses follow BR-01: any create, update or delete requires `confirm`. Reschedule labels describe the new schedule; before values are separate result metadata. `processed_at` documents offline processing time; this plan-level runner resolves dates from `now` (the written time). Persistence, clock clamping and replay are covered by the API tests.
+
 Executable examples of note understanding. Each case pins the clock, the zone, the existing tasks and the expected plan, so rules and the LLM fallback can be scored against the same truth ([ADR-001](../../07-architecture/decisions/ADR-001-note-plan-contract.md), [ADR-008](../../07-architecture/decisions/ADR-008-llm-fallback.md)).
 
 ## Format
@@ -18,7 +26,7 @@ One YAML list per file (`*.yaml`). Each case:
   done_tasks: []                   # optional
   note: "sql quiz monday 9am"
   expect:
-    status: done                   # done | confirm | followup | error
+    status: confirm                # done | confirm | followup | error
     error: null                    # copy key when status is error
     name: SQL quiz
     create:
@@ -41,6 +49,8 @@ Categories: `split.*` (newline, comma, semicolon, period, then, bullets, digit-c
 ## Accuracy gates
 
 Run in both modes. Each mode must meet every gate.
+
+Only rules mode is enabled for now. Count accuracy is measured once per note, with all three change counts required to match. Unexpected skipped items and ambiguity sets fail their safety/command gates. Explicit `end`, `notes` and `duplicate_of` expectations must all match (the runner's additional `details` gate, 100%).
 
 | Measure | Gate |
 |---|---|
