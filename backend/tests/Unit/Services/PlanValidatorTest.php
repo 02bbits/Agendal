@@ -17,18 +17,23 @@ function newTaskEntry(array $fields = []): array
     return [...['ref' => 'c1', 'title' => 'Call mum', 'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => 'low', 'project_id' => null, 'repeat' => 'never', 'reminder' => 'none', 'notes' => null, 'duplicate_of' => null], ...$fields];
 }
 
-it('requires confirmation for deletes, ties and five changes (T-NU-40–43)', function (array $plan, PlanStatus $status) {
+it('requires confirmation for any change, delete or tie (T-NU-40–43)', function (array $plan, PlanStatus $status) {
     expect(app(PlanValidator::class)->status(array_replace(emptyNotePlan(), $plan)))->toBe($status);
 })->with([
-    '4 creates → done' => [['create' => array_fill(0, 4, [])], PlanStatus::Done],
-    '5 creates → confirm' => [['create' => array_fill(0, 5, [])], PlanStatus::Confirm],
-    'a task changed twice counts once' => [['create' => array_fill(0, 3, []), 'update' => [['task_id' => 't1'], ['task_id' => 't1']]], PlanStatus::Done],
+    'one create → confirm' => [['create' => [[]]], PlanStatus::Confirm],
     'a delete → confirm' => [['delete' => [[]]], PlanStatus::Confirm],
     'a tie → confirm' => [['ambiguous' => [[]]], PlanStatus::Confirm],
     'a plain skip → followup' => [['skipped' => [['ref' => 's1', 'text' => 'ok', 'reason' => 'skip']]], PlanStatus::Followup],
     'only unmatched commands → done' => [['skipped' => [['ref' => 's1', 'text' => 'done x', 'reason' => 'not_found']]], PlanStatus::Done],
     'a plain skip among unmatched → followup' => [['skipped' => [['ref' => 's1', 'text' => 'done x', 'reason' => 'already_done'], ['ref' => 's2', 'text' => 'hmm', 'reason' => 'skip']]], PlanStatus::Followup],
 ]);
+
+it('counts a task changed twice once (BR-01)', function () {
+    config(['notes.changes_to_confirm' => 5]);
+    $plan = array_replace(emptyNotePlan(), ['create' => array_fill(0, 3, []), 'update' => [['task_id' => 't1'], ['task_id' => 't1']]]);
+
+    expect(app(PlanValidator::class)->status($plan))->toBe(PlanStatus::Done);
+});
 
 it('rejects foreign IDs even when the allowed set is empty (T-NU-71, SEC-41)', function () {
     $id = (string) Str::uuid();

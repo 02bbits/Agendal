@@ -19,7 +19,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Start date, due date, time, due time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
-| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or 5 or more changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
+| <a id="nu-5"></a>NU-5 | Ask before applying changes | Must | Every note with at least one change shows "Check this first" with the planned changes; nothing is applied until Apply changes |
 | <a id="nu-6"></a>NU-6 | Name each note automatically | Should | The name follows the naming rules and shows on the result screen and Notes card |
 | <a id="nu-7"></a>NU-7 | Label tasks the assistant made | Should | Task details show "Created by the assistant" |
 
@@ -90,7 +90,7 @@ In this order, first match wins:
 - **Score** = meaningful words found in the task title ÷ meaningful words in the command. A task matches when the score is ≥ 0.6.
 - **Best match wins.** On equal scores, the title with more of the command's words wins, then the title with fewer words the command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"). Two or more tasks still equal after that is a tie ([NU-E11](#nu-e11)).
 - **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. A delete with a deadline (*before / by / until / trước \<when>*, "cancel netflix before the 10th") or a place (*at / ở / tại \<place>*, "drop the kids at school") → that task, since a delete never needs either. Other complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
-- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`. A move to the date and time the task already has changes nothing → skip `no_change` (`note.skip_no_change`).
+- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`. Label times follow the user's time format ([UX-32](../01-product/ux-standards.md#ux-32)). A move to the date and time the task already has changes nothing → skip `no_change` (`note.skip_no_change`).
 - **Repeating tasks:** "done" completes this occurrence and creates the next one ([TK-4](TK-tasks.md#tk-4)). "move" moves only this occurrence ([NU-E36](#nu-e36)).
 
 ### 2.5 Extraction (NU-2)
@@ -150,8 +150,7 @@ The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contr
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
-| Any delete, any tie ([NU-E11](#nu-e11)), or 5 or more changes (creates + updates + deletes) | `confirm` |
-| At least one change | `done` |
+| At least one change (creates + updates + deletes), or any tie ([NU-E11](#nu-e11)) | `confirm` |
 | No changes, and every skip is `already_done`, `not_found` or `no_change` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
 
@@ -368,7 +367,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-4](#nu-4) | Ideas, FYIs and filler are kept in the note but make no task | T-NU-30 (prefixes), T-NU-31 (filler), T-NU-32 (kept in `skipped` and in the note text) · C-013–C-015 |
 | [NU-4](#nu-4) | A note with nothing actionable triggers the follow-up | T-NU-33 · C-013, C-014 |
 | [NU-5](#nu-5) | Any delete shows "Check this first" | T-NU-40 · C-018 |
-| [NU-5](#nu-5) | 5 or more changes shows "Check this first" | T-NU-41 (4 → `done`, 5 → `confirm`) · C-019 |
+| [NU-5](#nu-5) | Any change shows "Check this first" | T-NU-41 (1 → `confirm`) · C-019 |
 | [NU-5](#nu-5) | Nothing is applied until Apply changes | T-NU-42 (no task rows change while `confirm`), T-NU-43 (a tie → `confirm`) |
 | [NU-6](#nu-6) | The name follows the naming rules | T-NU-50 (one test per naming row, plus "first row wins") · corpus `naming.*` |
 | [NU-6](#nu-6) | Names over 34 characters are cut at a word boundary with an ellipsis | T-NU-51 |

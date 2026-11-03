@@ -71,7 +71,7 @@ export function TaskPanel({
       aria-label={t("task.heading")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      className="fixed inset-y-0 right-0 z-40 flex w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
+      className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
     >
       {task ? (
         <TaskDetails

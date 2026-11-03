@@ -5,6 +5,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Opis\JsonSchema\Errors\ErrorFormatter;
@@ -21,6 +22,8 @@ function notePayload(string $text = 'call mum tomorrow'): array
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
     $this->noteUser = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    // These exercise the applier: notes apply straight away, as with the old 5-change threshold. NoteConfirmTest covers Apply changes.
+    config(['notes.changes_to_confirm' => 5]);
 });
 
 it('creates assistant tasks and returns stored results on client-id replay (T-NU-60, T-NU-72, T-NU-86, SEC-13)', function () {
@@ -51,19 +54,31 @@ it('records before values without clearing unchanged task fields', function () {
     expect($log[0]['before']['done'])->toBeFalse()->and($log[0]['before']['start_time'])->toBe('09:00:00');
 });
 
-it('persists confirm plans without changing tasks (T-NU-42)', function (string $text) {
+it('persists confirm plans with a preview, without changing tasks (T-NU-42)', function (string $text, int $changes) {
     $task = new Task;
     $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Old reading list'])->save();
-    $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()->assertJsonPath('note.status', 'confirm')->assertJsonCount(0, 'changes');
+    $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()->assertJsonPath('note.status', 'confirm')->assertJsonCount($changes, 'changes');
     expect(Task::count())->toBe(1)->and($task->fresh())->not->toBeNull();
     expect(Note::firstOrFail()->applied)->toBe([]);
-})->with(['delete old reading list', 'buy milk; buy eggs; buy bread; buy rice; buy tea; buy soap']);
+})->with([['delete old reading list', 1], ['buy milk; buy eggs; buy bread; buy rice; buy tea; buy soap', 6]]);
 
 it('uses the written time for offline notes (T-NU-126)', function () {
     $payload = array_replace(notePayload('read tonight'), ['written_at' => '2026-10-22T19:00:00+07:00']);
     $this->actingAs($this->noteUser)->postJson('/api/v1/notes', $payload)->assertCreated();
     expect(Task::firstOrFail()->due_date)->toBe('2026-10-22')->and(Task::firstOrFail()->start_time)->toBe('20:00:00');
 });
+
+it('labels a created row with its date, time and project, not its title (RV-1)', function (string $text, string $format, string $label) {
+    $this->noteUser->forceFill(['time_format' => $format])->save();
+    DB::table('projects')->insert(['id' => (string) Str::uuid7(), 'user_id' => $this->noteUser->id, 'name' => 'SQL Course', 'colour' => 'blue']);
+    $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()
+        ->assertJsonPath('changes.0.kind', 'created')->assertJsonPath('changes.0.label', $label);
+})->with([
+    'date' => ['buy milk tomorrow', '24h', 'Sat 24 Oct'],
+    'date, time and project' => ['SQL Course quiz monday 9am', '24h', 'Mon 26 Oct · 09:00 · SQL Course'],
+    '12-hour time' => ['SQL Course quiz monday 9am', '12h', 'Mon 26 Oct · 9:00 am · SQL Course'],
+    'no date' => ['buy milk', '24h', ''],
+]);
 
 it('rolls back the note and all task writes on apply failure (T-NU-73)', function () {
     Event::listen('eloquent.created: '.Task::class, function (Task $task): void {

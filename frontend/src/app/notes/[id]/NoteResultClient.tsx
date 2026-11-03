@@ -5,14 +5,24 @@ import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
-import { getNote, recallNote } from "../../../lib/noteApi";
-import { getTask, httpTaskApi } from "../../../lib/taskApi";
+import { saveDraft } from "../../../lib/draft";
+import {
+  confirmNote,
+  getNote,
+  previewTaskApi,
+  recallNote,
+} from "../../../lib/noteApi";
+import { useOffline } from "../../../lib/online";
+import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
   NoteResultScreen,
+  TaskPanel,
   TaskStoreProvider,
   t,
+  tc,
   useTaskStore,
   type NoteResult,
+  type Project,
   type Task,
 } from "../../../ui";
 import type { Navigate } from "../../../ui/features/shell/routes";
@@ -29,6 +39,8 @@ interface Loaded {
   tasks: Task[];
   /** Ids of tasks removed since (RV-E13) */
   gone: ReadonlySet<string>;
+  /** For Task details on Check this first */
+  projects: Project[];
 }
 
 const touched = (result: NoteResult) =>
@@ -40,6 +52,14 @@ const touched = (result: NoteResult) =>
  */
 async function load(id: string): Promise<Loaded> {
   const result = recallNote(id) ?? (await getNote(id));
+  // A `confirm` note's rows are a preview: none of their tasks exist yet, and Task details edits them
+  if (result.note.status === "confirm")
+    return {
+      result,
+      tasks: touched(result).map((change) => change.task),
+      gone: new Set(),
+      projects: (await projects().catch(() => null)) ?? [],
+    };
   const tasks: Task[] = [];
   const gone = new Set<string>();
   await Promise.all(
@@ -54,7 +74,7 @@ async function load(id: string): Promise<Loaded> {
       }
     }),
   );
-  return { result, tasks, gone };
+  return { result, tasks, gone, projects: [] };
 }
 
 function ResultContainer({
@@ -63,14 +83,56 @@ function ResultContainer({
   back,
   navigate,
   weekStart,
+  showToast,
+  openNoteEditor,
+  edits,
+  projectList,
 }: {
   result: NoteResult;
   gone: ReadonlySet<string>;
   back: () => void;
   navigate?: Navigate;
   weekStart: "mon" | "sun";
+  showToast: ReturnType<typeof useAppFrame>["showToast"];
+  openNoteEditor: () => void;
+  edits?: Parameters<typeof confirmNote>[2];
+  projectList: Project[];
 }): ReactElement {
   const store = useTaskStore();
+  const offline = useOffline();
+  const [busy, setBusy] = useState(false);
+  const [openId, setOpenId] = useState<string | null>(null);
+  // Check this first (NU-5): Apply goes back to where the note was written, with a toast
+  const apply = async () => {
+    setBusy(true);
+    const outcome = await confirmNote(result.note.id, "apply", edits);
+    setBusy(false);
+    if ("error" in outcome)
+      return showToast(t(outcome.error, { request_id: "" }));
+    showToast(tc("note.made", outcome.changes.length));
+    back();
+  };
+  // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
+  // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
+  const edit = async () => {
+    setBusy(true);
+    const outcome = await confirmNote(result.note.id, "cancel");
+    if ("error" in outcome) {
+      setBusy(false);
+      return showToast(t(outcome.error, { request_id: "" }));
+    }
+    await saveDraft(result.note.text).catch(() => {});
+    let opened = false;
+    const open = () => {
+      if (opened) return;
+      opened = true;
+      window.removeEventListener("popstate", open);
+      openNoteEditor();
+    };
+    window.addEventListener("popstate", open);
+    setTimeout(open, 250);
+    back();
+  };
   const live = useMemo(
     () => ({
       ...Object.fromEntries(store.tasks.map((task) => [task.id, task])),
@@ -79,25 +141,40 @@ function ResultContainer({
     [store.tasks, gone],
   );
   return (
-    <NoteResultScreen
-      result={result}
-      live={live}
-      today={store.today}
-      timeZone={store.clock.timeZone}
-      timeFormat={store.timeFormat}
-      weekStart={weekStart}
-      onDone={back}
-      onSetDue={(task, date) => store.update(task, { due_date: date })}
-      navigate={navigate}
-    />
+    <>
+      <NoteResultScreen
+        result={result}
+        live={live}
+        today={store.today}
+        timeZone={store.clock.timeZone}
+        timeFormat={store.timeFormat}
+        weekStart={weekStart}
+        onDone={back}
+        onApply={apply}
+        onEdit={edit}
+        busy={busy}
+        offline={offline}
+        onSetDue={(task, date) => store.update(task, { due_date: date })}
+        onOpenTask={(task) => setOpenId(task.id)}
+        navigate={navigate}
+      />
+      {openId && (
+        <TaskPanel
+          taskId={openId}
+          onClose={() => setOpenId(null)}
+          projects={projectList}
+          weekStart={weekStart}
+        />
+      )}
+    </>
   );
 }
 
-/** `/notes/{id}`: what a note did (RV-1). */
+/** `/notes/{id}`: what a note did (RV-1), or will do once applied (NU-5). */
 export default function NoteResultClient({
   id,
 }: ClientProps): ReactElement | null {
-  const { back, navigate, settings } = useAppFrame();
+  const { back, navigate, settings, showToast, openNoteEditor } = useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -130,6 +207,15 @@ export default function NoteResultClient({
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // Check this first edits the planned tasks in memory until Apply (NU-5)
+  const preview = useMemo(
+    () =>
+      loaded?.result.note.status === "confirm"
+        ? previewTaskApi(loaded.result)
+        : null,
+    [loaded],
+  );
 
   const loading = !loaded && !errorState;
   useEffect(() => {
@@ -178,10 +264,10 @@ export default function NoteResultClient({
 
   return (
     <TaskStoreProvider
-      api={httpTaskApi}
+      api={preview?.api ?? httpTaskApi}
       clock={appClock}
       initialTasks={loaded.tasks}
-      initialProjects={[]}
+      initialProjects={loaded.projects}
       timeFormat={settings.timeFormat}
     >
       <ResultContainer
@@ -190,6 +276,10 @@ export default function NoteResultClient({
         back={back}
         navigate={navigate}
         weekStart={settings.weekStart}
+        showToast={showToast}
+        openNoteEditor={openNoteEditor}
+        edits={preview?.edits}
+        projectList={loaded.projects}
       />
     </TaskStoreProvider>
   );

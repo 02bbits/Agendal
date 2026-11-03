@@ -575,12 +575,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onDraftRestored={() => showToast(t("note.draft_restored"))}
             onSubmit={submitNote}
             onSubmitted={(result) => {
-              if (result.note.status === "done") {
+              // Check this first (`confirm`) and the result (`done`) share the note screen
+              if (result.note.status !== "followup") {
                 rememberNote(result);
                 openResult(result.note.id);
                 return;
               }
-              // ponytail: Check this first (IM-45) and the follow-up (IM-46) have no screen yet
+              // ponytail: the follow-up (IM-46) has no screen yet
               closeNoteEditor();
               showToast(tc("note.made", result.changes.length));
             }}
