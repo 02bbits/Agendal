@@ -971,15 +971,32 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("TaskPanel flags the page while open so the shell's bottom bar stops short of it", () => {
+  it("TaskPanel flags the page and locks body scroll while open so the background cannot scroll", () => {
     const t1 = task({ id: "t-flag", title: "Flag Task" });
     const ctx = setup([t1]);
     const view = render(
       ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
     );
     expect(document.documentElement.dataset.taskPanel).toBe("open");
+    expect(document.body.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("hidden");
     view.unmount();
     expect(document.documentElement.dataset.taskPanel).toBeUndefined();
+    expect(document.body.style.overflow).toBe("");
+    expect(document.documentElement.style.overflow).toBe("");
+  });
+
+  it("TaskPanel renders a backdrop overlay that closes the panel when clicked", async () => {
+    const t1 = task({ id: "t-backdrop", title: "Backdrop Task" });
+    const ctx = setup([t1]);
+    const onClose = vi.fn();
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={onClose} />));
+
+    const backdrop = screen.getByTestId("task-panel-backdrop");
+    expect(backdrop).toBeTruthy();
+    expect(backdrop.className).toContain("backdrop-blur");
+    await userEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("TaskPanel is axe clean in both themes", async () => {

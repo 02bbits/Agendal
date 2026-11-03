@@ -48,12 +48,21 @@ export function TaskPanel({
   }, []);
 
   // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
-  // short of it instead of covering Clear and Delete (see AppShell)
+  // short of it instead of covering Clear and Delete (see AppShell).
+  // Also locks background page scrolling (UX-28).
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.taskPanel = "open";
+
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevHtmlOverflow = root.style.overflow;
+    document.body.style.overflow = "hidden";
+    root.style.overflow = "hidden";
+
     return () => {
       delete root.dataset.taskPanel;
+      document.body.style.overflow = prevBodyOverflow;
+      root.style.overflow = prevHtmlOverflow;
     };
   }, []);
 
@@ -68,45 +77,55 @@ export function TaskPanel({
   );
 
   return (
-    <aside
-      aria-label={t("task.heading")}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-      className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
-    >
-      {task ? (
-        <TaskDetails
-          key={task.id}
-          task={task}
-          onBack={onClose}
-          onClose={onClose}
-          variant="panel"
-          projects={projects}
-          projectsStatus={projectsStatus}
-          onRetryProjects={onRetryProjects}
-          deleteAction={
-            <DeleteTask
-              task={task}
-              onDeleted={onDelete ?? onClose}
-              label={t("common.delete")}
-            />
-          }
-          autoFocusTitle
-          weekStart={weekStart}
-        />
-      ) : (
-        <div className="flex h-full flex-col">
-          <PanelHeader onClose={onClose} />
-          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-            <p className="text-body text-ink-secondary">
-              {t("error.not_found")}
-            </p>
-            <Button variant="secondary" onClick={onClose} className="mt-4">
-              {t("common.close")}
-            </Button>
+    <>
+      <div
+        data-testid="task-panel-backdrop"
+        aria-hidden="true"
+        onClick={onClose}
+        onWheel={(e) => e.preventDefault()}
+        onTouchMove={(e) => e.preventDefault()}
+        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+      />
+      <aside
+        aria-label={t("task.heading")}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in will-change-transform shadow-2xl"
+      >
+        {task ? (
+          <TaskDetails
+            key={task.id}
+            task={task}
+            onBack={onClose}
+            onClose={onClose}
+            variant="panel"
+            projects={projects}
+            projectsStatus={projectsStatus}
+            onRetryProjects={onRetryProjects}
+            deleteAction={
+              <DeleteTask
+                task={task}
+                onDeleted={onDelete ?? onClose}
+                label={t("common.delete")}
+              />
+            }
+            autoFocusTitle
+            weekStart={weekStart}
+          />
+        ) : (
+          <div className="flex h-full flex-col">
+            <PanelHeader onClose={onClose} />
+            <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+              <p className="text-body text-ink-secondary">
+                {t("error.not_found")}
+              </p>
+              <Button variant="secondary" onClick={onClose} className="mt-4">
+                {t("common.close")}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   );
 }
