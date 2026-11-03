@@ -397,7 +397,8 @@ describe("Check this first /notes/[id] (IM-45)", () => {
 
     expect(await screen.findByText(t("note.undone"))).toBeTruthy();
     expect(calls("POST", "/api/v1/notes/n1/undo")).toHaveLength(1);
-    expect(refetched).toHaveBeenCalledOnce();
+    // Once for Apply, once for Undo: the lists show what the note made, then that it's gone
+    expect(refetched).toHaveBeenCalledTimes(2);
 
     await userEvent.click(
       screen.getByRole("button", { name: t("common.undo") }),
@@ -405,7 +406,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     await waitFor(() =>
       expect(calls("POST", "/api/v1/notes/n1/redo")).toHaveLength(1),
     );
-    expect(refetched).toHaveBeenCalledTimes(2);
+    expect(refetched).toHaveBeenCalledTimes(3);
     window.removeEventListener("agendal:task-created", refetched);
   });
 

@@ -140,6 +140,7 @@ function ResultContainer({
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
     const id = outcome.note.id;
+    listsChanged();
     showToast({
       message: tc("note.made", outcome.changes.length),
       actionLabel: t("common.undo"),
