@@ -64,6 +64,31 @@ class MockIntersectionObserver implements IntersectionObserver {
   }
 }
 
+class MockResizeObserver implements ResizeObserver {
+  elements = new Set<Element>();
+  static instances: MockResizeObserver[] = [];
+
+  constructor(public callback: ResizeObserverCallback) {
+    MockResizeObserver.instances.push(this);
+  }
+
+  observe(element: Element) {
+    this.elements.add(element);
+  }
+
+  unobserve(element: Element) {
+    this.elements.delete(element);
+  }
+
+  disconnect() {
+    this.elements.clear();
+  }
+
+  trigger(entries: Partial<ResizeObserverEntry>[]) {
+    this.callback(entries as ResizeObserverEntry[], this);
+  }
+}
+
 function setupUpcoming(
   tasks: Task[] = [],
   customApi?: TaskApi,
@@ -135,6 +160,7 @@ afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
   MockIntersectionObserver.instances = [];
+  MockResizeObserver.instances = [];
 });
 
 describe("upcomingPage (LV-2, T-LV-10)", () => {
@@ -588,5 +614,154 @@ describe("Upcoming screen (Section 8)", () => {
       behavior: "smooth",
     });
     expect(scrollSpy.mock.instances).toContain(targetEl);
+  });
+
+  it("the last day section's class contains min-h-[calc(100dvh-var(--upcoming-bar-h and no other section has it", () => {
+    const { wrap } = setupUpcoming([], undefined, tuesdayClock);
+    render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+    const sections = Array.from(
+      document.querySelectorAll("section[aria-label]"),
+    );
+    expect(sections.length).toBeGreaterThan(1);
+    const lastSection = sections[sections.length - 1];
+
+    expect(lastSection.className).toContain(
+      "min-h-[calc(100dvh-var(--upcoming-bar-h",
+    );
+    for (let i = 0; i < sections.length - 1; i++) {
+      expect(sections[i].className).not.toContain(
+        "min-h-[calc(100dvh-var(--upcoming-bar-h",
+      );
+    }
+  });
+
+  it("headings use scroll-mt-[calc(var(--upcoming-bar-h in both list and board views", async () => {
+    const { wrap } = setupUpcoming([], undefined, tuesdayClock);
+    render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+    const listHeading = document.getElementById("day-2026-11-03");
+    expect(listHeading?.className).toContain(
+      "scroll-mt-[calc(var(--upcoming-bar-h",
+    );
+
+    const boardBtn = screen.getByRole("button", { name: "Board" });
+    await userEvent.click(boardBtn);
+
+    const boardHeading = document.getElementById("day-2026-11-03");
+    expect(boardHeading?.className).toContain(
+      "scroll-mt-[calc(var(--upcoming-bar-h",
+    );
+  });
+
+  it("bottom fallback: stub window at bottom, dispatch scroll -> strip active pill on last visible day", () => {
+    const originalInnerHeight = window.innerHeight;
+    const originalScrollY = window.scrollY;
+    try {
+      Object.defineProperty(window, "innerHeight", {
+        writable: true,
+        configurable: true,
+        value: 800,
+      });
+      Object.defineProperty(window, "scrollY", {
+        writable: true,
+        configurable: true,
+        value: 1200,
+      });
+      Object.defineProperty(document.documentElement, "scrollHeight", {
+        writable: true,
+        configurable: true,
+        value: 2000,
+      });
+
+      const { wrap } = setupUpcoming([], undefined, tuesdayClock);
+      render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+      const tue3Btn = screen.getByRole("button", {
+        name: /^3 Nov.*tasks$/,
+      });
+      expect(tue3Btn.getAttribute("aria-current")).toBe("date");
+
+      act(() => {
+        window.dispatchEvent(new Event("scroll"));
+      });
+
+      const sun15Btn = screen.getByRole("button", {
+        name: /^15 Nov.*tasks$/,
+      });
+      expect(sun15Btn.getAttribute("aria-current")).toBe("true");
+      const badge = within(sun15Btn).getByText("15");
+      expect(badge.className).toContain("bg-primary");
+      expect(badge.className).toContain("text-primary-content");
+    } finally {
+      Object.defineProperty(window, "innerHeight", {
+        writable: true,
+        configurable: true,
+        value: originalInnerHeight,
+      });
+      Object.defineProperty(window, "scrollY", {
+        writable: true,
+        configurable: true,
+        value: originalScrollY,
+      });
+    }
+  });
+
+  it("clicking Sun 15 (after › to that week, or a window containing it) calls scrollIntoView on #day-2026-11-15", async () => {
+    const scrollSpy = vi.fn();
+    Element.prototype.scrollIntoView = scrollSpy;
+
+    const { wrap } = setupUpcoming([], undefined, tuesdayClock);
+    render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+    const nextBtn = screen.getByRole("button", { name: "Next week" });
+    await userEvent.click(nextBtn);
+
+    const sun15Btn = screen.getByRole("button", {
+      name: /^15 Nov.*tasks$/,
+    });
+    await userEvent.click(sun15Btn);
+
+    const targetEl = document.getElementById("day-2026-11-15");
+    expect(targetEl).toBeTruthy();
+    expect(scrollSpy).toHaveBeenCalledWith({
+      block: "start",
+      behavior: "smooth",
+    });
+    expect(scrollSpy.mock.instances).toContain(targetEl);
+  });
+
+  it("measures sticky bar via ResizeObserver and sets --upcoming-bar-h on list wrapper", () => {
+    const originalRO = window.ResizeObserver;
+    window.ResizeObserver =
+      MockResizeObserver as unknown as typeof ResizeObserver;
+    try {
+      const { wrap } = setupUpcoming([], undefined, tuesdayClock);
+      render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+      const observer = MockResizeObserver.instances[0];
+      expect(observer).toBeTruthy();
+
+      const stickyBar = Array.from(observer.elements)[0];
+      expect(stickyBar).toBeTruthy();
+
+      act(() => {
+        observer.trigger([
+          {
+            target: stickyBar,
+            contentRect: { height: 135 } as DOMRectReadOnly,
+          },
+        ]);
+      });
+
+      const listWrapper = document
+        .getElementById("day-2026-11-03")
+        ?.closest(".mt-6");
+      expect(listWrapper?.getAttribute("style")).toContain(
+        "--upcoming-bar-h: 135px",
+      );
+    } finally {
+      window.ResizeObserver = originalRO;
+    }
   });
 });

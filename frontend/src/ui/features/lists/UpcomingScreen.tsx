@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useState, type CSSProperties, type ReactElement } from "react";
 import { Button } from "../../components/Button";
 import { ChipGroup } from "../../components/ChipGroup";
 import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
@@ -17,18 +17,6 @@ import { useUpcomingScreenData } from "./useUpcomingListWindow";
 export type { UpcomingScreenProps, UpcomingViewMode };
 
 export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
-  const {
-    accountInitial = "",
-    navigate,
-    onNewTask,
-    onAddTask,
-    subtitle,
-    showHeader = true,
-    showFilter = true,
-    selectedTaskId,
-    weekStart = "mon",
-  } = props;
-
   const store = useTaskStore();
   const [anchor, setAnchor] = useState<string>(() => store.today);
   const { filter, chooseFilter, viewMode, chooseViewMode } =
@@ -41,11 +29,13 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     tasksByDay,
     countsByDay,
     navProps,
+    barRef,
+    barHeight,
   } = useUpcomingScreenData({
     store,
     anchor,
     setAnchor,
-    weekStart,
+    weekStart: props.weekStart ?? "mon",
     viewMode,
     filter,
   });
@@ -54,9 +44,10 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     days: renderedDays,
     tasksByDay,
     today: store.today,
-    selectedTaskId,
-    navigate,
-    onAddTask: (d: string) => (onAddTask ? onAddTask(d) : onNewTask?.()),
+    selectedTaskId: props.selectedTaskId,
+    navigate: props.navigate,
+    onAddTask: (d: string) =>
+      props.onAddTask ? props.onAddTask(d) : props.onNewTask?.(),
   };
 
   const filterChips = (
@@ -81,6 +72,8 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   );
 
   const hasTasks = store.tasks.some((t) => !t.done || store.isSettling(t.id));
+  const showHeader = props.showHeader ?? true;
+  const showFilter = props.showFilter ?? true;
 
   return (
     <div className="pb-8">
@@ -88,8 +81,8 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
         <ScreenHeader
           overline=""
           title={t("nav.upcoming")}
-          accountInitial={accountInitial}
-          navigate={navigate}
+          accountInitial={props.accountInitial ?? ""}
+          navigate={props.navigate}
           action={
             <div className="flex items-center gap-3">
               <div className="hidden md:block">{filterChips}</div>
@@ -97,12 +90,12 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
                 viewMode={viewMode}
                 onChange={chooseViewMode}
               />
-              {onNewTask && (
+              {props.onNewTask && (
                 <Button
                   variant="primary"
                   pill
                   className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
-                  onClick={onNewTask}
+                  onClick={props.onNewTask}
                 >
                   <PlusIcon size={16} />
                   {t("task.new")}
@@ -111,9 +104,9 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
             </div>
           }
         >
-          {subtitle && (
+          {props.subtitle && (
             <p className="m-0 mt-1 text-footnote text-ink-secondary">
-              {subtitle}
+              {props.subtitle}
             </p>
           )}
           <div className="mt-4 md:hidden">{filterChips}</div>
@@ -122,7 +115,10 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
 
       {showFilter && !showHeader && <div className="mb-4">{filterChips}</div>}
 
-      <div className="sticky top-0 z-20 border-b border-separator bg-paper pb-2">
+      <div
+        ref={barRef}
+        className="sticky top-0 z-20 border-b border-separator bg-paper pb-2"
+      >
         <UpcomingWeekNav {...navProps} />
         {!isBoard && (
           <UpcomingDayStrip
@@ -137,7 +133,10 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
 
       {!hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>}
 
-      <div className="mt-6">
+      <div
+        className="mt-6"
+        style={{ "--upcoming-bar-h": `${barHeight}px` } as CSSProperties}
+      >
         {isBoard ? (
           <UpcomingBoard {...viewProps} />
         ) : (

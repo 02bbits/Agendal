@@ -20,15 +20,24 @@ export function UpcomingDayList({
 
   return (
     <div className={cx("space-y-6", TASK_COLUMN_CLASS)}>
-      {days.map((date) => {
+      {days.map((date, index) => {
         const heading = dayHeading(date, today);
         const dayTasks = tasksByDay[date] ?? [];
+        const isLast = index === days.length - 1;
 
         return (
-          <section key={date} aria-label={heading}>
+          <section
+            key={date}
+            aria-label={heading}
+            className={
+              isLast
+                ? "min-h-[calc(100dvh-var(--upcoming-bar-h,120px)-var(--upcoming-bottom-h,96px))] max-md:[--upcoming-bottom-h:160px]"
+                : undefined
+            }
+          >
             <h2
               id={"day-" + date}
-              className="scroll-mt-[120px] border-b border-separator pb-1.5 pt-6 text-callout font-semibold text-ink-secondary"
+              className="scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] border-b border-separator pb-1.5 pt-6 text-callout font-semibold text-ink-secondary"
             >
               {heading}
             </h2>

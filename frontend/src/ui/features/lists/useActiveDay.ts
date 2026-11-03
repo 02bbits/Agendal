@@ -20,6 +20,30 @@ export function useActiveDay(
   const intersectingRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
+    if (!enabled || typeof window === "undefined") {
+      return;
+    }
+
+    const onScroll = () => {
+      const scrollHeight = document.documentElement?.scrollHeight ?? 0;
+      if (
+        days.length > 0 &&
+        window.innerHeight + window.scrollY >= scrollHeight - 2
+      ) {
+        const lastDay = days[days.length - 1];
+        if (lastDay) {
+          setActiveDay(lastDay);
+        }
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, [days, enabled]);
+
+  useEffect(() => {
     if (
       !enabled ||
       typeof window === "undefined" ||

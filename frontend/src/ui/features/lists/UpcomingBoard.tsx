@@ -33,7 +33,7 @@ export function UpcomingBoard({
             <div className="flex items-baseline justify-between gap-1.5 pb-2">
               <h2
                 id={"day-" + date}
-                className="m-0 scroll-mt-[120px] text-callout font-semibold text-ink-secondary"
+                className="m-0 scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] text-callout font-semibold text-ink-secondary"
               >
                 {shortHeading}
               </h2>

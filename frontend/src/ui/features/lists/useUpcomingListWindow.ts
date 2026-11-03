@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatMonthYear } from "../../components/calendar";
 import { matchesFilter, type UpcomingFilter } from "../../domain/lists";
 import type { Task, WeekStart } from "../../domain/types";
@@ -17,6 +17,33 @@ export interface UseUpcomingListWindowOptions {
   setAnchor: (date: string) => void;
   weekStart: WeekStart;
   enabled?: boolean;
+  barHeight?: number;
+}
+
+export function useStickyBarHeight(defaultHeight = 120) {
+  const [barHeight, setBarHeight] = useState<number>(defaultHeight);
+  const barRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = barRef.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const h =
+          entry.borderBoxSize?.[0]?.blockSize ||
+          (entry.target as HTMLElement | undefined)?.offsetHeight ||
+          entry.contentRect?.height;
+        if (h && h > 0) {
+          setBarHeight(Math.round(h));
+        }
+      }
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  return { barRef, barHeight };
 }
 
 export function useUpcomingListWindow({
@@ -25,7 +52,11 @@ export function useUpcomingListWindow({
   setAnchor,
   weekStart,
   enabled = true,
+  barHeight: optionsBarHeight,
 }: UseUpcomingListWindowOptions) {
+  const { barRef, barHeight: measuredBarHeight } = useStickyBarHeight(120);
+  const barHeight = optionsBarHeight ?? measuredBarHeight;
+
   const windowDays = useMemo(() => {
     const week1 = weekOf(anchor, weekStart);
     const week2 = weekOf(shiftWeek(anchor, 1), weekStart);
@@ -35,7 +66,7 @@ export function useUpcomingListWindow({
   const { activeDay, setActiveDay } = useActiveDay(
     windowDays[0] ?? today,
     windowDays,
-    { enabled, barHeight: 120 },
+    { enabled, barHeight },
   );
 
   const scrollToDate = useCallback(
@@ -123,6 +154,8 @@ export function useUpcomingListWindow({
     onNext,
     onToday,
     onPickDate,
+    barRef,
+    barHeight,
   };
 }
 
@@ -234,5 +267,7 @@ export function useUpcomingScreenData({
     tasksByDay,
     countsByDay,
     navProps,
+    barRef: listWindow.barRef,
+    barHeight: listWindow.barHeight,
   };
 }
