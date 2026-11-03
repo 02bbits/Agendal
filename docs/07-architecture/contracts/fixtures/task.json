@@ -1,9 +1,11 @@
 {
   "id": "019a1c00-0000-7000-8000-000000000201",
   "title": "SQL quiz",
+  "start_date": null,
   "due_date": "2026-10-26",
   "start_time": "09:00",
   "end_time": "10:00",
+  "due_time": null,
   "priority": "high",
   "project_id": "019a1c00-0000-7000-8000-000000000101",
   "repeat": "never",
