@@ -1,4 +1,4 @@
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
@@ -14,6 +14,8 @@ export interface DialogProps {
   children?: ReactNode;
   /** Takes a history entry so Back closes it. Off when the dialog sits over a screen that has its own entry. */
   history?: boolean;
+  /** Initial element to focus on open, e.g. Cancel button (A11Y-42). */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export function Dialog({
@@ -24,12 +26,13 @@ export function Dialog({
   actions,
   children,
   history = true,
+  initialFocusRef,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  useModalFocus(dialogRef, titleRef, open, onClose);
+  useModalFocus(dialogRef, titleRef, open, onClose, initialFocusRef);
   useHistoryEntry(open && history, onClose);
 
   if (!open) return null;

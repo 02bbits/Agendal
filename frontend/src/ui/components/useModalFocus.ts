@@ -15,6 +15,7 @@ export function useModalFocus(
   titleRef: RefObject<HTMLElement | null>,
   open: boolean,
   onEscape: () => void,
+  initialFocusRef?: RefObject<HTMLElement | null>,
 ): void {
   // An inline onClose changes every render; as an effect dependency it would hand focus back to
   // the opener each time, so Escape (which listens inside the container) never fired
@@ -33,7 +34,8 @@ export function useModalFocus(
         : null;
 
     const firstField = container.querySelector<HTMLElement>(FIELD);
-    const target = firstField ?? titleRef.current ?? container;
+    const target =
+      initialFocusRef?.current ?? firstField ?? titleRef.current ?? container;
     // The modal fades in from visibility: hidden, which refuses focus, so try again on the next
     // frames until it lands (at most half a second)
     let frame = 0;
@@ -80,5 +82,5 @@ export function useModalFocus(
       container.removeEventListener("keydown", onKeyDown);
       if (opener && opener.isConnected) opener.focus();
     };
-  }, [open, containerRef, titleRef]);
+  }, [open, containerRef, titleRef, initialFocusRef]);
 }
