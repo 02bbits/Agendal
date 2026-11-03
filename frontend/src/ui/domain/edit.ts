@@ -22,20 +22,34 @@ export function localDateTime(
   };
 }
 
-/** TK-3: an end not after the start is an error (also a DB CHECK). */
-export function scheduleError(
-  start: string | null | undefined,
-  end: string | null | undefined,
-): CopyKey | null {
-  return start && end && end <= start ? "task.end_before_start" : null;
+/** TK-3, BR-11: start (date and time) must be before due (date and time); also a DB CHECK. */
+export function startAfterDue(
+  task: Pick<Task, "start_date" | "start_time" | "due_date" | "due_time">,
+): "start_date" | "start_time" | null {
+  if (task.start_date && task.due_date) {
+    if (task.start_date > task.due_date) {
+      return "start_date";
+    }
+    if (
+      task.start_date === task.due_date &&
+      task.start_time &&
+      task.due_time &&
+      task.start_time >= task.due_time
+    ) {
+      return "start_time";
+    }
+  }
+  return null;
 }
 
 /**
  * Applies the field rules of TK §2.2 to a patch, returning the full set of
  * fields that change:
- * - a start (or a repeat) with no due date sets the due date to today
- * - clearing the start clears the end
- * - clearing the due date clears start, end and reminder
+ * - a start time with no start date → start_date = due ?? todayDate
+ * - a due time with no due date → due_date = todayDate
+ * - a repeat (≠ never) with neither date → due_date = todayDate
+ * - clearing the start date → start_time = null; and if no due date → reminder = "none", repeat = "never"
+ * - clearing the due date → due_time = null; and if no start date → reminder = "none", repeat = "never"
  * Fields equal to the current value are dropped, so no empty patch is sent (TK-E16).
  */
 export function normalizePatch(
@@ -44,7 +58,6 @@ export function normalizePatch(
   todayDate: string,
 ): TaskPatch {
   const next: TaskPatch = { ...patch };
-  const due = "due_date" in next ? next.due_date : task.due_date;
 
   if ("title" in next && next.title !== undefined) {
     next.title = next.title.trim();
@@ -52,21 +65,40 @@ export function normalizePatch(
   if ("notes" in next) {
     next.notes = next.notes?.trim() ? next.notes : null;
   }
-  if (
-    !due &&
-    ((next.start_time ?? null) !== null ||
-      (next.repeat && next.repeat !== "never"))
-  ) {
-    next.due_date = todayDate;
-  }
-  if ("start_time" in next && !next.start_time) {
-    next.end_time = null;
+
+  let start = "start_date" in next ? next.start_date : task.start_date;
+  let due = "due_date" in next ? next.due_date : task.due_date;
+
+  if ("start_date" in next && !next.start_date) {
+    next.start_time = null;
+    if (!due) {
+      next.reminder = "none";
+      next.repeat = "never";
+    }
   }
   if ("due_date" in next && !next.due_date) {
-    next.start_time = null;
-    next.end_time = null;
-    next.reminder = "none";
-    next.repeat = "never";
+    next.due_time = null;
+    if (!start) {
+      next.reminder = "none";
+      next.repeat = "never";
+    }
+  }
+
+  const startTime = "start_time" in next ? next.start_time : task.start_time;
+  const dueTime = "due_time" in next ? next.due_time : task.due_time;
+  const repeat = "repeat" in next ? next.repeat : task.repeat;
+
+  if (!start && startTime) {
+    next.start_date = due ?? todayDate;
+    start = next.start_date;
+  }
+  if (!due && dueTime) {
+    next.due_date = todayDate;
+    due = next.due_date;
+  }
+  if (!due && !start && repeat && repeat !== "never") {
+    next.due_date = todayDate;
+    due = next.due_date;
   }
 
   for (const key of Object.keys(next) as Array<keyof TaskPatch>) {
@@ -84,11 +116,11 @@ export function patchErrors(task: Task, patch: TaskPatch): TaskUpdateErrors {
   if ("title" in patch && !merged.title) {
     errors.title = "task.title_required";
   }
-  const schedule = scheduleError(merged.start_time, merged.end_time);
-  if (schedule) {
-    errors.end_time = schedule;
+  const field = startAfterDue(merged);
+  if (field) {
+    errors[field] = "task.start_after_due";
   }
-  if (merged.reminder !== "none" && !merged.due_date) {
+  if (merged.reminder !== "none" && !merged.start_date && !merged.due_date) {
     errors.reminder = "task.reminder_needs_date";
   }
   return errors;
@@ -103,19 +135,31 @@ const OFFSET_MINUTES: Record<Exclude<Reminder, "none">, number> = {
 };
 
 /**
- * The local date-time a reminder fires: the offset before the start time, or
- * before 09:00 on the due date when there is no time (BR-12). Null without one.
+ * The local date-time a reminder fires: the offset before the start date and time
+ * when set, else before the due date and time (defaulting to 09:00 when there is no
+ * time) (BR-12). Null without one.
  */
 export function reminderAt(
-  task: Pick<Task, "due_date" | "start_time" | "reminder">,
+  task: Pick<
+    Task,
+    "start_date" | "start_time" | "due_date" | "due_time" | "reminder"
+  >,
 ): string | null {
-  if (task.reminder === "none" || !task.due_date) return null;
-  const [h, m] = (task.start_time ?? "09:00").split(":").map(Number) as [
-    number,
-    number,
-  ];
+  if (task.reminder === "none") return null;
+  let date: string;
+  let time: string;
+  if (task.start_date) {
+    date = task.start_date;
+    time = task.start_time ?? "09:00";
+  } else if (task.due_date) {
+    date = task.due_date;
+    time = task.due_time ?? "09:00";
+  } else {
+    return null;
+  }
+
+  const [h, m] = time.split(":").map(Number) as [number, number];
   let minutes = h * 60 + m - OFFSET_MINUTES[task.reminder];
-  let date = task.due_date;
   while (minutes < 0) {
     minutes += 1440;
     date = addDays(date, -1);
@@ -127,7 +171,10 @@ export function reminderAt(
  * Whether the reminder time has already passed (BR-12, TK-E4).
  */
 export function reminderPast(
-  task: Pick<Task, "due_date" | "start_time" | "reminder">,
+  task: Pick<
+    Task,
+    "start_date" | "start_time" | "due_date" | "due_time" | "reminder"
+  >,
   at: Date = now(),
   zone: string = timeZone(),
 ): boolean {

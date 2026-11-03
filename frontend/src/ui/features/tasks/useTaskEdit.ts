@@ -45,8 +45,7 @@ export function useTaskEdit({
       if ("due_date" in raw && !raw.due_date && Boolean(row.due_date)) {
         const restore: TaskPatch = {
           due_date: row.due_date,
-          start_time: row.start_time,
-          end_time: row.end_time,
+          due_time: row.due_time,
           reminder: row.reminder,
           repeat: row.repeat,
         };

@@ -13,9 +13,10 @@ export type TaskPatch = Partial<
   Pick<
     Task,
     | "title"
+    | "start_date"
     | "due_date"
     | "start_time"
-    | "end_time"
+    | "due_time"
     | "priority"
     | "reminder"
     | "repeat"

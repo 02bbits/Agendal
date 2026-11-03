@@ -135,7 +135,11 @@ export function TaskRow({
             <>
               <span>·</span>
               <span>
-                {formatTimeRange(task.start_time, task.end_time, timeFormat)}
+                {formatTimeRange(
+                  task.start_time,
+                  task.start_date === task.due_date ? task.due_time : null,
+                  timeFormat,
+                )}
               </span>
             </>
           )}
