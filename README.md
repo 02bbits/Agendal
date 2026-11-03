@@ -44,6 +44,8 @@ docker compose logs -f api web
 
 The first boot can take several minutes to install dependencies. When `api` is healthy and Next.js reports ready, open http://localhost:3000 and sign in with `example@gmail.com` / `password`. If changing `.env` while the app is already running, run `docker compose exec api php artisan config:clear` and `docker compose restart api queue`. The 20-second timeout is a manual-testing setting, not evidence of meeting the production latency target. Calls are capped at 20 per user per day by default.
 
+Keep `NEXT_PUBLIC_NOTES_MOCK` unset or `0` in `frontend/.env.local`; setting it to `1` uses fixture results instead of calling the note API. Known test limitations, including a Vietnamese multi-clause scheduling failure and the missing save-note-only UI flow, are recorded in [manual note cases](backend/tests/Manual/note-cases.md#giới-hạn-còn-mở-khi-test-nvidia-2026-11-03).
+
 For the standalone preview, without database writes, run this from `backend/` after `composer install`:
 
 ```bash
