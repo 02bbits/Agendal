@@ -156,6 +156,14 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `task.push_explainer` † | Get a notification before tasks with reminders? | In-app explainer before the browser prompt. Buttons: Allow / Not now |
 | `task.push_denied` † | Notifications are off for Agendal. Turn them on in your browser settings. | Reminder field helper |
 | `task.purged` † | This task can no longer be restored. | API code |
+| `task.start_date` † | Start date | Field label in Task details ([TK-2](../03-modules/TK-tasks.md#tk-2)) |
+| `task.due_time` † | Due time | Field label in Task details ([TK-2](../03-modules/TK-tasks.md#tk-2)) |
+| `task.start_after_due` † | Start can't be after the due date. | Field error ([TK-3](../03-modules/TK-tasks.md#tk-3)) |
+| `task.in_progress` † | In progress | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.planned` † | Planned {date} | List row meta line for passed start-only tasks ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.due_at` † | Due {time} | List row meta line and dashed blue card ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.due_on` † | Due {date} | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.priority_raised` † | Shown as {priority} · {reason} | Task details displayed priority note ([BR-23](../02-domain/business-rules.md#br-23)) |
 
 ## Lists and search (LV)
 
@@ -166,6 +174,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `list.encourage_progress` | {done} down, {left} to go! | Inbox progress line |
 | `list.overdue` | Overdue | Section heading |
 | `list.today` | Today | Section heading |
+| `list.inbox_subtitle` † | {overdue} overdue · {today} today | Desktop subtitle in Inbox ([LV-1](../03-modules/LV-lists-search.md#lv-1)) |
 | `list.tomorrow` | Tomorrow | Upcoming day heading |
 | `list.nothing_left` | Nothing left for today | Inbox empty state |
 | `list.no_date` † | No date | Inbox section (LV) |
