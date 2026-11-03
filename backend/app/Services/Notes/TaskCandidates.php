@@ -73,7 +73,7 @@ final class TaskCandidates
             'title' => (string) $task->title,
             'due_date' => $attributes['due_date'] === null ? null : substr((string) $attributes['due_date'], 0, 10),
             'start_time' => $hourMinute($attributes['start_time']),
-            'end_time' => $hourMinute($attributes['end_time']),
+            'end_time' => $hourMinute($attributes['due_time']),
             'done' => (bool) $attributes['done'],
             'deleted_at' => $attributes['deleted_at'] === null ? null : (string) $attributes['deleted_at'],
         ];

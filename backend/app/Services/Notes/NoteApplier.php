@@ -193,13 +193,28 @@ final class NoteApplier
     /** @param array<string, mixed> $entry */
     private function create(Note $note, array $entry, string $timezone): Task
     {
+        if (array_key_exists('end_time', $entry)) {
+            $entry['due_time'] = $entry['end_time'];
+        }
         $stamp = $this->clock->now()->format(DATE_ATOM);
         $task = new Task;
         $task->forceFill(array_intersect_key($entry, array_flip(Task::PATCHABLE)));
+        if ($task->start_time !== null && $task->start_date === null) {
+            $task->start_date = $task->due_date;
+        }
         $task->forceFill(['user_id' => $note->user_id, 'created_by' => TaskCreator::Assistant->value, 'source_note_id' => $note->id]);
-        $task->repeat_anchor = $task->repeat === Repeat::Never->value ? null : $task->due_date;
+        $task->repeat_anchor = $task->repeat === Repeat::Never->value ? null : ($task->start_date ?: $task->due_date);
         $task->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
-        $task->remind_at = $task->due_date === null ? null : $this->reminders->compute((string) $task->due_date, $task->start_time, (string) $task->reminder, $timezone);
+        $task->remind_at = ($task->start_date === null && $task->due_date === null) || $task->reminder === 'none'
+            ? null
+            : $this->reminders->forDates(
+                $task->start_date ? substr((string) $task->start_date, 0, 10) : null,
+                $task->start_time !== null ? substr((string) $task->start_time, 0, 5) : null,
+                $task->due_date ? substr((string) $task->due_date, 0, 10) : null,
+                $task->due_time !== null ? substr((string) $task->due_time, 0, 5) : null,
+                (string) $task->reminder,
+                $timezone,
+            );
         $task->save();
 
         return $task->refresh();
@@ -208,6 +223,16 @@ final class NoteApplier
     /** @param array<string, mixed> $entry */
     private function update(Task $task, array $entry, string $timezone): Task
     {
+        if (array_key_exists('end_time', $entry)) {
+            $entry['due_time'] = $entry['end_time'];
+        }
+        $oldDueDate = $task->due_date ? substr((string) $task->due_date, 0, 10) : null;
+        $oldStartDate = $task->start_date ? substr((string) $task->start_date, 0, 10) : null;
+        if (array_key_exists('due_date', $entry) && $entry['due_date'] !== $oldDueDate) {
+            if ($oldStartDate !== null && $oldStartDate === $oldDueDate) {
+                $entry['start_date'] = $entry['due_date'];
+            }
+        }
         $at = $this->patcher->afterLastWrite($task);
         $fields = array_intersect_key($entry, array_flip(Task::PATCHABLE));
         if (($entry['done'] ?? false) === true) {
@@ -233,9 +258,8 @@ final class NoteApplier
     private function row(Task $task): array
     {
         $row = $task->attributesToArray();
-        foreach (['start_time', 'end_time'] as $key) {
-            $row[$key] = isset($row[$key]) ? substr((string) $row[$key], 0, 5) : null;
-        }
+        $row['start_time'] = isset($row['start_time']) ? substr((string) $row['start_time'], 0, 5) : null;
+        $row['end_time'] = isset($row['due_time']) ? substr((string) $row['due_time'], 0, 5) : null;
         $row['due_date'] = isset($row['due_date']) ? substr((string) $row['due_date'], 0, 10) : null;
 
         return $row;

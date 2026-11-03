@@ -106,6 +106,9 @@ final class NoteUndo
                 // The state before the undo, back as it was. ponytail: stamps every field, so an edit made in the 10 s window is lost.
                 $stamp = $this->patcher->afterLastWrite($task);
                 $task->forceFill(Arr::except($change['before'], self::SNAPSHOT_SKIP));
+                if ($task->start_time !== null && $task->start_date === null) {
+                    $task->start_date = $task->due_date;
+                }
                 $task->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
                 $task->save();
             }
@@ -210,13 +213,23 @@ final class NoteUndo
             $restore['repeat_anchor'] = $before['repeat_anchor'] ?? null;
         }
         $task->forceFill($restore);
+        if ($task->start_time !== null && $task->start_date === null) {
+            $task->start_date = $task->due_date;
+            $stamps['start_date'] = $stamp;
+        }
         foreach (array_keys($restore) as $field) {
             $stamps[$field] = $stamp;
         }
-        if (array_intersect(['due_date', 'start_time', 'reminder'], array_keys($restore)) !== []) {
-            $due = $task->due_date;
-            $task->remind_at = $due === null || $task->reminder === 'none' ? null
-                : $this->reminders->compute((string) $due, $task->start_time === null ? null : substr((string) $task->start_time, 0, 5), (string) $task->reminder, $zone);
+        if (array_intersect(['start_date', 'due_date', 'start_time', 'due_time', 'reminder'], array_keys($restore)) !== []) {
+            $task->remind_at = ($task->start_date === null && $task->due_date === null) || $task->reminder === 'none' ? null
+                : $this->reminders->forDates(
+                    $task->start_date ? substr((string) $task->start_date, 0, 10) : null,
+                    $task->start_time !== null ? substr((string) $task->start_time, 0, 5) : null,
+                    $task->due_date ? substr((string) $task->due_date, 0, 10) : null,
+                    $task->due_time !== null ? substr((string) $task->due_time, 0, 5) : null,
+                    (string) $task->reminder,
+                    $zone,
+                );
         }
         $task->field_updated_at = $stamps;
         $task->save();
