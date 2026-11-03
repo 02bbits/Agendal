@@ -197,7 +197,8 @@ export function SearchScreen({
       <NavBar backLabel={t("common.back")} onBack={onBack} />
       <form
         role="search"
-        className="flex h-[52px] items-center gap-2 rounded-field border border-control bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary"
+        className="flex h-[52px] cursor-text items-center gap-2 rounded-field border border-control bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary"
+        onClick={() => field.current?.focus()}
         onSubmit={(e) => {
           e.preventDefault();
           setQuery(input);
@@ -207,7 +208,9 @@ export function SearchScreen({
         <input
           ref={field}
           type="search"
+          role="searchbox"
           className="h-full min-w-0 flex-1 border-0 bg-transparent text-body text-ink placeholder:text-ink-tertiary focus:outline-none"
+          style={{ caretColor: "currentColor" }}
           aria-label={t("search.placeholder")}
           placeholder={t("search.placeholder")}
           value={input}
@@ -215,6 +218,7 @@ export function SearchScreen({
           inputMode="search"
           enterKeyHint="search"
           autoComplete="off"
+          spellCheck={false}
           onChange={(e) => setInput(e.target.value)}
         />
       </form>

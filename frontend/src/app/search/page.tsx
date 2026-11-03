@@ -12,8 +12,11 @@ import {
   TaskStoreProvider,
   type Clock,
   type Project,
+  type Task,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
+
+const EMPTY_TASKS: Task[] = [];
 
 const clock: Clock = {
   now,
@@ -36,7 +39,7 @@ function SearchContent() {
     <TaskStoreProvider
       api={httpTaskApi}
       clock={clock}
-      initialTasks={[]}
+      initialTasks={EMPTY_TASKS}
       initialProjects={projectList}
       timeFormat={settings.timeFormat}
     >
