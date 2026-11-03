@@ -65,7 +65,7 @@ export function UpcomingDayStrip({
                     {day}
                   </span>
                   {/* Tells the reader which day is today */}
-                  <span className="text-footnote text-ink-tertiary">
+                  <span className="hidden text-footnote text-ink-tertiary md:inline">
                     {t("list.strip_today")}
                   </span>
                 </>
