@@ -43,7 +43,7 @@ Domain terms, used the same way in requirements, UI copy, and code. For acronyms
 | Note name | A name generated from the plan, e.g. "This week" or "SQL Course to-dos" ([NU-6](../03-modules/NU-note-understanding.md#nu-6)) |
 | Pending note | A note saved offline, shown as "Waiting for connection" ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
 | Due date | When the task must be done |
-| Schedule | When the user will work on it: a start time and an end time |
+| Schedule | A work session on the start date: a start time and, optionally, an end time |
 | Overdue | Not done, and the due date has passed. Shown in red with a count in Inbox ([LV-1](../03-modules/LV-lists-search.md#lv-1)) |
 | Today | Tasks due or scheduled today |
 | No project | Tasks without a project. It is not a record |
@@ -97,7 +97,9 @@ Conceptual model. For storage, see [data-model.md](../07-architecture/data-model
 | title | Sentence case. Acronyms kept upper case | **yes**, the only required field | [NC-7](../03-modules/NC-note-capture.md#nc-7) |
 | project | One of the user's projects, or none (*No project*) | no | PJ |
 | due date | A date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
-| start time, end time | Times. End must be later than start | no | [TK-3](../03-modules/TK-tasks.md#tk-3) |
+| due time | A time on the due date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
+| start date | A date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
+| start time, end time | Times of a work session on the start date. End later than start | no | [TK-3](../03-modules/TK-tasks.md#tk-3) |
 | priority | Low, Medium, High | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
 | reminder | None; 5, 15 or 30 minutes; 1 hour; 1 day before | no | [TK-2](../03-modules/TK-tasks.md#tk-2), [TK-6](../03-modules/TK-tasks.md#tk-6) |
 | repeat | Never, Daily, Weekly, Monthly, Yearly | no | [TK-4](../03-modules/TK-tasks.md#tk-4) |
@@ -109,8 +111,11 @@ Conceptual model. For storage, see [data-model.md](../07-architecture/data-model
 
 ### Derived
 
-- **Overdue**: not done and the due date is before today.
-- **Today**: due date or start date is today.
+- **Overdue**: not done and the due date is before today (date-based). From the due time on the due day the due label turns red, but the task stays in Today until the day ends.
+- **Today**: open tasks whose start date is today, or due date is today, or in progress (start date before today and due date after today), or start-only tasks whose start date has passed.
+- **In progress**: open tasks with both dates where the start date is before today and the due date is after today. Shows in Today between start and due days.
+- **Planned**: start-only tasks whose start date has passed; they roll into Today as "Planned {date}" with their session times greyed and are never overdue.
+- **Displayed priority**: the higher of the chosen priority and Medium when the due date is tomorrow or today, High when overdue. The stored priority never changes; sorting uses displayed priority.
 - **Project progress**: completed tasks ÷ all tasks in the project ("3 of 5 tasks completed").
 
 ### Task states
