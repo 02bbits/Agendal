@@ -9,10 +9,10 @@
   "properties": {
     "id": { "$ref": "#/$defs/uuid" },
     "title": { "$ref": "#/$defs/title" },
-    "start_date": { "$ref": "#/$defs/date", "description": "The day the user plans to work on the task. Optional until the API returns it (#124 follow-up)." },
+    "start_date": { "$ref": "#/$defs/date", "description": "The day the user plans to work on the task." },
     "due_date": { "$ref": "#/$defs/date" },
     "start_time": { "$ref": "#/$defs/time" },
-    "due_time": { "$ref": "#/$defs/time", "description": "The deadline time on the due date. Optional until the API returns it (#124 follow-up)." },
+    "due_time": { "$ref": "#/$defs/time", "description": "The deadline time on the due date." },
     "priority": { "$ref": "#/$defs/priority" },
     "project_id": { "$ref": "#/$defs/uuid_or_null" },
     "repeat": { "$ref": "#/$defs/repeat", "description": "Frequency enum. A non-null repeat_rule must have the same FREQ." },
