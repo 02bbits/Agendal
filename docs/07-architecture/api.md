@@ -51,8 +51,7 @@ A task entity in API requests and responses exposes the following fields:
 | `title` | string | 1–200 characters |
 | `project_id` | UUID \| null | Associated project, or null |
 | `start_date` | string \| null | Floating local date `YYYY-MM-DD` when work is planned |
-| `start_time` | string \| null | Floating local time `HH:MM` for session start on `start_date` |
-| `end_time` | string \| null | Floating local time `HH:MM` for session end on `start_date` |
+| `start_time` | string \| null | Floating local time `HH:MM` when work starts on `start_date` |
 | `due_date` | string \| null | Floating local date `YYYY-MM-DD` for the deadline |
 | `due_time` | string \| null | Floating local time `HH:MM` for the deadline on `due_date` |
 | `priority` | string \| null | `low`, `medium`, or `high` |

@@ -44,7 +44,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Section | Contents |
 |---|---|
 | Overdue | Open tasks not done and `due_date` before today (date-based). From the due time on the due day the due label turns red, but the task stays in Today until the day ends ([LV-E9](#lv-e9)). Heading in red with the word and a count ("Overdue 2"), so colour isn't the only signal |
-| Today | Open tasks whose start date is today, or due date is today, or in progress (start date before today and due date after today), or start-only tasks whose start date has passed ([BR-24](../02-domain/business-rules.md#br-24)) |
+| Today | Open tasks whose start date is today, or due date is today, or in progress (start date before today and due date after today), or start-only tasks whose start date has passed ([BR-23](../02-domain/business-rules.md#br-23)) |
 | **No date ([Q20](../08-project/open-questions.md#q20))** | Open tasks with no start date and no due date, collapsed by default and showing its count. Without it, every undated task a note makes ("Buy milk") would only be visible under Projects. This section isn't part of the progress |
 | Completed | Tasks completed today, collapsed and showing its count. Caps at 5 tasks initially. If more than 5 completed tasks exist, a "Show all" (`list.show_all`) button allows expanding to see all completed tasks, which can then be toggled back via "Show less" (`list.show_less`). Reopening/undoing tasks replenishes visible slots from hidden tasks; once total completed tasks drop to 5 or fewer, the button automatically disappears |
 
@@ -53,7 +53,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - *Done* = the completed part of that total.
   - Completing an overdue task counts toward today.
 - **All done:** when nothing is open in Overdue or Today, `list.nothing_left` shows with the link `list.see_upcoming` and `list.encourage_one`.
-- **Sort within Overdue:** oldest due date first. **Within Today:** timed first by start time, then displayed priority ([BR-23](../02-domain/business-rules.md#br-23)), then by creation time. **Within No date:** priority, then newest first.
+- **Sort within Overdue:** oldest due date first. **Within Today:** timed first by start time, then priority (High → Low), then by creation time. **Within No date:** priority, then newest first.
 - **Midnight:** the lists recompute at local midnight while the app is open (a timer to the next midnight, re-armed on `visibilitychange`), and whenever the zone changes ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ### 2.2 Upcoming (LV-2)
@@ -69,9 +69,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - On its due date, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue).
 - **Filters** (chips, remembered per device):
   - **All:** all entries across the window.
-  - **Scheduled:** entries with a work session (`start_time`) on that day.
+  - **Scheduled:** entries with a start time (`start_time`).
   - **Due only:** due-date entries.
-- **Sort within a day:** same as Today (timed first by start time, then displayed priority, then created). Completed tasks aren't shown.
+- **Sort within a day:** same as Today (timed first by start time, then priority (High → Low), then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
 - **Empty:** empty days show "+ Add task"; if no tasks exist anywhere in the window, shows `list.upcoming_empty`.
 
@@ -105,14 +105,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Checkbox (44 px hit area)
   - Title (2 lines max, [UX-30](../01-product/ux-standards.md#ux-30))
   - Meta line:
-    - On its start day: `HH:MM – HH:MM · Due {date}` (or `HH:MM · Due {date}`)
+    - On its start day: `HH:MM · Due {date}`; same-day block: `HH:MM – HH:MM` (start – due time)
     - In between (in progress): `In progress · Due {when}`
     - On its due day: rendered in a dashed blue card with `Due HH:MM` in blue
     - Overdue rows: red
     - Start-only passed: `Planned {date} · HH:MM` in tertiary ink
     - In Overdue, Search and No date, the meta line starts with the due date (`Wed 21 Oct`)
     - Project dot and name · reminder icon · repeat icon
-  - Priority flag for High (danger) and Medium (warning), based on displayed priority ([BR-23](../02-domain/business-rules.md#br-23)). Low gets no flag
+  - Priority flag for High (danger) and Medium (warning). Low gets no flag
 - **Interaction:** tapping the row opens details. Tapping the checkbox completes it (TK). There are no swipe gestures, which avoids conflicts with the browser's back gesture.
 - **A row with a sync conflict** shows a small "Changed on another device" marker until opened (AP).
 
@@ -137,7 +137,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="lv-e7"></a>LV-E7 | A task matches in both title and notes | Listed once, ranked as a title match | T-LV-107 |
 | <a id="lv-e8"></a>LV-E8 | 5,000 tasks | Inbox, Upcoming and Search stay within read p95 ≤ 300 ms (PERF-05) | PERF-05 |
 | <a id="lv-e9"></a>LV-E9 | A task due today with its time already passed | Stays in Today, not Overdue. Overdue is by date only. Due label turns red from due time | T-LV-109 |
-| <a id="lv-e10"></a>LV-E10 | A scheduled task with no due date (start-only) | Start-only task has its session on the start date; passed start day rolls into Today as "Planned {date}" ([BR-24](../02-domain/business-rules.md#br-24)) | T-LV-110 |
+| <a id="lv-e10"></a>LV-E10 | A scheduled task with no due date (start-only) | Start-only task has its start time on the start date; passed start day rolls into Today as "Planned {date}" ([BR-23](../02-domain/business-rules.md#br-23)) | T-LV-110 |
 | <a id="lv-e11"></a>LV-E11 | Completing the last open task of today | Shows `list.nothing_left`. Focus moves to its heading so screen readers hear it | T-LV-111 |
 | <a id="lv-e12"></a>LV-E12 | The Upcoming filter leaves no results | `list.filter_empty` with a "Show all" link | T-LV-112 |
 

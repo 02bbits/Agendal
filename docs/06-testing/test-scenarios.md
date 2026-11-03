@@ -124,8 +124,8 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 
 ## <a id="ts-19"></a>TS-19 — Multi-day task across the week (TK-2, LV-1, LV-2)
 - **Given** today is Fri 23 Oct
-- **When** the user creates a task "Course project" with start date Sat 24 Oct, work session 10:00 – 12:00, and due date Wed 28 Oct 17:00
-- **Then** in Upcoming, it appears on Sat 24 Oct with its session "10:00 – 12:00 · Due Wed 28 Oct"
+- **When** the user creates a task "Course project" with start date Sat 24 Oct, start time 10:00, and due date Wed 28 Oct 17:00
+- **Then** in Upcoming, it appears on Sat 24 Oct with "10:00 · Due Wed 28 Oct"
 - **And** on Wed 28 Oct, it appears in a dashed blue card with "Due 17:00" in blue
 - **When** Saturday arrives, the task appears in Today
 - **When** Sunday through Tuesday pass, the task stays in Today with "In progress · Due Wed 28 Oct"

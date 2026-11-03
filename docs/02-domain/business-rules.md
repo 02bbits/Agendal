@@ -81,7 +81,7 @@ The first row that matches wins. Names longer than 34 characters are cut at a wo
 | ID | Rule | Ref |
 |---|---|---|
 | <a id="br-10"></a>BR-10 | Only a title is needed to create a task by hand | [NC-7](../03-modules/NC-note-capture.md#nc-7) |
-| <a id="br-11"></a>BR-11 | Start date must be on or before the due date when both exist: "Start can't be after the due date." On the same day, the session must end by the due time when both exist. A schedule's end must be later than its start: "End time must be later than the start time." | [TK-3](../03-modules/TK-tasks.md#tk-3) |
+| <a id="br-11"></a>BR-11 | Start (date and time) must be before due (date and time) when both exist: "Start can't be after the due date." | [TK-3](../03-modules/TK-tasks.md#tk-3) |
 | <a id="br-12"></a>BR-12 | A reminder fires at its offset from the start time; without a start time, from 09:00 on the start date; without a start date, from the due time; without a due time, from 09:00 on the due date | [TK-6](../03-modules/TK-tasks.md#tk-6) |
 | <a id="br-13"></a>BR-13 | Completing a repeating task creates the next one. Deleting one asks "This task only" or "This and all future" | [TK-4](../03-modules/TK-tasks.md#tk-4) |
 | <a id="br-14"></a>BR-14 | Deleting a task asks for confirmation, and the toast offers Undo | [TK-5](../03-modules/TK-tasks.md#tk-5) |
@@ -93,5 +93,4 @@ The first row that matches wins. Names longer than 34 characters are cut at a wo
 | <a id="br-20"></a>BR-20 | Inbox shows Overdue before Today | [LV-1](../03-modules/LV-lists-search.md#lv-1) |
 | <a id="br-21"></a>BR-21 | Offline conflicts resolve last-write-wins **per field** | [NF-6](../05-quality/nfr.md#nf-6) |
 | <a id="br-22"></a>BR-22 | Files up to 5 MB: text, Markdown, CSV, PDF, Word, photos. The file is discarded after text extraction | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
-| <a id="br-23"></a>BR-23 | Displayed priority is the higher of the chosen priority and Medium when the due date is tomorrow or today, and High when overdue. The stored priority never changes; sorting uses displayed priority | [TK-2](../03-modules/TK-tasks.md#tk-2), [LV-1](../03-modules/LV-lists-search.md#lv-1) |
-| <a id="br-24"></a>BR-24 | One task shows on several days (its start day, in Today while in progress, and its due day) but is never copied: completing it completes the single task | [TK-1](../03-modules/TK-tasks.md#tk-1), [LV-1](../03-modules/LV-lists-search.md#lv-1) |
+| <a id="br-23"></a>BR-23 | One task shows on several days (its start day, in Today while in progress, and its due day) but is never copied: completing it completes the single task | [TK-1](../03-modules/TK-tasks.md#tk-1), [LV-1](../03-modules/LV-lists-search.md#lv-1) |
