@@ -66,6 +66,7 @@ export function UpcomingClient() {
     try {
       const savedFilter = localStorage.getItem("agendal.upcoming.filter");
       if (savedFilter === "scheduled" || savedFilter === "due") {
+        /* eslint-disable-next-line react-hooks/set-state-in-effect */
         setFilter(savedFilter);
       }
       const savedMode = localStorage.getItem("agendal.upcoming.view_mode");

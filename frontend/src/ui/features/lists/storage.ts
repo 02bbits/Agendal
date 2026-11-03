@@ -54,6 +54,7 @@ export function useUpcomingPreferences(
     props.viewMode !== undefined ? props.viewMode : internalViewMode;
 
   useEffect(() => {
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
     setInternalFilter(readFilter());
     setInternalViewMode(readViewMode());
   }, []);
