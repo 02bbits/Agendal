@@ -50,6 +50,48 @@ export async function submitNote(
   }
 }
 
+/** What Undo all and its redo answer: the note as it is now, how many tasks conflict, or why not. */
+export type NoteActionOutcome =
+  { result: NoteResult } | { conflicts: number } | { error: CopyKey };
+
+/**
+ * `POST /notes/{id}/undo` and `/redo` (RV §7). A `409 note.undo_conflicts` isn't a failure: it
+ * asks the user first (RV §2.4). A network failure reads as "needs a connection".
+ */
+async function noteAction(
+  id: string,
+  action: "undo" | "redo",
+  body: object,
+): Promise<NoteActionOutcome> {
+  try {
+    const response = await api(`/notes/${encodeURIComponent(id)}/${action}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (response.status === 409) {
+      const data = await response
+        .clone()
+        .json()
+        .catch(() => null);
+      if (data?.error?.code === "note.undo_conflicts")
+        return { conflicts: data.error.tasks?.length ?? 1 };
+    }
+    const result = await handleResponse<NoteResult>(response);
+    rememberNote(result);
+    return { result };
+  } catch (error) {
+    if (!(error instanceof ApiRequestError))
+      return { error: "note.needs_connection" };
+    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+  }
+}
+
+export const undoNote = (id: string, confirmConflicts: boolean) =>
+  noteAction(id, "undo", { confirm_conflicts: confirmConflicts });
+
+export const redoNote = (id: string) => noteAction(id, "redo", {});
+
 // Results the user has just made, so the result screen opens at once instead of asking the
 // server again (RV §3: a skeleton only on a deep link)
 const recent = new Map<string, NoteResult>();

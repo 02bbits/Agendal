@@ -11,6 +11,8 @@ import {
   getNote,
   previewTaskApi,
   recallNote,
+  redoNote,
+  undoNote,
 } from "../../../lib/noteApi";
 import { useOffline } from "../../../lib/online";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
@@ -25,7 +27,7 @@ import {
   type Project,
   type Task,
 } from "../../../ui";
-import type { Navigate } from "../../../ui/features/shell/routes";
+import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
 
 export const SKELETON_DELAY_MS = 300;
 
@@ -78,7 +80,7 @@ async function load(id: string): Promise<Loaded> {
 }
 
 function ResultContainer({
-  result,
+  result: initial,
   gone,
   back,
   navigate,
@@ -100,16 +102,64 @@ function ResultContainer({
 }): ReactElement {
   const store = useTaskStore();
   const offline = useOffline();
+  const [result, setResult] = useState(initial);
+  const [conflicts, setConflicts] = useState(0);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
-  // Check this first (NU-5): Apply goes back to where the note was written, with a toast
+  // The note's tasks changed under the lists: Inbox, Upcoming and the sidebar load them again
+  const listsChanged = () =>
+    window.dispatchEvent(new CustomEvent("agendal:task-created"));
+  // The toast's Undo redoes the note while the server still allows it (RV-2, RV-E6)
+  const redo = async () => {
+    const outcome = await redoNote(result.note.id);
+    if ("result" in outcome) {
+      setResult(outcome.result);
+      listsChanged();
+    } else if ("error" in outcome) showToast(t(outcome.error));
+  };
+  const undo = async (confirmConflicts: boolean) => {
+    const outcome = await undoNote(result.note.id, confirmConflicts);
+    setConflicts("conflicts" in outcome ? outcome.conflicts : 0);
+    if ("error" in outcome) return showToast(t(outcome.error));
+    if (!("result" in outcome)) return;
+    setResult(outcome.result);
+    listsChanged();
+    showToast({
+      message: t("note.undone"),
+      actionLabel: t("common.undo"),
+      onAction: redo,
+    });
+  };
+  // Check this first (NU-5): Apply goes back to where the note was written. Its toast offers Undo,
+  // which undoes the whole note from there (RV-2). Tasks edited by hand since ask first, on the
+  // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
     const outcome = await confirmNote(result.note.id, "apply", edits);
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
-    showToast(tc("note.made", outcome.changes.length));
+    const id = outcome.note.id;
+    listsChanged();
+    showToast({
+      message: tc("note.made", outcome.changes.length),
+      actionLabel: t("common.undo"),
+      onAction: async () => {
+        const undone = await undoNote(id, false);
+        if ("conflicts" in undone) return navigate?.(ROUTES.note(id));
+        if ("error" in undone) return showToast(t(undone.error));
+        listsChanged();
+        showToast({
+          message: t("note.undone"),
+          actionLabel: t("common.undo"),
+          onAction: async () => {
+            const redone = await redoNote(id);
+            if ("error" in redone) showToast(t(redone.error));
+            else listsChanged();
+          },
+        });
+      },
+    });
     back();
   };
   // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
@@ -153,6 +203,9 @@ function ResultContainer({
         onApply={apply}
         onEdit={edit}
         busy={busy}
+        onUndo={undo}
+        conflicts={conflicts}
+        onCancelUndo={() => setConflicts(0)}
         offline={offline}
         onSetDue={(task, date) => store.update(task, { due_date: date })}
         onOpenTask={(task) => setOpenId(task.id)}

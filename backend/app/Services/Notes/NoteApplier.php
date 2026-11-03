@@ -19,8 +19,6 @@ use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
-use DateTimeImmutable;
-use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -32,7 +30,7 @@ use Illuminate\Validation\ValidationException;
  * @phpstan-import-type ValidatedPlan from PlanValidator
  * @phpstan-import-type TaskRow from CommandMatcher
  *
- * @phpstan-type AppliedChange array{kind: string, task_id: string, before: array<string, mixed>|null, label: string}
+ * @phpstan-type AppliedChange array{kind: string, task_id: string, before: array<string, mixed>|null, after: array<string, mixed>, label: string}
  */
 final class NoteApplier
 {
@@ -80,12 +78,12 @@ final class NoteApplier
                     'delete' => $this->delete($locked[$entry['task_id']]),
                 };
                 $label = $entry['label'] ?? $this->meta($task, $context);
-                $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'label' => $label];
+                $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'after' => $task->attributesToArray(), 'label' => $label];
                 $changes[] = $this->change($changeKind, $task, $label, $entry['ref']);
                 $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task, restoreDeleted: true) : null;
                 if ($next !== null) {
                     // TK-4: completing a repeating task creates its next occurrence; undo removes it too.
-                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'label' => $this->meta($next, $context)];
+                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'after' => $next->attributesToArray(), 'label' => $this->meta($next, $context)];
                     $changes[] = $this->change(ChangeKind::Created, $next, $this->meta($next, $context));
                 }
             }
@@ -210,7 +208,7 @@ final class NoteApplier
     /** @param array<string, mixed> $entry */
     private function update(Task $task, array $entry, string $timezone): Task
     {
-        $at = $this->afterLastWrite($task);
+        $at = $this->patcher->afterLastWrite($task);
         $fields = array_intersect_key($entry, array_flip(Task::PATCHABLE));
         if (($entry['done'] ?? false) === true) {
             $this->patcher->complete($task, $at);
@@ -224,26 +222,11 @@ final class NoteApplier
 
     private function delete(Task $task): Task
     {
-        $task->field_updated_at = array_replace($task->field_updated_at ?? [], ['deleted' => $this->afterLastWrite($task)]);
+        $task->field_updated_at = array_replace($task->field_updated_at ?? [], ['deleted' => $this->patcher->afterLastWrite($task)]);
         $task->save();
         $task->delete();
 
         return $task;
-    }
-
-    /**
-     * Last write wins per field (TK). A note is a server action on the locked current row, so it must win
-     * even when the task was written in the same second: one second after the newest field stamp, or now.
-     */
-    private function afterLastWrite(Task $task): string
-    {
-        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
-        foreach ($task->field_updated_at ?? [] as $stamp) {
-            $next = (new DateTimeImmutable((string) $stamp))->setTimezone(new DateTimeZone('UTC'))->modify('+1 second');
-            $at = max($at, $next);
-        }
-
-        return $at->format('Y-m-d\TH:i:s\Z');
     }
 
     /** @return array<string, mixed> the task as the plan validator compares it */

@@ -16,7 +16,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
 | <a id="nu-1"></a>NU-1 | Split a note into items and make one task per actionable item | Must | Items split on new lines, commas, semicolons, full stops and "then" ("rồi", "sau đó"); bullets are stripped |
-| <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
+| <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Start date, due date, time, due time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
 | <a id="nu-5"></a>NU-5 | Ask before applying changes | Must | Every note with at least one change shows "Check this first" with the planned changes; nothing is applied until Apply changes |
@@ -99,9 +99,10 @@ The business-rules table is the phrase list. The precise semantics:
 
 | Field | Rule |
 |---|---|
-| Due date | Weekdays (full or 3-letter) mean the next one ahead. Today counts only with *this* ([NU-E2](#nu-e2), [NU-E3](#nu-e3)). *next week* → the first day of next week ([NU-E10](#nu-e10)). *end of the week* → the last day of the week (Sunday, or Saturday when the week starts on Sunday). *end of the month* → its last day ([NU-E9](#nu-e9)). Explicit dates: `26 Oct`, `Oct 26`, `26/10`, `26/10/2026`. Numbers are day/month ([NU-E31](#nu-e31)). A date that has passed follows [NU-E4](#nu-e4). Two dates follow [NU-E6](#nu-e6) |
+| Start date | "from X to Y / từ X đến Y" → start date X, due date Y |
+| Due date | "by / before / due / hạn / trước X" → due date (time → due time); "on / vào X" and plain dates keep setting the due date. Weekdays (full or 3-letter) mean the next one ahead. Today counts only with *this* ([NU-E2](#nu-e2), [NU-E3](#nu-e3)). *next week* → the first day of next week ([NU-E10](#nu-e10)). *end of the week* → the last day of the week (Sunday, or Saturday when the week starts on Sunday). *end of the month* → its last day ([NU-E9](#nu-e9)). Explicit dates: `26 Oct`, `Oct 26`, `26/10`, `26/10/2026`. Numbers are day/month ([NU-E31](#nu-e31)). A date that has passed follows [NU-E4](#nu-e4). Two dates follow [NU-E6](#nu-e6) |
 | No date | Empty, unless a time or repeat is given: then today, or tomorrow if that time has already passed ([NU-E5](#nu-e5)). Day-bound words (*tonight*, *this evening*) always mean today ([NU-E1](#nu-e1)) |
-| Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). Ranges set both start and end ([NU-E30](#nu-e30)) |
+| Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). A time range on one day ("2–4pm Friday") → start Fri 14:00, due Fri 16:00 ([NU-E30](#nu-e30)) |
 | Priority | High words win over Low words ([NU-E24](#nu-e24)). Default: Medium if due today, otherwise Low. Content words that set High (*deadline, exam, quiz, submit*) stay in the title. Pure priority words (*urgent, asap, important, high/low priority, whenever, someday, maybe*) are removed |
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
 | Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
@@ -176,7 +177,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e3"></a>NU-E3 | *next \<weekday>* when it isn't today ("next friday" on a Wednesday) | The coming one (in 2 days), never the week after | T-NU-103 |
 | <a id="nu-e4"></a>NU-E4 | Explicit date that has passed ("26 Oct" on 27 Oct) | 30 days ago or less → keep it, and the task is overdue at once. Older → the same date next year | T-NU-104 · C-023, C-024 |
 | <a id="nu-e5"></a>NU-E5 | Time already passed, with no date word ("call mum 9am" at 10:00) | Tomorrow at that time | T-NU-105 · C-022 |
-| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | The date after *by / due / on / before* wins. Otherwise the later date. The other date phrase stays in the title | T-NU-106 |
+| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | One date marked as the start (*from, bắt đầu*) and one as the deadline (*by, due, hạn*) → start date and due date. Otherwise the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
 | <a id="nu-e7"></a>NU-E7 | Bare hour without am/pm ("at 2") | 1–6 → pm, 7–11 → am, 12 → 12:00, 13–23 → that hour | T-NU-107 · C-025 |
 | <a id="nu-e8"></a>NU-E8 | "every Monday" with no start date | The next Monday. Today if today is Monday and the time (if any) hasn't passed | T-NU-108 · C-004 |
 | <a id="nu-e9"></a>NU-E9 | "end of the month" on its last day, "end of the week" on the week's last day | Today | T-NU-109 · C-036 |
@@ -212,6 +213,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e39"></a>NU-E39 | HTML or script in the note | Stored as given. Shown as plain text everywhere | T-NU-139, SEC-21 |
 | <a id="nu-e40"></a>NU-E40 | Vietnamese typed without diacritics ("mai hop nhom 9h", "toi can mua sua") | Vietnamese is expected with diacritics, so no Vietnamese phrase matches. Handled like [NU-E28](#nu-e28): the title is kept as written, only numeric dates and times ("9h") are extracted, and the item is low confidence, so the LLM may read it | T-NU-140 · C-050 |
 | <a id="nu-e41"></a>NU-E41 | "rồi" at the end of an item ("bài tập xong rồi") | No split: "rồi" splits only when words follow it. "X xong rồi" is a complete command | T-NU-141 · C-046 |
+| <a id="nu-e42"></a>NU-E42 | Date range ("study Mon to Fri", "từ thứ 2 đến thứ 6") | Sets start date (Mon) and due date (Fri) | T-NU-142 |
 
 ## 5. Copy keys
 
@@ -354,7 +356,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-1](#nu-1) | Items split on new lines, commas, semicolons, full stops and "then" | T-NU-01 (newline), T-NU-02 (comma), T-NU-03 (semicolon), T-NU-04 (full stop), T-NU-05 ("then"). Corpus `split.*` |
 | [NU-1](#nu-1) | Bullets are stripped | T-NU-06, T-NU-120 |
 | [NU-1](#nu-1) | One task per actionable item | T-NU-07. Corpus count gate |
-| [NU-2](#nu-2) | Due date, time, priority, project, repeat and reminder set per the rules | T-NU-10 (every date phrase, data provider), T-NU-11 (time), T-NU-12 (priority), T-NU-13 (project), T-NU-14 (repeat), T-NU-15 (reminder), T-NU-16 (title and acronyms). Corpus field gates |
+| [NU-2](#nu-2) | Start date, due date, time, due time, priority, project, repeat and reminder set per the rules | T-NU-10 (every date phrase, data provider), T-NU-11 (time), T-NU-12 (priority), T-NU-13 (project), T-NU-14 (repeat), T-NU-15 (reminder), T-NU-16 (title and acronyms). Corpus field gates |
 | [NU-2](#nu-2) | Anything not found is left empty | T-NU-17 |
 | [NU-2](#nu-2) | Vietnamese phrases set the same fields | T-NU-18 (every row of the Vietnamese table, data provider) · C-044, C-045, C-051 |
 | [NU-3](#nu-3) | "done X" completes the matching task | T-NU-20 (all four complete phrasings) · C-016 |
@@ -376,4 +378,4 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | — | A replayed `client_id` returns the stored result | T-NU-72, SEC-13 |
 | — | The apply step is atomic | T-NU-73 (a failure injected after the 2nd task → nothing persisted) |
 | — | API contract: statuses and error codes in §7 | T-NU-80–86 (one per status code) |
-| — | Edge cases [NU-E1](#nu-e1)–[NU-E41](#nu-e41) | T-NU-101–141 (§4) |
+| — | Edge cases [NU-E1](#nu-e1)–[NU-E42](#nu-e42) | T-NU-101–142 (§4) |

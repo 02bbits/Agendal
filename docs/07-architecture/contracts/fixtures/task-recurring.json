@@ -1,9 +1,11 @@
 {
   "id": "019a1c00-0000-7000-8000-000000000202",
   "title": "Gym",
+  "start_date": "2026-10-31",
   "due_date": "2026-11-02",
   "start_time": "09:00",
   "end_time": null,
+  "due_time": null,
   "priority": "low",
   "project_id": null,
   "repeat": "weekly",
