@@ -44,7 +44,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 |---|---|
 | <a id="ux-30"></a>UX-30 | Task titles in rows: up to 2 lines, then an ellipsis. Full title in Task details and in the accessible name. |
 | <a id="ux-31"></a>UX-31 | Note excerpts on Notes cards: 2 lines. Note names: 34 characters, cut at a word boundary (business rules). |
-| <a id="ux-32"></a>UX-32 | Dates: Today, Tomorrow, Yesterday as words. Otherwise `Mon 26 Oct`, with the year only when it isn't the current year. Times: 24-hour `16:00` by default, or 12-hour `4:00 pm` when the user picks it ([AP-5](../03-modules/AP-app-platform.md#ap-5)). Ranges `16:00 – 17:00` ([NF-12](../05-quality/nfr.md#nf-12)). |
+| <a id="ux-32"></a>UX-32 | Dates: Today, Tomorrow, Yesterday as words. Otherwise `Mon 26 Oct`, with the year only when it isn't the current year. Times: 24-hour `16:00` by default, or 12-hour `4:00 pm` when the user picks it ([AP-5](../03-modules/AP-app-platform.md#ap-5)). Ranges `16:00 – 17:00` ([NF-12](../05-quality/nfr.md#nf-12)). Due labels: "Due 14:00", "Due Thu 19, 14:00", "Due today", "Due tomorrow". Multi-day states: "In progress", "Planned Sun 15". |
 | <a id="ux-33"></a>UX-33 | Counts use the singular for 1: "1 task", "2 tasks". The copy catalog has `_one` / `_other` forms for every count. |
 
 ## 5. Connectivity and updates
