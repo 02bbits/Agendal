@@ -7,3 +7,5 @@ export * from "./lists";
 export * from "./edit";
 export * from "./sync";
 export * from "./projects";
+export * from "./week";
+export * from "./newTask";

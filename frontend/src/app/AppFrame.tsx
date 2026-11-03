@@ -115,7 +115,10 @@ interface AppFrameValue {
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
   /** Opens the new task bottom sheet. */
-  openNewTask: () => void;
+  openNewTask: {
+    (opts?: { dueDate?: string }): void;
+    (event: unknown): void;
+  };
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
