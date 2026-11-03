@@ -34,7 +34,7 @@ it('plans skips, commands and tasks from one note', function () {
     expect(array_column($build->plan['skipped'], 'reason'))->toBe(['skip', 'no_change'])
         ->and(array_column($build->plan['update'], 'task_id'))->toBe(['a0000000-0000-4000-8000-000000000001'])
         ->and(array_column($build->plan['create'], 'title'))->toBe(['Buy milk, eggs'])
-        ->and($build->status)->toBe(PlanStatus::Done)
+        ->and($build->status)->toBe(PlanStatus::Confirm)
         ->and($build->name)->toBe('Buy milk, eggs + 1 more');
 });
 

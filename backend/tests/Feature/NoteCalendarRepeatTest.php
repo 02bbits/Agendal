@@ -16,6 +16,8 @@ beforeEach(function () {
     $clock->shouldReceive('time')->andReturn('22:11');
     $this->app->instance(ClockInterface::class, $clock);
     config(['notes.engine_budget_ms' => 60_000]);
+    // These exercise the applier: notes apply straight away, as with the old 5-change threshold. NoteConfirmTest covers Apply changes.
+    config(['notes.changes_to_confirm' => 5]);
     $this->actingAs(User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']));
 });
 

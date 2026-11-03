@@ -5,12 +5,15 @@ import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
-import { getNote, recallNote } from "../../../lib/noteApi";
+import { saveDraft } from "../../../lib/draft";
+import { confirmNote, getNote, recallNote } from "../../../lib/noteApi";
+import { useOffline } from "../../../lib/online";
 import { getTask, httpTaskApi } from "../../../lib/taskApi";
 import {
   NoteResultScreen,
   TaskStoreProvider,
   t,
+  tc,
   useTaskStore,
   type NoteResult,
   type Task,
@@ -31,8 +34,11 @@ interface Loaded {
   gone: ReadonlySet<string>;
 }
 
+// A `confirm` note's rows are a preview: none of their tasks exist yet
 const touched = (result: NoteResult) =>
-  result.changes.filter((change) => change.kind !== "deleted");
+  result.note.status === "confirm"
+    ? []
+    : result.changes.filter((change) => change.kind !== "deleted");
 
 /**
  * A result just made in this session is already here, so the note isn't asked for again. Each
@@ -63,14 +69,51 @@ function ResultContainer({
   back,
   navigate,
   weekStart,
+  showToast,
+  openNoteEditor,
 }: {
   result: NoteResult;
   gone: ReadonlySet<string>;
   back: () => void;
   navigate?: Navigate;
   weekStart: "mon" | "sun";
+  showToast: ReturnType<typeof useAppFrame>["showToast"];
+  openNoteEditor: () => void;
 }): ReactElement {
   const store = useTaskStore();
+  const offline = useOffline();
+  const [busy, setBusy] = useState(false);
+  // Check this first (NU-5): Apply goes back to where the note was written, with a toast
+  const apply = async () => {
+    setBusy(true);
+    const outcome = await confirmNote(result.note.id, "apply");
+    setBusy(false);
+    if ("error" in outcome)
+      return showToast(t(outcome.error, { request_id: "" }));
+    showToast(tc("note.made", outcome.changes.length));
+    back();
+  };
+  // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
+  // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
+  const edit = async () => {
+    setBusy(true);
+    const outcome = await confirmNote(result.note.id, "cancel");
+    if ("error" in outcome) {
+      setBusy(false);
+      return showToast(t(outcome.error, { request_id: "" }));
+    }
+    await saveDraft(result.note.text).catch(() => {});
+    let opened = false;
+    const open = () => {
+      if (opened) return;
+      opened = true;
+      window.removeEventListener("popstate", open);
+      openNoteEditor();
+    };
+    window.addEventListener("popstate", open);
+    setTimeout(open, 250);
+    back();
+  };
   const live = useMemo(
     () => ({
       ...Object.fromEntries(store.tasks.map((task) => [task.id, task])),
@@ -87,17 +130,21 @@ function ResultContainer({
       timeFormat={store.timeFormat}
       weekStart={weekStart}
       onDone={back}
+      onApply={apply}
+      onEdit={edit}
+      busy={busy}
+      offline={offline}
       onSetDue={(task, date) => store.update(task, { due_date: date })}
       navigate={navigate}
     />
   );
 }
 
-/** `/notes/{id}`: what a note did (RV-1). */
+/** `/notes/{id}`: what a note did (RV-1), or will do once applied (NU-5). */
 export default function NoteResultClient({
   id,
 }: ClientProps): ReactElement | null {
-  const { back, navigate, settings } = useAppFrame();
+  const { back, navigate, settings, showToast, openNoteEditor } = useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -190,6 +237,8 @@ export default function NoteResultClient({
         back={back}
         navigate={navigate}
         weekStart={settings.weekStart}
+        showToast={showToast}
+        openNoteEditor={openNoteEditor}
       />
     </TaskStoreProvider>
   );

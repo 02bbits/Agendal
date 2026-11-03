@@ -34,6 +34,13 @@ export interface NoteResultScreenProps {
   timeFormat: TimeFormat;
   weekStart: WeekStart;
   onDone: () => void;
+  /** Check this first (`confirm`): Apply changes, and Edit note (NU-5, WF-02). */
+  onApply?: () => void;
+  onEdit?: () => void;
+  /** Apply or Edit note is waiting on the server. */
+  busy?: boolean;
+  /** No connection: Apply and Edit note can't reach the server. */
+  offline?: boolean;
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
@@ -58,7 +65,10 @@ const LONG_QUOTE = 160;
 /**
  * Result screen (RV-1): what a note did. The name, the note quoted, and one row per created,
  * updated or deleted task. Created and updated rows open Task details; a created task with no
- * date offers When? chips. Undo all and Edit note come with IM-44 and IM-47.
+ * date offers When? chips. Undo all comes with IM-44.
+ *
+ * A `confirm` note shows the same rows as Check this first (NU-5): what applying will do. Nothing
+ * exists yet, so rows don't open, and the footer has Edit note and Apply changes.
  */
 export function NoteResultScreen({
   result,
@@ -68,6 +78,10 @@ export function NoteResultScreen({
   timeFormat,
   weekStart,
   onDone,
+  onApply,
+  onEdit,
+  busy = false,
+  offline = false,
   onSetDue,
   navigate,
 }: NoteResultScreenProps) {
@@ -85,14 +99,17 @@ export function NoteResultScreen({
   const created = count("created");
   const updated = count("updated");
   const deleted = count("deleted");
-  const overline = [
-    `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-    created > 0 && tc("note.made", created),
-    updated > 0 && t("note.overline_updated", { count: updated }),
-    deleted > 0 && t("note.overline_deleted", { count: deleted }),
-  ]
-    .filter(Boolean)
-    .join(" · ");
+  const confirming = note.status === "confirm";
+  const overline = confirming
+    ? t("note.confirm_title")
+    : [
+        `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
+        created > 0 && tc("note.made", created),
+        updated > 0 && t("note.overline_updated", { count: updated }),
+        deleted > 0 && t("note.overline_deleted", { count: deleted }),
+      ]
+        .filter(Boolean)
+        .join(" · ");
   const longQuote =
     note.text.length > LONG_QUOTE || note.text.split("\n").length > 4;
 
@@ -115,6 +132,11 @@ export function NoteResultScreen({
       >
         {nameOf(result)}
       </h1>
+      {confirming && (
+        <p className="mt-2 mb-0 text-callout text-ink-secondary">
+          {tc("note.confirm_body", changes.length)}
+        </p>
+      )}
       {note.source_file_name && (
         <p className="mt-2 mb-0 text-footnote text-ink-secondary">
           {t("note.from_file", { file_name: note.source_file_name })}
@@ -146,6 +168,7 @@ export function NoteResultScreen({
               key={`${change.kind}-${change.task.id}`}
               change={change}
               current={live[change.task.id]}
+              preview={confirming}
               today={today}
               weekStart={weekStart}
               onSetDue={onSetDue}
@@ -176,16 +199,46 @@ export function NoteResultScreen({
         </section>
       )}
 
-      {changes.length > 0 && (
+      {changes.length > 0 && !confirming && (
         <p className="mt-4 mb-0 text-footnote text-ink-secondary">
           {t("note.result_hint")}
         </p>
       )}
 
       <div className="sticky bottom-0 mt-6 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
-        <Button variant="primary" size="lg" fullWidth onClick={onDone}>
-          {t("common.done")}
-        </Button>
+        {confirming ? (
+          <>
+            {offline && (
+              <p className="mt-0 mb-3 text-footnote text-ink-secondary">
+                {t("note.needs_connection")}
+              </p>
+            )}
+            <div className="flex gap-3">
+              <Button
+                size="lg"
+                className="flex-1"
+                disabled={offline || busy}
+                onClick={onEdit}
+              >
+                {t("note.edit")}
+              </Button>
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                disabled={offline}
+                busy={busy}
+                onClick={onApply}
+              >
+                {t("note.apply")}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <Button variant="primary" size="lg" fullWidth onClick={onDone}>
+            {t("common.done")}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -194,6 +247,8 @@ export function NoteResultScreen({
 interface ChangeRowProps {
   change: NoteChange;
   current: Task | null | undefined;
+  /** Check this first: the change isn't made yet, so the row neither opens nor asks When? */
+  preview: boolean;
   today: string;
   weekStart: WeekStart;
   onSetDue: (task: Task, date: string) => void;
@@ -203,6 +258,7 @@ interface ChangeRowProps {
 function ChangeRow({
   change,
   current,
+  preview,
   today,
   weekStart,
   onSetDue,
@@ -213,7 +269,7 @@ function ChangeRow({
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
   const gone = current === null;
-  const opens = change.kind !== "deleted" && !gone;
+  const opens = change.kind !== "deleted" && !gone && !preview;
 
   // A date given from here (When? chip) shows in front of what the note said
   const meta = gone
@@ -227,7 +283,8 @@ function ChangeRow({
       ]
         .filter(Boolean)
         .join(" · ");
-  const askWhen = change.kind === "created" && !gone && !task.due_date;
+  const askWhen =
+    change.kind === "created" && !gone && !preview && !task.due_date;
 
   const body = (
     <>

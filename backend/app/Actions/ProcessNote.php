@@ -16,6 +16,7 @@ use App\Services\Notes\NoteApplier;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
 use App\Services\Notes\NoteSplitter;
+use App\Services\Notes\PlanValidator;
 use App\Services\Notes\TaskCandidates;
 use DateTimeZone;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +25,7 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
 
+/** @phpstan-import-type ValidatedPlan from PlanValidator */
 class ProcessNote
 {
     public function __construct(
@@ -99,9 +101,29 @@ class ProcessNote
                 $note->applied = $applied['applied'];
                 $note->plan = [...$build->plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
                 $note->save();
+            } elseif ($build->status === PlanStatus::Confirm) {
+                $note->plan = [...$build->plan, 'changes' => $this->preview($note, $build->plan)];
+                $note->save();
             }
 
             return ['note' => $note->refresh(), 'replay' => false];
         }, 3);
+    }
+
+    /**
+     * The rows Check this first shows (NU-5): the plan applied in a savepoint and rolled back, so nothing persists.
+     * ponytail: preview task ids differ from the ones apply makes; confirm rows don't link to tasks.
+     *
+     * @param  ValidatedPlan  $plan
+     * @return list<array<string, mixed>>
+     */
+    private function preview(Note $note, array $plan): array
+    {
+        DB::beginTransaction();
+        try {
+            return $this->applier->apply($note, $plan)['changes'];
+        } finally {
+            DB::rollBack();
+        }
     }
 }

@@ -275,3 +275,54 @@ describe("Note result (IM-43, RV-1)", () => {
     await expectAxeCleanInBothThemes();
   });
 });
+
+describe("Check this first (IM-45, NU-5)", () => {
+  const confirm = (changes: NoteChange[]) =>
+    resultOf(changes, [], { status: "confirm" });
+
+  it("T-RV-40: says nothing happens yet, lists the rows, and offers Edit note and Apply changes", () => {
+    open(confirm([sql, old]));
+    expect(screen.getByText(t("note.confirm_title"))).toBeTruthy();
+    expect(
+      screen.getByText(t("note.confirm_body_other", { count: 2 })),
+    ).toBeTruthy();
+    expect(screen.getByText("SQL quiz")).toBeTruthy();
+    expect(screen.getByRole("button", { name: t("note.edit") })).toBeTruthy();
+    expect(screen.getByRole("button", { name: t("note.apply") })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+  });
+
+  it("rows neither open nor ask When?: nothing exists yet", () => {
+    open(confirm([sql, ink]));
+    expect(screen.queryByRole("link")).toBeNull();
+    expect(
+      screen.queryByRole("group", { name: t("note.ask_when") }),
+    ).toBeNull();
+  });
+
+  it("Apply changes and Edit note hand over", async () => {
+    const onApply = vi.fn();
+    const onEdit = vi.fn();
+    open(confirm([sql]), { onApply, onEdit });
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.apply") }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: t("note.edit") }));
+    expect(onApply).toHaveBeenCalledOnce();
+    expect(onEdit).toHaveBeenCalledOnce();
+  });
+
+  it("offline: both are disabled and say why", () => {
+    open(confirm([sql]), { offline: true });
+    expect(screen.getByText(t("note.needs_connection"))).toBeTruthy();
+    for (const name of [t("note.apply"), t("note.edit")])
+      expect(
+        (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
+      ).toBe(true);
+  });
+
+  it("is axe clean in both themes", async () => {
+    open(confirm([sql, hci, old]));
+    await expectAxeCleanInBothThemes();
+  });
+});
