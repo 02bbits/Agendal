@@ -27,7 +27,7 @@ final class NoteUndo
     public const REDO_SECONDS = 10;
 
     /** Task columns a redo writes back; ids, owner, source and sync bookkeeping stay as they are. */
-    private const SNAPSHOT_SKIP = ['id', 'user_id', 'created_by', 'source_note_id', 'previous_occurrence_id', 'created_at', 'updated_at', 'change_seq', 'field_updated_at'];
+    private const SNAPSHOT_SKIP = ['id', 'user_id', 'created_by', 'source_note_id', 'previous_occurrence_id', 'created_at', 'updated_at', 'change_seq', 'field_updated_at', 'end_time'];
 
     public function __construct(
         private ClockInterface $clock,

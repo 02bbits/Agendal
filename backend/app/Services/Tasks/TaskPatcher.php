@@ -127,7 +127,7 @@ class TaskPatcher
             }
         }
 
-        // - R1: start_time set without start_date falls back to due_date or today
+        // - start_time set without start_date falls back to due_date or today
         $today = $this->clock->today($timezone);
         if (empty($merged['start_date']) && $merged['start_time'] !== null) {
             $merged['start_date'] = ! empty($merged['due_date']) ? $merged['due_date'] : $today;
@@ -138,7 +138,7 @@ class TaskPatcher
             }
         }
 
-        // - R2/R3: due_time or repeat without due_date falls back to today
+        // - due_time or repeat without due_date falls back to today
         if (DueDateFallback::needed(
             is_string($merged['due_date']) ? $merged['due_date'] : null,
             is_string($merged['due_time']) ? $merged['due_time'] : null,

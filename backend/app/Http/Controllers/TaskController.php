@@ -103,7 +103,7 @@ class TaskController extends Controller
             $dueDate = $today;
         }
 
-        // R4: Start before due
+        // Start before due (TK-3)
         if (! empty($startDate) && ! empty($dueDate)) {
             if ($startDate > $dueDate) {
                 throw ValidationException::withMessages([

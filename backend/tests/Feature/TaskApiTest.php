@@ -1147,3 +1147,19 @@ it('T-TK-118: reminder 15m with start_date 2026-10-26 09:00 and due later comput
     $remindAt = (new DateTimeImmutable($task->remind_at))->format('Y-m-d H:i:s');
     expect($remindAt)->toBe('2026-10-26 01:45:00');
 });
+
+it('a reminder with only a start time is allowed: the start date falls back to today', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => (string) Str::uuid(),
+        'title' => 'Start time only',
+        'start_time' => '09:00',
+        'reminder' => '15m',
+    ])->assertStatus(201);
+
+    expect($response->json('start_date'))->not->toBeNull()
+        ->and($response->json('due_date'))->toBeNull()
+        ->and($response->json('reminder'))->toBe('15m');
+    assertTaskSchema($response->json());
+});

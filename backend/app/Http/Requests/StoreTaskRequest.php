@@ -87,7 +87,7 @@ class StoreTaskRequest extends FormRequest
                     $validator->errors()->add('repeat_rule', 'The repeat rule must match the repeat frequency.');
                 }
 
-                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($startDate) && empty($dueDate)) {
+                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($startDate) && empty($dueDate) && $this->input('start_time') === null) {
                     if (! DueDateFallback::needed($dueDateStr, $dueTimeStr, $startDateStr, $repeatStr)) {
                         $validator->errors()->add('reminder', 'Add a date to set a reminder.');
                     }
