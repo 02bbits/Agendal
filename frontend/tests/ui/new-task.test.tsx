@@ -137,6 +137,44 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(sentPickBody?.due_date).toBe("2026-11-12");
   });
 
+  it("opens with initialDueDate, showing Pick date with 05/11/2026 and Add sends due_date (Section 7)", async () => {
+    let sentBody: CreateTaskBody | undefined;
+    const onCreate = vi.fn(async (body: CreateTaskBody) => {
+      sentBody = body;
+      return {} as Task;
+    });
+
+    const { sheet } = await renderSheet({
+      initialDueDate: "2026-11-05",
+      onCreate,
+    });
+    expect(radio("Due", "Pick date…").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+
+    const day = within(sheet).getByRole("spinbutton", { name: "Day" });
+    const month = within(sheet).getByRole("spinbutton", { name: "Month" });
+    const year = within(sheet).getByRole("spinbutton", { name: "Year" });
+    expect(day.textContent).toBe("05");
+    expect(month.textContent).toBe("11");
+    expect(year.textContent).toBe("2026");
+
+    await userEvent.type(within(sheet).getByLabelText("Title"), "Meet friend");
+    await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
+    expect(sentBody?.due_date).toBe("2026-11-05");
+  });
+
+  it("closing without typing does not confirm discard when initialDueDate is set (Section 7)", async () => {
+    const onClose = vi.fn();
+    const { sheet } = await renderSheet({
+      initialDueDate: "2026-11-05",
+      onClose,
+    });
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+    expect(onClose).toHaveBeenCalled();
+    expect(screen.queryByRole("dialog", { name: /discard/i })).toBeNull();
+  });
+
   it("cancelling Pick date… keeps the previous chip selected (NC-E16)", async () => {
     const { sheet } = await renderSheet();
     // Default is Today

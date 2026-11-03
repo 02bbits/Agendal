@@ -156,7 +156,9 @@ describe("Project detail page /projects/[id]", () => {
 
     // Open from a row (wide): router.push(?task=t-1)
     await userEvent.click(taskLink);
-    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1");
+    expect(router.push).toHaveBeenCalledWith("/projects/p-1?task=t-1", {
+      scroll: false,
+    });
 
     // Simulate URL update
     searchParams = new URLSearchParams("task=t-1");
@@ -230,7 +232,9 @@ describe("Project detail page /projects/[id]", () => {
     const task2Link = await screen.findByRole("link", { name: /Second Task/ });
     await userEvent.click(task2Link);
 
-    expect(router.replace).toHaveBeenCalledWith("/projects/p-1?task=t-2");
+    expect(router.replace).toHaveBeenCalledWith("/projects/p-1?task=t-2", {
+      scroll: false,
+    });
     expect(router.push).not.toHaveBeenCalled();
   });
 
@@ -262,7 +266,9 @@ describe("Project detail page /projects/[id]", () => {
 
     await userEvent.click(closeBtn);
 
-    expect(router.replace).toHaveBeenCalledWith("/projects/p-1");
+    expect(router.replace).toHaveBeenCalledWith("/projects/p-1", {
+      scroll: false,
+    });
     expect(router.back).not.toHaveBeenCalled();
   });
 

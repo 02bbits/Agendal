@@ -3,6 +3,7 @@ import { ApiRequestError } from "../../../../lib/apiError";
 import { today as getToday } from "../../../../lib/clock";
 import { uuidv7 } from "../../../../lib/uuid";
 import {
+  chipForDate,
   createBody,
   defaultPriority,
   defaultsFor,
@@ -16,22 +17,32 @@ import type { NewTaskSheetProps } from "./types";
 export function useNewTaskForm({
   pathname = "/",
   today,
+  initialDueDate,
   onCreate,
   onAdded,
   onClose,
 }: Pick<
   NewTaskSheetProps,
-  "pathname" | "today" | "onCreate" | "onAdded" | "onClose"
+  "pathname" | "today" | "initialDueDate" | "onCreate" | "onAdded" | "onClose"
 >) {
   const todayDate = today ?? getToday();
   const defaults = defaultsFor(pathname);
+  const initial = initialDueDate
+    ? chipForDate(initialDueDate, todayDate)
+    : null;
+  const startingDue = initial ? initial.chip : defaults.chip;
+  const startingPicked = initial ? initial.picked : "";
 
   const [title, setTitle] = useState("");
-  const [due, setDue] = useState<DueChip>(defaults.chip);
-  const [picked, setPicked] = useState("");
-  const initialDueDate = dueDateFor(defaults.chip, todayDate);
+  const [due, setDue] = useState<DueChip>(startingDue);
+  const [picked, setPicked] = useState(startingPicked);
+  const initialDueDateValue = dueDateFor(
+    startingDue,
+    todayDate,
+    startingPicked,
+  );
   const [priority, setPriority] = useState<Priority>(
-    defaultPriority(initialDueDate, todayDate),
+    defaultPriority(initialDueDateValue, todayDate),
   );
   const [priorityTouched, setPriorityTouched] = useState(false);
   const [projectId, setProjectId] = useState<string | null>(
@@ -42,15 +53,15 @@ export function useNewTaskForm({
   const [formError, setFormError] = useState<string | undefined>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const previousDueRef = useRef<DueChip>(defaults.chip);
+  const previousDueRef = useRef<DueChip>(startingDue);
   const idRef = useRef(uuidv7());
 
   const hasInput =
     title.length > 0 ||
-    due !== defaults.chip ||
+    due !== startingDue ||
     priorityTouched ||
     (projectId !== null && projectId !== (defaults.projectId ?? null)) ||
-    picked !== "";
+    picked !== startingPicked;
 
   const trimmedTitle = title.trim();
   const valid = trimmedTitle.length > 0 && (due !== "pick" || picked !== "");

@@ -46,6 +46,16 @@ export function TaskPanel({
     };
   }, []);
 
+  // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
+  // short of it instead of covering Clear and Delete (see AppShell)
+  useEffect(() => {
+    const root = document.documentElement;
+    root.dataset.taskPanel = "open";
+    return () => {
+      delete root.dataset.taskPanel;
+    };
+  }, []);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
       if (e.key === "Escape" && !e.defaultPrevented) {

@@ -16,6 +16,7 @@ import type { PickerVariant } from "./usePickerKeyboard";
 
 export interface DatePickerProps {
   label: string;
+  triggerLabel?: string;
   value?: string | null;
   onChange: (value: string) => void;
   weekStart?: WeekStart;
@@ -29,6 +30,7 @@ export interface DatePickerProps {
 
 export function DatePicker({
   label,
+  triggerLabel,
   value,
   onChange,
   weekStart = "mon",
@@ -66,7 +68,8 @@ export function DatePicker({
 
   const isScreen = variant === "screen" || variant === "row";
   const isIcon = variant === "icon";
-  const displayValue = value ? formatDay(value, todayStr) : label;
+  const displayValue =
+    triggerLabel ?? (value ? formatDay(value, todayStr) : label);
   const chips = [
     { k: "today", d: dueDateFor("today", todayStr)!, l: t("date.today") },
     {

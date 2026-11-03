@@ -1,5 +1,10 @@
-import { TabScreen } from "../TabScreen";
+import { Suspense } from "react";
+import { UpcomingClient } from "./UpcomingClient";
 
 export default function Page() {
-  return <TabScreen tab="upcoming" />;
+  return (
+    <Suspense fallback={null}>
+      <UpcomingClient />
+    </Suspense>
+  );
 }
