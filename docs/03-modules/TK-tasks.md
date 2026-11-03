@@ -47,35 +47,35 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.2 Task details and editing (TK-2, TK-3)
 
-- **Row order:** Project, Start date, Schedule (start – end, on the start date), Due date (date + optional time), Reminder, Repeat, Priority, Notes. Same chip and picker controls as today; flags stay priority only.
+- **Row order:** the screen shows Title, Description (notes), Priority, then the rows Project, Start date, Schedule, Due date, Reminder, Repeat. The same chip and picker controls as the other rows; flags stay priority only.
 - **Saving:** every field saves on change, or on blur for text. There is no Save button. Each save is a per-field patch ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)).
 - **Title:** 1–200 characters. Cleared and blurred → it goes back to the previous value with `task.title_required`.
 - **Project:** picker with No project, the user's projects and New project….
-- **Start date:** date picker with quick choices. Optional. Setting a start time with no start date sets the start date to the due date if there is one, else today (rule 3). Clearing the start date clears the session times (rule 4).
+- **Start date:** date picker with quick choices. Optional. Setting a start time with no start date sets the start date to the due date if there is one, else today. Clearing the start date clears the session times.
 - **Schedule:**
-  - Times (start and optional end) of a work session ON THE START DATE (was: on the due date).
-  - Times need their day: `start_time` and `end_time` need `start_date`. Setting a start time with no start date sets the start date to the due date if there is one, else today (rule 3).
+  - Times (start and optional end) of a work session on the start date.
+  - Times need their day: `start_time` and `end_time` need `start_date`. Setting a start time with no start date sets the start date to the due date if there is one, else today.
   - End is disabled until a start exists. Clearing the start clears the end. End must be later than start ([TK-3](#tk-3), `task.end_before_start`, DB `CHECK`).
-  - When start date and due date are the same day, the session must end by the due time when both exist (rule 2).
-  - Clearing the start date clears the session times (rule 4).
+  - When start date and due date are the same day, the session must end by the due time when both exist ([BR-11](../02-domain/business-rules.md#br-11)).
+  - Clearing the start date clears the session times.
 - **Due date:** date picker with quick choices, with optional time (`due_time`).
-  - Setting a due time with no due date sets the due date to today (rule 3).
-  - `start_date <= due_date` when both exist; otherwise shows `task.start_after_due` ("Start can't be after the due date.") and is not saved (rule 2, DB `CHECK`).
-  - Clearing the due date clears the due time (and the reminder only if it counted from the due date; rule 4). Clearing one date never clears the other date.
+  - Setting a due time with no due date sets the due date to today.
+  - `start_date <= due_date` when both exist; otherwise shows `task.start_after_due` ("Start can't be after the due date.") and is not saved ([BR-11](../02-domain/business-rules.md#br-11), DB `CHECK`).
+  - Clearing the due date clears the due time (and the reminder only if it counted from the due date). Clearing one date never clears the other date.
 - **Reminder:**
   - Options: None, 5, 15 or 30 minutes, 1 hour, 1 day before.
   - Disabled when there is neither a start date nor a due date.
-  - Offset counts from the start time; without one, from 09:00 on the start date; without a start date, from the due time; without a due time, from 09:00 on the due date ([BR-12](../02-domain/business-rules.md#br-12), rule 11).
+  - Offset counts from the start time; without one, from 09:00 on the start date; without a start date, from the due time; without a due time, from 09:00 on the due date ([BR-12](../02-domain/business-rules.md#br-12)).
   - A reminder time already passed shows `task.reminder_past`. It is still saved, and no notification is sent.
 - **Repeat:** Never, Daily, Weekly, Monthly, Yearly. Choosing a repeat with no dates sets the due date to today.
-- **Priority:** Low, Medium, High. Note on displayed priority: the displayed priority in lists reflects due-date urgency ([BR-23](../02-domain/business-rules.md#br-23), rule 12); Task details displays the chosen priority plus `task.priority_raised` ("Shown as {priority} · {reason}") when raised. Flags stay priority only.
+- **Priority:** Low, Medium, High. Note on displayed priority: the displayed priority in lists reflects due-date urgency ([BR-23](../02-domain/business-rules.md#br-23)); Task details displays the chosen priority plus `task.priority_raised` ("Shown as {priority} · {reason}") when raised. Flags stay priority only.
 - **Notes:** up to 5,000 characters, the box grows with the text.
 - **Assistant tasks:** an assistant-made task shows `task.created_by_assistant` with the link `task.from_note` ("From note: {name}"), which opens the note's result ([NU-7](NU-note-understanding.md#nu-7)).
 - **Footer:** "Created Mon 26 Oct · Edited Today 08:15" in footnote style.
 
 ### 2.3 Repeating tasks (TK-4)
 
-- **Next occurrence ([Q20](../08-project/open-questions.md#q20), rule 10):**
+- **Next occurrence ([Q20](../08-project/open-questions.md#q20)):**
   - Shifting: the next occurrence shifts start date and due date together by the period, keeping the gap between them and all times (`start_time`, `end_time`, `due_time`).
   - It comes from the **due date** (or start date if start only), not the completion date. It is the first date in the series **after the current date and on or after today**. Missed occurrences are skipped, so they never pile up as overdue.
   - Daily progress on a long task = Repeat daily until the due date (existing UNTIL support).
@@ -141,10 +141,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e14"></a>TK-E14 | Project picker "New project…" from details | PJ sheet, then back with it selected | T-TK-114 |
 | <a id="tk-e15"></a>TK-E15 | The yearly anchor is 29 Feb | 28 Feb in non-leap years. 29 Feb returns in leap years | T-TK-115 |
 | <a id="tk-e16"></a>TK-E16 | Title edited to the same text | No patch is sent | T-TK-116 |
-| <a id="tk-e17"></a>TK-E17 | Start date after due date (`start_date > due_date`) | Client rejects with `task.start_after_due`, server returns 422, DB `CHECK` prevents save (rule 2) | T-TK-117 |
-| <a id="tk-e18"></a>TK-E18 | Start and due date on same day with session end after due time | Client shows error, server returns 422 (rule 2) | T-TK-118 |
-| <a id="tk-e19"></a>TK-E19 | Due time passed on the due day (rule 6) | Due label turns red, but task stays in Today until the day ends | T-TK-119 |
-| <a id="tk-e20"></a>TK-E20 | Start-only task with passed start day (rule 7) | Never overdue; rolls into Today as "Planned {date}" with session times greyed | T-TK-120 |
+| <a id="tk-e17"></a>TK-E17 | Start date after due date (`start_date > due_date`) | Client rejects with `task.start_after_due`, server returns 422, DB `CHECK` prevents save ([BR-11](../02-domain/business-rules.md#br-11)) | T-TK-117 |
+| <a id="tk-e18"></a>TK-E18 | Start and due date on same day with session end after due time | Client shows error, server returns 422 ([BR-11](../02-domain/business-rules.md#br-11)) | T-TK-118 |
+| <a id="tk-e19"></a>TK-E19 | Due time passed on the due day | Due label turns red, but task stays in Today until the day ends ([LV-E9](LV-lists-search.md#lv-e9)) | T-TK-119 |
+| <a id="tk-e20"></a>TK-E20 | Start-only task with passed start day | Never overdue; rolls into Today as "Planned {date}" with session times greyed ([BR-24](../02-domain/business-rules.md#br-24)) | T-TK-120 |
 
 ## 5. Copy keys
 

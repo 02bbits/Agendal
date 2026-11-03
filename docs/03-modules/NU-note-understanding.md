@@ -178,7 +178,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e3"></a>NU-E3 | *next \<weekday>* when it isn't today ("next friday" on a Wednesday) | The coming one (in 2 days), never the week after | T-NU-103 |
 | <a id="nu-e4"></a>NU-E4 | Explicit date that has passed ("26 Oct" on 27 Oct) | 30 days ago or less → keep it, and the task is overdue at once. Older → the same date next year | T-NU-104 · C-023, C-024 |
 | <a id="nu-e5"></a>NU-E5 | Time already passed, with no date word ("call mum 9am" at 10:00) | Tomorrow at that time | T-NU-105 · C-022 |
-| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | Two dates with roles → start date and due date. Otherwise unchanged: the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
+| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | One date marked as the start (*from, bắt đầu*) and one as the deadline (*by, due, hạn*) → start date and due date. Otherwise the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
 | <a id="nu-e7"></a>NU-E7 | Bare hour without am/pm ("at 2") | 1–6 → pm, 7–11 → am, 12 → 12:00, 13–23 → that hour | T-NU-107 · C-025 |
 | <a id="nu-e8"></a>NU-E8 | "every Monday" with no start date | The next Monday. Today if today is Monday and the time (if any) hasn't passed | T-NU-108 · C-004 |
 | <a id="nu-e9"></a>NU-E9 | "end of the month" on its last day, "end of the week" on the week's last day | Today | T-NU-109 · C-036 |

@@ -6,7 +6,7 @@ Decisions the docs depend on. A closed question keeps its row, so links to it st
 
 | ID | Question | Notes |
 |---|---|---|
-| <a id="q22"></a>Q22 | Should multi-day tasks support a "Done for today" action to hide them from Today until tomorrow without completing? | Recorded for future consideration (rule 13); not decided for v1 |
+| <a id="q22"></a>Q22 | Should multi-day tasks support a "Done for today" action to hide them from Today until tomorrow without completing? | Recorded for future consideration; not decided for v1 |
 
 ## Closed
 
