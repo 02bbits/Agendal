@@ -16,8 +16,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
 | <a id="tk-1"></a>TK-1 | Complete a task | Must | Tapping the checkbox completes it, updates progress and shows a toast with Undo |
-| <a id="tk-2"></a>TK-2 | Edit every field of a task | Must | Title, schedule (start–end), due date, reminder (None; 5, 15 or 30 minutes; 1 hour; 1 day before), repeat (Never, Daily, Weekly, Monthly, Yearly), priority (Low, Medium, High), project and notes |
-| <a id="tk-3"></a>TK-3 | Validate the schedule | Must | An end before the start shows "End time must be later than the start time." |
+| <a id="tk-2"></a>TK-2 | Edit every field of a task | Must | Title, start date, schedule (start–end on start date), due date, due time, reminder (None; 5, 15 or 30 minutes; 1 hour; 1 day before), repeat (Never, Daily, Weekly, Monthly, Yearly), priority (Low, Medium, High), project and notes |
+| <a id="tk-3"></a>TK-3 | Validate dates and schedule | Must | Start date must be on or before due date ("Start can't be after the due date."); on the same day, the session must end by the due time; end time must be later than start time ("End time must be later than the start time.") |
 | <a id="tk-4"></a>TK-4 | Repeat tasks | Must | Completing a repeating task creates the next one; deleting one asks "This task only" or "This and all future" |
 | <a id="tk-5"></a>TK-5 | Delete a task safely | Must | Delete asks for confirmation and the toast offers Undo |
 | <a id="tk-6"></a>TK-6 | Remind before a task | Should | A notification fires at the chosen offset from the start time, or from 09:00 on the due date when there is no time |
@@ -47,32 +47,42 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.2 Task details and editing (TK-2, TK-3)
 
+- **Row order:** Project, Start date, Schedule (start – end, on the start date), Due date (date + optional time), Reminder, Repeat, Priority, Notes. Same chip and picker controls as today; flags stay priority only.
 - **Saving:** every field saves on change, or on blur for text. There is no Save button. Each save is a per-field patch ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)).
 - **Title:** 1–200 characters. Cleared and blurred → it goes back to the previous value with `task.title_required`.
+- **Project:** picker with No project, the user's projects and New project….
+- **Start date:** date picker with quick choices. Optional. Setting a start time with no start date sets the start date to the due date if there is one, else today (rule 3). Clearing the start date clears the session times (rule 4).
 - **Schedule:**
-  - Start and end are times on the due date (data model). Setting a start with no due date sets the due date to today.
-  - End is disabled until a start exists. Clearing the start clears the end.
-  - An end not after the start shows `task.end_before_start` and isn't saved ([TK-3](#tk-3), DB `CHECK`).
-- **Due date:** native date input with Clear. Clearing the date also clears the start, end and reminder, after a toast with Undo, because those fields depend on the date.
+  - Times (start and optional end) of a work session ON THE START DATE (was: on the due date).
+  - Times need their day: `start_time` and `end_time` need `start_date`. Setting a start time with no start date sets the start date to the due date if there is one, else today (rule 3).
+  - End is disabled until a start exists. Clearing the start clears the end. End must be later than start ([TK-3](#tk-3), `task.end_before_start`, DB `CHECK`).
+  - When start date and due date are the same day, the session must end by the due time when both exist (rule 2).
+  - Clearing the start date clears the session times (rule 4).
+- **Due date:** date picker with quick choices, with optional time (`due_time`).
+  - Setting a due time with no due date sets the due date to today (rule 3).
+  - `start_date <= due_date` when both exist; otherwise shows `task.start_after_due` ("Start can't be after the due date.") and is not saved (rule 2, DB `CHECK`).
+  - Clearing the due date clears the due time (and the reminder only if it counted from the due date; rule 4). Clearing one date never clears the other date.
 - **Reminder:**
   - Options: None, 5, 15 or 30 minutes, 1 hour, 1 day before.
-  - Disabled with `task.reminder_needs_date` when there is no due date.
-  - With a start time, the offset counts from the start. Without one, it counts from 09:00 on the due date ([BR-12](../02-domain/business-rules.md#br-12)).
+  - Disabled when there is neither a start date nor a due date.
+  - Offset counts from the start time; without one, from 09:00 on the start date; without a start date, from the due time; without a due time, from 09:00 on the due date ([BR-12](../02-domain/business-rules.md#br-12), rule 11).
   - A reminder time already passed shows `task.reminder_past`. It is still saved, and no notification is sent.
-- **Repeat:** Never, Daily, Weekly, Monthly, Yearly. Choosing a repeat when there's no due date sets the due date to today.
-- **Priority:** Low, Medium, High. **Project:** picker with No project, the user's projects and New project…. **Notes:** up to 5,000 characters, the box grows with the text.
+- **Repeat:** Never, Daily, Weekly, Monthly, Yearly. Choosing a repeat with no dates sets the due date to today.
+- **Priority:** Low, Medium, High. Note on displayed priority: the displayed priority in lists reflects due-date urgency ([BR-23](../02-domain/business-rules.md#br-23), rule 12); Task details displays the chosen priority plus `task.priority_raised` ("Shown as {priority} · {reason}") when raised. Flags stay priority only.
+- **Notes:** up to 5,000 characters, the box grows with the text.
 - **Assistant tasks:** an assistant-made task shows `task.created_by_assistant` with the link `task.from_note` ("From note: {name}"), which opens the note's result ([NU-7](NU-note-understanding.md#nu-7)).
 - **Footer:** "Created Mon 26 Oct · Edited Today 08:15" in footnote style.
 
 ### 2.3 Repeating tasks (TK-4)
 
-- **Next occurrence ([Q20](../08-project/open-questions.md#q20)):**
-  - It comes from the **due date**, not the completion date.
-  - It is the first date in the series **after the current due date and on or after today**. Missed occurrences are skipped, so they never pile up as overdue.
-- **Anchor:** each series keeps `repeat_anchor`, its first due date.
+- **Next occurrence ([Q20](../08-project/open-questions.md#q20), rule 10):**
+  - Shifting: the next occurrence shifts start date and due date together by the period, keeping the gap between them and all times (`start_time`, `end_time`, `due_time`).
+  - It comes from the **due date** (or start date if start only), not the completion date. It is the first date in the series **after the current date and on or after today**. Missed occurrences are skipped, so they never pile up as overdue.
+  - Daily progress on a long task = Repeat daily until the due date (existing UNTIL support).
+- **Anchor:** each series keeps `repeat_anchor`, its first start date when there is one, else the due date.
   - Enum-only monthly schedules use the anchor's day, capped at the month's last day: 31 Jan → 28 Feb → 31 Mar.
   - Enum-only yearly schedules on 29 Feb use 28 Feb in non-leap years.
-- **What the next occurrence copies:** title, project, priority, start and end times, reminder offset, repeat frequency/rule, notes, anchor and `created_by`. It sets `previous_occurrence_id` (used by RV undo).
+- **What the next occurrence copies:** title, project, priority, shifted start date, shifted due date, start and end times, due time, reminder offset, repeat frequency/rule, notes, anchor and `created_by`. It sets `previous_occurrence_id` (used by RV undo).
 - **Delete** asks `task.repeat_scope_title`:
   - **This task only:** deletes this occurrence and creates the next one, so the series continues.
   - **This and all future:** deletes this occurrence. No future ones exist yet, so the series ends.
@@ -131,10 +141,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e14"></a>TK-E14 | Project picker "New project…" from details | PJ sheet, then back with it selected | T-TK-114 |
 | <a id="tk-e15"></a>TK-E15 | The yearly anchor is 29 Feb | 28 Feb in non-leap years. 29 Feb returns in leap years | T-TK-115 |
 | <a id="tk-e16"></a>TK-E16 | Title edited to the same text | No patch is sent | T-TK-116 |
+| <a id="tk-e17"></a>TK-E17 | Start date after due date (`start_date > due_date`) | Client rejects with `task.start_after_due`, server returns 422, DB `CHECK` prevents save (rule 2) | T-TK-117 |
+| <a id="tk-e18"></a>TK-E18 | Start and due date on same day with session end after due time | Client shows error, server returns 422 (rule 2) | T-TK-118 |
+| <a id="tk-e19"></a>TK-E19 | Due time passed on the due day (rule 6) | Due label turns red, but task stays in Today until the day ends | T-TK-119 |
+| <a id="tk-e20"></a>TK-E20 | Start-only task with passed start day (rule 7) | Never overdue; rolls into Today as "Planned {date}" with session times greyed | T-TK-120 |
 
 ## 5. Copy keys
 
-`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`.
+`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`, `task.priority_raised`.
 
 ## 6. Accessibility
 
@@ -149,9 +163,9 @@ Task IDs are **UUID v7, generated by the client**, so tasks can be created offli
 
 | Endpoint | Request | Success | Errors |
 |---|---|---|---|
-| `POST /tasks` | `{id, title, due_date?, start_time?, end_time?, priority?, project_id?, reminder?, repeat?, repeat_rule?, notes?}` | `201` task. A replay of a known `id` → `200` | `422` field errors, `task.limit`. `404` for someone else's `project_id` |
+| `POST /tasks` | `{id, title, start_date?, due_date?, start_time?, end_time?, due_time?, priority?, project_id?, reminder?, repeat?, repeat_rule?, notes?}` | `201` task. A replay of a known `id` → `200` | `422` field errors, `task.start_after_due`, `task.limit`. `404` for someone else's `project_id` |
 | `GET /tasks/{id}` | — | `200` | `404` |
-| `PATCH /tasks/{id}` | Changed fields, plus `at` per field ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)) | `200` task | `422`, `404` |
+| `PATCH /tasks/{id}` | Changed fields (including `start_date`, `due_time`), plus `at` per field ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)) | `200` task | `422` field errors, `task.start_after_due`, `404` |
 | `DELETE /tasks/{id}?scope=one\|future` | — | `204` | `404`. `422` if `scope` is missing on a repeating task |
 | `POST /tasks/{id}/complete` | `{at}` | `200 {task, next?}`; add/merge the generated `next` by id | `404`, `422` field errors |
 | `POST /tasks/{id}/reopen` | `{at}` | `200 {task, next?}`; remove the withdrawn `next` by id | `404`, `422` field errors or `task.limit` |
@@ -161,7 +175,7 @@ Task IDs are **UUID v7, generated by the client**, so tasks can be created offli
 
 Offline edits use `POST /sync/patches` ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)/005) with the same field rules.
 
-Task responses expose nullable `repeat_rule` and read-only `repeat_anchor` alongside the frequency enum `repeat`; older embedded note snapshots may omit them. The frontend formats the structured fields. The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) specifies RRULE limits, write/clear semantics, completion/Undo, and the distinction between calendar skipping and legacy month-end clamping. Examples and machine-readable shapes live in [contracts](../07-architecture/contracts/schemas/task.schema.json).
+Task responses expose nullable `start_date`, `due_time`, `repeat_rule` and read-only `repeat_anchor` alongside the frequency enum `repeat`; older embedded note snapshots may omit them. The frontend formats the structured fields. The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) specifies RRULE limits, write/clear semantics, completion/Undo, and the distinction between calendar skipping and legacy month-end clamping. Examples and machine-readable shapes live in [contracts](../07-architecture/contracts/schemas/task.schema.json).
 
 ## 8. Data, validation and authorization
 
@@ -170,9 +184,12 @@ Task responses expose nullable `repeat_rule` and read-only `repeat_anchor` along
   - Title 1–200, notes ≤ 5,000
   - Enums
   - `end_time > start_time` (also a DB `CHECK`)
-  - A reminder or repeat needs a `due_date`
+  - `start_date <= due_date` when both exist (422 `task.start_after_due`, DB `CHECK (start_date <= due_date)`)
+  - When on the same day, the session must end by `due_time` when both exist (422)
+  - Times need their day: `start_time`/`end_time` need `start_date`; `due_time` needs `due_date`
+  - A reminder needs a `start_date` or `due_date`; repeat needs a `due_date` (or start date)
   - `project_id` belongs to the user
-- **Task PATCH field allow-list:** title, due_date, start_time, end_time, priority, reminder, repeat, repeat_rule, notes, project_id, plus `at`. Completion/deletion use their lifecycle endpoints. `repeat_anchor`, `previous_occurrence_id`, `user_id`, `created_by` and `source_note_id` are never client-writable ([SC-10](../07-architecture/security.md#sc-10), SEC-15). A non-null rule must match the merged frequency; COUNT and UNTIL are exclusive. A winning frequency-only patch clears the custom rule.
+- **Task PATCH field allow-list:** title, start_date, due_date, start_time, end_time, due_time, priority, reminder, repeat, repeat_rule, notes, project_id, plus `at`. Completion/deletion use their lifecycle endpoints. `repeat_anchor`, `previous_occurrence_id`, `user_id`, `created_by` and `source_note_id` are never client-writable ([SC-10](../07-architecture/security.md#sc-10), SEC-15). A non-null rule must match the merged frequency; COUNT and UNTIL are exclusive. A winning frequency-only patch clears the custom rule.
 - **Next occurrence:** created in the same transaction that sets `done = true`. `previous_occurrence_id` is unique, so a concurrent second complete can't create a second one ([TK-E7](#tk-e7)).
 - **Ownership:** every route is scoped by `user_id`, and someone else's task returns `404` ([authorization matrix](../07-architecture/security.md#authorization-matrix)).
 
@@ -196,11 +213,11 @@ Task responses expose nullable `repeat_rule` and read-only `repeat_anchor` along
 | Req | Acceptance criterion | Tests |
 |---|---|---|
 | [TK-1](#tk-1) | Tapping the checkbox completes it, updates progress and shows a toast with Undo | T-TK-01 (component), T-TK-02 (E2E [WF-06](../04-workflows/WF-06-complete-a-task.md)), T-TK-03 (Undo) |
-| [TK-2](#tk-2) | Every field is editable: title, schedule, due, reminder options, repeat options, priority, project, notes | T-TK-10 (one test per field, every option), T-TK-11 (patch per field) |
-| [TK-3](#tk-3) | An end before the start shows "End time must be later than the start time." | T-TK-20 (client), T-TK-21 (API `422`), T-TK-22 (DB `CHECK`) |
+| [TK-2](#tk-2) | Every field is editable: title, start date, schedule, due date, due time, reminder options, repeat options, priority, project, notes | T-TK-10 (one test per field, every option), T-TK-11 (patch per field) |
+| [TK-3](#tk-3) | Start date on or before due date ("Start can't be after the due date."); same day session ends by due time; end after start ("End time must be later than the start time.") | T-TK-20 (client), T-TK-21 (API `422`), T-TK-22 (DB `CHECK`) |
 | [TK-4](#tk-4) | Completing a repeating task creates the next one | T-TK-30 (each repeat type, with the anchor), T-TK-101–103, T-TK-115 |
 | [TK-4](#tk-4) | Deleting one asks "This task only" or "This and all future" | T-TK-31, T-TK-105 |
 | [TK-5](#tk-5) | Delete asks for confirmation and the toast offers Undo | T-TK-40, T-TK-41 (restore) |
 | [TK-6](#tk-6) | A notification fires at the offset from the start time, or from 09:00 on the due date | T-TK-50 (`remind_at` math with injected clock and zone), T-TK-51 (scheduler sends once), T-TK-52 (E2E push with a mocked push service) |
-| — | Edge cases [TK-E1](#tk-e1)–[TK-E16](#tk-e16) | T-TK-101–116 |
+| — | Edge cases [TK-E1](#tk-e1)–[TK-E20](#tk-e20) | T-TK-101–120 |
 | — | Accessibility | A11Y-40–43 |
