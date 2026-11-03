@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
@@ -44,8 +44,14 @@ const result: NoteResult = {
 };
 
 /** The server: the note, and each task by id (a missing one answers 404). */
-function serve(tasks: Record<string, unknown>, note: () => Response) {
+function serve(
+  tasks: Record<string, unknown>,
+  note: () => Response,
+  actions: Record<string, (body: unknown) => Response> = {},
+) {
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    const action = actions[url];
+    if (action) return action(JSON.parse(String(init?.body ?? "{}")));
     if (url === "/api/v1/me") return json(200, { id: 1, email: "u@test.com" });
     if (url === "/api/v1/notes/n1") return note();
     const id = url.match(/^\/api\/v1\/tasks\/(.+)$/)?.[1];
@@ -217,6 +223,109 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(router.replace).toHaveBeenCalledWith("/notes");
   });
+
+  describe("Undo all (IM-44, RV-2)", () => {
+    const undone: NoteResult = {
+      ...result,
+      note: { ...result.note, status: "undone" },
+      redo_until: "2026-10-23T08:12:11+07:00",
+    };
+    const undoUrl = "/api/v1/notes/n1/undo";
+    const redoUrl = "/api/v1/notes/n1/redo";
+
+    it("T-RV-11: Undo all marks the note Undone and the toast's Undo redoes it", async () => {
+      rememberNote(result);
+      serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result), {
+        [undoUrl]: () => json(200, undone),
+        [redoUrl]: () => json(200, result),
+      });
+      await open();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: t("note.undo_all") }),
+      );
+      expect(await screen.findByText(/Undone/)).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: t("note.undo_all") }),
+      ).toBeNull();
+      expect(screen.queryByRole("link", { name: /SQL quiz/ })).toBeNull();
+      expect(JSON.parse(String(calls("POST", undoUrl)[0]![1].body))).toEqual({
+        confirm_conflicts: false,
+      });
+
+      await userEvent.click(
+        within(screen.getByText(t("note.undone")).closest(".alert")!).getByRole(
+          "button",
+          { name: t("common.undo") },
+        ),
+      );
+      expect(
+        await screen.findByRole("link", { name: /SQL quiz/ }),
+      ).toBeTruthy();
+      expect(calls("POST", redoUrl)).toHaveLength(1);
+    });
+
+    it("RV-E1: edited tasks ask first, Cancel keeps the note, Undo all sends the confirmation", async () => {
+      rememberNote(result);
+      let conflicted = true;
+      serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result), {
+        [undoUrl]: (body) =>
+          conflicted &&
+          !(body as { confirm_conflicts: boolean }).confirm_conflicts
+            ? json(409, {
+                error: {
+                  code: "note.undo_conflicts",
+                  tasks: [{ id: "t-sql", title: "SQL quiz" }],
+                },
+              })
+            : json(200, undone),
+      });
+      await open();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: t("note.undo_all") }),
+      );
+      const dialog = await screen.findByRole("alertdialog");
+      expect(
+        within(dialog).getByText(t("note.undo_conflict_title")),
+      ).toBeTruthy();
+      await userEvent.click(
+        within(dialog).getByRole("button", { name: t("common.cancel") }),
+      );
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect(screen.queryByText(/Undone/)).toBeNull();
+
+      await userEvent.click(
+        screen.getByRole("button", { name: t("note.undo_all") }),
+      );
+      await userEvent.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: t("note.undo_all"),
+        }),
+      );
+      expect(await screen.findByText(/Undone/)).toBeTruthy();
+      conflicted = false;
+      expect(calls("POST", undoUrl)).toHaveLength(3);
+    });
+
+    it("a refused undo says why and leaves the note done", async () => {
+      rememberNote(result);
+      serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result), {
+        [undoUrl]: () => json(409, { error: { code: "note.undo_expired" } }),
+      });
+      await open();
+
+      await userEvent.click(
+        await screen.findByRole("button", { name: t("note.undo_all") }),
+      );
+      expect(
+        (await screen.findAllByText(t("note.undo_expired"))).length,
+      ).toBeGreaterThan(0);
+      expect(
+        screen.getByRole("button", { name: t("note.undo_all") }),
+      ).toBeTruthy();
+    });
+  });
 });
 
 describe("Check this first /notes/[id] (IM-45)", () => {
@@ -259,6 +368,66 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(
       await screen.findByText(t("note.made_other", { count: 2 })),
     ).toBeTruthy();
+  });
+
+  // The server's answer to the toast's undo and redo
+  function serveUndo(undo: Response) {
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/notes/n1/undo") return undo.clone();
+      if (url === "/api/v1/notes/n1/redo") return json(200, result);
+      return base(url, init);
+    });
+  }
+
+  it("RV-2: the apply toast's Undo undoes the note from the list, and offers redo", async () => {
+    serveConfirm();
+    serveUndo(
+      json(200, { ...result, note: { ...result.note, status: "undone" } }),
+    );
+    const refetched = vi.fn();
+    window.addEventListener("agendal:task-created", refetched);
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.undo") }),
+    );
+
+    expect(await screen.findByText(t("note.undone"))).toBeTruthy();
+    expect(calls("POST", "/api/v1/notes/n1/undo")).toHaveLength(1);
+    expect(refetched).toHaveBeenCalledOnce();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.undo") }),
+    );
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/redo")).toHaveLength(1),
+    );
+    expect(refetched).toHaveBeenCalledTimes(2);
+    window.removeEventListener("agendal:task-created", refetched);
+  });
+
+  it("RV §2.4: tasks edited since send the toast's Undo to the note, which asks first", async () => {
+    serveConfirm();
+    serveUndo(
+      json(409, {
+        error: {
+          code: "note.undo_conflicts",
+          tasks: [{ id: "t-sql", title: "SQL quiz" }],
+        },
+      }),
+    );
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.undo") }),
+    );
+
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/notes/n1"));
   });
 
   it("Edit note keeps the note and reopens the editor", async () => {

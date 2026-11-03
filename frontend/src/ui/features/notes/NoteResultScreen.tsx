@@ -2,6 +2,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
+import { Dialog } from "../../components/Dialog";
 import { PencilIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
@@ -10,6 +11,7 @@ import {
   formatDay,
   formatTime,
   startOfWeek,
+  undoExpired,
 } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type {
@@ -39,10 +41,15 @@ export interface NoteResultScreenProps {
   onEdit?: () => void;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
-  /** No connection: Apply and Edit note can't reach the server. */
+  /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
   offline?: boolean;
   /** Check this first: a row opens Task details on the planned task. */
   onOpenTask?: (task: Task) => void;
+  /** Undo all (RV-2). `true` once the user has confirmed the conflict dialog. */
+  onUndo?: (confirmConflicts: boolean) => void;
+  /** How many created tasks were edited since: shows the confirm dialog (RV §2.4). 0 = none */
+  conflicts?: number;
+  onCancelUndo?: () => void;
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
@@ -67,7 +74,7 @@ const LONG_QUOTE = 160;
 /**
  * Result screen (RV-1): what a note did. The name, the note quoted, and one row per created,
  * updated or deleted task. Created and updated rows open Task details; a created task with no
- * date offers When? chips. Undo all comes with IM-44.
+ * date offers When? chips. Undo all (IM-44) reverses the note; Edit note comes with IM-47.
  *
  * A `confirm` note shows the same rows as Check this first (NU-5): what applying will do. A row
  * opens Task details on the planned task, and the footer has Edit note and Apply changes.
@@ -85,6 +92,9 @@ export function NoteResultScreen({
   busy = false,
   offline = false,
   onOpenTask,
+  onUndo,
+  conflicts = 0,
+  onCancelUndo,
   onSetDue,
   navigate,
 }: NoteResultScreenProps) {
@@ -103,13 +113,21 @@ export function NoteResultScreen({
   const updated = count("updated");
   const deleted = count("deleted");
   const confirming = note.status === "confirm";
+  const undone = note.status === "undone";
+  // RV-E2: after 30 days the note stays, but Undo all is gone
+  const expired = undoExpired(written.date, today);
   const overline = confirming
     ? t("note.confirm_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-        created > 0 && tc("note.made", created),
-        updated > 0 && t("note.overline_updated", { count: updated }),
-        deleted > 0 && t("note.overline_deleted", { count: deleted }),
+        undone && t("note.undone_label"),
+        !undone && created > 0 && tc("note.made", created),
+        !undone &&
+          updated > 0 &&
+          t("note.overline_updated", { count: updated }),
+        !undone &&
+          deleted > 0 &&
+          t("note.overline_deleted", { count: deleted }),
       ]
         .filter(Boolean)
         .join(" · ");
@@ -172,6 +190,7 @@ export function NoteResultScreen({
               change={change}
               current={live[change.task.id]}
               onOpen={confirming ? onOpenTask : undefined}
+              undone={undone}
               today={today}
               timeFormat={timeFormat}
               weekStart={weekStart}
@@ -209,7 +228,7 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <div className="sticky bottom-0 mt-6 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="sticky bottom-0 mt-6 flex flex-col gap-2 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         {confirming ? (
           <>
             {offline && (
@@ -239,11 +258,54 @@ export function NoteResultScreen({
             </div>
           </>
         ) : (
-          <Button variant="primary" size="lg" fullWidth onClick={onDone}>
-            {t("common.done")}
-          </Button>
+          <>
+            {note.status === "done" &&
+              changes.length > 0 &&
+              (expired ? (
+                <p className="m-0 text-center text-footnote text-ink-secondary">
+                  {t("note.undo_expired")}
+                </p>
+              ) : (
+                <>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    fullWidth
+                    disabled={offline}
+                    onClick={() => onUndo?.(false)}
+                  >
+                    {t("note.undo_all")}
+                  </Button>
+                  {offline && (
+                    <p className="m-0 text-center text-footnote text-ink-secondary">
+                      {t("note.needs_connection")}
+                    </p>
+                  )}
+                </>
+              ))}
+            <Button variant="primary" size="lg" fullWidth onClick={onDone}>
+              {t("common.done")}
+            </Button>
+          </>
         )}
       </div>
+
+      <Dialog
+        open={conflicts > 0}
+        title={t("note.undo_conflict_title")}
+        description={t("note.undo_conflict_body", { count: conflicts })}
+        onClose={() => onCancelUndo?.()}
+        actions={
+          <>
+            <Button variant="destructive" onClick={() => onUndo?.(true)}>
+              {t("note.undo_all")}
+            </Button>
+            <Button variant="outline" onClick={() => onCancelUndo?.()}>
+              {t("common.cancel")}
+            </Button>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -253,6 +315,8 @@ interface ChangeRowProps {
   current: Task | null | undefined;
   /** Check this first: the task isn't made yet, so the row opens it here instead of its page. */
   onOpen?: (task: Task) => void;
+  /** The note was undone: rows stay as a record and stop opening (RV §2.1) */
+  undone: boolean;
   today: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
@@ -264,6 +328,7 @@ function ChangeRow({
   change,
   current,
   onOpen,
+  undone,
   today,
   timeFormat,
   weekStart,
@@ -275,7 +340,7 @@ function ChangeRow({
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
   const gone = current === null;
-  const opens = change.kind !== "deleted" && !gone;
+  const opens = change.kind !== "deleted" && !gone && !undone;
 
   // Rescheduled on Check this first: the new date and time replace what the note said
   const moved =
@@ -301,7 +366,8 @@ function ChangeRow({
         ]
           .filter(Boolean)
           .join(" · ");
-  const askWhen = change.kind === "created" && !gone && !task.due_date;
+  const askWhen =
+    change.kind === "created" && !gone && !undone && !task.due_date;
 
   const body = (
     <>
@@ -347,7 +413,7 @@ function ChangeRow({
         <div
           className={cx(
             "flex min-h-[52px] items-start gap-3 px-3.5 py-3",
-            gone && "opacity-60",
+            (gone || undone) && "opacity-60",
           )}
         >
           {body}

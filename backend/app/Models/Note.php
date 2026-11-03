@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property array<string, mixed>|null $plan
  * @property list<array<string, mixed>> $applied
+ * @property array{redo_until: string, changes: list<array{task_id: string, before: array<string, mixed>, after: array<string, mixed>}>}|null $undo_log  Undo all's record while redo is possible (RV §8)
  * @property CarbonImmutable $written_at
  * @property CarbonImmutable $processed_at
  */

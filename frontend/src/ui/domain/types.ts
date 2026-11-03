@@ -90,4 +90,6 @@ export interface NoteResult {
   };
   changes: NoteChange[];
   skipped: SkippedItem[];
+  /** Only after Undo all: redo is allowed until then (RV §7) */
+  redo_until?: string;
 }
