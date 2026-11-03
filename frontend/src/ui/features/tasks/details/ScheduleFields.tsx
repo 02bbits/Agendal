@@ -18,6 +18,17 @@ export interface ScheduleFieldsProps {
   variant?: "panel" | "screen";
 }
 
+/** On the same day the start time must be before the due time (TK-3). */
+function timeError(
+  sameDay: boolean,
+  start: string | null,
+  due: string | null,
+): CopyKey | null {
+  return sameDay && start && due && start >= due
+    ? "task.start_after_due"
+    : null;
+}
+
 export function ScheduleFields({
   startTime,
   dueTime,
@@ -29,9 +40,7 @@ export function ScheduleFields({
   const [start, setStart] = useState(startTime ?? "");
   const [due, setDue] = useState(dueTime ?? "");
   const [error, setError] = useState<CopyKey | null>(() =>
-    sameDay && startTime && dueTime && startTime >= dueTime
-      ? "task.start_after_due"
-      : null,
+    timeError(sameDay, startTime, dueTime),
   );
   const [prevStart, setPrevStart] = useState(startTime);
   const [prevDue, setPrevDue] = useState(dueTime);
@@ -47,11 +56,7 @@ export function ScheduleFields({
     setPrevSameDay(sameDay);
     setStart(startTime ?? "");
     setDue(dueTime ?? "");
-    setError(
-      sameDay && startTime && dueTime && startTime >= dueTime
-        ? "task.start_after_due"
-        : null,
-    );
+    setError(timeError(sameDay, startTime, dueTime));
   }
 
   const handleStartChange = (nextStart: string) => {
@@ -61,10 +66,7 @@ export function ScheduleFields({
       onSave({ start_time: null, due_time: due || null });
       return;
     }
-    const err: CopyKey | null =
-      sameDay && nextStart && due && nextStart >= due
-        ? "task.start_after_due"
-        : null;
+    const err = timeError(sameDay, nextStart, due || null);
     setError(err);
     if (!err) {
       onSave({ start_time: nextStart, due_time: due || null });
@@ -78,10 +80,7 @@ export function ScheduleFields({
       onSave({ start_time: start || null, due_time: null });
       return;
     }
-    const err: CopyKey | null =
-      sameDay && start && nextDue && start >= nextDue
-        ? "task.start_after_due"
-        : null;
+    const err = timeError(sameDay, start || null, nextDue);
     setError(err);
     if (!err) {
       onSave({ start_time: start || null, due_time: nextDue });
