@@ -33,6 +33,11 @@ it('previews only uncertain items through the selected transport', function (str
         expect(array_column($input['items'], 'text'))->toBe(['toi can mua sua']);
         if (! $native) {
             expect($request['provider'])->toBe(['require_parameters' => true, 'data_collection' => 'deny']);
+        } else {
+            expect($request->data())->not->toHaveKeys(['provider', 'reasoning'])
+                ->and($request['chat_template_kwargs'])->toBe(['enable_thinking' => false])
+                ->and($request['stream'])->toBeFalse()
+                ->and($request->hasHeader('Authorization', 'Bearer test-nvidia'))->toBeTrue();
         }
 
         return true;
@@ -58,14 +63,6 @@ it('retains an honestly labelled rules fallback when the selected provider fails
         ->and($result['build']->plan['create'])->toBe([])
         ->and($result['build']->plan['skipped'][0]['text'])->toBe('toi can mua sua')
         ->and($result['build']->itemOutcomes['i1']['reason'])->toBe('connection_failed_or_timeout');
-});
-
-it('adapts the actual native request body without OpenRouter-specific fields', function () {
-    $request = new GuzzleHttp\Psr7\Request('POST', 'https://integrate.api.nvidia.com/v1/chat/completions', [],
-        json_encode(['model' => 'test/model', 'provider' => ['data_collection' => 'deny'], 'reasoning' => ['enabled' => false]]));
-    $adapted = json_decode((string) NoteLlmPreview::nativeRequest($request)->getBody(), true);
-    expect($adapted)->not->toHaveKeys(['provider', 'reasoning'])
-        ->and($adapted['chat_template_kwargs'])->toBe(['enable_thinking' => false]);
 });
 
 it('does not expose credentials in selectable profile metadata', function () {

@@ -54,6 +54,9 @@ final class OpenRouterFallback
         if (! config('note_llm.enabled')) {
             return $this->failed($rules, $text, $context, $openTasks, 'disabled');
         }
+        if (! in_array(config('note_llm.provider'), ['openrouter', 'nvidia'], true)) {
+            return $this->failed($rules, $text, $context, $openTasks, 'not_configured');
+        }
         if (! config('note_llm.key') || ! config('note_llm.model')) {
             return $this->failed($rules, $text, $context, $openTasks, 'not_configured');
         }
@@ -244,6 +247,11 @@ final class OpenRouterFallback
         $reasoning = config('note_llm.reasoning_enabled');
         if ($reasoning !== null && $reasoning !== '') {
             $body['reasoning'] = ['enabled' => (bool) $reasoning];
+        }
+        if (config('note_llm.provider') === 'nvidia') {
+            unset($body['provider'], $body['reasoning']);
+            $body['chat_template_kwargs'] = ['enable_thinking' => false];
+            $body['stream'] = false;
         }
 
         return $body;

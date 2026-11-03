@@ -8,14 +8,11 @@ use App\Services\Notes\NoteBuild;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\OpenRouterFallback;
 use Dotenv\Dotenv;
-use GuzzleHttp\Psr7\Utils;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
-use Psr\Http\Message\RequestInterface;
 
 /** Local preview transport only: the production fallback still owns schema, routing and validation. */
 final class NoteLlmPreview
@@ -68,14 +65,12 @@ final class NoteLlmPreview
         }
         $native = $selected['provider'] === 'nvidia';
         config(['cache.default' => 'array', 'note_llm.enabled' => true, 'note_llm.model' => $model,
+            'note_llm.provider' => $selected['provider'],
             'note_llm.prompt_version' => 'note-plan-v6', 'note_llm.reasoning_enabled' => false,
             'note_llm.timeout_seconds' => max(1, min(30, $timeout)),
             'note_llm.url' => $native ? 'https://integrate.api.nvidia.com/v1/chat/completions' : 'https://openrouter.ai/api/v1/chat/completions',
             'note_llm.key' => $this->settings[$native ? 'NVIDIA_API_KEY' : 'OPENROUTER_API_KEY'],
         ]);
-        if ($native) {
-            Http::globalRequestMiddleware(self::nativeRequest(...));
-        }
         $http = [];
         $sentAt = null;
         Event::listen(RequestSending::class, function () use (&$sentAt): void {
@@ -95,16 +90,5 @@ final class NoteLlmPreview
         $build = app(OpenRouterFallback::class)->improve($rules, $text, $context, $tasks, 0);
 
         return ['build' => $build, 'http' => $http, 'provider' => $selected['provider'], 'model' => $model];
-    }
-
-    public static function nativeRequest(RequestInterface $request): RequestInterface
-    {
-        $body = json_decode((string) $request->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        unset($body['provider'], $body['reasoning']);
-        $body['chat_template_kwargs'] = ['enable_thinking' => false];
-        $body['stream'] = false;
-        $json = json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-
-        return $request->withBody(Utils::streamFor($json))->withHeader('Content-Length', (string) strlen($json));
     }
 }

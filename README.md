@@ -20,6 +20,40 @@ The first start installs Composer and npm packages, creates `backend/.env` with 
 
 Run commands inside the containers, for example `docker compose exec api php artisan test` or `docker compose exec web npm test`. The API container runs as UID 1000 by default; if yours differs, `export UID GID` first.
 
+### NVIDIA fallback for team testing (IM-38)
+
+The main app and manual preview both support the NVIDIA hosted API; the model runs remotely, with no local GPU required. Copy `backend/.env.example` to `backend/.env` on a fresh checkout (keep an existing `.env` and update the entries below instead). Add your own NVIDIA API key and enable fallback:
+
+```dotenv
+NOTE_LLM_ENABLED=true
+NOTE_LLM_PROVIDER=nvidia
+NVIDIA_API_KEY=your_key_here
+NOTE_LLM_MODEL=nvidia/nemotron-3.5-super-vl-120b-a12b
+NOTE_LLM_TIMEOUT_SECONDS=20
+NOTE_LLM_PROMPT_VERSION=note-plan-v6
+```
+
+The example already includes the provider, model, timeout and prompt. Never commit `.env` or share a key in the PR. `OPENROUTER_API_KEY` is not needed for NVIDIA. Requests go to `https://integrate.api.nvidia.com/v1/chat/completions`; thinking is disabled. `NOTE_LLM_URL` optionally overrides the endpoint. NVIDIA usage is subject to your account's quota and data handling terms; the OpenRouter data-collection routing option does not apply to NVIDIA direct.
+
+Start with `docker compose up -d`, then wait for API health before signing in:
+
+```bash
+docker compose ps
+docker compose logs -f api web
+```
+
+The first boot can take several minutes to install dependencies. When `api` is healthy and Next.js reports ready, open http://localhost:3000 and sign in with `example@gmail.com` / `password`. If changing `.env` while the app is already running, run `docker compose exec api php artisan config:clear` and `docker compose restart api queue`. The 20-second timeout is a manual-testing setting, not evidence of meeting the production latency target. Calls are capped at 20 per user per day by default.
+
+For the standalone preview, without database writes, run this from `backend/` after `composer install`:
+
+```bash
+php -S localhost:8091 tests/Manual/try.php
+```
+
+Open http://localhost:8091, choose **Rules + LLM**, **NVIDIA · Nemotron Super**, and a 20-second timeout. Each submit shows the final plan, the original rules preview, field sources and HTTP diagnostics. The preview isolates app budgets, but still consumes provider quota. The standalone server is local-only and is not a deployment entry point.
+
+To use OpenRouter instead, set `NOTE_LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, a compatible `NOTE_LLM_MODEL` and your desired timeout; clear config and restart the API/queue. Installations without `NOTE_LLM_PROVIDER` retain OpenRouter as the default. To turn fallback off, set `NOTE_LLM_ENABLED=false`; uncertain writes wait for clarification rather than applying provisional results.
+
 ### Without Docker for the app
 
 PHP 8.4+ with `pdo_pgsql`, `intl` and `mbstring`, Composer, Node 20+. Start only the services with `docker compose up -d db mail`, set up once with `cd backend && composer setup && php artisan db:seed` and `cd frontend && npm install && cp .env.example .env.local`, then run `composer run dev` in `backend/` and `npm run dev` in `frontend/`.

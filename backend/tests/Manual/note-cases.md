@@ -144,3 +144,8 @@ done: Pay rent
 ## Câu dài và phức tạp
 
 Xem [70 lượt thử mở rộng](complex-note-cases.md): khoảng thời gian bằng chữ, hoán đổi vị trí metadata, danh sách có ngày đứng đầu, câu có ngoại lệ và các đoạn trộn nhiều task/lệnh.
+
+## Giới hạn còn mở khi test NVIDIA (2026-11-03)
+
+- Với mốc `2026-11-03T10:00`, câu `NGÀY mốt tôi phaỉ đi công chứng nhưng tối nay tôi phải xong giấy tờ` phải giữ hai việc: công chứng ngày 05/11 và xong giấy tờ tối 03/11. Lượt thử thật hiện chỉ tạo `xong giấy tờ` vào 05/11 lúc 20:00: splitter chưa tách hai vế, nên field authority ghép lịch khác vế. Đây là lỗi còn mở, không phải ca đã pass; đổi model không sửa được ranh giới đầu vào/schema một proposal cho mỗi ref.
+- `Hôm nay trời đẹp, mình thấy vui vì đã gặp lại bạn cũ.` không tạo task trong lượt thử thật, nhưng trạng thái là `followup`. API lưu nội dung note; UI chưa có hành động lưu ghi chú riêng để bỏ qua engine. Không coi follow-up này là một flow ghi chú hoàn chỉnh.

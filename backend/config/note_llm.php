@@ -6,12 +6,17 @@ return [
     // Kill switch: false keeps the app on rules only.
     'enabled' => env('NOTE_LLM_ENABLED', false),
 
-    'key' => env('OPENROUTER_API_KEY'),
+    // Existing installations keep OpenRouter; .env.example selects NVIDIA for team testing.
+    'provider' => env('NOTE_LLM_PROVIDER', 'openrouter'),
+
+    'key' => env('NOTE_LLM_PROVIDER', 'openrouter') === 'nvidia' ? env('NVIDIA_API_KEY') : env('OPENROUTER_API_KEY'),
 
     // Must support structured outputs; changes must keep the corpus gates.
     'model' => env('NOTE_LLM_MODEL'),
 
-    'url' => env('NOTE_LLM_URL', 'https://openrouter.ai/api/v1/chat/completions'),
+    'url' => env('NOTE_LLM_URL', env('NOTE_LLM_PROVIDER', 'openrouter') === 'nvidia'
+        ? 'https://integrate.api.nvidia.com/v1/chat/completions'
+        : 'https://openrouter.ai/api/v1/chat/completions'),
 
     // Seconds per note; on timeout confident rules remain, while uncertain writes wait (rules_fallback).
     'timeout_seconds' => (float) env('NOTE_LLM_TIMEOUT_SECONDS', 1.5),

@@ -17,15 +17,12 @@ use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
 use App\Services\Notes\OpenRouterFallback;
 use Dotenv\Dotenv;
-use GuzzleHttp\Psr7\Utils;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;
 use Illuminate\Http\Client\Events\ResponseReceived;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Event;
-use Illuminate\Support\Facades\Http;
-use Psr\Http\Message\RequestInterface;
 
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
@@ -39,28 +36,22 @@ if (isset($options['prompt'])) {
     }
     config(['note_llm.prompt_version' => $options['prompt']]);
 }
-$provider = $options['provider'] ?? 'openrouter';
+$provider = $options['provider'] ?? config('note_llm.provider');
 if (! in_array($provider, ['openrouter', 'nvidia'], true)) {
     fwrite(STDERR, "Unknown live test provider.\n");
     exit(1);
 }
+config(['note_llm.provider' => $provider]);
 if ($provider === 'nvidia') {
     // Read the workspace file explicitly: an inherited Windows variable may contain an older key.
     $workspaceEnv = Dotenv::parse((string) file_get_contents(base_path('.env')));
     $key = array_key_exists('key-stdin', $options) ? trim((string) stream_get_contents(STDIN)) : (string) ($workspaceEnv['NVIDIA_API_KEY'] ?? '');
     config(['note_llm.key' => $key, 'note_llm.url' => 'https://integrate.api.nvidia.com/v1/chat/completions',
         'note_llm.model' => 'nvidia/nemotron-3.5-super-vl-120b-a12b']);
-    // Test transport only: retain the app's prompt/schema/validation, translating OpenRouter-only options.
-    Http::globalRequestMiddleware(function (RequestInterface $request): RequestInterface {
-        $body = json_decode((string) $request->getBody(), true, flags: JSON_THROW_ON_ERROR);
-        $reasoning = $body['reasoning']['enabled'] ?? false;
-        unset($body['provider'], $body['reasoning']);
-        $body['chat_template_kwargs'] = ['enable_thinking' => $reasoning];
-        $body['stream'] = false;
-        $json = json_encode($body, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
-
-        return $request->withBody(Utils::streamFor($json))->withHeader('Content-Length', (string) strlen($json));
-    });
+} elseif (isset($options['provider'])) {
+    $workspaceEnv = Dotenv::parse((string) file_get_contents(base_path('.env')));
+    config(['note_llm.key' => $workspaceEnv['OPENROUTER_API_KEY'] ?? '',
+        'note_llm.url' => 'https://openrouter.ai/api/v1/chat/completions']);
 }
 if (isset($options['timeout'])) {
     config(['note_llm.timeout_seconds' => max(0.1, min(30, (float) $options['timeout']))]);

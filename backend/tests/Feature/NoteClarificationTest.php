@@ -5,6 +5,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Tests\Support\FrozenClock;
@@ -82,16 +83,17 @@ it('never applies provisional low-confidence writes while fallback is disabled',
     $this->getJson('/api/v1/notes/'.$result->json('note.id'))->assertOk()->assertJson($result->json());
 });
 
-it('persists trusted schedule fields and defaults while accepting a cleaned model title', function () {
+it('persists trusted schedule fields and defaults while accepting a cleaned model title', function (string $provider, string $url) {
     app()->instance(ClockInterface::class, new FrozenClock('2026-11-03T10:00:00+07:00'));
     config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model', 'note_llm.prompt_version' => 'note-plan-v6']);
+    config(['note_llm.provider' => $provider, 'note_llm.url' => $url]);
     $response = json_decode(file_get_contents(__DIR__.'/../Fixtures/note-llm-response.json'), true, flags: JSON_THROW_ON_ERROR);
     $template = json_decode($response['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR)['items'][0];
     $response['choices'][0]['message']['content'] = json_encode(['items' => [[...$template,
         'title' => 'Đi chơi', 'due_date' => '2026-11-03', 'start_time' => '07:00', 'priority' => 'medium', 'reminder' => 'none',
     ]]]);
     Http::preventStrayRequests();
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake([$url => Http::response($response)]);
     $this->postJson('/api/v1/notes', [...$this->payload, 'text' => 'Mai tao phải đi chơi 7 giờ', 'written_at' => '2026-11-03T10:00:00+07:00'])
         ->assertCreated()->assertJsonPath('note.status', 'done')
         ->assertJsonPath('changes.0.task.title', 'Đi chơi')->assertJsonPath('changes.0.task.due_date', '2026-11-04')
@@ -99,7 +101,20 @@ it('persists trusted schedule fields and defaults while accepting a cleaned mode
         ->assertJsonPath('changes.0.task.priority', 'low')
         ->assertJsonPath('processing.0.source', 'mixed')->assertJsonPath('processing.0.field_sources.due_date', 'rules');
     expect(Task::count())->toBe(1);
-});
+    Http::assertSent(function (Request $request) use ($provider): bool {
+        if ($provider === 'nvidia') {
+            expect($request->data())->not->toHaveKeys(['provider', 'reasoning'])
+                ->and($request['chat_template_kwargs'])->toBe(['enable_thinking' => false]);
+        } else {
+            expect($request['provider']['data_collection'])->toBe('deny');
+        }
+
+        return true;
+    });
+})->with([
+    ['openrouter', 'https://openrouter.ai/api/v1/chat/completions'],
+    ['nvidia', 'https://integrate.api.nvidia.com/v1/chat/completions'],
+]);
 
 it('rejects a different answer after the note has already applied its changes', function () {
     $first = $this->postJson('/api/v1/notes', [...$this->payload, 'text' => 'buy milk'])->assertCreated();
