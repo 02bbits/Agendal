@@ -30,7 +30,7 @@ export function UpcomingWeekNav({
           aria-label={t("list.prev_week")}
           disabled={prevDisabled}
           onClick={onPrev}
-          className="focus-ring inline-flex size-8 items-center justify-center rounded-full border-0 bg-transparent text-ink-secondary transition-colors hover:text-ink disabled:cursor-not-allowed disabled:opacity-40"
+          className="focus-ring inline-flex size-8 items-center justify-center rounded-full border-0 bg-transparent text-ink-secondary transition-colors hover:text-ink disabled:cursor-default disabled:opacity-40"
         >
           <ChevronLeftIcon size={16} />
         </button>

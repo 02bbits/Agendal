@@ -40,7 +40,7 @@ export function UpcomingDayStrip({
             className={cx(
               "focus-ring relative flex flex-col items-center justify-center rounded-xl border-0 bg-transparent py-1.5 transition-colors",
               isPast
-                ? "cursor-not-allowed opacity-50"
+                ? "cursor-default opacity-50"
                 : "cursor-pointer hover:bg-surface-hover/50",
             )}
           >
