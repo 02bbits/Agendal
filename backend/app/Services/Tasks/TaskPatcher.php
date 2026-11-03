@@ -127,32 +127,14 @@ class TaskPatcher
             }
         }
 
-        // - start_time set without start_date falls back to due_date or today
-        $today = $this->clock->today($timezone);
-        if (empty($merged['start_date']) && $merged['start_time'] !== null) {
-            $merged['start_date'] = ! empty($merged['due_date']) ? $merged['due_date'] : $today;
-            if (array_key_exists('start_time', $effectiveAtMap)) {
-                $fieldUpdatedAt['start_date'] = $effectiveAtMap['start_time']->format('Y-m-d\TH:i:s\Z');
-            } else {
-                $fieldUpdatedAt['start_date'] = $this->resolveEffectiveAt(null)->format('Y-m-d\TH:i:s\Z');
-            }
-        }
-
-        // - due_time or repeat without due_date falls back to today
+        // - repeat with neither date falls back to today
         if (DueDateFallback::needed(
             is_string($merged['due_date']) ? $merged['due_date'] : null,
-            is_string($merged['due_time']) ? $merged['due_time'] : null,
             is_string($merged['start_date']) ? $merged['start_date'] : null,
             (string) $merged['repeat'],
         )) {
-            $merged['due_date'] = $today;
-            if (array_key_exists('due_time', $effectiveAtMap)) {
-                $fieldUpdatedAt['due_date'] = $effectiveAtMap['due_time']->format('Y-m-d\TH:i:s\Z');
-            } elseif (array_key_exists('repeat', $effectiveAtMap)) {
-                $fieldUpdatedAt['due_date'] = $effectiveAtMap['repeat']->format('Y-m-d\TH:i:s\Z');
-            } else {
-                $fieldUpdatedAt['due_date'] = $this->resolveEffectiveAt(null)->format('Y-m-d\TH:i:s\Z');
-            }
+            $merged['due_date'] = $this->clock->today($timezone);
+            $fieldUpdatedAt['due_date'] = (array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null))->format('Y-m-d\TH:i:s\Z');
         }
 
         // - repeat changes from never → repeat_anchor = active anchor date; repeat becomes never → repeat_anchor = null;
@@ -188,6 +170,13 @@ class TaskPatcher
         $startTime = $merged['start_time'];
         $dueTime = $merged['due_time'];
         $reminder = (string) $merged['reminder'];
+
+        $errors = [...$errors, ...DueDateFallback::timeErrors(
+            is_string($startDate) ? $startDate : null,
+            is_string($startTime) ? $startTime : null,
+            is_string($dueDate) ? $dueDate : null,
+            is_string($dueTime) ? $dueTime : null,
+        )];
 
         if (! empty($startDate) && ! empty($dueDate)) {
             if ($startDate > $dueDate) {

@@ -135,6 +135,7 @@ it('filters scheduled and due only', function () {
         'id' => (string) Str::uuid(),
         'user_id' => $user->id,
         'title' => 'Scheduled task',
+        'start_date' => '2026-10-25',
         'due_date' => '2026-10-25',
         'start_time' => '10:00:00',
         'done' => false,

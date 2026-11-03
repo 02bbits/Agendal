@@ -82,7 +82,7 @@ class TaskController extends Controller
             }
         }
 
-        // 3. Date fallbacks
+        // 3. Repeat date fallback (times without their day are rejected by the request)
         $timezone = (string) $request->attributes->get('timezone', 'UTC');
         $today = $clock->today($timezone);
         $startDateInput = $request->input('start_date');
@@ -97,9 +97,9 @@ class TaskController extends Controller
         $dueTimeStr = is_string($dueTime) ? $dueTime : null;
         $repeatStr = is_string($repeat) ? $repeat : 'never';
 
-        $startDate = DueDateFallback::startDate($startDateStr, $startTimeStr, $dueDateStr, $today);
+        $startDate = $startDateStr;
         $dueDate = $dueDateStr;
-        if (DueDateFallback::needed($dueDate, $dueTimeStr, $startDate, $repeatStr)) {
+        if (DueDateFallback::needed($dueDate, $startDate, $repeatStr)) {
             $dueDate = $today;
         }
 

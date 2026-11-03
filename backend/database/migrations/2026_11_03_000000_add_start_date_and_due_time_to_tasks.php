@@ -23,6 +23,10 @@ return new class extends Migration
 
         DB::statement('ALTER TABLE tasks ADD CONSTRAINT tasks_start_before_due CHECK (start_date IS NULL OR due_date IS NULL OR start_date < due_date OR (start_date = due_date AND (start_time IS NULL OR due_time IS NULL OR start_time < due_time)))');
 
+        DB::statement('UPDATE tasks SET start_time = NULL WHERE start_date IS NULL');
+        DB::statement('ALTER TABLE tasks ADD CONSTRAINT tasks_start_time_needs_date CHECK (start_time IS NULL OR start_date IS NOT NULL)');
+        DB::statement('ALTER TABLE tasks ADD CONSTRAINT tasks_due_time_needs_date CHECK (due_time IS NULL OR due_date IS NOT NULL)');
+
         Schema::table('tasks', fn (Blueprint $table) => $table->index(['user_id', 'start_date']));
     }
 
@@ -31,6 +35,8 @@ return new class extends Migration
         Schema::table('tasks', fn (Blueprint $table) => $table->dropIndex(['user_id', 'start_date']));
 
         DB::statement('ALTER TABLE tasks DROP CONSTRAINT tasks_start_before_due');
+        DB::statement('ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_start_time_needs_date');
+        DB::statement('ALTER TABLE tasks DROP CONSTRAINT IF EXISTS tasks_due_time_needs_date');
 
         Schema::table('tasks', fn (Blueprint $table) => $table->time('end_time', 0)->nullable());
 

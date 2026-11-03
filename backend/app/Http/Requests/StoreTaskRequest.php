@@ -82,13 +82,21 @@ class StoreTaskRequest extends FormRequest
                 $dueTimeStr = is_string($dueTime) ? $dueTime : null;
                 $repeatStr = is_string($repeat) ? $repeat : 'never';
 
+                $startTime = $this->input('start_time');
+                $timeErrors = DueDateFallback::timeErrors($startDateStr, is_string($startTime) ? $startTime : null, $dueDateStr, $dueTimeStr);
+                foreach ($timeErrors as $field => $messages) {
+                    if (! $validator->errors()->has($field)) {
+                        $validator->errors()->add($field, $messages[0]);
+                    }
+                }
+
                 $rule = $this->input('repeat_rule');
                 if (is_string($rule) && ! RepeatSchedule::validFor($rule, $repeatStr)) {
                     $validator->errors()->add('repeat_rule', 'The repeat rule must match the repeat frequency.');
                 }
 
-                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($startDate) && empty($dueDate) && $this->input('start_time') === null) {
-                    if (! DueDateFallback::needed($dueDateStr, $dueTimeStr, $startDateStr, $repeatStr)) {
+                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($startDate) && empty($dueDate)) {
+                    if (! DueDateFallback::needed($dueDateStr, $startDateStr, $repeatStr)) {
                         $validator->errors()->add('reminder', 'Add a date to set a reminder.');
                     }
                 }

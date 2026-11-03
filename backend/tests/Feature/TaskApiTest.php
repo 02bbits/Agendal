@@ -152,7 +152,7 @@ it('all fields: due 2026-10-26, 09:00–10:00, high, reminder 1d, notes, own pro
     expect($remindAt)->toBe('2026-10-25 02:00:00');
 });
 
-it('start_time without any date → start_date becomes 2026-10-23 (today in Ho Chi Minh), due_date null; repeat weekly without due_date → due_date becomes today', function () {
+it('start_time without any date → 422 on start_date; repeat weekly without due_date → due_date becomes today', function () {
     $user = User::factory()->create();
 
     $id1 = (string) Str::uuid();
@@ -160,11 +160,10 @@ it('start_time without any date → start_date becomes 2026-10-23 (today in Ho C
         'id' => $id1,
         'title' => 'Task with start time only',
         'start_time' => '14:00',
-    ])->assertStatus(201);
+    ])->assertStatus(422);
 
-    expect($response1->json('start_date'))->toBe('2026-10-23')
-        ->and($response1->json('due_date'))->toBeNull();
-    assertTaskSchema($response1->json());
+    expect($response1->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
+    expect(DB::table('tasks')->find($id1))->toBeNull();
 
     $id2 = (string) Str::uuid();
     $response2 = $this->actingAs($user)->postJson('/api/v1/tasks', [
@@ -177,13 +176,14 @@ it('start_time without any date → start_date becomes 2026-10-23 (today in Ho C
     assertTaskSchema($response2->json());
 });
 
-it('POST with due_time 09:00 + reminder 15m and no due_date → 201, due_date = today in Asia/Ho_Chi_Minh, remind_at computed', function () {
+it('POST with due_time 09:00 + reminder 15m and due_date → 201, remind_at computed', function () {
     $user = User::factory()->create();
     $id = (string) Str::uuid();
 
     $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
         'id' => $id,
         'title' => 'Morning meeting',
+        'due_date' => '2026-10-23',
         'due_time' => '09:00',
         'reminder' => '15m',
     ])->assertStatus(201);
@@ -342,11 +342,10 @@ it('due_time without due_date sets due_date to today', function () {
         'id' => $id,
         'title' => 'Only due time',
         'due_time' => '17:00',
-    ])->assertStatus(201);
+    ])->assertStatus(422);
 
-    expect($response->json('due_date'))->toBe('2026-10-23')
-        ->and($response->json('due_time'))->toBe('17:00');
-    assertTaskSchema($response->json());
+    expect($response->json('error.fields.due_date'))->toContain('Add a due date to set a due time.');
+    expect(DB::table('tasks')->find($id))->toBeNull();
 });
 
 it('replays a soft-deleted task with 200', function () {
@@ -445,8 +444,8 @@ it('T-TK-11: patches each patchable field and updates its field_updated_at times
     'title' => ['title', 'Initial title', 'Updated title', 'Updated title', false, []],
     'start_date' => ['start_date', null, '2026-11-01', '2026-11-01', false, ['due_date' => '2026-11-02']],
     'due_date' => ['due_date', null, '2026-11-01', '2026-11-01', false, []],
-    'start_time' => ['start_time', null, '10:00', '10:00', false, ['due_date' => '2026-11-01']],
-    'due_time with a start' => ['due_time with a start', null, '11:00', '11:00', false, ['due_date' => '2026-11-01', 'start_time' => '10:00']],
+    'start_time' => ['start_time', null, '10:00', '10:00', false, ['start_date' => '2026-11-01', 'due_date' => '2026-11-01']],
+    'due_time with a start' => ['due_time with a start', null, '11:00', '11:00', false, ['start_date' => '2026-11-01', 'due_date' => '2026-11-01', 'start_time' => '10:00']],
     'priority' => ['priority', null, 'high', 'high', false, []],
     'reminder with a due date' => ['reminder with a due date', 'none', '15m', '15m', false, ['due_date' => '2026-11-01']],
     'repeat' => ['repeat', 'never', 'weekly', 'weekly', false, ['due_date' => '2026-11-01']],
@@ -695,7 +694,7 @@ it('clearing due_date clears due_time and keeps start fields; clearing start_dat
         ->and(substr((string) $task2->due_time, 0, 5))->toBe('11:00');
 });
 
-it('setting start_time on an undated task sets start_date to today (2026-10-23 in Ho Chi Minh) with due_date null', function () {
+it('PATCH start_time without start_date returns 422; PATCH due_time without due_date returns 422', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -704,21 +703,22 @@ it('setting start_time on an undated task sets start_date to today (2026-10-23 i
         'user_id' => $user->id,
         'title' => 'Undated task',
         'due_date' => null,
+        'start_date' => null,
         'start_time' => null,
+        'due_time' => null,
     ]);
 
-    $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
-        'start_time' => '14:00',
-    ])->assertStatus(200);
+    $response1 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'start_time' => '09:00',
+    ])->assertStatus(422);
 
-    expect($response->json('start_date'))->toBe('2026-10-23')
-        ->and($response->json('due_date'))->toBeNull();
-    assertTaskSchema($response->json());
+    expect($response1->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
 
-    $task = Task::find($taskId);
-    expect(substr((string) $task->start_date, 0, 10))->toBe('2026-10-23')
-        ->and($task->due_date)->toBeNull()
-        ->and(substr((string) $task->start_time, 0, 5))->toBe('14:00');
+    $response2 = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'due_time' => '17:00',
+    ])->assertStatus(422);
+
+    expect($response2->json('error.fields.due_date'))->toContain('Add a due date to set a due time.');
 });
 
 it('remind_at recomputed: task due 2026-10-26 with reminder 1h, PATCH start_time 16:00 → remind_at 2026-10-26 08:00:00 UTC', function () {
@@ -735,6 +735,7 @@ it('remind_at recomputed: task due 2026-10-26 with reminder 1h, PATCH start_time
     ]);
 
     $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
+        'start_date' => '2026-10-26',
         'start_time' => '16:00',
     ])->assertStatus(200);
 
@@ -1097,7 +1098,7 @@ it('rejects start_date after due_date with 422', function () {
     expect($response->json('error.fields.start_date'))->toContain("Start can't be after the due date.");
 });
 
-it('start_time without start_date: with due_date sets start_date to due_date; without any date sets start_date to today and due_date null', function () {
+it('start_time without start_date: with due_date and without any date both return 422 on start_date', function () {
     $user = User::factory()->create();
 
     // With due_date
@@ -1107,11 +1108,10 @@ it('start_time without start_date: with due_date sets start_date to due_date; wi
         'title' => 'With due date',
         'due_date' => '2026-10-28',
         'start_time' => '09:00',
-    ])->assertStatus(201);
+    ])->assertStatus(422);
 
-    expect($response1->json('start_date'))->toBe('2026-10-28')
-        ->and($response1->json('due_date'))->toBe('2026-10-28');
-    assertTaskSchema($response1->json());
+    expect($response1->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
+    expect(DB::table('tasks')->find($id1))->toBeNull();
 
     // Without any date
     $id2 = (string) Str::uuid();
@@ -1119,11 +1119,10 @@ it('start_time without start_date: with due_date sets start_date to due_date; wi
         'id' => $id2,
         'title' => 'Without any date',
         'start_time' => '09:00',
-    ])->assertStatus(201);
+    ])->assertStatus(422);
 
-    expect($response2->json('start_date'))->toBe('2026-10-23')
-        ->and($response2->json('due_date'))->toBeNull();
-    assertTaskSchema($response2->json());
+    expect($response2->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
+    expect(DB::table('tasks')->find($id2))->toBeNull();
 });
 
 it('T-TK-118: reminder 15m with start_date 2026-10-26 09:00 and due later computes remind_at from the start', function () {
@@ -1148,18 +1147,17 @@ it('T-TK-118: reminder 15m with start_date 2026-10-26 09:00 and due later comput
     expect($remindAt)->toBe('2026-10-26 01:45:00');
 });
 
-it('a reminder with only a start time is allowed: the start date falls back to today', function () {
+it('a reminder with only a start time returns 422 on start_date', function () {
     $user = User::factory()->create();
+    $id = (string) Str::uuid();
 
     $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
-        'id' => (string) Str::uuid(),
+        'id' => $id,
         'title' => 'Start time only',
         'start_time' => '09:00',
         'reminder' => '15m',
-    ])->assertStatus(201);
+    ])->assertStatus(422);
 
-    expect($response->json('start_date'))->not->toBeNull()
-        ->and($response->json('due_date'))->toBeNull()
-        ->and($response->json('reminder'))->toBe('15m');
-    assertTaskSchema($response->json());
+    expect($response->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
+    expect(DB::table('tasks')->find($id))->toBeNull();
 });

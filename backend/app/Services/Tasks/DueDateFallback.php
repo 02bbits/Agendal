@@ -6,13 +6,27 @@ namespace App\Services\Tasks;
 
 class DueDateFallback
 {
-    public static function needed(?string $dueDate, ?string $dueTime, ?string $startDate, string $repeat): bool
+    /** A repeat with neither date starts from today (TK §8). */
+    public static function needed(?string $dueDate, ?string $startDate, string $repeat): bool
     {
-        return empty($dueDate) && ($dueTime !== null || ($repeat !== 'never' && empty($startDate)));
+        return empty($dueDate) && empty($startDate) && $repeat !== 'never';
     }
 
-    public static function startDate(?string $startDate, ?string $startTime, ?string $dueDate, string $today): ?string
+    /**
+     * A time needs its day (TK §8): start_time needs start_date, due_time needs due_date.
+     *
+     * @return array<string, list<string>>
+     */
+    public static function timeErrors(?string $startDate, ?string $startTime, ?string $dueDate, ?string $dueTime): array
     {
-        return ! empty($startDate) ? $startDate : ($startTime !== null ? ($dueDate ?: $today) : null);
+        $errors = [];
+        if ($startTime !== null && empty($startDate)) {
+            $errors['start_date'] = ['Add a start date to set a start time.'];
+        }
+        if ($dueTime !== null && empty($dueDate)) {
+            $errors['due_date'] = ['Add a due date to set a due time.'];
+        }
+
+        return $errors;
     }
 }
