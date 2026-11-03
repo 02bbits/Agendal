@@ -124,3 +124,34 @@ it('interprets the written zone and schedules reminders in the current zone (T-N
     expect($task->due_date)->toBe('2026-10-24')->and($task->start_time)->toBe('20:00:00');
     expect($task->remind_at->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-24T23:45:00Z');
 });
+
+it('gives a moved task a start date with its new start time (TK-3, NU-E35)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Dentist', 'due_date' => '2026-10-28'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move dentist to friday 9am'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([substr((string) $fresh->start_date, 0, 10), $fresh->start_time, substr((string) $fresh->due_date, 0, 10)])->toBe(['2026-10-30', '09:00:00', '2026-10-30']);
+});
+
+it('completes a task that has only a due time (TK-3)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Submit report', 'due_date' => '2026-10-24', 'due_time' => '17:00'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('done submit report'))->assertCreated();
+    expect($task->fresh()->done)->toBeTrue();
+});
+
+it('pulls the start date back when a move puts the due date before it (BR-11)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Essay', 'start_date' => '2026-10-26', 'due_date' => '2026-10-30'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move essay to tomorrow'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([substr((string) $fresh->start_date, 0, 10), substr((string) $fresh->due_date, 0, 10)])->toBe(['2026-10-24', '2026-10-24']);
+});
+
+it('keeps a deadline on another day when the start time moves (TK-3)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Essay', 'start_date' => '2026-10-26', 'start_time' => '09:00', 'due_date' => '2026-10-30', 'due_time' => '10:00'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move essay to 5pm'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([$fresh->start_time, substr((string) $fresh->due_date, 0, 10), $fresh->due_time])->toBe(['17:00:00', '2026-10-30', '10:00:00']);
+});
