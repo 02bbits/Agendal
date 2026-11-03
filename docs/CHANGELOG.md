@@ -4,6 +4,8 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-03
 
+- **Undo all (Refs #43).** [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5), [WF-02](04-workflows/WF-02-confirm-risky-changes.md) and [WF-04](04-workflows/WF-04-undo-a-note.md): the toast after Apply changes offers Undo, which undoes the whole note from the list. Edited created tasks open the result screen to ask first.
+- **Undo all log keeps `after` values (Refs #43).** `notes.applied` entries are `{kind, task_id, before, after, label}`, and `notes.undo_log` is `{redo_until, changes}`. Touches [ADR-002](07-architecture/decisions/ADR-002-undo-change-log.md), [data-model](07-architecture/data-model.md), [domain](02-domain/domain.md#change), [RV §2.1 and §8](03-modules/RV-review-control.md) (RV-2, NF-11).
 - **Every note confirms first (Refs #44).**
   - [BR-01](02-domain/business-rules.md#br-01), [NU-5](03-modules/NU-note-understanding.md#nu-5), [NU §2.6](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01-br-02) and T-NU-41: any change gives `confirm`.
   - [WF-01](04-workflows/WF-01-capture-and-process-note.md) step 5 and [WF-02](04-workflows/WF-02-confirm-risky-changes.md): Apply goes back to the list with `note.made_*`, and Edit note keeps the note (`kept`) and reopens the editor with its text.

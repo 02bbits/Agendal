@@ -13,6 +13,6 @@ Physical model for the [domain records](../02-domain/domain.md). The database is
 | `reminder_deliveries` | task_id, remind_at, sent_at | UNIQUE (task_id, remind_at), so each reminder is sent once |
 | `audit_events` | id, user_id?, event, ip, user_agent, created_at | Kept 90 days ([NF-20](../05-quality/nfr.md#nf-20)). No secrets |
 
-`applied` is a list of `{kind, task_id, before, label}` ([note model](../02-domain/domain.md#change)). Deletes set `deleted_at` (tombstones for sync, [ADR-005](decisions/ADR-005-sync-protocol.md)). Rows are purged after 30 days, unless an undoable note still references them ([ADR-002](decisions/ADR-002-undo-change-log.md)).
+`applied` is a list of `{kind, task_id, before, after, label}` ([note model](../02-domain/domain.md#change)). Deletes set `deleted_at` (tombstones for sync, [ADR-005](decisions/ADR-005-sync-protocol.md)). Rows are purged after 30 days, unless an undoable note still references them ([ADR-002](decisions/ADR-002-undo-change-log.md)).
 
 Indexes (all lead with `user_id`, [scalability](../05-quality/scalability.md)): `(user_id, change_seq)` on tasks, projects and notes for sync, `tasks (remind_at)` where not sent, `tasks (user_id, due_date)`, `tasks (user_id, done)`, and a trigram GIN index on `unaccent(title || ' ' || notes)` for accent-insensitive search ([LV-3](../03-modules/LV-lists-search.md#lv-3)) and command matching ([NU-3](../03-modules/NU-note-understanding.md#nu-3)). `notes (user_id, written_at desc, id)` for the Notes tab ([RV-4](../03-modules/RV-review-control.md#rv-4)).

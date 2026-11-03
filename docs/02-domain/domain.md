@@ -86,6 +86,7 @@ One entry in `Note.applied`.
 | kind | `created`, `updated` or `deleted` |
 | task id | The task affected |
 | before values | Field values before the change. Enough to undo exactly ([NF-11](../05-quality/nfr.md#nf-11)) |
+| after values | The task as the note left it. Undo restores a field only where it still holds this value ([RV §2.4](../03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20)) |
 | label | What the result screen shows, e.g. "Due Fri (was today)" |
 
 ## Task Model
