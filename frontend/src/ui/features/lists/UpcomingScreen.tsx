@@ -1,158 +1,149 @@
-import { useState } from "react";
-import { t } from "../../copy";
+import { useState, type CSSProperties, type ReactElement } from "react";
 import { Button } from "../../components/Button";
 import { ChipGroup } from "../../components/ChipGroup";
-import { EmptyState } from "../../components/EmptyState";
-import { CalendarIcon, ClockIcon } from "../../components/icons";
-import { addDays, formatDay } from "../../domain/dates";
-import {
-  upcomingPage,
-  type UpcomingFilter,
-  type UpcomingPage,
-} from "../../domain/lists";
-import type { Navigate } from "../shell/routes";
+import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
+import { t } from "../../copy";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
-import { Section } from "./Section";
+import { useUpcomingPreferences } from "./storage";
+import type { UpcomingScreenProps, UpcomingViewMode } from "./types";
+import { UpcomingBoard } from "./UpcomingBoard";
+import { UpcomingDayList } from "./UpcomingDayList";
+import { UpcomingDayStrip } from "./UpcomingDayStrip";
+import { UpcomingViewSwitch } from "./UpcomingViewSwitch";
+import { UpcomingWeekNav } from "./UpcomingWeekNav";
+import { useUpcomingScreenData } from "./useUpcomingListWindow";
 
-const FILTER_KEY = "agendal.upcoming.filter";
+export type { UpcomingScreenProps, UpcomingViewMode };
 
-/** The filter is remembered per device (LV §2.2); storage may be unavailable, so every access is guarded. */
-function readFilter(): UpcomingFilter {
-  try {
-    const saved = localStorage.getItem(FILTER_KEY);
-    return saved === "scheduled" || saved === "due" ? saved : "all";
-  } catch {
-    return "all";
-  }
-}
-function writeFilter(filter: UpcomingFilter) {
-  try {
-    localStorage.setItem(FILTER_KEY, filter);
-  } catch {
-    /* per-device convenience only */
-  }
-}
-
-export interface UpcomingScreenProps {
-  accountInitial: string;
-  navigate?: Navigate;
-}
-
-/** Upcoming (LV-2): from tomorrow, grouped by day, 14 days at a time, All / Scheduled / Due only. */
-export function UpcomingScreen({
-  accountInitial,
-  navigate,
-}: UpcomingScreenProps) {
+export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   const store = useTaskStore();
-  const [filter, setFilter] = useState<UpcomingFilter>(readFilter);
-  const [pages, setPages] = useState(1);
-  const tomorrow = addDays(store.today, 1);
+  const [anchor, setAnchor] = useState<string>(() => store.today);
+  const { filter, chooseFilter, viewMode, chooseViewMode } =
+    useUpcomingPreferences(props, () => setAnchor(listWindow.activeDay));
 
-  const loaded: UpcomingPage = { days: [], nextFrom: tomorrow };
-  for (let i = 0; i < pages && loaded.nextFrom; i++) {
-    const page = upcomingPage(
-      store.tasks,
-      loaded.nextFrom,
-      filter,
-      14,
-      store.isSettling,
-    );
-    loaded.days.push(...page.days);
-    loaded.nextFrom = page.nextFrom;
-  }
-  const anyUnfiltered =
-    filter !== "all" &&
-    upcomingPage(store.tasks, tomorrow, "all").days.length > 0;
+  const {
+    isBoard,
+    listWindow,
+    renderedDays,
+    tasksByDay,
+    overdueTasks,
+    countsByDay,
+    navProps,
+    barRef,
+    barHeight,
+  } = useUpcomingScreenData({
+    store,
+    anchor,
+    setAnchor,
+    weekStart: props.weekStart ?? "mon",
+    viewMode,
+    filter,
+  });
 
-  const choose = (next: UpcomingFilter) => {
-    setFilter(next);
-    setPages(1);
-    writeFilter(next);
+  const viewProps = {
+    days: renderedDays,
+    tasksByDay,
+    overdueTasks,
+    today: store.today,
+    selectedTaskId: props.selectedTaskId,
+    navigate: props.navigate,
+    onAddTask: (d: string) =>
+      props.onAddTask ? props.onAddTask(d) : props.onNewTask?.(),
   };
-  const [filterEmptyText, showAllLabel] =
-    t("list.filter_empty").split(/(?<=\.)\s+/);
+
+  const filterChips = (
+    <ChipGroup
+      label={t("list.filter_label")}
+      value={filter}
+      onChange={chooseFilter}
+      options={[
+        { value: "all", label: t("list.filter_all") },
+        {
+          value: "scheduled",
+          label: t("list.filter_scheduled"),
+          icon: <ClockIcon size={14} />,
+        },
+        {
+          value: "due",
+          label: t("list.filter_due"),
+          icon: <CalendarIcon size={14} />,
+        },
+      ]}
+    />
+  );
+
+  const hasTasks = store.tasks.some((t) => !t.done || store.isSettling(t.id));
+  const { showHeader = true, showFilter = true } = props;
 
   return (
     <div className="pb-8">
-      <ScreenHeader
-        overline={t("list.from_tomorrow")}
-        title={t("nav.upcoming")}
-        accountInitial={accountInitial}
-        navigate={navigate}
-      >
-        <div className="mt-4">
-          <ChipGroup
-            label={t("list.filter_label")}
-            value={filter}
-            onChange={choose}
-            options={[
-              { value: "all", label: t("list.filter_all") },
-              {
-                value: "scheduled",
-                label: t("list.filter_scheduled"),
-                icon: <ClockIcon size={14} />,
-              },
-              {
-                value: "due",
-                label: t("list.filter_due"),
-                icon: <CalendarIcon size={14} />,
-              },
-            ]}
-          />
-        </div>
-      </ScreenHeader>
-
-      {loaded.days.length === 0 ? (
-        anyUnfiltered ? (
-          <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
-            <h2 className="m-0 font-serif text-dialog font-semibold text-balance focus:outline-none">
-              {filterEmptyText}
-            </h2>
-            <button
-              type="button"
-              className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
-              onClick={() => choose("all")}
-            >
-              {showAllLabel}
-            </button>
-          </section>
-        ) : (
-          <EmptyState title={t("list.upcoming_empty")} />
-        )
-      ) : (
-        <>
-          {loaded.days.map((day) => (
-            <Section
-              key={day.date}
-              title={formatDay(day.date, store.today)}
-              count={day.tasks.length}
-            >
-              {day.tasks.map((x) => (
-                <TaskRow
-                  key={x.id}
-                  task={x}
-                  project={store.projectOf(x)}
-                  today={store.today}
-                  timeFormat={store.timeFormat}
-                  onToggle={store.toggle}
-                  navigate={navigate}
-                />
-              ))}
-            </Section>
-          ))}
-          {loaded.nextFrom && (
-            <Button
-              variant="secondary"
-              className="mt-3 w-full"
-              onClick={() => setPages((n) => n + 1)}
-            >
-              {t("list.load_more")}
-            </Button>
+      {showHeader && (
+        <ScreenHeader
+          overline=""
+          title={t("nav.upcoming")}
+          accountInitial={props.accountInitial ?? ""}
+          navigate={props.navigate}
+          action={
+            <div className="flex items-center gap-3">
+              <div className="hidden md:block">{filterChips}</div>
+              <UpcomingViewSwitch
+                viewMode={viewMode}
+                onChange={chooseViewMode}
+              />
+              {props.onNewTask && (
+                <Button
+                  variant="primary"
+                  pill
+                  className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
+                  onClick={props.onNewTask}
+                >
+                  <PlusIcon size={16} />
+                  {t("task.new")}
+                </Button>
+              )}
+            </div>
+          }
+        >
+          {props.subtitle && (
+            <p className="m-0 mt-1 text-footnote text-ink-secondary">
+              {props.subtitle}
+            </p>
           )}
-        </>
+          <div className="mt-4 md:hidden">{filterChips}</div>
+        </ScreenHeader>
       )}
+
+      {showFilter && !showHeader && <div className="mb-4">{filterChips}</div>}
+
+      <div
+        ref={barRef}
+        className="sticky top-0 z-20 border-b border-separator bg-paper pb-2"
+      >
+        <UpcomingWeekNav {...navProps} />
+        {!isBoard && (
+          <UpcomingDayStrip
+            week={listWindow.stripWeek}
+            today={store.today}
+            activeDay={listWindow.activeDay}
+            countsByDay={countsByDay}
+            onPickDay={listWindow.scrollToDate}
+          />
+        )}
+      </div>
+
+      {!hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>}
+
+      <div
+        className="mt-6"
+        style={{ "--upcoming-bar-h": `${barHeight}px` } as CSSProperties}
+      >
+        {isBoard ? (
+          <UpcomingBoard {...viewProps} />
+        ) : (
+          <UpcomingDayList {...viewProps} />
+        )}
+      </div>
     </div>
   );
 }

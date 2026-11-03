@@ -74,19 +74,19 @@ const themes = {
   "agendal-dark": theme("agendal-dark"),
 };
 
-describe("Paper & ink daisyUI themes", () => {
+describe("Graphite daisyUI themes", () => {
   it("matches the theme guide values", () => {
     expect(themes["agendal-light"]).toMatchObject({
-      bg: "#f6f5f1",
-      ink: "#1b1a17",
-      accent: "#2f5bd3",
-      danger: "#b42318",
+      bg: "#f2f2f2",
+      ink: "#252525",
+      accent: "#252525",
+      danger: "#b3261e",
     });
     expect(themes["agendal-dark"]).toMatchObject({
-      bg: "#121211",
-      ink: "#f2f0ea",
-      accent: "#8fadff",
-      danger: "#ff8a7f",
+      bg: "#1a1a1a",
+      ink: "#ededed",
+      accent: "#cfcfcf",
+      danger: "#ff8a80",
     });
   });
 
@@ -111,7 +111,6 @@ describe("Paper & ink daisyUI themes", () => {
       it.each([
         "ink",
         "ink-secondary",
-        "ink-tertiary",
         "accent",
         "danger",
         "success",
@@ -120,12 +119,20 @@ describe("Paper & ink daisyUI themes", () => {
         expect(contrast(t[token], t.bg)).toBeGreaterThanOrEqual(4.5);
       });
 
-      it.each(["ink", "ink-secondary", "ink-tertiary"] as const)(
+      it.each(["ink", "ink-secondary"] as const)(
         "%s text reaches 4.5:1 on surface",
         (token) => {
           expect(contrast(t[token], t.surface)).toBeGreaterThanOrEqual(4.5);
         },
       );
+
+      // ink-tertiary is for icons, empty checkbox rings and placeholders only (theme guide)
+      it("ink-tertiary reaches 3:1 on bg and surface", () => {
+        expect(contrast(t["ink-tertiary"], t.bg)).toBeGreaterThanOrEqual(3);
+        expect(contrast(t["ink-tertiary"], t.surface)).toBeGreaterThanOrEqual(
+          3,
+        );
+      });
 
       it("control-border reaches 3:1 on bg", () => {
         expect(contrast(t["control-border"], t.bg)).toBeGreaterThanOrEqual(3);
@@ -160,5 +167,53 @@ describe("Paper & ink daisyUI themes", () => {
         new RegExp(`--color-project-${color}: #[0-9a-f]{6};`),
       );
     }
+  });
+});
+
+describe("theme choice (AP-3, T-AP-20)", () => {
+  /** The plain options of a theme block (name, prefersdark, root…), as daisyUI's plugin reads them. */
+  function options(name: string): Record<string, string | boolean> {
+    const block = [...css.matchAll(/@plugin "daisyui\/theme" \{([^{}]*)\}/g)]
+      .map(([, body]) => body!.replace(/\/\*[\s\S]*?\*\//g, ""))
+      .find((body) => body.includes(`name: "${name}"`))!;
+    return Object.fromEntries(
+      [...block.matchAll(/^\s*([a-z][\w-]*):\s*([^;]+);/gm)].map(
+        ([, key, value]) => {
+          const v = value!.trim();
+          return [
+            key!,
+            v === "true"
+              ? true
+              : v === "false"
+                ? false
+                : v.replace(/^"|"$/g, ""),
+          ];
+        },
+      ),
+    );
+  }
+
+  it("the system dark mode never overrides a theme the user picked", async () => {
+    // daisyUI ships this plugin without types
+    const pluginPath = "daisyui/theme/index.js";
+    const { default: theme } = (await import(
+      /* @vite-ignore */ pluginPath
+    )) as {
+      default: (options: object) => {
+        handler: (api: { addBase: (rule: never) => void }) => void;
+      };
+    };
+    const added: Record<string, Record<string, unknown>>[] = [];
+    theme(options("agendal-dark")).handler({
+      addBase: (rule: never) => added.push(rule),
+    });
+    const systemDark = added.find(
+      (rule) => "@media (prefers-color-scheme: dark)" in rule,
+    )!;
+
+    // With a bare ":root" this rule outranks [data-theme="agendal-light"], so Light can't be picked
+    expect(
+      Object.keys(systemDark["@media (prefers-color-scheme: dark)"]!),
+    ).toEqual([":root:not([data-theme])"]);
   });
 });

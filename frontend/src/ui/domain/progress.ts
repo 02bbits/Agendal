@@ -28,10 +28,14 @@ export function inboxProgress(
   return { done, total };
 }
 
-/** The next open task for the "Next: … at 16:00" line: timed tasks first by start, then the rest in list order. */
-export function nextUp(open: readonly Task[]): Task | null {
-  const timed = open
+/**
+ * The next open task for the "Next: … at 16:00" line (LV-1): only open tasks due today;
+ * timed tasks first by start, then the first untimed one due today. Overdue tasks are never next.
+ */
+export function nextUp(open: readonly Task[], today: string): Task | null {
+  const dueToday = open.filter((t) => !t.done && t.due_date === today);
+  const timed = dueToday
     .filter((t) => t.start_time)
     .sort((a, b) => a.start_time!.localeCompare(b.start_time!));
-  return timed[0] ?? open[0] ?? null;
+  return timed[0] ?? dueToday[0] ?? null;
 }

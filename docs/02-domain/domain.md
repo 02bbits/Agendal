@@ -38,12 +38,12 @@ Domain terms, used the same way in requirements, UI copy, and code. For acronyms
 | Change | One applied create, change or delete, with enough data to undo it |
 | Result screen | Lists every change from a note with CREATED / UPDATED / DELETED badges ([RV-1](../03-modules/RV-review-control.md#rv-1)) |
 | Undo all | Reverses every change from one note. The note is kept and marked Undone ([RV-2](../03-modules/RV-review-control.md#rv-2)) |
-| Check this first | The confirmation shown before a risky plan: any delete, or more than 5 changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
-| Follow-up | The one question for a note with nothing actionable: Keep as note, or Make it a task ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| Check this first | The confirmation shown before a risky plan: any delete, or 5 or more changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
+| Follow-up | The one question for a note with nothing actionable: Keep it as task, or Edit the note ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
 | Note name | A name generated from the plan, e.g. "This week" or "SQL Course to-dos" ([NU-6](../03-modules/NU-note-understanding.md#nu-6)) |
 | Pending note | A note saved offline, shown as "Waiting for connection" ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
 | Due date | When the task must be done |
-| Schedule | When the user will work on it: a start time and an end time |
+| Schedule | When the user starts working: a start time on the start date |
 | Overdue | Not done, and the due date has passed. Shown in red with a count in Inbox ([LV-1](../03-modules/LV-lists-search.md#lv-1)) |
 | Today | Tasks due or scheduled today |
 | No project | Tasks without a project. It is not a record |
@@ -86,6 +86,7 @@ One entry in `Note.applied`.
 | kind | `created`, `updated` or `deleted` |
 | task id | The task affected |
 | before values | Field values before the change. Enough to undo exactly ([NF-11](../05-quality/nfr.md#nf-11)) |
+| after values | The task as the note left it. Undo restores a field only where it still holds this value ([RV §2.4](../03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20)) |
 | label | What the result screen shows, e.g. "Due Fri (was today)" |
 
 ## Task Model
@@ -96,8 +97,10 @@ Conceptual model. For storage, see [data-model.md](../07-architecture/data-model
 |---|---|---|---|
 | title | Sentence case. Acronyms kept upper case | **yes**, the only required field | [NC-7](../03-modules/NC-note-capture.md#nc-7) |
 | project | One of the user's projects, or none (*No project*) | no | PJ |
+| start date | A date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
+| start time | A time on the start date | no | [TK-3](../03-modules/TK-tasks.md#tk-3) |
 | due date | A date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
-| start time, end time | Times. End must be later than start | no | [TK-3](../03-modules/TK-tasks.md#tk-3) |
+| due time | A time on the due date | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
 | priority | Low, Medium, High | no | [TK-2](../03-modules/TK-tasks.md#tk-2) |
 | reminder | None; 5, 15 or 30 minutes; 1 hour; 1 day before | no | [TK-2](../03-modules/TK-tasks.md#tk-2), [TK-6](../03-modules/TK-tasks.md#tk-6) |
 | repeat | Never, Daily, Weekly, Monthly, Yearly | no | [TK-4](../03-modules/TK-tasks.md#tk-4) |
@@ -109,8 +112,10 @@ Conceptual model. For storage, see [data-model.md](../07-architecture/data-model
 
 ### Derived
 
-- **Overdue**: not done and the due date is before today.
-- **Today**: due date or start date is today.
+- **Overdue**: not done and the due date is before today (date-based). From the due time on the due day the due label turns red, but the task stays in Today until the day ends.
+- **Today**: open tasks whose start date is today, or due date is today, or in progress (start date before today and due date after today), or start-only tasks whose start date has passed.
+- **In progress**: open tasks with both dates where the start date is before today and the due date is after today. Shows in Today between start and due days.
+- **Planned**: start-only tasks whose start date has passed; they roll into Today as "Planned {date}" with their start time greyed and are never overdue.
 - **Project progress**: completed tasks ÷ all tasks in the project ("3 of 5 tasks completed").
 
 ### Task states
@@ -128,8 +133,8 @@ flowchart TD
   S -- on reconnect --> P
   B -- yes --> P["Build a plan<br/>Tasks to create, change, delete"]
   P --> C{Anything to do?}
-  C -- no --> Q["Ask one question<br/>Keep as note, or make it a task"]
-  C -- yes --> R{"Any delete or 6+ changes?"}
+  C -- no --> Q["Ask one question<br/>Keep it as task, or edit the note"]
+  C -- yes --> R{"Any delete or 5+ changes?"}
   R -- yes --> K["Check this first<br/>Apply, or Cancel to keep the note"]
   K -- Apply changes --> AP
   R -- no --> AP["Apply the plan<br/>Tasks created, changed, deleted"]
@@ -159,8 +164,8 @@ All three are due within 7 days, so the note is named **"This week"**. 3 changes
 | `new` | Being processed | `done`, `confirm` or `followup` |
 | `done` | Plan applied | `undone` (Undo all), `new` (Edit note) |
 | `confirm` | Plan waits for Apply changes | `done` (Apply), `kept` (Cancel), `new` (Edit note) |
-| `followup` | Nothing actionable found | `kept` (Keep as note), `done` (Make it a task), `new` (Edit note) |
-| `kept` | Saved as a note only | `new` (Edit note) |
+| `followup` | Nothing actionable found | `done` (Keep it as task), `new` (Edit the note) |
+| `kept` | Saved as a note only, after Cancel in Check this first | `new` (Edit note) |
 | `undone` | Applied, then reversed | `done` (redo from the toast, within 10 s), `new` (Edit note) |
 
 ```mermaid
@@ -169,12 +174,11 @@ stateDiagram-v2
     [*] --> new : Make tasks (online)
     pending --> new : reconnect
     new --> done : plan is safe
-    new --> confirm : any delete or > 5 changes
+    new --> confirm : any delete or 5+ changes
     new --> followup : nothing actionable
     confirm --> done : Apply changes
     confirm --> kept : Cancel
-    followup --> done : Make it a task
-    followup --> kept : Keep as note
+    followup --> done : Keep it as task
     done --> undone : Undo all
     undone --> done : redo (toast, 10 s)
     done --> new : Edit note

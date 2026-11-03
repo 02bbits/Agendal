@@ -4,6 +4,10 @@ import type { Task } from "./types";
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const;
 
+function priorityRank(priority: Task["priority"]): number {
+  return priority ? PRIORITY_RANK[priority] : 3;
+}
+
 /** Within a day (Today, and each Upcoming day): timed by start, then untimed by priority, then created (LV §2.1). */
 export function sortWithinDay(tasks: readonly Task[]): Task[] {
   return [...tasks].sort((a, b) => {
@@ -15,7 +19,7 @@ export function sortWithinDay(tasks: readonly Task[]): Task[] {
     if (a.start_time) return -1;
     if (b.start_time) return 1;
     return (
-      PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+      priorityRank(a.priority) - priorityRank(b.priority) ||
       a.created_at.localeCompare(b.created_at)
     );
   });
@@ -37,6 +41,15 @@ export interface ListOptions {
   isSettling?: (id: string) => boolean;
 }
 
+function dedupeTasks(tasks: readonly Task[]): Task[] {
+  const seen = new Set<string>();
+  return tasks.filter((t) => {
+    if (seen.has(t.id)) return false;
+    seen.add(t.id);
+    return true;
+  });
+}
+
 /**
  * Inbox sections (LV-1): Overdue (oldest first) before Today, then No date
  * (priority, newest first) and tasks completed today. Overdue is by date only,
@@ -47,12 +60,13 @@ export function buildInbox(
   today: string,
   opts: ListOptions,
 ): InboxView {
+  const uniqueTasks = dedupeTasks(tasks);
   const settling = opts.isSettling ?? (() => false);
-  const open = tasks.filter((t) => !t.done || settling(t.id));
+  const open = uniqueTasks.filter((t) => !t.done || settling(t.id));
   const overdue = open.filter((t) => t.due_date && t.due_date < today);
   const dueToday = open.filter((t) => t.due_date === today);
   const noDate = open.filter((t) => !t.due_date);
-  const completed = tasks.filter(
+  const completed = uniqueTasks.filter(
     (t) => t.done && !settling(t.id) && opts.completedToday(t),
   );
   return {
@@ -64,14 +78,14 @@ export function buildInbox(
     today: sortWithinDay(dueToday),
     noDate: [...noDate].sort(
       (a, b) =>
-        PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority] ||
+        priorityRank(a.priority) - priorityRank(b.priority) ||
         b.created_at.localeCompare(a.created_at),
     ),
     completed: [...completed].sort((a, b) =>
       (b.done_at ?? "").localeCompare(a.done_at ?? ""),
     ),
-    progress: inboxProgress(tasks, today, opts.completedToday),
-    empty: tasks.length === 0,
+    progress: inboxProgress(uniqueTasks, today, opts.completedToday),
+    empty: uniqueTasks.length === 0,
   };
 }
 

@@ -21,10 +21,10 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-10"></a>UX-10 | Opening a sheet or dialog moves focus to its first field, or to its title if it has no field. Focus is trapped inside. Escape closes it (unless it has unsaved input, then [UX-13](#ux-13)). |
 | <a id="ux-11"></a>UX-11 | Closing a sheet, dialog or pushed screen returns focus to the control that opened it. If that control is gone (the task was deleted), focus goes to the list heading. |
 | <a id="ux-12"></a>UX-12 | **Shortcuts:** Ctrl/Cmd+Enter submits the note editor and every sheet. Enter in a single-line field submits the form. `/` focuses Search on list screens when no field has focus. |
-| <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text saves a draft on the device (restored next time it opens). Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
+| <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text asks "Discard this note?" (Discard / Keep editing). Meanwhile a draft is kept on the device, restored if the app closed mid-note. Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
 | <a id="ux-14"></a>UX-14 | Tab order follows the visual order. Every control has a visible 2px focus ring ([NF-2](../05-quality/nfr.md#nf-2)). |
 
-## 3. Mobile viewport
+## 3. Viewport
 
 | ID | Rule |
 |---|---|
@@ -32,6 +32,11 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-21"></a>UX-21 | A focused field is scrolled into view above the keyboard. Inputs use 16px text or larger, so iOS doesn't zoom. |
 | <a id="ux-22"></a>UX-22 | Inputs set `inputmode`, `autocomplete` and `enterkeyhint` (email, current-password, new-password, search, done). |
 | <a id="ux-23"></a>UX-23 | No horizontal scroll from 320px wide. Long words in titles wrap (`overflow-wrap: anywhere`). |
+| <a id="ux-24"></a>UX-24 | Below 768px wide the app is one centred column up to 600px ([NF-8](../05-quality/nfr.md#nf-8)). The capture bar, tab bar, toasts and sheets are as wide as that column, not the window, and the paper background fills both sides. The header shows Search and the account avatar at the top right. |
+| <a id="ux-25"></a>UX-25 | The side margin is at least 20px (`space-20`) at every width, plus `env(safe-area-inset-left)` / `env(safe-area-inset-right)` when a phone is held sideways. |
+| <a id="ux-26"></a>UX-26 | Held sideways (a viewport about 320–420px tall), the bottom bars stay visible and the content scrolls above them; no fixed element covers a list row or a field. When the viewport is 480px tall or less, tab bar items shrink from 56px to 48px. A phone at least 768px wide sideways gets the sidebar layout instead ([UX-27](#ux-27)). |
+| <a id="ux-27"></a>UX-27 | From 768px wide (tablet, laptop, a large phone held sideways) the layout follows the Figma desktop frames (03 · Desktop 1440). A 248px sidebar on `surface` replaces the tab bar: the Agendal mark, a Search field, the four tabs with their counts (the current one in accent on `primary-tint`), the project list, and the account (avatar, name) at the bottom. The content is one column up to 712px with 40px side margins (`px-gutter-wide`) on `paper`, centred in the space left. The capture bar sticks to the bottom of that column over a paper fade; there is no tab bar. The header leaves Search and the avatar to the sidebar. Sheets open as a centred dialog up to 560px wide; toasts centre on the content column. Signed-out screens (sign in, create account, forgot and reset password) have no sidebar. |
+| <a id="ux-28"></a>UX-28 | From 1280px wide a screen may show a 400px side panel on `surface` as a fixed overlay on the right (task detail); the content column doesn't resize, the panel slides in from the right, the list row shows as selected, the URL carries `?task={id}`, and closing does Back when the panel added the entry, else replace (Escape and × also close it). Below 1280px the same content opens as its own screen. The sidebar and the side panel are as tall as the window and scroll on their own, so the capture bar and the panel never scroll away. |
 
 ## 4. Truncation and formatting
 
@@ -39,7 +44,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 |---|---|
 | <a id="ux-30"></a>UX-30 | Task titles in rows: up to 2 lines, then an ellipsis. Full title in Task details and in the accessible name. |
 | <a id="ux-31"></a>UX-31 | Note excerpts on Notes cards: 2 lines. Note names: 34 characters, cut at a word boundary (business rules). |
-| <a id="ux-32"></a>UX-32 | Dates: Today, Tomorrow, Yesterday as words. Otherwise `Mon 26 Oct`, with the year only when it isn't the current year. Times: 24-hour `16:00` by default, or 12-hour `4:00 pm` when the user picks it ([AP-5](../03-modules/AP-app-platform.md#ap-5)). Ranges `16:00 – 17:00` ([NF-12](../05-quality/nfr.md#nf-12)). |
+| <a id="ux-32"></a>UX-32 | Dates: Today, Tomorrow, Yesterday as words. Otherwise `Mon 26 Oct`, with the year only when it isn't the current year. Times: 24-hour `16:00` by default, or 12-hour `4:00 pm` when the user picks it ([AP-5](../03-modules/AP-app-platform.md#ap-5)). Ranges `16:00 – 17:00` ([NF-12](../05-quality/nfr.md#nf-12)). Due labels: "Due 14:00", "Due Thu 19, 14:00", "Due today", "Due tomorrow". Multi-day states: "In progress", "Planned Sun 15". |
 | <a id="ux-33"></a>UX-33 | Counts use the singular for 1: "1 task", "2 tasks". The copy catalog has `_one` / `_other` forms for every count. |
 
 ## 5. Connectivity and updates

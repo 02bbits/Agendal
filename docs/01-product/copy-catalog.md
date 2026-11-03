@@ -18,6 +18,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `common.retry` † | Retry | Error toasts and banners |
 | `common.done` | Done | Note result |
 | `common.discard` † | Discard changes? | Closing a sheet with edits. Buttons: Discard / Keep editing |
+| `common.discard_action` † | Discard | Button in the "Discard this note?" dialog |
+| `common.keep_editing` † | Keep editing | Button in the same dialog |
 | `common.back` | Back | Back button accessible name |
 
 ## Account and access (AA)
@@ -79,6 +81,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up |
 | `note.needs_look_other` † | {count} need a look. | Same |
 | `note.couldnt_process` † | Couldn't turn this note into tasks. Tap to edit it. | Notes card, for a queued note rejected with a `422` |
+| `note.discard_title` † | Discard this note? | Closing the editor with text |
+| `note.discard_body` † | What you wrote won't be kept. | Same dialog |
 | `note.draft_restored` † | Your unsent note is back. | Editor, after a restored draft ([UX-13](ux-standards.md#ux-13)) |
 | `task.new` | New task | Sheet title ([NC-7](../03-modules/NC-note-capture.md#nc-7)) |
 | `task.title_only` | Only a title is needed | Sheet helper |
@@ -123,11 +127,12 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.cancel_keep` † | Cancel and keep the note | Confirm secondary |
 | `note.pick_task` † | Which task did you mean? | Tie ([NU-E11](../03-modules/NU-note-understanding.md#nu-e11)): candidates as radio buttons |
 | `note.followup_title` | I couldn't find a task in this note. | Follow-up ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
-| `note.keep` | Keep as note | Follow-up |
-| `note.make_one` | Make it a task | Follow-up |
+| `note.followup_edit` † | Edit the note | Follow-up secondary ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
+| `note.make_one` † | Keep it as task | Follow-up primary |
 | `note.skipped` † | Not made into tasks | Result section heading for skipped text |
 | `note.skip_already_done` † | Already done: “{title}” | Skipped reason ([NU-E12](../03-modules/NU-note-understanding.md#nu-e12)) |
 | `note.skip_not_found` † | Couldn't find a task matching “{text}” | Skipped reason ([NU-E29](../03-modules/NU-note-understanding.md#nu-e29)) |
+| `note.skip_no_change` † | Already set: “{title}” | Skipped reason: the move changes nothing ([NU §2.4](../03-modules/NU-note-understanding.md#24-command-matching-nu-3)) |
 | `note.duplicate_hint` † | You already have a task like this | Row hint ([NU-E13](../03-modules/NU-note-understanding.md#nu-e13)) |
 | `note.processing_failed` † | I couldn't read this note just now. It's saved, and I'll try again. | Server error, note kept as pending |
 | `task.created_by_assistant` | Created by the assistant | Task details ([NU-7](../03-modules/NU-note-understanding.md#nu-7)) |
@@ -151,6 +156,13 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `task.push_explainer` † | Get a notification before tasks with reminders? | In-app explainer before the browser prompt. Buttons: Allow / Not now |
 | `task.push_denied` † | Notifications are off for Agendal. Turn them on in your browser settings. | Reminder field helper |
 | `task.purged` † | This task can no longer be restored. | API code |
+| `task.start_date` † | Start date | Field label in Task details ([TK-2](../03-modules/TK-tasks.md#tk-2)) |
+| `task.due_time` † | Due time | Field label in Task details ([TK-2](../03-modules/TK-tasks.md#tk-2)) |
+| `task.start_after_due` † | Start can't be after the due date. | Field error ([TK-3](../03-modules/TK-tasks.md#tk-3)) |
+| `task.in_progress` † | In progress | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.planned` † | Planned {date} | List row meta line for passed start-only tasks ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.due_at` † | Due {time} | List row meta line and dashed blue card ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.due_on` † | Due {date} | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 
 ## Lists and search (LV)
 
@@ -161,6 +173,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `list.encourage_progress` | {done} down, {left} to go! | Inbox progress line |
 | `list.overdue` | Overdue | Section heading |
 | `list.today` | Today | Section heading |
+| `list.inbox_subtitle` † | {overdue} overdue · {today} today | Desktop subtitle in Inbox ([LV-1](../03-modules/LV-lists-search.md#lv-1)) |
 | `list.tomorrow` | Tomorrow | Upcoming day heading |
 | `list.nothing_left` | Nothing left for today | Inbox empty state |
 | `list.no_date` † | No date | Inbox section (LV) |
@@ -231,3 +244,4 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `error.slow` † | This is taking longer than usual. | After 10 s ([UX-03](ux-standards.md#ux-03)) |
 | `error.rate_limited` † | You're going a bit fast. Try again in {seconds} s. | 429 ([UX-43](ux-standards.md#ux-43)) |
 | `error.not_found` † | This item no longer exists. | 404 on a task, note or project |
+| `error.invalid` † | Check the highlighted fields. | 422 without a more specific code |

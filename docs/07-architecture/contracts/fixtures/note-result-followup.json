@@ -1,0 +1,23 @@
+{
+  "note": {
+    "id": "019a1c00-0000-7000-8000-000000000304",
+    "client_id": "6f1c2b3a-4d5e-4f7a-8b9c-0d1e2f3a4b04",
+    "status": "followup",
+    "name": "Idea: dark mode for portfolio site",
+    "text": "idea: dark mode for portfolio site",
+    "source_file_name": null,
+    "written_at": "2026-10-23T08:12:00+07:00",
+    "processed_at": "2026-10-23T08:12:01+07:00",
+    "engine": "rules"
+  },
+  "changes": [],
+  "plan": null,
+  "skipped": [
+    {
+      "ref": "s1",
+      "text": "idea: dark mode for portfolio site",
+      "reason": "skip"
+    }
+  ],
+  "ambiguous": []
+}

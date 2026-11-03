@@ -8,7 +8,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "sql quiz monday 9am, email the group tonight, buy printer ink tomorrow"
   expect:
-    status: done
+    status: confirm
     name: This week
     create:
       - {title: SQL quiz, due: "2026-10-26", start: "09:00", priority: high, project: SQL Course, reminder: 1d}
@@ -21,7 +21,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "Call mum"
   expect:
-    status: done
+    status: confirm
     name: Call mum
     create:
       - {title: Call mum, priority: low, project: Personal}
@@ -32,7 +32,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "submit HCI report by friday"
   expect:
-    status: done
+    status: confirm
     name: Submit HCI report
     create:
       - {title: Submit HCI report, due: "2026-10-30", priority: high, project: HCI}
@@ -43,7 +43,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "gym every monday 7am"
   expect:
-    status: done
+    status: confirm
     name: Gym
     create:
       - {title: Gym, due: "2026-10-26", start: "07:00", priority: low, project: Personal, repeat: weekly, reminder: 15m}
@@ -54,7 +54,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "stretch every day 21:00"
   expect:
-    status: done
+    status: confirm
     name: Stretch
     create:
       - {title: Stretch, due: "2026-10-23", start: "21:00", priority: medium, repeat: daily, reminder: 15m}
@@ -65,7 +65,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "pay rent end of the month"
   expect:
-    status: done
+    status: confirm
     name: Pay rent
     create:
       - {title: Pay rent, due: "2026-10-31", priority: low}
@@ -76,7 +76,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "read chapter 5 in 3 days"
   expect:
-    status: done
+    status: confirm
     name: Read chapter 5
     create:
       - {title: Read chapter 5, due: "2026-10-26", priority: low}
@@ -87,7 +87,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "ER diagram draft tmr"
   expect:
-    status: done
+    status: confirm
     name: ER diagram draft
     create:
       - {title: ER diagram draft, due: "2026-10-24", priority: low, project: SQL Course}
@@ -98,7 +98,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "remember to email the lecturer tonight"
   expect:
-    status: done
+    status: confirm
     name: Email the lecturer
     create:
       - {title: Email the lecturer, due: "2026-10-23", start: "20:00", priority: medium, reminder: 15m}
@@ -109,7 +109,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "- buy milk\n- print CV\n- book dentist"
   expect:
-    status: done
+    status: confirm
     name: Buy milk + 2 more
     create:
       - {title: Buy milk, priority: low}
@@ -122,7 +122,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "finish slides then send them to the group"
   expect:
-    status: done
+    status: confirm
     name: Finish slides + 1 more
     create:
       - {title: Finish slides, priority: low}
@@ -134,10 +134,10 @@
   timezone: Asia/Ho_Chi_Minh
   note: "write 1,000 word essay by sunday"
   expect:
-    status: done
+    status: confirm
     name: Write 1,000 word essay
     create:
-      - {title: Write 1,000 word essay, due: "2026-10-25", priority: low}
+      - {title: "Write 1,000 word essay", due: "2026-10-25", priority: low}
 
 - id: C-013
   categories: [skip.idea, naming.nothing]
@@ -167,7 +167,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "fyi lab moved to room 3. buy printer ink"
   expect:
-    status: done
+    status: confirm
     name: Buy printer ink
     create:
       - {title: Buy printer ink, priority: low}
@@ -182,7 +182,7 @@
     - {id: t1, title: Email the group, due: "2026-10-23"}
   note: "done email the group"
   expect:
-    status: done
+    status: confirm
     name: "Update: Email the group"
     update:
       - {task: t1, done: true}
@@ -195,10 +195,10 @@
     - {id: t2, title: Renew gym membership, due: "2026-10-23"}
   note: "move gym membership to sunday"
   expect:
-    status: done
+    status: confirm
     name: "Update: Renew gym membership"
     update:
-      - {task: t2, due: "2026-10-25", label: "Due Sun 25 Oct (was today)"}
+      - {task: t2, due: "2026-10-25", label: "Due Sun 25 Oct"}
 
 - id: C-018
   categories: [command.delete, safety.delete]
@@ -234,7 +234,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "pitch practice this friday"
   expect:
-    status: done
+    status: confirm
     name: Pitch practice
     create:
       - {title: Pitch practice, due: "2026-10-23", priority: medium}
@@ -245,7 +245,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "call mum tonight"
   expect:
-    status: done
+    status: confirm
     name: Call mum
     create:
       - {title: Call mum, due: "2026-10-23", priority: medium, project: Personal}
@@ -256,7 +256,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "call mum 9am"
   expect:
-    status: done
+    status: confirm
     name: Call mum
     create:
       - {title: Call mum, due: "2026-10-24", start: "09:00", priority: low, project: Personal, reminder: 15m}
@@ -267,7 +267,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "submit lab 26 Oct"
   expect:
-    status: done
+    status: confirm
     name: Submit lab
     create:
       - {title: Submit lab, due: "2026-10-26", priority: high}
@@ -278,7 +278,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "renew passport 1 Sep"
   expect:
-    status: done
+    status: confirm
     name: Renew passport
     create:
       - {title: Renew passport, due: "2027-09-01", priority: low}
@@ -289,7 +289,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "meet tutor at 2 tomorrow"
   expect:
-    status: done
+    status: confirm
     name: Meet tutor
     create:
       - {title: Meet tutor, due: "2026-10-24", start: "14:00", priority: low, reminder: 15m}
@@ -340,7 +340,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "move dentist to friday"
   expect:
-    status: done
+    status: confirm
     name: Dentist
     create:
       - {title: Dentist, due: "2026-10-30", priority: low}
@@ -360,7 +360,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "adv web database lab report"
   expect:
-    status: done
+    status: confirm
     name: Adv Web database lab report
     create:
       - {title: Adv Web database lab report, priority: low, project: Adv Web}
@@ -371,7 +371,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "maybe urgent call bank"
   expect:
-    status: done
+    status: confirm
     name: Call bank
     create:
       - {title: Call bank, priority: high}
@@ -382,7 +382,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "HCI quiz wednesday"
   expect:
-    status: done
+    status: confirm
     name: HCI quiz
     create:
       - {title: HCI quiz, due: "2026-10-28", priority: high, project: HCI, reminder: 1d}
@@ -393,7 +393,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "exam tomorrow 8am"
   expect:
-    status: done
+    status: confirm
     name: Exam
     create:
       - {title: Exam, due: "2026-10-24", start: "08:00", priority: high}
@@ -405,7 +405,7 @@
   processed_at: "2026-10-23T08:00"
   note: "buy ink tonight"
   expect:
-    status: done
+    status: confirm
     name: Buy ink
     create:
       - {title: Buy ink, due: "2026-10-22", start: "20:00", priority: medium, reminder: 15m}
@@ -416,7 +416,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "submit timesheet end of the month"
   expect:
-    status: done
+    status: confirm
     name: Submit timesheet
     create:
       - {title: Submit timesheet, due: "2026-10-31", priority: high}
@@ -427,7 +427,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "sql homework, sql reading, er diagram tmr"
   expect:
-    status: done
+    status: confirm
     name: SQL Course to-dos
     create:
       - {title: SQL homework, priority: low, project: SQL Course}
@@ -440,7 +440,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "buy ink tomorrow, call bank tomorrow"
   expect:
-    status: done
+    status: confirm
     name: Tomorrow's plan
     create:
       - {title: Buy ink, due: "2026-10-24", priority: low}
@@ -452,7 +452,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "lab monday, gym monday"
   expect:
-    status: done
+    status: confirm
     name: Monday plan
     create:
       - {title: Lab, due: "2026-10-26", priority: low}
@@ -464,7 +464,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "standup 9.30 tomorrow. bring laptop"
   expect:
-    status: done
+    status: confirm
     name: Standup + 1 more
     create:
       - {title: Standup, due: "2026-10-24", start: "09:30", priority: low, reminder: 15m}
@@ -476,7 +476,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "buy milk, eggs and bread"
   expect:
-    status: done
+    status: confirm
     name: "Buy milk, eggs and bread"
     create:
       - {title: "Buy milk, eggs and bread", priority: low}
@@ -487,7 +487,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "dentist, haircut"
   expect:
-    status: done
+    status: confirm
     name: Dentist + 1 more
     create:
       - {title: Dentist, priority: low}
@@ -499,7 +499,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "buy ink, sql quiz monday"
   expect:
-    status: done
+    status: confirm
     name: Buy ink + 1 more
     create:
       - {title: Buy ink, priority: low}
@@ -513,7 +513,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "mai 9h họp nhóm, nộp báo cáo HCI thứ 2"
   expect:
-    status: done
+    status: confirm
     name: This week
     create:
       - {title: Họp nhóm, due: "2026-10-24", start: "09:00", priority: low, reminder: 15m}
@@ -525,7 +525,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "kiểm tra SQL thứ 2 lúc 2 giờ chiều"
   expect:
-    status: done
+    status: confirm
     name: Kiểm tra SQL
     create:
       - {title: Kiểm tra SQL, due: "2026-10-26", start: "14:00", priority: high, project: SQL Course, reminder: 1d}
@@ -538,7 +538,7 @@
     - {id: t1, title: Bài tập SQL, due: "2026-10-23"}
   note: "bài tập sql xong rồi"
   expect:
-    status: done
+    status: confirm
     name: "Update: Bài tập SQL"
     update:
       - {task: t1, done: true}
@@ -551,10 +551,10 @@
     - {id: t1, title: Họp nhóm, due: "2026-10-24", start: "09:00"}
   note: "dời họp nhóm sang thứ 3"
   expect:
-    status: done
+    status: confirm
     name: "Update: Họp nhóm"
     update:
-      - {task: t1, due: "2026-10-27", start: "09:00", label: "Due Tue 27 Oct (was tomorrow)"}
+      - {task: t1, due: "2026-10-27", start: "09:00", label: "Due Tue 27 Oct 09:00"}
 
 - id: C-048
   categories: [lang.vi, command.delete, safety.delete]
@@ -583,7 +583,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "toi can mua sua"
   expect:
-    status: done
+    status: confirm
     name: Toi can mua sua
     create:
       - {title: Toi can mua sua, priority: low}
@@ -594,7 +594,7 @@
   timezone: Asia/Ho_Chi_Minh
   note: "chạy bộ mỗi ngày 6h rồi đi chợ chiều nay"
   expect:
-    status: done
+    status: confirm
     name: This week
     create:
       - {title: Chạy bộ, due: "2026-10-24", start: "06:00", priority: low, repeat: daily, reminder: 15m}

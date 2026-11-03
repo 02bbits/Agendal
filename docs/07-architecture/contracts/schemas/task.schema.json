@@ -1,0 +1,42 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agendal.app/schemas/task.schema.json",
+  "title": "Task",
+  "description": "A task as the API returns it (TK §7, data model). Dates and times are floating local values (ADR-006).",
+  "type": "object",
+  "required": ["id", "title", "start_date", "due_date", "start_time", "due_time", "priority", "project_id", "repeat", "reminder", "notes", "done", "done_at", "created_by", "source_note_id", "created_at", "updated_at"],
+  "additionalProperties": false,
+  "properties": {
+    "id": { "$ref": "#/$defs/uuid" },
+    "title": { "$ref": "#/$defs/title" },
+    "start_date": { "$ref": "#/$defs/date", "description": "The day the user plans to work on the task." },
+    "due_date": { "$ref": "#/$defs/date" },
+    "start_time": { "$ref": "#/$defs/time" },
+    "due_time": { "$ref": "#/$defs/time", "description": "The deadline time on the due date." },
+    "priority": { "$ref": "#/$defs/priority" },
+    "project_id": { "$ref": "#/$defs/uuid_or_null" },
+    "repeat": { "$ref": "#/$defs/repeat", "description": "Frequency enum. A non-null repeat_rule must have the same FREQ." },
+    "repeat_rule": { "$ref": "#/$defs/repeat_rule" },
+    "repeat_anchor": { "$ref": "#/$defs/date", "readOnly": true, "description": "Original local date of the series, maintained by the server. Moving one occurrence preserves it. Current task responses include it; older embedded note snapshots may omit it." },
+    "reminder": { "$ref": "#/$defs/reminder" },
+    "notes": { "$ref": "#/$defs/notes" },
+    "done": { "type": "boolean" },
+    "done_at": { "type": ["string", "null"], "format": "date-time" },
+    "created_by": { "enum": ["user", "assistant"] },
+    "source_note_id": { "$ref": "#/$defs/uuid_or_null" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "updated_at": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "uuid": { "type": "string", "format": "uuid" },
+    "uuid_or_null": { "type": ["string", "null"], "format": "uuid" },
+    "title": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "date": { "type": ["string", "null"], "format": "date" },
+    "time": { "type": ["string", "null"], "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$" },
+    "priority": { "enum": ["low", "medium", "high", null] },
+    "repeat": { "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
+    "repeat_rule": { "type": ["string", "null"], "maxLength": 300, "pattern": "^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$", "description": "Nullable calendar RRULE. FREQ is first and matches repeat. Supported parts: FREQ, INTERVAL (1-999), BYDAY, BYMONTHDAY, BYMONTH, WKST, COUNT (1-10000) and UNTIL; COUNT and UNTIL are exclusive. Backend validation checks full rule semantics. Null uses legacy enum-only recurrence. Human-readable descriptions are formatted by the frontend, not returned by the API." },
+    "reminder": { "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
+    "notes": { "type": ["string", "null"], "maxLength": 5000 }
+  }
+}

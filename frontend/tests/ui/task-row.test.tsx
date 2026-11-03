@@ -4,11 +4,12 @@ import { describe, expect, it, vi } from "vitest";
 import {
   TaskRow,
   formatDay,
-  formatLongDate,
   formatTime,
   formatTimeRange,
-  todayIn,
   addDays,
+  formatLongDate,
+  startOfWeek,
+  weekdayOrder,
   type Priority,
   type Reminder,
   type Repeat,
@@ -56,14 +57,16 @@ describe("dates (UX-32)", () => {
     expect(formatTimeRange("16:00", "17:00", "24h")).toBe("16:00 – 17:00");
   });
 
-  it("writes the overline date in full", () => {
-    expect(formatLongDate(TODAY)).toBe("Friday 23 October");
+  it("moves a date to the start of its week for either setting (T-AP-51)", () => {
+    expect(startOfWeek("2026-10-25", "mon")).toBe("2026-10-19"); // a Sunday
+    expect(startOfWeek("2026-10-25", "sun")).toBe("2026-10-25");
+    expect(startOfWeek("2026-10-24", "sun")).toBe("2026-10-18");
+    expect(weekdayOrder("mon")).toEqual([1, 2, 3, 4, 5, 6, 0]);
+    expect(weekdayOrder("sun")).toEqual([0, 1, 2, 3, 4, 5, 6]);
   });
 
-  it("computes today from an injected instant and zone (ADR-006)", () => {
-    const instant = new Date("2026-10-23T18:30:00Z");
-    expect(todayIn(instant, "Asia/Ho_Chi_Minh")).toBe("2026-10-24");
-    expect(todayIn(instant, "America/New_York")).toBe("2026-10-23");
+  it("writes the overline date in full", () => {
+    expect(formatLongDate(TODAY)).toBe("Friday, 23 October");
   });
 });
 
@@ -72,9 +75,10 @@ describe("TaskRow (LV-4)", () => {
     const t = task({
       title: "Review lecture 6 notes",
       project_id: "p-hci",
+      start_date: TODAY,
       due_date: TODAY,
       start_time: "16:00",
-      end_time: "17:00",
+      due_time: "17:00",
       reminder: "15m",
       repeat: "weekly",
     });
@@ -99,10 +103,11 @@ describe("TaskRow (LV-4)", () => {
     ).toBe("var(--color-project-gray)");
   });
 
-  const priorities: Array<[Priority, string | null]> = [
+  const priorities: Array<[Priority | null, string | null]> = [
     ["high", "danger"],
     ["medium", "warning"],
     ["low", null],
+    [null, null],
   ];
   it.each(priorities)("flags %s priority correctly", (priority, tone) => {
     const { container } = renderRow(
@@ -137,7 +142,7 @@ describe("TaskRow (LV-4)", () => {
       task({
         title: "Submit HCI reflection",
         project_id: "p-hci",
-        due_date: "2026-10-22",
+        due_date: "2026-10-21",
         start_time: "23:59",
         priority: "high",
       }),
@@ -147,12 +152,22 @@ describe("TaskRow (LV-4)", () => {
       },
     );
     expect(container.querySelector('[data-slot="meta"]')!.textContent).toBe(
-      "HCI·Yesterday·23:59",
+      "Wed 21 Oct·HCI·23:59",
     );
     expect(
       container.querySelectorAll('[data-slot="meta"] .text-error'),
-    ).toHaveLength(2);
+    ).toHaveLength(1);
+    expect(
+      container.querySelector('[data-slot="meta"] .text-error')!.textContent,
+    ).toBe("Wed 21 Oct");
     expect(container.querySelector("li")!.className).toContain("is-overdue");
+  });
+
+  it("reads no priority when the API sends priority: null", () => {
+    renderRow(task({ title: "Call mum", priority: null }));
+    expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
+      "Call mum, No project",
+    );
   });
 
   it("has a full accessible name (A11Y-51)", () => {
@@ -169,7 +184,7 @@ describe("TaskRow (LV-4)", () => {
       { showDue: true },
     );
     expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
-      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly",
+      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly on Monday",
     );
   });
 
@@ -207,6 +222,18 @@ describe("TaskRow (LV-4)", () => {
     expect(screen.getByRole("link").getAttribute("href")).toBe("/tasks/abc");
   });
 
+  it("marks the selected row with aria-current on the link and grey background", () => {
+    const { container } = renderRow(
+      task({ title: "Selected task", id: "sel-1" }),
+      { selected: true },
+    );
+    const link = screen.getByRole("link");
+    expect(link.getAttribute("aria-current")).toBe("true");
+    expect(container.querySelector("li")!.className).toContain(
+      "bg-surface-hover/60",
+    );
+  });
+
   it("is axe clean in both themes, open and done", async () => {
     render(
       <main>
@@ -215,9 +242,10 @@ describe("TaskRow (LV-4)", () => {
             task={task({
               title: "Draft portfolio case study",
               project_id: "p-port",
-              start_time: "10:00",
-              end_time: "12:00",
+              start_date: TODAY,
               due_date: TODAY,
+              start_time: "10:00",
+              due_time: "12:00",
             })}
             project={projectById("p-port")}
             today={TODAY}

@@ -6,8 +6,8 @@
 Undo all must reverse a whole note exactly, possibly long after it was applied ([RV-2](../../03-modules/RV-review-control.md#rv-2)), and no change may be lost ([NF-11](../../05-quality/nfr.md#nf-11)).
 
 ## Decision
-- Applying a plan writes one entry per change into `notes.applied`: `{kind, task_id, before, label}`, in the same transaction as the task writes.
-- Undo replays the log in reverse in one transaction. It deletes created tasks, restores `before` values on changed tasks, and restores soft-deleted tasks. The note becomes `undone`.
+- Applying a plan writes one entry per change into `notes.applied`: `{kind, task_id, before, after, label}`, in the same transaction as the task writes.
+- Undo replays the log in reverse in one transaction. It deletes created tasks, restores `before` values on changed tasks (only for fields that still hold `after`), and restores soft-deleted tasks. The note becomes `undone`.
 - Tasks deleted by a note stay soft-deleted while that note can still be undone.
 
 ## Consequences

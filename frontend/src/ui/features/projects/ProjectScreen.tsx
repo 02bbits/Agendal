@@ -1,51 +1,54 @@
 import { useState } from "react";
 import { t } from "../../copy";
-import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
-import { IconButton } from "../../components/IconButton";
-import { TrashIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
-import {
-  projectProgress,
-  sortCompleted,
-  sortOpenByDue,
-} from "../../domain/projects";
-import type { Project } from "../../domain/types";
-import type { Navigate } from "../shell/routes";
-import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
+import { sortCompleted, sortOpenByDue } from "../../domain/projects";
+import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
+import { ProjectHeaderMenu } from "./ProjectHeaderMenu";
+import { ProjectOpenList } from "./ProjectOpenList";
+import { ProjectProgressBar } from "./ProjectProgressBar";
+import {
+  COMPLETED_PAGE,
+  dedupeTasks,
+  ProjectCompletedList,
+} from "./ProjectCompletedList";
+import type { ProjectScreenProps } from "./types";
 
-/** Completed tasks shown before "Show completed" (PJ §2.3). */
-export const COMPLETED_PAGE = 10;
-
-export interface ProjectScreenProps {
-  project: Project;
-  onBack: () => void;
-  /** After deleting, back to the Projects list (PJ §2.5). */
-  onDeleted: () => void;
-  navigate?: Navigate;
-}
+export { COMPLETED_PAGE };
+export type { ProjectScreenProps };
 
 /** One project's tasks with its progress bar; menu with Delete (PJ-2, PJ-4). */
 export function ProjectScreen({
   project,
+  progress: explicitProgress,
+  openTasks = [],
+  completedTasks = [],
+  hasMoreCompleted: explicitHasMoreCompleted,
+  onLoadMoreCompleted,
+  loadingMore = false,
+  today,
+  timeFormat = "24h",
+  onToggleTask,
+  isSettling,
   onBack,
-  onDeleted,
+  onDeleteProject,
+  onRenameProject,
   navigate,
+  selectedTaskId,
 }: ProjectScreenProps) {
-  const store = useTaskStore();
-  const [shown, setShown] = useState(COMPLETED_PAGE);
   const [deleting, setDeleting] = useState(false);
-  const mine = store.tasks.filter((x) => x.project_id === project.id);
-  const open = sortOpenByDue(
-    mine.filter((x) => !x.done || store.isSettling(x.id)),
-  );
-  const completed = sortCompleted(
-    mine.filter((x) => x.done && !store.isSettling(x.id)),
-  );
-  const progress = projectProgress(store.tasks, project.id);
-  const share = progress.total ? (progress.done / progress.total) * 100 : 0;
+
+  const open = dedupeTasks(sortOpenByDue(openTasks));
+  const completed = dedupeTasks(sortCompleted(completedTasks));
+  const totalTasks = openTasks.length + completedTasks.length;
+  const progress = explicitProgress ?? {
+    done: completedTasks.length,
+    total: totalTasks,
+  };
+  const totalDone =
+    explicitProgress?.done ??
+    (explicitHasMoreCompleted ? completed.length + 1 : completed.length);
 
   return (
     <div className="pb-8">
@@ -53,11 +56,9 @@ export function ProjectScreen({
         backLabel={t("common.back")}
         onBack={onBack}
         actions={
-          <IconButton
-            plain
-            label={t("project.delete")}
-            icon={<TrashIcon size={20} />}
-            onClick={() => setDeleting(true)}
+          <ProjectHeaderMenu
+            onRename={onRenameProject}
+            onDelete={onDeleteProject ? () => setDeleting(true) : undefined}
           />
         }
       />
@@ -72,87 +73,54 @@ export function ProjectScreen({
         />
         {project.name}
       </h1>
-      <div className="mb-6 flex flex-col gap-1.5 [&_p]:m-0">
-        <span
-          className="block h-1.5 overflow-hidden rounded-full bg-fill"
-          aria-hidden="true"
-        >
-          <span
-            className="block h-full rounded-[inherit]"
-            style={{
-              width: `${share}%`,
-              background: `var(--color-project-${project.colour})`,
-            }}
-          />
-        </span>
-        <p className="text-footnote text-ink-secondary">
-          {t("project.progress", {
-            done: progress.done,
-            total: progress.total,
-          })}
-        </p>
-      </div>
+      <div className={TASK_COLUMN_CLASS}>
+        <ProjectProgressBar
+          colour={project.colour}
+          done={progress.done}
+          total={progress.total}
+        />
 
-      {mine.length === 0 ? (
-        <EmptyState title={t("project.empty")} />
-      ) : (
-        <>
-          <ul className="m-0 list-none p-0">
-            {open.map((x) => (
-              <TaskRow
-                key={x.id}
-                task={x}
+        {totalTasks === 0 ? (
+          <EmptyState title={t("project.empty")} />
+        ) : (
+          <>
+            <ProjectOpenList
+              tasks={open}
+              project={project}
+              today={today}
+              timeFormat={timeFormat}
+              selectedTaskId={selectedTaskId}
+              onToggleTask={onToggleTask}
+              isSettling={isSettling}
+              navigate={navigate}
+            />
+            {completed.length > 0 && (
+              <ProjectCompletedList
+                completed={completed}
+                hasMoreCompleted={explicitHasMoreCompleted}
+                totalDone={totalDone}
+                onLoadMoreCompleted={onLoadMoreCompleted}
+                loadingMore={loadingMore}
                 project={project}
-                today={store.today}
-                timeFormat={store.timeFormat}
-                showDue
-                onToggle={store.toggle}
+                today={today}
+                timeFormat={timeFormat}
+                selectedTaskId={selectedTaskId}
+                onToggleTask={onToggleTask}
                 navigate={navigate}
               />
-            ))}
-          </ul>
-          {completed.length > 0 && (
-            <>
-              <h2 className="mt-6 mb-2 flex items-baseline gap-1.5 text-heading font-semibold">
-                {t("list.completed")}
-              </h2>
-              <ul className="m-0 list-none p-0">
-                {completed.slice(0, shown).map((x) => (
-                  <TaskRow
-                    key={x.id}
-                    task={x}
-                    project={project}
-                    today={store.today}
-                    timeFormat={store.timeFormat}
-                    showDue
-                    onToggle={store.toggle}
-                    navigate={navigate}
-                  />
-                ))}
-              </ul>
-              {completed.length > shown && (
-                <Button
-                  variant="secondary"
-                  className="mt-3 w-full"
-                  onClick={() => setShown((n) => n + 50)}
-                >
-                  {t("project.show_completed")}
-                </Button>
-              )}
-            </>
-          )}
-        </>
-      )}
+            )}
+          </>
+        )}
+      </div>
 
       <DeleteProjectDialog
         open={deleting}
         project={project}
-        taskCount={mine.length}
+        taskCount={totalTasks}
         onCancel={() => setDeleting(false)}
-        onConfirm={(action) => {
+        onConfirm={async (action) => {
           setDeleting(false);
-          store.removeProject(project, action);
-          onDeleted();
+          await onDeleteProject?.(action);
         }}
       />
     </div>

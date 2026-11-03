@@ -7,6 +7,24 @@ const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
   prettier,
+  // IM-05: read the time through src/lib/clock.ts so tests can pin it
+  {
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/lib/clock.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "NewExpression[callee.name='Date'][arguments.length=0]",
+          message: "Use now() from @/lib/clock.",
+        },
+        {
+          selector: "MemberExpression[object.name='Date'][property.name='now']",
+          message: "Use now() from @/lib/clock.",
+        },
+      ],
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

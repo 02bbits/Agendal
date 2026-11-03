@@ -1,10 +1,9 @@
 /*
- * Paper & ink on Tailwind CSS and daisyUI (IM-06).
+ * Graphite (V2.1) on Tailwind CSS and daisyUI (IM-06).
  * Source of truth for every value: docs/01-product/theme-guide.md.
  * Themes are switched with data-theme="agendal-light" | "agendal-dark" on <html>;
  * with no attribute, the system setting picks one (prefersdark).
  */
-@import url("https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,600&display=swap");
 @import "tailwindcss";
 
 @plugin "daisyui" {
@@ -18,98 +17,103 @@
   color-scheme: light;
 
   /* daisyUI roles */
-  --color-base-100: #f6f5f1; /* bg: paper, the 60% */
-  --color-base-200: #eceae4; /* fill: quiet controls */
-  --color-base-300: #e2dfd7; /* separator */
-  --color-base-content: #1b1a17; /* ink */
-  --color-primary: #2f5bd3; /* accent, the 10% */
+  --color-base-100: #f2f2f2; /* bg: grouped-list grey */
+  --color-base-200: #e6e6e6; /* fill: quiet controls */
+  --color-base-300: #e1e1e1; /* separator */
+  --color-base-content: #252525; /* ink */
+  --color-primary: #252525; /* accent is ink */
   --color-primary-content: #ffffff; /* on-accent */
-  --color-secondary: #eceae4;
-  --color-secondary-content: #1b1a17;
-  --color-accent: #2f5bd3;
+  --color-secondary: #e6e6e6;
+  --color-secondary-content: #252525;
+  --color-accent: #252525;
   --color-accent-content: #ffffff;
-  --color-neutral: #1b1a17; /* selected chips, toasts */
-  --color-neutral-content: #f6f5f1;
-  --color-info: #2f5bd3;
+  --color-neutral: #252525; /* toasts */
+  --color-neutral-content: #f2f2f2;
+  --color-info: #252525;
   --color-info-content: #ffffff;
-  --color-success: #2f7a4b;
+  --color-success: #2e6b43;
   --color-success-content: #ffffff;
   --color-warning: #8a5300;
   --color-warning-content: #ffffff;
-  --color-error: #b42318; /* danger */
+  --color-error: #b3261e; /* danger-text */
   --color-error-content: #ffffff;
 
   --radius-selector: 999px;
-  --radius-field: 12px;
-  --radius-box: 16px;
+  --radius-field: 10px;
+  --radius-box: 12px;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
   --depth: 0;
   --noise: 0;
 
-  /* Paper & ink tokens daisyUI has no role for */
+  /* Graphite tokens daisyUI has no role for */
   --ag-surface: #ffffff;
   --ag-surface-elevated: #ffffff;
   --ag-fill-thumb: #ffffff;
-  --ag-control-border: #8a867c;
-  --ag-ink-secondary: #57544d;
-  --ag-ink-tertiary: #6b675f;
-  --ag-accent-tint: #e8edfb;
-  --ag-danger-tint: #fbeae8;
-  --ag-success-tint: #e6f1ea;
-  --ag-warning-tint: #f6eddc;
-  --ag-bar: rgba(246, 245, 241, 0.92);
-  --ag-scrim: rgba(27, 26, 23, 0.32);
+  --ag-fill-2: #cfcfcf;
+  --ag-control-border: #7d7d7d;
+  --ag-ink-secondary: #545454;
+  --ag-ink-tertiary: #7d7d7d;
+  --ag-accent-tint: #e6e6e6;
+  --ag-danger-tint: #f8e4e2;
+  --ag-success-tint: #e5efe8;
+  --ag-warning-tint: #f5ecdc;
+  --ag-bar: rgba(242, 242, 242, 0.94);
+  --ag-scrim: rgba(0, 0, 0, 0.32);
 }
 
 @plugin "daisyui/theme" {
   name: "agendal-dark";
   default: false;
   prefersdark: true;
+  /* The system dark mode applies only when no theme is chosen. With the default ":root", its
+     media rule outranks [data-theme="agendal-light"] and Light can't be picked (AP-3) */
+  root: ":root:not([data-theme])";
   color-scheme: dark;
 
-  --color-base-100: #121211;
-  --color-base-200: #262522;
-  --color-base-300: #2c2b28;
-  --color-base-content: #f2f0ea;
-  --color-primary: #8fadff;
-  --color-primary-content: #0e1630;
-  --color-secondary: #262522;
-  --color-secondary-content: #f2f0ea;
-  --color-accent: #8fadff;
-  --color-accent-content: #0e1630;
-  --color-neutral: #f2f0ea;
-  --color-neutral-content: #121211;
-  --color-info: #8fadff;
-  --color-info-content: #0e1630;
-  --color-success: #7dd19c;
-  --color-success-content: #0e1630;
-  --color-warning: #f0b45a;
-  --color-warning-content: #0e1630;
-  --color-error: #ff8a7f;
-  --color-error-content: #0e1630;
+  --color-base-100: #1a1a1a;
+  --color-base-200: #333333;
+  --color-base-300: #363636;
+  --color-base-content: #ededed;
+  --color-primary: #cfcfcf;
+  --color-primary-content: #252525;
+  --color-secondary: #333333;
+  --color-secondary-content: #ededed;
+  --color-accent: #cfcfcf;
+  --color-accent-content: #252525;
+  --color-neutral: #ededed;
+  --color-neutral-content: #1a1a1a;
+  --color-info: #cfcfcf;
+  --color-info-content: #252525;
+  --color-success: #7fcb98;
+  --color-success-content: #1a1a1a;
+  --color-warning: #f0b860;
+  --color-warning-content: #1a1a1a;
+  --color-error: #ff8a80;
+  --color-error-content: #1a1a1a;
 
   --radius-selector: 999px;
-  --radius-field: 12px;
-  --radius-box: 16px;
+  --radius-field: 10px;
+  --radius-box: 12px;
   --size-selector: 0.25rem;
   --size-field: 0.25rem;
   --border: 1px;
   --depth: 0;
   --noise: 0;
 
-  --ag-surface: #1c1b19;
-  --ag-surface-elevated: #22211e;
-  --ag-fill-thumb: #3a3935;
-  --ag-control-border: #77736a;
-  --ag-ink-secondary: #b5b1a7;
-  --ag-ink-tertiary: #9a968c;
-  --ag-accent-tint: #1d2640;
-  --ag-danger-tint: #3a1d1a;
-  --ag-success-tint: #16301f;
-  --ag-warning-tint: #33270f;
-  --ag-bar: rgba(18, 18, 17, 0.92);
+  --ag-surface: #252525;
+  --ag-surface-elevated: #2e2e2e;
+  --ag-fill-thumb: #252525;
+  --ag-fill-2: #545454;
+  --ag-control-border: #7d7d7d;
+  --ag-ink-secondary: #a6a6a6;
+  --ag-ink-tertiary: #7d7d7d;
+  --ag-accent-tint: #363636;
+  --ag-danger-tint: #3a2321;
+  --ag-success-tint: #1f3326;
+  --ag-warning-tint: #3a2e18;
+  --ag-bar: rgba(26, 26, 26, 0.94);
   --ag-scrim: rgba(0, 0, 0, 0.6);
 }
 
@@ -117,6 +121,7 @@
 @theme inline {
   --color-paper: var(--color-base-100);
   --color-fill: var(--color-base-200);
+  --color-fill-2: var(--ag-fill-2);
   --color-separator: var(--color-base-300);
   --color-ink: var(--color-base-content);
   --color-danger: var(--color-error);
@@ -137,64 +142,65 @@
 /* Project colours are picked at runtime (style={{ background: var(--color-project-…) }}), so always emit them */
 @theme static {
   /* Project colours: the same in both themes, only as dots, bars and tiles */
-  --color-project-blue: #4e79d9;
-  --color-project-red: #d2584e;
-  --color-project-orange: #e08a2e;
+  --color-project-blue: #5b7fb5;
+  --color-project-red: #b9564d;
+  --color-project-orange: #c78a3c;
   --color-project-yellow: #d9b23a;
-  --color-project-green: #4e9f6b;
+  --color-project-green: #5e9670;
   --color-project-teal: #2e9c93;
-  --color-project-purple: #8c63d2;
-  --color-project-gray: #8e8a80;
+  --color-project-purple: #8b6bae;
+  --color-project-gray: #7d7d7d;
 }
 
 @theme {
+  /* The variables come from next/font in app/layout.tsx */
   --font-sans:
-    "Instrument Sans", -apple-system, "Segoe UI", system-ui, sans-serif;
-  --font-serif: Newsreader, Georgia, "Times New Roman", serif;
+    var(--font-inter), Inter, -apple-system, "Segoe UI", system-ui, sans-serif;
 
   /* Type scale */
-  --text-display: 36px;
-  --text-display--line-height: 40px;
-  --text-display--letter-spacing: -0.01em;
-  --text-title: 28px;
-  --text-title--line-height: 34px;
-  --text-title--letter-spacing: -0.01em;
-  --text-dialog: 24px;
-  --text-dialog--line-height: 30px;
-  --text-dialog--letter-spacing: -0.01em;
-  --text-note: 19px;
-  --text-note--line-height: 28px;
+  --text-display: 28px;
+  --text-display--line-height: 34px;
+  --text-display--letter-spacing: -0.02em;
+  --text-title: 22px;
+  --text-title--line-height: 28px;
+  --text-title--letter-spacing: -0.015em;
+  --text-dialog: 22px;
+  --text-dialog--line-height: 28px;
+  --text-dialog--letter-spacing: -0.015em;
+  --text-note: 17px;
+  --text-note--line-height: 25px;
   --text-heading: 17px;
-  --text-heading--line-height: 24px;
-  --text-body: 16px;
-  --text-body--line-height: 22px;
+  --text-heading--line-height: 22px;
+  --text-body: 15px;
+  --text-body--line-height: 20px;
   --text-callout: 15px;
-  --text-callout--line-height: 21px;
+  --text-callout--line-height: 20px;
   --text-footnote: 13px;
   --text-footnote--line-height: 18px;
-  --text-overline: 12px;
-  --text-overline--line-height: 16px;
-  --text-overline--letter-spacing: 0.06em;
-  --text-tab: 11px;
-  --text-tab--line-height: 14px;
+  --text-overline: 11px;
+  --text-overline--line-height: 14px;
+  --text-overline--letter-spacing: 0.03em;
+  --text-tab: 10px;
+  --text-tab--line-height: 12px;
 
   /* Radius: field (12), box (16) and selector (999) come from daisyUI */
-  --radius-badge: 6px;
-  --radius-tile: 8px;
+  --radius-badge: 5px;
+  --radius-tile: 7px;
   --radius-segmented: 10px;
-  --radius-dialog: 20px;
-  --radius-sheet: 24px;
+  --radius-dialog: 16px;
+  --radius-sheet: 14px;
 
   /* Shadows only on overlays and the capture bar */
-  --shadow-xs: 0 1px 2px rgba(27, 26, 23, 0.06);
-  --shadow-sm: 0 2px 10px rgba(27, 26, 23, 0.06);
-  --shadow-knob: 0 1px 3px rgba(27, 26, 23, 0.2);
-  --shadow-md: 0 8px 24px rgba(27, 26, 23, 0.12);
-  --shadow-lg: 0 16px 48px rgba(27, 26, 23, 0.16);
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 2px 14px rgba(0, 0, 0, 0.08);
+  --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 18px 50px rgba(0, 0, 0, 0.18);
+  --shadow-lg: 0 18px 50px rgba(0, 0, 0, 0.18);
 
   /* Motion (UX-50): fades and slides, 150–200 ms */
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-slide-up: slide-up 180ms ease-out;
+  --animate-panel-in: panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-fade-quick: fade-in 100ms linear;
 
   @keyframes fade-in {
@@ -208,9 +214,19 @@
       opacity: 0;
     }
   }
+  @keyframes panel-in {
+    from {
+      transform: translateX(24px);
+      opacity: 0;
+    }
+    to {
+      transform: none;
+      opacity: 1;
+    }
+  }
 }
 
-/* Keyboard focus: a 2px paper gap, then 2px solid accent, on every control (NF-2) */
+/* Keyboard focus: a 2px gap, then 2px solid accent, on every control (NF-2) */
 @utility focus-ring {
   &:focus-visible {
     outline: 2px solid var(--color-primary);
@@ -218,13 +234,22 @@
   }
 }
 
-/* Overlines above screen titles and group labels */
-@utility overline {
-  font-size: var(--text-overline);
-  line-height: var(--text-overline--line-height);
-  letter-spacing: var(--text-overline--letter-spacing);
-  font-weight: 600;
-  text-transform: uppercase;
+/* Side margin of the column: 20px plus the side safe areas of a phone held sideways (UX-25) */
+@utility px-gutter {
+  padding-left: calc(1.25rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(1.25rem + env(safe-area-inset-right, 0px));
+}
+
+/* Side margin of the content column from 768px wide: 40px plus the safe areas (UX-27) */
+@utility px-gutter-wide {
+  padding-left: calc(2.5rem + env(safe-area-inset-left, 0px));
+  padding-right: calc(2.5rem + env(safe-area-inset-right, 0px));
+}
+
+/* Only the side safe areas, for full-width bars such as the tab bar (UX-25) */
+@utility px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 @layer base {
@@ -235,7 +260,7 @@
     background: var(--color-base-100);
     color: var(--color-base-content);
     font-family: var(--font-sans);
-    font-size: 16px;
-    line-height: 22px;
+    font-size: 15px;
+    line-height: 20px;
   }
 }

@@ -16,10 +16,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
 | <a id="nu-1"></a>NU-1 | Split a note into items and make one task per actionable item | Must | Items split on new lines, commas, semicolons, full stops and "then" ("rồi", "sau đó"); bullets are stripped |
-| <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Due date, time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
+| <a id="nu-2"></a>NU-2 | Fill in each task's details | Must | Start date, due date, time, due time, priority, project, repeat and reminder are set per the extraction rules, for English and Vietnamese phrases; anything not found is left empty |
 | <a id="nu-3"></a>NU-3 | Act on existing tasks from a note | Must | "done X", "move X to Friday" and "delete X" find the matching task and complete, reschedule or delete it |
 | <a id="nu-4"></a>NU-4 | Ignore text that isn't a task | Must | Ideas, FYIs and filler are kept in the note but make no task; a note with nothing actionable triggers the follow-up |
-| <a id="nu-5"></a>NU-5 | Ask before risky changes | Must | Any delete, or more than 5 changes in one note, shows "Check this first" with the planned changes; nothing is applied until Apply changes |
+| <a id="nu-5"></a>NU-5 | Ask before applying changes | Must | Every note with at least one change shows "Check this first" with the planned changes; nothing is applied until Apply changes |
 | <a id="nu-6"></a>NU-6 | Name each note automatically | Should | The name follows the naming rules and shows on the result screen and Notes card |
 | <a id="nu-7"></a>NU-7 | Label tasks the assistant made | Should | Task details show "Created by the assistant" |
 
@@ -29,7 +29,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | Make tasks in the note editor (online) | `POST /notes` → result, confirm or follow-up (RV) |
 | Reconnect with pending notes | Service worker replays them oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)) → toast |
-| Make it a task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
+| Keep it as task (follow-up) | Handled by RV ([RV-3](RV-review-control.md#rv-3)). NU is not called again |
 
 - As a user, I write several things in one line, so that I don't fill in a form for each one.
 - As a user, I write "done X" or "move X to Friday", so that I can update tasks without finding them.
@@ -63,9 +63,12 @@ Every note goes through the same steps, on the server, in one request:
 - Split on newlines, `;`, `,` (not between digits, [NU-E18](#nu-e18)), and `. ` or a full stop at the end of the text (not after a known abbreviation, [NU-E19](#nu-e19)). A dot followed by anything other than a space or the end (`9.30`, `report.pdf`, `a.b@x.com`) never splits.
 - Split on the **whole word** "then", in any case ([NU-E17](#nu-e17)), and on "sau đó" or "rồi" when words follow them ([NU-E41](#nu-e41)). "and" and "và" never split.
 - **Merge comma lists ([NU-E33](#nu-e33), [Q17](../08-project/open-questions.md#q17)).** A fragment after a comma joins the item before it when both of these hold:
-  - The item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
-  - The fragment has **no signal of its own**: no task verb or command verb at its start, no skip prefix, and no date, time, priority word, repeat phrase, project name or project keyword.
+  - After leading date/time/priority phrases and lead-ins, the item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
+  - The fragment **starts no task of its own**: it doesn't open with a task verb, command verb, skip prefix, or a date, time, priority or repeat phrase ("mai gọi mẹ", "26 Oct meeting"), and it names no project, project keyword the user has, or task word (*exam, quiz, deadline, submit* …). Date, time, priority and repeat phrases that **close** the fragment describe the whole list: "mua sữa, trứng và bánh mì sáng mai" is one task for tomorrow morning.
+  - A fragment of **only** date, time, priority and repeat phrases ("tomorrow 9am", "không gấp", "lặp lại 3 lần") joins the item before it. If the item so far contains only modifiers, it joins the following task across a comma; explicit command/skip prefixes keep their boundary. Exclusion and series-end clauses stay attached to their task, including any explanation.
   
+  Calendar lists are read as a whole before comma splitting, independently of the task verb: `gym 2, 4, 6 hàng tuần` and `gym every month on day 1, 15, 25` each describe one task. A following independent task still splits. Commas inside URLs, emails and project names preserve their original text.
+
   Only commas merge. Newlines, semicolons, full stops and "then" always split. When unsure, the rule splits, as the PRD does. The 30-item limit counts items after merging.
 - At the start of each line, strip bullets (`-`, `*`, `•`, `–`), numbering (`1.`, `1)`, `a)`) and checkboxes (`[ ]`, `[x]`) ([NU-E20](#nu-e20)).
 - Trim each item and drop empty ones. Known abbreviations: Dr, Prof, Mr, Mrs, Ms, St, No, vs, etc, e.g, i.e.
@@ -74,8 +77,8 @@ Every note goes through the same steps, on the server, in one request:
 
 In this order, first match wins:
 
-1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3). Reason `skip`.
-2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*. Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*). Without it, the item is a task.
+1. **Skip:** starts with *idea, note, thought, remember that, fyi* (with or without `:`), or the whole item is filler (*hmm, ok, okay, test, thanks, thank you, cool, lol*, symbols alone such as 👍), or a Vietnamese equivalent from the [business rules](../02-domain/business-rules.md#vietnamese-q3), or a heading that ends with `:` and starts with no task verb ("Tuần này:", "Shopping list:"). Reason `skip`. The full word lists live in `backend/resources/notes/note-rules.csv`.
+2. **Command:** starts with a command verb (*done, finished, did, move, push, reschedule, postpone, delete, cancel, remove, drop*, or the Vietnamese ones) or ends with *is done* / *xong rồi*, or ends with a bare *done* / *xong* after a non-verb ("homework done", but "get it done" is a task). Reschedule also needs *to \<when>* (*sang / qua / đến \<when>*) where *\<when>* reads as a date or time: "move the boxes to the garage" and "push code to github" are tasks. Phrasal verbs such as *drop off* and *bỏ rác* are tasks.
 3. **Task:** everything else. An item with no title words after extraction (only a date, time or priority, such as "tomorrow 9am") becomes a skip ([NU-E32](#nu-e32)).
 
 "Remember to" is a lead-in (it makes a task). "Remember that" is a skip. Both follow the business rules.
@@ -85,9 +88,9 @@ In this order, first match wins:
 - **Meaningful words:** the words left after lower-casing and removing the command verb, date/time phrases, and stop words (*a, an, the, to, for, my, of, on, in, at, with, and, or, task*; *cái, các, những, của, cho, với, và, là, việc*). No stemming. Diacritics are kept, so "xong bài tập sql" matches "Bài tập SQL" but "bai tap" doesn't.
 - **Candidates:** trigram search (`pg_trgm` on the unaccented title) over the user's **open** tasks for any meaningful word (a wide net; scoring then compares with diacritics), the top 50 by relevance ([scalability](../05-quality/scalability.md#design-rules-that-keep-it-scaling)).
 - **Score** = meaningful words found in the task title ÷ meaningful words in the command. A task matches when the score is ≥ 0.6.
-- **Best match wins.** Two or more tasks with the same top score is a tie ([NU-E11](#nu-e11)).
-- **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. Complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
-- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`.
+- **Best match wins.** On equal scores, the title with more of the command's words wins, then the title with fewer words the command doesn't name ("done buy milk" means "Buy milk" over "Buy milk and eggs"). Two or more tasks still equal after that is a tie ([NU-E11](#nu-e11)).
+- **No open match:** if a *done* task would match → skip `already_done` ([NU-E12](#nu-e12)). Otherwise: reschedule → a new task with the target date. A delete with a deadline (*before / by / until / trước \<when>*, "cancel netflix before the 10th") or a place (*at / ở / tại \<place>*, "drop the kids at school") → that task, since a delete never needs either. Other complete or delete → skip `not_found` ([NU-E29](#nu-e29), **[Q17](../08-project/open-questions.md#q17)**).
+- **Reschedule detail:** a new date alone keeps the task's start and end times. A new time also sets the start, and the end moves by the same amount ([NU-E35](#nu-e35)). The change label is `Due Sun 25 Oct (was today)`. If the old value was empty, it reads `(was no date)`. Label times follow the user's time format ([UX-32](../01-product/ux-standards.md#ux-32)). A move to the date and time the task already has changes nothing → skip `no_change` (`note.skip_no_change`).
 - **Repeating tasks:** "done" completes this occurrence and creates the next one ([TK-4](TK-tasks.md#tk-4)). "move" moves only this occurrence ([NU-E36](#nu-e36)).
 
 ### 2.5 Extraction (NU-2)
@@ -96,14 +99,15 @@ The business-rules table is the phrase list. The precise semantics:
 
 | Field | Rule |
 |---|---|
-| Due date | Weekdays (full or 3-letter) mean the next one ahead. Today counts only with *this* ([NU-E2](#nu-e2), [NU-E3](#nu-e3)). *next week* → the first day of next week ([NU-E10](#nu-e10)). *end of the week* → the last day of the week (Sunday, or Saturday when the week starts on Sunday). *end of the month* → its last day ([NU-E9](#nu-e9)). Explicit dates: `26 Oct`, `Oct 26`, `26/10`, `26/10/2026`. Numbers are day/month ([NU-E31](#nu-e31)). A date that has passed follows [NU-E4](#nu-e4). Two dates follow [NU-E6](#nu-e6) |
+| Start date | "from X to Y / từ X đến Y" → start date X, due date Y |
+| Due date | "by / before / due / hạn / trước X" → due date (time → due time); "on / vào X" and plain dates keep setting the due date. Weekdays (full or 3-letter) mean the next one ahead. Today counts only with *this* ([NU-E2](#nu-e2), [NU-E3](#nu-e3)). *next week* → the first day of next week ([NU-E10](#nu-e10)). *end of the week* → the last day of the week (Sunday, or Saturday when the week starts on Sunday). *end of the month* → its last day ([NU-E9](#nu-e9)). Explicit dates: `26 Oct`, `Oct 26`, `26/10`, `26/10/2026`. Numbers are day/month ([NU-E31](#nu-e31)). A date that has passed follows [NU-E4](#nu-e4). Two dates follow [NU-E6](#nu-e6) |
 | No date | Empty, unless a time or repeat is given: then today, or tomorrow if that time has already passed ([NU-E5](#nu-e5)). Day-bound words (*tonight*, *this evening*) always mean today ([NU-E1](#nu-e1)) |
-| Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). Ranges set both start and end ([NU-E30](#nu-e30)) |
+| Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). A time range on one day ("2–4pm Friday") → start Fri 14:00, due Fri 16:00 ([NU-E30](#nu-e30)) |
 | Priority | High words win over Low words ([NU-E24](#nu-e24)). Default: Medium if due today, otherwise Low. Content words that set High (*deadline, exam, quiz, submit*) stay in the title. Pure priority words (*urgent, asap, important, high/low priority, whenever, someday, maybe*) are removed |
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
-| Repeat | *every day / daily* → Daily. *every week / weekly* → Weekly. *every \<weekday>* → Weekly, starting per [NU-E8](#nu-e8). *every month / monthly* → Monthly. Other patterns → low confidence |
+| Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
 | Reminder | *exam* or *quiz* → 1 day before. Otherwise, any task with a time → 15 min before. Otherwise none. A reminder that would fall before `now` → none ([NU-E25](#nu-e25)) |
-| Title | Remove date, time, pure priority and repeat phrases, and lead-ins. Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
+| Title | Remove the chosen date phrase, time, pure priority and repeat phrases, and lead-ins. With several dates, keep the other date phrases per [NU-E6](#nu-e6). Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
 
 **Low confidence** (sent to the LLM when it's enabled, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)):
 - A date- or time-like token the rules couldn't parse (`31/2`, `3pmish`)
@@ -112,14 +116,42 @@ The business-rules table is the phrase list. The precise semantics:
 - Text in a language other than English or Vietnamese ([NU-E28](#nu-e28))
 - Vietnamese typed without diacritics ([NU-E40](#nu-e40))
 
+#### Relative time
+
+Relative durations share the quantity/unit vocabulary with modifier detection: `sau nửa tiếng`, `nửa tiếng sau`, `in half an hour` and `in thirty minutes` all mean 30 minutes from `written_at`. Vietnamese `giờ` and `tiếng` share the hour unit; a trailing `rưỡi` adds half of that unit (`một giờ rưỡi` = 90 minutes). Fractional months and sub-minute results remain unresolved because the contract cannot represent them exactly. Clock durations use elapsed time across a clock change; whole days/weeks/months retain calendar arithmetic. Unsupported quantities remain low confidence instead of consuming a known fragment of the duration.
+
+A relative clock timestamp fixes its own date. A weekday/rule that would move it onto another date, an unallocated time for several copies, or a repeated DST minute that cannot round-trip through the floating-time contract keeps the scheduling text for fallback, without applying a partial date/time/rule. The [complex manual cases](../../backend/tests/Manual/complex-note-cases.md) cover midnight, date boundaries and mixed notes.
+
+#### Calendar recurrence
+
+English and Vietnamese repeat phrases can specify a frequency/interval, selected weekdays, monthly dates or ordinal weekdays, and an end condition:
+
+| Example note | Schedule |
+|---|---|
+| `gym every 3 days` | Once every three days |
+| `tập gym 2 4 6 hàng tuần` | Monday, Wednesday and Friday each week |
+| `gym every 2 weeks on Monday and Wednesday` | Those two weekdays in every second week |
+| `gym every month on day 1, 15, 25` | Days 1, 15 and 25 of each month |
+| `gym every first Monday, last Friday of month` | The first Monday and last Friday of each month |
+| `pay rent every month on the 15th` | The 15th of each month |
+| `gym every month on first and third Monday` | The first and third Mondays; shared-weekday ordinal lists also accept commas |
+| `test every second monday of month` | The second Monday of each month |
+| `họp thứ sáu cuối cùng mỗi tháng` | The last Friday of each month |
+| `birthday every year on February 29` | February 29 in leap years |
+| `gym every 3 days for 5 occurrences` | Five occurrences, including the first |
+| `tập gym mỗi 2 ngày đến 15/11/2026` | Every two days through the named date |
+
+**Multiple tasks per scheduled day.** `visit house 3 times every day`, `visit house three times a day` and `đi gym mỗi ngày 3 lần` create three independent daily series, labelled `Visit house (1/3)`, `(2/3)` and `(3/3)`, without inventing times. A series-end count is separate: `every day for 3 occurrences` creates one series ending after three dates; `3 times every day for 2 occurrences` creates three series, each ending after two dates. The expanded creates count toward the 30-item limit and the usual confirmation threshold. Conflicting counts or incomplete time allocations keep the original text as low confidence.
+
+The [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37) defines stored fields, validation, missing-date behaviour, completion/Undo and frontend presentation. Date exclusions and editing an entire future series require their task flows; unrecognised exclusion text (including `trừ`, `except` and `not on`) stays intact and low confidence, without choosing one of its excluded dates. Ambiguous repeat words such as `biweekly` also stay low confidence. A [manual case list](../../backend/tests/Manual/note-cases.md) records inputs and expected results for dates, title cleanup, recurrence, splitting and commands.
+
 ### 2.6 Safety and status (NU-5, BR-01, BR-02)
 
 | Condition, checked in order | Status |
 |---|---|
 | Validation error (empty, too long, too many items) | `422`, nothing stored |
-| Any delete, any tie ([NU-E11](#nu-e11)), or more than 5 changes (creates + updates + deletes) | `confirm` |
-| At least one change | `done` |
-| No changes, and every skip is `already_done` or `not_found` | `done` with zero changes. The result shows the skipped section |
+| At least one change (creates + updates + deletes), or any tie ([NU-E11](#nu-e11)) | `confirm` |
+| No changes, and every skip is `already_done`, `not_found` or `no_change` | `done` with zero changes. The result shows the skipped section |
 | No changes, and at least one plain `skip` | `followup` |
 
 Skipped items never count as changes. A `confirm` plan is re-validated when it is applied ([NU-E38](#nu-e38)).
@@ -145,12 +177,12 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e3"></a>NU-E3 | *next \<weekday>* when it isn't today ("next friday" on a Wednesday) | The coming one (in 2 days), never the week after | T-NU-103 |
 | <a id="nu-e4"></a>NU-E4 | Explicit date that has passed ("26 Oct" on 27 Oct) | 30 days ago or less → keep it, and the task is overdue at once. Older → the same date next year | T-NU-104 · C-023, C-024 |
 | <a id="nu-e5"></a>NU-E5 | Time already passed, with no date word ("call mum 9am" at 10:00) | Tomorrow at that time | T-NU-105 · C-022 |
-| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | The date after *by / due / on / before* wins. Otherwise the later date. The other date phrase stays in the title | T-NU-106 |
+| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | One date marked as the start (*from, bắt đầu*) and one as the deadline (*by, due, hạn*) → start date and due date. Otherwise the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
 | <a id="nu-e7"></a>NU-E7 | Bare hour without am/pm ("at 2") | 1–6 → pm, 7–11 → am, 12 → 12:00, 13–23 → that hour | T-NU-107 · C-025 |
 | <a id="nu-e8"></a>NU-E8 | "every Monday" with no start date | The next Monday. Today if today is Monday and the time (if any) hasn't passed | T-NU-108 · C-004 |
 | <a id="nu-e9"></a>NU-E9 | "end of the month" on its last day, "end of the week" on the week's last day | Today | T-NU-109 · C-036 |
 | <a id="nu-e10"></a>NU-E10 | "next week" | The first day of next week, per the user's week-start setting (Monday by default, [Q6](../08-project/open-questions.md#q6)), no time | T-NU-110 |
-| <a id="nu-e11"></a>NU-E11 | Command ties: 2+ open tasks with the same top score | `confirm`. "Which task did you mean?" shows up to 5 candidates by due date (no date last). The soonest is preselected (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-111 · C-026 |
+| <a id="nu-e11"></a>NU-E11 | Command ties: 2+ open tasks equally close to the command (same score, same words found, same extra title words) | `confirm`. "Which task did you mean?" shows up to 5 candidates by due date (no date last). The soonest is preselected (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-111 · C-026 |
 | <a id="nu-e12"></a>NU-E12 | Command matches only a done task | Skip `already_done` (`note.skip_already_done`) | T-NU-112 · C-027 |
 | <a id="nu-e13"></a>NU-E13 | New task looks like an open one (same meaningful words, same due date) | Created anyway. The result row shows `note.duplicate_hint` | T-NU-113 |
 | <a id="nu-e14"></a>NU-E14 | More than 30 items | `422 note.too_many_items`. Nothing is stored. The text stays in the editor | T-NU-114 · C-030 |
@@ -168,11 +200,11 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e26"></a>NU-E26 | Note written offline, processed later | `now` = `written_at` in its zone. Notes are processed oldest first, each against the state the previous one left | T-NU-126 · C-035 |
 | <a id="nu-e27"></a>NU-E27 | LLM times out, errors, returns invalid output, or the budget is used up | The rules result is used. `engine = rules_fallback`. No message to the user | T-NU-127 |
 | <a id="nu-e28"></a>NU-E28 | Text in a language other than English or Vietnamese | The title is kept as written, with diacritics. Only numeric dates and times are extracted. Items are low confidence, so the LLM may parse them | T-NU-128 |
-| <a id="nu-e29"></a>NU-E29 | Command with no match | Reschedule → a new task with the target date (PRD). Complete or delete → skip `not_found` (`note.skip_not_found`), instead of a new task named "Delete …" (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-129 · C-028, C-029 |
+| <a id="nu-e29"></a>NU-E29 | Command with no match | Reschedule → a new task with the target date (PRD). Delete with a deadline or a place ("cancel netflix before the 10th", "drop the kids at school") → that task. Other complete or delete → skip `not_found` (`note.skip_not_found`), instead of a new task named "Delete …" (**[Q17](../08-project/open-questions.md#q17)**) | T-NU-129 · C-028, C-029 |
 | <a id="nu-e30"></a>NU-E30 | Time range ("2-4pm", "14:00–16:00", "from 2 to 4") | Sets the start and end. An end not after the start is dropped ([TK-3](TK-tasks.md#tk-3)) | T-NU-130 |
 | <a id="nu-e31"></a>NU-E31 | Numeric date ("3/4", "31/2") | Day/month: 3 April. An invalid date isn't a date, and the item is low confidence | T-NU-131 |
 | <a id="nu-e32"></a>NU-E32 | Item with no title words ("tomorrow 9am") | Skip. On its own it leads to the follow-up | T-NU-132 |
-| <a id="nu-e33"></a>NU-E33 | Comma between objects ("buy milk, eggs and bread") | One task, "Buy milk, eggs and bread", per the merge rule in §2.2 (**[Q17](../08-project/open-questions.md#q17)**). "dentist, haircut" still splits, because the first item has no verb. "buy ink, sql quiz monday" still splits, because the second fragment has a date and a keyword | T-NU-133 · C-041–C-043 |
+| <a id="nu-e33"></a>NU-E33 | Comma between objects ("buy milk, eggs and bread") | One task, "Buy milk, eggs and bread", per the merge rule in §2.2 (**[Q17](../08-project/open-questions.md#q17)**). "dentist, haircut" still splits, because the first item has no verb. "buy ink, sql quiz monday" still splits, because the second fragment names a keyword and a task word. "buy milk, eggs tomorrow" stays one task due tomorrow | T-NU-133 · C-041–C-043 |
 | <a id="nu-e34"></a>NU-E34 | Keyword for a project the user doesn't have ("gym" with no Personal project) | No project | T-NU-134 |
 | <a id="nu-e35"></a>NU-E35 | "move X to Friday" with and without a time | No time → the task keeps its times. With a time → the start is set and the end moves by the same amount | T-NU-135 |
 | <a id="nu-e36"></a>NU-E36 | Command on a repeating task | *done* completes this occurrence and creates the next one. *move* moves only this occurrence | T-NU-136 |
@@ -181,10 +213,11 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e39"></a>NU-E39 | HTML or script in the note | Stored as given. Shown as plain text everywhere | T-NU-139, SEC-21 |
 | <a id="nu-e40"></a>NU-E40 | Vietnamese typed without diacritics ("mai hop nhom 9h", "toi can mua sua") | Vietnamese is expected with diacritics, so no Vietnamese phrase matches. Handled like [NU-E28](#nu-e28): the title is kept as written, only numeric dates and times ("9h") are extracted, and the item is low confidence, so the LLM may read it | T-NU-140 · C-050 |
 | <a id="nu-e41"></a>NU-E41 | "rồi" at the end of an item ("bài tập xong rồi") | No split: "rồi" splits only when words follow it. "X xong rồi" is a complete command | T-NU-141 · C-046 |
+| <a id="nu-e42"></a>NU-E42 | Date range ("study Mon to Fri", "từ thứ 2 đến thứ 6") | Sets start date (Mon) and due date (Fri) | T-NU-142 |
 
 ## 5. Copy keys
 
-`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
+`note.reading`, `note.empty`, `note.too_long`, `note.too_many_items`, `note.processing_failed`, `note.couldnt_process`, `note.back_online_one`, `note.back_online_other`, `note.needs_look_one`, `note.needs_look_other`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.pick_task`, `note.confirm_title`, `note.followup_title`, `error.rate_limited`, `task.created_by_assistant`. See the [copy catalog](../01-product/copy-catalog.md).
 
 ## 6. Accessibility
 
@@ -266,8 +299,9 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
   - `priority`: `low`, `medium`, `high`
   - `repeat`: `never`, `daily`, `weekly`, `monthly`, `yearly`
   - `reminder`: `none`, `5m`, `15m`, `30m`, `1h`, `1d`
-  - `reason`: `skip`, `already_done`, `not_found`
+  - `reason`: `skip`, `already_done`, `not_found`, `no_change`
 - Dates are local `YYYY-MM-DD`. Times are local `HH:MM` (floating, [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
+- Plan `create` and `update` entries may include nullable `repeat_rule`, following the [shared recurrence contract](../07-architecture/api.md#task-recurrence-contract-im-37); its FREQ must match the resulting task's `repeat`. The applier derives the read-only `repeat_anchor` when creating the task, so it is not a plan field. Returned `changes[].task` carries the structured task fields; older snapshots may omit the rule/anchor. Presentation belongs to the frontend formatter.
 
 ## 8. Data, validation and authorization
 
@@ -322,7 +356,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-1](#nu-1) | Items split on new lines, commas, semicolons, full stops and "then" | T-NU-01 (newline), T-NU-02 (comma), T-NU-03 (semicolon), T-NU-04 (full stop), T-NU-05 ("then"). Corpus `split.*` |
 | [NU-1](#nu-1) | Bullets are stripped | T-NU-06, T-NU-120 |
 | [NU-1](#nu-1) | One task per actionable item | T-NU-07. Corpus count gate |
-| [NU-2](#nu-2) | Due date, time, priority, project, repeat and reminder set per the rules | T-NU-10 (every date phrase, data provider), T-NU-11 (time), T-NU-12 (priority), T-NU-13 (project), T-NU-14 (repeat), T-NU-15 (reminder), T-NU-16 (title and acronyms). Corpus field gates |
+| [NU-2](#nu-2) | Start date, due date, time, due time, priority, project, repeat and reminder set per the rules | T-NU-10 (every date phrase, data provider), T-NU-11 (time), T-NU-12 (priority), T-NU-13 (project), T-NU-14 (repeat), T-NU-15 (reminder), T-NU-16 (title and acronyms). Corpus field gates |
 | [NU-2](#nu-2) | Anything not found is left empty | T-NU-17 |
 | [NU-2](#nu-2) | Vietnamese phrases set the same fields | T-NU-18 (every row of the Vietnamese table, data provider) · C-044, C-045, C-051 |
 | [NU-3](#nu-3) | "done X" completes the matching task | T-NU-20 (all four complete phrasings) · C-016 |
@@ -333,7 +367,7 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | [NU-4](#nu-4) | Ideas, FYIs and filler are kept in the note but make no task | T-NU-30 (prefixes), T-NU-31 (filler), T-NU-32 (kept in `skipped` and in the note text) · C-013–C-015 |
 | [NU-4](#nu-4) | A note with nothing actionable triggers the follow-up | T-NU-33 · C-013, C-014 |
 | [NU-5](#nu-5) | Any delete shows "Check this first" | T-NU-40 · C-018 |
-| [NU-5](#nu-5) | More than 5 changes shows "Check this first" | T-NU-41 (5 → `done`, 6 → `confirm`) · C-019 |
+| [NU-5](#nu-5) | Any change shows "Check this first" | T-NU-41 (1 → `confirm`) · C-019 |
 | [NU-5](#nu-5) | Nothing is applied until Apply changes | T-NU-42 (no task rows change while `confirm`), T-NU-43 (a tie → `confirm`) |
 | [NU-6](#nu-6) | The name follows the naming rules | T-NU-50 (one test per naming row, plus "first row wins") · corpus `naming.*` |
 | [NU-6](#nu-6) | Names over 34 characters are cut at a word boundary with an ellipsis | T-NU-51 |
@@ -344,4 +378,4 @@ Engine tests are Pest unit tests with the clock and zone injected. Corpus cases 
 | — | A replayed `client_id` returns the stored result | T-NU-72, SEC-13 |
 | — | The apply step is atomic | T-NU-73 (a failure injected after the 2nd task → nothing persisted) |
 | — | API contract: statuses and error codes in §7 | T-NU-80–86 (one per status code) |
-| — | Edge cases [NU-E1](#nu-e1)–[NU-E41](#nu-e41) | T-NU-101–141 (§4) |
+| — | Edge cases [NU-E1](#nu-e1)–[NU-E42](#nu-e42) | T-NU-101–142 (§4) |

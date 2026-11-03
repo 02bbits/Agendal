@@ -6,6 +6,10 @@ const strings = { ...pending, ...catalog } as const;
 export type CopyKey = keyof typeof strings;
 export type CopyVars = Record<string, string | number>;
 
+export function isCopyKey(key: string): key is CopyKey {
+  return Object.prototype.hasOwnProperty.call(strings, key);
+}
+
 /** Base key of a counted pair: `list.section_count` for `list.section_count_one/_other`. */
 export type CountKey = {
   [K in CopyKey]: K extends `${infer Base}_one`

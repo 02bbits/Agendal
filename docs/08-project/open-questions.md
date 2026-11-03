@@ -4,7 +4,9 @@ Decisions the docs depend on. A closed question keeps its row, so links to it st
 
 ## Open
 
-None.
+| ID | Question | Notes |
+|---|---|---|
+| <a id="q22"></a>Q22 | Should multi-day tasks support a "Done for today" action to hide them from Today until tomorrow without completing? | Recorded for future consideration; not decided for v1 |
 
 ## Closed
 
@@ -14,7 +16,7 @@ None.
 | <a id="q2"></a>Q2 | Rules only, or rules plus a language model? | Rules first, with a language-model fallback ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) |
 | <a id="q3"></a>Q3 | Which languages does v1 need to understand? | **English and Vietnamese**, in notes only. The UI stays English ([business rules](../02-domain/business-rules.md#vietnamese-q3)) |
 | <a id="q4"></a>Q4 | Should the app offer "Ask me when" for items with no date? | **Yes.** Created tasks with no date show When? chips on the result screen ([RV §2.1](../03-modules/RV-review-control.md#21-result-screen-rv-1)) |
-| <a id="q5"></a>Q5 | Is the 5-change confirmation threshold right? | **Keep 5.** A change is one task the note creates, updates (completes or reschedules) or deletes. Skipped text doesn't count |
+| <a id="q5"></a>Q5 | Is the 5-change confirmation threshold right? | **Confirm at 5 or more changes in one note** (until 2026-11-01 it was more than 5). A change is one task the note creates, updates (completes, reschedules or edits any of its fields) or deletes, and a task counts once. Skipped text doesn't count |
 | <a id="q6"></a>Q6 | Week start and 12- vs 24-hour time: fixed, or a setting? | **A setting** in Account. Defaults: Monday and 24-hour ([AP-5](../03-modules/AP-app-platform.md#ap-5)) |
 | <a id="q7"></a>Q7 | Account deletion and data export for the first release? | **Neither.** Moved to Later ([release plan](../01-product/overview.md#release-plan)) |
 | <a id="q8"></a>Q8 | Confirm the metric targets | **Dropped.** Agendal is a demo project, so it has no success metrics or product analytics |

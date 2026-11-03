@@ -23,7 +23,7 @@ Write the test ID in the test name (`it('T-NU-07 tonight after 20:00 has no time
 | Corpus | Whole-note plans against the golden set, in rules mode and rules + LLM mode (LLM mode: nightly and on prompt/model change, against the real provider) | Pest data provider over `note-corpus/*.yaml` | Every push (rules), nightly (LLM) |
 | API / integration | Endpoints with a real DB: validation, authorization matrix, rate limits, idempotency, undo, sync | Pest + Laravel HTTP tests, a fresh DB per test | Every push |
 | Component | Screens and components in every state of the module's state matrix | Vitest + React Testing Library | Every push |
-| End-to-end | Workflows [WF-01](../04-workflows/WF-01-capture-and-process-note.md)–07 in a real browser, including offline (`context.setOffline`) and two-device sync | Playwright (Chromium, WebKit, Firefox; mobile viewport 360×800) | Every PR |
+| End-to-end | Workflows [WF-01](../04-workflows/WF-01-capture-and-process-note.md)–07 in a real browser, including offline (`context.setOffline`) and two-device sync | Playwright (Chromium, WebKit, Firefox; mobile viewport 360×800, plus the layout viewports in [NF-8](../05-quality/nfr.md#nf-8)'s traceability row) | Every PR |
 | Accessibility | axe on every screen and state, keyboard-only paths | @axe-core/playwright. Manual VoiceOver/TalkBack pass before each release | Every PR (axe), release (manual) |
 | Security | Authorization matrix, CSRF, headers, upload abuse, rate limits | Pest + Playwright, OWASP ZAP baseline against the server, `composer audit`, `npm audit`, secret scan | Every PR. ZAP nightly |
 | Performance | PERF-01–05 | k6 against the server. Lighthouse CI for [NF-4](../05-quality/nfr.md#nf-4) | Before the demo |
@@ -39,6 +39,28 @@ Write the test ID in the test name (`it('T-NU-07 tonight after 20:00 has no time
 7. E2E green on Chromium and WebKit (Firefox may be non-blocking).
 
 Nightly: corpus in LLM mode, ZAP baseline, k6, Lighthouse. A failure opens an issue automatically.
+
+## NU edge verification (IM-40)
+
+`backend/tests/Unit/Services/NoteEdgeDecisionsTest.php` maps T-NU-101–141 to the matching NU-E1–E41 corpus cases and runs them through the existing PHP `Tests\Support\NoteCorpus` runner. It fails when an edge has no examples or an example differs from its expected plan. It uses the normal Pest suite; the earlier standalone JavaScript engine and tests are not used.
+
+Plan examples do not exercise persistence or provider failures. `NoteConfirmTest.php` and `NoteEdgeCasesTest.php` cover the HTTP/transaction stages, including written-time semantics, duration preservation, repeating occurrences and targets changed before Apply. They retain main's POST → `confirm` preview → Apply contract; new confirmation regressions do not lower its threshold.
+
+**Temporary deferrals:** T-NU-127 / NU-E27 is explicitly skipped while IM-38 (LLM provider failure/timeout handling) is disabled. A rules-only corpus case tagged NU-E27 is not evidence that fallback works. The newer NU-E42 / T-NU-142 date-range requirement is outside IM-40's assigned E1–E41 scope; #129 explicitly leaves date-range parsing for separate work. These deferrals must not be reported as passing tests.
+
+From `backend/`, run the edge and confirmation tests with:
+
+```sh
+php vendor/bin/pest tests/Unit/Services/NoteEdgeDecisionsTest.php tests/Feature/NoteConfirmTest.php tests/Feature/NoteEdgeCasesTest.php
+```
+
+Measure line coverage with the full Pest suite and a coverage driver (Xdebug or PCOV):
+
+```sh
+XDEBUG_MODE=coverage php vendor/bin/pest --coverage-clover=storage/logs/coverage.xml
+```
+
+For the note-engine threshold, sum `coveredstatements` and `statements` from the Clover file metrics for **all** files under `app/Services/Notes`, including the applier, confirmation and Undo services; divide the sums, rather than averaging file percentages. The target is at least 95%. The repository-wide CI coverage enforcement remains IM-60's scope.
 
 ## Test data
 
