@@ -41,6 +41,33 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
 | `POST /auth/logout-everywhere` | End all sessions (Should) | [ADR-007](decisions/ADR-007-session-and-auth.md) |
 
+## Task fields
+
+A task entity in API requests and responses exposes the following fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | UUID v7 | Unique identifier, client-generated |
+| `title` | string | 1–200 characters |
+| `project_id` | UUID \| null | Associated project, or null |
+| `start_date` | string \| null | Floating local date `YYYY-MM-DD` when work is planned |
+| `start_time` | string \| null | Floating local time `HH:MM` for session start on `start_date` |
+| `end_time` | string \| null | Floating local time `HH:MM` for session end on `start_date` |
+| `due_date` | string \| null | Floating local date `YYYY-MM-DD` for the deadline |
+| `due_time` | string \| null | Floating local time `HH:MM` for the deadline on `due_date` |
+| `priority` | string \| null | `low`, `medium`, or `high` |
+| `reminder` | string | `none`, `5m`, `15m`, `30m`, `1h`, `1d` |
+| `repeat` | string | `never`, `daily`, `weekly`, `monthly`, `yearly` |
+| `repeat_rule` | string \| null | RRULE string (≤ 300 characters) |
+| `repeat_anchor` | string \| null | Original local date of the series (`start_date` if present, else `due_date`), read-only |
+| `notes` | string \| null | Free text (≤ 5,000 characters) |
+| `done` | boolean | Completion flag |
+| `done_at` | string \| null | ISO 8601 timestamp |
+| `created_by` | string | `user` or `assistant` |
+| `source_note_id` | UUID \| null | Originating note id |
+| `created_at` | string | ISO 8601 timestamp |
+| `updated_at` | string | ISO 8601 timestamp |
+
 ## Task recurrence contract (IM-37)
 
 These fields apply to task responses, including `changes[].task` in a note result. Full examples: [task.json](contracts/fixtures/task.json) (no recurrence) and [task-recurring.json](contracts/fixtures/task-recurring.json) (Monday/Wednesday/Friday).
@@ -57,10 +84,12 @@ Example response fragment:
 
 ```json
 {
+  "start_date": "2026-10-31",
   "due_date": "2026-11-02",
+  "due_time": null,
   "repeat": "weekly",
   "repeat_rule": "FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=MO,WE,FR",
-  "repeat_anchor": "2026-11-02"
+  "repeat_anchor": "2026-10-31"
 }
 ```
 
