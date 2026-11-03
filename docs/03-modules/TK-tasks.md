@@ -128,8 +128,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e6"></a>TK-E6 | Toast Undo after completing a repeating task | Reopens it and deletes the generated occurrence | T-TK-106 |
 | <a id="tk-e7"></a>TK-E7 | Completed on two devices offline | Per-field LWW on `done`. Only one next occurrence: it is created by the server when `done` first becomes true, and is unique on `previous_occurrence_id` | T-TK-107, OFF-20 |
 | <a id="tk-e8"></a>TK-E8 | Edited on device A, deleted on device B | `deleted` is a field ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)). The later write wins. If the delete wins, A's edit is dropped and A shows `app.conflict` | T-TK-108, OFF-21 |
-| <a id="tk-e9"></a>TK-E9 | End time cleared while the start remains | Allowed (no end) | T-TK-109 |
-| <a id="tk-e10"></a>TK-E10 | The due date moves to a day where the start/end would fall in a DST gap | [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md) shifts to the next valid minute. Floating time is shown as entered | T-TK-110 |
+| <a id="tk-e9"></a>TK-E9 | Due time cleared while the start time remains | Allowed (the task keeps its due date, with no deadline time) | T-TK-109 |
+| <a id="tk-e10"></a>TK-E10 | The start or due date moves to a day where the start time or due time would fall in a DST gap | [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md) shifts to the next valid minute. Floating time is shown as entered | T-TK-110 |
 | <a id="tk-e11"></a>TK-E11 | Time zone changes (travel) | Floating times unchanged. `remind_at` recomputed in the new zone | T-TK-111 |
 | <a id="tk-e12"></a>TK-E12 | The scheduler is down for 30 minutes | Reminders over 10 minutes late are skipped. The others are sent once | T-TK-112, PERF-03 |
 | <a id="tk-e13"></a>TK-E13 | Opening details of a task deleted on another device | `error.not_found`, and back to the list | T-TK-113 |
