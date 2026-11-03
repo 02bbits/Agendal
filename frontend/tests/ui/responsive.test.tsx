@@ -103,6 +103,22 @@ describe("On-screen keyboard (UX-20, UX-21)", () => {
   });
 });
 
+describe("Bottom bar next to the task panel (UX-28)", () => {
+  it("stops 400px short from 1280px while the task panel is open", () => {
+    render(
+      <AppShell tab="inbox" capture={{ onWrite: () => {} }}>
+        <p>content</p>
+      </AppShell>,
+    );
+    const bars = screen.getByRole("navigation", {
+      name: "Main",
+    }).parentElement!;
+    expect(bars.className).toContain(
+      "xl:[html[data-task-panel]_&]:w-[calc(100%-400px)]",
+    );
+  });
+});
+
 describe("Side margins and safe areas (UX-25)", () => {
   it("defines the gutter as 20px plus the side safe areas", () => {
     expect(theme).toContain(
