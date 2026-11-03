@@ -89,11 +89,14 @@ export function SearchScreen({
     setError(false);
 
     const skeletonTimer = setTimeout(() => {
-      setShowSkeleton(true);
+      if (!cancelled) {
+        setShowSkeleton(true);
+      }
     }, SEARCH_SKELETON_MS);
 
     activeSearch({ q: query.trim(), status })
       .then((res) => {
+        clearTimeout(skeletonTimer);
         if (cancelled) return;
         setRemoteResults({
           items: res.items,
@@ -104,6 +107,7 @@ export function SearchScreen({
         setShowSkeleton(false);
       })
       .catch(() => {
+        clearTimeout(skeletonTimer);
         if (cancelled) return;
         setError(true);
         setLoading(false);
@@ -246,7 +250,7 @@ export function SearchScreen({
             {t("common.retry")}
           </Button>
         </div>
-      ) : showSkeleton ? (
+      ) : loading && showSkeleton ? (
         <div
           className="mt-3 flex flex-col gap-2"
           role="status"
