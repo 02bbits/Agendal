@@ -58,8 +58,11 @@ final class NoteApplier
     {
         $user = User::query()->findOrFail($note->user_id);
         $timezone = (string) $user->timezone;
+        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
+        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects,
+            WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
         $locked = $this->lockTargets($note, $plan);
-        [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked, $edits);
+        [$plan, $gone] = $this->revalidate($note, $plan, $locked, $context, $edits);
         if ($plan['dropped'] > 0) {
             Log::info('note_plan_validation', ['dropped' => $plan['dropped'], 'at' => 'apply']);
         }
@@ -74,14 +77,14 @@ final class NoteApplier
                     'update' => $this->update($locked[$entry['task_id']], $entry, $timezone),
                     'delete' => $this->delete($locked[$entry['task_id']]),
                 };
-                $label = $entry['label'] ?? $task->title;
+                $label = $entry['label'] ?? $this->meta($task, $context);
                 $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'after' => $task->attributesToArray(), 'label' => $label];
                 $changes[] = $this->change($changeKind, $task, $label, $entry['ref']);
                 $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task, restoreDeleted: true) : null;
                 if ($next !== null) {
                     // TK-4: completing a repeating task creates its next occurrence; undo removes it too.
-                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'after' => $next->attributesToArray(), 'label' => $next->title];
-                    $changes[] = $this->change(ChangeKind::Created, $next, $next->title);
+                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'after' => $next->attributesToArray(), 'label' => $this->meta($next, $context)];
+                    $changes[] = $this->change(ChangeKind::Created, $next, $this->meta($next, $context));
                 }
             }
         }
@@ -116,10 +119,9 @@ final class NoteApplier
      * @param  array<string, array<string, mixed>>  $edits
      * @return array{0: ValidatedPlan, 1: list<array<string, mixed>>}
      */
-    private function revalidate(Note $note, User $user, array $plan, array $locked, array $edits): array
+    private function revalidate(Note $note, array $plan, array $locked, NoteContext $context, array $edits): array
     {
-        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
+        $projects = $context->projects;
         $items = $this->splitter->split($note->text, array_values($projects));
         $gone = [];
         foreach (['update', 'delete'] as $kind) {
@@ -237,6 +239,14 @@ final class NoteApplier
         $row['due_date'] = isset($row['due_date']) ? substr((string) $row['due_date'], 0, 10) : null;
 
         return $row;
+    }
+
+    /** A created row's meta (RV §2.1): "Mon 26 Oct · 09:00 · SQL Course", empty parts left out. */
+    private function meta(Task $task, NoteContext $context): string
+    {
+        $row = $this->row($task);
+
+        return implode(' · ', array_filter([$context->scheduled($row['due_date'], $row['start_time'], ' · '), $context->projects[(string) $row['project_id']] ?? null]));
     }
 
     /** @return array<string, mixed> one change in the note result */

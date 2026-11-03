@@ -48,6 +48,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Created and changed rows open Task details. Deleted rows don't open.
   - A task removed since (by hand or by another note) shows `note.gone_since` and doesn't open.
   - The meta is the row's `label` from the server ("Mon 26 Oct · 09:00 · SQL Course"). Changed rows add the old value: "Fri 30 Oct · HCI · was Wed 28 Oct".
+  - A created row's label is its date, start time and project joined by " · ", empty parts left out, so a task with none of them has an empty meta. It never repeats the title. Times follow the user's time format when the note is applied ("9:00 am" in 12-hour, [UX-32](../01-product/ux-standards.md#ux-32)); the label keeps that format if the setting changes later.
   - A row's accessible name reads its badge, title and meta: "Created: SQL quiz, Mon 26 Oct · 09:00 · SQL Course" (A11Y-21).
 - **Skipped section** (`note.skipped`): each skipped item with its reason (`note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`), or the plain text for `skip`.
 - **Hints:** a duplicate row carries `note.duplicate_hint` ([NU-E13](NU-note-understanding.md#nu-e13)).

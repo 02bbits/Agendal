@@ -64,7 +64,7 @@ class ProcessNote
             }
             $zone = in_array($input['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true) ? $input['timezone'] : (string) $user->timezone;
             $projects = Project::query()->where('user_id', $user->id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-            $context = new NoteContext($clientClock->now(), $zone, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
+            $context = new NoteContext($clientClock->now(), $zone, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
             $budgetMs = (float) config('notes.engine_budget_ms');
             $started = hrtime(true);
             $text = $this->splitter->normalize($input['text']);
