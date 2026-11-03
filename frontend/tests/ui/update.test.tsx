@@ -22,8 +22,9 @@ function TestComponent({
             <span data-testid={`title-${t.id}`}>{t.title}</span>
             <span data-testid={`due-${t.id}`}>{t.due_date ?? "none"}</span>
             <span data-testid={`start-${t.id}`}>{t.start_time ?? "none"}</span>
-            <span data-testid={`end-${t.id}`}>{t.end_time ?? "none"}</span>
+            <span data-testid={`due-time-${t.id}`}>{t.due_time ?? "none"}</span>
             <span data-testid={`reminder-${t.id}`}>{t.reminder}</span>
+            <span data-testid={`repeat-${t.id}`}>{t.repeat}</span>
             <span data-testid={`priority-${t.id}`}>{t.priority}</span>
           </li>
         ))}
@@ -93,13 +94,13 @@ describe("store.update (Refs #22)", () => {
     await act(async () => {});
     expect(deferred.calls).toHaveLength(0);
 
-    // Schedule error (end <= start)
+    // Schedule error (start >= due)
     act(() => {
       const errors = store.update(t1, {
         start_time: "10:00",
-        end_time: "09:00",
+        due_time: "09:00",
       });
-      expect(errors).toEqual({ end_time: "task.end_before_start" });
+      expect(errors).toEqual({ start_time: "task.start_after_due" });
     });
     await act(async () => {});
     expect(deferred.calls).toHaveLength(0);
@@ -275,9 +276,9 @@ describe("store.update (Refs #22)", () => {
       id: "t-1",
       title: "Task with Date and Schedule",
       due_date: TODAY,
-      start_time: "09:00",
-      end_time: "10:00",
+      due_time: "10:00",
       reminder: "15m",
+      repeat: "weekly",
     });
     const deferred = deferredApi({ tasks: [t1] });
     let store!: ReturnType<typeof useTaskStore>;
@@ -299,9 +300,9 @@ describe("store.update (Refs #22)", () => {
 
     // Check optimistic update: date, schedule and reminder cleared
     expect(screen.getByTestId("due-t-1").textContent).toBe("none");
-    expect(screen.getByTestId("start-t-1").textContent).toBe("none");
-    expect(screen.getByTestId("end-t-1").textContent).toBe("none");
+    expect(screen.getByTestId("due-time-t-1").textContent).toBe("none");
     expect(screen.getByTestId("reminder-t-1").textContent).toBe("none");
+    expect(screen.getByTestId("repeat-t-1").textContent).toBe("never");
 
     // Toast with Undo is shown
     const undoButton = screen.getByRole("button", { name: "Undo" });
@@ -312,9 +313,9 @@ describe("store.update (Refs #22)", () => {
 
     // Four fields are restored
     expect(screen.getByTestId("due-t-1").textContent).toBe(TODAY);
-    expect(screen.getByTestId("start-t-1").textContent).toBe("09:00");
-    expect(screen.getByTestId("end-t-1").textContent).toBe("10:00");
+    expect(screen.getByTestId("due-time-t-1").textContent).toBe("10:00");
     expect(screen.getByTestId("reminder-t-1").textContent).toBe("15m");
+    expect(screen.getByTestId("repeat-t-1").textContent).toBe("weekly");
   });
 
   it("reverts failed patch on 500 error and allows Retry", async () => {

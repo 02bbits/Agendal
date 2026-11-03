@@ -36,9 +36,10 @@ const designTasks = () => [
   task({
     title: "Review lecture 6 notes",
     project_id: "p-hci",
+    start_date: TODAY,
     due_date: TODAY,
     start_time: "16:00",
-    end_time: "17:00",
+    due_time: "17:00",
     reminder: "15m",
   }),
   task({

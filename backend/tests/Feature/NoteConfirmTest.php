@@ -117,15 +117,15 @@ it('keeps the written date through confirmation of an offline note (T-NU-126)', 
 
 it('replans a relative move from current values through Apply changes (T-NU-135, T-NU-138)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->user->id, 'title' => 'Lunch meeting', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->user->id, 'title' => 'Lunch meeting', 'start_date' => '2026-10-29', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $result = $this->postJson('/api/v1/notes', confirmNote('push lunch meeting back 1 hour'))->assertCreated()
         ->assertJsonPath('note.status', 'confirm');
     expect($task->fresh()->start_time)->toBe('09:00:00');
 
-    $task->forceFill(['start_time' => '14:00', 'end_time' => '15:00'])->save();
+    $task->forceFill(['start_time' => '14:00', 'due_time' => '15:00'])->save();
     $this->postJson('/api/v1/notes/'.$result->json('note.id').'/apply')->assertOk()
         ->assertJsonPath('changes.0.task.id', $task->id);
-    expect([$task->fresh()->start_time, $task->fresh()->end_time])->toBe(['15:00:00', '16:00:00'])
+    expect([$task->fresh()->start_time, $task->fresh()->due_time])->toBe(['15:00:00', '16:00:00'])
         ->and(Note::findOrFail($result->json('note.id'))->applied[0]['before']['start_time'])->toBe('14:00:00');
 });
 

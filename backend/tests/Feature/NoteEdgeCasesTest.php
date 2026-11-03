@@ -35,11 +35,11 @@ it('applies consecutive notes within the same clock tick', function () {
 
 it('preserves and shifts a task’s duration (T-NU-135)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move email group to sunday'))->assertCreated();
-    expect($task->fresh()->start_time)->toBe('09:00:00')->and($task->fresh()->end_time)->toBe('10:00:00');
+    expect($task->fresh()->start_time)->toBe('09:00:00')->and($task->fresh()->due_time)->toBe('10:00:00');
     $this->postJson('/api/v1/notes', edgeNote('move email group to tomorrow 2pm'))->assertCreated();
-    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->end_time)->toBe('15:00:00');
+    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->due_time)->toBe('15:00:00');
 });
 
 it('creates one next occurrence and records it for undo (T-NU-136)', function (string $repeat, string $due, string $anchor, string $now, string $expected) {
@@ -63,14 +63,14 @@ it('creates one next occurrence and records it for undo (T-NU-136)', function (s
 
 it('revalidates deleted and changed confirmation targets under row locks (T-NU-138)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $text = 'move email group to sunday; buy milk; buy eggs; buy bread; buy rice; buy tea';
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote($text))->assertCreated()->assertJsonPath('note.status', 'confirm');
     $note = Note::firstOrFail();
-    $task->forceFill(['due_date' => '2026-10-24', 'start_time' => '14:00', 'end_time' => '16:00'])->save();
+    $task->forceFill(['start_date' => '2026-10-24', 'due_date' => '2026-10-24', 'start_time' => '14:00', 'due_time' => '16:00'])->save();
     $applied = DB::transaction(fn () => app(NoteApplier::class)->apply($note, $note->plan));
     expect($applied['changes'][5]['label'])->toBe('Due Sun 25 Oct 14:00');
-    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->end_time)->toBe('16:00:00');
+    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->due_time)->toBe('16:00:00');
     $task->delete();
     $deletePlan = ['create' => [], 'update' => [], 'delete' => [['ref' => 'i1', 'task_id' => $task->id, 'label' => 'Email group']], 'skipped' => [], 'ambiguous' => []];
     Log::spy();
@@ -81,15 +81,15 @@ it('revalidates deleted and changed confirmation targets under row locks (T-NU-1
 
 it('moves by an amount from the time a task has when the plan is applied (NU-E38)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Lunch meeting', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Lunch meeting', 'start_date' => '2026-10-29', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $old = new Task;
     $old->forceFill(['user_id' => $this->owner->id, 'title' => 'Old list'])->save();
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('push lunch meeting back 1 hour; delete old list'))->assertCreated()->assertJsonPath('note.status', 'confirm');
     $note = Note::firstOrFail();
-    $task->forceFill(['start_time' => '14:00', 'end_time' => '15:00'])->save();
+    $task->forceFill(['start_date' => '2026-10-29', 'start_time' => '14:00', 'due_time' => '15:00'])->save();
     DB::transaction(fn () => app(NoteApplier::class)->apply($note, $note->plan));
 
-    expect([$task->fresh()->start_time, $task->fresh()->end_time])->toBe(['15:00:00', '16:00:00']);
+    expect([$task->fresh()->start_time, $task->fresh()->due_time])->toBe(['15:00:00', '16:00:00']);
 });
 
 it('soft deletes approved entries and preserves their before values', function () {
@@ -123,4 +123,35 @@ it('interprets the written zone and schedules reminders in the current zone (T-N
     $task = Task::firstOrFail();
     expect($task->due_date)->toBe('2026-10-24')->and($task->start_time)->toBe('20:00:00');
     expect($task->remind_at->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-24T23:45:00Z');
+});
+
+it('gives a moved task a start date with its new start time (TK-3, NU-E35)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Dentist', 'due_date' => '2026-10-28'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move dentist to friday 9am'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([substr((string) $fresh->start_date, 0, 10), $fresh->start_time, substr((string) $fresh->due_date, 0, 10)])->toBe(['2026-10-30', '09:00:00', '2026-10-30']);
+});
+
+it('completes a task that has only a due time (TK-3)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Submit report', 'due_date' => '2026-10-24', 'due_time' => '17:00'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('done submit report'))->assertCreated();
+    expect($task->fresh()->done)->toBeTrue();
+});
+
+it('pulls the start date back when a move puts the due date before it (BR-11)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Essay', 'start_date' => '2026-10-26', 'due_date' => '2026-10-30'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move essay to tomorrow'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([substr((string) $fresh->start_date, 0, 10), substr((string) $fresh->due_date, 0, 10)])->toBe(['2026-10-24', '2026-10-24']);
+});
+
+it('keeps a deadline on another day when the start time moves (TK-3)', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Essay', 'start_date' => '2026-10-26', 'start_time' => '09:00', 'due_date' => '2026-10-30', 'due_time' => '10:00'])->save();
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move essay to 5pm'))->assertCreated();
+    $fresh = $task->fresh();
+    expect([$fresh->start_time, substr((string) $fresh->due_date, 0, 10), $fresh->due_time])->toBe(['17:00:00', '2026-10-30', '10:00:00']);
 });

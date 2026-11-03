@@ -28,9 +28,10 @@ export type ProjectColor =
 export interface Task {
   id: string;
   title: string;
+  start_date: string | null;
   due_date: string | null;
   start_time: string | null;
-  end_time: string | null;
+  due_time: string | null;
   /** null when no priority was set (the API contract allows it); shown like Low. */
   priority: Priority | null;
   project_id: string | null;

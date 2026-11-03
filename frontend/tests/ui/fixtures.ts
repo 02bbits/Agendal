@@ -41,9 +41,10 @@ export function task(overrides: Partial<Task> & Pick<Task, "title">): Task {
   seq += 1;
   return {
     id: `t-${seq}`,
+    start_date: null,
     due_date: null,
     start_time: null,
-    end_time: null,
+    due_time: null,
     priority: "low",
     project_id: null,
     repeat: "never",

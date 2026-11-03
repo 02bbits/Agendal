@@ -75,9 +75,10 @@ describe("TaskRow (LV-4)", () => {
     const t = task({
       title: "Review lecture 6 notes",
       project_id: "p-hci",
+      start_date: TODAY,
       due_date: TODAY,
       start_time: "16:00",
-      end_time: "17:00",
+      due_time: "17:00",
       reminder: "15m",
       repeat: "weekly",
     });
@@ -241,9 +242,10 @@ describe("TaskRow (LV-4)", () => {
             task={task({
               title: "Draft portfolio case study",
               project_id: "p-port",
-              start_time: "10:00",
-              end_time: "12:00",
+              start_date: TODAY,
               due_date: TODAY,
+              start_time: "10:00",
+              due_time: "12:00",
             })}
             project={projectById("p-port")}
             today={TODAY}

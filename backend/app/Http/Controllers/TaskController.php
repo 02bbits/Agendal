@@ -82,18 +82,43 @@ class TaskController extends Controller
             }
         }
 
-        // 3. Due date fallback
+        // 3. Repeat date fallback (times without their day are rejected by the request)
         $timezone = (string) $request->attributes->get('timezone', 'UTC');
-        $dueDate = $request->input('due_date');
+        $today = $clock->today($timezone);
+        $startDateInput = $request->input('start_date');
+        $dueDateInput = $request->input('due_date');
         $startTime = $request->input('start_time');
+        $dueTime = $request->input('due_time');
         $repeat = $request->input('repeat', 'never') ?? 'never';
 
-        $dueDateStr = is_string($dueDate) ? $dueDate : null;
+        $startDateStr = is_string($startDateInput) ? $startDateInput : null;
+        $dueDateStr = is_string($dueDateInput) ? $dueDateInput : null;
         $startTimeStr = is_string($startTime) ? $startTime : null;
+        $dueTimeStr = is_string($dueTime) ? $dueTime : null;
         $repeatStr = is_string($repeat) ? $repeat : 'never';
 
-        if (DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {
-            $dueDate = $clock->today($timezone);
+        $startDate = $startDateStr;
+        $dueDate = $dueDateStr;
+        if (DueDateFallback::needed($dueDate, $startDate, $repeatStr)) {
+            $dueDate = $today;
+        }
+
+        // Start before due (TK-3)
+        if (! empty($startDate) && ! empty($dueDate)) {
+            if ($startDate > $dueDate) {
+                throw ValidationException::withMessages([
+                    'start_date' => ["Start can't be after the due date."],
+                ]);
+            }
+            if ($startDate === $dueDate && $startTimeStr !== null && $dueTimeStr !== null) {
+                $st = substr($startTimeStr, 0, 5);
+                $dt = substr($dueTimeStr, 0, 5);
+                if ($st >= $dt) {
+                    throw ValidationException::withMessages([
+                        'start_time' => ["Start can't be after the due date."],
+                    ]);
+                }
+            }
         }
 
         // 4. Open limit
@@ -109,8 +134,8 @@ class TaskController extends Controller
         // 6. Reminders
         $reminder = $request->input('reminder', 'none') ?? 'none';
         $remindAt = null;
-        if (! empty($dueDate) && $reminder !== 'none') {
-            $remindAt = $reminders->compute($dueDate, $startTime, $reminder, $timezone);
+        if ($reminder !== 'none') {
+            $remindAt = $reminders->forDates($startDate, $startTimeStr, $dueDate, $dueTimeStr, $reminder, $timezone);
         }
 
         $user = $request->user();
@@ -120,9 +145,10 @@ class TaskController extends Controller
         $task->id = $id;
         $task->user_id = $user->id;
         $task->title = (string) $request->input('title');
+        $task->start_date = $startDate;
         $task->due_date = $dueDate;
         $task->start_time = $startTime;
-        $task->end_time = $request->input('end_time');
+        $task->due_time = $dueTime;
         $task->priority = $request->input('priority');
         $task->reminder = $reminder;
         $task->repeat = $repeat;
@@ -133,8 +159,8 @@ class TaskController extends Controller
         $task->created_by = 'user';
         $task->field_updated_at = $fieldUpdatedAt;
         $task->remind_at = $remindAt;
-        if ($repeat !== 'never' && ! empty($dueDate)) {
-            $task->repeat_anchor = $dueDate;
+        if ($repeat !== 'never' && (! empty($startDate) || ! empty($dueDate))) {
+            $task->repeat_anchor = $startDate ?: $dueDate;
         }
         $task->save();
 

@@ -40,9 +40,10 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             'title' => ['required', 'string', 'min:1', 'max:200'],
+            'start_date' => ['nullable', 'date_format:Y-m-d'],
             'due_date' => ['nullable', 'date_format:Y-m-d'],
             'start_time' => ['nullable', 'date_format:H:i'],
-            'end_time' => ['nullable', 'date_format:H:i'],
+            'due_time' => ['nullable', 'date_format:H:i'],
             'priority' => ['nullable', 'in:low,medium,high'],
             'reminder' => ['nullable', 'in:none,5m,15m,30m,1h,1d'],
             'repeat' => ['nullable', 'in:never,daily,weekly,monthly,yearly'],
@@ -70,32 +71,32 @@ class StoreTaskRequest extends FormRequest
     {
         return [
             function (Validator $validator): void {
-                $startTime = $this->input('start_time');
-                $endTime = $this->input('end_time');
-                $reminder = $this->input('reminder', 'none') ?? 'none';
+                $startDate = $this->input('start_date');
                 $dueDate = $this->input('due_date');
+                $dueTime = $this->input('due_time');
+                $reminder = $this->input('reminder', 'none') ?? 'none';
+                $repeat = $this->input('repeat', 'never') ?? 'never';
 
-                if (! $validator->errors()->has('start_time') && ! $validator->errors()->has('end_time')) {
-                    if ($endTime !== null) {
-                        if ($startTime === null) {
-                            $validator->errors()->add('end_time', 'End time cannot be set without a start time.');
-                        } elseif ($endTime <= $startTime) {
-                            $validator->errors()->add('end_time', 'End time must be later than the start time.');
-                        }
+                $startDateStr = is_string($startDate) ? $startDate : null;
+                $dueDateStr = is_string($dueDate) ? $dueDate : null;
+                $dueTimeStr = is_string($dueTime) ? $dueTime : null;
+                $repeatStr = is_string($repeat) ? $repeat : 'never';
+
+                $startTime = $this->input('start_time');
+                $timeErrors = DueDateFallback::timeErrors($startDateStr, is_string($startTime) ? $startTime : null, $dueDateStr, $dueTimeStr);
+                foreach ($timeErrors as $field => $messages) {
+                    if (! $validator->errors()->has($field)) {
+                        $validator->errors()->add($field, $messages[0]);
                     }
                 }
 
-                $repeat = $this->input('repeat', 'never') ?? 'never';
-                $dueDateStr = is_string($dueDate) ? $dueDate : null;
-                $startTimeStr = is_string($startTime) ? $startTime : null;
-                $repeatStr = is_string($repeat) ? $repeat : 'never';
                 $rule = $this->input('repeat_rule');
                 if (is_string($rule) && ! RepeatSchedule::validFor($rule, $repeatStr)) {
                     $validator->errors()->add('repeat_rule', 'The repeat rule must match the repeat frequency.');
                 }
 
-                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($dueDate)) {
-                    if (! DueDateFallback::needed($dueDateStr, $startTimeStr, $repeatStr)) {
+                if (! $validator->errors()->has('reminder') && $reminder !== 'none' && empty($startDate) && empty($dueDate)) {
+                    if (! DueDateFallback::needed($dueDateStr, $startDateStr, $repeatStr)) {
                         $validator->errors()->add('reminder', 'Add a date to set a reminder.');
                     }
                 }

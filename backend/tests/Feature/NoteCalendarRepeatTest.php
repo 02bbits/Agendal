@@ -64,7 +64,7 @@ it('advances monthly ordinal weekdays and clears a custom rule when the frequenc
 it('keeps local time across daylight saving and recalculates the reminder instant', function () {
     auth()->user()->forceFill(['timezone' => 'America/New_York'])->save();
     $response = $this->withHeader('X-Timezone', 'America/New_York')->postJson('/api/v1/tasks', [
-        'id' => (string) Str::uuid(), 'title' => 'Gym', 'due_date' => '2026-10-31', 'start_time' => '09:00',
+        'id' => (string) Str::uuid(), 'title' => 'Gym', 'start_date' => '2026-10-31', 'due_date' => '2026-10-31', 'start_time' => '09:00',
         'repeat' => 'daily', 'repeat_rule' => 'FREQ=DAILY', 'reminder' => '15m',
     ])->assertCreated();
     $id = $response->json('id');

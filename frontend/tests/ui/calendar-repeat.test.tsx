@@ -18,9 +18,10 @@ afterEach(cleanup);
 const task: Task = {
   id: "root",
   title: "Gym",
+  start_date: null,
   due_date: "2026-11-02",
   start_time: null,
-  end_time: null,
+  due_time: null,
   priority: "low",
   project_id: null,
   repeat: "weekly",

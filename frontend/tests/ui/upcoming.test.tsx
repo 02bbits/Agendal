@@ -110,9 +110,10 @@ const designTasks = () => [
   task({
     title: "Draft portfolio case study",
     project_id: "p-port",
+    start_date: "2026-10-24",
     due_date: "2026-10-24",
     start_time: "10:00",
-    end_time: "12:00",
+    due_time: "12:00",
   }),
   task({
     title: "Plan the week",
@@ -138,9 +139,10 @@ const designTasks = () => [
   task({
     title: "Adv Web sprint demo",
     project_id: "p-web",
+    start_date: "2026-10-26",
     due_date: "2026-10-26",
     start_time: "14:00",
-    end_time: "15:00",
+    due_time: "15:00",
     reminder: "15m",
   }),
   task({ title: "Today, not upcoming", due_date: TODAY }),

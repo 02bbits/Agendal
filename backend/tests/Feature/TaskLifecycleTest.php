@@ -567,3 +567,33 @@ it('with 5000 open tasks, restoring a deleted done task succeeds because it is n
         ->and($restoredTask->deleted_at)->toBeNull()
         ->and($restoredTask->done)->toBeTrue();
 });
+
+it('completing a weekly task with start and due dates shifts both together', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sprint review',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'start_time' => '09:00',
+        'due_time' => '17:00',
+        'repeat' => 'weekly',
+        'done' => false,
+        'field_updated_at' => [
+            'done' => '2026-10-23T01:10:00Z',
+        ],
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+
+    expect($response->json('next.start_date'))->toBe('2026-11-02')
+        ->and($response->json('next.due_date'))->toBe('2026-11-04')
+        ->and($response->json('next.start_time'))->toBe('09:00')
+        ->and($response->json('next.due_time'))->toBe('17:00');
+    assertTaskSchema($response->json('task'));
+    assertTaskSchema($response->json('next'));
+});

@@ -73,9 +73,22 @@ final class TaskCandidates
             'title' => (string) $task->title,
             'due_date' => $attributes['due_date'] === null ? null : substr((string) $attributes['due_date'], 0, 10),
             'start_time' => $hourMinute($attributes['start_time']),
-            'end_time' => $hourMinute($attributes['end_time']),
+            'end_time' => self::sessionEnd($task),
             'done' => (bool) $attributes['done'],
             'deleted_at' => $attributes['deleted_at'] === null ? null : (string) $attributes['deleted_at'],
         ];
+    }
+
+    /**
+     * What note commands treat as the task's end time (TK-3): its due time only when it closes a session that starts
+     * the same day. A due time on its own, or on a later day than the start, is a deadline that moves never touch.
+     */
+    public static function sessionEnd(Task $task): ?string
+    {
+        $attributes = $task->getAttributes();
+        $day = fn (string $key): ?string => ($attributes[$key] ?? null) === null ? null : substr((string) $attributes[$key], 0, 10);
+        $sameDay = ($attributes['start_time'] ?? null) !== null && $day('start_date') !== null && $day('start_date') === $day('due_date');
+
+        return $sameDay && ($attributes['due_time'] ?? null) !== null ? substr((string) $attributes['due_time'], 0, 5) : null;
     }
 }

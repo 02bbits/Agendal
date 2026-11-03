@@ -16,10 +16,10 @@ export function DueChips({
   const pickChipRef = useRef<HTMLButtonElement | null>(null);
 
   const options: ReadonlyArray<ChipOption<DueChip>> = [
+    { value: "none", label: t("task.no_date") },
     { value: "today", label: t("date.today") },
     { value: "tomorrow", label: t("date.tomorrow") },
     { value: "next_week", label: t("task.next_week") },
-    { value: "none", label: t("task.no_date") },
     { value: "pick", label: t("task.pick_date") },
   ];
 
