@@ -340,9 +340,9 @@ final class CommandMatcher
         }
         // The new date and time, and the old ones as "was" (T-NU-21): "Due Fri 30 Oct 09:00", was "Fri 23 Oct 09:00".
         $old = [$task['due_date'] ?? null, $task['start_time'] ?? null];
-        $new = $this->scheduled($fields['due_date'] ?? $old[0], array_key_exists('start_time', $fields) ? $fields['start_time'] : $old[1]);
+        $new = $context->scheduled($fields['due_date'] ?? $old[0], array_key_exists('start_time', $fields) ? $fields['start_time'] : $old[1]);
 
-        return new TaskChange($task['id'], __('notes.label.due', ['when' => $new]), fields: $fields, was: $this->scheduled(...$old) ?: null);
+        return new TaskChange($task['id'], __('notes.label.due', ['when' => $new]), fields: $fields, was: $context->scheduled(...$old) ?: null);
     }
 
     /**
@@ -519,13 +519,5 @@ final class CommandMatcher
     private function stopWords(): array
     {
         return $this->stopWords ??= array_map(mb_strtolower(...), [...NoteVocabulary::values('stop_word'), ...NoteVocabulary::values('reschedule_target')]);
-    }
-
-    /** "Fri 30 Oct 09:00", "Fri 30 Oct", "09:00"; empty for neither. */
-    private function scheduled(?string $date, ?string $start): string
-    {
-        $day = $date === null ? '' : (new DateTimeImmutable($date))->format(__('notes.label.date_format'));
-
-        return trim($day.' '.$start);
     }
 }
