@@ -113,6 +113,7 @@ export const pending = {
   "list.upcoming_subtitle": "{count} tasks in the next 7 days",
   "list.upcoming_subtitle_one": "1 task in the next 7 days",
   "list.view_mode": "View",
+  "list.strip_today": "(Today)",
   "list.view_list": "List",
   "list.view_board": "Board",
   "list.week_days": "Days of the week",

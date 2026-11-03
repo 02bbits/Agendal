@@ -14,6 +14,7 @@ import { expectAxeCleanInBothThemes } from "./axe";
 import { projects, task } from "./fixtures";
 import { TODAY } from "./harness";
 import { createMemoryApi } from "./memoryApi";
+import { t } from "../../src/ui/copy";
 import { TaskStoreProvider } from "../../src/ui/features/tasks/store";
 
 const tomorrow = addDays(TODAY, 1);
@@ -226,6 +227,9 @@ describe("Upcoming screen (Section 8)", () => {
     expect(tue3Btn.disabled).toBe(true);
     const badge = within(tue3Btn).getByText("3");
     expect(badge.className).toContain("bg-fill");
+    // Only today carries the "(Today)" label
+    expect(within(tue3Btn).getByText(t("list.strip_today"))).toBeTruthy();
+    expect(screen.getAllByText(t("list.strip_today"))).toHaveLength(1);
 
     const wed4Btn = screen.getByRole("button", {
       name: /^4 Nov · Tomorrow · Wednesday,/,
