@@ -105,9 +105,7 @@ describe("Delete a task (TK-5)", () => {
     expect(
       screen.getByRole("alertdialog", { name: "Delete a repeating task" }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", { name: "This task only" }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "This task only" })).toBeTruthy();
     expect(
       screen.getByRole("button", { name: "This and all future" }),
     ).toBeTruthy();
@@ -126,7 +124,9 @@ describe("Delete a task (TK-5)", () => {
     const removeSpy = vi.spyOn(memory.api, "remove");
     render(wrap(<Screen id={t0.id} />));
     await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
-    await userEvent.click(screen.getByRole("button", { name: "This task only" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "This task only" }),
+    );
     expect(removeSpy).toHaveBeenCalledWith(t0.id, "one");
     await waitFor(() => expect(memory.db.tasks).toHaveLength(0));
   });
