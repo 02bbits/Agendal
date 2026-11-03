@@ -643,4 +643,35 @@ describe("Inbox Page (app/page.tsx)", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("allows Overdue and Today sections to be collapsed and expanded like No date and Completed", async () => {
+    const { wrap } = setup([
+      task({ id: "t-overdue", title: "Overdue Item", due_date: "2026-10-20" }),
+      task({ id: "t-today", title: "Today Item", due_date: TODAY }),
+    ]);
+    render(wrap(<InboxScreen accountInitial="e" />));
+
+    const overdueBtn = screen.getByRole("button", { name: /Overdue, 1 task/ });
+    const todayBtn = screen.getByRole("button", { name: /Today, 1 task/ });
+
+    expect(overdueBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(todayBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("link", { name: /Overdue Item/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Today Item/ })).toBeTruthy();
+
+    // Collapse overdue
+    await userEvent.click(overdueBtn);
+    expect(overdueBtn.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("link", { name: /Overdue Item/ })).toBeNull();
+
+    // Collapse today
+    await userEvent.click(todayBtn);
+    expect(todayBtn.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("link", { name: /Today Item/ })).toBeNull();
+
+    // Expand overdue back
+    await userEvent.click(overdueBtn);
+    expect(overdueBtn.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("link", { name: /Overdue Item/ })).toBeTruthy();
+  });
 });
