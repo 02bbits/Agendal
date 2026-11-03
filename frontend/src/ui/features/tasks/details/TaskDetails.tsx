@@ -116,8 +116,15 @@ export function TaskDetails({
         />
 
         <DetailsActions
-          canClear={Boolean(task.due_date)}
-          onClear={() => save({ due_date: null })}
+          canClear={Boolean(task.start_date || task.due_date)}
+          onClear={() =>
+            save({
+              start_date: null,
+              start_time: null,
+              due_date: null,
+              due_time: null,
+            })
+          }
           deleteAction={deleteAction}
           onDelete={onDelete}
           isScreen={isScreen}

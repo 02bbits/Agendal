@@ -19,6 +19,8 @@ import {
   type CopyKey,
   type Task,
 } from "../../src/ui";
+import * as datePickerModule from "../../src/ui/components/DatePicker";
+import { DateTimeFields } from "../../src/ui/features/tasks/details/DateTimeFields";
 import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
@@ -185,6 +187,79 @@ describe("Task details fields (T-TK-10)", () => {
           due_time: "10:00",
           reminder: "15m",
         },
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("Clear clears both dates and their times, and Undo brings them back", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        start_date: "2026-10-28",
+        start_time: "09:00",
+        due_date: "2026-10-30",
+        due_time: "17:00",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.clear") }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.clear_title"),
+    });
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("common.clear") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          start_date: null,
+          start_time: null,
+          due_date: null,
+          due_time: null,
+        },
+        expect.any(String),
+      ),
+    );
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.undo") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          start_date: "2026-10-28",
+          start_time: "09:00",
+          due_date: "2026-10-30",
+          due_time: "17:00",
+        },
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("No date in the start date calendar clears the start date and time", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        start_date: "2026-10-28",
+        start_time: "09:00",
+        due_date: "2026-10-30",
+      }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.start_date") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.no_date") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { start_date: null, start_time: null },
         expect.any(String),
       ),
     );
@@ -409,7 +484,12 @@ describe("Task details fields (T-TK-10)", () => {
 describe("Schedule validation (T-TK-20)", () => {
   it("offers only end times after start, so the UI can't break TK-3", async () => {
     open(
-      task({ title: "Schedule Task", due_date: TODAY, start_time: "14:00" }),
+      task({
+        title: "Schedule Task",
+        start_date: TODAY,
+        due_date: TODAY,
+        start_time: "14:00",
+      }),
     );
     await userEvent.click(
       screen.getByRole("button", { name: t("task.due_time") }),
@@ -419,34 +499,129 @@ describe("Schedule validation (T-TK-20)", () => {
     expect(screen.getByRole("option", { name: "14:15" })).toBeTruthy();
   });
 
-  it("shows start_after_due for a stored bad schedule, linked by aria-describedby, and a valid due time clears it", async () => {
+  it("shows start_after_due when start is after due, linked by aria-describedby, and a valid start time clears it", async () => {
     const { patchSpy } = open(
       task({
         title: "Schedule Task",
         start_date: TODAY,
         due_date: TODAY,
-        start_time: "14:00",
-        due_time: "13:00",
+        due_time: "10:00",
       }),
     );
-    const dueTime = screen.getByRole("button", { name: t("task.due_time") });
+    const startTime = screen.getByRole("button", { name: t("task.start") });
+    await userEvent.click(startTime);
+    await userEvent.click(screen.getByRole("option", { name: "14:00" }));
+
     const alert = screen.getByRole("alert");
     expect(alert.textContent).toBe(t("task.start_after_due"));
-    expect(dueTime.getAttribute("aria-describedby")).toBe(
-      "task-due-time-error",
-    );
+    expect(startTime.getAttribute("aria-describedby")).toBe("task-dates-error");
     expect(patchSpy).not.toHaveBeenCalled();
 
-    await userEvent.click(dueTime);
-    await userEvent.click(screen.getByRole("option", { name: "15:00" }));
+    await userEvent.click(startTime);
+    await userEvent.click(screen.getByRole("option", { name: "09:00" }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { due_time: "15:00" },
+        { start_time: "09:00" },
         expect.any(String),
       ),
     );
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("start time disabled without start date", () => {
+    open(task({ title: "Task", start_date: null }));
+    const startTimeTrigger = screen.getByRole("button", {
+      name: t("task.start"),
+    }) as HTMLButtonElement;
+    expect(startTimeTrigger.disabled).toBe(true);
+  });
+
+  it("picking a start date then a start time saves both", async () => {
+    const { patchSpy } = open(
+      task({
+        title: "Task",
+        due_date: "2026-12-31",
+        start_date: null,
+        start_time: null,
+      }),
+    );
+    const startDateTrigger = screen.getByRole("button", {
+      name: t("task.start_date"),
+    });
+    await userEvent.click(startDateTrigger);
+    await userEvent.click(
+      screen.getByRole("button", { name: t("date.today") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({ start_date: expect.any(String) }),
+        expect.any(String),
+      ),
+    );
+
+    const startTimeTrigger = screen.getByRole("button", {
+      name: t("task.start"),
+    }) as HTMLButtonElement;
+    expect(startTimeTrigger.disabled).toBe(false);
+    await userEvent.click(startTimeTrigger);
+    await userEvent.click(screen.getByRole("option", { name: "09:00" }));
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { start_time: "09:00" },
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("start date after due date shows the error and calls no save", async () => {
+    const { patchSpy } = open(
+      task({ title: "Task", due_date: TODAY, start_date: null }),
+    );
+    const startDateTrigger = screen.getByRole("button", {
+      name: t("task.start_date"),
+    });
+    await userEvent.click(startDateTrigger);
+    await userEvent.click(
+      screen.getByRole("button", { name: t("date.tomorrow") }),
+    );
+
+    const alert = screen.getByRole("alert");
+    expect(alert.textContent).toBe(t("task.start_after_due"));
+    expect(alert.id).toBe("task-dates-error");
+    expect(patchSpy).not.toHaveBeenCalled();
+  });
+
+  it("clearing the start date saves {start_date: null, start_time: null}", () => {
+    let clearStartDate: (() => void) | undefined;
+    const spy = vi
+      .spyOn(datePickerModule, "DatePicker")
+      .mockImplementation((props) => {
+        if (props.id === "task-start-date") {
+          clearStartDate = () => props.onChange("");
+        }
+        return <div data-testid={props.id} />;
+      });
+    const onSave = vi.fn();
+    render(
+      <DateTimeFields
+        task={{
+          start_date: TODAY,
+          start_time: "09:00",
+          due_date: TODAY,
+          due_time: "17:00",
+        }}
+        onSave={onSave}
+      />,
+    );
+    clearStartDate?.();
+    expect(onSave).toHaveBeenCalledWith({
+      start_date: null,
+      start_time: null,
+    });
+    spy.mockRestore();
   });
 });
 
