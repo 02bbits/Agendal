@@ -292,12 +292,28 @@ describe("Check this first (IM-45, NU-5)", () => {
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
   });
 
-  it("rows neither open nor ask When?: nothing exists yet", () => {
-    open(confirm([sql, ink]));
+  it("a row opens the planned task here, not its page, and an undated one asks When?", async () => {
+    const onOpenTask = vi.fn();
+    open(confirm([sql, ink, old]), { onOpenTask });
     expect(screen.queryByRole("link")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: /SQL quiz/ }));
+    expect(onOpenTask).toHaveBeenCalledWith(sql.task);
     expect(
-      screen.queryByRole("group", { name: t("note.ask_when") }),
+      screen.queryByRole("button", { name: /Old reading list/ }),
     ).toBeNull();
+    expect(
+      screen.getByRole("group", { name: t("note.ask_when") }),
+    ).toBeTruthy();
+  });
+
+  it("a row rescheduled here shows its new date instead of the note's", () => {
+    open(confirm([sql]), {
+      onOpenTask: vi.fn(),
+      live: {
+        "t-sql": { ...sql.task, due_date: "2026-10-30", start_time: "14:00" },
+      },
+    });
+    expect(screen.getByText("Fri 30 Oct · 14:00")).toBeTruthy();
   });
 
   it("Apply changes and Edit note hand over", async () => {

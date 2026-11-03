@@ -71,3 +71,33 @@ it('shows a note to its owner only (RV §7)', function () {
     $this->postJson("/api/v1/notes/{$id}/apply")->assertNotFound();
     $this->postJson("/api/v1/notes/{$id}/cancel")->assertNotFound();
 });
+
+it('applies the edits made on Check this first, by entry ref', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->assertJsonPath('changes.0.ref', 'i1');
+
+    $this->postJson("/api/v1/notes/{$note->json('note.id')}/apply", ['edits' => ['i1' => ['title' => 'Call mum back', 'due_date' => '2026-10-30', 'priority' => 'high']]])
+        ->assertOk()->assertJsonPath('changes.0.task.title', 'Call mum back');
+
+    $task = Task::firstOrFail();
+    expect([$task->title, substr((string) $task->due_date, 0, 10), $task->priority])->toBe(['Call mum back', '2026-10-30', 'high']);
+});
+
+it('keeps a moved task where the user put it instead of planning the move again', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->user->id, 'title' => 'Gym', 'due_date' => '2026-10-24'])->save();
+    $note = $this->postJson('/api/v1/notes', confirmNote('move gym to monday'))->assertJsonPath('note.status', 'confirm');
+    $ref = $note->json('changes.0.ref');
+
+    $this->postJson("/api/v1/notes/{$note->json('note.id')}/apply", ['edits' => [$ref => ['due_date' => '2026-10-28']]])->assertOk();
+
+    expect(substr((string) $task->fresh()->due_date, 0, 10))->toBe('2026-10-28');
+});
+
+it('refuses edits to fields a task patch may not set', function () {
+    $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->json('note.id');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['user_id' => 99]]])->assertStatus(422);
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => 'x']])->assertStatus(422);
+
+    expect(Task::count())->toBe(0)->and(Note::firstOrFail()->status)->toBe('confirm');
+});

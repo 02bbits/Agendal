@@ -2,6 +2,7 @@ import { api } from "./api";
 import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
 import { isCopyKey, type CopyKey } from "../ui/copy";
+import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { NoteResult } from "../ui/domain/types";
 
 /** Why a note wasn't made: the copy to show, and for 429 the seconds until it may be sent again. */
@@ -81,11 +82,14 @@ export async function getNote(id: string): Promise<NoteResult> {
 export async function confirmNote(
   id: string,
   action: "apply" | "cancel",
+  edits: Record<string, TaskPatch> = {},
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
       await api(`/notes/${encodeURIComponent(id)}/${action}`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action === "apply" ? { edits } : {}),
       }),
     );
     rememberNote(result);
@@ -95,4 +99,27 @@ export async function confirmNote(
       return { error: "note.needs_connection" };
     return { error: isCopyKey(error.code) ? error.code : "error.generic" };
   }
+}
+
+/**
+ * Check this first's tasks don't exist yet (NU-5). Task details edits them through this instead of
+ * the server, and Apply sends what changed, by plan entry ref. Completing one isn't a planned change.
+ */
+export function previewTaskApi(result: NoteResult) {
+  const tasks = new Map(result.changes.map((c) => [c.task.id, c.task]));
+  const refs = new Map(result.changes.map((c) => [c.task.id, c.ref]));
+  const edits: Record<string, TaskPatch> = {};
+  const refuse = () => Promise.reject(new Error("note.preview"));
+  const api: TaskApi = {
+    async patch(id, fields) {
+      const task = { ...tasks.get(id)!, ...fields };
+      tasks.set(id, task);
+      const ref = refs.get(id);
+      if (ref) edits[ref] = { ...edits[ref], ...fields };
+      return task;
+    },
+    complete: refuse,
+    reopen: refuse,
+  };
+  return { api, edits };
 }

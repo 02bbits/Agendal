@@ -274,6 +274,38 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(await screen.findByRole("textbox")).toBeTruthy();
   });
 
+  it("edits made in Task details go with Apply, by entry ref, and nothing else is saved", async () => {
+    serveConfirm();
+    const refd = {
+      ...pending,
+      changes: changes.map((c, i) => ({ ...c, ref: `i${i + 1}` })),
+    };
+    fetchMock.mockImplementation(
+      ((base) => async (url: string, init?: RequestInit) =>
+        url === "/api/v1/notes/n1" ? json(200, refd) : base(url, init))(
+        fetchMock.getMockImplementation()!,
+      ),
+    );
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.click(screen.getByRole("radio", { name: /high/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.apply") }),
+    );
+
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(1),
+    );
+    expect(
+      JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
+    ).toEqual({
+      edits: { i1: { priority: "high" } },
+    });
+    expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
+  });
+
   it("a failed apply stays on the screen and says why", async () => {
     serve({}, () => json(200, pending));
     const base = fetchMock.getMockImplementation()!;

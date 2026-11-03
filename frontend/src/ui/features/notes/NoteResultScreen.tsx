@@ -41,6 +41,8 @@ export interface NoteResultScreenProps {
   busy?: boolean;
   /** No connection: Apply and Edit note can't reach the server. */
   offline?: boolean;
+  /** Check this first: a row opens Task details on the planned task. */
+  onOpenTask?: (task: Task) => void;
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
@@ -67,8 +69,8 @@ const LONG_QUOTE = 160;
  * updated or deleted task. Created and updated rows open Task details; a created task with no
  * date offers When? chips. Undo all comes with IM-44.
  *
- * A `confirm` note shows the same rows as Check this first (NU-5): what applying will do. Nothing
- * exists yet, so rows don't open, and the footer has Edit note and Apply changes.
+ * A `confirm` note shows the same rows as Check this first (NU-5): what applying will do. A row
+ * opens Task details on the planned task, and the footer has Edit note and Apply changes.
  */
 export function NoteResultScreen({
   result,
@@ -82,6 +84,7 @@ export function NoteResultScreen({
   onEdit,
   busy = false,
   offline = false,
+  onOpenTask,
   onSetDue,
   navigate,
 }: NoteResultScreenProps) {
@@ -168,8 +171,9 @@ export function NoteResultScreen({
               key={`${change.kind}-${change.task.id}`}
               change={change}
               current={live[change.task.id]}
-              preview={confirming}
+              onOpen={confirming ? onOpenTask : undefined}
               today={today}
+              timeFormat={timeFormat}
               weekStart={weekStart}
               onSetDue={onSetDue}
               navigate={navigate}
@@ -247,9 +251,10 @@ export function NoteResultScreen({
 interface ChangeRowProps {
   change: NoteChange;
   current: Task | null | undefined;
-  /** Check this first: the change isn't made yet, so the row neither opens nor asks When? */
-  preview: boolean;
+  /** Check this first: the task isn't made yet, so the row opens it here instead of its page. */
+  onOpen?: (task: Task) => void;
   today: string;
+  timeFormat: TimeFormat;
   weekStart: WeekStart;
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
@@ -258,8 +263,9 @@ interface ChangeRowProps {
 function ChangeRow({
   change,
   current,
-  preview,
+  onOpen,
   today,
+  timeFormat,
   weekStart,
   onSetDue,
   navigate,
@@ -269,22 +275,33 @@ function ChangeRow({
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
   const gone = current === null;
-  const opens = change.kind !== "deleted" && !gone && !preview;
+  const opens = change.kind !== "deleted" && !gone;
 
+  // Rescheduled on Check this first: the new date and time replace what the note said
+  const moved =
+    onOpen !== undefined &&
+    (task.due_date !== change.task.due_date ||
+      task.start_time !== change.task.start_time);
   // A date given from here (When? chip) shows in front of what the note said
   const meta = gone
     ? t("note.gone_since")
-    : [
-        change.task.due_date === null &&
-          task.due_date &&
-          formatDay(task.due_date, today),
-        change.label,
-        change.was && t("note.was", { value: change.was }),
-      ]
-        .filter(Boolean)
-        .join(" · ");
-  const askWhen =
-    change.kind === "created" && !gone && !preview && !task.due_date;
+    : moved
+      ? [
+          task.due_date ? formatDay(task.due_date, today) : t("task.no_date"),
+          task.start_time && formatTime(task.start_time, timeFormat),
+        ]
+          .filter(Boolean)
+          .join(" · ")
+      : [
+          change.task.due_date === null &&
+            task.due_date &&
+            formatDay(task.due_date, today),
+          change.label,
+          change.was && t("note.was", { value: change.was }),
+        ]
+          .filter(Boolean)
+          .join(" · ");
+  const askWhen = change.kind === "created" && !gone && !task.due_date;
 
   const body = (
     <>
@@ -308,7 +325,16 @@ function ChangeRow({
 
   return (
     <li className="border-b border-separator last:border-b-0">
-      {opens ? (
+      {opens && onOpen ? (
+        <button
+          type="button"
+          onClick={() => onOpen(task)}
+          aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
+          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink"
+        >
+          {body}
+        </button>
+      ) : opens ? (
         <Link
           href={ROUTES.task(task.id)}
           navigate={navigate}

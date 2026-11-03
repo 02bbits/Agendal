@@ -63,6 +63,8 @@ export interface NoteChange {
   kind: "created" | "updated" | "deleted";
   task: Task;
   label: string;
+  /** The plan entry it comes from; Check this first sends edits by it (RV §7). */
+  ref?: string;
   was?: string;
 }
 

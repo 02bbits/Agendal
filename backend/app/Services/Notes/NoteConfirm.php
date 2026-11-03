@@ -19,16 +19,20 @@ final class NoteConfirm
 {
     public function __construct(private NoteApplier $applier) {}
 
-    /** Applies a `confirm` plan, re-validated against the tasks as they are now (NU-E38). */
-    public function apply(Note $note): Note
+    /**
+     * Applies a `confirm` plan, re-validated against the tasks as they are now (NU-E38), with the user's edits.
+     *
+     * @param  array<string, array<string, mixed>>  $edits
+     */
+    public function apply(Note $note, array $edits = []): Note
     {
-        return DB::transaction(function () use ($note): Note {
+        return DB::transaction(function () use ($note, $edits): Note {
             // The user row first, as POST /notes locks it, so a note and an apply can't deadlock.
             User::query()->whereKey($note->user_id)->lockForUpdate()->firstOrFail();
             $note = $this->locked($note);
             /** @var ValidatedPlan $plan */
             $plan = $note->plan;
-            $applied = $this->applier->apply($note, $plan);
+            $applied = $this->applier->apply($note, $plan, $edits);
             $note->forceFill([
                 'status' => PlanStatus::Done->value, 'applied' => $applied['applied'],
                 'plan' => [...$plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']],
