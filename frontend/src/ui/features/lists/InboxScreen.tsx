@@ -32,6 +32,24 @@ export function InboxScreen({
 }: InboxScreenProps) {
   const store = useTaskStore();
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [openOverdue, setOpenOverdue] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:overdue");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return true;
+  });
+  const [openToday, setOpenToday] = useState(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("agendal:inbox:open:today");
+        if (saved !== null) return saved === "true";
+      } catch {}
+    }
+    return true;
+  });
   const [openNoDate, setOpenNoDate] = useState(() => {
     if (typeof window !== "undefined") {
       try {
@@ -50,6 +68,20 @@ export function InboxScreen({
     }
     return false;
   });
+
+  const handleToggleOverdue = (next: boolean) => {
+    setOpenOverdue(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:overdue", String(next));
+    } catch {}
+  };
+
+  const handleToggleToday = (next: boolean) => {
+    setOpenToday(next);
+    try {
+      sessionStorage.setItem("agendal:inbox:open:today", String(next));
+    } catch {}
+  };
 
   const handleToggleNoDate = (next: boolean) => {
     setOpenNoDate(next);
@@ -164,6 +196,9 @@ export function InboxScreen({
               title={t("list.overdue")}
               count={view.overdue.length}
               tone="danger"
+              collapsible
+              open={openOverdue}
+              onToggle={handleToggleOverdue}
             >
               {view.overdue.map((x) =>
                 row(x, { showDue: true, overdue: true }),
@@ -171,7 +206,13 @@ export function InboxScreen({
             </Section>
           )}
           {view.today.length > 0 && (
-            <Section title={t("list.today")} count={view.today.length}>
+            <Section
+              title={t("list.today")}
+              count={view.today.length}
+              collapsible
+              open={openToday}
+              onToggle={handleToggleToday}
+            >
               {view.today.map((x) => row(x))}
             </Section>
           )}
