@@ -104,7 +104,7 @@ describe("On-screen keyboard (UX-20, UX-21)", () => {
 });
 
 describe("Bottom bar next to the task panel (UX-28)", () => {
-  it("stops 400px short from 1280px while the task panel is open", () => {
+  it("keeps its left edge and stops at the task panel from 1280px while it is open", () => {
     render(
       <AppShell tab="inbox" capture={{ onWrite: () => {} }}>
         <p>content</p>
@@ -113,6 +113,8 @@ describe("Bottom bar next to the task panel (UX-28)", () => {
     const bars = screen.getByRole("navigation", {
       name: "Main",
     }).parentElement!;
+    // Left-aligned, not centred by mx-auto, so it ends at the panel's edge
+    expect(bars.className).toContain("xl:[html[data-task-panel]_&]:ml-0");
     expect(bars.className).toContain(
       "xl:[html[data-task-panel]_&]:w-[calc(100%-400px)]",
     );

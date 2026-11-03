@@ -58,7 +58,7 @@ export function AppShell({
           {children}
         </main>
         {tab && (
-          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
+          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
             {capture && <CaptureBar {...capture} />}
             <TabBar active={tab} navigate={navigate} />
           </div>
