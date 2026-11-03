@@ -6,6 +6,7 @@ import {
   FolderIcon,
   InboxIcon,
   NotesIcon,
+  PlusIcon,
   SearchIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
@@ -26,6 +27,8 @@ export interface SidebarProps {
   counts?: Partial<Record<TabId, number>>;
   /** The project rows under "Projects" (PJ fills them). */
   projects?: ReactNode;
+  /** Callback to create a new project from the PROJECTS header button. */
+  onNewProject?: () => void;
   /** The signed-in user's name; the avatar shows its first letter. */
   accountName: string;
 }
@@ -36,6 +39,7 @@ export function Sidebar({
   navigate,
   counts,
   projects,
+  onNewProject,
   accountName,
 }: SidebarProps) {
   return (
@@ -99,9 +103,21 @@ export function Sidebar({
 
       {projects && (
         <section className="min-h-0 flex-1 overflow-y-auto">
-          <h2 className="m-0 px-3 pt-2 pb-1 text-overline font-semibold uppercase text-ink-tertiary">
-            {t("nav.projects")}
-          </h2>
+          <div className="flex items-center justify-between px-3 pt-2 pb-1">
+            <h2 className="m-0 text-overline font-semibold uppercase text-ink-tertiary">
+              {t("nav.projects")}
+            </h2>
+            {onNewProject && (
+              <button
+                type="button"
+                onClick={onNewProject}
+                className="inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                aria-label={t("project.new")}
+              >
+                <PlusIcon size={14} />
+              </button>
+            )}
+          </div>
           {projects}
         </section>
       )}

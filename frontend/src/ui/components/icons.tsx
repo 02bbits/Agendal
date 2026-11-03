@@ -103,6 +103,7 @@ export const TrashIcon = icon(
 );
 export const ChevronRightIcon = icon(<path d="m9 18 6-6-6-6" />);
 export const ChevronLeftIcon = icon(<path d="m15 18-6-6 6-6" />);
+export const ChevronDownIcon = icon(<path d="m6 9 6 6 6-6" />);
 export const MoreIcon = icon(
   <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.2" />,
 );

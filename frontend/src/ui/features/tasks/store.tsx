@@ -121,9 +121,10 @@ export function TaskStoreProvider({
         : { done: false, done_at: null };
       const req = () =>
         (isComplete ? api.complete(id, at) : api.reopen(id, at)).then((r) => {
-          if (r.next && getTask(id)?.done === isComplete) {
-            acceptOccurrence(r.next, !isComplete);
-          }
+          // Requests for one task run in order, so every answer is applied:
+          // complete adds the next occurrence, reopen removes the one the
+          // server deleted. Skipping a stale answer left a duplicate row
+          if (r.next) acceptOccurrence(r.next, !isComplete);
           return r.task;
         });
       change(id, fields, req, (err) =>
@@ -148,7 +149,12 @@ export function TaskStoreProvider({
   }, [mutateLifecycle]);
 
   const toggle = React.useCallback(
-    (task: Task) => mutateLifecycle(task.id, task.done ? "reopen" : "complete"),
+    (task: Task) => {
+      // A task that is settling after Complete ignores more clicks on its
+      // tick until it moves down; Undo in the toast still reopens it
+      if (settleTimers.current.has(task.id)) return;
+      mutateLifecycle(task.id, task.done ? "reopen" : "complete");
+    },
     [mutateLifecycle],
   );
 

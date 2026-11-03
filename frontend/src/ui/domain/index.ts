@@ -1,8 +1,9 @@
-export * from "./types";
 export * from "./dates";
+export * from "./types";
 export { taskAccessibleName } from "./describe";
 export * from "./api";
 export * from "./progress";
+export * from "./lists";
 export * from "./edit";
 export * from "./sync";
 export * from "./projects";

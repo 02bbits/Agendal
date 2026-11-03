@@ -13,6 +13,7 @@ export interface ChipGroupProps<V extends string> {
   options: ReadonlyArray<ChipOption<V>>;
   value: V;
   onChange: (value: V) => void;
+  itemRef?: (value: V, el: HTMLButtonElement | null) => void;
 }
 
 export function ChipGroup<V extends string>({
@@ -21,6 +22,7 @@ export function ChipGroup<V extends string>({
   options,
   value,
   onChange,
+  itemRef,
 }: ChipGroupProps<V>) {
   const labelId = useId();
   const refs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -57,6 +59,7 @@ export function ChipGroup<V extends string>({
               key={option.value}
               ref={(el) => {
                 refs.current[index] = el;
+                itemRef?.(option.value, el);
               }}
               role="radio"
               aria-checked={checked}

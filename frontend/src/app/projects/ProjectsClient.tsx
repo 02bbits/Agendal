@@ -2,25 +2,48 @@
 
 import { useCallback, useEffect, useState } from "react";
 import {
-  ProjectSheet,
   ProjectsScreen,
   ROUTES,
+  formatLongDate,
   type Project,
   type ProjectWithCounts,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
-import { createProject, listProjects } from "@/lib/projectApi";
+import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
+import { useToday } from "@/ui/features/tasks/useToday";
+import { ProjectsModals } from "./ProjectsModals";
 
 export function ProjectsClient() {
-  const { navigate, user } = useAppFrame();
+  const { navigate, user, showToast } = useAppFrame();
   const [projects, setProjects] = useState<ProjectWithCounts[]>([]);
+  const [noProjectCounts, setNoProjectCounts] = useState<{
+    open: number;
+    done: number;
+  }>({ open: 0, done: 0 });
   const [creating, setCreating] = useState(false);
+  const [editingProject, setEditingProject] =
+    useState<ProjectWithCounts | null>(null);
+  const [deletingProject, setDeletingProject] =
+    useState<ProjectWithCounts | null>(null);
+
+  const today = useToday(appClock);
 
   const load = useCallback(() => {
     listProjects()
       .then((data) => {
         if (Array.isArray(data)) setProjects(data);
+      })
+      .catch(() => {});
+
+    getProject("none")
+      .then((res) => {
+        if (res && res.progress) {
+          setNoProjectCounts({
+            open: res.progress.total - res.progress.done,
+            done: res.progress.done,
+          });
+        }
       })
       .catch(() => {});
   }, []);
@@ -66,20 +89,26 @@ export function ProjectsClient() {
     <>
       <ProjectsScreen
         projects={projects}
+        noProjectCounts={noProjectCounts}
         accountInitial={accountInitial}
+        overline={formatLongDate(today)}
         onNewProject={() => setCreating(true)}
+        onRenameProject={(p) => setEditingProject(p)}
+        onDeleteProject={(p) => setDeletingProject(p)}
         navigate={navigate}
       />
-      {creating && (
-        <ProjectSheet
-          open
-          projects={projects}
-          onClose={() => setCreating(false)}
-          clock={appClock}
-          onCreate={createProject}
-          onCreated={handleCreated}
-        />
-      )}
+      <ProjectsModals
+        projects={projects}
+        setProjects={setProjects}
+        creating={creating}
+        setCreating={setCreating}
+        editingProject={editingProject}
+        setEditingProject={setEditingProject}
+        deletingProject={deletingProject}
+        setDeletingProject={setDeletingProject}
+        onCreated={handleCreated}
+        showToast={showToast}
+      />
     </>
   );
 }

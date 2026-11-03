@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   beginChange,
   createTaskSyncState,
@@ -29,6 +29,22 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
   const syncState = useRef<TaskSyncState>(createTaskSyncState(initialTasks));
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+
+  useEffect(() => {
+    const onTaskCreated = (e: Event) => {
+      const customEvent = e as CustomEvent<Task>;
+      const created = customEvent?.detail;
+      if (created) {
+        if (rowsRef.current.some((t) => t.id === created.id)) return;
+        rowsRef.current = [...rowsRef.current, created];
+        setTasks(rowsRef.current);
+      }
+    };
+    window.addEventListener("agendal:task-created", onTaskCreated);
+    return () => {
+      window.removeEventListener("agendal:task-created", onTaskCreated);
+    };
+  }, []);
 
   const replaceRow = useCallback((id: string, row: Task) => {
     rowsRef.current = rowsRef.current.map((t) => (t.id === id ? row : t));

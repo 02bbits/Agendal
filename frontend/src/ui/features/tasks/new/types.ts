@@ -1,4 +1,4 @@
-import type { Task, Project, Priority } from "../../../domain/types";
+import type { Task, Project, Priority, WeekStart } from "../../../domain/types";
 import type { CreateTaskBody, DueChip } from "../../../domain/newTask";
 
 export interface NewTaskSheetProps {
@@ -11,6 +11,7 @@ export interface NewTaskSheetProps {
   onRetryProjects?: () => void;
   onCreate?: (body: CreateTaskBody) => Promise<Task>;
   onAdded?: (title: string) => void;
+  weekStart?: WeekStart;
 }
 
 export interface DueChipsProps {
@@ -19,6 +20,7 @@ export interface DueChipsProps {
   onChange: (chip: DueChip) => void;
   onPickedChange: (picked: string) => void;
   onCancelPick: () => void;
+  weekStart?: WeekStart;
 }
 
 export interface PriorityChipsProps {

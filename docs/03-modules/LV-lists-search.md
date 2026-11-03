@@ -36,7 +36,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Inbox (LV-1)
 
-- **Overline:** today's date (`Friday 23 Oct`). Then the progress summary `list.progress` with `list.encourage_progress`.
+- **Overline:** today's date (`Friday 23 Oct`). On desktop screens (from 768px), an informative subtitle displays the count of overdue and today's tasks (`list.inbox_subtitle`, e.g. "1 overdue · 3 due or scheduled today"), accompanied by a pill-shaped `+ New task` action button in the header. Then the progress summary `list.progress` with `list.encourage_progress`.
+- **Card layout:** Section task lists are wrapped in elevated rounded card containers (`rounded-2xl border border-separator/50 bg-surface shadow-xs`) with row hairlines suppressed on the last item (`last:after:hidden`).
+- **Live refresh:** The Inbox updates in real time on task creation (`agendal:task-created`), project modifications (`agendal:projects-changed`), window focus, and visibility changes without needing a full browser reload.
 - **Sections, in order:**
 
 | Section | Contents |
@@ -44,7 +46,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Overdue | Open tasks due before today. Heading in red with the word and a count ("Overdue 2"), so colour isn't the only signal |
 | Today | Open tasks due today |
 | **No date ([Q20](../08-project/open-questions.md#q20))** | Open tasks with no due date, collapsed by default and showing its count. Without it, every undated task a note makes ("Buy milk") would only be visible under Projects. This section isn't part of the progress |
-| Completed | Tasks completed today, collapsed and showing its count |
+| Completed | Tasks completed today, collapsed and showing its count. Caps at 5 tasks initially. If more than 5 completed tasks exist, a "Show all" (`list.show_all`) button allows expanding to see all completed tasks, which can then be toggled back via "Show less" (`list.show_less`). Reopening/undoing tasks replenishes visible slots from hidden tasks; once total completed tasks drop to 5 or fewer, the button automatically disappears |
 
 - **Progress:**
   - *Total* = open tasks due today or overdue, plus tasks completed today that were due today or earlier.
@@ -128,7 +130,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`list.progress`, `list.encourage_one`, `list.encourage_progress`, `list.overdue`, `list.today`, `list.no_date`, `list.completed`, `list.tomorrow`, `list.nothing_left`, `list.see_upcoming`, `list.first_run`, `list.filter_all`, `list.filter_scheduled`, `list.filter_due`, `list.filter_empty`, `list.upcoming_empty`, `search.placeholder`, `search.hint`, `search.filter_open`, `search.filter_completed`, `search.no_match`, `search.offline`, `app.offline`.
+`list.progress`, `list.encourage_one`, `list.encourage_progress`, `list.overdue`, `list.today`, `list.no_date`, `list.completed`, `list.show_all`, `list.show_less`, `list.inbox_subtitle`, `list.tomorrow`, `list.nothing_left`, `list.see_upcoming`, `list.first_run`, `list.filter_all`, `list.filter_scheduled`, `list.filter_due`, `list.filter_empty`, `list.upcoming_empty`, `search.placeholder`, `search.hint`, `search.filter_open`, `search.filter_completed`, `search.no_match`, `search.offline`, `app.offline`.
 
 ## 6. Accessibility
 

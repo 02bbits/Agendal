@@ -1044,3 +1044,245 @@ it('returns 404 on delete and restore for another user\'s project', function () 
         'mode' => 'move',
     ])->assertStatus(404);
 });
+
+it('returns 401 when signed out for /projects/none', function () {
+    $this->getJson('/api/v1/projects/none')->assertStatus(401);
+});
+
+it('shows No project screen with only the user\'s own non-deleted tasks without a project and correct progress counts', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Assigned Project',
+        'colour' => 'blue',
+    ]);
+
+    // Other user's unassigned tasks (excluded)
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'project_id' => null,
+        'title' => 'Other User Open',
+        'done' => false,
+    ]);
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $otherUser->id,
+        'project_id' => null,
+        'title' => 'Other User Done',
+        'done' => true,
+        'done_at' => Carbon::now(),
+    ]);
+
+    // User's task assigned to a project (excluded)
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Assigned Task',
+        'done' => false,
+    ]);
+
+    // User's soft-deleted unassigned tasks (excluded)
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Deleted Open',
+        'done' => false,
+        'deleted_at' => Carbon::now(),
+    ]);
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Deleted Completed',
+        'done' => true,
+        'done_at' => Carbon::now(),
+        'deleted_at' => Carbon::now(),
+    ]);
+
+    // User's active unassigned tasks: 2 open, 1 done
+    $open1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Open Task 1',
+        'done' => false,
+    ]);
+    $open2 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Open Task 2',
+        'done' => false,
+    ]);
+    $done1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Done Task 1',
+        'done' => true,
+        'done_at' => Carbon::now(),
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/projects/none')
+        ->assertStatus(200);
+
+    $data = $response->json();
+    expect($data)->toHaveKeys(['project', 'progress', 'open', 'completed', 'next_cursor'])
+        ->and($data['project'])->toBeNull()
+        ->and($data['progress'])->toBe(['done' => 1, 'total' => 3])
+        ->and($data['open'])->toHaveCount(2)
+        ->and($data['completed'])->toHaveCount(1)
+        ->and($data['next_cursor'])->toBeNull();
+
+    assertProjectTaskSchema($data['open'][0]);
+    assertProjectTaskSchema($data['completed'][0]);
+});
+
+it('orders open tasks in No project by due_date (nulls last), then priority, then created_at', function () {
+    $user = User::factory()->create();
+
+    $t1 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T1 due tomorrow high',
+        'due_date' => '2026-10-25',
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t2 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T2 due today low',
+        'due_date' => '2026-10-24',
+        'priority' => 'low',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t3 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T3 due today medium',
+        'due_date' => '2026-10-24',
+        'priority' => 'medium',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t4 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T4 due today high',
+        'due_date' => '2026-10-24',
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 10:00:00'),
+    ]);
+
+    $t5 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T5 due null high early',
+        'due_date' => null,
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-20 08:00:00'),
+    ]);
+
+    $t6 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T6 due null high late',
+        'due_date' => null,
+        'priority' => 'high',
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-21 08:00:00'),
+    ]);
+
+    $t7 = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'T7 due null no priority',
+        'due_date' => null,
+        'priority' => null,
+        'done' => false,
+        'created_at' => Carbon::parse('2026-10-19 08:00:00'),
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/projects/none')
+        ->assertStatus(200);
+
+    $openIds = array_column($response->json('open'), 'id');
+    expect($openIds)->toBe([
+        $t4->id,
+        $t3->id,
+        $t2->id,
+        $t1->id,
+        $t5->id,
+        $t6->id,
+        $t7->id,
+    ]);
+});
+
+it('pages completed tasks in No project with cursor', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => null,
+        'title' => 'Open Task Stays',
+        'done' => false,
+    ]);
+
+    $completedIds = [];
+    $baseTime = Carbon::parse('2026-10-23 01:00:00Z');
+    for ($i = 1; $i <= 12; $i++) {
+        $task = Task::forceCreate([
+            'id' => (string) Str::uuid(),
+            'user_id' => $user->id,
+            'project_id' => null,
+            'title' => "Completed Task {$i}",
+            'done' => true,
+            'done_at' => (clone $baseTime)->addMinutes($i),
+        ]);
+        $completedIds[] = $task->id;
+    }
+
+    $expectedOrder = array_reverse($completedIds);
+
+    // 1st request: without cursor -> first 10
+    $res1 = $this->actingAs($user)->getJson('/api/v1/projects/none')
+        ->assertStatus(200);
+
+    $completedPage1 = $res1->json('completed');
+    expect($completedPage1)->toHaveCount(10)
+        ->and(array_column($completedPage1, 'id'))->toBe(array_slice($expectedOrder, 0, 10))
+        ->and($res1->json('open'))->toHaveCount(1)
+        ->and($res1->json('next_cursor'))->not->toBeNull();
+
+    $cursor = $res1->json('next_cursor');
+
+    // 2nd request: with cursor -> remaining 2
+    $res2 = $this->actingAs($user)->getJson("/api/v1/projects/none?cursor={$cursor}")
+        ->assertStatus(200);
+
+    $completedPage2 = $res2->json('completed');
+    expect($completedPage2)->toHaveCount(2)
+        ->and(array_column($completedPage2, 'id'))->toBe(array_slice($expectedOrder, 10, 2))
+        ->and($res2->json('next_cursor'))->toBeNull();
+});

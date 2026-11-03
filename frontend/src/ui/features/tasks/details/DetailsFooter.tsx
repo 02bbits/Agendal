@@ -10,6 +10,8 @@ export interface DetailsFooterProps {
   todayDate: string;
   timeZone: string;
   timeFormat: TimeFormat;
+  createdBy?: "user" | "assistant";
+  sourceNote?: { name: string; href?: string };
 }
 
 export function DetailsFooter({
@@ -18,14 +20,34 @@ export function DetailsFooter({
   todayDate,
   timeZone,
   timeFormat,
+  createdBy,
+  sourceNote,
 }: DetailsFooterProps): ReactElement {
   const localCreated = localDateTime(createdAt, timeZone);
+
+  if (createdBy === "assistant") {
+    const datePart = formatDay(localCreated.date, todayDate);
+    const timePart = formatTime(localCreated.time, timeFormat);
+    const noteText = sourceNote?.name
+      ? t("task.made_from_note", { name: sourceNote.name })
+      : t("task.created_by_assistant");
+
+    return (
+      <p className="text-center text-footnote text-ink-secondary">
+        {"✦ "}
+        {noteText}
+        {" · "}
+        {`${datePart} ${timePart}`}
+      </p>
+    );
+  }
+
   const createdStr = t("task.created", {
     date: formatDay(localCreated.date, todayDate),
   });
 
   let editedStr: string | null = null;
-  if (updatedAt) {
+  if (updatedAt && updatedAt !== createdAt) {
     const localUpdated = localDateTime(updatedAt, timeZone);
     const datePart = formatDay(localUpdated.date, todayDate);
     const timePart = formatTime(localUpdated.time, timeFormat);
