@@ -10,6 +10,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
   - [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5), the RV state matrix and §10: rows are a preview, Cancel becomes Edit note, and tick boxes and the tie picker are deferred.
   - The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) description: `confirm` carries `changes` as a preview.
   - [IM-45](08-project/tasks.md#im-45) row: reshaped scope.
+  - [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5) and [RV §7](03-modules/RV-review-control.md#7-api-contract): rows open Task details and offer When? on the planned task, and the edits go with Apply as `edits` by entry `ref`. The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) gives each change its `ref`.
 
 ## 2026-11-02
 

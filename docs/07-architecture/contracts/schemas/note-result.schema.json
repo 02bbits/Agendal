@@ -34,6 +34,7 @@
           "kind": { "enum": ["created", "updated", "deleted"] },
           "task": { "$ref": "task.schema.json" },
           "label": { "type": "string" },
+          "ref": { "type": "string", "description": "The plan entry the change comes from; Check this first sends edits by it" },
           "was": { "type": "string", "description": "Previous value for an update, shown as \"was …\" (RV-1)" }
         }
       }
