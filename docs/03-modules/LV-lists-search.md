@@ -36,16 +36,16 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Inbox (LV-1)
 
-- **Overline:** today's date (`Friday 23 Oct`). On desktop screens (from 768px), an informative subtitle displays the count of overdue and today's tasks (`list.inbox_subtitle`, e.g. "1 overdue · 3 due or scheduled today"), accompanied by a pill-shaped `+ New task` action button in the header. Then the progress summary `list.progress` with `list.encourage_progress`.
+- **Overline:** today's date (`Friday 23 Oct`). On desktop screens (from 768px), an informative subtitle displays the count of overdue and today's tasks (`list.inbox_subtitle`, e.g. "2 overdue · 4 today"), accompanied by a pill-shaped `+ New task` action button in the header. Then the progress summary `list.progress` with `list.encourage_progress`.
 - **Card layout:** Section task lists are wrapped in elevated rounded card containers (`rounded-2xl border border-separator/50 bg-surface shadow-xs`) with row hairlines suppressed on the last item (`last:after:hidden`).
 - **Live refresh:** The Inbox updates in real time on task creation (`agendal:task-created`), project modifications (`agendal:projects-changed`), window focus, and visibility changes without needing a full browser reload.
 - **Sections, in order:**
 
 | Section | Contents |
 |---|---|
-| Overdue | Open tasks due before today. Heading in red with the word and a count ("Overdue 2"), so colour isn't the only signal |
-| Today | Open tasks due today |
-| **No date ([Q20](../08-project/open-questions.md#q20))** | Open tasks with no due date, collapsed by default and showing its count. Without it, every undated task a note makes ("Buy milk") would only be visible under Projects. This section isn't part of the progress |
+| Overdue | Open tasks not done and `due_date` before today (date-based, rule 6). From the due time on the due day the due label turns red, but the task stays in Today until the day ends. Heading in red with the word and a count ("Overdue 2"), so colour isn't the only signal |
+| Today | Open tasks whose start date is today, OR due date is today, OR in progress (start date before today and due date after today), OR start-only tasks whose start date has passed (rule 8) |
+| **No date ([Q20](../08-project/open-questions.md#q20))** | Open tasks with no start date and no due date, collapsed by default and showing its count. Without it, every undated task a note makes ("Buy milk") would only be visible under Projects. This section isn't part of the progress |
 | Completed | Tasks completed today, collapsed and showing its count. Caps at 5 tasks initially. If more than 5 completed tasks exist, a "Show all" (`list.show_all`) button allows expanding to see all completed tasks, which can then be toggled back via "Show less" (`list.show_less`). Reopening/undoing tasks replenishes visible slots from hidden tasks; once total completed tasks drop to 5 or fewer, the button automatically disappears |
 
 - **Progress:**
@@ -53,20 +53,27 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - *Done* = the completed part of that total.
   - Completing an overdue task counts toward today.
 - **All done:** when nothing is open in Overdue or Today, `list.nothing_left` shows with the link `list.see_upcoming` and `list.encourage_one`.
-- **Sort within Overdue:** oldest due date first. **Within Today:** timed tasks by start time, then untimed tasks by priority (High → Low), then by creation time. **Within No date:** priority, then newest first.
+- **Sort within Overdue:** oldest due date first. **Within Today:** timed first by start time, then displayed priority (rule 12, [BR-23](../02-domain/business-rules.md#br-23)), then by creation time. **Within No date:** priority, then newest first.
 - **Midnight:** the lists recompute at local midnight while the app is open (a timer to the next midnight, re-armed on `visibilitychange`), and whenever the zone changes ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ### 2.2 Upcoming (LV-2)
 
-- **Groups:** tasks due from tomorrow on, grouped by day, with headings Tomorrow, then `Mon 26 Oct` ([UX-32](../01-product/ux-standards.md#ux-32)). Days with nothing due aren't shown.
-- **Loading:** 14 days at a time. Scrolling loads the next 14 (keyset on `due_date`). A long gap simply moves on to the next date with tasks.
-- **Filters** (chips, remembered per device):
-  - **All**
-  - **Scheduled:** has a start time
-  - **Due only:** has a due date and no start time
-- **Sort within a day:** same as Today. Completed tasks aren't shown.
+- **Layout and views:**
+  - Sticky week bar (`UpcomingWeekNav`) with week switcher and day indicators.
+  - **Overdue section** first: open overdue tasks shown above the upcoming days (or as the first column in Board view).
+  - **List view:** rolling 2-week window.
+  - **Board view:** one week of columns, Overdue column first.
+- **Day groups:** tasks from tomorrow on, grouped by day, with headings Tomorrow, then `Mon 26 Oct` ([UX-32](../01-product/ux-standards.md#ux-32)). Every day is shown with a "+ Add task" action button (empty days are shown; this replaces "Days with nothing due aren't shown").
+- **Task entries (rule 9):**
+  - A task appears on its **start date** AND on its **due date** (shown once when they are the same day).
+  - On its due date, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue).
+- **Filters** (chips, remembered per device, rule 9):
+  - **All:** all entries across the window.
+  - **Scheduled:** entries with a work session (`start_time`) on that day.
+  - **Due only:** due-date entries.
+- **Sort within a day:** same as Today (timed first by start time, then displayed priority, then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
-- **Empty:** `list.upcoming_empty`.
+- **Empty:** empty days show "+ Add task"; if no tasks exist anywhere in the window, shows `list.upcoming_empty`.
 
 ### 2.3 Search (LV-3)
 
@@ -97,9 +104,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Layout:**
   - Checkbox (44 px hit area)
   - Title (2 lines max, [UX-30](../01-product/ux-standards.md#ux-30))
-  - Meta line: project dot and name · time (or `16:00 – 17:00`) · reminder icon · repeat icon
-  - Priority flag for High (danger) and Medium (warning). Low gets no flag
-  - In Overdue, Search and No date, the meta line starts with the due date (`Wed 21 Oct`)
+  - Meta line:
+    - On its start day: `HH:MM – HH:MM · Due {date}` (or `HH:MM · Due {date}`)
+    - In between (in progress): `In progress · Due {when}`
+    - On its due day: rendered in a dashed blue card with `Due HH:MM` in blue
+    - Overdue rows: red as today
+    - Start-only passed: `Planned {date} · HH:MM` in tertiary ink
+    - In Overdue, Search and No date, the meta line starts with the due date (`Wed 21 Oct`)
+    - Project dot and name · reminder icon · repeat icon
+  - Priority flag for High (danger) and Medium (warning), based on displayed priority (rule 12). Low gets no flag
 - **Interaction:** tapping the row opens details. Tapping the checkbox completes it (TK). There are no swipe gestures, which avoids conflicts with the browser's back gesture.
 - **A row with a sync conflict** shows a small "Changed on another device" marker until opened (AP).
 
@@ -108,7 +121,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Screen | Empty | Loading | Success | Partial | Error | Offline |
 |---|---|---|---|---|---|---|
 | Inbox | `list.nothing_left` with links (or a first-run state, `list.first_run`, when the user has no tasks at all) | First load: skeleton after 300 ms. After that, from IndexedDB at once | Sections | Collapsed sections show their counts | Sync failure: cached data and a quiet retry. After 3 failures, `error.save_failed`-style toast | Banner `app.offline`. Everything editable |
-| Upcoming | `list.upcoming_empty` | Same | Day groups | Loading the next 14 days: a row skeleton at the end | Load-more failure: inline Retry | Cached days |
+| Upcoming | Empty week shows days with "+ Add task" (`list.upcoming_empty` if window has no tasks) | Skeleton cards after 300 ms | Day groups / columns with week bar | Loading next batch: skeleton cards | "(Ref …)" error alert with Retry, or banner if offline | Cached days |
 | Search | `search.hint` | Results skeleton after 300 ms | Results with counts | — | `error.generic` with Retry | Local results plus `search.offline` |
 
 ## 4. Edge cases
@@ -123,8 +136,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="lv-e6"></a>LV-E6 | Search query with `%`, `_` or quotes | Treated as literal text. Parameterised, with `LIKE` wildcards escaped | T-LV-106, SEC-22 |
 | <a id="lv-e7"></a>LV-E7 | A task matches in both title and notes | Listed once, ranked as a title match | T-LV-107 |
 | <a id="lv-e8"></a>LV-E8 | 5,000 tasks | Inbox, Upcoming and Search stay within read p95 ≤ 300 ms (PERF-05) | PERF-05 |
-| <a id="lv-e9"></a>LV-E9 | A task due today with its time already passed | Stays in Today, not Overdue. Overdue is by date only | T-LV-109 |
-| <a id="lv-e10"></a>LV-E10 | A scheduled task with no due date | Can't happen: a start time sets the due date (TK) | T-LV-110 |
+| <a id="lv-e9"></a>LV-E9 | A task due today with its time already passed | Stays in Today, not Overdue. Overdue is by date only (rule 6). Due label turns red from due time | T-LV-109 |
+| <a id="lv-e10"></a>LV-E10 | A scheduled task with no due date (start-only) | Start-only task has its session on the start date; passed start day rolls into Today as "Planned {date}" (rule 7) | T-LV-110 |
 | <a id="lv-e11"></a>LV-E11 | Completing the last open task of today | Shows `list.nothing_left`. Focus moves to its heading so screen readers hear it | T-LV-111 |
 | <a id="lv-e12"></a>LV-E12 | The Upcoming filter leaves no results | `list.filter_empty` with a "Show all" link | T-LV-112 |
 
@@ -148,12 +161,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `GET /tasks/search?q=&status=all\|open\|completed&cursor=` | — | `200 {items[], counts: {all, open, completed}, next_cursor}` |
 
 - **Errors:** `401`. `422` for a bad `view` or `filter`. `429` for search beyond 60/min.
+- **Queries:** Inbox and Upcoming queries evaluate both `start_date` and `due_date`. Upcoming returns both start-day and due-day entries (tasks with both dates appear under each day; single entry if start and due are the same day). The endpoint `GET /tasks?view=upcoming&from=&days=14&filter=all|scheduled|due` keeps an unchanged response shape.
 - **"Today":** every list endpoint computes it from `X-Timezone` ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 - **Offline:** the client normally renders from IndexedDB, which sync keeps current ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). These endpoints serve the first load and Search.
 
 ## 8. Data, validation and authorization
 
-- **Queries:** scoped by `user_id`, using `tasks (user_id, due_date)`, `tasks (user_id, done)` and the trigram index.
+- **Queries:** scoped by `user_id`, using `tasks (user_id, start_date)`, `tasks (user_id, due_date)`, `tasks (user_id, done)` and the trigram index.
 - **Accent-insensitive search** uses PostgreSQL `unaccent` with a trigram GIN index on the unaccented title and notes ([data model](../07-architecture/data-model.md)).
 - **Search query:** parameterised. It isn't logged in access logs (ASVS 8.3.1 deviation).
 
