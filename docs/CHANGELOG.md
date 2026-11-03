@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-03
 
+- **Created row label is the meta, not the title (Refs #36).** [RV §2.1](03-modules/RV-review-control.md#21-result-screen-rv-1): a created change's `label` is date · time · project with empty parts left out ("Buy milk tomorrow" → `Sat 24 Oct`, not `Buy milk`). Label times follow the user's `time_format` at apply time ([NU §2.4](03-modules/NU-note-understanding.md#24-command-matching-nu-3), [UX-32](01-product/ux-standards.md#ux-32)).
 - **Every note confirms first (Refs #44).**
   - [BR-01](02-domain/business-rules.md#br-01), [NU-5](03-modules/NU-note-understanding.md#nu-5), [NU §2.6](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01-br-02) and T-NU-41: any change gives `confirm`.
   - [WF-01](04-workflows/WF-01-capture-and-process-note.md) step 5 and [WF-02](04-workflows/WF-02-confirm-risky-changes.md): Apply goes back to the list with `note.made_*`, and Edit note keeps the note (`kept`) and reopens the editor with its text.
