@@ -2,12 +2,8 @@ import { useEffect, type ReactNode } from "react";
 import { CaptureBar, type CaptureBarProps } from "./CaptureBar";
 import { Sidebar, type SidebarProps } from "./Sidebar";
 import { TabBar } from "./TabBar";
-<<<<<<< HEAD
 import { ROUTES, type Navigate, type TabId } from "./routes";
-=======
 import { useKeyboardInset } from "./useKeyboardInset";
-import type { Navigate, TabId } from "./routes";
->>>>>>> origin/main
 
 export interface AppShellProps {
   /** Tab screens pass their tab; pushed screens (task, project, search, account) omit the bars. */

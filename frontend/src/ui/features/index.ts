@@ -99,7 +99,6 @@ export {
   type UpcomingViewMode,
 } from "./lists/UpcomingScreen";
 export {
-export {
   SearchScreen,
   SEARCH_DEBOUNCE_MS,
   SEARCH_PAGE,
