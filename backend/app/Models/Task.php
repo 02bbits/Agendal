@@ -21,9 +21,10 @@ class Task extends Model
 
     public const PATCHABLE = [
         'title',
+        'start_date',
         'due_date',
         'start_time',
-        'end_time',
+        'due_time',
         'priority',
         'reminder',
         'repeat',
@@ -40,9 +41,10 @@ class Task extends Model
     protected $fillable = [
         'id',
         'title',
+        'start_date',
         'due_date',
         'start_time',
-        'end_time',
+        'due_time',
         'priority',
         'reminder',
         'repeat',
