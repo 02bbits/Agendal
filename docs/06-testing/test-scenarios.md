@@ -121,3 +121,14 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 - **When** it is requested by id
 - **Then** it is not returned, and no log line contains note or task text
 - **Tests:** SEC-12, SEC-44, SEC-61
+
+## <a id="ts-19"></a>TS-19 — Multi-day task across the week (TK-2, LV-1, LV-2)
+- **Given** today is Fri 23 Oct
+- **When** the user creates a task "Course project" with start date Sat 24 Oct, work session 10:00 – 12:00, and due date Wed 28 Oct 17:00
+- **Then** in Upcoming, it appears on Sat 24 Oct with its session "10:00 – 12:00 · Due Wed 28 Oct"
+- **And** on Wed 28 Oct, it appears in a dashed blue card with "Due 17:00" in blue
+- **When** Saturday arrives, the task appears in Today
+- **When** Sunday through Tuesday pass, the task stays in Today with "In progress · Due Wed 28 Oct"
+- **When** Wednesday arrives, it shows in Today with "Due 17:00" (turning red after 17:00)
+- **When** completed at any point, the single task is marked done and disappears from all future day views
+- **Tests:** T-TK-10, T-LV-01, T-LV-10
