@@ -62,14 +62,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.2 Check this first (NU-5)
 
-- **Contents:** the same rows as the result, each with a checkbox, all ticked by default. A delete row has the red DELETED badge.
+- **Contents:** the overline `note.confirm_title`, the note's name, `note.confirm_body_*`, the quoted note, and the same rows as the result: a preview of what applying will do. Rows don't open and show no When? chips, since nothing exists yet. A delete row has the red DELETED badge.
+- **Until tick boxes land:** rows have no checkbox and ties use the preselected task. Ticking and the tie picker below are deferred, and Apply sends no body.
 - **Ticking ([Q20](../08-project/open-questions.md#q20)):**
   - Unticking a row removes it from the plan. Apply changes stays disabled until at least one row is ticked.
   - Unticked rows are kept in the plan JSON as `excluded`, and are not applied.
 - **Ties ([NU-E11](NU-note-understanding.md#nu-e11)):** the row shows "Which task did you mean?" with radio buttons for the candidates, the preselected one already chosen.
 - **Buttons:**
-  - **Apply changes** (primary, or red when the plan has a delete) sends the choices and exclusions.
-  - **Cancel and keep the note** sets the status to `kept`.
+  - **Apply changes** (primary, or red when the plan has a delete) sends the choices and exclusions. The app goes back to where the note was written, and a toast says `note.made_*`.
+  - **Edit note** (secondary) sets the status to `kept` (`POST /notes/{id}/cancel`) and opens the editor again with the note's text. Make tasks then makes a new note.
 - **Re-validation:** Apply re-checks the plan ([NU-E38](NU-note-understanding.md#nu-e38)). If anything changed since, the result screen lists the skipped entries.
 - **No expiry:** a `confirm` note waits indefinitely. Its Notes card shows `note.needs_look_one`.
 
@@ -145,7 +146,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | Screen | Empty | Loading | Success | Partial | Error | Offline |
 |---|---|---|---|---|---|---|
 | Result | — | Skeleton after 300 ms (deep link only. Arriving from the editor, the data is already there) | Rows and buttons | Some rows `note.gone_since`. Skipped section shown | `404` → `error.not_found` with Back. `5xx` → `error.generic` with Retry | Cached result shown. Undo all disabled with `note.needs_connection` |
-| Check this first | — | Same | Rows with checkboxes | Ties shown as radio groups | Apply fails: rows kept, `error.save_failed` with Retry | Apply and Cancel disabled with `note.needs_connection` |
+| Check this first | — | Same | Rows with checkboxes | Ties shown as radio groups | Apply fails: rows kept, a toast says why | Apply and Edit note disabled with `note.needs_connection` |
 | Follow-up | — | Same | Question and two buttons (Keep it as task, Edit the note) | — | Same as result | Buttons disabled with `note.needs_connection` |
 | Notes tab | `note.list_empty` | Skeleton cards after 300 ms | Cards | Pending cards mixed in | Load-more failure: inline Retry at the end of the list | Cached notes plus pending ones. Older pages: `app.offline_body` at the end of the list |
 
@@ -222,7 +223,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 ## 10. Performance and scaling
 
-- Result and confirm come back in the `POST /notes` response, so there is no second round trip ([NF-5](../05-quality/nfr.md#nf-5)).
+- Result and confirm come back in the `POST /notes` response, so there is no second round trip. A `confirm` response's `changes` is a preview: the plan applied in a savepoint and rolled back, so its task ids are not the ones Apply makes ([NF-5](../05-quality/nfr.md#nf-5)).
 - `GET /notes` uses `notes (user_id, written_at desc, id)`. Read p95 ≤ 300 ms (PERF-01).
 - Undo of a 30-change note: one transaction, ≤ 150 ms p95.
 

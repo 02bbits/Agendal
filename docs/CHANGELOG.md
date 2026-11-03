@@ -2,6 +2,15 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-03
+
+- **Every note confirms first (Refs #44).**
+  - [BR-01](02-domain/business-rules.md#br-01), [NU-5](03-modules/NU-note-understanding.md#nu-5), [NU §2.6](03-modules/NU-note-understanding.md#26-safety-and-status-nu-5-br-01-br-02) and T-NU-41: any change gives `confirm`.
+  - [WF-01](04-workflows/WF-01-capture-and-process-note.md) step 5 and [WF-02](04-workflows/WF-02-confirm-risky-changes.md): Apply goes back to the list with `note.made_*`, and Edit note keeps the note (`kept`) and reopens the editor with its text.
+  - [RV §2.2](03-modules/RV-review-control.md#22-check-this-first-nu-5), the RV state matrix and §10: rows are a preview, Cancel becomes Edit note, and tick boxes and the tie picker are deferred.
+  - The [note-result schema](07-architecture/contracts/schemas/note-result.schema.json) description: `confirm` carries `changes` as a preview.
+  - [IM-45](08-project/tasks.md#im-45) row: reshaped scope.
+
 ## 2026-11-02
 
 - **12:50 (UTC+7) · Task panel overlay and URL behaviour (Refs #26).** [UX-28](01-product/ux-standards.md#ux-28): the task panel is a fixed overlay on the right, the content column doesn't resize, the URL uses `?task={id}`, and closing does Back when the panel added the entry, else replace.

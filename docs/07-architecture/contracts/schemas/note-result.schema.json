@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agendal.app/schemas/note-result.schema.json",
   "title": "NoteResult",
-  "description": "Returned by POST /notes, GET /notes/{id} and the note actions (ADR-001, NU §7, RV §7). `done`: `changes` lists what was applied, `plan` is null. `confirm`: `changes` is empty, `plan` holds the proposal. `followup`: nothing actionable.",
+  "description": "Returned by POST /notes, GET /notes/{id} and the note actions (ADR-001, NU §7, RV §7). `done`: `changes` lists what was applied, `plan` is null. `confirm`: `changes` previews what Apply will do (task ids are not final), `plan` holds the proposal. `followup`: nothing actionable.",
   "type": "object",
   "required": ["note", "changes", "plan", "skipped", "ambiguous"],
   "additionalProperties": false,
