@@ -50,6 +50,22 @@ describe("Delete a task (TK-5)", () => {
     expect(memory.db.tasks).toHaveLength(1);
   });
 
+  it("dismisses the confirmation dialog when clicking outside on the backdrop", async () => {
+    const t0 = task({ title: "Pay phone bill" });
+    const { wrap, memory } = setup([t0]);
+    render(wrap(<Screen id={t0.id} />));
+    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete “Pay phone bill”?",
+    });
+    expect(dialog).toBeTruthy();
+
+    const backdrop = dialog.parentElement as HTMLElement;
+    await userEvent.click(backdrop);
+    expect(dialog.isConnected).toBe(false);
+    expect(memory.db.tasks).toHaveLength(1);
+  });
+
   it("deletes, goes back, and Undo restores it (T-TK-41)", async () => {
     const t0 = task({ title: "Pay phone bill" });
     const keep = task({ title: "Email the group" });

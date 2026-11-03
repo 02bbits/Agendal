@@ -39,9 +39,17 @@ export function Dialog({
   if (!open || typeof document === "undefined") return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         ref={dialogRef}
+        onClick={(e) => e.stopPropagation()}
         className="flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-2xl motion-reduce:transition-none"
         role="alertdialog"
         aria-modal="true"
