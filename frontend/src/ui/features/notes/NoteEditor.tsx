@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useId,
   useLayoutEffect,
@@ -27,6 +28,8 @@ const EXAMPLES = [
 const VISIBLE = /[^\s​-‍⁠﻿]/;
 
 export interface NoteEditorProps {
+  /** Editing a saved follow-up stays separate from the unsent new-note draft. */
+  note?: NoteResult["note"];
   /** Called when the editor closes: at once when it is empty, otherwise after Discard (UX-13). */
   onClose: () => void;
   /** An earlier unsent note was put back in the editor (`note.draft_restored`). */
@@ -48,12 +51,13 @@ const READING_AFTER_MS = 300;
  * example chips while it is empty, and Make tasks once there is something to read.
  */
 export function NoteEditor({
+  note,
   onClose,
   onDraftRestored,
   onSubmit,
   onSubmitted,
 }: NoteEditorProps) {
-  const [text, setText] = useState("");
+  const [text, setText] = useState(note?.text ?? "");
   const latest = useRef(text);
   const dirty = useRef(false);
   const clientId = useRef(crypto.randomUUID());
@@ -83,6 +87,7 @@ export function NoteEditor({
   const requestClose = () => {
     // Closing mid-request would leave the answer with nowhere to go
     if (sending.current) return false;
+    if (note && latest.current === note.text) return onClose();
     if (confirming) setConfirming(false);
     else if (VISIBLE.test(latest.current)) setConfirming(true);
     else return onClose();
@@ -90,7 +95,7 @@ export function NoteEditor({
   };
   const discard = () => {
     dirty.current = false;
-    clearDraft().catch(() => {});
+    if (!note) clearDraft().catch(() => {});
     onClose();
   };
   useModalFocus(editorRef, textRef, true, requestClose);
@@ -102,6 +107,7 @@ export function NoteEditor({
 
   // Restore the draft, unless the user has already started typing
   useEffect(() => {
+    if (note) return;
     let current = true;
     loadDraft()
       .then((draft) => {
@@ -122,16 +128,17 @@ export function NoteEditor({
   }, []);
 
   // Save 500 ms after the last keystroke, when the page is hidden or left, and on close
-  const save = () => {
+  const save = useCallback(() => {
+    if (note) return;
     if (!dirty.current) return;
     dirty.current = false;
     saveDraft(latest.current).catch(() => {});
-  };
+  }, [note]);
   useEffect(() => {
     if (!dirty.current) return;
     const timer = setTimeout(save, 500);
     return () => clearTimeout(timer);
-  }, [text]);
+  }, [text, save]);
   useEffect(() => {
     const onHide = () => document.visibilityState !== "visible" && save();
     window.addEventListener("pagehide", save);
@@ -141,7 +148,7 @@ export function NoteEditor({
       document.removeEventListener("visibilitychange", onHide);
       save();
     };
-  }, []);
+  }, [save]);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -169,7 +176,7 @@ export function NoteEditor({
     }
     // Same order as discard(): without dirty = false the unmount would save the text again
     dirty.current = false;
-    clearDraft().catch(() => {});
+    if (!note) clearDraft().catch(() => {});
     onSubmitted?.(result);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -215,7 +222,7 @@ export function NoteEditor({
             className="m-0 flex items-center gap-1.5 text-heading font-semibold"
           >
             <SparklesIcon size={16} />
-            {t("note.new_title")}
+            {t(note ? "note.edit" : "note.new_title")}
           </h2>
           <span />
         </div>
@@ -288,7 +295,7 @@ export function NoteEditor({
               onClick={submit}
             >
               <SparklesIcon size={18} />
-              {t("note.make_tasks")}
+              {t(note ? "note.replan" : "note.make_tasks")}
             </Button>
           </div>
         </div>
@@ -296,8 +303,8 @@ export function NoteEditor({
       <Dialog
         open={confirming}
         history={false}
-        title={t("note.discard_title")}
-        description={t("note.discard_body")}
+        title={t(note ? "note.discard_edit_title" : "note.discard_title")}
+        description={t(note ? "note.discard_edit_body" : "note.discard_body")}
         onClose={() => setConfirming(false)}
         actions={
           <>

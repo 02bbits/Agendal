@@ -411,3 +411,70 @@ describe("Check this first (IM-45, NU-5)", () => {
     await expectAxeCleanInBothThemes();
   });
 });
+
+describe("Follow-up (IM-46, RV-3)", () => {
+  const followup = resultOf([], [], {
+    status: "followup",
+    text: "idea: garden\nfyi: a long thought ".repeat(10),
+  });
+
+  it("T-RV-20: shows the question, the full quote and both actions with heading focus", () => {
+    open(followup);
+    const heading = screen.getByRole("heading", {
+      name: t("note.followup_title"),
+      level: 1,
+    });
+    expect(document.activeElement).toBe(heading);
+    expect(
+      screen.getByText(followup.note.text.replace(/\s+/g, " ").trim()),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: t("note.make_one") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: t("note.followup_edit") }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: t("common.done") })).toBeNull();
+    expect(screen.queryByText(t("note.show_all"))).toBeNull();
+  });
+
+  it("calls the selected action (T-RV-22, T-RV-23)", async () => {
+    const make = vi.fn();
+    const edit = vi.fn();
+    open(followup, { onMakeTask: make, onEdit: edit });
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.followup_edit") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.make_one") }),
+    );
+    expect(make).toHaveBeenCalledOnce();
+    expect(edit).toHaveBeenCalledOnce();
+  });
+
+  it.each([{ offline: true }, { busy: true }])(
+    "disables both actions while unavailable: %j",
+    (state) => {
+      open(followup, state);
+      expect(
+        (
+          screen.getByRole("button", {
+            name: t("note.followup_edit"),
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
+      expect(
+        (
+          screen.getByRole("button", {
+            name: t("note.make_one"),
+          }) as HTMLButtonElement
+        ).disabled,
+      ).toBe(true);
+    },
+  );
+
+  it("has no axe violations in either theme", async () => {
+    open(followup);
+    await expectAxeCleanInBothThemes();
+  });
+});

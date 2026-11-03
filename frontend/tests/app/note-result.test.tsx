@@ -493,3 +493,102 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 });
+
+describe("Follow-up /notes/[id] (IM-46)", () => {
+  const followup: NoteResult = {
+    ...result,
+    note: { ...result.note, status: "followup", text: "idea: a garden" },
+    changes: [],
+    skipped: [],
+  };
+
+  it("keeps the note as a task then opens real Task details (T-RV-22)", async () => {
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/make-task": () => json(200, result),
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.make_one") }),
+    );
+    await waitFor(() =>
+      expect(router.push).toHaveBeenCalledWith("/tasks/t-sql"),
+    );
+    expect(calls("POST", "/api/v1/notes/n1/make-task")).toHaveLength(1);
+  });
+
+  it("a failed manual creation keeps the follow-up available for retry", async () => {
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/make-task": () =>
+        json(500, { error: { code: "error.generic" } }),
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.make_one") }),
+    );
+    expect(await screen.findByText(/Something went wrong/)).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: t("note.followup_title") }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: t("note.make_one"),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("Edit opens the original text, sends PUT for the same note and refreshes its result (T-RV-23)", async () => {
+    let current = followup;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/notes/n1") {
+        if (init?.method === "PUT")
+          current = {
+            ...followup,
+            note: {
+              ...followup.note,
+              text: "read tomorrow",
+              status: "confirm",
+              edited_at: "2026-10-23T08:13:00+07:00",
+            },
+          };
+        return json(200, current);
+      }
+      return json(200, []);
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.followup_edit") }),
+    );
+    const field = screen.getByRole("textbox", { name: t("note.text_label") });
+    expect((field as HTMLTextAreaElement).value).toBe(followup.note.text);
+    await userEvent.clear(field);
+    await userEvent.type(field, "read tomorrow");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.replan") }),
+    );
+    await screen.findByRole("button", { name: t("note.apply") });
+    expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(1);
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes")).toHaveLength(0);
+  });
+
+  it("closing an unchanged follow-up editor leaves its status and text untouched", async () => {
+    serve({}, () => json(200, followup));
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.followup_edit") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.cancel") }),
+    );
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: t("note.followup_title") }),
+    ).toBeTruthy();
+    expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+  });
+});

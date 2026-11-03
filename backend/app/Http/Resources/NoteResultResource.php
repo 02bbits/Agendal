@@ -33,6 +33,7 @@ class NoteResultResource extends JsonResource
                 'id' => $this->id, 'client_id' => $this->client_id, 'status' => $this->status, 'name' => $this->name,
                 'text' => $this->text, 'source_file_name' => $this->source_file_name,
                 'written_at' => $this->written_at->format(DATE_ATOM), 'processed_at' => $this->processed_at->format(DATE_ATOM), 'engine' => $this->engine,
+                'edited_at' => $this->edited_at?->format(DATE_ATOM),
             ],
             'changes' => $changes,
             'redo_until' => $this->when($this->undo_log !== null, $this->undo_log['redo_until'] ?? null),

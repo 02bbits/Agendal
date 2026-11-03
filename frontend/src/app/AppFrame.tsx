@@ -20,10 +20,10 @@ import {
   ROUTES,
   sortProjects,
   t,
-  tc,
   Toast,
   type AccountSettings,
   type Navigate,
+  type NoteResult,
   type Project,
   type ProjectWithCounts,
   type TabId,
@@ -36,7 +36,12 @@ import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
-import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
+import {
+  forgetNotes,
+  rememberNote,
+  replanFollowup,
+  submitNote,
+} from "@/lib/noteApi";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -114,6 +119,7 @@ interface AppFrameValue {
   showToast: (messageOrDraft: string | Omit<ToastData, "id">) => void;
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
+  editFollowupNote: (note: NoteResult["note"]) => void;
   /** Opens the new task bottom sheet. */
   openNewTask: {
     (opts?: { dueDate?: string }): void;
@@ -207,8 +213,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     else router.back();
   }, [router, pathname]);
   const [editing, setEditing] = useState(false);
-  const openNoteEditor = useCallback(() => setEditing(true), []);
-  const closeNoteEditor = useCallback(() => setEditing(false), []);
+  const [editingNote, setEditingNote] = useState<NoteResult["note"] | null>(
+    null,
+  );
+  const openNoteEditor = useCallback(() => {
+    setEditingNote(null);
+    setEditing(true);
+  }, []);
+  const editFollowupNote = useCallback((note: NoteResult["note"]) => {
+    setEditingNote(note);
+    setEditing(true);
+  }, []);
+  const closeNoteEditor = useCallback(() => {
+    setEditing(false);
+    setEditingNote(null);
+  }, []);
   // Closing the editor takes its history entry off with history.back(), which is only done a
   // moment later. The result goes on top of where the editor was opened once that has happened,
   // so Back from the result returns there and never to the editor (RV-E12). A router.replace
@@ -220,14 +239,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
         if (done) return;
         done = true;
         window.removeEventListener("popstate", go);
-        router.push(ROUTES.note(id));
+        if (pathname === ROUTES.note(id)) router.replace(ROUTES.note(id));
+        else router.push(ROUTES.note(id));
       };
       window.addEventListener("popstate", go);
       // The entry wasn't on top (nothing to take off): no popstate comes
       setTimeout(go, 250);
       setEditing(false);
     },
-    [router],
+    [router, pathname],
   );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
@@ -360,6 +380,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      editFollowupNote,
       openNewTask,
       user,
       signOut,
@@ -371,6 +392,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      editFollowupNote,
       openNewTask,
       user,
       signOut,
@@ -571,19 +593,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {children}
         {editing && (
           <NoteEditor
+            note={editingNote ?? undefined}
             onClose={closeNoteEditor}
             onDraftRestored={() => showToast(t("note.draft_restored"))}
-            onSubmit={submitNote}
+            onSubmit={
+              editingNote
+                ? (text) => replanFollowup(editingNote.id, text)
+                : submitNote
+            }
             onSubmitted={(result) => {
-              // Check this first (`confirm`) and the result (`done`) share the note screen
-              if (result.note.status !== "followup") {
-                rememberNote(result);
-                openResult(result.note.id);
-                return;
-              }
-              // ponytail: the follow-up (IM-46) has no screen yet
-              closeNoteEditor();
-              showToast(tc("note.made", result.changes.length));
+              rememberNote(result);
+              if (editingNote)
+                window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+              openResult(result.note.id);
             }}
           />
         )}

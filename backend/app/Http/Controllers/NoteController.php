@@ -10,6 +10,7 @@ use App\Models\Note;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Notes\NoteConfirm;
+use App\Services\Notes\NoteFollowup;
 use App\Services\Notes\NoteUndo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,6 +29,19 @@ class NoteController extends Controller
     public function show(Note $note): NoteResultResource
     {
         return new NoteResultResource($note);
+    }
+
+    public function makeTask(Note $note, NoteFollowup $followup): NoteResultResource
+    {
+        return new NoteResultResource($followup->makeTask($note));
+    }
+
+    public function update(Request $request, Note $note, ProcessNote $process): NoteResultResource
+    {
+        $user = $request->user();
+        assert($user instanceof User);
+
+        return new NoteResultResource($process->replanFollowup($user, $note, $request->all()));
     }
 
     public function apply(Request $request, Note $note, NoteConfirm $confirm): NoteResultResource

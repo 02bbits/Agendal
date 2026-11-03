@@ -9,6 +9,7 @@ import { saveDraft } from "../../../lib/draft";
 import {
   confirmNote,
   getNote,
+  makeFollowupTask,
   previewTaskApi,
   recallNote,
   redoNote,
@@ -87,6 +88,7 @@ function ResultContainer({
   weekStart,
   showToast,
   openNoteEditor,
+  editFollowupNote,
   edits,
   projectList,
 }: {
@@ -97,6 +99,7 @@ function ResultContainer({
   weekStart: "mon" | "sun";
   showToast: ReturnType<typeof useAppFrame>["showToast"];
   openNoteEditor: () => void;
+  editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
   edits?: Parameters<typeof confirmNote>[2];
   projectList: Project[];
 }): ReactElement {
@@ -165,6 +168,10 @@ function ResultContainer({
   // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
   // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
   const edit = async () => {
+    if (result.note.status === "followup") {
+      editFollowupNote(result.note);
+      return;
+    }
     setBusy(true);
     const outcome = await confirmNote(result.note.id, "cancel");
     if ("error" in outcome) {
@@ -182,6 +189,19 @@ function ResultContainer({
     window.addEventListener("popstate", open);
     setTimeout(open, 250);
     back();
+  };
+  const makeTask = async () => {
+    setBusy(true);
+    const outcome = await makeFollowupTask(result.note.id);
+    setBusy(false);
+    if ("error" in outcome)
+      return showToast(t(outcome.error, { request_id: "" }));
+    setResult(outcome);
+    listsChanged();
+    const task = outcome.changes.find(
+      (change) => change.kind === "created",
+    )?.task;
+    if (task) navigate?.(ROUTES.task(task.id));
   };
   const live = useMemo(
     () => ({
@@ -202,6 +222,7 @@ function ResultContainer({
         onDone={back}
         onApply={apply}
         onEdit={edit}
+        onMakeTask={makeTask}
         busy={busy}
         onUndo={undo}
         conflicts={conflicts}
@@ -227,7 +248,14 @@ function ResultContainer({
 export default function NoteResultClient({
   id,
 }: ClientProps): ReactElement | null {
-  const { back, navigate, settings, showToast, openNoteEditor } = useAppFrame();
+  const {
+    back,
+    navigate,
+    settings,
+    showToast,
+    openNoteEditor,
+    editFollowupNote,
+  } = useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -236,6 +264,16 @@ export default function NoteResultClient({
     message?: string;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const changed = () => {
+      setLoaded(null);
+      setErrorState(null);
+      setReloadKey((key) => key + 1);
+    };
+    window.addEventListener("agendal:note-updated", changed);
+    return () => window.removeEventListener("agendal:note-updated", changed);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,6 +369,7 @@ export default function NoteResultClient({
         weekStart={settings.weekStart}
         showToast={showToast}
         openNoteEditor={openNoteEditor}
+        editFollowupNote={editFollowupNote}
         edits={preview?.edits}
         projectList={loaded.projects}
       />

@@ -3,6 +3,8 @@
 // catalog, delete it here (test/copy.test.ts fails on duplicates).
 
 export const pending = {
+  "note.discard_edit_title": "Discard your changes?",
+  "note.discard_edit_body": "The saved note will stay as it was.",
   "nav.inbox": "Inbox",
   "nav.upcoming": "Upcoming",
   "nav.projects": "Projects",

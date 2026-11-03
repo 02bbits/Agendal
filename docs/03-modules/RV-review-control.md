@@ -77,6 +77,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3 Follow-up (RV-3)
 
+**IM-46 implementation:** follow-ups use the existing `/notes/{id}` screen, including deep links and reloads. `POST /notes/{id}/make-task` creates through the normal applier and Undo log; retries return the same created task. `PUT /notes/{id}` re-plans a follow-up under the same id and client id, using the edit time and device zone, and exposes `edited_at`. The original `written_at` stays intact. Changed text on an already handled note returns `409 note.wrong_status`; unchanged text returns the stored result. General editing of applied notes remains IM-47. Saved-note edits do not replace the separate unsent new-note draft.
+
 - **Contents:** `note.followup_title`, the note quoted in full, then Edit the note (secondary) and Keep it as task (primary).
 - **Keep it as task:**
   - The task's title is the note's whole text, with line breaks turned into spaces. Over 200 characters it is cut at a word boundary and the rest goes into the task notes ([NU-E16](NU-note-understanding.md#nu-e16)). No fields are extracted.

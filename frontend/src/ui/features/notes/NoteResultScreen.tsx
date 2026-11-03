@@ -39,6 +39,7 @@ export interface NoteResultScreenProps {
   /** Check this first (`confirm`): Apply changes, and Edit note (NU-5, WF-02). */
   onApply?: () => void;
   onEdit?: () => void;
+  onMakeTask?: () => void;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -89,6 +90,7 @@ export function NoteResultScreen({
   onDone,
   onApply,
   onEdit,
+  onMakeTask,
   busy = false,
   offline = false,
   onOpenTask,
@@ -106,6 +108,50 @@ export function NoteResultScreen({
   useEffect(() => heading.current?.focus(), []);
 
   const { note, changes, skipped } = result;
+  if (note.status === "followup")
+    return (
+      <div className="pb-8">
+        <NavBar backLabel={t("common.back")} onBack={onDone} />
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className="mt-1 mb-0 text-display font-bold focus:outline-none"
+        >
+          {t("note.followup_title")}
+        </h1>
+        <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
+          <p className="m-0 whitespace-pre-line [overflow-wrap:anywhere]">
+            {note.text}
+          </p>
+        </blockquote>
+        <div className="sticky bottom-0 mt-6 flex flex-col gap-3 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          {offline && (
+            <p className="m-0 text-footnote text-ink-secondary">
+              {t("note.needs_connection")}
+            </p>
+          )}
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            disabled={offline || busy}
+            onClick={onEdit}
+          >
+            {t("note.followup_edit")}
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={offline || busy}
+            busy={busy}
+            onClick={onMakeTask}
+          >
+            {t("note.make_one")}
+          </Button>
+        </div>
+      </div>
+    );
   const written = localDateTime(note.processed_at, timeZone);
   const count = (kind: NoteChange["kind"]) =>
     changes.filter((change) => change.kind === kind).length;

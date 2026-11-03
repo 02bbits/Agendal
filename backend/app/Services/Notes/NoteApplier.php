@@ -59,7 +59,7 @@ final class NoteApplier
         $user = User::query()->findOrFail($note->user_id);
         $timezone = (string) $user->timezone;
         $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects,
+        $context = new NoteContext(($note->edited_at ?? $note->written_at)->toDateTimeImmutable(), (string) ($note->plan['edit_timezone'] ?? $note->written_tz), $projects,
             WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
         $locked = $this->lockTargets($note, $plan);
         [$plan, $gone] = $this->revalidate($note, $plan, $locked, $context, $edits);

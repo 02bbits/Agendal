@@ -36,18 +36,21 @@ export async function submitNote(
       }),
     );
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.send_failed" };
-    if (error.status === 429)
-      return {
-        error: "error.rate_limited",
-        retryAfter: error.retryAfter ?? 60,
-      };
-    if (error.status === 422)
-      return { error: isCopyKey(error.code) ? error.code : "error.invalid" };
-    // 5xx, 503, 401, 419 and 404 all read as "couldn't send, try again"
-    return { error: "note.send_failed" };
+    return submitFailure(error);
   }
+}
+
+function submitFailure(error: unknown): NoteSubmitFailure {
+  if (!(error instanceof ApiRequestError)) return { error: "note.send_failed" };
+  if (error.status === 429)
+    return {
+      error: "error.rate_limited",
+      retryAfter: error.retryAfter ?? 60,
+    };
+  if (error.status === 422)
+    return { error: isCopyKey(error.code) ? error.code : "error.invalid" };
+  // 5xx, 503, 401, 419 and 404 all read as "couldn't send, try again"
+  return { error: "note.send_failed" };
 }
 
 /** What Undo all and its redo answer: the note as it is now, how many tasks conflict, or why not. */
@@ -115,6 +118,45 @@ export async function getNote(id: string): Promise<NoteResult> {
   return handleResponse<NoteResult>(
     await api(`/notes/${encodeURIComponent(id)}`),
   );
+}
+
+/** RV-3: explicitly keep a follow-up's whole text as one task. */
+export async function makeFollowupTask(
+  id: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}/make-task`, {
+        method: "POST",
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return {
+      error:
+        error instanceof ApiRequestError && isCopyKey(error.code)
+          ? error.code
+          : "note.needs_connection",
+    };
+  }
+}
+
+/** IM-46 edits a follow-up in place; editing applied notes remains IM-47. */
+export async function replanFollowup(id: string, text: string): NoteSubmission {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, timezone: timeZone() }),
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return submitFailure(error);
+  }
 }
 
 /**
