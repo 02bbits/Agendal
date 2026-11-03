@@ -50,16 +50,18 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
           </div>
         </div>
         <div className="mt-1 flex items-center justify-between gap-4">
-          <h1
-            ref={ref}
-            className="text-display font-bold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary m-0"
-            tabIndex={-1}
-          >
-            {title}
-          </h1>
-          {action}
+          <div>
+            <h1
+              ref={ref}
+              className="text-display font-bold focus:outline-none focus-visible:rounded-tile focus-visible:outline-2 focus-visible:outline-primary m-0"
+              tabIndex={-1}
+            >
+              {title}
+            </h1>
+            {children}
+          </div>
+          {action && <div className="shrink-0">{action}</div>}
         </div>
-        {children}
       </header>
     );
   },

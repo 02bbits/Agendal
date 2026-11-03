@@ -14,6 +14,7 @@ import InboxPage from "../../src/app/page";
 import NotesPage from "../../src/app/notes/page";
 import UpcomingPage from "../../src/app/upcoming/page";
 import ProjectsPage from "../../src/app/projects/page";
+import { task } from "../ui/fixtures";
 
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 let currentPathname = "/";
@@ -21,6 +22,7 @@ let currentPathname = "/";
 vi.mock("next/navigation", () => ({
   usePathname: () => currentPathname,
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 function renderPage(path: string, Page: ComponentType = () => null) {
@@ -61,10 +63,17 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
         }
         if (urlStr.includes("/tasks") && init?.method === "POST") {
           lastRequestBody = JSON.parse((init.body as string) ?? "{}");
-          return new Response(JSON.stringify({ task: lastRequestBody }), {
-            status: 201,
-            headers: { "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify(
+              task({ ...lastRequestBody } as unknown as Parameters<
+                typeof task
+              >[0]),
+            ),
+            {
+              status: 201,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         return new Response(JSON.stringify({}), { status: 200 });
       }),
@@ -233,10 +242,17 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
         }
         if (urlStr.includes("/tasks") && init?.method === "POST") {
           lastRequestBody = JSON.parse((init.body as string) ?? "{}");
-          return new Response(JSON.stringify({ task: lastRequestBody }), {
-            status: 201,
-            headers: { "Content-Type": "application/json" },
-          });
+          return new Response(
+            JSON.stringify(
+              task({ ...lastRequestBody } as unknown as Parameters<
+                typeof task
+              >[0]),
+            ),
+            {
+              status: 201,
+              headers: { "Content-Type": "application/json" },
+            },
+          );
         }
         return new Response(JSON.stringify({}), { status: 200 });
       }),

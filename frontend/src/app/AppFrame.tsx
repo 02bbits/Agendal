@@ -114,6 +114,8 @@ interface AppFrameValue {
   showToast: (messageOrDraft: string | Omit<ToastData, "id">) => void;
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
+  /** Opens the new task bottom sheet. */
+  openNewTask: () => void;
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
@@ -355,6 +357,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      openNewTask,
       user,
       signOut,
     }),
@@ -365,6 +368,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      openNewTask,
       user,
       signOut,
     ],

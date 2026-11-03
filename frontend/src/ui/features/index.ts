@@ -47,6 +47,8 @@ export {
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
 export { useMediaQuery } from "./tasks/useMediaQuery";
+export { useTaskPanel, type TaskPanelState } from "./tasks/useTaskPanel";
+export { TASK_COLUMN_CLASS } from "./tasks/layout";
 export {
   SETTLE_MS,
   type TaskStore,
@@ -57,6 +59,8 @@ export {
   ProgressSummary,
   type ProgressSummaryProps,
 } from "./tasks/ProgressSummary";
+export { InboxScreen, type InboxScreenProps } from "./lists/InboxScreen";
+export { Section, type SectionProps } from "./lists/Section";
 export {
   TaskDetails,
   type TaskDetailsProps,
