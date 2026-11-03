@@ -27,6 +27,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     listWindow,
     renderedDays,
     tasksByDay,
+    overdueTasks,
     countsByDay,
     navProps,
     barRef,
@@ -43,6 +44,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   const viewProps = {
     days: renderedDays,
     tasksByDay,
+    overdueTasks,
     today: store.today,
     selectedTaskId: props.selectedTaskId,
     navigate: props.navigate,
@@ -72,8 +74,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   );
 
   const hasTasks = store.tasks.some((t) => !t.done || store.isSettling(t.id));
-  const showHeader = props.showHeader ?? true;
-  const showFilter = props.showFilter ?? true;
+  const { showHeader = true, showFilter = true } = props;
 
   return (
     <div className="pb-8">

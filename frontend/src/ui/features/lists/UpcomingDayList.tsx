@@ -7,10 +7,12 @@ import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import type { UpcomingDayListProps } from "./types";
+import { UpcomingOverdue } from "./UpcomingOverdue";
 
 export function UpcomingDayList({
   days,
   tasksByDay,
+  overdueTasks,
   today,
   selectedTaskId,
   navigate,
@@ -20,6 +22,15 @@ export function UpcomingDayList({
 
   return (
     <div className={cx("space-y-6", TASK_COLUMN_CLASS)}>
+      {overdueTasks && overdueTasks.length > 0 && (
+        <UpcomingOverdue
+          variant="list"
+          tasks={overdueTasks}
+          today={today}
+          selectedTaskId={selectedTaskId}
+          navigate={navigate}
+        />
+      )}
       {days.map((date, index) => {
         const heading = dayHeading(date, today);
         const dayTasks = tasksByDay[date] ?? [];

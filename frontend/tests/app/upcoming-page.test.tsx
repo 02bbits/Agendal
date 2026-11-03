@@ -136,4 +136,69 @@ describe("Upcoming page /upcoming (Refs #28)", () => {
 
     expect(await screen.findByText("Newly Created Task")).toBeTruthy();
   });
+
+  it("calls upcoming with no from= and inbox for overdue tasks", async () => {
+    const overdueTask = task({
+      id: "t-overdue",
+      title: "Overdue from Inbox",
+      due_date: "2026-10-20",
+    });
+    const upcomingTask = task({
+      id: "t-upcoming",
+      title: "Tomorrow from Upcoming",
+      due_date: "2026-10-24",
+    });
+
+    const requestedUrls: string[] = [];
+
+    fetchMock.mockImplementation(async (url: string) => {
+      requestedUrls.push(url);
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects") return json(200, []);
+      if (url === "/api/v1/projects/none")
+        return json(200, { progress: { done: 0, total: 0 } });
+      if (url === "/api/v1/tasks?view=inbox")
+        return json(200, {
+          overdue: [overdueTask],
+          today: [],
+          no_date: [],
+          completed_today: [],
+        });
+      if (url.includes("view=upcoming")) {
+        return json(200, {
+          days: [
+            {
+              date: "2026-10-24",
+              tasks: [upcomingTask],
+            },
+          ],
+          next_from: null,
+        });
+      }
+      return json(404, {});
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <UpcomingPage />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    const upcomingUrl = requestedUrls.find((u) => u.includes("view=upcoming"));
+    expect(upcomingUrl).toBeTruthy();
+    expect(upcomingUrl).not.toContain("from=");
+    expect(upcomingUrl).toContain("days=366");
+
+    const inboxUrl = requestedUrls.find((u) => u.includes("view=inbox"));
+    expect(inboxUrl).toBe("/api/v1/tasks?view=inbox");
+
+    expect(await screen.findByText("Overdue from Inbox")).toBeTruthy();
+    expect(await screen.findByText("Tomorrow from Upcoming")).toBeTruthy();
+    expect(screen.getByRole("heading", { name: /^Overdue 1/ })).toBeTruthy();
+  });
 });

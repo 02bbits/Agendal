@@ -1,13 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatMonthYear } from "../../components/calendar";
+import { addDays } from "../../domain/dates";
 import { matchesFilter, type UpcomingFilter } from "../../domain/lists";
 import type { Task, WeekStart } from "../../domain/types";
-import {
-  isCurrentWeek,
-  shiftWeek,
-  visibleDays,
-  weekOf,
-} from "../../domain/week";
+import { daysAfter, isCurrentWeek, shiftWeek, weekOf } from "../../domain/week";
 import type { UpcomingViewMode, UpcomingWeekNavProps } from "./types";
 import { useActiveDay } from "./useActiveDay";
 
@@ -60,7 +56,7 @@ export function useUpcomingListWindow({
   const windowDays = useMemo(() => {
     const week1 = weekOf(anchor, weekStart);
     const week2 = weekOf(shiftWeek(anchor, 1), weekStart);
-    return visibleDays([...week1, ...week2], today);
+    return daysAfter([...week1, ...week2], today);
   }, [anchor, weekStart, today]);
 
   const { activeDay, setActiveDay } = useActiveDay(
@@ -71,9 +67,32 @@ export function useUpcomingListWindow({
 
   const scrollToDate = useCallback(
     (targetDate: string) => {
-      const date = targetDate < today ? today : targetDate;
-      setActiveDay(date);
-      const el = document.getElementById("day-" + date);
+      if (targetDate <= today) {
+        const tomorrow = addDays(today, 1);
+        setActiveDay(tomorrow);
+        const target =
+          document.getElementById("day-overdue") ??
+          document.getElementById("day-" + tomorrow);
+        if (typeof target?.scrollIntoView === "function") {
+          target.scrollIntoView({ block: "start", behavior: "smooth" });
+        } else {
+          const raf =
+            typeof requestAnimationFrame === "function"
+              ? requestAnimationFrame
+              : (cb: () => void) => setTimeout(cb, 0);
+          raf(() => {
+            const el =
+              document.getElementById("day-overdue") ??
+              document.getElementById("day-" + tomorrow);
+            if (typeof el?.scrollIntoView === "function") {
+              el.scrollIntoView({ block: "start", behavior: "smooth" });
+            }
+          });
+        }
+        return;
+      }
+      setActiveDay(targetDate);
+      const el = document.getElementById("day-" + targetDate);
       if (typeof el?.scrollIntoView === "function") {
         el.scrollIntoView({ block: "start", behavior: "smooth" });
       } else {
@@ -82,7 +101,7 @@ export function useUpcomingListWindow({
             ? requestAnimationFrame
             : (cb: () => void) => setTimeout(cb, 0);
         raf(() => {
-          const target = document.getElementById("day-" + date);
+          const target = document.getElementById("day-" + targetDate);
           if (typeof target?.scrollIntoView === "function") {
             target.scrollIntoView({
               block: "start",
@@ -103,7 +122,7 @@ export function useUpcomingListWindow({
   const onPrev = useCallback(() => {
     const prevAnchor = shiftWeek(anchor, -1);
     setAnchor(prevAnchor);
-    const prevDays = visibleDays(
+    const prevDays = daysAfter(
       [
         ...weekOf(prevAnchor, weekStart),
         ...weekOf(shiftWeek(prevAnchor, 1), weekStart),
@@ -118,7 +137,7 @@ export function useUpcomingListWindow({
   const onNext = useCallback(() => {
     const nextAnchor = shiftWeek(anchor, 1);
     setAnchor(nextAnchor);
-    const nextDays = visibleDays(
+    const nextDays = daysAfter(
       [
         ...weekOf(nextAnchor, weekStart),
         ...weekOf(shiftWeek(nextAnchor, 1), weekStart),
@@ -130,14 +149,16 @@ export function useUpcomingListWindow({
     }
   }, [anchor, weekStart, today, setAnchor, scrollToDate]);
 
+  // Upcoming starts tomorrow (LV §2.2), so the bar's button jumps there
   const onToday = useCallback(() => {
-    setAnchor(today);
-    scrollToDate(today);
+    const tomorrow = addDays(today, 1);
+    setAnchor(tomorrow);
+    scrollToDate(tomorrow);
   }, [today, setAnchor, scrollToDate]);
 
   const onPickDate = useCallback(
     (picked: string) => {
-      const target = picked < today ? today : picked;
+      const target = picked <= today ? today : picked;
       setAnchor(target);
       scrollToDate(target);
     },
@@ -200,10 +221,10 @@ export function getUpcomingNavProps(
     onPrev: isBoard
       ? () => setAnchor(shiftWeek(anchor, -1))
       : listWindow.onPrev,
-    onToday: isBoard ? () => setAnchor(today) : listWindow.onToday,
+    onToday: isBoard ? () => setAnchor(addDays(today, 1)) : listWindow.onToday,
     onNext: isBoard ? () => setAnchor(shiftWeek(anchor, 1)) : listWindow.onNext,
     onPickDate: isBoard
-      ? (p) => setAnchor(p < today ? today : p)
+      ? (p) => setAnchor(p <= today ? today : p)
       : listWindow.onPickDate,
   };
 }
@@ -236,10 +257,11 @@ export function useUpcomingScreenData({
     enabled: !isBoard,
   });
 
-  const boardDays = useMemo(
-    () => visibleDays(weekOf(anchor, weekStart), store.today),
-    [anchor, weekStart, store.today],
-  );
+  const boardDays = useMemo(() => {
+    const week = weekOf(anchor, weekStart);
+    const after = daysAfter(week, store.today);
+    return after.length === 0 ? weekOf(shiftWeek(anchor, 1), weekStart) : after;
+  }, [anchor, weekStart, store.today]);
 
   const renderedDays = isBoard ? boardDays : listWindow.windowDays;
   const stripDays = isBoard ? weekOf(anchor, weekStart) : listWindow.stripWeek;
@@ -250,6 +272,24 @@ export function useUpcomingScreenData({
     filter,
     store.isSettling,
   );
+
+  const overdueTasks = useMemo(() => {
+    return store.tasks
+      .filter(
+        (t) =>
+          (!t.done || store.isSettling(t.id)) &&
+          t.due_date &&
+          t.due_date < store.today,
+      )
+      .sort(
+        (a, b) =>
+          a.due_date!.localeCompare(b.due_date!) ||
+          a.created_at.localeCompare(b.created_at),
+      );
+  }, [store]);
+
+  const isCurrent = isCurrentWeek(weekOf(anchor, weekStart), store.today);
+  const visibleOverdue = isCurrent ? overdueTasks : [];
 
   const navProps = getUpcomingNavProps(
     isBoard,
@@ -265,6 +305,7 @@ export function useUpcomingScreenData({
     listWindow,
     renderedDays,
     tasksByDay,
+    overdueTasks: visibleOverdue,
     countsByDay,
     navProps,
     barRef: listWindow.barRef,

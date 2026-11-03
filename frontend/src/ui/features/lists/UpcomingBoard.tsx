@@ -5,10 +5,12 @@ import { dayHeading, dayHeadingShort } from "../../domain/week";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import type { UpcomingBoardProps } from "./types";
+import { UpcomingOverdue } from "./UpcomingOverdue";
 
 export function UpcomingBoard({
   days,
   tasksByDay,
+  overdueTasks,
   today,
   selectedTaskId,
   navigate,
@@ -18,6 +20,15 @@ export function UpcomingBoard({
 
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+      {overdueTasks && overdueTasks.length > 0 && (
+        <UpcomingOverdue
+          variant="board"
+          tasks={overdueTasks}
+          today={today}
+          selectedTaskId={selectedTaskId}
+          navigate={navigate}
+        />
+      )}
       {days.map((date) => {
         const shortHeading = dayHeadingShort(date, today);
         const fullHeading = dayHeading(date, today);

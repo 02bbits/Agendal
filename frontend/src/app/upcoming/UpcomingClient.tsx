@@ -24,7 +24,7 @@ import {
   type UpcomingViewMode,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
-import { httpTaskApi, projects, upcoming } from "@/lib/taskApi";
+import { httpTaskApi, inbox, projects, upcoming } from "@/lib/taskApi";
 import { now, timeZone, today } from "@/lib/clock";
 import { ApiRequestError } from "@/lib/apiError";
 import { headerDate, subscribeHeaderDate } from "../headerDate";
@@ -115,19 +115,28 @@ export function UpcomingClient() {
 
   const fetchData = () => {
     const todayStr = today(timeZone(), now());
-    Promise.all([upcoming({ from: todayStr, days: 366 }), projects()])
-      .then(([upcomingData, projectsData]) => {
-        const flatTasks = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
-        setTasks(flatTasks);
+    Promise.all([upcoming({ days: 366 }), inbox(), projects()])
+      .then(([upcomingData, inboxData, projectsData]) => {
+        const flatUpcoming = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
+        const overdueTasks = inboxData?.overdue ?? [];
+        const seen = new Set<string>();
+        const combinedTasks: Task[] = [];
+        for (const t of [...overdueTasks, ...flatUpcoming]) {
+          if (!seen.has(t.id)) {
+            seen.add(t.id);
+            combinedTasks.push(t);
+          }
+        }
+        setTasks(combinedTasks);
         setProjectList(projectsData ?? []);
         setProjectsStatus("ready");
 
         const limitDate = addDays(todayStr, 7);
-        const next7DaysTasks = flatTasks.filter(
+        const next7DaysTasks = flatUpcoming.filter(
           (x) =>
             !x.done &&
             x.due_date &&
-            x.due_date >= todayStr &&
+            x.due_date > todayStr &&
             x.due_date <= limitDate,
         );
         const count = next7DaysTasks.length;

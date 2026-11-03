@@ -39,6 +39,7 @@ export interface UpcomingWeekBarProps {
 export interface UpcomingDayListProps {
   days: string[];
   tasksByDay: Record<string, Task[]>;
+  overdueTasks?: Task[];
   today: string;
   selectedTaskId?: string | null;
   navigate?: Navigate;
@@ -48,6 +49,7 @@ export interface UpcomingDayListProps {
 export interface UpcomingBoardProps {
   days: string[];
   tasksByDay: Record<string, Task[]>;
+  overdueTasks?: Task[];
   today: string;
   selectedTaskId?: string | null;
   navigate?: Navigate;
