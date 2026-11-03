@@ -118,19 +118,18 @@ export function SearchScreen({
               onToggle={store.toggle}
               navigate={navigate}
               renderTitle={(title) =>
-                highlightParts(title, query).map((part, i) =>
-                  part.match ? (
-                    <mark key={i}>{part.text}</mark>
-                  ) : (
-                    <span key={i}>{part.text}</span>
-                  ),
-                )
+                highlightParts(title, query).map((part, i) => {
+                  if (part.match) {
+                    return <mark key={i}>{part.text}</mark>;
+                  }
+                  return <span key={i}>{part.text}</span>;
+                })
               }
             />
           ))}
         </ul>
       )}
-      {items.length > shown && (
+      {shown < items.length && (
         <button
           type="button"
           className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary mt-3 w-full"

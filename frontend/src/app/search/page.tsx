@@ -1,19 +1,37 @@
 "use client";
 
-import { NavBar, RouteEmptyState, t } from "@/ui";
+import { Suspense } from "react";
+import { now, timeZone } from "@/lib/clock";
+import { httpTaskApi } from "@/lib/taskApi";
+import { SearchScreen, TaskStoreProvider, type Clock } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 
-/** Search route; the search field and results come with IM-30. */
-export default function SearchPage() {
-  const { back } = useAppFrame();
+const clock: Clock = {
+  now,
+  get timeZone() {
+    return timeZone();
+  },
+};
+
+function SearchContent() {
+  const { back, navigate, settings } = useAppFrame();
   return (
-    <>
-      <NavBar
-        backLabel={t("common.back")}
-        onBack={back}
-        title={t("nav.search")}
-      />
-      <RouteEmptyState route="search" />
-    </>
+    <TaskStoreProvider
+      api={httpTaskApi}
+      clock={clock}
+      initialTasks={[]}
+      initialProjects={[]}
+      timeFormat={settings.timeFormat}
+    >
+      <SearchScreen onBack={back} navigate={navigate} />
+    </TaskStoreProvider>
+  );
+}
+
+export default function SearchPage() {
+  return (
+    <Suspense fallback={null}>
+      <SearchContent />
+    </Suspense>
   );
 }

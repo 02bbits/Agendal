@@ -25,6 +25,16 @@ export interface UpcomingData {
   total_count?: number;
 }
 
+export interface SearchData {
+  items: Task[];
+  counts: {
+    all: number;
+    open: number;
+    completed: number;
+  };
+  next_cursor: string | null;
+}
+
 async function postLifecycle<T>(
   id: string,
   action: "complete" | "reopen",
@@ -57,6 +67,19 @@ export async function upcoming(params?: {
   if (params?.filter) query.set("filter", params.filter);
   const response = await api(`/tasks?${query.toString()}`);
   return handleResponse<UpcomingData>(response);
+}
+
+export async function search(params: {
+  q: string;
+  status?: "all" | "open" | "completed";
+  cursor?: string;
+}): Promise<SearchData> {
+  const query = new URLSearchParams();
+  if (params.q) query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  if (params.cursor) query.set("cursor", params.cursor);
+  const response = await api(`/tasks/search?${query.toString()}`);
+  return handleResponse<SearchData>(response);
 }
 
 export async function getTask(id: string): Promise<Task> {

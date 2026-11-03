@@ -15,6 +15,7 @@ use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\DueDateFallback;
 use App\Services\Tasks\InboxQuery;
 use App\Services\Tasks\OpenTaskLimit;
+use App\Services\Tasks\SearchQuery;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
 use App\Services\Tasks\UpcomingQuery;
@@ -54,6 +55,25 @@ class TaskController extends Controller
         $filter = (string) $request->query('filter', 'all');
 
         return response()->json($upcomingQuery->for($timezone, $from, $days, $filter));
+    }
+
+    public function search(Request $request, SearchQuery $searchQuery): JsonResponse
+    {
+        $user = $request->user();
+        assert($user !== null);
+
+        $q = (string) $request->query('q', '');
+        $status = (string) $request->query('status', 'all');
+        $cursor = $request->query('cursor');
+
+        return response()->json(
+            $searchQuery->search(
+                $user->id,
+                $q,
+                $status,
+                is_string($cursor) ? $cursor : null,
+            )
+        );
     }
 
     public function store(
