@@ -36,6 +36,24 @@ export const CheckCircleIcon = icon(
     <path d="M8.5 12.5l2.5 2.5 4.5-5" />
   </>,
 );
+export const GridIcon = icon(
+  <>
+    <rect width="7" height="7" x="3" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="3" rx="1" />
+    <rect width="7" height="7" x="14" y="14" rx="1" />
+    <rect width="7" height="7" x="3" y="14" rx="1" />
+  </>,
+);
+export const ListIcon = icon(
+  <>
+    <line x1="8" x2="21" y1="6" y2="6" />
+    <line x1="8" x2="21" y1="12" y2="12" />
+    <line x1="8" x2="21" y1="18" y2="18" />
+    <line x1="3" x2="3.01" y1="6" y2="6" />
+    <line x1="3" x2="3.01" y1="12" y2="12" />
+    <line x1="3" x2="3.01" y1="18" y2="18" />
+  </>,
+);
 export const SearchIcon = icon(
   <>
     <circle cx="11" cy="11" r="7" />

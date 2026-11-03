@@ -12,9 +12,18 @@ export interface UseNewTaskOptions {
   showToast: (message: string) => void;
 }
 
+export interface OpenNewTaskOptions {
+  dueDate?: string;
+}
+
+export type OpenNewTaskFn = {
+  (opts?: OpenNewTaskOptions): void;
+  (event: unknown): void;
+};
+
 export interface UseNewTaskReturn {
   open: boolean;
-  openNewTask: () => void;
+  openNewTask: OpenNewTaskFn;
   sheetProps: NewTaskSheetProps;
 }
 
@@ -26,6 +35,7 @@ export function useNewTask({
   const pathname = explicitPathname ?? currentPathname ?? "/";
 
   const [open, setOpen] = useState(false);
+  const [initialDueDate, setInitialDueDate] = useState<string | undefined>();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
     "ready",
@@ -42,12 +52,26 @@ export function useNewTask({
       });
   }, []);
 
-  const openNewTask = useCallback(() => {
-    setOpen(true);
-    loadProjects();
-  }, [loadProjects]);
+  const openNewTask = useCallback(
+    (opts?: unknown) => {
+      const dueDate =
+        opts &&
+        typeof opts === "object" &&
+        "dueDate" in opts &&
+        typeof (opts as { dueDate: unknown }).dueDate === "string"
+          ? (opts as { dueDate: string }).dueDate
+          : undefined;
+      setInitialDueDate(dueDate);
+      setOpen(true);
+      loadProjects();
+    },
+    [loadProjects],
+  );
 
-  const closeNewTask = useCallback(() => setOpen(false), []);
+  const closeNewTask = useCallback(() => {
+    setOpen(false);
+    setInitialDueDate(undefined);
+  }, []);
 
   const handleAdded = useCallback(
     (title: string) => {
@@ -70,6 +94,7 @@ export function useNewTask({
   const sheetProps: NewTaskSheetProps = {
     open,
     pathname,
+    initialDueDate,
     projects,
     projectsStatus,
     onRetryProjects: loadProjects,

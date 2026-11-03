@@ -3,6 +3,7 @@ import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
 import { isCopyKey, type CopyKey } from "../ui/copy";
 import type { NoteChange, NoteResult } from "../ui/domain/types";
+import doneFixture from "./fixtures/note-result-done.json";
 
 /** Why a note wasn't made: the copy to show, and for 429 the seconds until it may be sent again. */
 export interface NoteSubmitFailure {
@@ -125,8 +126,7 @@ const UNDATED: NoteChange = {
 };
 
 async function mockResult(id?: string): Promise<NoteResult> {
-  const { default: done } =
-    await import("../../../docs/07-architecture/contracts/fixtures/note-result-done.json");
+  const done = doneFixture as unknown as NoteResult;
   const result = {
     ...done,
     note: { ...done.note, ...(id && { id }) },

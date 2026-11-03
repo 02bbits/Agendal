@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  chipForDate,
   createBody,
   defaultPriority,
   defaultsFor,
@@ -34,6 +35,29 @@ describe("New task rules (Refs #25)", () => {
     it("Pick date sets the picked value", () => {
       expect(dueDateFor("pick", today, "2026-11-15")).toBe("2026-11-15");
       expect(dueDateFor("pick", today)).toBeNull();
+    });
+
+    describe("chipForDate (Section 7)", () => {
+      it("maps today to today chip", () => {
+        expect(chipForDate(today, today)).toEqual({
+          chip: "today",
+          picked: "",
+        });
+      });
+
+      it("maps tomorrow to tomorrow chip", () => {
+        expect(chipForDate("2026-10-24", today)).toEqual({
+          chip: "tomorrow",
+          picked: "",
+        });
+      });
+
+      it("maps other dates to pick chip with picked date", () => {
+        expect(chipForDate("2026-11-05", today)).toEqual({
+          chip: "pick",
+          picked: "2026-11-05",
+        });
+      });
     });
   });
 

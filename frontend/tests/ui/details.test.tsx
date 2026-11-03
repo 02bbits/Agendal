@@ -789,6 +789,17 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("TaskPanel flags the page while open so the shell's bottom bar stops short of it", () => {
+    const t1 = task({ id: "t-flag", title: "Flag Task" });
+    const ctx = setup([t1]);
+    const view = render(
+      ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
+    );
+    expect(document.documentElement.dataset.taskPanel).toBe("open");
+    view.unmount();
+    expect(document.documentElement.dataset.taskPanel).toBeUndefined();
+  });
+
   it("TaskPanel is axe clean in both themes", async () => {
     const t1 = task({ id: "t-axe", title: "Axe Task" });
     const ctx = setup([t1]);

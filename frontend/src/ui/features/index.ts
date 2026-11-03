@@ -88,3 +88,24 @@ export {
   type DeleteProjectDialogProps,
   type ProjectTaskAction,
 } from "./projects/DeleteProjectDialog";
+export {
+  UpcomingScreen,
+  type UpcomingScreenProps,
+  type UpcomingViewMode,
+} from "./lists/UpcomingScreen";
+export {
+  UpcomingViewSwitch,
+  type UpcomingViewSwitchProps,
+} from "./lists/UpcomingViewSwitch";
+export { UpcomingWeekNav } from "./lists/UpcomingWeekNav";
+export { UpcomingDayStrip } from "./lists/UpcomingDayStrip";
+export { UpcomingDayList } from "./lists/UpcomingDayList";
+export { UpcomingBoard } from "./lists/UpcomingBoard";
+export type {
+  UpcomingWeekNavProps,
+  UpcomingDayStripProps,
+  UpcomingDayListProps,
+  UpcomingBoardProps,
+} from "./lists/types";
+export { useActiveDay, type UseActiveDayOptions } from "./lists/useActiveDay";
+export { useUpcomingListWindow } from "./lists/useUpcomingListWindow";

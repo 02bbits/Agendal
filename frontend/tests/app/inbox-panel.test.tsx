@@ -121,7 +121,9 @@ describe("Inbox task panel integration", () => {
     expect(rowLink.getAttribute("aria-current")).toBeNull();
 
     await userEvent.click(rowLink);
-    expect(router.push).toHaveBeenCalledWith("/?task=t-1");
+    expect(router.push).toHaveBeenCalledWith("/?task=t-1", {
+      scroll: false,
+    });
 
     searchParams = new URLSearchParams("task=t-1");
     await act(async () => {

@@ -33,6 +33,11 @@ export const PROJECT_COLORS: readonly ProjectColor[] = [
   "purple",
   "gray",
 ];
+export {
+  ChipGroup,
+  type ChipGroupProps,
+  type ChipOption,
+} from "./components/ChipGroup";
 export { NavBar, type NavBarProps } from "./components/NavBar";
 export {
   Segmented,

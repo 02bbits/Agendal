@@ -6,6 +6,7 @@ export interface NewTaskSheetProps {
   onClose: () => void;
   pathname?: string;
   today?: string;
+  initialDueDate?: string;
   projects?: Project[];
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;

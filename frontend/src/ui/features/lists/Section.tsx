@@ -16,6 +16,7 @@ export interface SectionProps {
   icon?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
+  className?: string;
 }
 
 /** A list section: heading with its count ("Overdue, 2 tasks" to screen readers, A11Y-50), then the list. */
@@ -30,6 +31,7 @@ export function Section({
   icon,
   footer,
   children,
+  className,
 }: SectionProps) {
   const [internalOpen, setInternalOpen] = useState(
     defaultOpen !== undefined ? defaultOpen : !collapsible,
@@ -57,7 +59,7 @@ export function Section({
   );
 
   return (
-    <section className="mb-6 [&>h2]:mt-0 [&>h2]:mb-2.5">
+    <section className={cx("mb-6 [&>h2]:mt-0 [&>h2]:mb-2.5", className)}>
       <h2 className="mt-6 mb-2 flex items-baseline gap-1.5 text-heading font-semibold">
         {collapsible ? (
           <button
