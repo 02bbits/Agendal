@@ -180,22 +180,22 @@ The point of this module is trust: the user can always see what the assistant di
 
 ## 5. Tasks, lists and projects
 
-**A task.** Only a **title** is required (1 to 200 characters). Optional: project, due date, a start and end time (end must be later than start), priority (Low/Medium/High), reminder (none, 5, 15, 30 minutes, 1 hour, 1 day before), repeat (never, daily, weekly, monthly, yearly) and notes (up to 5,000 characters). The system adds done/done-at, created-by (user or assistant) and the source note.
+**A task.** Only a **title** is required (1 to 200 characters). Optional: project, start date, a work session (start and optional end time) on the start date (end must be later than start), due date, due time, priority (Low/Medium/High), reminder (none, 5, 15, 30 minutes, 1 hour, 1 day before), repeat (never, daily, weekly, monthly, yearly) and notes (up to 5,000 characters). Lists show a displayed priority raised to Medium when due tomorrow or today and High when overdue; the chosen priority never changes. The system adds done/done-at, created-by (user or assistant) and the source note.
 
-**Editing.** Every field is editable on Task details and **saves on change**, with no Save button (each save is a per-field patch). Rules: setting a start or repeat with no date sets the date to today; the end is disabled until a start exists; clearing the date clears start, end and reminder (with an Undo toast); the reminder is disabled without a date.
+**Editing.** Every field is editable on Task details and **saves on change**, with no Save button (each save is a per-field patch). Rules: start date ≤ due date ("Start can't be after the due date."); times need their day (a start time with no start date sets it to the due date, else today; a due time with no due date sets the due date to today); setting repeat with no date sets the due date to today; the end is disabled until a start exists; clearing the start date clears the session; clearing the due date clears the due time and reminder (with an Undo toast); the reminder is disabled without a date.
 
-**Completing.** Optimistic: the row strikes through, moves to Completed after 600 ms, progress updates and a toast offers Undo. Completing a repeating task creates the next occurrence from the **due date** (not the completion date), skipping missed dates so overdue tasks never pile up; monthly keeps the original day capped at month end (31 Jan, 28 Feb, 31 Mar).
+**Completing.** Optimistic: the row strikes through, moves to Completed after 600 ms, progress updates and a toast offers Undo. Completing a repeating task creates the next occurrence from the **due date** (not the completion date), moving the start date and due date together and keeping the gap and all times, skipping missed dates so overdue tasks never pile up; monthly keeps the original day capped at month end (31 Jan, 28 Feb, 31 Mar).
 
 **Deleting.** Always confirmed, always undoable from the toast. A repeating task asks "This task only" (the series continues) or "This and all future" (the series ends). Deleted rows are soft-deleted.
 
-**Reminders** (Should). A web push at the chosen offset from the start time, or from 09:00 on the due date if there is no time. Permission is asked in context, never at sign-in; on iPhone push works only in the installed app.
+**Reminders** (Should). A web push at the chosen offset from the start time; else 09:00 on the start date; else the due time; else 09:00 on the due date. Permission is asked in context, never at sign-in; on iPhone push works only in the installed app.
 
 **Lists**
 
 | Screen | Behaviour |
 |---|---|
-| **Inbox** | Today's date and progress (done of total). **Overdue comes before Today** (in red, with a count and the word, not just colour). A collapsed *No date* section holds undated tasks; a collapsed *Completed* section. "Nothing left for today" links to Upcoming. Lists recompute at local midnight |
-| **Upcoming** | Tasks from tomorrow on, grouped by day, 14 days at a time. Filters: All, Scheduled (has a start time), Due only |
+| **Inbox** | Today's date, desktop subtitle ("2 overdue · 4 today") and progress (done of total). **Overdue comes before Today** (past due date only, in red, with a count and the word, not just colour). Today holds tasks with start date today, due date today, in progress (between start and due), or a start-only task whose day passed ("Planned"). A collapsed *No date* section holds undated tasks; a collapsed *Completed* section. "Nothing left for today" links to Upcoming. Lists recompute at local midnight |
+| **Upcoming** | Tasks from tomorrow on, grouped by day. A task appears on its start date and on its due date; on its due date it sits in a dashed blue card. Sticky week bar; List shows two weeks, Board one week; Overdue first. Filters: All, Scheduled (has a start time), Due only |
 | **Search** | Titles and notes, completed included, accent-insensitive ("bai tap" finds "Bài tập"). All words must match. Title matches rank first, then open before completed, then soonest due. Counts for All/Open/Completed. Works offline against the device's copy |
 | **Task row** | Checkbox, title (2 lines), project dot and name, time, reminder and repeat icons, a priority flag for High and Medium. No swipe gestures |
 
