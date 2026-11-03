@@ -1,5 +1,4 @@
 import { localTime, now, timeZone, today } from "../../lib/clock";
-import type { CopyKey } from "../copy";
 import type { TaskPatch, TaskUpdateErrors } from "./api";
 import { addDays } from "./dates";
 import type { Reminder, Task } from "./types";

@@ -91,7 +91,9 @@ describe("Task details fields (T-TK-10)", () => {
   });
 
   it("saves start time", async () => {
-    const { patchSpy } = open(task({ title: "Task", due_date: TODAY }));
+    const { patchSpy } = open(
+      task({ title: "Task", start_date: TODAY, due_date: TODAY }),
+    );
     const trigger = screen.getByRole("button", { name: t("task.start") });
     await userEvent.click(trigger);
     const option = screen.getByRole("option", { name: "09:00" });
@@ -107,16 +109,21 @@ describe("Task details fields (T-TK-10)", () => {
 
   it("saves end time", async () => {
     const { patchSpy } = open(
-      task({ title: "Task", due_date: TODAY, start_time: "09:00" }),
+      task({
+        title: "Task",
+        start_date: TODAY,
+        due_date: TODAY,
+        start_time: "09:00",
+      }),
     );
-    const trigger = screen.getByRole("button", { name: t("task.end") });
+    const trigger = screen.getByRole("button", { name: t("task.due_time") });
     await userEvent.click(trigger);
     const option = screen.getByRole("option", { name: "10:00" });
     await userEvent.click(option);
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { end_time: "10:00" },
+        { due_time: "10:00" },
         expect.any(String),
       ),
     );
@@ -127,8 +134,7 @@ describe("Task details fields (T-TK-10)", () => {
       task({
         title: "Task",
         due_date: "2026-10-30",
-        start_time: "09:00",
-        end_time: "10:00",
+        due_time: "10:00",
         reminder: "15m",
       }),
     );
@@ -162,8 +168,7 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
         {
           due_date: null,
-          start_time: null,
-          end_time: null,
+          due_time: null,
           reminder: "none",
         },
         expect.any(String),
@@ -177,8 +182,7 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
         {
           due_date: "2026-11-01",
-          start_time: "09:00",
-          end_time: "10:00",
+          due_time: "10:00",
           reminder: "15m",
         },
         expect.any(String),
@@ -191,8 +195,7 @@ describe("Task details fields (T-TK-10)", () => {
       task({
         title: "Task",
         due_date: "2026-10-30",
-        start_time: "09:00",
-        end_time: "10:00",
+        due_time: "10:00",
         reminder: "15m",
         repeat: "weekly",
       }),
@@ -217,8 +220,7 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
         {
           due_date: null,
-          start_time: null,
-          end_time: null,
+          due_time: null,
           reminder: "none",
           repeat: "never",
         },
@@ -241,8 +243,7 @@ describe("Task details fields (T-TK-10)", () => {
         expect.any(String),
         {
           due_date: "2026-10-30",
-          start_time: "09:00",
-          end_time: "10:00",
+          due_time: "10:00",
           reminder: "15m",
           repeat: "weekly",
         },
@@ -410,33 +411,38 @@ describe("Schedule validation (T-TK-20)", () => {
     open(
       task({ title: "Schedule Task", due_date: TODAY, start_time: "14:00" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: t("task.end") }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.due_time") }),
+    );
     expect(screen.queryByRole("option", { name: "13:00" })).toBeNull();
     expect(screen.queryByRole("option", { name: "14:00" })).toBeNull();
     expect(screen.getByRole("option", { name: "14:15" })).toBeTruthy();
   });
 
-  it("shows end_before_start for a stored bad schedule, linked by aria-describedby, and a valid end clears it", async () => {
+  it("shows start_after_due for a stored bad schedule, linked by aria-describedby, and a valid due time clears it", async () => {
     const { patchSpy } = open(
       task({
         title: "Schedule Task",
+        start_date: TODAY,
         due_date: TODAY,
         start_time: "14:00",
-        end_time: "13:00",
+        due_time: "13:00",
       }),
     );
-    const end = screen.getByRole("button", { name: t("task.end") });
+    const dueTime = screen.getByRole("button", { name: t("task.due_time") });
     const alert = screen.getByRole("alert");
-    expect(alert.textContent).toBe(t("task.end_before_start"));
-    expect(end.getAttribute("aria-describedby")).toBe("task-end-error");
+    expect(alert.textContent).toBe(t("task.start_after_due"));
+    expect(dueTime.getAttribute("aria-describedby")).toBe(
+      "task-due-time-error",
+    );
     expect(patchSpy).not.toHaveBeenCalled();
 
-    await userEvent.click(end);
+    await userEvent.click(dueTime);
     await userEvent.click(screen.getByRole("option", { name: "15:00" }));
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { end_time: "15:00" },
+        { due_time: "15:00" },
         expect.any(String),
       ),
     );
@@ -481,6 +487,7 @@ describe("Field edge cases and accessibility", () => {
     open(
       task({
         title: "Passed Task",
+        start_date: TODAY,
         due_date: TODAY,
         start_time: "00:01",
         reminder: "15m",
@@ -515,7 +522,7 @@ describe("Field edge cases and accessibility", () => {
         title: "Clean Task",
         due_date: TODAY,
         start_time: "10:00",
-        end_time: "11:00",
+        due_time: "11:00",
         reminder: "15m",
         priority: "medium",
         created_by: "assistant",

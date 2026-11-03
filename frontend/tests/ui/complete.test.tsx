@@ -77,7 +77,7 @@ const seed = () => [
     title: "Review lecture 6 notes",
     due_date: TODAY,
     start_time: "16:00",
-    end_time: "17:00",
+    due_time: "17:00",
     project_id: "p-hci",
   }),
   task({
