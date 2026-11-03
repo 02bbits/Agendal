@@ -38,4 +38,14 @@ export interface TaskApi {
   remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void>;
   /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
   restore(id: string): Promise<Task>;
+  /** `GET /tasks/search?q=&status=&cursor=`: search titles and notes (LV-3). */
+  search?(params: {
+    q: string;
+    status?: "all" | "open" | "completed";
+    cursor?: string;
+  }): Promise<{
+    items: Task[];
+    counts: { all: number; open: number; completed: number };
+    next_cursor: string | null;
+  }>;
 }

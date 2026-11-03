@@ -158,4 +158,12 @@ export const httpTaskApi: TaskApi = {
   restore(id: string): Promise<Task> {
     return restoreTask(id);
   },
+
+  search(params: {
+    q: string;
+    status?: "all" | "open" | "completed";
+    cursor?: string;
+  }): Promise<SearchData> {
+    return search(params);
+  },
 };

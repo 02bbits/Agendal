@@ -186,6 +186,46 @@ describe("Search screen", () => {
     await expectAxeCleanInBothThemes();
   });
 
+  it("delegates to searchFn when provided and handles pagination cursor", async () => {
+    const searchFn = vi.fn().mockResolvedValue({
+      items: [task({ id: "t-1", title: "Remote banana item 1" })],
+      counts: { all: 2, open: 2, completed: 0 },
+      next_cursor: "cursor-page-2",
+    });
+
+    const { wrap } = setup([]);
+    render(wrap(<SearchScreen onBack={() => {}} searchFn={searchFn} />));
+
+    fireEvent.change(screen.getByRole("searchbox"), {
+      target: { value: "banana" },
+    });
+    fireEvent.submit(screen.getByRole("search"));
+
+    expect(
+      await screen.findByRole("link", { name: /Remote banana item 1/ }),
+    ).toBeTruthy();
+    expect(searchFn).toHaveBeenCalledWith({ q: "banana", status: "all" });
+    expect(
+      screen.getByRole("button", { name: "Show more results" }),
+    ).toBeTruthy();
+
+    searchFn.mockResolvedValueOnce({
+      items: [task({ id: "t-2", title: "Remote banana item 2" })],
+      counts: { all: 2, open: 2, completed: 0 },
+      next_cursor: null,
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: "Show more results" }));
+    expect(searchFn).toHaveBeenCalledWith({
+      q: "banana",
+      status: "all",
+      cursor: "cursor-page-2",
+    });
+    expect(
+      await screen.findByRole("link", { name: /Remote banana item 2/ }),
+    ).toBeTruthy();
+  });
+
   it("`/` on a list screen opens Search unless a field has focus (UX-12)", async () => {
     const navigate = vi.fn(() => true);
     render(
