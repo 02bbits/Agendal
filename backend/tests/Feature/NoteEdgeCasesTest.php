@@ -35,11 +35,11 @@ it('applies consecutive notes within the same clock tick', function () {
 
 it('preserves and shifts a task’s duration (T-NU-135)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('move email group to sunday'))->assertCreated();
-    expect($task->fresh()->start_time)->toBe('09:00:00')->and($task->fresh()->end_time)->toBe('10:00:00');
+    expect($task->fresh()->start_time)->toBe('09:00:00')->and($task->fresh()->due_time)->toBe('10:00:00');
     $this->postJson('/api/v1/notes', edgeNote('move email group to tomorrow 2pm'))->assertCreated();
-    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->end_time)->toBe('15:00:00');
+    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->due_time)->toBe('15:00:00');
 });
 
 it('creates one next occurrence and records it for undo (T-NU-136)', function (string $repeat, string $due, string $anchor, string $now, string $expected) {
@@ -63,14 +63,14 @@ it('creates one next occurrence and records it for undo (T-NU-136)', function (s
 
 it('revalidates deleted and changed confirmation targets under row locks (T-NU-138)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $text = 'move email group to sunday; buy milk; buy eggs; buy bread; buy rice; buy tea';
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote($text))->assertCreated()->assertJsonPath('note.status', 'confirm');
     $note = Note::firstOrFail();
-    $task->forceFill(['due_date' => '2026-10-24', 'start_time' => '14:00', 'end_time' => '16:00'])->save();
+    $task->forceFill(['start_date' => '2026-10-24', 'due_date' => '2026-10-24', 'start_time' => '14:00', 'due_time' => '16:00'])->save();
     $applied = DB::transaction(fn () => app(NoteApplier::class)->apply($note, $note->plan));
     expect($applied['changes'][5]['label'])->toBe('Due Sun 25 Oct 14:00');
-    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->end_time)->toBe('16:00:00');
+    expect($task->fresh()->start_time)->toBe('14:00:00')->and($task->fresh()->due_time)->toBe('16:00:00');
     $task->delete();
     $deletePlan = ['create' => [], 'update' => [], 'delete' => [['ref' => 'i1', 'task_id' => $task->id, 'label' => 'Email group']], 'skipped' => [], 'ambiguous' => []];
     Log::spy();
@@ -81,15 +81,15 @@ it('revalidates deleted and changed confirmation targets under row locks (T-NU-1
 
 it('moves by an amount from the time a task has when the plan is applied (NU-E38)', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Lunch meeting', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->owner->id, 'title' => 'Lunch meeting', 'start_date' => '2026-10-29', 'due_date' => '2026-10-29', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $old = new Task;
     $old->forceFill(['user_id' => $this->owner->id, 'title' => 'Old list'])->save();
     $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('push lunch meeting back 1 hour; delete old list'))->assertCreated()->assertJsonPath('note.status', 'confirm');
     $note = Note::firstOrFail();
-    $task->forceFill(['start_time' => '14:00', 'end_time' => '15:00'])->save();
+    $task->forceFill(['start_date' => '2026-10-29', 'start_time' => '14:00', 'due_time' => '15:00'])->save();
     DB::transaction(fn () => app(NoteApplier::class)->apply($note, $note->plan));
 
-    expect([$task->fresh()->start_time, $task->fresh()->end_time])->toBe(['15:00:00', '16:00:00']);
+    expect([$task->fresh()->start_time, $task->fresh()->due_time])->toBe(['15:00:00', '16:00:00']);
 });
 
 it('soft deletes approved entries and preserves their before values', function () {
