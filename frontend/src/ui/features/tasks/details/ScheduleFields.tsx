@@ -3,76 +3,98 @@ import { cx } from "../../../components/cx";
 import { ClockIcon } from "../../../components/icons";
 import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
-import { scheduleError } from "../../../domain/edit";
 import type { TimeFormat } from "../../../domain/types";
 import { buildTimeOptions } from "./timeOptions";
 
 export interface ScheduleFieldsProps {
   startTime: string | null;
-  endTime: string | null;
+  dueTime: string | null;
+  sameDay: boolean;
   timeFormat?: TimeFormat;
   onSave: (patch: {
     start_time: string | null;
-    end_time: string | null;
+    due_time: string | null;
   }) => void;
   variant?: "panel" | "screen";
 }
 
 export function ScheduleFields({
   startTime,
-  endTime,
+  dueTime,
+  sameDay,
   timeFormat = "24h",
   onSave,
   variant = "panel",
 }: ScheduleFieldsProps): ReactElement {
   const [start, setStart] = useState(startTime ?? "");
-  const [end, setEnd] = useState(endTime ?? "");
+  const [due, setDue] = useState(dueTime ?? "");
   const [error, setError] = useState<CopyKey | null>(() =>
-    scheduleError(startTime, endTime),
+    sameDay && startTime && dueTime && startTime >= dueTime
+      ? "task.start_after_due"
+      : null,
   );
   const [prevStart, setPrevStart] = useState(startTime);
-  const [prevEnd, setPrevEnd] = useState(endTime);
+  const [prevDue, setPrevDue] = useState(dueTime);
+  const [prevSameDay, setPrevSameDay] = useState(sameDay);
 
-  if (startTime !== prevStart || endTime !== prevEnd) {
+  if (
+    startTime !== prevStart ||
+    dueTime !== prevDue ||
+    sameDay !== prevSameDay
+  ) {
     setPrevStart(startTime);
-    setPrevEnd(endTime);
+    setPrevDue(dueTime);
+    setPrevSameDay(sameDay);
     setStart(startTime ?? "");
-    setEnd(endTime ?? "");
-    setError(scheduleError(startTime, endTime));
+    setDue(dueTime ?? "");
+    setError(
+      sameDay && startTime && dueTime && startTime >= dueTime
+        ? "task.start_after_due"
+        : null,
+    );
   }
 
   const handleStartChange = (nextStart: string) => {
     setStart(nextStart);
     if (!nextStart) {
-      setEnd("");
       setError(null);
-      onSave({ start_time: null, end_time: null });
+      onSave({ start_time: null, due_time: due || null });
       return;
     }
-    const err = scheduleError(nextStart, end || null);
+    const err: CopyKey | null =
+      sameDay && nextStart && due && nextStart >= due
+        ? "task.start_after_due"
+        : null;
     setError(err);
     if (!err) {
-      onSave({ start_time: nextStart, end_time: end || null });
+      onSave({ start_time: nextStart, due_time: due || null });
     }
   };
 
-  const handleEndChange = (nextEnd: string) => {
-    setEnd(nextEnd);
-    if (!nextEnd) {
+  const handleDueChange = (nextDue: string) => {
+    setDue(nextDue);
+    if (!nextDue) {
       setError(null);
-      onSave({ start_time: start || null, end_time: null });
+      onSave({ start_time: start || null, due_time: null });
       return;
     }
-    const err = scheduleError(start || null, nextEnd);
+    const err: CopyKey | null =
+      sameDay && start && nextDue && start >= nextDue
+        ? "task.start_after_due"
+        : null;
     setError(err);
     if (!err) {
-      onSave({ start_time: start || null, end_time: nextEnd });
+      onSave({ start_time: start || null, due_time: nextDue });
     }
   };
 
   const isScreen = variant === "screen";
   const startOptions = buildTimeOptions(null, start, timeFormat);
-  const endOptions = buildTimeOptions(start || null, end, timeFormat);
+  const dueOptions = buildTimeOptions(
+    sameDay ? start || null : null,
+    due,
+    timeFormat,
+  );
 
   return (
     <div
@@ -108,20 +130,19 @@ export function ScheduleFields({
             {"–"}
           </span>
           <Picker<string>
-            id="task-end"
-            label={t("task.end")}
-            value={end}
-            options={endOptions}
-            disabled={!start}
-            onChange={handleEndChange}
+            id="task-due-time"
+            label={t("task.due_time")}
+            value={due}
+            options={dueOptions}
+            onChange={handleDueChange}
             variant={variant}
-            ariaDescribedBy={error ? "task-end-error" : undefined}
+            ariaDescribedBy={error ? "task-due-time-error" : undefined}
           />
         </div>
       </div>
       {error && (
         <p
-          id="task-end-error"
+          id="task-due-time-error"
           role="alert"
           className="mt-1 text-footnote text-error"
         >

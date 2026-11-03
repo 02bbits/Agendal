@@ -87,7 +87,8 @@ export function SettingsRows({
       {showSchedule && (
         <ScheduleFields
           startTime={task.start_time}
-          endTime={task.end_time}
+          dueTime={task.due_time}
+          sameDay={!task.start_date || task.start_date === task.due_date}
           timeFormat={timeFormat}
           onSave={onSave}
           variant={variant}
