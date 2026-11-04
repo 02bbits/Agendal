@@ -6,6 +6,7 @@ import {
   normalize,
   SearchPanel,
   SearchPopup,
+  searchProjects,
   searchTasks,
   SEARCH_DEBOUNCE_MS,
   SEARCH_SETTLE_MS,
@@ -97,6 +98,199 @@ describe("searchTasks (domain/search)", () => {
     expect(highlightParts("Bài tập SQL", "bai")).toEqual([
       { text: "Bài", match: true },
       { text: " tập SQL", match: false },
+    ]);
+  });
+
+  const mustPassTexts = [
+    "Bài tập SQL",
+    "Bãi biển Nha Trang",
+    "Bai tap tieng Anh",
+    "Họp nhóm hoà giải",
+    "Hòa nhạc tối nay",
+    "Adv Web report: outline",
+    "Update CV and portfolio links",
+    "Thuỷ điện Sơn La",
+    "Đồ án tốt nghiệp",
+    "Ứng dụng di động",
+    "Research PostgreSQL unaccent",
+    "Learn UI/UX",
+    "Meet at café",
+  ];
+
+  const mustPassTasks = mustPassTexts.map((title, i) =>
+    task({ id: `mp-${i}`, title }),
+  );
+
+  const mustPassTable: Array<{
+    query: string;
+    finds: string[];
+    mustNotFind: string[];
+  }> = [
+    {
+      query: "à ứ ừ ư",
+      finds: [],
+      mustNotFind: mustPassTexts,
+    },
+    {
+      query: "ứ",
+      finds: ["Ứng dụng di động"],
+      mustNotFind: ["Update CV and portfolio links", "Learn UI/UX"],
+    },
+    {
+      query: "u",
+      finds: [
+        "Update CV and portfolio links",
+        "Research PostgreSQL unaccent",
+        "Learn UI/UX",
+        "Ứng dụng di động",
+      ],
+      mustNotFind: ["Adv Web report: outline", "Bài tập SQL"],
+    },
+    {
+      query: "a",
+      finds: [
+        "Adv Web report: outline",
+        "Update CV and portfolio links",
+        "Bai tap tieng Anh",
+        "Đồ án tốt nghiệp",
+        "Meet at café",
+      ],
+      mustNotFind: ["Research PostgreSQL unaccent"],
+    },
+    {
+      query: "bai",
+      finds: ["Bài tập SQL", "Bãi biển Nha Trang", "Bai tap tieng Anh"],
+      mustNotFind: [],
+    },
+    {
+      query: "bài",
+      finds: ["Bài tập SQL", "Bai tap tieng Anh"],
+      mustNotFind: ["Bãi biển Nha Trang"],
+    },
+    {
+      query: "bài tập",
+      finds: ["Bài tập SQL", "Bai tap tieng Anh"],
+      mustNotFind: [],
+    },
+    {
+      query: "hoà",
+      finds: ["Họp nhóm hoà giải", "Hòa nhạc tối nay"],
+      mustNotFind: [],
+    },
+    {
+      query: "hòa",
+      finds: ["Họp nhóm hoà giải", "Hòa nhạc tối nay"],
+      mustNotFind: [],
+    },
+    {
+      query: "thủy",
+      finds: ["Thuỷ điện Sơn La"],
+      mustNotFind: [],
+    },
+    {
+      query: "thuỷ",
+      finds: ["Thuỷ điện Sơn La"],
+      mustNotFind: [],
+    },
+    {
+      query: "do an",
+      finds: ["Đồ án tốt nghiệp"],
+      mustNotFind: [],
+    },
+    {
+      query: "đồ án",
+      finds: ["Đồ án tốt nghiệp"],
+      mustNotFind: [],
+    },
+    {
+      query: "ĐỒ ÁN",
+      finds: ["Đồ án tốt nghiệp"],
+      mustNotFind: [],
+    },
+    {
+      query: "ung dung",
+      finds: ["Ứng dụng di động"],
+      mustNotFind: [],
+    },
+    {
+      query: "sql",
+      finds: ["Bài tập SQL", "Research PostgreSQL unaccent"],
+      mustNotFind: [],
+    },
+    {
+      query: "cafe",
+      finds: ["Meet at café"],
+      mustNotFind: [],
+    },
+    {
+      query: "café",
+      finds: ["Meet at café"],
+      mustNotFind: [],
+    },
+    {
+      query: "ui/ux",
+      finds: ["Learn UI/UX"],
+      mustNotFind: [],
+    },
+  ];
+
+  it.each(mustPassTable)(
+    "matches Vietnamese search table query: $query",
+    ({ query, finds, mustNotFind }) => {
+      const items = searchTasks(mustPassTasks, query, "all").items;
+      const titles = items.map((x) => x.title);
+      if (finds.length === 0) {
+        expect(titles).toEqual([]);
+      } else {
+        for (const f of finds) {
+          expect(titles).toContain(f);
+        }
+      }
+      for (const nf of mustNotFind) {
+        expect(titles).not.toContain(nf);
+      }
+    },
+  );
+
+  it("filters searchProjects across must-pass table rows", () => {
+    const projects = mustPassTexts.map((name, i) => ({ id: `p-${i}`, name }));
+
+    const res1 = searchProjects(projects, "do an").map((p) => p.name);
+    expect(res1).toContain("Đồ án tốt nghiệp");
+
+    const res2 = searchProjects(projects, "hoà").map((p) => p.name);
+    expect(res2).toContain("Họp nhóm hoà giải");
+    expect(res2).toContain("Hòa nhạc tối nay");
+
+    const res3 = searchProjects(projects, "bài").map((p) => p.name);
+    expect(res3).toContain("Bài tập SQL");
+    expect(res3).toContain("Bai tap tieng Anh");
+    expect(res3).not.toContain("Bãi biển Nha Trang");
+  });
+
+  it("highlights parts with exact rules", () => {
+    // u on Update outline marks only the first U
+    expect(highlightParts("Update outline", "u")).toEqual([
+      { text: "U", match: true },
+      { text: "pdate outline", match: false },
+    ]);
+
+    // sql on PostgreSQL marks SQL
+    expect(highlightParts("PostgreSQL", "sql")).toEqual([
+      { text: "Postgre", match: false },
+      { text: "SQL", match: true },
+    ]);
+
+    // hòa on Họp hoà giải marks hoà
+    expect(highlightParts("Họp hoà giải", "hòa")).toEqual([
+      { text: "Họp ", match: false },
+      { text: "hoà", match: true },
+      { text: " giải", match: false },
+    ]);
+
+    // bài on Bãi marks nothing
+    expect(highlightParts("Bãi", "bài")).toEqual([
+      { text: "Bãi", match: false },
     ]);
   });
 });
