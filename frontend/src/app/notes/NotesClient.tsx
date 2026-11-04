@@ -176,6 +176,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             aria-hidden="true"
             className="fixed inset-0 z-[54] bg-black/60"
             onMouseDown={(event) => event.preventDefault()}
+            onClick={close}
           />
           <aside
             ref={panelRef}
