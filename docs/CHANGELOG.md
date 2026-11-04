@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-04
+
+- **Search popup with tasks, projects and notes (Refs #29).** [LV-3 and §2.3](03-modules/LV-lists-search.md#23-search-lv-3): a popup from 768 px, Quick filters, Recent searches, Search in a project, chips All / Tasks / Projects / Notes, what opening each result does, and the skeleton that waits for the answer + 200 ms. LV §7, [api.md](07-architecture/api.md) and [security.md](07-architecture/security.md): `filter` and `project_id` on `GET /tasks/search`, new `GET /notes/search`. [screens.md](01-product/screens.md), [UX-12](01-product/ux-standards.md#ux-12) (Ctrl/Cmd+K) and [copy-catalog.md](01-product/copy-catalog.md) (`search.placeholder`, `search.no_match`).
+
 ## 2026-11-03
 
 - **A time needs its date (Refs #129).** [TK §2.2](03-modules/TK-tasks.md#22-task-details-and-editing-tk-2-tk-3) and [TK §8](03-modules/TK-tasks.md#8-data-validation-and-authorization): a start or due time is only set with its date (the server answers 422 and the database has CHECKs, instead of filling in a date); the date pickers get a **No date** choice.

@@ -17,7 +17,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|
 | <a id="lv-1"></a>LV-1 | Show today in Inbox | Must | A summary shows done of total for today; Overdue (in red, with a count) comes before Today; when all are done, "Nothing left for today" links to Upcoming |
 | <a id="lv-2"></a>LV-2 | Show what's coming | Must | Upcoming groups tasks by day and filters All / Scheduled / Due only |
-| <a id="lv-3"></a>LV-3 | Find any task | Must | Search covers titles and notes, completed included, with All / Open / Completed counts; no match shows "No tasks match “…”" |
+| <a id="lv-3"></a>LV-3 | Find any task, project or note | Must | Search covers task titles and notes (completed included), project names and notes, with All / Tasks / Projects / Notes counts; no match shows "Nothing matches “…”" |
 | <a id="lv-4"></a>LV-4 | Show task context in every row | Must | Each row shows project dot and name, time, reminder and repeat icons, and a priority flag for High and Medium |
 
 ## 1. Entry points and user stories
@@ -26,7 +26,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | App open, Inbox tab | Inbox |
 | Upcoming tab, the "See what's coming" link | Upcoming |
-| Search icon, or `/` on a list screen | Search, field focused |
+| Search in the sidebar, `/` on a list screen, or Ctrl/Cmd+K | Search popup from 768 px, the Search screen below it; field focused |
 
 - As a user opening the app between meetings, I see what's due today and what I missed, in one glance.
 - As a user planning my week, I see the next days grouped by day.
@@ -78,19 +78,29 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.3 Search (LV-3)
 
 - **When it runs:**
+  - **From 768 px:** a popup over the current screen, on a dark blurred backdrop; clicking the backdrop or Esc closes it. `/search` opens the popup over Inbox. Below 768 px: the full Search screen with Cancel.
   - The field is focused on open. Search runs 250 ms after the last keystroke, with 1 character minimum.
-  - Enter runs it at once.
+  - Enter runs it at once, or opens the active row. ↑ and ↓ move through the rows. No key hints are shown.
+  - **Before typing:** Quick filters (Overdue, Due this week, Starts today, High priority, From a note, Completed), Recent searches (the last 5, on this device only, cleared at sign-out), Notes (empty until the Notes screen is done) and Search in a project. Quick filters and the project work with an empty field.
   - The query is capped at 100 characters ([NF-14](../05-quality/nfr.md#nf-14)).
 - **Matching:**
-  - Over titles and notes, completed tasks included
+  - Tasks: over titles and notes, completed tasks included
+  - Projects: over names, on the client
+  - Notes: over the name and text, newest first, at most 20; a result carries a short snippet, never the whole note
+  - Results show Tasks, Notes, then Projects. The Notes section stays, with "No notes found", during a text search
   - **Case- and accent-insensitive:** "bai tap" finds "Bài tập", "cafe" finds "café"
   - All query words must match, in any order and in any field
 - **Ranking:**
   1. Title matches before notes-only matches
   2. Then open before completed
   3. Then by due date (soonest first, no date last)
-- **Chips:** All / Open / Completed. Each count reflects the current query.
-- **Highlight:** matched words in titles are bold. It is built by splitting the text, never by injecting HTML ([SC-08](../07-architecture/security.md#sc-08)).
+- **Chips:** All / Tasks / Projects / Notes. Each count reflects the current query. The popup also has an Any project filter. With a quick filter or a project set, only tasks show.
+- **Highlight:** matched words in titles, project names and note snippets are marked. It is built by splitting the text, never by injecting HTML ([SC-08](../07-architecture/security.md#sc-08)).
+- **Opening a result:**
+  - A task closes the popup and opens the task panel from 1280 px, on Inbox, Upcoming or a project, else on Inbox. Below 1280 px: the task screen. A task that isn't in the list on screen is loaded by id.
+  - A project closes the popup and opens that project.
+  - A note does nothing yet (the Notes screen isn't built).
+- **Loading:** from the first keystroke until the answer has arrived and 200 ms more has passed, only the skeleton shows, so "no match" never flashes. An answer to an older query is dropped.
 - **Pages:** 50 results per page, keyset.
 - **Empty:**
   - No query → hint `search.hint`
@@ -122,7 +132,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|---|---|---|
 | Inbox | `list.nothing_left` with links (or a first-run state, `list.first_run`, when the user has no tasks at all) | First load: skeleton after 300 ms. After that, from IndexedDB at once | Sections | Collapsed sections show their counts | Sync failure: cached data and a quiet retry. After 3 failures, `error.save_failed`-style toast | Banner `app.offline`. Everything editable |
 | Upcoming | Empty week shows days with "+ Add task" (`list.upcoming_empty` if window has no tasks) | Skeleton cards after 300 ms | Day groups / columns with week bar | Loading next batch: skeleton cards | "(Ref …)" error alert with Retry, or banner if offline | Cached days |
-| Search | `search.hint` | Results skeleton after 300 ms | Results with counts | — | `error.generic` with Retry | Local results plus `search.offline` |
+| Search | Quick filters, recent searches, projects | Skeleton until the answer + 200 ms | Results with counts | — | `error.generic` with Retry | Local results plus `search.offline` |
 
 ## 4. Edge cases
 
@@ -158,7 +168,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|
 | `GET /tasks?view=inbox` | — | `200 {overdue[], today[], no_date[], completed_today[], progress: {done, total}}` (bounded by date, so no pagination. No date and Completed are capped at 200 each, with a count) |
 | `GET /tasks?view=upcoming&from=&days=14&filter=all\|scheduled\|due` | — | `200 {days: [{date, tasks[]}], next_from}` |
-| `GET /tasks/search?q=&status=all\|open\|completed&cursor=` | — | `200 {items[], counts: {all, open, completed}, next_cursor}` |
+| `GET /tasks/search?q=&status=all\|open\|completed&filter=overdue\|due_week\|starts_today\|high_priority\|from_note&project_id=&cursor=` | — | `200 {items[], counts: {all, open, completed}, next_cursor}`. `422` for a wrong type, null byte, invalid UTF-8, unknown `status` or `filter`, or a forged `cursor`. `404` for a `project_id` the user doesn't own |
+| `GET /notes/search?q=` | — | `200 {items: [{id, title, snippet, status, written_at}]}`, at most 20. `422` as above. Own rate limit `search-notes`, 60 a minute |
 
 - **Errors:** `401`. `422` for a bad `view` or `filter`. `429` for search beyond 60/min.
 - **Queries:** Inbox and Upcoming queries evaluate both `start_date` and `due_date`. Upcoming returns both start-day and due-day entries (tasks with both dates appear under each day; single entry if start and due are the same day). The endpoint `GET /tasks?view=upcoming&from=&days=14&filter=all|scheduled|due` keeps an unchanged response shape.
@@ -194,8 +205,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | [LV-2](#lv-2) | Upcoming groups tasks by day | T-LV-10 (headings, sort, 14-day paging) |
 | [LV-2](#lv-2) | Filters All / Scheduled / Due only | T-LV-11, T-LV-112 |
 | [LV-3](#lv-3) | Search covers titles and notes, completed included | T-LV-20, T-LV-105–107 |
-| [LV-3](#lv-3) | All / Open / Completed counts | T-LV-21 |
-| [LV-3](#lv-3) | No match shows "No tasks match “…”" | T-LV-22 |
+| [LV-3](#lv-3) | All / Tasks / Projects / Notes counts | T-LV-21 |
+| [LV-3](#lv-3) | No match shows "Nothing matches “…”" | T-LV-22 |
 | [LV-4](#lv-4) | Each row shows project dot and name, time, reminder and repeat icons, and a High/Medium flag | T-LV-30 (component, every combination), A11Y-51 |
 | — | Edge cases [LV-E1](#lv-e1)–[LV-E12](#lv-e12) | T-LV-101–112, PERF-05 |
 | — | Accessibility | A11Y-50–53 |
