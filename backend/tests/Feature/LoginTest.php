@@ -100,6 +100,9 @@ describe('lockout', function () {
     it('allows 30 attempts per IP per 10 min across all emails', function () {
         foreach (range(1, 30) as $i) {
             wrongPassword('10.0.0.9', "user{$i}@gmail.com");
+            if ($i % 19 === 0) {
+                $this->travel(1)->seconds(); // stay under the general 20/s burst cap
+            }
         }
 
         login(['email' => 'someone@gmail.com'], '10.0.0.9')->assertStatus(429)->assertJsonPath('error.code', 'auth.locked');
