@@ -1,6 +1,6 @@
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
-import { t, tc } from "../../copy";
+import { t } from "../../copy";
 import { formatDay, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
@@ -85,23 +85,13 @@ export function NotesScreen({
             {rows.map((note) => {
               const needsLook =
                 note.status === "confirm" || note.status === "followup";
-              const status =
-                note.status === "confirm"
-                  ? t("notes.needs_ok")
-                  : note.status === "followup"
-                    ? t("notes.question")
-                    : note.status === "kept"
-                      ? t("note.kept_label")
-                      : note.status === "undone"
-                        ? t("note.undone_label")
-                        : note.counts.updated || note.counts.deleted
-                          ? t("notes.applied", {
-                              count:
-                                note.counts.created +
-                                note.counts.updated +
-                                note.counts.deleted,
-                            })
-                          : tc("note.made", note.counts.created);
+              const status = needsLook
+                ? t("notes.needs")
+                : note.status === "done"
+                  ? t("notes.made")
+                  : note.status === "undone"
+                    ? t("note.undone_label")
+                    : null;
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -115,12 +105,7 @@ export function NotesScreen({
                     aria-current={selected === note.id ? "true" : undefined}
                     className={`focus-ring flex min-h-16 items-center gap-3 px-4 py-3 text-ink no-underline hover:bg-fill ${selected === note.id ? "bg-fill" : ""}`}
                   >
-                    <Icon
-                      size={19}
-                      className={
-                        needsLook ? "text-warning" : "text-ink-secondary"
-                      }
-                    />
+                    <Icon size={19} className="text-ink-secondary" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">
                         {note.name ?? note.excerpt.slice(0, 60)}
