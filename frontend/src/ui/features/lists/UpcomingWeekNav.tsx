@@ -41,14 +41,20 @@ export function UpcomingWeekNav({
         >
           <ChevronLeftIcon size={16} />
         </button>
-        <span className="h-4 w-px shrink-0 bg-separator/60" aria-hidden="true" />
+        <span
+          className="h-4 w-px shrink-0 bg-separator/60"
+          aria-hidden="true"
+        />
         <span
           className="flex-1 truncate px-2 text-center text-footnote font-medium text-ink-secondary"
           aria-live="polite"
         >
           {weekLabel}
         </span>
-        <span className="h-4 w-px shrink-0 bg-separator/60" aria-hidden="true" />
+        <span
+          className="h-4 w-px shrink-0 bg-separator/60"
+          aria-hidden="true"
+        />
         <button
           type="button"
           aria-label={t("list.next_week")}
