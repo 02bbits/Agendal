@@ -1,7 +1,17 @@
 import { t } from "../copy";
 import { addDays, formatDay, formatTime, formatTimeRange } from "./dates";
 import type { EntryKind } from "./entries";
+import { describeRepeat } from "./repeat";
 import type { Task, TimeFormat } from "./types";
+
+export function repeatLabel(task: Task): string {
+  if (task.repeat === "never") return "";
+  if (task.repeat_rule) {
+    const desc = describeRepeat(task);
+    if (desc) return desc;
+  }
+  return t(`repeat.every_${task.repeat}`);
+}
 
 export type MetaTone = "plain" | "due" | "late" | "muted";
 
@@ -86,6 +96,19 @@ export function rowMeta(
         });
       }
       return parts;
+    }
+
+    // 4b. Repeating task with no start_date on Scheduled (entry === "start")
+    if (
+      opts.entry === "start" &&
+      !task.start_date &&
+      task.repeat !== "never" &&
+      task.due_date
+    ) {
+      if (task.due_time) {
+        return [{ text: time(task.due_time), tone: "plain" }];
+      }
+      return [];
     }
 
     // 5. entry === "start", or no entry and start_date === today

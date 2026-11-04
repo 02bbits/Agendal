@@ -10,7 +10,7 @@ import {
 } from "../../components/icons";
 import { taskAccessibleName } from "../../domain/describe";
 import type { EntryKind } from "../../domain/entries";
-import { rowMeta, type MetaTone } from "../../domain/rowMeta";
+import { repeatLabel, rowMeta, type MetaTone } from "../../domain/rowMeta";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -97,7 +97,7 @@ export function TaskRow({
         })}
         aria-disabled={settling || undefined}
         className={cx(
-          "group/check inline-flex size-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary",
+          "group/check inline-flex size-11 -m-1 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary",
           settling ? "cursor-default" : "cursor-pointer",
         )}
         onClick={() => {
@@ -154,9 +154,18 @@ export function TaskRow({
           {task.reminder !== "none" && (
             <BellIcon size={13} className="text-ink-tertiary" />
           )}
-          {task.repeat !== "never" && (
-            <RepeatIcon size={13} className="text-ink-tertiary" />
-          )}
+          {task.repeat !== "never" &&
+            (task.done ? (
+              <RepeatIcon size={13} className="text-ink-tertiary" />
+            ) : (
+              <Fragment>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 text-due-ink">
+                  <RepeatIcon size={13} />
+                  <span>{repeatLabel(task)}</span>
+                </span>
+              </Fragment>
+            ))}
         </span>
       </Link>
 

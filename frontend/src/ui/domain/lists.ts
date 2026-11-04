@@ -108,9 +108,13 @@ export interface UpcomingPage {
   nextFrom: string | null;
 }
 
-/** Scheduled: has a start date. Due only: has a due date. */
+/** Scheduled: has a start date, or repeats on a due date. Due only: has a due date. */
 export function matchesFilter(task: Task, filter: UpcomingFilter): boolean {
-  if (filter === "scheduled") return !!task.start_date;
+  if (filter === "scheduled")
+    return (
+      !!task.start_date ||
+      (!task.start_date && task.repeat !== "never" && !!task.due_date)
+    );
   if (filter === "due") return !!task.due_date;
   return true;
 }
