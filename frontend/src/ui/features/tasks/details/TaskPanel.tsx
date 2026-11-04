@@ -37,6 +37,7 @@ export function TaskPanel({
     return t.id === taskId;
   });
   const triggerRef = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -49,22 +50,57 @@ export function TaskPanel({
 
   // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
   // short of it instead of covering Clear and Delete (see AppShell).
-  // Also locks background page scrolling (UX-28).
+  // Also intercepts wheel and touchmove events outside the panel to prevent
+  // the background page from scrolling without mutating html/body overflow,
+  // which preserves sticky sidebar and header positioning (UX-28).
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.taskPanel = "open";
 
-    const prevBodyOverflow = document.body.style.overflow;
-    const prevHtmlOverflow = root.style.overflow;
-    document.body.style.overflow = "hidden";
-    root.style.overflow = "hidden";
+    const aside = panelRef.current;
+
+    const onWheel = (e: WheelEvent) => {
+      const isInside = e.target instanceof Node && aside?.contains(e.target);
+      if (!isInside) {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const isInside = e.target instanceof Node && aside?.contains(e.target);
+      if (!isInside) {
+        e.preventDefault();
+      }
+    };
+
+    const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (
+        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
+          e.key,
+        )
+      ) {
+        if (!aside || !aside.contains(document.activeElement)) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onWindowKeyDown);
 
     return () => {
       delete root.dataset.taskPanel;
-      document.body.style.overflow = prevBodyOverflow;
-      root.style.overflow = prevHtmlOverflow;
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onWindowKeyDown);
     };
-  }, []);
+  }, [onClose]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
@@ -87,6 +123,7 @@ export function TaskPanel({
         className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
       />
       <aside
+        ref={panelRef}
         aria-label={t("task.heading")}
         tabIndex={-1}
         onKeyDown={handleKeyDown}

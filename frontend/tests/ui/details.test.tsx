@@ -971,19 +971,23 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("TaskPanel flags the page and locks body scroll while open so the background cannot scroll", () => {
+  it("TaskPanel flags the page and intercepts background scroll events while preserving sticky positioning", () => {
     const t1 = task({ id: "t-flag", title: "Flag Task" });
     const ctx = setup([t1]);
     const view = render(
       ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
     );
     expect(document.documentElement.dataset.taskPanel).toBe("open");
-    expect(document.body.style.overflow).toBe("hidden");
-    expect(document.documentElement.style.overflow).toBe("hidden");
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(document.body.style.overflow).toBe("");
+
+    // Wheel outside the panel is prevented
+    const outsideEvent = new WheelEvent("wheel", { cancelable: true });
+    window.dispatchEvent(outsideEvent);
+    expect(outsideEvent.defaultPrevented).toBe(true);
+
     view.unmount();
     expect(document.documentElement.dataset.taskPanel).toBeUndefined();
-    expect(document.body.style.overflow).toBe("");
-    expect(document.documentElement.style.overflow).toBe("");
   });
 
   it("TaskPanel renders a backdrop overlay that closes the panel when clicked", async () => {
