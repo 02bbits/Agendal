@@ -517,7 +517,7 @@ function ChangeRow({
       {opens && (
         <span
           aria-hidden="true"
-          className="inline-flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-control/60 bg-linear-to-b from-surface-elevated to-fill text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.14),0_2px_5px_rgb(0_0_0/0.20)]"
+          className="inline-flex size-9 shrink-0 items-center justify-center self-center text-ink [&>svg]:drop-shadow-[0_1px_1px_rgb(0_0_0/0.20)]"
         >
           <PencilIcon size={18} />
         </span>

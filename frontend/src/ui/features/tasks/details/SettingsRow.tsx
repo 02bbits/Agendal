@@ -55,7 +55,7 @@ export function SettingsRow({
         <>
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center rounded-tile border border-control/60 bg-linear-to-b from-surface-elevated to-fill text-ink shadow-[inset_0_1px_0_rgb(255_255_255/0.10),0_2px_4px_rgb(0_0_0/0.12)]">
+              <div className="flex size-8 shrink-0 items-center justify-center text-ink [&>svg]:drop-shadow-[0_1px_1px_rgb(0_0_0/0.20)]">
                 {icon}
               </div>
               <span className="text-body font-normal text-ink">{label}</span>
