@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -427,6 +428,56 @@ describe("Task details page /tasks/[id]", () => {
 
     // Delete task button at the bottom
     expect(screen.getByText(t("task.delete"))).toBeTruthy();
+  });
+
+  it("the delete toast outlives the screen, with its Undo", async () => {
+    const fakeTask = task({ id: "t-gone", title: "Gone Task" });
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/tasks/t-gone" && init?.method === "DELETE")
+        return new Response(null, { status: 204 });
+      if (url === "/api/v1/tasks/t-gone") return json(200, fakeTask);
+      if (url === "/api/v1/tasks/t-gone/restore") return json(200, fakeTask);
+      if (url === "/api/v1/projects") return json(200, []);
+      return json(404, {});
+    });
+
+    let view: ReturnType<typeof render>;
+    await act(async () => {
+      view = render(
+        <AppFrame>
+          <Suspense>
+            <TaskDetailsPage params={Promise.resolve({ id: "t-gone" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await userEvent.click(await screen.findByText(t("task.delete")));
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: t("common.delete"),
+      }),
+    );
+
+    // Going back takes the task screen away
+    await act(async () => {
+      view!.rerender(<AppFrame>{null}</AppFrame>);
+    });
+
+    const message = t("task.deleted", { title: "Gone Task" });
+    expect(await screen.findByText(message)).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.undo") }),
+    );
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([url]) => url === "/api/v1/tasks/t-gone/restore",
+        ),
+      ).toBe(true),
+    );
   });
 
   it("mobile screen is axe clean in both themes", async () => {
