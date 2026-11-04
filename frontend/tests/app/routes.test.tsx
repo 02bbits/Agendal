@@ -161,10 +161,14 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     );
   });
 
-  it("other tabs leave the overline empty", async () => {
+  it("Notes shows today's date above the title, like Inbox", async () => {
     renderAt("/notes", NotesPage);
     await screen.findByRole("heading", { level: 1, name: "Notes" });
-    expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
+    expect(
+      within(screen.getByRole("banner")).getByText(
+        /^[A-Z][a-z]+day, \d{1,2} [A-Z][a-z]+$/,
+      ),
+    ).toBeTruthy();
   });
 
   it("tab links and header links go through the Next.js router", async () => {
