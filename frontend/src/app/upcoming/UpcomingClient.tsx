@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   CalendarIcon,
@@ -14,6 +14,7 @@ import {
   UpcomingScreen,
   UpcomingViewSwitch,
   addDays,
+  entriesOf,
   t,
   useTaskPanel,
   useTaskStore,
@@ -61,6 +62,7 @@ export function UpcomingClient() {
   const [subtitle, setSubtitle] = useState<string>("");
   const [filter, setFilter] = useState<UpcomingFilter>("all");
   const [viewMode, setViewMode] = useState<UpcomingViewMode>("list");
+  const viewRef = useRef<{ anchor: string; day: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -132,14 +134,15 @@ export function UpcomingClient() {
         setProjectsStatus("ready");
 
         const limitDate = addDays(todayStr, 7);
-        const next7DaysTasks = flatUpcoming.filter(
-          (x) =>
-            !x.done &&
-            x.due_date &&
-            x.due_date > todayStr &&
-            x.due_date <= limitDate,
-        );
-        const count = next7DaysTasks.length;
+        const next7DaysMap = new Map<string, Task>();
+        for (const t of flatUpcoming) {
+          if (t.done) continue;
+          const entries = entriesOf(t);
+          if (entries.some((e) => e.date > todayStr && e.date <= limitDate)) {
+            next7DaysMap.set(t.id, t);
+          }
+        }
+        const count = next7DaysMap.size;
         setSubtitle(
           count === 1
             ? t("list.upcoming_subtitle_one", { count: 1 })
@@ -311,7 +314,14 @@ export function UpcomingClient() {
             onViewModeChange={handleViewModeChange}
             selectedTaskId={selectedTaskId}
             weekStart={settings.weekStart}
-            onAddTask={(date) => openNewTask({ dueDate: date })}
+            initialView={() => viewRef.current}
+            onViewChange={(view) => {
+              viewRef.current = view;
+            }}
+            onAddTask={(date) => {
+              viewRef.current = { anchor: date, day: date };
+              openNewTask({ dueDate: date });
+            }}
             onNewTask={() => openNewTask()}
           />
           {isWide && selectedTaskId && (

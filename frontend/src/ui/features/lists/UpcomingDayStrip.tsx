@@ -24,7 +24,8 @@ export function UpcomingDayStrip({
         const isActive = date === currentActive;
         const isPast = date < today;
         const count = countsByDay[date] ?? 0;
-        const hasTasks = count > 0;
+        // Upcoming lists no tasks for today, so its slot has no dot
+        const hasTasks = count > 0 && !isToday;
         const heading = dayHeading(date, today);
         const { weekday, day } = stripLabel(date);
         const ariaCurrent = isToday ? "date" : isActive ? "true" : undefined;

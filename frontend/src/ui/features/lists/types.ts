@@ -1,3 +1,4 @@
+import type { DayEntry } from "../../domain/entries";
 import type { UpcomingFilter } from "../../domain/lists";
 import type { Task, WeekStart } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
@@ -8,11 +9,13 @@ export interface UpcomingWeekNavProps {
   monthLabel: string;
   pickedDate: string;
   weekStart: WeekStart;
+  weekLabel: string;
   prevDisabled: boolean;
+  overdueCount: number;
   onPrev: () => void;
-  onToday: () => void;
   onNext: () => void;
   onPickDate: (date: string) => void;
+  onOverdue: () => void;
 }
 
 export interface UpcomingDayStripProps {
@@ -29,16 +32,16 @@ export interface UpcomingWeekBarProps {
   weekStart: WeekStart;
   countsByDay: Record<string, number>;
   activeDay?: string;
+  weekLabel: string;
   onAnchorChange: (date: string) => void;
   onPickDay: (date: string) => void;
   onPrevWeek?: () => void;
   onNextWeek?: () => void;
-  onToday?: () => void;
 }
 
 export interface UpcomingDayListProps {
   days: string[];
-  tasksByDay: Record<string, Task[]>;
+  entriesByDay: Record<string, DayEntry[]>;
   overdueTasks?: Task[];
   today: string;
   selectedTaskId?: string | null;
@@ -48,7 +51,7 @@ export interface UpcomingDayListProps {
 
 export interface UpcomingBoardProps {
   days: string[];
-  tasksByDay: Record<string, Task[]>;
+  entriesByDay: Record<string, DayEntry[]>;
   overdueTasks?: Task[];
   today: string;
   selectedTaskId?: string | null;
@@ -70,4 +73,9 @@ export interface UpcomingScreenProps {
   onViewModeChange?: (mode: UpcomingViewMode) => void;
   selectedTaskId?: string | null;
   weekStart?: WeekStart;
+  initialView?:
+    | { anchor: string; day: string }
+    | (() => { anchor: string; day: string } | null)
+    | null;
+  onViewChange?: (view: { anchor: string; day: string }) => void;
 }
