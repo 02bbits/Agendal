@@ -13,3 +13,5 @@ Artisan::command('inspire', function () {
 // NF-20: the audit log is kept 90 days
 Schedule::call(fn () => DB::table('audit_events')->where('created_at', '<', now()->subDays(Audit::KEEP_DAYS))->delete())
     ->daily()->name('purge-audit-events');
+
+Schedule::command('reminders:send')->everyMinute();
