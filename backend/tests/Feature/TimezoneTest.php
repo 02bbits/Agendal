@@ -40,7 +40,7 @@ it('T-TK-111: updates the user zone and UTC reminders without moving floating ta
     foreach ([[$taskId, $user->id], [$otherTaskId, $otherUser->id]] as [$id, $userId]) {
         DB::table('tasks')->insert([
             'id' => $id, 'user_id' => $userId, 'title' => 'SQL quiz',
-            'due_date' => '2026-10-26', 'start_time' => '09:00', 'end_time' => '10:00',
+            'start_date' => '2026-10-26', 'due_date' => '2026-10-26', 'start_time' => '09:00', 'due_time' => '10:00',
             'reminder' => '15m', 'remind_at' => '2026-10-26T01:45:00Z',
         ]);
     }
@@ -56,7 +56,7 @@ it('T-TK-111: updates the user zone and UTC reminders without moving floating ta
     expect((new DateTimeImmutable($task->updated_at))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-23T01:12:00Z');
     expect($task->due_date)->toBe('2026-10-26')
         ->and($task->start_time)->toBe('09:00:00')
-        ->and($task->end_time)->toBe('10:00:00')
+        ->and($task->due_time)->toBe('10:00:00')
         ->and((new DateTimeImmutable($task->remind_at))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-25T23:45:00Z');
     $otherTask = DB::table('tasks')->find($otherTaskId);
     expect((new DateTimeImmutable($otherTask->remind_at))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-26T01:45:00Z')

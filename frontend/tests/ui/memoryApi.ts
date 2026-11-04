@@ -15,6 +15,7 @@ export function createMemoryApi(seed: Partial<MemoryDb> = {}) {
     tasks: structuredClone(seed.tasks ?? []),
     projects: structuredClone(seed.projects ?? []),
   };
+  const deleted = new Map<string, Task>();
   let failNext = false;
 
   const find = (id: string) => {
@@ -48,14 +49,32 @@ export function createMemoryApi(seed: Partial<MemoryDb> = {}) {
       const merged = { ...task, ...fields };
       if (
         merged.start_time &&
-        merged.end_time &&
-        merged.end_time <= merged.start_time
+        merged.due_time &&
+        merged.due_time <= merged.start_time
       ) {
-        throw Object.assign(new Error("task.end_before_start"), {
+        throw Object.assign(new Error("task.start_after_due"), {
           status: 422,
         });
       }
       Object.assign(task, fields, { updated_at: at });
+      return { ...task };
+    },
+    async remove(id, scope) {
+      await guard();
+      const task = find(id);
+      if (task.repeat !== "never" && !scope) {
+        throw Object.assign(new Error("scope required"), { status: 422 });
+      }
+      db.tasks.splice(db.tasks.indexOf(task), 1);
+      deleted.set(id, task);
+      return {};
+    },
+    async restore(id) {
+      await guard();
+      const task = deleted.get(id);
+      if (!task) throw Object.assign(new Error("task.purged"), { status: 409 });
+      deleted.delete(id);
+      db.tasks.push(task);
       return { ...task };
     },
   };
@@ -172,6 +191,15 @@ export function deferredApi(seed: Partial<MemoryDb> = {}) {
 
       calls.push(call);
       return promise;
+    },
+    async remove(id) {
+      const task = find(id);
+      db.tasks.splice(db.tasks.indexOf(task), 1);
+      return {};
+    },
+    async restore(id) {
+      const task = find(id);
+      return { ...task };
     },
   };
 

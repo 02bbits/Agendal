@@ -17,9 +17,8 @@ import {
   type WeekStart,
 } from "../../../domain/types";
 import type { Clock } from "../types";
-import { DueDateField } from "./DueDateField";
+import { DateTimeFields } from "./DateTimeFields";
 import { ProjectField } from "./ProjectField";
-import { ScheduleFields } from "./ScheduleFields";
 import { SettingsRow } from "./SettingsRow";
 
 export interface SettingsRowsProps {
@@ -41,17 +40,16 @@ export function SettingsRows({
   projects,
   projectsStatus = "ready",
   onRetryProjects,
-  todayDate,
   clock,
   timeFormat,
   weekStart,
-  showSchedule = true,
   onSave,
   variant = "panel",
 }: SettingsRowsProps): ReactElement {
   const isReminderPast = reminderPast(task, clock.now(), clock.timeZone);
 
-  const reminderHelper = !task.due_date
+  const hasDate = Boolean(task.start_date || task.due_date);
+  const reminderHelper = !hasDate
     ? t("task.reminder_needs_date")
     : isReminderPast
       ? t("task.reminder_past")
@@ -77,22 +75,13 @@ export function SettingsRows({
         onChange={(project_id) => onSave({ project_id })}
         variant={variant}
       />
-      <DueDateField
-        value={task.due_date}
-        todayDate={todayDate}
+      <DateTimeFields
+        task={task}
+        timeFormat={timeFormat}
         weekStart={weekStart}
-        onSave={(due_date) => onSave({ due_date })}
+        onSave={onSave}
         variant={variant}
       />
-      {showSchedule && (
-        <ScheduleFields
-          startTime={task.start_time}
-          endTime={task.end_time}
-          timeFormat={timeFormat}
-          onSave={onSave}
-          variant={variant}
-        />
-      )}
       <SettingsRow
         variant={variant}
         icon={<BellIcon size={18} />}
@@ -105,7 +94,7 @@ export function SettingsRows({
             id="task-reminder"
             label={t("task.reminder")}
             value={task.reminder}
-            disabled={!task.due_date}
+            disabled={!hasDate}
             options={REMINDERS.map((r) => ({
               value: r,
               label: t(`reminder.${r}` as CopyKey),

@@ -47,7 +47,7 @@ it('validates the response against the shared API schema (T-NU-80)', function ()
 
 it('records before values without clearing unchanged task fields', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload('done email group'))->assertCreated();
     expect($task->fresh()->done)->toBeTrue()->and($task->fresh()->due_date)->toBe('2026-10-23');
     $log = Note::firstOrFail()->applied;

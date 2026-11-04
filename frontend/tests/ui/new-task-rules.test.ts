@@ -144,5 +144,43 @@ describe("New task rules (Refs #25)", () => {
       expect(body).not.toHaveProperty("project_id");
       expect(body).not.toHaveProperty("priority");
     });
+
+    it("drops start_time without start_date, and drops due_time without due_date", () => {
+      const body = createBody({
+        id: "0192e21b-6800-7000-8000-000000000001",
+        title: "Timed task",
+        startDate: null,
+        startTime: "09:00",
+        dueDate: null,
+        dueTime: "17:00",
+      });
+
+      expect(body).toEqual({
+        id: "0192e21b-6800-7000-8000-000000000001",
+        title: "Timed task",
+      });
+      expect(body).not.toHaveProperty("start_time");
+      expect(body).not.toHaveProperty("due_time");
+    });
+
+    it("includes start_time with start_date, and due_time with due_date", () => {
+      const body = createBody({
+        id: "0192e21b-6800-7000-8000-000000000001",
+        title: "Timed task",
+        startDate: "2026-10-23",
+        startTime: "09:00",
+        dueDate: "2026-10-23",
+        dueTime: "17:00",
+      });
+
+      expect(body).toEqual({
+        id: "0192e21b-6800-7000-8000-000000000001",
+        title: "Timed task",
+        start_date: "2026-10-23",
+        start_time: "09:00",
+        due_date: "2026-10-23",
+        due_time: "17:00",
+      });
+    });
   });
 });

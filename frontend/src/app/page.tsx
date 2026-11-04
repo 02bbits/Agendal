@@ -45,6 +45,7 @@ function InboxContent() {
   const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
   const {
     status,
+    errorMessage,
     tasks,
     projectList,
     projectsStatus,
@@ -93,7 +94,7 @@ function InboxContent() {
       {status === "error" && (
         <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
           <p className="text-callout text-ink-secondary">
-            {t("error.generic")}
+            {errorMessage || t("error.generic")}
           </p>
           <Button onClick={handleRetry}>{t("common.retry")}</Button>
         </div>

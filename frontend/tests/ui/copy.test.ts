@@ -29,6 +29,13 @@ describe("copy catalog", () => {
     expect(t("list.encourage_progress", { done: 2, left: 4 })).toBe(
       "2 down, 4 to go!",
     );
+    expect(t("error.generic", { request_id: "req-123" })).toBe(
+      "Something went wrong. Try again. (Ref req-123)",
+    );
+    expect(t("error.generic", { request_id: "" })).toBe(
+      "Something went wrong. Try again.",
+    );
+    expect(t("error.generic")).toBe("Something went wrong. Try again.");
   });
 
   it("picks _one and _other forms (UX-33)", () => {

@@ -46,9 +46,10 @@ it('groups open tasks by day from tomorrow and sorts within each day', function 
         'id' => (string) Str::uuid(),
         'user_id' => $user->id,
         'title' => 'Draft portfolio case study',
+        'start_date' => '2026-10-24',
         'due_date' => '2026-10-24',
         'start_time' => '10:00:00',
-        'end_time' => '12:00:00',
+        'due_time' => '12:00:00',
         'done' => false,
     ]);
 
@@ -57,6 +58,7 @@ it('groups open tasks by day from tomorrow and sorts within each day', function 
         'id' => (string) Str::uuid(),
         'user_id' => $user->id,
         'title' => 'Plan the week',
+        'start_date' => '2026-10-25',
         'due_date' => '2026-10-25',
         'start_time' => '19:00:00',
         'done' => false,
@@ -133,6 +135,7 @@ it('filters scheduled and due only', function () {
         'id' => (string) Str::uuid(),
         'user_id' => $user->id,
         'title' => 'Scheduled task',
+        'start_date' => '2026-10-25',
         'due_date' => '2026-10-25',
         'start_time' => '10:00:00',
         'done' => false,

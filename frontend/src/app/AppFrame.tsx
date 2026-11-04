@@ -610,7 +610,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
           />
         )}
         {open && (
-          <NewTaskSheet {...sheetProps} weekStart={settings.weekStart} />
+          <NewTaskSheet
+            {...sheetProps}
+            weekStart={settings.weekStart}
+            timeFormat={settings.timeFormat}
+          />
         )}
         {creatingProject && (
           <ProjectSheet

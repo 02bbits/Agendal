@@ -20,9 +20,12 @@ export type CountKey = {
 }[CopyKey];
 
 function fill(text: string, vars: CopyVars = {}): string {
-  return text.replace(/\{(\w+)\}/g, (match, name: string) =>
-    name in vars ? String(vars[name]) : match,
+  let filled = text.replace(/\{(\w+)\}/g, (match, name: string) =>
+    name in vars && vars[name] !== "" ? String(vars[name]) : match,
   );
+  // Clean up unfilled or empty reference tokens, e.g. " (Ref {request_id})" or " (Ref )"
+  filled = filled.replace(/\s*\((?:Ref\s*\{request_id\}|Ref\s*)\)/g, "");
+  return filled;
 }
 
 /** Looks up a copy-catalog string and fills its {placeholders}. */

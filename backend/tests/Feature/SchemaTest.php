@@ -38,17 +38,31 @@ afterEach(function () {
     $this->travelBack();
 });
 
-it('T-TK-22: rejects an end time before or equal to the start time', function (string $end) {
-    expect(fn () => insertTask($this->userId, ['start_time' => '10:00', 'end_time' => $end]))
-        ->toThrow(QueryException::class, 'tasks_end_after_start');
-})->with(['09:00', '10:00']);
+it('T-TK-22: rejects start_date after due_date, and same-day start_time >= due_time', function (array $row) {
+    expect(fn () => insertTask($this->userId, $row))
+        ->toThrow(QueryException::class, 'tasks_start_before_due');
+})->with([
+    'start date after due date' => [['start_date' => '2026-10-27', 'due_date' => '2026-10-26']],
+    'same day start time after due time' => [['start_date' => '2026-10-26', 'due_date' => '2026-10-26', 'start_time' => '10:00', 'due_time' => '09:00']],
+    'same day start time equal to due time' => [['start_date' => '2026-10-26', 'due_date' => '2026-10-26', 'start_time' => '10:00', 'due_time' => '10:00']],
+]);
 
-it('allows a valid schedule, or either time on its own', function () {
-    insertTask($this->userId, ['start_time' => '09:00', 'end_time' => '10:00']);
-    insertTask($this->userId, ['start_time' => '09:00']);
+it('allows a valid schedule, or either date on its own', function () {
+    insertTask($this->userId, ['start_date' => '2026-10-25', 'due_date' => '2026-10-26']);
+    insertTask($this->userId, ['start_date' => '2026-10-26', 'due_date' => '2026-10-26', 'start_time' => '09:00', 'due_time' => '10:00']);
+    insertTask($this->userId, ['start_date' => '2026-10-25']);
+    insertTask($this->userId, ['due_date' => '2026-10-26']);
 
-    expect(DB::table('tasks')->count())->toBe(2);
+    expect(DB::table('tasks')->count())->toBe(4);
 });
+
+it('rejects start_time without start_date and due_time without due_date', function (array $row, string $constraint) {
+    expect(fn () => insertTask($this->userId, $row))
+        ->toThrow(QueryException::class, $constraint);
+})->with([
+    'start_time without start_date' => [['start_time' => '09:00'], 'tasks_start_time_needs_date'],
+    'due_time without due_date' => [['due_time' => '10:00'], 'tasks_due_time_needs_date'],
+]);
 
 it('rejects values outside each list', function (string $table, array $row, string $constraint) {
     $base = [

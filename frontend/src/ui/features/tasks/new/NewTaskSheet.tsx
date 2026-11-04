@@ -5,6 +5,7 @@ import { t } from "../../../copy";
 import { ProjectField } from "../details/ProjectField";
 import { DiscardDialog } from "./DiscardDialog";
 import { DueChips } from "./DueChips";
+import { NewTaskDates } from "./NewTaskDates";
 import { PriorityChips } from "./PriorityChips";
 import type { NewTaskSheetProps } from "./types";
 import { useNewTaskForm } from "./useNewTaskForm";
@@ -25,6 +26,7 @@ export function NewTaskSheet({
   onCreate,
   onAdded,
   weekStart = "mon",
+  timeFormat = "24h",
 }: NewTaskSheetProps): ReactElement | null {
   const form = useNewTaskForm({
     pathname,
@@ -69,6 +71,19 @@ export function NewTaskSheet({
             onChange={form.handleDueChange}
             onPickedChange={form.handlePickedChange}
             onCancelPick={form.handleCancelPick}
+            weekStart={weekStart}
+          />
+
+          <NewTaskDates
+            dueDate={form.dueDate}
+            dueTime={form.dueTime}
+            onDueTimeChange={form.setDueTime}
+            startDate={form.startDate}
+            onStartDateChange={form.setStartDate}
+            startTime={form.startTime}
+            onStartTimeChange={form.setStartTime}
+            error={form.datesError}
+            timeFormat={timeFormat}
             weekStart={weekStart}
           />
 

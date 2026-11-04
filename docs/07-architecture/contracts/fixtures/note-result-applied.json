@@ -17,9 +17,10 @@
       "task": {
         "id": "019a1c00-0000-7000-8000-000000000204",
         "title": "Email Prof. Kim",
+        "start_date": null,
         "due_date": null,
         "start_time": null,
-        "end_time": null,
+        "due_time": null,
         "priority": null,
         "project_id": null,
         "repeat": "never",
@@ -39,9 +40,10 @@
       "task": {
         "id": "019a1c00-0000-7000-8000-000000000205",
         "title": "Old reading list",
+        "start_date": null,
         "due_date": null,
         "start_time": null,
-        "end_time": null,
+        "due_time": null,
         "priority": null,
         "project_id": null,
         "repeat": "never",

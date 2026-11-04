@@ -51,10 +51,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Saving:** every field saves on change, or on blur for text. There is no Save button. Each save is a per-field patch ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)).
 - **Title:** 1–200 characters. Cleared and blurred → it goes back to the previous value with `task.title_required`.
 - **Project:** picker with No project, the user's projects and New project….
-- **Start date:** date picker with quick choices. Optional. Setting a start time with no start date sets the start date to the due date if there is one, else today. Clearing the start date clears the start time.
+- **Start date:** date picker with quick choices. Optional, with a **No date** quick choice that clears it. The start time can be set only once there is a start date. Clearing the start date clears the start time.
 - **Start time:** an optional time on the start date. Start (date and time) must be before due (date and time) when both exist ([TK-3](#tk-3), [BR-11](../02-domain/business-rules.md#br-11)).
 - **Due date:** date picker with quick choices, with optional time (`due_time`).
-  - Setting a due time with no due date sets the due date to today.
+  - The due time can be set only once there is a due date; **No date** clears both.
   - Start (date and time) must be before due (date and time) when both exist; otherwise shows `task.start_after_due` ("Start can't be after the due date.") and is not saved ([BR-11](../02-domain/business-rules.md#br-11), DB `CHECK`).
   - Clearing the due date clears the due time (and the reminder only if it counted from the due date). Clearing one date never clears the other date.
 - **Reminder:**
@@ -179,7 +179,7 @@ Task responses expose nullable `start_date`, `due_time`, `repeat_rule` and read-
   - Title 1–200, notes ≤ 5,000
   - Enums
   - Start (date and time) must be before due (date and time) when both exist (422 `task.start_after_due`, DB `CHECK`)
-  - Times need their day: `start_time` needs `start_date` (setting one with no start date sets the start date to the due date if any, else today); `due_time` needs `due_date` (sets it to today)
+  - Times need their day: `start_time` without `start_date` → 422 on `start_date`; `due_time` without `due_date` → 422 on `due_date` (DB `CHECK`s too)
   - A reminder needs a `start_date` or `due_date`; repeat needs a `due_date` (or start date)
   - `project_id` belongs to the user
   - Migration: `end_time` is replaced by `due_time`. Existing tasks with `start_time`–`end_time` on one date migrate in the code issue to `start_date` = `due_date` = that date, `due_time` = the old end time.
