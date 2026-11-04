@@ -1,8 +1,10 @@
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
+  useMemo,
   useRef,
   useState,
   type ReactElement,
@@ -168,22 +170,25 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
       | { type: "project"; id: string; item: Project }
       | { type: "note"; id: string; item: NoteHit };
 
-    const visibleRows: VisibleRow[] = [];
-    if (tab === "all" || tab === "tasks") {
-      for (const t of tasks) {
-        visibleRows.push({ type: "task", id: t.id, item: t });
+    const visibleRows = useMemo<VisibleRow[]>(() => {
+      const rows: VisibleRow[] = [];
+      if (tab === "all" || tab === "tasks") {
+        for (const t of tasks) {
+          rows.push({ type: "task", id: t.id, item: t });
+        }
       }
-    }
-    if (tab === "all" || tab === "notes") {
-      for (const n of notes) {
-        visibleRows.push({ type: "note", id: n.id, item: n });
+      if (tab === "all" || tab === "notes") {
+        for (const n of notes) {
+          rows.push({ type: "note", id: n.id, item: n });
+        }
       }
-    }
-    if (tab === "all" || tab === "projects") {
-      for (const p of projectHits) {
-        visibleRows.push({ type: "project", id: p.id, item: p });
+      if (tab === "all" || tab === "projects") {
+        for (const p of projectHits) {
+          rows.push({ type: "project", id: p.id, item: p });
+        }
       }
-    }
+      return rows;
+    }, [tab, tasks, notes, projectHits]);
 
     // Reset active index to unselected whenever new results arrive or tab changes
     useEffect(() => {
@@ -197,63 +202,151 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
         ? `search-opt-${activeIndex}`
         : undefined;
 
-    const handleSelectTask = (id: string) => {
-      if (input.trim()) {
-        addRecent(input);
-      }
-      onOpenTask(id);
-    };
+    const handleSelectTask = useCallback(
+      (id: string) => {
+        if (input.trim()) {
+          addRecent(input);
+        }
+        onOpenTask(id);
+      },
+      [input, onOpenTask],
+    );
 
-    const handleSelectProject = (id: string) => {
-      if (input.trim()) {
-        addRecent(input);
-      }
-      onOpenProject(id);
-    };
+    const handleSelectProject = useCallback(
+      (id: string) => {
+        if (input.trim()) {
+          addRecent(input);
+        }
+        onOpenProject(id);
+      },
+      [input, onOpenProject],
+    );
 
-    const handleSelectNote = (id: string) => {
-      onOpenNote(id);
-    };
+    const handleSelectNote = useCallback(
+      (id: string) => {
+        onOpenNote(id);
+      },
+      [onOpenNote],
+    );
+
+    const navigateNext = useCallback(() => {
+      if (visibleRows.length === 0) return;
+      const next = activeIndex < 0 ? 0 : (activeIndex + 1) % visibleRows.length;
+      setActiveIndex(next);
+      document
+        .getElementById(`search-opt-${next}`)
+        ?.scrollIntoView?.({ block: "nearest" });
+    }, [activeIndex, visibleRows.length]);
+
+    const navigatePrev = useCallback(() => {
+      if (visibleRows.length === 0) return;
+      const next = activeIndex <= 0 ? visibleRows.length - 1 : activeIndex - 1;
+      setActiveIndex(next);
+      document
+        .getElementById(`search-opt-${next}`)
+        ?.scrollIntoView?.({ block: "nearest" });
+    }, [activeIndex, visibleRows.length]);
+
+    const activateCurrent = useCallback(() => {
+      if (pending || visibleRows.length === 0 || activeIndex < 0) {
+        if (input.trim()) {
+          addRecent(input);
+          setRecentList(readRecent());
+        }
+        runNow();
+      } else {
+        const row = visibleRows[activeIndex];
+        if (row) {
+          if (row.type === "task") handleSelectTask(row.id);
+          else if (row.type === "project") handleSelectProject(row.id);
+          else if (row.type === "note") handleSelectNote(row.id);
+        }
+      }
+    }, [
+      pending,
+      visibleRows,
+      activeIndex,
+      input,
+      runNow,
+      handleSelectTask,
+      handleSelectProject,
+      handleSelectNote,
+    ]);
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (e.key === "ArrowDown") {
         if (visibleRows.length > 0) {
           e.preventDefault();
-          const next =
-            activeIndex < 0 ? 0 : (activeIndex + 1) % visibleRows.length;
-          setActiveIndex(next);
-          document
-            .getElementById(`search-opt-${next}`)
-            ?.scrollIntoView?.({ block: "nearest" });
+          navigateNext();
         }
       } else if (e.key === "ArrowUp") {
         if (visibleRows.length > 0) {
           e.preventDefault();
-          const next =
-            activeIndex <= 0 ? visibleRows.length - 1 : activeIndex - 1;
-          setActiveIndex(next);
-          document
-            .getElementById(`search-opt-${next}`)
-            ?.scrollIntoView?.({ block: "nearest" });
+          navigatePrev();
         }
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (pending || visibleRows.length === 0 || activeIndex < 0) {
-          if (input.trim()) {
-            addRecent(input);
-            setRecentList(readRecent());
-          }
-          runNow();
-        } else {
-          const row = visibleRows[activeIndex];
-          if (row) {
-            if (row.type === "task") handleSelectTask(row.id);
-            else if (row.type === "project") handleSelectProject(row.id);
-            else if (row.type === "note") handleSelectNote(row.id);
-          }
-        }
+        activateCurrent();
       }
     };
+
+    // Auto-focus input on mount
+    useEffect(() => {
+      internalInputRef.current?.focus();
+    }, []);
+
+    // Global keyboard listener for search panel (UX: arrows work without explicitly clicking search box)
+    useEffect(() => {
+      const onGlobalKeyDown = (e: KeyboardEvent) => {
+        if (e.defaultPrevented) return;
+
+        const active = document.activeElement;
+
+        // If typing inside another input/textarea, ignore
+        if (
+          active &&
+          active !== internalInputRef.current &&
+          (active.tagName === "INPUT" ||
+            active.tagName === "TEXTAREA" ||
+            (active as HTMLElement).isContentEditable)
+        ) {
+          return;
+        }
+
+        // If a picker popover is open, let it handle arrows
+        if (document.querySelector('[id*="picker"][role="listbox"]')) {
+          return;
+        }
+
+        if (e.key === "ArrowDown") {
+          if (visibleRows.length > 0) {
+            e.preventDefault();
+            navigateNext();
+          }
+        } else if (e.key === "ArrowUp") {
+          if (visibleRows.length > 0) {
+            e.preventDefault();
+            navigatePrev();
+          }
+        } else if (e.key === "Enter") {
+          if (activeIndex >= 0) {
+            e.preventDefault();
+            activateCurrent();
+          }
+        } else if (
+          e.key.length === 1 &&
+          !e.ctrlKey &&
+          !e.metaKey &&
+          !e.altKey &&
+          active !== internalInputRef.current
+        ) {
+          internalInputRef.current?.focus();
+        }
+      };
+
+      window.addEventListener("keydown", onGlobalKeyDown);
+      return () => window.removeEventListener("keydown", onGlobalKeyDown);
+    }, [visibleRows, activeIndex, navigateNext, navigatePrev, activateCurrent]);
 
     const handleRecentClick = (q: string) => {
       setInput(q);
