@@ -6,7 +6,7 @@
 
 1. The note's status becomes `confirm`. Nothing is applied yet.
 2. "Check this first" lists the planned changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)).
-3. The user taps **Apply changes**. The plan is applied, the app goes back to where the note was written, and a toast says `note.made_*`.
+3. The user taps **Apply changes**. The plan is applied, the app goes back to where the note was written, and a toast says `note.made_*` with Undo ([WF-04](WF-04-undo-a-note.md)).
 
 ## Alternatives
 

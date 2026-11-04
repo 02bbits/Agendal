@@ -21,6 +21,8 @@ export interface UseTaskSyncReturn {
   ) => void;
   getTask: (id: string) => Task | undefined;
   acceptOccurrence: (task: Task, remove: boolean) => void;
+  removeRow: (id: string) => void;
+  insertRow: (task: Task) => void;
 }
 
 export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
@@ -29,6 +31,23 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
   const syncState = useRef<TaskSyncState>(createTaskSyncState(initialTasks));
   const taskSeq = useRef<Map<string, number>>(new Map());
   const taskQueue = useRef<Map<string, Promise<unknown>>>(new Map());
+
+  // A refetch hands in the server's rows: they replace the list, except a task still saving keeps
+  // its local row. Compared by content, since some callers build a new array every render.
+  // ponytail: JSON compare per render; key the rows by updated_at if lists get large
+  const seen = useRef(JSON.stringify(initialTasks));
+  useEffect(() => {
+    const next = JSON.stringify(initialTasks);
+    if (next === seen.current) return;
+    seen.current = next;
+    rowsRef.current = initialTasks.map((task) => {
+      if (taskQueue.current.has(task.id))
+        return rowsRef.current.find((row) => row.id === task.id) ?? task;
+      syncState.current.confirmed.set(task.id, task);
+      return task;
+    });
+    setTasks(rowsRef.current);
+  }, [initialTasks]);
 
   useEffect(() => {
     const onTaskCreated = (e: Event) => {
@@ -40,9 +59,21 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
         setTasks(rowsRef.current);
       }
     };
+    const onTaskDeleted = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      const deletedId = customEvent?.detail?.id;
+      if (deletedId) {
+        rowsRef.current = rowsRef.current.filter((t) => t.id !== deletedId);
+        syncState.current.confirmed.delete(deletedId);
+        syncState.current.writers.delete(deletedId);
+        setTasks(rowsRef.current);
+      }
+    };
     window.addEventListener("agendal:task-created", onTaskCreated);
+    window.addEventListener("agendal:task-deleted", onTaskDeleted);
     return () => {
       window.removeEventListener("agendal:task-created", onTaskCreated);
+      window.removeEventListener("agendal:task-deleted", onTaskDeleted);
     };
   }, []);
 
@@ -63,6 +94,26 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
       syncState.current.writers.delete(task.id);
     } else if (!rowsRef.current.some((row) => row.id === task.id)) {
       rowsRef.current = [...rowsRef.current, task];
+      syncState.current.confirmed.set(task.id, task);
+    }
+    setTasks(rowsRef.current);
+  }, []);
+
+  const removeRow = useCallback((id: string) => {
+    rowsRef.current = rowsRef.current.filter((row) => row.id !== id);
+    syncState.current.confirmed.delete(id);
+    syncState.current.writers.delete(id);
+    setTasks(rowsRef.current);
+  }, []);
+
+  const insertRow = useCallback((task: Task) => {
+    if (!rowsRef.current.some((row) => row.id === task.id)) {
+      rowsRef.current = [...rowsRef.current, task];
+      syncState.current.confirmed.set(task.id, task);
+    } else {
+      rowsRef.current = rowsRef.current.map((row) =>
+        row.id === task.id ? task : row,
+      );
       syncState.current.confirmed.set(task.id, task);
     }
     setTasks(rowsRef.current);
@@ -130,5 +181,5 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
     [replaceRow],
   );
 
-  return { tasks, change, getTask, acceptOccurrence };
+  return { tasks, change, getTask, acceptOccurrence, removeRow, insertRow };
 }

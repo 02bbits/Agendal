@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { today } from "../../../lib/clock";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
-import type { TaskApi, TaskUpdateFn } from "../../domain/api";
+import type { DeleteScope, TaskApi, TaskUpdateFn } from "../../domain/api";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { saveErrorMessage } from "./saveError";
 import type { UseTaskSyncReturn } from "./useTaskSync";
@@ -48,6 +48,10 @@ export interface TaskStore {
   toggle: (task: Task) => void;
   change: UseTaskSyncReturn["change"];
   update: TaskUpdateFn;
+  /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */
+  remove: (task: Task, scope?: DeleteScope) => void;
+  /** Restores a deleted task (Undo action) */
+  restore: (task: Task, madeNextId?: string) => void;
   setProjects: (update: (projects: Project[]) => Project[]) => void;
 }
 

@@ -57,18 +57,20 @@ class TaskPatcher
         }
 
         // 4. Initial state
+        $origStartDate = $task->start_date ? substr((string) $task->start_date, 0, 10) : null;
         $origDueDate = $task->due_date ? substr((string) $task->due_date, 0, 10) : null;
         $origStartTime = $task->start_time !== null ? substr((string) $task->start_time, 0, 5) : null;
-        $origEndTime = $task->end_time !== null ? substr((string) $task->end_time, 0, 5) : null;
+        $origDueTime = $task->due_time !== null ? substr((string) $task->due_time, 0, 5) : null;
         $origReminder = $task->reminder ?? 'none';
         $origRepeat = $task->repeat ?? 'never';
         $origRepeatAnchor = $task->repeat_anchor ? substr((string) $task->repeat_anchor, 0, 10) : null;
 
         $merged = [
             'title' => $task->title,
+            'start_date' => $origStartDate,
             'due_date' => $origDueDate,
             'start_time' => $origStartTime,
-            'end_time' => $origEndTime,
+            'due_time' => $origDueTime,
             'priority' => $task->priority,
             'reminder' => $origReminder,
             'repeat' => $origRepeat,
@@ -101,46 +103,42 @@ class TaskPatcher
         }
 
         // 6. Dependent fields (TK §2.2)
-        // - clearing due_date → start_time, end_time, reminder get due_date's time
+        // - Clearing due_date clears due_time, and clears reminder if start_date is empty
         $dueDateWasCleared = array_key_exists('due_date', $appliedFields) && $merged['due_date'] === null;
-
         if ($dueDateWasCleared) {
             $dueDateEffectiveAtIso = ($effectiveAtMap['due_date'] ?? $this->resolveFieldEffectiveAt('due_date', $atPayload))->format('Y-m-d\TH:i:s\Z');
-            $merged['start_time'] = null;
-            $fieldUpdatedAt['start_time'] = $dueDateEffectiveAtIso;
-            $merged['end_time'] = null;
-            $fieldUpdatedAt['end_time'] = $dueDateEffectiveAtIso;
-            $merged['reminder'] = 'none';
-            $fieldUpdatedAt['reminder'] = $dueDateEffectiveAtIso;
-        }
-
-        // - clearing start_time → end_time gets start_time's time
-        $startTimeWasCleared = array_key_exists('start_time', $appliedFields) && $merged['start_time'] === null;
-
-        if ($startTimeWasCleared && ! $dueDateWasCleared) {
-            $startTimeEffectiveAtIso = ($effectiveAtMap['start_time'] ?? $this->resolveFieldEffectiveAt('start_time', $atPayload))->format('Y-m-d\TH:i:s\Z');
-            $merged['end_time'] = null;
-            $fieldUpdatedAt['end_time'] = $startTimeEffectiveAtIso;
-        }
-
-        // - start_time set, or repeat not never, and the merged due_date is empty → due_date = $clock->today($timezone)
-        if (DueDateFallback::needed(
-            is_string($merged['due_date']) ? $merged['due_date'] : null,
-            is_string($merged['start_time']) ? $merged['start_time'] : null,
-            (string) $merged['repeat'],
-        )) {
-            $merged['due_date'] = $this->clock->today($timezone);
-            if (array_key_exists('start_time', $effectiveAtMap)) {
-                $fieldUpdatedAt['due_date'] = $effectiveAtMap['start_time']->format('Y-m-d\TH:i:s\Z');
-            } elseif (array_key_exists('repeat', $effectiveAtMap)) {
-                $fieldUpdatedAt['due_date'] = $effectiveAtMap['repeat']->format('Y-m-d\TH:i:s\Z');
-            } else {
-                $fieldUpdatedAt['due_date'] = $this->resolveEffectiveAt(null)->format('Y-m-d\TH:i:s\Z');
+            $merged['due_time'] = null;
+            $fieldUpdatedAt['due_time'] = $dueDateEffectiveAtIso;
+            if (empty($merged['start_date'])) {
+                $merged['reminder'] = 'none';
+                $fieldUpdatedAt['reminder'] = $dueDateEffectiveAtIso;
             }
         }
 
-        // - repeat changes from never → repeat_anchor = due_date; repeat becomes never → repeat_anchor = null;
-        //   due_date changes while repeating → keep the anchor.
+        // - Clearing start_date clears start_time, and clears reminder if due_date is empty
+        $startDateWasCleared = array_key_exists('start_date', $appliedFields) && $merged['start_date'] === null;
+        if ($startDateWasCleared) {
+            $startDateEffectiveAtIso = ($effectiveAtMap['start_date'] ?? $this->resolveFieldEffectiveAt('start_date', $atPayload))->format('Y-m-d\TH:i:s\Z');
+            $merged['start_time'] = null;
+            $fieldUpdatedAt['start_time'] = $startDateEffectiveAtIso;
+            if (empty($merged['due_date'])) {
+                $merged['reminder'] = 'none';
+                $fieldUpdatedAt['reminder'] = $startDateEffectiveAtIso;
+            }
+        }
+
+        // - repeat with neither date falls back to today
+        if (DueDateFallback::needed(
+            is_string($merged['due_date']) ? $merged['due_date'] : null,
+            is_string($merged['start_date']) ? $merged['start_date'] : null,
+            (string) $merged['repeat'],
+        )) {
+            $merged['due_date'] = $this->clock->today($timezone);
+            $fieldUpdatedAt['due_date'] = (array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null))->format('Y-m-d\TH:i:s\Z');
+        }
+
+        // - repeat changes from never → repeat_anchor = active anchor date; repeat becomes never → repeat_anchor = null;
+        //   anchor date changes while repeating → keep the anchor.
         $repeatAnchor = $origRepeatAnchor;
         $newRepeat = (string) $merged['repeat'];
         if (isset($appliedFields['repeat']) && ! isset($appliedFields['repeat_rule'])) {
@@ -148,13 +146,15 @@ class TaskPatcher
             $fieldUpdatedAt['repeat_rule'] = $fieldUpdatedAt['repeat'];
         }
 
+        $activeAnchorDate = $merged['start_date'] ?: $merged['due_date'];
+
         if ($origRepeat === 'never' && $newRepeat !== 'never') {
-            $repeatAnchor = $merged['due_date'];
+            $repeatAnchor = $activeAnchorDate;
         } elseif ($origRepeat !== 'never' && $newRepeat === 'never') {
             $repeatAnchor = null;
         } elseif ($origRepeat !== 'never' && $newRepeat !== 'never') {
             if ($repeatAnchor === null) {
-                $repeatAnchor = $merged['due_date'];
+                $repeatAnchor = $activeAnchorDate;
             }
         } else {
             $repeatAnchor = null;
@@ -165,20 +165,32 @@ class TaskPatcher
         if (! RepeatSchedule::validFor($merged['repeat_rule'], $newRepeat)) {
             $errors['repeat_rule'] = ['The repeat rule must match the repeat frequency.'];
         }
-        $startTime = $merged['start_time'];
-        $endTime = $merged['end_time'];
-        $reminder = (string) $merged['reminder'];
+        $startDate = $merged['start_date'];
         $dueDate = $merged['due_date'];
+        $startTime = $merged['start_time'];
+        $dueTime = $merged['due_time'];
+        $reminder = (string) $merged['reminder'];
 
-        if ($endTime !== null) {
-            if ($startTime === null) {
-                $errors['end_time'] = ['End time cannot be set without a start time.'];
-            } elseif ($endTime <= $startTime) {
-                $errors['end_time'] = ['End time must be later than the start time.'];
+        $errors = [...$errors, ...DueDateFallback::timeErrors(
+            is_string($startDate) ? $startDate : null,
+            is_string($startTime) ? $startTime : null,
+            is_string($dueDate) ? $dueDate : null,
+            is_string($dueTime) ? $dueTime : null,
+        )];
+
+        if (! empty($startDate) && ! empty($dueDate)) {
+            if ($startDate > $dueDate) {
+                $errors['start_date'] = ["Start can't be after the due date."];
+            } elseif ($startDate === $dueDate && $startTime !== null && $dueTime !== null) {
+                $st = substr((string) $startTime, 0, 5);
+                $dt = substr((string) $dueTime, 0, 5);
+                if ($st >= $dt) {
+                    $errors['start_time'] = ["Start can't be after the due date."];
+                }
             }
         }
 
-        if ($reminder !== 'none' && empty($dueDate)) {
+        if ($reminder !== 'none' && empty($startDate) && empty($dueDate)) {
             $errors['reminder'] = ['Add a date to set a reminder.'];
         }
 
@@ -187,17 +199,21 @@ class TaskPatcher
         }
 
         // 9. Remind_at calculation
-        $scheduleOrReminderChanged = ($merged['due_date'] !== $origDueDate
+        $scheduleOrReminderChanged = ($merged['start_date'] !== $origStartDate
             || $merged['start_time'] !== $origStartTime
+            || $merged['due_date'] !== $origDueDate
+            || $merged['due_time'] !== $origDueTime
             || $merged['reminder'] !== $origReminder);
 
         if ($scheduleOrReminderChanged) {
-            if (empty($merged['due_date']) || $merged['reminder'] === 'none') {
+            if (empty($merged['start_date']) && empty($merged['due_date']) || $merged['reminder'] === 'none') {
                 $task->remind_at = null;
             } else {
-                $task->remind_at = $this->reminders->compute(
-                    (string) $merged['due_date'],
+                $task->remind_at = $this->reminders->forDates(
+                    $merged['start_date'],
                     $merged['start_time'],
+                    $merged['due_date'],
+                    $merged['due_time'],
                     (string) $merged['reminder'],
                     $timezone,
                 );
@@ -206,9 +222,10 @@ class TaskPatcher
 
         // 10. Save once (if dirty)
         $task->title = (string) $merged['title'];
+        $task->start_date = $merged['start_date'];
         $task->due_date = $merged['due_date'];
         $task->start_time = $merged['start_time'];
-        $task->end_time = $merged['end_time'];
+        $task->due_time = $merged['due_time'];
         $task->priority = $merged['priority'];
         $task->reminder = (string) $merged['reminder'];
         $task->repeat = (string) $merged['repeat'];
@@ -223,6 +240,21 @@ class TaskPatcher
         }
 
         return $task;
+    }
+
+    /**
+     * Last write wins per field (TK). A note is a server action on the locked current row, so it must win
+     * even when the task was written in the same second: one second after the newest field stamp, or now.
+     */
+    public function afterLastWrite(Task $task): string
+    {
+        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
+        foreach ($task->field_updated_at ?? [] as $stamp) {
+            $next = (new DateTimeImmutable((string) $stamp))->setTimezone(new DateTimeZone('UTC'))->modify('+1 second');
+            $at = max($at, $next);
+        }
+
+        return $at->format('Y-m-d\TH:i:s\Z');
     }
 
     public function resolveFieldEffectiveAt(string $field, mixed $atPayload): DateTimeImmutable

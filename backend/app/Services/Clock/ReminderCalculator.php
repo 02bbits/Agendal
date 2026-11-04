@@ -28,4 +28,18 @@ final class ReminderCalculator
         // Subtract elapsed time in UTC, including when the interval crosses DST.
         return $dueAt->setTimestamp($dueAt->getTimestamp() - $minutes * 60)->format('Y-m-d\TH:i:s\Z');
     }
+
+    /** Offset from the start (time, else 09:00), else from the due (time, else 09:00) (BR-12). */
+    public function forDates(?string $startDate, ?string $startTime, ?string $dueDate, ?string $dueTime, string $reminder, string $timezone): ?string
+    {
+        if (! empty($startDate)) {
+            return $this->compute($startDate, $startTime, $reminder, $timezone);
+        }
+
+        if (! empty($dueDate)) {
+            return $this->compute($dueDate, $dueTime, $reminder, $timezone);
+        }
+
+        return null;
+    }
 }

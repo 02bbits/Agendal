@@ -48,11 +48,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Created and changed rows open Task details. Deleted rows don't open.
   - A task removed since (by hand or by another note) shows `note.gone_since` and doesn't open.
   - The meta is the row's `label` from the server ("Mon 26 Oct · 09:00 · SQL Course"). Changed rows add the old value: "Fri 30 Oct · HCI · was Wed 28 Oct".
+  - A created row's label is its date, start time and project joined by " · ", empty parts left out, so a task with none of them has an empty meta. It never repeats the title. Times follow the user's time format when the note is applied ("9:00 am" in 12-hour, [UX-32](../01-product/ux-standards.md#ux-32)); the label keeps that format if the setting changes later.
   - A row's accessible name reads its badge, title and meta: "Created: SQL quiz, Mon 26 Oct · 09:00 · SQL Course" (A11Y-21).
 - **Skipped section** (`note.skipped`): each skipped item with its reason (`note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`), or the plain text for `skip`.
 - **Hints:** a duplicate row carries `note.duplicate_hint` ([NU-E13](NU-note-understanding.md#nu-e13)).
 - **When? chips ([Q4](../08-project/open-questions.md#q4)):** a created row whose task has no due date shows `note.ask_when` with chips Today, Tomorrow, Next week and Pick date…. A chip sets the due date like an edit in Task details (`PATCH /tasks/{id}`), and the row's meta updates. The chips disappear once the task has a date, and after Undo all.
-- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). Until Undo all ([IM-44](../08-project/tasks.md#im-44)) and Edit note ([IM-47](../08-project/tasks.md#im-47)) are built, the screen has **Done** only.
+- **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). Until Edit note ([IM-47](../08-project/tasks.md#im-47)) is built, the header menu is absent.
 - **Where the data comes from:** after Make tasks the note is already in hand and isn't asked for again; opened by link, the note is loaded first. Either way each created and changed task is read by its id, so a task removed since shows `note.gone_since` and the When? chips follow the task's real date. The result takes the editor's place in the history, so Back goes to where the editor was opened ([RV-E12](#rv-e12)).
 - **After undo:**
   - The overline says `Undone`.
@@ -69,7 +70,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Unticked rows are kept in the plan JSON as `excluded`, and are not applied.
 - **Ties ([NU-E11](NU-note-understanding.md#nu-e11)):** the row shows "Which task did you mean?" with radio buttons for the candidates, the preselected one already chosen.
 - **Buttons:**
-  - **Apply changes** (primary, or red when the plan has a delete) sends the choices and exclusions. The app goes back to where the note was written, and a toast says `note.made_*`.
+  - **Apply changes** (primary, or red when the plan has a delete) sends the choices and exclusions. The app goes back to where the note was written, and a toast says `note.made_*` with Undo. Undo there is Undo all (§2.4) from the list, followed by the `note.undone` toast and its redo. If a created task was edited in those seconds, Undo opens the note's result screen instead, where the conflict dialog asks first.
   - **Edit note** (secondary) sets the status to `kept` (`POST /notes/{id}/cancel`) and opens the editor again with the note's text. Make tasks then makes a new note.
 - **Re-validation:** Apply re-checks the plan ([NU-E38](NU-note-understanding.md#nu-e38)). If anything changed since, the result screen lists the skipped entries.
 - **No expiry:** a `confirm` note waits indefinitely. Its Notes card shows `note.needs_look_one`.
@@ -207,7 +208,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 ## 8. Data, validation and authorization
 
 - **Apply** runs in the same transaction pattern as [NU §8](NU-note-understanding.md#8-data-validation-and-authorization), with row locks on the matched tasks.
-- **Undo** writes its own reverse log into `notes.undo_log` (json: `{task_id, before, after}`), so redo is exact. The undo log is cleared when redo expires.
+- **Undo** writes its own reverse log into `notes.undo_log` (json: `{redo_until, changes: [{task_id, before, after}]}`), so redo is exact and needs no extra column. The undo log is cleared when redo expires or succeeds.
 - **Field ownership:** "the field still holds the note's value" compares the current value to the `after` value in `applied`. Per-field timestamps ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)) aren't needed for this.
 - **Ownership:** every note action checks that the note's `user_id` matches the session user. Other users' notes return `404` ([authorization matrix](../07-architecture/security.md#authorization-matrix)).
 - **Edit note** stores the new text, sets `notes.edited_at`, and replaces `plan` and `applied`. The undo and the new plan share one transaction, so a failure leaves the note as it was.

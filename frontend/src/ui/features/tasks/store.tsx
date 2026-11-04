@@ -3,6 +3,7 @@ import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
 import { t } from "../../copy";
 import type { Task } from "../../domain/types";
+import type { DeleteScope } from "../../domain/api";
 import * as types from "./types";
 import { useTaskEdit } from "./useTaskEdit";
 import { useTaskSync } from "./useTaskSync";
@@ -28,7 +29,7 @@ export function TaskStoreProvider({
   timeFormat = "24h",
   children,
 }: types.TaskStoreProviderProps) {
-  const { tasks, change, getTask, acceptOccurrence } =
+  const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
     useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
   const [toast, setToast] = React.useState<ToastData | null>(null);
@@ -36,6 +37,12 @@ export function TaskStoreProvider({
   const toastSeq = React.useRef(0);
   const settleTimers = React.useRef<types.SettleTimerMap>(new Map());
   const lifecycleRef = React.useRef<types.LifecycleFn>(() => {});
+  const removeRef = React.useRef<(task: Task, scope?: DeleteScope) => void>(
+    () => {},
+  );
+  const restoreRef = React.useRef<(task: Task, madeNextId?: string) => void>(
+    () => {},
+  );
 
   React.useEffect(
     () => () => {
@@ -168,6 +175,68 @@ export function TaskStoreProvider({
     handleSaveError,
   });
 
+  const restore = React.useCallback(
+    (task: Task, madeNextId?: string) => {
+      if (madeNextId) removeRow(madeNextId);
+      insertRow(task);
+      api.restore(task.id).then(
+        (saved) => {
+          insertRow(saved);
+          if (typeof window !== "undefined") {
+            window.dispatchEvent(
+              new CustomEvent("agendal:task-created", { detail: saved }),
+            );
+          }
+        },
+        (err) => {
+          removeRow(task.id);
+          handleSaveError(err, () => restoreRef.current(task, madeNextId));
+        },
+      );
+    },
+    [api, handleSaveError, insertRow, removeRow],
+  );
+
+  const remove = React.useCallback(
+    (task: Task, scope?: DeleteScope) => {
+      removeRow(task.id);
+      let madeNextId: string | undefined;
+      showToast({
+        message: t("task.deleted", { title: task.title }),
+        actionLabel: t("common.undo"),
+        onAction: () => restore(task, madeNextId),
+      });
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("agendal:task-deleted", { detail: { id: task.id } }),
+        );
+      }
+      api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
+        (res) => {
+          if (res && "next" in res && res.next) {
+            madeNextId = res.next.id;
+            insertRow(res.next);
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(
+                new CustomEvent("agendal:task-created", { detail: res.next }),
+              );
+            }
+          }
+        },
+        (err) => {
+          insertRow(task);
+          handleSaveError(err, () => removeRef.current(task, scope));
+        },
+      );
+    },
+    [api, handleSaveError, insertRow, removeRow, restore, showToast],
+  );
+
+  React.useEffect(() => {
+    removeRef.current = remove;
+    restoreRef.current = restore;
+  }, [remove, restore]);
+
   const store: types.TaskStore = React.useMemo(
     () => ({
       tasks,
@@ -186,6 +255,8 @@ export function TaskStoreProvider({
       toggle,
       change,
       update,
+      remove,
+      restore,
       setProjects,
     }),
     [
@@ -203,6 +274,8 @@ export function TaskStoreProvider({
       toggle,
       change,
       update,
+      remove,
+      restore,
     ],
   );
 

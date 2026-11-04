@@ -19,8 +19,6 @@ use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
-use DateTimeImmutable;
-use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -32,7 +30,7 @@ use Illuminate\Validation\ValidationException;
  * @phpstan-import-type ValidatedPlan from PlanValidator
  * @phpstan-import-type TaskRow from CommandMatcher
  *
- * @phpstan-type AppliedChange array{kind: string, task_id: string, before: array<string, mixed>|null, label: string}
+ * @phpstan-type AppliedChange array{kind: string, task_id: string, before: array<string, mixed>|null, after: array<string, mixed>, label: string}
  */
 final class NoteApplier
 {
@@ -60,8 +58,11 @@ final class NoteApplier
     {
         $user = User::query()->findOrFail($note->user_id);
         $timezone = (string) $user->timezone;
+        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
+        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects,
+            WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
         $locked = $this->lockTargets($note, $plan);
-        [$plan, $gone] = $this->revalidate($note, $user, $plan, $locked, $edits);
+        [$plan, $gone] = $this->revalidate($note, $plan, $locked, $context, $edits);
         if ($plan['dropped'] > 0) {
             Log::info('note_plan_validation', ['dropped' => $plan['dropped'], 'at' => 'apply']);
         }
@@ -76,14 +77,14 @@ final class NoteApplier
                     'update' => $this->update($locked[$entry['task_id']], $entry, $timezone),
                     'delete' => $this->delete($locked[$entry['task_id']]),
                 };
-                $label = $entry['label'] ?? $task->title;
-                $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'label' => $label];
+                $label = $entry['label'] ?? $this->meta($task, $context);
+                $applied[] = ['kind' => $changeKind->value, 'task_id' => $task->id, 'before' => $before, 'after' => $task->attributesToArray(), 'label' => $label];
                 $changes[] = $this->change($changeKind, $task, $label, $entry['ref']);
                 $next = ($entry['done'] ?? false) === true ? $this->recurrence->next($task, restoreDeleted: true) : null;
                 if ($next !== null) {
                     // TK-4: completing a repeating task creates its next occurrence; undo removes it too.
-                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'label' => $next->title];
-                    $changes[] = $this->change(ChangeKind::Created, $next, $next->title);
+                    $applied[] = ['kind' => ChangeKind::Created->value, 'task_id' => $next->id, 'before' => null, 'after' => $next->attributesToArray(), 'label' => $this->meta($next, $context)];
+                    $changes[] = $this->change(ChangeKind::Created, $next, $this->meta($next, $context));
                 }
             }
         }
@@ -118,10 +119,9 @@ final class NoteApplier
      * @param  array<string, array<string, mixed>>  $edits
      * @return array{0: ValidatedPlan, 1: list<array<string, mixed>>}
      */
-    private function revalidate(Note $note, User $user, array $plan, array $locked, array $edits): array
+    private function revalidate(Note $note, array $plan, array $locked, NoteContext $context, array $edits): array
     {
-        $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday);
+        $projects = $context->projects;
         $items = $this->splitter->split($note->text, array_values($projects));
         $gone = [];
         foreach (['update', 'delete'] as $kind) {
@@ -193,13 +193,28 @@ final class NoteApplier
     /** @param array<string, mixed> $entry */
     private function create(Note $note, array $entry, string $timezone): Task
     {
+        if (array_key_exists('end_time', $entry)) {
+            $entry['due_time'] = $entry['end_time'];
+        }
         $stamp = $this->clock->now()->format(DATE_ATOM);
         $task = new Task;
         $task->forceFill(array_intersect_key($entry, array_flip(Task::PATCHABLE)));
+        if ($task->start_time !== null && $task->start_date === null) {
+            $task->start_date = $task->due_date;
+        }
         $task->forceFill(['user_id' => $note->user_id, 'created_by' => TaskCreator::Assistant->value, 'source_note_id' => $note->id]);
-        $task->repeat_anchor = $task->repeat === Repeat::Never->value ? null : $task->due_date;
+        $task->repeat_anchor = $task->repeat === Repeat::Never->value ? null : ($task->start_date ?: $task->due_date);
         $task->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
-        $task->remind_at = $task->due_date === null ? null : $this->reminders->compute((string) $task->due_date, $task->start_time, (string) $task->reminder, $timezone);
+        $task->remind_at = ($task->start_date === null && $task->due_date === null) || $task->reminder === 'none'
+            ? null
+            : $this->reminders->forDates(
+                $task->start_date ? substr((string) $task->start_date, 0, 10) : null,
+                $task->start_time !== null ? substr((string) $task->start_time, 0, 5) : null,
+                $task->due_date ? substr((string) $task->due_date, 0, 10) : null,
+                $task->due_time !== null ? substr((string) $task->due_time, 0, 5) : null,
+                (string) $task->reminder,
+                $timezone,
+            );
         $task->save();
 
         return $task->refresh();
@@ -208,7 +223,11 @@ final class NoteApplier
     /** @param array<string, mixed> $entry */
     private function update(Task $task, array $entry, string $timezone): Task
     {
-        $at = $this->afterLastWrite($task);
+        if (array_key_exists('end_time', $entry)) {
+            $entry['due_time'] = $entry['end_time'];
+        }
+        $entry = $this->withStartInPlace($task, $entry);
+        $at = $this->patcher->afterLastWrite($task);
         $fields = array_intersect_key($entry, array_flip(Task::PATCHABLE));
         if (($entry['done'] ?? false) === true) {
             $this->patcher->complete($task, $at);
@@ -220,40 +239,67 @@ final class NoteApplier
         return $task->refresh();
     }
 
+    /**
+     * A move keeps the start valid (TK-3): a start time needs its start date, a same-day task's start follows its due
+     * date, and a start can't stay after the new due date. If the start and due times then clash on one day, the one
+     * the note didn't set is dropped, as an end not after the start always was (NU-E30).
+     *
+     * @param  array<string, mixed>  $entry
+     * @return array<string, mixed>
+     */
+    private function withStartInPlace(Task $task, array $entry): array
+    {
+        $hourMinute = fn (mixed $time): ?string => $time === null ? null : substr((string) $time, 0, 5);
+        $oldDueDate = $task->due_date ? substr((string) $task->due_date, 0, 10) : null;
+        $oldStartDate = $task->start_date ? substr((string) $task->start_date, 0, 10) : null;
+        $dueDate = array_key_exists('due_date', $entry) ? $entry['due_date'] : $oldDueDate;
+        $startTime = $hourMinute(array_key_exists('start_time', $entry) ? $entry['start_time'] : $task->start_time);
+        if ($dueDate === null) {
+            return $entry;
+        }
+        $follows = $oldStartDate === null ? $startTime !== null : $oldStartDate === $oldDueDate || $oldStartDate > $dueDate;
+        if ($follows && $dueDate !== $oldStartDate) {
+            $entry['start_date'] = $dueDate;
+        }
+        $dueTime = $hourMinute(array_key_exists('due_time', $entry) ? $entry['due_time'] : $task->due_time);
+        $startDate = $entry['start_date'] ?? $oldStartDate;
+        if ($startDate === $dueDate && $startTime !== null && $dueTime !== null && $startTime >= $dueTime) {
+            if (array_key_exists('start_time', $entry)) {
+                $entry['due_time'] = null;
+            } else {
+                $entry['start_time'] = null;
+            }
+        }
+
+        return $entry;
+    }
+
     private function delete(Task $task): Task
     {
-        $task->field_updated_at = array_replace($task->field_updated_at ?? [], ['deleted' => $this->afterLastWrite($task)]);
+        $task->field_updated_at = array_replace($task->field_updated_at ?? [], ['deleted' => $this->patcher->afterLastWrite($task)]);
         $task->save();
         $task->delete();
 
         return $task;
     }
 
-    /**
-     * Last write wins per field (TK). A note is a server action on the locked current row, so it must win
-     * even when the task was written in the same second: one second after the newest field stamp, or now.
-     */
-    private function afterLastWrite(Task $task): string
-    {
-        $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
-        foreach ($task->field_updated_at ?? [] as $stamp) {
-            $next = (new DateTimeImmutable((string) $stamp))->setTimezone(new DateTimeZone('UTC'))->modify('+1 second');
-            $at = max($at, $next);
-        }
-
-        return $at->format('Y-m-d\TH:i:s\Z');
-    }
-
     /** @return array<string, mixed> the task as the plan validator compares it */
     private function row(Task $task): array
     {
         $row = $task->attributesToArray();
-        foreach (['start_time', 'end_time'] as $key) {
-            $row[$key] = isset($row[$key]) ? substr((string) $row[$key], 0, 5) : null;
-        }
+        $row['start_time'] = isset($row['start_time']) ? substr((string) $row['start_time'], 0, 5) : null;
+        $row['end_time'] = TaskCandidates::sessionEnd($task);
         $row['due_date'] = isset($row['due_date']) ? substr((string) $row['due_date'], 0, 10) : null;
 
         return $row;
+    }
+
+    /** A created row's meta (RV §2.1): "Mon 26 Oct · 09:00 · SQL Course", empty parts left out. */
+    private function meta(Task $task, NoteContext $context): string
+    {
+        $row = $this->row($task);
+
+        return implode(' · ', array_filter([$context->scheduled($row['due_date'], $row['start_time'], ' · '), $context->projects[(string) $row['project_id']] ?? null]));
     }
 
     /** @return array<string, mixed> one change in the note result */

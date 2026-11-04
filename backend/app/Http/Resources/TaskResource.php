@@ -32,9 +32,10 @@ class TaskResource extends JsonResource
         return [
             'id' => $this->id,
             'title' => $this->title,
+            'start_date' => $this->start_date ? substr((string) $this->start_date, 0, 10) : null,
             'due_date' => $this->due_date ? substr((string) $this->due_date, 0, 10) : null,
             'start_time' => $this->start_time !== null ? substr((string) $this->start_time, 0, 5) : null,
-            'end_time' => $this->end_time !== null ? substr((string) $this->end_time, 0, 5) : null,
+            'due_time' => $this->due_time !== null ? substr((string) $this->due_time, 0, 5) : null,
             'priority' => $this->priority ?: null,
             'project_id' => $this->project_id,
             'repeat' => $this->repeat ?? 'never',

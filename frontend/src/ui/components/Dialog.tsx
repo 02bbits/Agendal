@@ -1,4 +1,5 @@
-import { useId, useRef, type ReactNode } from "react";
+import { useId, useRef, type ReactNode, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
@@ -14,6 +15,8 @@ export interface DialogProps {
   children?: ReactNode;
   /** Takes a history entry so Back closes it. Off when the dialog sits over a screen that has its own entry. */
   history?: boolean;
+  /** Initial element to focus on open, e.g. Cancel button (A11Y-42). */
+  initialFocusRef?: RefObject<HTMLElement | null>;
 }
 
 export function Dialog({
@@ -24,21 +27,30 @@ export function Dialog({
   actions,
   children,
   history = true,
+  initialFocusRef,
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
   const descriptionId = useId();
-  useModalFocus(dialogRef, titleRef, open, onClose);
+  useModalFocus(dialogRef, titleRef, open, onClose, initialFocusRef);
   useHistoryEntry(open && history, onClose);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
-  return (
-    <div className="modal modal-open bg-scrim px-gutter">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+    >
       <div
         ref={dialogRef}
-        className="modal-box flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-lg motion-reduce:transition-none"
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-2xl motion-reduce:transition-none"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -60,6 +72,7 @@ export function Dialog({
         {children}
         <div className="mt-3 flex flex-col gap-2">{actions}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

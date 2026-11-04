@@ -5,6 +5,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Str;
 use Opis\JsonSchema\Errors\ErrorFormatter;
@@ -46,7 +47,7 @@ it('validates the response against the shared API schema (T-NU-80)', function ()
 
 it('records before values without clearing unchanged task fields', function () {
     $task = new Task;
-    $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'end_time' => '10:00'])->save();
+    $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
     $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload('done email group'))->assertCreated();
     expect($task->fresh()->done)->toBeTrue()->and($task->fresh()->due_date)->toBe('2026-10-23');
     $log = Note::firstOrFail()->applied;
@@ -66,6 +67,18 @@ it('uses the written time for offline notes (T-NU-126)', function () {
     $this->actingAs($this->noteUser)->postJson('/api/v1/notes', $payload)->assertCreated();
     expect(Task::firstOrFail()->due_date)->toBe('2026-10-22')->and(Task::firstOrFail()->start_time)->toBe('20:00:00');
 });
+
+it('labels a created row with its date, time and project, not its title (RV-1)', function (string $text, string $format, string $label) {
+    $this->noteUser->forceFill(['time_format' => $format])->save();
+    DB::table('projects')->insert(['id' => (string) Str::uuid7(), 'user_id' => $this->noteUser->id, 'name' => 'SQL Course', 'colour' => 'blue']);
+    $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()
+        ->assertJsonPath('changes.0.kind', 'created')->assertJsonPath('changes.0.label', $label);
+})->with([
+    'date' => ['buy milk tomorrow', '24h', 'Sat 24 Oct'],
+    'date, time and project' => ['SQL Course quiz monday 9am', '24h', 'Mon 26 Oct · 09:00 · SQL Course'],
+    '12-hour time' => ['SQL Course quiz monday 9am', '12h', 'Mon 26 Oct · 9:00 am · SQL Course'],
+    'no date' => ['buy milk', '24h', ''],
+]);
 
 it('rolls back the note and all task writes on apply failure (T-NU-73)', function () {
     Event::listen('eloquent.created: '.Task::class, function (Task $task): void {

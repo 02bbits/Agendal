@@ -11,9 +11,10 @@ function makeTask(overrides: Partial<Task> = {}): Task {
   return {
     id: "task-1",
     title: "Write documentation",
+    start_date: null,
     due_date: "2026-10-31",
     start_time: null,
-    end_time: null,
+    due_time: null,
     priority: "medium",
     project_id: null,
     repeat: "never",

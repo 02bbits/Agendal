@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../src/lib/apiError";
+import { today as getToday } from "../../src/lib/clock";
 import type { Task } from "../../src/ui/domain/types";
 import type { CreateTaskBody } from "../../src/ui/domain/newTask";
 import { NewTaskSheet, type NewTaskSheetProps } from "../../src/ui";
@@ -330,6 +331,83 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
       within(dialog2).getByRole("button", { name: "Discard" }),
     );
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("due time disabled with the No date chip", async () => {
+    const { sheet } = await renderSheet({ pathname: "/" });
+    await userEvent.click(radio("Due", "No date"));
+    const dueTimePicker = within(sheet).getByRole("button", {
+      name: "Due time",
+    }) as HTMLButtonElement;
+    expect(dueTimePicker.disabled).toBe(true);
+  });
+
+  it("choosing start date + start time + due time sends start_date, start_time, due_date, due_time in the create body", async () => {
+    let sentBody: CreateTaskBody | undefined;
+    const onCreate = vi.fn(async (body: CreateTaskBody) => {
+      sentBody = body;
+      return {} as Task;
+    });
+
+    const currentToday = getToday();
+    const { sheet } = await renderSheet({ today: currentToday, onCreate });
+    await userEvent.type(within(sheet).getByLabelText("Title"), "Timed task");
+
+    // Due time
+    const dueTimePicker = within(sheet).getByRole("button", {
+      name: "Due time",
+    });
+    await userEvent.click(dueTimePicker);
+    await userEvent.click(screen.getByRole("option", { name: "17:00" }));
+
+    // Start date
+    const startDatePicker = within(sheet).getByRole("button", {
+      name: "Start date",
+    });
+    await userEvent.click(startDatePicker);
+    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+
+    // Start time
+    const startTimePicker = within(sheet).getByRole("button", {
+      name: "Start",
+    });
+    await userEvent.click(startTimePicker);
+    await userEvent.click(screen.getByRole("option", { name: "09:00" }));
+
+    // Add task
+    await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
+
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(sentBody).toMatchObject({
+      title: "Timed task",
+      due_date: currentToday,
+      due_time: "17:00",
+      start_date: currentToday,
+      start_time: "09:00",
+    });
+  });
+
+  it("start after due disables Add and shows the error", async () => {
+    const currentToday = getToday();
+    const { sheet } = await renderSheet({ today: currentToday });
+    const addButton = within(sheet).getByRole("button", {
+      name: "Add",
+    }) as HTMLButtonElement;
+    await userEvent.type(within(sheet).getByLabelText("Title"), "Meeting");
+    expect(addButton.disabled).toBe(false);
+
+    // Pick Start date as Tomorrow while Due is Today
+    const startDatePicker = within(sheet).getByRole("button", {
+      name: "Start date",
+    });
+    await userEvent.click(startDatePicker);
+    await userEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
+
+    // Error is displayed and Add is disabled
+    const errorEl = within(sheet).getByRole("alert");
+    expect(errorEl.textContent).toBe("Start can't be after the due date.");
+    expect(errorEl.id).toBe("new-task-dates-error");
+    expect(addButton.disabled).toBe(true);
   });
 
   it("is axe clean in both themes", async () => {

@@ -97,3 +97,7 @@ export function weekdayOrder(weekStart: WeekStart): number[] {
   const first = weekStart === "sun" ? 0 : 1;
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
+
+/** RV-E2: a note can be undone for 30 days after it was processed (dates as `YYYY-MM-DD`). */
+export const undoExpired = (processed: string, today: string) =>
+  addDays(processed, 30) < today;

@@ -1,6 +1,6 @@
 # WF-04 — Undo a Note
 
-**Trigger:** The user taps **Undo all** on a note's result screen. The screen is reached right after processing, or later from the Notes tab.
+**Trigger:** The user taps **Undo** in the toast after Apply changes ([WF-02](WF-02-confirm-risky-changes.md)), or **Undo all** on a note's result screen, reached later from the Notes tab.
 
 ## Main flow
 

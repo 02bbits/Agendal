@@ -40,6 +40,28 @@ Write the test ID in the test name (`it('T-NU-07 tonight after 20:00 has no time
 
 Nightly: corpus in LLM mode, ZAP baseline, k6, Lighthouse. A failure opens an issue automatically.
 
+## NU edge verification (IM-40)
+
+`backend/tests/Unit/Services/NoteEdgeDecisionsTest.php` maps T-NU-101–141 to the matching NU-E1–E41 corpus cases and runs them through the existing PHP `Tests\Support\NoteCorpus` runner. It fails when an edge has no examples or an example differs from its expected plan. It uses the normal Pest suite; the earlier standalone JavaScript engine and tests are not used.
+
+Plan examples do not exercise persistence or provider failures. `NoteConfirmTest.php` and `NoteEdgeCasesTest.php` cover the HTTP/transaction stages, including written-time semantics, duration preservation, repeating occurrences and targets changed before Apply. They retain main's POST → `confirm` preview → Apply contract; new confirmation regressions do not lower its threshold.
+
+**Temporary deferrals:** T-NU-127 / NU-E27 is explicitly skipped while IM-38 (LLM provider failure/timeout handling) is disabled. A rules-only corpus case tagged NU-E27 is not evidence that fallback works. The newer NU-E42 / T-NU-142 date-range requirement is outside IM-40's assigned E1–E41 scope; #129 explicitly leaves date-range parsing for separate work. These deferrals must not be reported as passing tests.
+
+From `backend/`, run the edge and confirmation tests with:
+
+```sh
+php vendor/bin/pest tests/Unit/Services/NoteEdgeDecisionsTest.php tests/Feature/NoteConfirmTest.php tests/Feature/NoteEdgeCasesTest.php
+```
+
+Measure line coverage with the full Pest suite and a coverage driver (Xdebug or PCOV):
+
+```sh
+XDEBUG_MODE=coverage php vendor/bin/pest --coverage-clover=storage/logs/coverage.xml
+```
+
+For the note-engine threshold, sum `coveredstatements` and `statements` from the Clover file metrics for **all** files under `app/Services/Notes`, including the applier, confirmation and Undo services; divide the sums, rather than averaging file percentages. The target is at least 95%. The repository-wide CI coverage enforcement remains IM-60's scope.
+
 ## Test data
 
 - **Clock and zone are always injected.** Tests never read the real clock. Every date test pins `now` and `timezone` ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
