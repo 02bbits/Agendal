@@ -61,7 +61,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Layout and views:**
   - Sticky week bar with the month, the week arrows, the week in view as a read-only label (`2 – 8 Nov`) and the days of the week.
   - `>` goes to the first day of the next week (Monday, or the account's week start). `<` goes to the first day of the previous week, or tomorrow when that has passed, and is off on the current week.
-  - Today stays in the week as a marker, without a task dot, because Upcoming starts tomorrow.
+  - Today stays in the week as a marker that can't be picked, because Upcoming starts tomorrow. Its dot shows like any day's; on phones `(Today)` sits under the dot so the dots stay on one line.
   - The calendar on the month button has **Overdue** with its count in place of Today. It goes to the Overdue section, and is off when nothing is overdue.
   - Creating a task keeps the day in view.
   - **Overdue section** first: open overdue tasks shown above the upcoming days (or as the first column in Board view).
