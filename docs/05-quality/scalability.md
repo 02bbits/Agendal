@@ -54,6 +54,8 @@ Agendal runs on **one Linux server** ([Q14](../08-project/open-questions.md#q14)
 
 PERF tests live in the [test strategy](../06-testing/test-strategy.md#levels-and-tools). They run against the server before the demo.
 
+PERF-03 and PERF-05 also have a local check in `backend/tests/Performance`, outside the normal suites and CI: `php vendor/bin/pest tests/Performance`. It runs inside the app with a fake push sender, so it measures the job and the queries, not the network or the real push service.
+
 | ID | Scenario | Pass |
 |---|---|---|
 | PERF-01 | 15 req/s mixed traffic (lists 60%, sync 25%, edits 15%) for 30 min | SLOs above hold, error rate < 0.1% |
