@@ -17,13 +17,7 @@ import type { NoteFilter } from "../../ui/domain/types";
 import NoteResultClient from "./[id]/NoteResultClient";
 
 function NotesContent({ noteId }: { noteId?: string }) {
-  const {
-    user,
-    settings,
-    openNoteEditor,
-    navigate: baseNavigate,
-    back,
-  } = useAppFrame();
+  const { user, settings, navigate: baseNavigate, back } = useAppFrame();
   const router = useRouter();
   const search = useSearchParams();
   const selected = search.get("note") ?? noteId ?? null;
@@ -151,7 +145,6 @@ function NotesContent({ noteId }: { noteId?: string }) {
             timeZone={appClock.timeZone}
             timeFormat={settings.timeFormat}
             accountInitial={user?.display_name ?? user?.email ?? ""}
-            onNew={openNoteEditor}
             navigate={navigate}
           />
         ) : (

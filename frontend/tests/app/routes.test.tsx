@@ -91,39 +91,30 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     },
   );
 
-  it.each([
-    [
-      "the capture bar",
-      (bar: HTMLElement) =>
-        within(bar).getByRole("button", { name: "Write a note" }),
-    ],
-    [
-      "the Notes tab",
-      () =>
-        within(screen.getByRole("main")).getByRole("button", {
-          name: "New note",
-        }),
-    ],
-  ])(
-    "%s opens the full-screen editor with the cursor in the text (T-NC-01)",
-    async (_, opener) => {
-      renderAt("/notes", NotesPage);
-      await screen.findByRole("heading", { level: 1, name: "Notes" });
-      const bar = screen.getByRole("navigation", {
-        name: "Main",
-      }).parentElement!;
-      await userEvent.click(opener(bar));
-      const editor = screen.getByRole("dialog", { name: "New note" });
-      expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
-        document.activeElement,
-      );
-      expect(router.push).not.toHaveBeenCalled();
-      await userEvent.click(
-        within(editor).getByRole("button", { name: "Cancel" }),
-      );
-      expect(screen.queryByRole("dialog")).toBeNull();
-    },
-  );
+  it("the Notes capture bar opens the editor without a duplicate header action (T-NC-01)", async () => {
+    renderAt("/notes", NotesPage);
+    await screen.findByRole("heading", { level: 1, name: "Notes" });
+    const bar = screen.getByRole("navigation", {
+      name: "Main",
+    }).parentElement!;
+    expect(
+      within(screen.getByRole("main")).queryByRole("button", {
+        name: "New note",
+      }),
+    ).toBeNull();
+    await userEvent.click(
+      within(bar).getByRole("button", { name: "Write a note" }),
+    );
+    const editor = screen.getByRole("dialog", { name: "New note" });
+    expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
+      document.activeElement,
+    );
+    expect(router.push).not.toHaveBeenCalled();
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Cancel" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
 
   it("/search is a pushed screen with Back and the search hint", async () => {
     renderAt("/search", SearchPage);

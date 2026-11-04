@@ -1,4 +1,3 @@
-import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
 import { t, tc } from "../../copy";
@@ -20,7 +19,6 @@ export function NotesScreen({
   timeZone,
   timeFormat,
   accountInitial,
-  onNew,
   navigate,
 }: {
   notes: NoteListEntry[];
@@ -33,7 +31,6 @@ export function NotesScreen({
   timeZone: string;
   timeFormat: TimeFormat;
   accountInitial: string;
-  onNew: () => void;
   navigate: Navigate;
 }) {
   const days = new Map<string, NoteListEntry[]>();
@@ -47,7 +44,6 @@ export function NotesScreen({
         title={t("nav.notes")}
         accountInitial={accountInitial}
         navigate={navigate}
-        action={<Button onClick={onNew}>{t("note.new_title")}</Button>}
       >
         <p className="mt-1 text-footnote text-ink-secondary">
           {t("notes.summary", { count: total, needs })}
@@ -60,10 +56,9 @@ export function NotesScreen({
       >
         {(
           [
-            ["all", t("notes.all", { count: total })],
+            ["all", t("notes.all")],
             ["made", t("notes.made")],
-            ["needs", t("notes.needs", { count: needs })],
-            ["kept", t("notes.kept")],
+            ["needs", t("notes.needs")],
           ] as const
         ).map(([value, label]) => (
           <Chip

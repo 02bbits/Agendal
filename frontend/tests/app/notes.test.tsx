@@ -6,7 +6,6 @@ import { t, type NoteResult } from "../../src/ui";
 
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 const navigate = vi.fn();
-const newNote = vi.fn();
 let query = new URLSearchParams();
 vi.mock("next/navigation", () => ({
   useRouter: () => router,
@@ -16,7 +15,6 @@ vi.mock("../../src/app/AppFrame", () => ({
   useAppFrame: () => ({
     user: { email: "test@example.test" },
     settings: { timeFormat: "24h" },
-    openNoteEditor: newNote,
     navigate,
     back: router.back,
   }),
@@ -115,12 +113,10 @@ it("phone links use the task flow and a selected note changes presentation witho
   expect(result.getAttribute("data-presentation")).toBe("panel");
 });
 
-it("filters saved notes through the API and offers the shared new-note editor", async () => {
+it("filters saved notes through the API", async () => {
   render(<NotesClient />);
   await userEvent.click(
-    await screen.findByRole("button", {
-      name: t("notes.needs", { count: 1 }),
-    }),
+    await screen.findByRole("button", { name: t("notes.needs") }),
   );
   await waitFor(() =>
     expect(
@@ -129,10 +125,6 @@ it("filters saved notes through the API and offers the shared new-note editor", 
       ),
     ).toBe(true),
   );
-  await userEvent.click(
-    await screen.findByRole("button", { name: t("note.new_title") }),
-  );
-  expect(newNote).toHaveBeenCalledOnce();
 });
 
 it("locks the background and traps focus until the Notes modal closes", async () => {
