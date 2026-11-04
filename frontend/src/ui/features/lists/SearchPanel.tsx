@@ -370,7 +370,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
         )}
 
         {/* Content area */}
-        <div className="flex-1 overflow-y-auto p-2">
+        <div className="flex-1 overflow-y-auto overscroll-contain p-2">
           {!hasCriteria ? (
             /* Home (no criteria) */
             <div className="flex flex-col gap-4 py-2">

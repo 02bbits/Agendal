@@ -872,6 +872,40 @@ describe("SearchPanel & SearchPopup", () => {
     expect(screen.queryByText(/⌘K/)).toBeNull();
   });
 
+  it("locks the page behind the popup but keeps typing and scrolling inside it", () => {
+    render(
+      <SearchPopup
+        clock={{ now: () => new Date("2026-10-23T03:00:00Z"), timeZone: "UTC" }}
+        onClose={() => {}}
+        projects={mockProjects}
+        timeFormat="24h"
+        searchTasks={vi.fn()}
+        searchNotes={vi.fn()}
+        onOpenTask={() => {}}
+        onOpenProject={() => {}}
+        onOpenNote={() => {}}
+      />,
+    );
+    const wheel = () =>
+      new WheelEvent("wheel", { bubbles: true, cancelable: true });
+
+    const outside = wheel();
+    document.body.dispatchEvent(outside);
+    expect(outside.defaultPrevented).toBe(true);
+
+    const inside = wheel();
+    screen.getByRole("dialog").dispatchEvent(inside);
+    expect(inside.defaultPrevented).toBe(false);
+
+    const space = new KeyboardEvent("keydown", {
+      key: " ",
+      bubbles: true,
+      cancelable: true,
+    });
+    screen.getByRole("combobox").dispatchEvent(space);
+    expect(space.defaultPrevented).toBe(false);
+  });
+
   it("navigates rows with ArrowDown and Enter, opens task and project", async () => {
     vi.useFakeTimers();
     try {
