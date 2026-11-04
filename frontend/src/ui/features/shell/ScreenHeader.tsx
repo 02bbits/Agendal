@@ -32,7 +32,7 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
             <Link
               href={ROUTES.search}
               navigate={navigate}
-              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-ink before:absolute before:size-8 before:rounded-full before:bg-fill [&>svg]:relative"
+              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-ink transition-colors before:absolute before:size-8 before:rounded-full before:bg-fill hover:before:bg-fill-2 [&>svg]:relative"
               aria-label={t("nav.search")}
             >
               <SearchIcon size={20} />
