@@ -1,8 +1,19 @@
-import { useId, useRef, type MouseEvent, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useId,
+  useRef,
+  type MouseEvent,
+  type ReactNode,
+} from "react";
+import { createPortal } from "react-dom";
 import { IconButton } from "./IconButton";
 import { XIcon } from "./icons";
 import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
+
+/** A sheet opened from another sheet stays inside it, in the parent's focus trap. */
+const InsideSheet = createContext(false);
 
 export interface SheetProps {
   open: boolean;
@@ -30,16 +41,17 @@ export function Sheet({
   const sheetRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
+  const nested = useContext(InsideSheet);
   useModalFocus(sheetRef, titleRef, open, onClose);
   useHistoryEntry(open, onClose);
 
-  if (!open) return null;
+  if (!open || typeof document === "undefined") return null;
 
   const onScrimClick = (event: MouseEvent<HTMLDivElement>) => {
     if (event.target === event.currentTarget) onClose();
   };
 
-  return (
+  const sheet = (
     <div
       className="modal modal-open modal-bottom bg-scrim md:modal-middle"
       onMouseDown={onScrimClick}
@@ -79,8 +91,11 @@ export function Sheet({
             <span />
           )}
         </div>
-        {children}
+        <InsideSheet.Provider value={true}>{children}</InsideSheet.Provider>
       </div>
     </div>
   );
+
+  // In body: a parent with its own stacking (the sticky week bar) would keep it under the tab bar
+  return nested ? sheet : createPortal(sheet, document.body);
 }
