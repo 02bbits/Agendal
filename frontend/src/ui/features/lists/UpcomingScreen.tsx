@@ -92,6 +92,15 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   );
 
   const hasTasks = store.tasks.some((t) => !t.done || store.isSettling(t.id));
+  const hasFilteredEntries =
+    Object.values(entriesByDay).some((entries) => entries.length > 0) ||
+    overdueTasks.length > 0;
+  const isFilterEmpty = filter !== "all" && !hasFilteredEntries;
+
+  const filterEmptyFullText = t("list.filter_empty");
+  const showAllText = t("common.show_all");
+  const [filterEmptyPrefix] = filterEmptyFullText.split(showAllText);
+
   const { showHeader = true, showFilter = true } = props;
 
   return (
@@ -150,7 +159,20 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
         )}
       </div>
 
-      {!hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>}
+      {isFilterEmpty ? (
+        <p className="mt-8 text-center text-callout text-ink-secondary">
+          <span>{filterEmptyPrefix}</span>
+          <button
+            type="button"
+            onClick={() => chooseFilter("all")}
+            className="cursor-pointer font-medium text-primary hover:underline"
+          >
+            {showAllText}
+          </button>
+        </p>
+      ) : (
+        !hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>
+      )}
 
       <div
         className="mt-6"
