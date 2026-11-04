@@ -13,7 +13,7 @@ beforeEach(function () {
     $this->user = User::factory()->create();
 });
 
-function makeNote(User $user, array $attributes = []): Note
+function searchableNote(User $user, array $attributes = []): Note
 {
     static $seq = 1;
 
@@ -37,8 +37,8 @@ it('requires authentication for note search', function () {
 
 it('scopes note search results to the authenticated user', function () {
     $otherUser = User::factory()->create();
-    makeNote($otherUser, ['text' => 'Private note for other user']);
-    $myNote = makeNote($this->user, ['text' => 'Private note of mine']);
+    searchableNote($otherUser, ['text' => 'Private note for other user']);
+    $myNote = searchableNote($this->user, ['text' => 'Private note of mine']);
 
     $res = $this->actingAs($this->user)
         ->getJson('/api/v1/notes/search?q=private')
@@ -49,8 +49,8 @@ it('scopes note search results to the authenticated user', function () {
 });
 
 it('normalizes case and accents both ways for notes', function () {
-    makeNote($this->user, ['text' => 'Bài tập tiếng Việt']);
-    makeNote($this->user, ['text' => 'Café meeting in city']);
+    searchableNote($this->user, ['text' => 'Bài tập tiếng Việt']);
+    searchableNote($this->user, ['text' => 'Café meeting in city']);
 
     $res1 = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q=bai tap')->assertOk();
     expect($res1->json('items'))->toHaveCount(1)
@@ -65,8 +65,8 @@ it('normalizes case and accents both ways for notes', function () {
 });
 
 it('treats %, _ and ! as literal in note search', function () {
-    makeNote($this->user, ['text' => 'Discount 100% on special item_1!']);
-    makeNote($this->user, ['text' => 'Discount 1000 on special itemX1.']);
+    searchableNote($this->user, ['text' => 'Discount 100% on special item_1!']);
+    searchableNote($this->user, ['text' => 'Discount 1000 on special itemX1.']);
 
     $resPercent = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q=100%')->assertOk();
     expect($resPercent->json('items'))->toHaveCount(1);
@@ -79,7 +79,7 @@ it('treats %, _ and ! as literal in note search', function () {
 });
 
 it('matches notes by name', function () {
-    makeNote($this->user, [
+    searchableNote($this->user, [
         'name' => 'Weekly Sync Agenda',
         'text' => 'Discuss release dates and budget.',
     ]);
@@ -91,7 +91,7 @@ it('matches notes by name', function () {
 
 it('returns at most 20 note search results', function () {
     for ($i = 1; $i <= 25; $i++) {
-        makeNote($this->user, [
+        searchableNote($this->user, [
             'text' => sprintf('Batch note record %02d for testing', $i),
         ]);
     }
@@ -101,7 +101,7 @@ it('returns at most 20 note search results', function () {
 });
 
 it('returns only id, title, snippet, status, written_at in note results', function () {
-    makeNote($this->user, [
+    searchableNote($this->user, [
         'text' => 'Testing secret content for payload check',
         'plan' => ['step' => 1],
         'status' => 'done',
@@ -124,7 +124,7 @@ it('produces snippet <= 122 characters containing matched word deep in a note', 
     $deepWord = 'supercalifragilistic';
     $longText = str_repeat('alpha beta ', 30).$deepWord.' '.str_repeat('gamma delta ', 30);
 
-    makeNote($this->user, ['text' => $longText]);
+    searchableNote($this->user, ['text' => $longText]);
 
     $res = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q='.$deepWord)->assertOk();
     expect($res->json('items'))->toHaveCount(1);
@@ -142,7 +142,7 @@ it('validates note search request query parameter', function () {
 });
 
 it('returns empty list when note search query is empty', function () {
-    makeNote($this->user, ['text' => 'Some existing note']);
+    searchableNote($this->user, ['text' => 'Some existing note']);
 
     $res1 = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q=')->assertOk();
     expect($res1->json())->toBe(['items' => []]);
@@ -152,8 +152,8 @@ it('returns empty list when note search query is empty', function () {
 });
 
 it('matches Vietnamese notes according to rules (LV-E5, T-LV-105)', function () {
-    makeNote($this->user, ['text' => 'Bài tập SQL']);
-    makeNote($this->user, ['text' => 'Bãi biển Nha Trang']);
+    searchableNote($this->user, ['text' => 'Bài tập SQL']);
+    searchableNote($this->user, ['text' => 'Bãi biển Nha Trang']);
 
     $resEmpty = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q='.urlencode('à ứ ừ ư'))->assertOk();
     expect($resEmpty->json('items'))->toBeEmpty();
