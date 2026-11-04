@@ -4,6 +4,10 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-04
 
+- `05-quality/nfr.md` NF-13, `03-modules/RV-review-control.md`: general API limit raised from 120/min per user to 300/min plus a 20/s burst cap, per user and per IP for guests.
+
+## 2026-11-04
+
 - **Search in the summary (Refs #29).** [SUMMARY §5](SUMMARY.md): the Search row now lists the popup, tasks, notes and projects, quick filters, Vietnamese matching and the skeleton. [LV §2.3](03-modules/LV-lists-search.md#23-search-lv-3): the popup uses the task panel's backdrop and locks background scrolling.
 - **Vietnamese search matching (Refs #29).** [LV §2.3](03-modules/LV-lists-search.md#23-search-lv-3) and [LV-E5](03-modules/LV-lists-search.md#lv-e5): a word typed with accents keeps them, old and new tone placement match, and words of 1 or 2 letters match only at the start of a word.
 - **Search popup with tasks, projects and notes (Refs #29).** [LV-3 and §2.3](03-modules/LV-lists-search.md#23-search-lv-3): a popup from 768 px, Quick filters, Recent searches, Search in a project, chips All / Tasks / Projects / Notes, what opening each result does, and the skeleton that waits for the answer + 200 ms. LV §7, [api.md](07-architecture/api.md) and [security.md](07-architecture/security.md): `filter` and `project_id` on `GET /tasks/search`, new `GET /notes/search`. [screens.md](01-product/screens.md), [UX-12](01-product/ux-standards.md#ux-12) (Ctrl/Cmd+K) and [copy-catalog.md](01-product/copy-catalog.md) (`search.placeholder`, `search.no_match`).

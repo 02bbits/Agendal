@@ -133,6 +133,9 @@ it('limits note submission and includes Retry-After (T-NU-84)', function () {
     $this->actingAs($this->noteUser);
     for ($i = 0; $i < 30; $i++) {
         $this->postJson('/api/v1/notes', notePayload('ok'))->assertCreated();
+        if (($i + 1) % 19 === 0) {
+            $this->travel(1)->seconds(); // stay under the general 20/s burst cap
+        }
     }
     $this->postJson('/api/v1/notes', notePayload())->assertStatus(429)->assertHeader('Retry-After');
 });
