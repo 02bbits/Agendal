@@ -55,7 +55,11 @@ export function SettingsRows({
       ? t("task.reminder_past")
       : undefined;
 
-  const repeatHelper = describeRepeat(task);
+  const repeatDescription = describeRepeat(task);
+  const repeatLabel = repeatDescription
+    ? repeatDescription.charAt(0).toLocaleUpperCase() +
+      repeatDescription.slice(1)
+    : undefined;
 
   const isScreen = variant === "screen";
 
@@ -109,20 +113,21 @@ export function SettingsRows({
         icon={<RepeatIcon size={18} />}
         tileBg="bg-fill text-ink-secondary"
         label={t("task.repeat")}
-        helper={repeatHelper}
-        helperId="task-repeat-helper"
         control={
           <Picker<Repeat>
             id="task-repeat"
             label={t("task.repeat")}
             value={task.repeat}
+            className="max-w-[180px]"
             options={REPEATS.map((r) => ({
               value: r,
-              label: t(`repeat.${r}` as CopyKey),
+              label:
+                r === task.repeat && repeatLabel
+                  ? repeatLabel
+                  : t(`repeat.${r}` as CopyKey),
             }))}
             onChange={(repeat) => onSave({ repeat })}
             variant={variant}
-            ariaDescribedBy={repeatHelper ? "task-repeat-helper" : undefined}
           />
         }
       />
