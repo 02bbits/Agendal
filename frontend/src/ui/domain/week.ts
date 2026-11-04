@@ -33,6 +33,26 @@ export function isCurrentWeek(week: string[], today: string): boolean {
   return week.includes(today);
 }
 
+/** Formats a 7-day week range: "2 – 8 Nov" or "30 Nov – 6 Dec". */
+export function formatWeekRange(week: string[]): string {
+  if (week.length === 0) return "";
+  const start = parseUtc(week[0]!);
+  const end = parseUtc(week[week.length - 1]!);
+  const monthFmt = new Intl.DateTimeFormat("en-GB", {
+    month: "short",
+    timeZone: "UTC",
+  });
+  const startMonth = monthFmt.format(start);
+  const endMonth = monthFmt.format(end);
+  const startDay = start.getUTCDate();
+  const endDay = end.getUTCDate();
+
+  if (startMonth === endMonth) {
+    return `${startDay} – ${endDay} ${startMonth}`;
+  }
+  return `${startDay} ${startMonth} – ${endDay} ${endMonth}`;
+}
+
 /**
  * Format heading for list view:
  * "2 Nov · Today · Monday", "3 Nov · Tomorrow · Tuesday", else "4 Nov · Wednesday".

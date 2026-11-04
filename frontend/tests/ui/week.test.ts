@@ -3,6 +3,7 @@ import {
   daysAfter,
   dayHeading,
   dayHeadingShort,
+  formatWeekRange,
   isCurrentWeek,
   shiftWeek,
   stripLabel,
@@ -102,5 +103,13 @@ describe("week model pure helpers (Section 2)", () => {
   it("stripLabel returns short weekday and day number", () => {
     expect(stripLabel("2026-11-02")).toEqual({ weekday: "Mon", day: 2 });
     expect(stripLabel("2026-11-08")).toEqual({ weekday: "Sun", day: 8 });
+  });
+
+  it("formatWeekRange formats same month as '2 – 8 Nov' and across months as '30 Nov – 6 Dec'", () => {
+    const sameMonthWeek = weekOf("2026-11-02", "mon");
+    expect(formatWeekRange(sameMonthWeek)).toBe("2 – 8 Nov");
+
+    const acrossMonthWeek = weekOf("2026-12-01", "mon"); // 30 Nov - 6 Dec
+    expect(formatWeekRange(acrossMonthWeek)).toBe("30 Nov – 6 Dec");
   });
 });
