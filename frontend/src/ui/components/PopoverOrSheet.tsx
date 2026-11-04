@@ -51,7 +51,7 @@ export function PopoverOrSheet({
   const [modalHost, setModalHost] = useState<Element | null>(null);
   const setContainer = useCallback((el: HTMLDivElement | null) => {
     containerRef.current = el;
-    setModalHost(el?.closest(".modal") ?? null);
+    setModalHost(el?.closest(".modal, [data-modal-host]") ?? null);
   }, []);
   const popoverRef = useRef<HTMLDivElement>(null);
   const isWide = useMediaQuery("(min-width: 768px)");
@@ -121,6 +121,7 @@ export function PopoverOrSheet({
         createPortal(
           <div
             ref={popoverRef}
+            data-modal-host
             role="presentation"
             onKeyDown={onPopoverKeyDown}
             style={{ top: 0, left: 0, visibility: "hidden" }}

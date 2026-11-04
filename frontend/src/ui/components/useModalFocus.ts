@@ -48,6 +48,14 @@ export function useModalFocus(
     focusTarget();
 
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented) return;
+      // A nested panel handles its own focus and Escape before its parent does.
+      if (
+        event.target instanceof Element &&
+        event.target.closest("[data-modal-host]") !==
+          container.closest("[data-modal-host]")
+      )
+        return;
       if (event.key === "Escape") {
         event.stopPropagation();
         escape.current();
@@ -56,7 +64,7 @@ export function useModalFocus(
       if (event.key !== "Tab") return;
       const focusable = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE),
-      );
+      ).filter((element) => !element.closest("[inert]"));
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
       if (!first || !last) {

@@ -7,6 +7,7 @@ import { appClock } from "../appClock";
 import { useToday } from "../../ui/features/tasks/useToday";
 import { listNotes, type NoteListPage } from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
+import { useModalFocus } from "../../ui/components/useModalFocus";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
 import { Button } from "../../ui/components/Button";
 import { IconButton } from "../../ui/components/IconButton";
@@ -40,6 +41,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const data = loaded?.key === requestKey ? loaded.page : null;
   const error = loaded?.key === requestKey && loaded.error;
   const pushed = useRef(false);
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     let current = true;
     listNotes(filter)
@@ -77,6 +79,25 @@ function NotesContent({ noteId }: { noteId?: string }) {
       router.back();
     } else back();
   }, [router, back]);
+  useModalFocus(panelRef, panelRef, !!selected, close);
+  useEffect(() => {
+    if (!selected) return;
+    const background = [
+      ...document.querySelectorAll<HTMLElement>("[data-shell-navigation]"),
+    ];
+    const previous = background.map((element) => element.inert);
+    background.forEach((element) => {
+      element.inert = true;
+    });
+    const overflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      background.forEach((element, index) => {
+        element.inert = previous[index]!;
+      });
+      document.body.style.overflow = overflow;
+    };
+  }, [selected]);
   const navigate = useCallback(
     (href: string) => {
       const match = href.match(/^\/notes\/([^/?#]+)/);
@@ -117,7 +138,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   };
   return (
     <div className={wide && selected ? "pr-[400px]" : ""}>
-      <div hidden={!!selected && !wide}>
+      <div hidden={!!selected && !wide} inert={!!selected}>
         {data ? (
           <NotesScreen
             notes={data.items}
@@ -150,36 +171,47 @@ function NotesContent({ noteId }: { noteId?: string }) {
         )}
       </div>
       {selected && (
-        <aside
-          aria-label={t("nav.notes")}
-          className="fixed inset-0 z-[55] flex flex-col bg-paper md:left-[248px] xl:left-auto xl:z-40 xl:w-[400px] xl:border-l xl:border-separator"
-        >
-          <header className="hidden min-h-14 shrink-0 items-center justify-between border-b border-separator bg-surface px-4 xl:flex">
-            <span className="font-semibold">{t("nav.notes")}</span>
-            <IconButton
-              plain
-              label={t("common.close")}
-              icon={<XIcon />}
-              onClick={close}
-            />
-          </header>
+        <>
           <div
-            className="relative min-h-0 flex-1 overflow-y-auto px-4 xl:pt-4"
-            onKeyDown={(event) => {
-              if (event.key === "Escape" && !event.defaultPrevented) {
-                event.stopPropagation();
-                close();
-              }
-            }}
+            aria-hidden="true"
+            className="fixed inset-0 z-[54] bg-black/60"
+            onMouseDown={(event) => event.preventDefault()}
+          />
+          <aside
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            tabIndex={-1}
+            data-modal-host
+            aria-label={t("nav.notes")}
+            className="fixed inset-0 z-[55] flex flex-col bg-paper outline-none shadow-2xl md:left-[248px] xl:left-auto xl:w-[400px] xl:border-l xl:border-separator"
           >
-            <NoteResultClient
-              key={selected}
-              id={selected}
-              presentation={wide ? "panel" : "screen"}
-              onClose={close}
-            />
-          </div>
-        </aside>
+            {wide && (
+              <header className="flex min-h-14 shrink-0 items-center justify-between border-b border-separator bg-surface px-4">
+                <span className="font-semibold">{t("nav.notes")}</span>
+                <IconButton
+                  plain
+                  label={t("common.close")}
+                  icon={<XIcon />}
+                  onClick={close}
+                />
+              </header>
+            )}
+            <div
+              className="relative min-h-0 flex-1 overflow-y-auto px-4 xl:pt-4"
+              onKeyDown={(event) => {
+                if (event.key === "Escape") event.stopPropagation();
+              }}
+            >
+              <NoteResultClient
+                key={selected}
+                id={selected}
+                presentation={wide ? "panel" : "screen"}
+                onClose={close}
+              />
+            </div>
+          </aside>
+        </>
       )}
     </div>
   );

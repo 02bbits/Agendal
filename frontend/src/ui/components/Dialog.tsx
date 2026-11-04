@@ -40,7 +40,7 @@ export function Dialog({
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
+      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();

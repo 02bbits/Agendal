@@ -72,6 +72,7 @@ function OpenedTask({
   if (wide)
     return (
       <TaskPanel
+        modal
         taskId={id}
         onClose={onClose}
         projects={store.projects}

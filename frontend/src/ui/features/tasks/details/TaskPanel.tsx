@@ -12,8 +12,10 @@ import { useTaskStore } from "../store";
 import { DeleteTask } from "../DeleteTask";
 import { PanelHeader } from "./PanelHeader";
 import { TaskDetails } from "./TaskDetails";
+import { useModalFocus } from "../../../components/useModalFocus";
 
 export interface TaskPanelProps {
+  modal?: boolean;
   taskId: string;
   onClose: () => void;
   projects?: Project[];
@@ -24,6 +26,7 @@ export interface TaskPanelProps {
 }
 
 export function TaskPanel({
+  modal = false,
   taskId,
   onClose,
   projects,
@@ -33,6 +36,8 @@ export function TaskPanel({
   weekStart,
 }: TaskPanelProps): ReactElement | null {
   const store = useTaskStore();
+  const panelRef = useRef<HTMLElement>(null);
+  useModalFocus(panelRef, panelRef, modal, onClose);
   const task = store.tasks.find((t) => {
     return t.id === taskId;
   });
@@ -69,6 +74,10 @@ export function TaskPanel({
 
   return (
     <aside
+      ref={panelRef}
+      data-modal-host={modal ? true : undefined}
+      role={modal ? "dialog" : undefined}
+      aria-modal={modal ? true : undefined}
       aria-label={t("task.heading")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}

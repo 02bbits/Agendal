@@ -134,3 +134,60 @@ it("filters saved notes through the API and offers the shared new-note editor", 
   );
   expect(newNote).toHaveBeenCalledOnce();
 });
+
+it("locks the background and traps focus until the Notes modal closes", async () => {
+  const view = render(
+    <>
+      <nav data-shell-navigation>
+        <button>Outside</button>
+      </nav>
+      <NotesClient />
+    </>,
+  );
+  const opener = await screen.findByRole("link", { name: /Call mum/ });
+  await userEvent.click(opener);
+  query = new URLSearchParams("note=n1");
+  view.rerender(
+    <>
+      <nav data-shell-navigation>
+        <button>Outside</button>
+      </nav>
+      <NotesClient />
+    </>,
+  );
+  const modal = screen.getByRole("dialog", { name: t("nav.notes") });
+  expect(modal.getAttribute("aria-modal")).toBe("true");
+  expect(
+    (
+      screen.getByRole("button", { name: "Outside" })
+        .parentElement as HTMLElement
+    ).inert,
+  ).toBe(true);
+  expect(opener.closest("[inert]")).not.toBeNull();
+  expect(document.body.style.overflow).toBe("hidden");
+  const close = screen.getByRole("button", { name: t("common.close") });
+  close.focus();
+  await userEvent.tab();
+  expect(document.activeElement).toBe(close);
+  await userEvent.tab({ shift: true });
+  expect(document.activeElement).toBe(close);
+  await userEvent.keyboard("{Escape}");
+  expect(router.back).toHaveBeenCalledOnce();
+  query = new URLSearchParams();
+  view.rerender(
+    <>
+      <nav data-shell-navigation>
+        <button>Outside</button>
+      </nav>
+      <NotesClient />
+    </>,
+  );
+  expect(
+    (
+      screen.getByRole("button", { name: "Outside" })
+        .parentElement as HTMLElement
+    ).inert,
+  ).toBeFalsy();
+  expect(opener.closest("[inert]")).toBeNull();
+  expect(document.body.style.overflow).toBe("");
+});

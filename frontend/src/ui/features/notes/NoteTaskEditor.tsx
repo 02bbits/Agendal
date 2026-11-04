@@ -38,7 +38,7 @@ export function NoteTaskEditor({
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useId();
   useHistoryEntry(!wide, onCancel);
-  useModalFocus(root, heading, !wide, onCancel);
+  useModalFocus(root, heading, true, onCancel);
   useEffect(() => {
     if (wide) heading.current?.focus();
   }, [wide]);
@@ -53,6 +53,7 @@ export function NoteTaskEditor({
   };
   return (
     <section
+      data-modal-host
       ref={root}
       role={wide ? "region" : "dialog"}
       aria-modal={wide ? undefined : true}
