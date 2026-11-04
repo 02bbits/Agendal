@@ -6,6 +6,7 @@ namespace App\Services\Tasks;
 
 use App\Http\Resources\TaskResource;
 use App\Models\Task;
+use App\Services\Search\SearchMatcher;
 use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
@@ -15,7 +16,13 @@ final class SearchQuery
 {
     public const PAGE_SIZE = 50;
 
-    public const QUERY_MAX = 100;
+    public const QUERY_MAX = SearchMatcher::QUERY_MAX;
+
+    private const HAYSTACK = "title || ' ' || coalesce(notes, '')";
+
+    public function __construct(
+        private readonly SearchMatcher $matcher,
+    ) {}
 
     /**
      * @return array{
@@ -45,9 +52,7 @@ final class SearchQuery
             ]);
         }
 
-        $queryStr = trim(mb_substr($rawQuery, 0, self::QUERY_MAX));
-        /** @var list<string> $words */
-        $words = $queryStr !== '' ? (preg_split('/\s+/', $queryStr, -1, PREG_SPLIT_NO_EMPTY) ?: []) : [];
+        $words = $this->matcher->words($rawQuery);
 
         if ($words === [] && $filter === null && $projectId === null && $status === 'all') {
             return [
@@ -66,18 +71,9 @@ final class SearchQuery
             ->where('user_id', $userId)
             ->whereNull('deleted_at');
 
-        // Escape LIKE wildcards: !, %, _
-        $patterns = array_map(
-            fn (string $w): string => '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $w).'%',
-            $words
-        );
-
-        // Every word must match either title or notes (accent- and case-insensitive)
-        foreach ($patterns as $pattern) {
-            $base->whereRaw(
-                "immutable_unaccent(lower(title || ' ' || coalesce(notes, ''))) ILIKE immutable_unaccent(lower(?)) ESCAPE '!'",
-                [$pattern]
-            );
+        foreach ($words as $word) {
+            [$sql, $bindings] = $this->matcher->clause($word, self::HAYSTACK);
+            $base->whereRaw($sql, $bindings);
         }
 
         // Filters applied on base before counts
@@ -120,16 +116,18 @@ final class SearchQuery
         }
 
         // Build in_title expression (1 if ALL words match title, 0 otherwise)
-        if ($patterns === []) {
+        if ($words === []) {
             $inTitleSql = '0';
             $titleBindings = [];
         } else {
             $titleConditions = [];
             $titleBindings = [];
-            foreach ($patterns as $pattern) {
-                $titleConditions[] = "immutable_unaccent(lower(title)) ILIKE immutable_unaccent(lower(?)) ESCAPE '!'";
-                $titleBindings[] = $pattern;
+            foreach ($words as $word) {
+                [$sql, $bindings] = $this->matcher->clause($word, 'title');
+                $titleConditions[] = $sql;
+                $titleBindings = array_merge($titleBindings, $bindings);
             }
+            /** @var literal-string&non-falsy-string $inTitleSql */
             $inTitleSql = '(CASE WHEN '.implode(' AND ', $titleConditions).' THEN 1 ELSE 0 END)';
         }
 
@@ -176,7 +174,7 @@ final class SearchQuery
         // 2. done ASC (open before completed)
         // 3. due_date ASC NULLS LAST
         // 4. id ASC
-        if ($patterns === []) {
+        if ($words === []) {
             $base->orderBy('in_title', 'desc');
         } else {
             $base->orderByRaw("{$inTitleSql} DESC", $titleBindings);

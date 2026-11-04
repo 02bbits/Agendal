@@ -15,14 +15,16 @@ final class NoteSearch
 
     public const SNIPPET = 120;
 
+    public function __construct(
+        private readonly SearchMatcher $matcher,
+    ) {}
+
     /**
      * @return array{items: list<array{id: string, title: string, snippet: string, status: string, written_at: string|null}>}
      */
     public function search(int $userId, string $rawQuery): array
     {
-        $q = trim(mb_substr($rawQuery, 0, 100));
-        /** @var list<string> $words */
-        $words = $q !== '' ? (preg_split('/\s+/', $q, -1, PREG_SPLIT_NO_EMPTY) ?: []) : [];
+        $words = $this->matcher->words($rawQuery);
         if ($words === []) {
             return ['items' => []];
         }
@@ -30,16 +32,9 @@ final class NoteSearch
         $query = Note::query()
             ->where('user_id', $userId);
 
-        $patterns = array_map(
-            fn (string $w): string => '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $w).'%',
-            $words
-        );
-
-        foreach ($patterns as $pattern) {
-            $query->whereRaw(
-                "immutable_unaccent(lower(coalesce(name, '') || ' ' || text)) ILIKE immutable_unaccent(lower(?)) ESCAPE '!'",
-                [$pattern]
-            );
+        foreach ($words as $word) {
+            [$sql, $bindings] = $this->matcher->clause($word, "coalesce(name, '') || ' ' || text");
+            $query->whereRaw($sql, $bindings);
         }
 
         $notes = $query

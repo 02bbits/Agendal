@@ -150,3 +150,17 @@ it('returns empty list when note search query is empty', function () {
     $res2 = $this->actingAs($this->user)->getJson('/api/v1/notes/search')->assertOk();
     expect($res2->json())->toBe(['items' => []]);
 });
+
+it('matches Vietnamese notes according to rules (LV-E5, T-LV-105)', function () {
+    makeNote($this->user, ['text' => 'Bài tập SQL']);
+    makeNote($this->user, ['text' => 'Bãi biển Nha Trang']);
+
+    $resEmpty = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q='.urlencode('à ứ ừ ư'))->assertOk();
+    expect($resEmpty->json('items'))->toBeEmpty();
+
+    $resBai = $this->actingAs($this->user)->getJson('/api/v1/notes/search?q='.urlencode('bài'))->assertOk();
+    $titles = collect($resBai->json('items'))->pluck('snippet')->all();
+    expect($titles)->toHaveCount(1)
+        ->and($titles[0])->toContain('Bài tập')
+        ->and($titles[0])->not->toContain('Bãi biển');
+});

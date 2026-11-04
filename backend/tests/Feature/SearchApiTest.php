@@ -343,3 +343,99 @@ it('supports each filter with empty q and frozen clock', function () {
     expect($resFilterQNoMatch->json('items'))->toHaveCount(0)
         ->and($resFilterQNoMatch->json('counts.all'))->toBe(0);
 });
+
+dataset('vietnamese_search_matrix', [
+    'à ứ ừ ư' => ['à ứ ừ ư', [], [
+        'Bài tập SQL',
+        'Bãi biển Nha Trang',
+        'Bai tap tieng Anh',
+        'Họp nhóm hoà giải',
+        'Hòa nhạc tối nay',
+        'Adv Web report: outline',
+        'Update CV and portfolio links',
+        'Thuỷ điện Sơn La',
+        'Đồ án tốt nghiệp',
+        'Ứng dụng di động',
+        'Research PostgreSQL unaccent',
+        'Learn UI/UX',
+        'Meet at café',
+    ]],
+    'ứ' => ['ứ', ['Ứng dụng di động'], ['Update CV and portfolio links', 'Learn UI/UX']],
+    'u' => ['u', ['Update CV and portfolio links', 'Research PostgreSQL unaccent', 'Learn UI/UX', 'Ứng dụng di động'], ['Adv Web report: outline', 'Bài tập SQL']],
+    'a' => ['a', ['Adv Web report: outline', 'Update CV and portfolio links', 'Bai tap tieng Anh', 'Đồ án tốt nghiệp', 'Meet at café'], ['Research PostgreSQL unaccent']],
+    'bai' => ['bai', ['Bài tập SQL', 'Bãi biển Nha Trang', 'Bai tap tieng Anh'], []],
+    'bài' => ['bài', ['Bài tập SQL', 'Bai tap tieng Anh'], ['Bãi biển Nha Trang']],
+    'bài tập' => ['bài tập', ['Bài tập SQL', 'Bai tap tieng Anh'], []],
+    'hoà' => ['hoà', ['Họp nhóm hoà giải', 'Hòa nhạc tối nay'], []],
+    'hòa' => ['hòa', ['Họp nhóm hoà giải', 'Hòa nhạc tối nay'], []],
+    'thủy' => ['thủy', ['Thuỷ điện Sơn La'], []],
+    'thuỷ' => ['thuỷ', ['Thuỷ điện Sơn La'], []],
+    'do an' => ['do an', ['Đồ án tốt nghiệp'], []],
+    'đồ án' => ['đồ án', ['Đồ án tốt nghiệp'], []],
+    'ĐỒ ÁN' => ['ĐỒ ÁN', ['Đồ án tốt nghiệp'], []],
+    'ung dung' => ['ung dung', ['Ứng dụng di động'], []],
+    'sql' => ['sql', ['Bài tập SQL', 'Research PostgreSQL unaccent'], []],
+    'cafe' => ['cafe', ['Meet at café'], []],
+    'café' => ['café', ['Meet at café'], []],
+    'ui/ux' => ['ui/ux', ['Learn UI/UX'], []],
+]);
+
+it('matches Vietnamese like a person expects (LV-E5, T-LV-105)', function (string $query, array $finds, array $mustNotFind) {
+    $texts = [
+        'Bài tập SQL',
+        'Bãi biển Nha Trang',
+        'Bai tap tieng Anh',
+        'Họp nhóm hoà giải',
+        'Hòa nhạc tối nay',
+        'Adv Web report: outline',
+        'Update CV and portfolio links',
+        'Thuỷ điện Sơn La',
+        'Đồ án tốt nghiệp',
+        'Ứng dụng di động',
+        'Research PostgreSQL unaccent',
+        'Learn UI/UX',
+        'Meet at café',
+    ];
+    foreach ($texts as $text) {
+        makeTask($this->user, ['title' => $text]);
+    }
+
+    $res = $this->actingAs($this->user)
+        ->getJson('/api/v1/tasks/search?q='.urlencode($query))
+        ->assertOk();
+
+    $titles = collect($res->json('items'))->pluck('title')->all();
+
+    if ($finds === []) {
+        expect($titles)->toBeEmpty();
+    } else {
+        foreach ($finds as $expected) {
+            expect($titles)->toContain($expected);
+        }
+    }
+
+    foreach ($mustNotFind as $unexpected) {
+        expect($titles)->not->toContain($unexpected);
+    }
+})->with('vietnamese_search_matrix');
+
+it('handles NFD decomposition for stored titles and queries', function () {
+    $nfdTitle = "Ba\u{0300}i ta\u{0323}\u{0302}p";
+    makeTask($this->user, ['title' => $nfdTitle]);
+    makeTask($this->user, ['title' => 'Bài tập SQL']);
+
+    // Title stored in NFD is found by 'bài' and by 'bai'
+    $resBai = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q='.urlencode('bài'))->assertOk();
+    $titlesBai = collect($resBai->json('items'))->pluck('title')->all();
+    expect($titlesBai)->toContain($nfdTitle);
+
+    $resBaiUnaccent = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q='.urlencode('bai'))->assertOk();
+    $titlesBaiUnaccent = collect($resBaiUnaccent->json('items'))->pluck('title')->all();
+    expect($titlesBaiUnaccent)->toContain($nfdTitle);
+
+    // Query sent in NFD finds 'Bài tập SQL'
+    $nfdQuery = "Ba\u{0300}i";
+    $resNfdQuery = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q='.urlencode($nfdQuery))->assertOk();
+    $titlesNfdQuery = collect($resNfdQuery->json('items'))->pluck('title')->all();
+    expect($titlesNfdQuery)->toContain('Bài tập SQL');
+});
