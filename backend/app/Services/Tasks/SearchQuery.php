@@ -6,7 +6,9 @@ namespace App\Services\Tasks;
 
 use App\Http\Resources\TaskResource;
 use App\Models\Task;
+use DateTimeImmutable;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 final class SearchQuery
@@ -22,30 +24,32 @@ final class SearchQuery
      *     next_cursor: string|null
      * }
      */
-    public function search(int $userId, string $rawQuery, string $status = 'all', ?string $cursor = null): array
-    {
+    public function search(
+        int $userId,
+        string $rawQuery,
+        string $status = 'all',
+        ?string $cursor = null,
+        ?string $filter = null,
+        ?string $projectId = null,
+        ?string $today = null,
+    ): array {
         if (! in_array($status, ['all', 'open', 'completed'], true)) {
             throw ValidationException::withMessages([
                 'status' => ['The selected status is invalid.'],
             ]);
         }
 
-        $queryStr = trim(mb_substr($rawQuery, 0, self::QUERY_MAX));
-        if ($queryStr === '') {
-            return [
-                'items' => [],
-                'counts' => [
-                    'all' => 0,
-                    'open' => 0,
-                    'completed' => 0,
-                ],
-                'next_cursor' => null,
-            ];
+        if ($filter !== null && ! in_array($filter, ['overdue', 'due_week', 'starts_today', 'high_priority', 'from_note'], true)) {
+            throw ValidationException::withMessages([
+                'filter' => ['The selected filter is invalid.'],
+            ]);
         }
 
+        $queryStr = trim(mb_substr($rawQuery, 0, self::QUERY_MAX));
         /** @var list<string> $words */
-        $words = preg_split('/\s+/', $queryStr, -1, PREG_SPLIT_NO_EMPTY) ?: [];
-        if ($words === []) {
+        $words = $queryStr !== '' ? (preg_split('/\s+/', $queryStr, -1, PREG_SPLIT_NO_EMPTY) ?: []) : [];
+
+        if ($words === [] && $filter === null && $projectId === null && $status === 'all') {
             return [
                 'items' => [],
                 'counts' => [
@@ -76,6 +80,24 @@ final class SearchQuery
             );
         }
 
+        // Filters applied on base before counts
+        if ($projectId !== null) {
+            $base->where('project_id', $projectId);
+        }
+
+        if ($filter === 'overdue') {
+            $base->where('done', false)->where('due_date', '<', $today);
+        } elseif ($filter === 'due_week') {
+            $weekEnd = (new DateTimeImmutable($today ?? 'now'))->modify('+6 days')->format('Y-m-d');
+            $base->where('done', false)->whereBetween('due_date', [$today, $weekEnd]);
+        } elseif ($filter === 'starts_today') {
+            $base->where('done', false)->where('start_date', $today);
+        } elseif ($filter === 'high_priority') {
+            $base->where('done', false)->where('priority', 'high');
+        } elseif ($filter === 'from_note') {
+            $base->whereNotNull('source_note_id');
+        }
+
         // Compute counts for all, open, completed
         $countsQuery = clone $base;
         $countsRow = $countsQuery
@@ -98,13 +120,18 @@ final class SearchQuery
         }
 
         // Build in_title expression (1 if ALL words match title, 0 otherwise)
-        $titleConditions = [];
-        $titleBindings = [];
-        foreach ($patterns as $pattern) {
-            $titleConditions[] = "immutable_unaccent(lower(title)) ILIKE immutable_unaccent(lower(?)) ESCAPE '!'";
-            $titleBindings[] = $pattern;
+        if ($patterns === []) {
+            $inTitleSql = '0';
+            $titleBindings = [];
+        } else {
+            $titleConditions = [];
+            $titleBindings = [];
+            foreach ($patterns as $pattern) {
+                $titleConditions[] = "immutable_unaccent(lower(title)) ILIKE immutable_unaccent(lower(?)) ESCAPE '!'";
+                $titleBindings[] = $pattern;
+            }
+            $inTitleSql = '(CASE WHEN '.implode(' AND ', $titleConditions).' THEN 1 ELSE 0 END)';
         }
-        $inTitleSql = '(CASE WHEN '.implode(' AND ', $titleConditions).' THEN 1 ELSE 0 END)';
 
         $base->select('tasks.*');
         $base->selectRaw("{$inTitleSql} AS in_title", $titleBindings);
@@ -149,8 +176,12 @@ final class SearchQuery
         // 2. done ASC (open before completed)
         // 3. due_date ASC NULLS LAST
         // 4. id ASC
-        $base->orderByRaw("{$inTitleSql} DESC", $titleBindings)
-            ->orderBy('done', 'asc')
+        if ($patterns === []) {
+            $base->orderBy('in_title', 'desc');
+        } else {
+            $base->orderByRaw("{$inTitleSql} DESC", $titleBindings);
+        }
+        $base->orderBy('done', 'asc')
             ->orderByRaw('CASE WHEN due_date IS NULL THEN 1 ELSE 0 END ASC')
             ->orderBy('due_date', 'asc')
             ->orderBy('id', 'asc')
@@ -180,30 +211,63 @@ final class SearchQuery
      */
     private function decodeCursor(?string $cursor): ?array
     {
-        if (! is_string($cursor) || $cursor === '') {
+        if ($cursor === null) {
             return null;
         }
 
         $decoded = base64_decode($cursor, true);
-        if ($decoded === false) {
-            return null;
+        if ($decoded === false || base64_encode($decoded) !== $cursor) {
+            throw ValidationException::withMessages([
+                'cursor' => ['The cursor is invalid.'],
+            ]);
         }
 
         try {
             $data = json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
-            if (! is_array($data) || count($data) !== 4) {
-                return null;
-            }
-
-            return [
-                (int) $data[0],
-                (int) $data[1],
-                is_string($data[2]) && $data[2] !== '' ? $data[2] : null,
-                (string) $data[3],
-            ];
         } catch (\Throwable) {
-            return null;
+            throw ValidationException::withMessages([
+                'cursor' => ['The cursor is invalid.'],
+            ]);
         }
+
+        if (! is_array($data) || ! array_is_list($data) || count($data) !== 4) {
+            throw ValidationException::withMessages([
+                'cursor' => ['The cursor is invalid.'],
+            ]);
+        }
+
+        if (! in_array($data[0], [0, 1], true) || ! in_array($data[1], [0, 1], true)) {
+            throw ValidationException::withMessages([
+                'cursor' => ['The cursor is invalid.'],
+            ]);
+        }
+
+        if ($data[2] !== null) {
+            if (! is_string($data[2]) || ! preg_match('/^\d{4}-\d{2}-\d{2}$/', $data[2])) {
+                throw ValidationException::withMessages([
+                    'cursor' => ['The cursor is invalid.'],
+                ]);
+            }
+            $parts = explode('-', $data[2]);
+            if (! checkdate((int) $parts[1], (int) $parts[2], (int) $parts[0])) {
+                throw ValidationException::withMessages([
+                    'cursor' => ['The cursor is invalid.'],
+                ]);
+            }
+        }
+
+        if (! is_string($data[3]) || ! Str::isUuid($data[3])) {
+            throw ValidationException::withMessages([
+                'cursor' => ['The cursor is invalid.'],
+            ]);
+        }
+
+        return [
+            $data[0],
+            $data[1],
+            $data[2],
+            $data[3],
+        ];
     }
 
     private function encodeCursor(Task $task): string

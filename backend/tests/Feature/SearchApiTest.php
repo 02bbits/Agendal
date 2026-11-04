@@ -2,10 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Models\Note;
+use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
+use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Tests\Support\FrozenClock;
 
 uses(RefreshDatabase::class);
 
@@ -228,4 +232,114 @@ it('supports keyset pagination for 50 results per page', function () {
     );
     expect(count($allIds))->toBe(55)
         ->and(count(array_unique($allIds)))->toBe(55);
+});
+
+it('rejects invalid query parameters with 422', function () {
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q[]=x')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test%00invalid')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test%ffinvalid')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?status=bad')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=bad')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?project_id=not-a-uuid')->assertStatus(422);
+});
+
+it('rejects forged cursors with 422, never 500', function () {
+    $validUuid = (string) Str::uuid7();
+
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test&cursor=not-base64!')->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test&cursor='.base64_encode((string) json_encode([1, 0, null, 'not-a-uuid'])))->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test&cursor='.base64_encode((string) json_encode([1, 0, '2026-13-45', $validUuid])))->assertStatus(422);
+    $this->actingAs($this->user)->getJson('/api/v1/tasks/search?q=test&cursor='.base64_encode((string) json_encode([9, 0, null, $validUuid])))->assertStatus(422);
+});
+
+it('returns 404 for unowned or unknown project_id', function () {
+    $otherUser = User::factory()->create();
+    $otherProject = Project::forceCreate([
+        'id' => (string) Str::uuid7(),
+        'user_id' => $otherUser->id,
+        'name' => 'Other Project',
+        'colour' => 'blue',
+        'change_seq' => 1,
+    ]);
+    $unknownUuid = (string) Str::uuid7();
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/tasks/search?project_id='.$otherProject->id)
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'This item no longer exists.');
+
+    $this->actingAs($this->user)
+        ->getJson('/api/v1/tasks/search?project_id='.$unknownUuid)
+        ->assertStatus(404)
+        ->assertJsonPath('error.message', 'This item no longer exists.');
+});
+
+it('supports each filter with empty q and frozen clock', function () {
+    app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:00:00Z'));
+    $otherUser = User::factory()->create();
+
+    // Overdue task (due < 2026-10-23, open)
+    $tOverdue = makeTask($this->user, ['title' => 'Overdue task', 'due_date' => '2026-10-20', 'done' => false]);
+    // Overdue completed (should not appear in overdue filter)
+    makeTask($this->user, ['title' => 'Overdue done', 'due_date' => '2026-10-20', 'done' => true]);
+    // Other user overdue task
+    makeTask($otherUser, ['title' => 'Other overdue', 'due_date' => '2026-10-20', 'done' => false]);
+
+    // Due week task (due between 2026-10-23 and 2026-10-29, open)
+    $tDueWeek = makeTask($this->user, ['title' => 'Due this week', 'due_date' => '2026-10-25', 'done' => false]);
+
+    // Starts today task (start_date = 2026-10-23, open)
+    $tStartsToday = makeTask($this->user, ['title' => 'Starts today task', 'start_date' => '2026-10-23', 'done' => false]);
+
+    // High priority task (priority = high, open)
+    $tHighPriority = makeTask($this->user, ['title' => 'High priority task', 'priority' => 'high', 'done' => false]);
+
+    // From note task (source_note_id not null, with existing note)
+    $note = Note::forceCreate([
+        'id' => (string) Str::uuid7(),
+        'user_id' => $this->user->id,
+        'client_id' => (string) Str::uuid(),
+        'text' => 'Source note text',
+        'status' => 'done',
+        'written_at' => '2026-10-23T08:00:00Z',
+        'written_tz' => 'UTC',
+        'change_seq' => 1,
+    ]);
+    $tFromNote = makeTask($this->user, ['title' => 'From note task', 'source_note_id' => $note->id]);
+
+    // Soft-deleted task matching filters (must never appear)
+    $tDeleted = makeTask($this->user, ['title' => 'Deleted high priority', 'priority' => 'high', 'done' => false]);
+    $tDeleted->delete();
+
+    // Test overdue filter
+    $resOverdue = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=overdue')->assertOk();
+    expect(collect($resOverdue->json('items'))->pluck('id')->all())->toBe([$tOverdue->id])
+        ->and($resOverdue->json('counts.all'))->toBe(1)
+        ->and($resOverdue->json('counts.open'))->toBe(1)
+        ->and($resOverdue->json('counts.completed'))->toBe(0);
+
+    // Test due_week filter
+    $resDueWeek = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=due_week')->assertOk();
+    expect(collect($resDueWeek->json('items'))->pluck('id')->all())->toBe([$tDueWeek->id]);
+
+    // Test starts_today filter
+    $resStartsToday = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=starts_today')->assertOk();
+    expect(collect($resStartsToday->json('items'))->pluck('id')->all())->toBe([$tStartsToday->id]);
+
+    // Test high_priority filter
+    $resHigh = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=high_priority')->assertOk();
+    expect(collect($resHigh->json('items'))->pluck('id')->all())->toBe([$tHighPriority->id]);
+
+    // Test from_note filter
+    $resNote = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=from_note')->assertOk();
+    expect(collect($resNote->json('items'))->pluck('id')->all())->toBe([$tFromNote->id]);
+
+    // Filter + q together
+    $resFilterQ = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=high_priority&q=High priority')->assertOk();
+    expect($resFilterQ->json('items'))->toHaveCount(1)
+        ->and($resFilterQ->json('items.0.id'))->toBe($tHighPriority->id);
+
+    $resFilterQNoMatch = $this->actingAs($this->user)->getJson('/api/v1/tasks/search?filter=high_priority&q=Nomatch')->assertOk();
+    expect($resFilterQNoMatch->json('items'))->toHaveCount(0)
+        ->and($resFilterQNoMatch->json('counts.all'))->toBe(0);
 });

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\SearchTasksRequest;
 use App\Http\Requests\StoreTaskRequest;
 use App\Http\Requests\TaskLifecycleRequest;
 use App\Http\Requests\UpdateTaskRequest;
@@ -57,14 +58,31 @@ class TaskController extends Controller
         return response()->json($upcomingQuery->for($timezone, $from, $days, $filter));
     }
 
-    public function search(Request $request, SearchQuery $searchQuery): JsonResponse
-    {
+    public function search(
+        SearchTasksRequest $request,
+        SearchQuery $searchQuery,
+        ClockInterface $clock,
+    ): JsonResponse {
         $user = $request->user();
         assert($user !== null);
 
-        $q = (string) $request->query('q', '');
-        $status = (string) $request->query('status', 'all');
-        $cursor = $request->query('cursor');
+        $today = $clock->today(((string) $request->attributes->get('timezone')) ?: 'UTC');
+
+        $projectId = $request->input('project_id');
+        if ($projectId !== null) {
+            $project = Project::query()
+                ->where('user_id', $user->id)
+                ->whereNull('deleted_at')
+                ->find($projectId);
+            if (! $project) {
+                abort(404, 'This item no longer exists.');
+            }
+        }
+
+        $q = (string) $request->input('q', '');
+        $status = (string) $request->input('status', 'all');
+        $cursor = $request->input('cursor');
+        $filter = $request->input('filter');
 
         return response()->json(
             $searchQuery->search(
@@ -72,6 +90,9 @@ class TaskController extends Controller
                 $q,
                 $status,
                 is_string($cursor) ? $cursor : null,
+                is_string($filter) ? $filter : null,
+                is_string($projectId) ? $projectId : null,
+                $today,
             )
         );
     }
@@ -103,7 +124,7 @@ class TaskController extends Controller
         }
 
         // 3. Repeat date fallback (times without their day are rejected by the request)
-        $timezone = (string) $request->attributes->get('timezone', 'UTC');
+        $timezone = ((string) $request->attributes->get('timezone')) ?: 'UTC';
         $today = $clock->today($timezone);
         $startDateInput = $request->input('start_date');
         $dueDateInput = $request->input('due_date');
