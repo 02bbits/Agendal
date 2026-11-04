@@ -31,7 +31,8 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
 | `POST /files/extract` | File (≤ 5 MB) → text. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
 | `GET /tasks?view=inbox\|upcoming&filter=` | Lists | [LV-1](../03-modules/LV-lists-search.md#lv-1), [LV-2](../03-modules/LV-lists-search.md#lv-2) |
-| `GET /tasks/search?q=&status=all\|open\|completed` | Search with counts | [LV-3](../03-modules/LV-lists-search.md#lv-3) |
+| `GET /tasks/search?q=&status=all\|open\|completed&filter=&project_id=` | Search with counts | [LV-3](../03-modules/LV-lists-search.md#lv-3) |
+| `GET /notes/search?q=` | Notes in Search: short snippets, at most 20 | [LV-3](../03-modules/LV-lists-search.md#lv-3) |
 | `POST /tasks`, `GET/PATCH/DELETE /tasks/{id}` | Manual create, edit, delete (`?scope=one\|future` for repeating) | [NC-7](../03-modules/NC-note-capture.md#nc-7), [TK-2](../03-modules/TK-tasks.md#tk-2)–5 |
 | `POST /tasks/{id}/complete`, `/reopen` | Complete, and toast Undo | [TK-1](../03-modules/TK-tasks.md#tk-1), [TK-4](../03-modules/TK-tasks.md#tk-4) |
 | `POST /tasks/{id}/restore` | Toast Undo after a delete | [TK-5](../03-modules/TK-tasks.md#tk-5) |

@@ -9,6 +9,7 @@ use App\Http\Controllers\Auth\RegisterController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
@@ -25,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('me', [MeController::class, 'update']);
     Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
     Route::get('notes', [NoteController::class, 'index']);
+    Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');
     Route::get('notes/{note}', [NoteController::class, 'show']);
     Route::put('notes/{note}', [NoteController::class, 'update'])->middleware('throttle:notes');
     Route::post('notes/{note}/make-task', [NoteController::class, 'makeTask']);
@@ -41,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('projects/{id}/restore', [ProjectController::class, 'restore']);
     Route::post('tasks', [TaskController::class, 'store']);
     Route::get('tasks', [TaskController::class, 'index']);
+    Route::get('tasks/search', [TaskController::class, 'search'])->middleware('throttle:search');
     Route::get('tasks/{task}', [TaskController::class, 'show']);
     Route::patch('tasks/{task}', [TaskController::class, 'update']);
     Route::post('tasks/{task}/complete', [TaskController::class, 'complete']);

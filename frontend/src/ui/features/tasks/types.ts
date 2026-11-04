@@ -46,6 +46,8 @@ export interface TaskStore {
   isSettling: (id: string) => boolean;
   completedToday: (task: Task) => boolean;
   toggle: (task: Task) => void;
+  /** Adds a task loaded by id, e.g. one opened from Search. */
+  ensureTask: (task: Task) => void;
   change: UseTaskSyncReturn["change"];
   update: TaskUpdateFn;
   /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */

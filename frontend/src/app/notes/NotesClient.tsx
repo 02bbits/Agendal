@@ -8,6 +8,7 @@ import { useToday } from "../../ui/features/tasks/useToday";
 import { listNotes, type NoteListPage } from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
 import { useModalFocus } from "../../ui/components/useModalFocus";
+import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
 import { Button } from "../../ui/components/Button";
 import { IconButton } from "../../ui/components/IconButton";
@@ -83,27 +84,10 @@ function NotesContent({ noteId }: { noteId?: string }) {
     background.forEach((element) => {
       element.inert = true;
     });
-    // Match TaskPanel's scroll lock without moving sticky shell elements.
-    const preventBackgroundScroll = (event: WheelEvent | TouchEvent) => {
-      if (
-        event.target instanceof Node &&
-        panelRef.current?.contains(event.target)
-      )
-        return;
-      event.preventDefault();
-    };
-    window.addEventListener("wheel", preventBackgroundScroll, {
-      passive: false,
-    });
-    window.addEventListener("touchmove", preventBackgroundScroll, {
-      passive: false,
-    });
     return () => {
       background.forEach((element, index) => {
         element.inert = previous[index]!;
       });
-      window.removeEventListener("wheel", preventBackgroundScroll);
-      window.removeEventListener("touchmove", preventBackgroundScroll);
     };
   }, [selected]);
   const navigate = useCallback(
@@ -194,6 +178,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             aria-label={t("nav.notes")}
             className="fixed inset-0 z-[55] flex flex-col bg-paper outline-none shadow-2xl md:left-[248px] xl:left-auto xl:w-[400px] xl:border-l xl:border-separator"
           >
+            <NoteScrollLock panelRef={panelRef} />
             {wide && (
               <header className="flex min-h-14 shrink-0 items-center justify-between border-b border-separator bg-surface px-4">
                 <span className="font-semibold">{t("nav.notes")}</span>
@@ -223,6 +208,14 @@ function NotesContent({ noteId }: { noteId?: string }) {
       )}
     </div>
   );
+}
+function NoteScrollLock({
+  panelRef,
+}: {
+  panelRef: React.RefObject<HTMLElement | null>;
+}) {
+  useBackgroundScrollLock(panelRef);
+  return null;
 }
 export default function NotesClient({ noteId }: { noteId?: string }) {
   return (
