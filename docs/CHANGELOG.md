@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-04
+
+- **Follow-up and responsive review (Refs #45).** [RV](03-modules/RV-review-control.md), [API](07-architecture/api.md), [agent brief](AGENT-BRIEF.md), [handover](HANDOVER.md) and [summary](SUMMARY.md): literal Keep it as task, same-note follow-up editing, saved-note summaries, preview exclusions and modal desktop/full-screen mobile review. Documents the implementation prepared on `feat/issue-45-followup`; applied-note editing remains IM-47 and pending/offline Notes-list work remains IM-48. Task schemas stay identical to main (`start_date`, `due_time`).
+
 ## 2026-11-03
 
 - **A time needs its date (Refs #129).** [TK §2.2](03-modules/TK-tasks.md#22-task-details-and-editing-tk-2-tk-3) and [TK §8](03-modules/TK-tasks.md#8-data-validation-and-authorization): a start or due time is only set with its date (the server answers 422 and the database has CHECKs, instead of filling in a date); the date pickers get a **No date** choice.

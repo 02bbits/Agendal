@@ -412,6 +412,8 @@ After Foundation, phases 1, 2 and 4 run in parallel; note flow is built against 
 
 ## 13. Where the build is, and what is still open
 
+**Prepared branch (IM-46):** `feat/issue-45-followup` adds follow-up actions, editing a follow-up under the same note id, a minimal saved Notes list and modal desktop/full-screen mobile review. Preview edits and omitted refs are sent only on Apply. This is prepared for a PR, not yet merged; the table below remains a main-only snapshot. General applied-note editing (IM-47) and pending/offline Notes-list behavior (IM-48) remain outside this change.
+
 _Status of `main` on 2026-11-04. "Done" means the IM issue is closed and its code is on `main`; open PRs are not._
 
 | Phase                        | Done                                                                                                                                                                 | In review (open PR) | Not started                                                                                           |
