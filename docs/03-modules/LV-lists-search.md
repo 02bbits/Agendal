@@ -59,7 +59,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.2 Upcoming (LV-2)
 
 - **Layout and views:**
-  - Sticky week bar with the month, the week arrows and the days of the week.
+  - Sticky week bar with the month, the week arrows, the week in view as a read-only label (`2 – 8 Nov`) and the days of the week.
+  - `>` goes to the first day of the next week (Monday, or the account's week start). `<` goes to the first day of the previous week, or tomorrow when that has passed, and is off on the current week.
+  - Today stays in the week as a marker, without a task dot, because Upcoming starts tomorrow.
+  - The calendar on the month button has **Overdue** with its count in place of Today. It goes to the Overdue section, and is off when nothing is overdue.
+  - Creating a task keeps the day in view.
   - **Overdue section** first: open overdue tasks shown above the upcoming days (or as the first column in Board view).
   - **List view:** rolling 2-week window.
   - **Board view:** one week of columns, Overdue column first.
@@ -67,10 +71,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Task entries:**
   - A task appears on its **start date** AND on its **due date** (shown once when they are the same day).
   - On its due date, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue).
+  - **List:** normal entries of a day share one card and due entries share one dashed block below it, split by a dashed line. **Board:** one card per entry, normal ones first.
 - **Filters** (chips, remembered per device):
-  - **All:** all entries across the window.
-  - **Scheduled:** entries with a start time (`start_time`).
-  - **Due only:** due-date entries.
+  - **All:** every upcoming entry, start days and due days.
+  - **Scheduled:** start-day entries of tasks with a start date, plus repeating tasks when IM-31 lands. Every entry here is a normal card, also for a task that starts and is due the same day.
+  - **Due only:** due-day entries of tasks with a due date.
 - **Sort within a day:** same as Today (timed first by start time, then priority (High → Low), then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
 - **Empty:** empty days show "+ Add task"; if no tasks exist anywhere in the window, shows `list.upcoming_empty`.
