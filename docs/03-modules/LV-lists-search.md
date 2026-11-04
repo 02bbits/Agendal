@@ -88,7 +88,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Projects: over names, on the client
   - Notes: over the name and text, newest first, at most 20; a result carries a short snippet, never the whole note
   - Results show Tasks, Notes, then Projects. The Notes section stays, with "No notes found", during a text search
-  - **Case- and accent-insensitive:** "bai tap" finds "Bài tập", "cafe" finds "café"
+  - **Case-insensitive.** A word typed without accents ignores accents: "bai tap" finds "Bài tập", "cafe" finds "café"
+  - **A word typed with accents keeps them:** "bài" finds "Bài", not "Bãi". It also finds text typed without accents ("Bai"), when the word has 2 letters or more
+  - Old and new tone placement are the same word: "hoà" and "hòa", "thuỷ" and "thủy"
+  - A word of 1 or 2 letters matches only at the start of a word: "u" finds "Update", not "outline". Longer words match anywhere: "sql" finds "PostgreSQL"
   - All query words must match, in any order and in any field
 - **Ranking:**
   1. Title matches before notes-only matches
@@ -142,7 +145,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="lv-e2"></a>LV-E2 | Travelling across zones | "Today" follows the device zone. Floating due dates don't move ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)) | T-LV-102 |
 | <a id="lv-e3"></a>LV-E3 | Completing an overdue task | It counts in today's progress. The row moves to Completed | T-LV-103 |
 | <a id="lv-e4"></a>LV-E4 | A task with no date | Inbox No date section ([Q20](../08-project/open-questions.md#q20)), its project, and Search | T-LV-104 |
-| <a id="lv-e5"></a>LV-E5 | Search with Vietnamese diacritics, or without them | Accent-insensitive both ways | T-LV-105 |
+| <a id="lv-e5"></a>LV-E5 | Search with Vietnamese diacritics, or without them | Without accents: ignores accents. With accents: the same accents, or text typed without accents. See [§2.3](#23-search-lv-3) | T-LV-105 |
 | <a id="lv-e6"></a>LV-E6 | Search query with `%`, `_` or quotes | Treated as literal text. Parameterised, with `LIKE` wildcards escaped | T-LV-106, SEC-22 |
 | <a id="lv-e7"></a>LV-E7 | A task matches in both title and notes | Listed once, ranked as a title match | T-LV-107 |
 | <a id="lv-e8"></a>LV-E8 | 5,000 tasks | Inbox, Upcoming and Search stay within read p95 ≤ 300 ms (PERF-05) | PERF-05 |
