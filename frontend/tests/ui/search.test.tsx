@@ -945,13 +945,23 @@ describe("SearchPanel & SearchPopup", () => {
 
       const options = screen.getAllByRole("option");
       expect(options).toHaveLength(2);
-      expect(options[0].getAttribute("aria-selected")).toBe("true");
+      expect(options[0].getAttribute("aria-selected")).toBe("false");
+      expect(options[1].getAttribute("aria-selected")).toBe("false");
+
+      // ArrowDown to first row
+      act(() => {
+        fireEvent.keyDown(input, { key: "ArrowDown" });
+      });
+      let updatedOptions = screen.getAllByRole("option");
+      expect(updatedOptions[0].getAttribute("aria-selected")).toBe("true");
+      expect(updatedOptions[1].getAttribute("aria-selected")).toBe("false");
 
       // ArrowDown to second row
       act(() => {
         fireEvent.keyDown(input, { key: "ArrowDown" });
       });
-      const updatedOptions = screen.getAllByRole("option");
+      updatedOptions = screen.getAllByRole("option");
+      expect(updatedOptions[0].getAttribute("aria-selected")).toBe("false");
       expect(updatedOptions[1].getAttribute("aria-selected")).toBe("true");
 
       // Enter opens active (second) row

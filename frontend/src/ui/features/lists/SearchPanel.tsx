@@ -147,7 +147,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
 
     const [tab, setTab] = useState<SearchTab>("all");
     const [recentList, setRecentList] = useState<string[]>([]);
-    const [activeIndex, setActiveIndex] = useState(0);
+    const [activeIndex, setActiveIndex] = useState(-1);
 
     useEffect(() => {
       setRecentList(readRecent());
@@ -185,13 +185,15 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
       }
     }
 
-    // Reset active index to first row whenever new results arrive
+    // Reset active index to unselected whenever new results arrive or tab changes
     useEffect(() => {
-      setActiveIndex(0);
+      setActiveIndex(-1);
     }, [tasks, projectHits, notes, tab]);
 
     const activeOptionId =
-      visibleRows.length > 0 && activeIndex < visibleRows.length
+      visibleRows.length > 0 &&
+      activeIndex >= 0 &&
+      activeIndex < visibleRows.length
         ? `search-opt-${activeIndex}`
         : undefined;
 
@@ -217,7 +219,8 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
       if (e.key === "ArrowDown") {
         if (visibleRows.length > 0) {
           e.preventDefault();
-          const next = (activeIndex + 1) % visibleRows.length;
+          const next =
+            activeIndex < 0 ? 0 : (activeIndex + 1) % visibleRows.length;
           setActiveIndex(next);
           document
             .getElementById(`search-opt-${next}`)
@@ -227,7 +230,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
         if (visibleRows.length > 0) {
           e.preventDefault();
           const next =
-            (activeIndex - 1 + visibleRows.length) % visibleRows.length;
+            activeIndex <= 0 ? visibleRows.length - 1 : activeIndex - 1;
           setActiveIndex(next);
           document
             .getElementById(`search-opt-${next}`)
@@ -235,7 +238,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
         }
       } else if (e.key === "Enter") {
         e.preventDefault();
-        if (pending || visibleRows.length === 0) {
+        if (pending || visibleRows.length === 0 || activeIndex < 0) {
           if (input.trim()) {
             addRecent(input);
             setRecentList(readRecent());
@@ -660,7 +663,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                       <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
                         {t("search.tab_tasks")}
                       </div>
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-2">
                         {tasks.map((task) => {
                           const rowIndex = rowRunningIndex++;
                           const isActive = activeIndex === rowIndex;
@@ -676,8 +679,10 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                               aria-selected={isActive}
                               onClick={() => handleSelectTask(task.id)}
                               className={cx(
-                                "flex items-center gap-3 rounded-tile px-3 py-2 text-left w-full cursor-pointer hover:bg-fill transition-colors",
-                                isActive && "bg-primary-tint",
+                                "flex items-center gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
+                                isActive
+                                  ? "border-primary ring-1 ring-primary/40 shadow-sm"
+                                  : "border-separator hover:border-ink-tertiary hover:shadow-sm",
                               )}
                             >
                               <span
@@ -770,7 +775,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                           {t("search.no_notes")}
                         </p>
                       )}
-                      <div className="flex flex-col gap-0.5">
+                      <div className="flex flex-col gap-2">
                         {notes.map((note) => {
                           const rowIndex = rowRunningIndex++;
                           const isActive = activeIndex === rowIndex;
@@ -789,8 +794,10 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                               aria-selected={isActive}
                               onClick={() => handleSelectNote(note.id)}
                               className={cx(
-                                "flex items-start gap-3 rounded-tile px-3 py-2 text-left w-full cursor-pointer hover:bg-fill transition-colors",
-                                isActive && "bg-primary-tint",
+                                "flex items-start gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
+                                isActive
+                                  ? "border-primary ring-1 ring-primary/40 shadow-sm"
+                                  : "border-separator hover:border-ink-tertiary hover:shadow-sm",
                               )}
                             >
                               <NotesIcon
@@ -822,7 +829,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                         <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
                           {t("search.tab_projects")}
                         </div>
-                        <div className="flex flex-col gap-0.5">
+                        <div className="flex flex-col gap-2">
                           {projectHits.map((project) => {
                             const rowIndex = rowRunningIndex++;
                             const isActive = activeIndex === rowIndex;
@@ -835,8 +842,10 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                                 aria-selected={isActive}
                                 onClick={() => handleSelectProject(project.id)}
                                 className={cx(
-                                  "flex items-center gap-3 rounded-tile px-3 py-2 text-left w-full cursor-pointer hover:bg-fill transition-colors",
-                                  isActive && "bg-primary-tint",
+                                  "flex items-center gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
+                                  isActive
+                                    ? "border-primary ring-1 ring-primary/40 shadow-sm"
+                                    : "border-separator hover:border-ink-tertiary hover:shadow-sm",
                                 )}
                               >
                                 <ProjectDot colour={project.colour} />
