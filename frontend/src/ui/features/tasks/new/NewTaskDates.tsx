@@ -1,9 +1,14 @@
 import type { ReactElement } from "react";
 import { DatePicker } from "../../../components/DatePicker";
-import { CalendarIcon, ClockIcon } from "../../../components/icons";
+import { CalendarIcon, ClockIcon, RepeatIcon } from "../../../components/icons";
 import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
-import type { TimeFormat, WeekStart } from "../../../domain/types";
+import {
+  REPEATS,
+  type Repeat,
+  type TimeFormat,
+  type WeekStart,
+} from "../../../domain/types";
 import { SettingsRow } from "../details/SettingsRow";
 import { buildTimeOptions } from "../details/timeOptions";
 
@@ -15,6 +20,8 @@ export interface NewTaskDatesProps {
   onStartDateChange: (value: string) => void;
   startTime: string;
   onStartTimeChange: (value: string) => void;
+  repeat: Repeat;
+  onRepeatChange: (value: Repeat) => void;
   error: CopyKey | null;
   timeFormat?: TimeFormat;
   weekStart?: WeekStart;
@@ -29,6 +36,8 @@ export function NewTaskDates({
   onStartDateChange,
   startTime,
   onStartTimeChange,
+  repeat,
+  onRepeatChange,
   error,
   timeFormat = "24h",
   weekStart = "mon",
@@ -83,6 +92,22 @@ export function NewTaskDates({
               ariaDescribedBy={describedBy}
             />
           </div>
+        }
+      />
+      <SettingsRow
+        icon={<RepeatIcon size={18} />}
+        label={t("task.repeat")}
+        control={
+          <Picker<Repeat>
+            id="new-task-repeat"
+            label={t("task.repeat")}
+            value={repeat}
+            options={REPEATS.map((r) => ({
+              value: r,
+              label: t(`repeat.${r}` as CopyKey),
+            }))}
+            onChange={onRepeatChange}
+          />
         }
       />
     </div>

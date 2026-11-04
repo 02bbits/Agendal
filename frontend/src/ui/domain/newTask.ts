@@ -1,5 +1,5 @@
 import { addDays, startOfWeek } from "./dates";
-import type { Priority } from "./types";
+import type { Priority, Repeat } from "./types";
 
 export type DueChip = "today" | "tomorrow" | "next_week" | "none" | "pick";
 
@@ -33,6 +33,7 @@ export interface CreateTaskInput {
   startTime?: string | null;
   priority?: Priority;
   projectId?: string | null;
+  repeat?: Repeat;
 }
 
 export interface CreateTaskBody {
@@ -44,6 +45,7 @@ export interface CreateTaskBody {
   due_time?: string;
   priority?: Priority;
   project_id?: string;
+  repeat?: Repeat;
 }
 
 /**
@@ -113,6 +115,7 @@ export function createBody({
   startTime,
   priority,
   projectId,
+  repeat,
 }: CreateTaskInput): CreateTaskBody {
   const body: CreateTaskBody = {
     id,
@@ -131,6 +134,9 @@ export function createBody({
   }
   if (projectId) {
     body.project_id = projectId;
+  }
+  if (repeat && repeat !== "never") {
+    body.repeat = repeat;
   }
   return body;
 }

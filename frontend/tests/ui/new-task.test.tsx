@@ -14,7 +14,7 @@ import { ApiRequestError } from "../../src/lib/apiError";
 import { today as getToday } from "../../src/lib/clock";
 import type { Task } from "../../src/ui/domain/types";
 import type { CreateTaskBody } from "../../src/ui/domain/newTask";
-import { NewTaskSheet, type NewTaskSheetProps } from "../../src/ui";
+import { NewTaskSheet, t, type NewTaskSheetProps } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { TODAY, projects } from "./fixtures";
 
@@ -434,6 +434,91 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(errorEl.textContent).toBe("Start can't be after the due date.");
     expect(errorEl.id).toBe("new-task-dates-error");
     expect(addButton.disabled).toBe(true);
+  });
+
+  it("repeat row in new task and interactions with due chips (Part C)", async () => {
+    let sentBody: CreateTaskBody | undefined;
+    const onCreate = vi.fn().mockImplementation((body) => {
+      sentBody = body;
+      return Promise.resolve({ id: body.id, title: body.title });
+    });
+    const currentToday = getToday();
+    const { sheet } = await renderSheet({ today: currentToday, onCreate });
+
+    await userEvent.type(
+      within(sheet).getByLabelText("Title"),
+      "Recurring chore",
+    );
+
+    // Repeat picker is present under start date
+    const repeatPicker = within(sheet).getByRole("button", {
+      name: t("task.repeat"),
+    });
+    expect(repeatPicker).toBeTruthy();
+    expect(repeatPicker.textContent).toContain("Never");
+
+    // Select Weekly
+    await userEvent.click(repeatPicker);
+    await userEvent.click(screen.getByRole("option", { name: "Weekly" }));
+    expect(repeatPicker.textContent).toContain("Weekly");
+
+    // Submit sends repeat
+    await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
+    expect(onCreate).toHaveBeenCalledTimes(1);
+    expect(sentBody).toMatchObject({
+      title: "Recurring chore",
+      repeat: "weekly",
+    });
+  });
+
+  it("choosing repeat with No date chip moves chip to Today; choosing No date with repeat sets repeat to Never (Part C)", async () => {
+    const currentToday = getToday();
+    // Start with No date (e.g. from /projects/none or pathname "/projects/p-1")
+    const { sheet } = await renderSheet({
+      today: currentToday,
+      pathname: "/projects/none",
+    });
+
+    const noDateRadio = within(sheet).getByRole("radio", { name: "No date" });
+    expect(noDateRadio.getAttribute("aria-checked")).toBe("true");
+
+    // Choose repeat Weekly while due is No date and no start date -> moves due to Today
+    const repeatPicker = within(sheet).getByRole("button", {
+      name: t("task.repeat"),
+    });
+    await userEvent.click(repeatPicker);
+    await userEvent.click(screen.getByRole("option", { name: "Weekly" }));
+
+    const todayRadio = within(sheet).getByRole("radio", { name: "Today" });
+    expect(todayRadio.getAttribute("aria-checked")).toBe("true");
+    expect(repeatPicker.textContent).toContain("Weekly");
+
+    // Now click "No date" chip while repeat is Weekly and no start date -> sets repeat to Never
+    await userEvent.click(
+      within(sheet).getByRole("radio", { name: "No date" }),
+    );
+    expect(
+      within(sheet).getByRole("button", { name: t("task.repeat") }).textContent,
+    ).toContain("Never");
+  });
+
+  it("changing repeat triggers discard dialog on close", async () => {
+    const { sheet } = await renderSheet({ pathname: "/" });
+
+    // Choose repeat Weekly
+    const repeatPicker = within(sheet).getByRole("button", {
+      name: t("task.repeat"),
+    });
+    await userEvent.click(repeatPicker);
+    await userEvent.click(screen.getByRole("option", { name: "Weekly" }));
+
+    // Click Close
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+
+    // Discard dialog appears
+    expect(
+      screen.getByRole("alertdialog", { name: "Discard changes?" }),
+    ).toBeTruthy();
   });
 
   it("is axe clean in both themes", async () => {
