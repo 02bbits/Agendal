@@ -63,7 +63,7 @@ export function ProjectField({
       options={options}
       disabled={disabled}
       onChange={(val) => onChange(val ? val : null)}
-      variant={variant}
+      variant="row"
     />
   );
 

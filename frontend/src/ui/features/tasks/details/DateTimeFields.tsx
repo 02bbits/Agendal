@@ -63,7 +63,7 @@ export function DateTimeFields({
                 )
               }
               weekStart={weekStart}
-              variant={variant}
+              variant="row"
             />
             <Picker<string>
               id="task-start"
@@ -76,7 +76,7 @@ export function DateTimeFields({
               )}
               disabled={!task.start_date}
               onChange={(val) => save({ start_time: val || null })}
-              variant={variant}
+              variant="row"
               ariaDescribedBy={describedBy}
             />
           </div>
@@ -101,7 +101,7 @@ export function DateTimeFields({
                 )
               }
               weekStart={weekStart}
-              variant={variant}
+              variant="row"
             />
             <Picker<string>
               id="task-due-time"
@@ -114,7 +114,7 @@ export function DateTimeFields({
               )}
               disabled={!task.due_date}
               onChange={(val) => save({ due_time: val || null })}
-              variant={variant}
+              variant="row"
               ariaDescribedBy={describedBy}
             />
           </div>

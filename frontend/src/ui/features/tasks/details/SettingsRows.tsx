@@ -99,7 +99,7 @@ export function SettingsRows({
               label: t(`reminder.${r}` as CopyKey),
             }))}
             onChange={(reminder) => onSave({ reminder })}
-            variant={variant}
+            variant="row"
           />
         }
       />
@@ -121,7 +121,7 @@ export function SettingsRows({
                   : t(`repeat.${r}` as CopyKey),
             }))}
             onChange={(repeat) => onSave({ repeat })}
-            variant={variant}
+            variant="row"
           />
         }
       />
