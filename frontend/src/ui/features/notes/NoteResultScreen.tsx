@@ -4,6 +4,7 @@ import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { PencilIcon } from "../../components/icons";
+import { LayeredIcon } from "../../components/LayeredIcon";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
 import {
@@ -517,9 +518,11 @@ function ChangeRow({
       {opens && (
         <span
           aria-hidden="true"
-          className="inline-flex size-9 shrink-0 items-center justify-center self-center text-ink [&>svg]:drop-shadow-[0_1px_1px_rgb(0_0_0/0.20)]"
+          className="inline-flex size-9 shrink-0 items-center justify-center self-center text-ink"
         >
-          <PencilIcon size={18} />
+          <LayeredIcon>
+            <PencilIcon size={18} />
+          </LayeredIcon>
         </span>
       )}
     </>
