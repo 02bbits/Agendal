@@ -17,6 +17,7 @@ use App\Services\Notes\NoteApplier;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
 use App\Services\Notes\NoteSplitter;
+use App\Services\Notes\NoteUndo;
 use App\Services\Notes\PlanValidator;
 use App\Services\Notes\TaskCandidates;
 use DateTimeZone;
@@ -36,6 +37,7 @@ class ProcessNote
         private CommandMatcher $matcher,
         private TaskCandidates $candidates,
         private NoteApplier $applier,
+        private NoteUndo $undo,
     ) {}
 
     /**
@@ -59,24 +61,55 @@ class ProcessNote
     }
 
     /** @param array<string, mixed> $input */
-    public function replanFollowup(User $user, Note $note, array $input): Note
+    public function replan(User $user, Note $note, array $input): Note
     {
         return DB::transaction(function () use ($user, $note, $input): Note {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();
-            Validator::make($input, ['text' => ['required', 'string'], 'timezone' => ['required', 'string']])->validate();
+            Validator::make($input, [
+                'text' => ['required', 'string'],
+                'timezone' => ['required', 'string'],
+                'confirm_conflicts' => ['sometimes', 'boolean'],
+            ])->validate();
+
+            // Notes in done, confirm, followup, kept, undone can be edited (RV §2.5).
+            $allowed = [
+                PlanStatus::Done->value,
+                PlanStatus::Confirm->value,
+                PlanStatus::Followup->value,
+                'kept',
+                'undone',
+            ];
+            if (! in_array($note->status, $allowed, true)) {
+                throw new ApiError('note.wrong_status', 'This note cannot be edited.', 409);
+            }
+
             $text = $this->splitter->normalize($input['text']);
-            // Unchanged text and a retry after a lost reply return the already stored result.
+            // Unchanged text and a retry after a lost reply return the already stored result (RV-E18).
             if ($text === $note->text) {
                 return $note;
             }
-            if ($note->status !== PlanStatus::Followup->value) {
-                throw new ApiError('note.wrong_status', 'Only a follow-up note can be edited here.', 409);
+
+            // RV §2.5: If status is done, undo what the note applied first.
+            // RV-E17: older than 30 days throws note.undo_expired.
+            // RV-E16: conflicts without confirm_conflicts throws note.undo_conflicts.
+            if ($note->status === PlanStatus::Done->value) {
+                $confirmConflicts = (bool) ($input['confirm_conflicts'] ?? false);
+                $this->undo->reverseApplied($note, $confirmConflicts);
+                $note->applied = [];
+                $note->undo_log = null;
             }
+
             $input['written_at'] = $this->clock->now()->format(DATE_ATOM);
 
             return $this->process($user, $input, $note);
         }, 3);
+    }
+
+    /** @param array<string, mixed> $input */
+    public function replanFollowup(User $user, Note $note, array $input): Note
+    {
+        return $this->replan($user, $note, $input);
     }
 
     /** @param array<string, mixed> $input */

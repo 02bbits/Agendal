@@ -5,7 +5,6 @@ import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
-import { saveDraft } from "../../../lib/draft";
 import {
   confirmNote,
   getNote,
@@ -147,7 +146,6 @@ function ResultContainer({
   navigate,
   weekStart,
   showToast,
-  openNoteEditor,
   editFollowupNote,
   edits,
   projectList,
@@ -159,7 +157,6 @@ function ResultContainer({
   navigate?: Navigate;
   weekStart: "mon" | "sun";
   showToast: ReturnType<typeof useAppFrame>["showToast"];
-  openNoteEditor: () => void;
   editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
   edits?: Parameters<typeof confirmNote>[2];
   projectList: Project[];
@@ -240,30 +237,9 @@ function ResultContainer({
     });
     back();
   };
-  // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
-  // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
-  const edit = async () => {
-    if (result.note.status === "followup") {
-      editFollowupNote(result.note);
-      return;
-    }
-    setBusy(true);
-    const outcome = await confirmNote(result.note.id, "cancel");
-    if ("error" in outcome) {
-      setBusy(false);
-      return showToast(t(outcome.error, { request_id: "" }));
-    }
-    await saveDraft(result.note.text).catch(() => {});
-    let opened = false;
-    const open = () => {
-      if (opened) return;
-      opened = true;
-      window.removeEventListener("popstate", open);
-      openNoteEditor();
-    };
-    window.addEventListener("popstate", open);
-    setTimeout(open, 250);
-    back();
+  // Edit note (RV-5): opens the note's text in the editor; Make tasks replans it.
+  const edit = () => {
+    editFollowupNote(result.note);
   };
   const makeTask = async () => {
     setBusy(true);
@@ -370,14 +346,8 @@ export default function NoteResultClient({
   presentation = "screen",
   onClose,
 }: ClientProps): ReactElement | null {
-  const {
-    back,
-    navigate,
-    settings,
-    showToast,
-    openNoteEditor,
-    editFollowupNote,
-  } = useAppFrame();
+  const { back, navigate, settings, showToast, editFollowupNote } =
+    useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -490,7 +460,6 @@ export default function NoteResultClient({
         navigate={navigate}
         weekStart={settings.weekStart}
         showToast={showToast}
-        openNoteEditor={openNoteEditor}
         editFollowupNote={editFollowupNote}
         edits={preview?.edits}
         projectList={loaded.projects}

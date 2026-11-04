@@ -91,7 +91,9 @@ export function NotesScreen({
                   ? t("notes.made")
                   : note.status === "undone"
                     ? t("note.undone_label")
-                    : null;
+                    : note.status === "kept"
+                      ? t("note.kept_label")
+                      : null;
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -122,6 +124,12 @@ export function NotesScreen({
                       className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
                     >
                       {status}
+                      {status && note.edited_at ? " · " : ""}
+                      {note.edited_at ? (
+                        <span className="text-ink-secondary">
+                          {t("note.edited_label")}
+                        </span>
+                      ) : null}
                     </span>
                     <time className="hidden text-footnote text-ink-secondary sm:block">
                       {formatTime(

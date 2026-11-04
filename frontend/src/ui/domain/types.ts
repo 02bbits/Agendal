@@ -102,6 +102,7 @@ export interface NoteListEntry {
   name: string | null;
   excerpt: string;
   written_at: string;
+  edited_at?: string | null;
   source_file_name: string | null;
   counts: { created: number; updated: number; deleted: number };
 }

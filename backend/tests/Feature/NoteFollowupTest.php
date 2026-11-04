@@ -100,10 +100,9 @@ it('rolls back a failed replan without replacing the original note', function ()
         ->and(Note::findOrFail($id)->edited_at)->toBeNull()->and(Task::count())->toBe(0);
 });
 
-it('rejects actions on a confirm note instead of bypassing Apply', function () {
+it('rejects make-task on a confirm note instead of bypassing Apply', function () {
     $id = $this->postJson('/api/v1/notes', followupPayload('read tomorrow'))->json('note.id');
     $this->postJson("/api/v1/notes/$id/make-task")->assertStatus(409);
-    $this->putJson("/api/v1/notes/$id", ['text' => 'read friday', 'timezone' => 'UTC'])->assertStatus(409);
     expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('confirm');
 });
 
