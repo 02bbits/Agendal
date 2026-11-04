@@ -18,10 +18,12 @@ import {
   NoteEditor,
   ProjectSheet,
   ROUTES,
+  SearchPopup,
   sortProjects,
   t,
   tc,
   Toast,
+  useMediaQuery,
   type AccountSettings,
   type Navigate,
   type Project,
@@ -33,10 +35,16 @@ import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
-import { inbox, upcoming } from "@/lib/taskApi";
+import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
-import { forgetNotes, rememberNote, submitNote } from "@/lib/noteApi";
+import {
+  forgetNotes,
+  rememberNote,
+  searchNotes,
+  submitNote,
+} from "@/lib/noteApi";
+import { clearRecent } from "@/ui/domain/recentSearches";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -114,6 +122,8 @@ interface AppFrameValue {
   showToast: (messageOrDraft: string | Omit<ToastData, "id">) => void;
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
+  /** Opens the search popup or navigates to search. */
+  openSearch: () => void;
   /** Opens the new task bottom sheet. */
   openNewTask: {
     (opts?: { dueDate?: string }): void;
@@ -209,6 +219,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [editing, setEditing] = useState(false);
   const openNoteEditor = useCallback(() => setEditing(true), []);
   const closeNoteEditor = useCallback(() => setEditing(false), []);
+
+  const [searching, setSearching] = useState(false);
+  const openSearch = useCallback(() => setSearching(true), []);
+  const closeSearch = useCallback(() => setSearching(false), []);
+  const isWideSearch = useMediaQuery("(min-width: 768px)");
+  const hasPanel = useMediaQuery("(min-width: 1280px)");
   // Closing the editor takes its history entry off with history.back(), which is only done a
   // moment later. The result goes on top of where the editor was opened once that has happened,
   // so Back from the result returns there and never to the editor (RV-E12). A router.replace
@@ -304,6 +320,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       }
       await wipeDevice();
       forgetNotes();
+      clearRecent();
       setUser(null);
       settingsRef.current = DEFAULT_SETTINGS;
       setSettings(DEFAULT_SETTINGS);
@@ -352,6 +369,45 @@ export function AppFrame({ children }: { children: ReactNode }) {
     }
   }, [settings, user]);
 
+  const handleOpenTask = useCallback(
+    (id: string) => {
+      closeSearch();
+      if (hasPanel) {
+        if (
+          pathname === "/" ||
+          pathname === "/upcoming" ||
+          pathname.startsWith("/projects/")
+        ) {
+          router.push(`${pathname}?task=${encodeURIComponent(id)}`, {
+            scroll: false,
+          });
+        } else {
+          router.push(`/?task=${encodeURIComponent(id)}`);
+        }
+      } else {
+        navigate(ROUTES.task(id));
+      }
+    },
+    [hasPanel, pathname, router, navigate, closeSearch],
+  );
+
+  const handleOpenProject = useCallback(
+    (id: string) => {
+      closeSearch();
+      navigate(ROUTES.project(id));
+    },
+    [closeSearch, navigate],
+  );
+
+  const handleOpenSearch = useCallback(() => {
+    if (!userRef.current) return;
+    if (isWideSearch) {
+      openSearch();
+    } else {
+      navigate(ROUTES.search);
+    }
+  }, [isWideSearch, openSearch, navigate]);
+
   const value = useMemo(
     () => ({
       navigate,
@@ -360,6 +416,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      openSearch: handleOpenSearch,
       openNewTask,
       user,
       signOut,
@@ -371,6 +428,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      handleOpenSearch,
       openNewTask,
       user,
       signOut,
@@ -555,6 +613,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       <AppShell
         tab={tab}
         navigate={navigate}
+        onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
           PUBLIC_PATHS.includes(pathname)
@@ -564,6 +623,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 counts: sidebarCounts,
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
+                onSearch: handleOpenSearch,
               }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
@@ -584,6 +644,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
               // ponytail: the follow-up (IM-46) has no screen yet
               closeNoteEditor();
               showToast(tc("note.made", result.changes.length));
+            }}
+          />
+        )}
+        {searching && (
+          <SearchPopup
+            clock={appClock}
+            onClose={closeSearch}
+            projects={projectsList}
+            timeFormat={settings.timeFormat}
+            searchTasks={search}
+            searchNotes={searchNotes}
+            onOpenTask={handleOpenTask}
+            onOpenProject={handleOpenProject}
+            onOpenNote={() => {
+              // TODO: open the note here once the Notes screen is done.
             }}
           />
         )}

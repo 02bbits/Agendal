@@ -1,50 +1,49 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { now, timeZone } from "@/lib/clock";
-import {
-  httpTaskApi,
-  projects as fetchProjects,
-  search as apiSearch,
-} from "@/lib/taskApi";
-import {
-  SearchScreen,
-  TaskStoreProvider,
-  type Clock,
-  type Project,
-  type Task,
-} from "@/ui";
+import { useRouter } from "next/navigation";
+import { projects as fetchProjects, search as apiSearch } from "@/lib/taskApi";
+import { searchNotes } from "@/lib/noteApi";
+import { SearchScreen, useMediaQuery, useToday, type Project } from "@/ui";
 import { useAppFrame } from "../AppFrame";
-
-const EMPTY_TASKS: Task[] = [];
-
-const clock: Clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
+import { appClock } from "../appClock";
 
 function SearchContent() {
-  const { back, navigate, settings } = useAppFrame();
+  const router = useRouter();
+  const { back, navigate, settings, openSearch } = useAppFrame();
+  const isWide = useMediaQuery("(min-width: 768px)");
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const today = useToday(appClock);
 
   useEffect(() => {
-    fetchProjects()
-      .then((res) => setProjectList(res ?? []))
-      .catch(() => {});
-  }, []);
+    if (isWide) {
+      router.replace("/");
+      openSearch();
+    }
+  }, [isWide, router, openSearch]);
+
+  useEffect(() => {
+    if (!isWide) {
+      fetchProjects()
+        .then((res) => setProjectList(res ?? []))
+        .catch(() => {});
+    }
+  }, [isWide]);
+
+  if (isWide) {
+    return null;
+  }
 
   return (
-    <TaskStoreProvider
-      api={httpTaskApi}
-      clock={clock}
-      initialTasks={EMPTY_TASKS}
-      initialProjects={projectList}
+    <SearchScreen
+      onBack={back}
+      navigate={navigate}
+      projects={projectList}
+      today={today}
       timeFormat={settings.timeFormat}
-    >
-      <SearchScreen onBack={back} navigate={navigate} searchFn={apiSearch} />
-    </TaskStoreProvider>
+      searchTasks={apiSearch}
+      searchNotes={searchNotes}
+    />
   );
 }
 

@@ -18,6 +18,7 @@ export interface AppShellProps {
   banner?: ReactNode;
   toast?: ReactNode;
   children: ReactNode;
+  onOpenSearch?: () => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export interface AppShellProps {
 export function AppShell({
   tab,
   navigate,
+  onOpenSearch,
   capture,
   sidebar,
   aside,
@@ -38,27 +40,38 @@ export function AppShell({
 }: AppShellProps) {
   useKeyboardInset();
 
-  // `/` opens Search on list screens when no field has focus (UX-12)
   useEffect(() => {
-    if (!tab || !navigate) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "/" || event.metaKey || event.ctrlKey || event.altKey)
-        return;
-      const el = document.activeElement;
-      if (
-        el instanceof HTMLInputElement ||
-        el instanceof HTMLTextAreaElement ||
-        el instanceof HTMLSelectElement ||
-        (el as HTMLElement | null)?.isContentEditable
-      )
-        return;
+      const isSlash =
+        event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const isK =
+        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+
+      if (!isSlash && !isK) return;
       if (document.querySelector('[aria-modal="true"]')) return;
+
+      if (isSlash) {
+        if (!tab) return;
+        const el = document.activeElement;
+        if (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement ||
+          (el as HTMLElement | null)?.isContentEditable
+        )
+          return;
+      }
+
       event.preventDefault();
-      navigate(ROUTES.search);
+      if (onOpenSearch) {
+        onOpenSearch();
+      } else if (navigate) {
+        navigate(ROUTES.search);
+      }
     };
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [tab, navigate]);
+  }, [tab, navigate, onOpenSearch]);
 
   return (
     // --sidebar-w and --panel-w let fixed overlays (toasts) centre on the column

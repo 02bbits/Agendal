@@ -347,7 +347,7 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     const sidebar = screen
       .getByRole("navigation", { name: "Menu" })
       .closest(".sticky")!;
-    expect(sidebar.querySelector('a[href="/search"]')!.textContent).toContain(
+    expect(sidebar.querySelector("button")!.textContent).toContain(
       "Search tasks",
     );
     const account = sidebar.querySelector('a[href="/account"]')!;
