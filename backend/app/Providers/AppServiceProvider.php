@@ -39,10 +39,15 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(20)->by('ip:'.$request->ip()),
         ]);
 
-        // Everything else: 120/min per user, 300/min per IP for guests
-        RateLimiter::for('api', fn (Request $request) => $request->user('sanctum')
-            ? Limit::perMinute(120)->by('user:'.$request->user('sanctum')->getAuthIdentifier())
-            : Limit::perMinute(300)->by('ip:'.$request->ip()));
+        // Everything else: 300/min plus a 20/s burst cap, per user, or per IP for guests
+        RateLimiter::for('api', function (Request $request) {
+            $key = ($user = $request->user('sanctum')) ? 'user:'.$user->getAuthIdentifier() : 'ip:'.$request->ip();
+
+            return [
+                Limit::perMinute(300)->by('api-min:'.$key),
+                Limit::perSecond(20)->by('api-sec:'.$key),
+            ];
+        });
         // Named for endpoints that arrive later; their owners attach them with throttle:<name>.
         // Each replaces the general limit on its route, so it carries the per-user key itself
         $perUser = fn (Request $request) => 'user:'.($request->user('sanctum')?->getAuthIdentifier() ?? $request->ip());

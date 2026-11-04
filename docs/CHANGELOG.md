@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-04
 
+- `05-quality/nfr.md` NF-13, `03-modules/RV-review-control.md`: general API limit raised from 120/min per user to 300/min plus a 20/s burst cap, per user and per IP for guests.
 - **Upcoming week bar, filters and due cards (Refs #139).** [LV §2.2](03-modules/LV-lists-search.md#22-upcoming-lv-2): the week label replaces the Tomorrow button, `>` and `<` go to the first day of a week, the calendar has Overdue in place of Today, `(Today)` sits under the dot on phones, creating a task keeps the day in view, Scheduled means start days and Due only means due days, and due entries share a dashed block in List and are one card each on Board. [SUMMARY §5](SUMMARY.md) and [copy-catalog.md](01-product/copy-catalog.md) (`task.started_on`).
 - **Search in the summary (Refs #29).** [SUMMARY §5](SUMMARY.md): the Search row now lists the popup, tasks, notes and projects, quick filters, Vietnamese matching and the skeleton. [LV §2.3](03-modules/LV-lists-search.md#23-search-lv-3): the popup uses the task panel's backdrop and locks background scrolling.
 - **Vietnamese search matching (Refs #29).** [LV §2.3](03-modules/LV-lists-search.md#23-search-lv-3) and [LV-E5](03-modules/LV-lists-search.md#lv-e5): a word typed with accents keeps them, old and new tone placement match, and words of 1 or 2 letters match only at the start of a word.
