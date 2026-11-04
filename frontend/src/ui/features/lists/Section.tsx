@@ -17,6 +17,7 @@ export interface SectionProps {
   footer?: ReactNode;
   children: ReactNode;
   className?: string;
+  rawChildren?: boolean;
 }
 
 /** A list section: heading with its count ("Overdue, 2 tasks" to screen readers, A11Y-50), then the list. */
@@ -32,6 +33,7 @@ export function Section({
   footer,
   children,
   className,
+  rawChildren = false,
 }: SectionProps) {
   const [internalOpen, setInternalOpen] = useState(
     defaultOpen !== undefined ? defaultOpen : !collapsible,
@@ -87,9 +89,13 @@ export function Section({
         )}
       </h2>
       <div id={listId} hidden={!open}>
-        <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
-          <ul className="m-0 list-none p-0">{children}</ul>
-        </div>
+        {rawChildren ? (
+          children
+        ) : (
+          <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
+            <ul className="m-0 list-none p-0">{children}</ul>
+          </div>
+        )}
         {footer}
       </div>
     </section>

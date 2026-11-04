@@ -1,4 +1,5 @@
 import { addDays } from "./dates";
+import { entriesOf, matchesEntry } from "./entries";
 import { inboxProgress, type Progress } from "./progress";
 import type { Task } from "./types";
 
@@ -50,6 +51,16 @@ function dedupeTasks(tasks: readonly Task[]): Task[] {
   });
 }
 
+export function inToday(task: Task, today: string): boolean {
+  if (task.due_date === today) return true;
+  if (task.start_date === today) return true;
+  if (task.start_date && task.start_date < today) {
+    if (task.due_date && task.due_date > today) return true;
+    if (!task.due_date) return true;
+  }
+  return false;
+}
+
 /**
  * Inbox sections (LV-1): Overdue (oldest first) before Today, then No date
  * (priority, newest first) and tasks completed today. Overdue is by date only,
@@ -64,8 +75,8 @@ export function buildInbox(
   const settling = opts.isSettling ?? (() => false);
   const open = uniqueTasks.filter((t) => !t.done || settling(t.id));
   const overdue = open.filter((t) => t.due_date && t.due_date < today);
-  const dueToday = open.filter((t) => t.due_date === today);
-  const noDate = open.filter((t) => !t.due_date);
+  const todayTasks = open.filter((t) => inToday(t, today));
+  const noDate = open.filter((t) => !t.due_date && !t.start_date);
   const completed = uniqueTasks.filter(
     (t) => t.done && !settling(t.id) && opts.completedToday(t),
   );
@@ -75,7 +86,7 @@ export function buildInbox(
         a.due_date!.localeCompare(b.due_date!) ||
         a.created_at.localeCompare(b.created_at),
     ),
-    today: sortWithinDay(dueToday),
+    today: sortWithinDay(todayTasks),
     noDate: [...noDate].sort(
       (a, b) =>
         priorityRank(a.priority) - priorityRank(b.priority) ||
@@ -97,10 +108,10 @@ export interface UpcomingPage {
   nextFrom: string | null;
 }
 
-/** Scheduled: has a start time. Due only: a due date and no start time (LV §2.2). */
+/** Scheduled: has a start date. Due only: has a due date. */
 export function matchesFilter(task: Task, filter: UpcomingFilter): boolean {
-  if (filter === "scheduled") return !!task.start_time;
-  if (filter === "due") return !task.start_time;
+  if (filter === "scheduled") return !!task.start_date;
+  if (filter === "due") return !!task.due_date;
   return true;
 }
 
@@ -116,29 +127,33 @@ export function upcomingPage(
   days = 14,
   isSettling: (id: string) => boolean = () => false,
 ): UpcomingPage {
-  const due = tasks
-    .filter(
-      (t) =>
-        (!t.done || isSettling(t.id)) &&
-        t.due_date &&
-        t.due_date >= from &&
-        matchesFilter(t, filter),
-    )
-    .sort((a, b) => a.due_date!.localeCompare(b.due_date!));
-  const first = due[0]?.due_date;
-  if (!first) return { days: [], nextFrom: null };
-  const last = addDays(first, days - 1);
+  const open = tasks.filter((t) => !t.done || isSettling(t.id));
   const byDay = new Map<string, Task[]>();
-  for (const task of due) {
-    if (task.due_date! > last) break;
-    byDay.set(task.due_date!, [...(byDay.get(task.due_date!) ?? []), task]);
+
+  for (const task of open) {
+    const entries = entriesOf(task);
+    for (const entry of entries) {
+      if (matchesEntry(entry, filter) && entry.date >= from) {
+        const list = byDay.get(entry.date) ?? [];
+        list.push(entry.task);
+        byDay.set(entry.date, list);
+      }
+    }
   }
-  const later = due.find((t) => t.due_date! > last);
+
+  const sortedDates = [...byDay.keys()].sort();
+  const first = sortedDates[0];
+  if (!first) return { days: [], nextFrom: null };
+
+  const last = addDays(first, days - 1);
+  const visibleDates = sortedDates.filter((d) => d <= last);
+  const laterDates = sortedDates.filter((d) => d > last);
+
   return {
-    days: [...byDay].map(([date, list]) => ({
+    days: visibleDates.map((date) => ({
       date,
-      tasks: sortWithinDay(list),
+      tasks: sortWithinDay(byDay.get(date)!),
     })),
-    nextFrom: later ? later.due_date : null,
+    nextFrom: laterDates[0] ?? null,
   };
 }

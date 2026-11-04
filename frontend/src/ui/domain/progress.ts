@@ -1,3 +1,4 @@
+import { inToday } from "./lists";
 import type { Task } from "./types";
 
 export interface Progress {
@@ -7,8 +8,7 @@ export interface Progress {
 
 /**
  * Inbox progress (LV-1): total = open tasks due today or overdue, plus tasks
- * completed today that were due today or earlier; done = the completed part.
- * Completing an overdue task counts toward today (LV-E3).
+ * completed today that were due or started today or earlier; done = the completed part.
  */
 export function inboxProgress(
   tasks: readonly Task[],
@@ -18,24 +18,34 @@ export function inboxProgress(
   let done = 0;
   let total = 0;
   for (const task of tasks) {
-    if (!task.due_date || task.due_date > today) continue;
-    if (!task.done) total += 1;
-    else if (completedToday(task)) {
-      total += 1;
-      done += 1;
+    const isOverdue = Boolean(task.due_date && task.due_date < today);
+    const isInToday = inToday(task, today);
+
+    if (!task.done) {
+      if (isOverdue || isInToday) {
+        total += 1;
+      }
+    } else if (completedToday(task)) {
+      const dueOrStartOnOrBefore =
+        Boolean(task.due_date && task.due_date <= today) ||
+        Boolean(task.start_date && task.start_date <= today);
+      if (dueOrStartOnOrBefore) {
+        total += 1;
+        done += 1;
+      }
     }
   }
   return { done, total };
 }
 
 /**
- * The next open task for the "Next: … at 16:00" line (LV-1): only open tasks due today;
- * timed tasks first by start, then the first untimed one due today. Overdue tasks are never next.
+ * The next open task for the "Next: … at 16:00" line (LV-1): only open tasks in today;
+ * timed tasks first (start_date === today && start_time) by start, then the first of them.
  */
 export function nextUp(open: readonly Task[], today: string): Task | null {
-  const dueToday = open.filter((t) => !t.done && t.due_date === today);
-  const timed = dueToday
-    .filter((t) => t.start_time)
+  const todayTasks = open.filter((t) => !t.done && inToday(t, today));
+  const timed = todayTasks
+    .filter((t) => t.start_date === today && t.start_time)
     .sort((a, b) => a.start_time!.localeCompare(b.start_time!));
-  return timed[0] ?? dueToday[0] ?? null;
+  return timed[0] ?? todayTasks[0] ?? null;
 }

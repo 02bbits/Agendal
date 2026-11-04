@@ -945,13 +945,23 @@ describe("SearchPanel & SearchPopup", () => {
 
       const options = screen.getAllByRole("option");
       expect(options).toHaveLength(2);
-      expect(options[0].getAttribute("aria-selected")).toBe("true");
+      expect(options[0].getAttribute("aria-selected")).toBe("false");
+      expect(options[1].getAttribute("aria-selected")).toBe("false");
+
+      // ArrowDown to first row
+      act(() => {
+        fireEvent.keyDown(input, { key: "ArrowDown" });
+      });
+      let updatedOptions = screen.getAllByRole("option");
+      expect(updatedOptions[0].getAttribute("aria-selected")).toBe("true");
+      expect(updatedOptions[1].getAttribute("aria-selected")).toBe("false");
 
       // ArrowDown to second row
       act(() => {
         fireEvent.keyDown(input, { key: "ArrowDown" });
       });
-      const updatedOptions = screen.getAllByRole("option");
+      updatedOptions = screen.getAllByRole("option");
+      expect(updatedOptions[0].getAttribute("aria-selected")).toBe("false");
       expect(updatedOptions[1].getAttribute("aria-selected")).toBe("true");
 
       // Enter opens active (second) row
@@ -962,6 +972,65 @@ describe("SearchPanel & SearchPopup", () => {
 
       // Direct clicking task calls onOpenTask
       fireEvent.click(options[0]);
+      expect(onOpenTask).toHaveBeenCalledWith("t-1");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("navigates rows with global ArrowDown even when focus is not in the search box", async () => {
+    vi.useFakeTimers();
+    try {
+      const onOpenTask = vi.fn();
+      const searchTasksMock = vi.fn().mockResolvedValue({
+        items: [
+          task({ id: "t-1", title: "Task Alpha" }),
+          task({ id: "t-2", title: "Task Beta" }),
+        ],
+        counts: { all: 2, open: 2, completed: 0 },
+        next_cursor: null,
+      });
+
+      render(
+        <SearchPanel
+          variant="popup"
+          projects={mockProjects}
+          today="2026-10-23"
+          timeFormat="24h"
+          searchTasks={searchTasksMock}
+          searchNotes={async () => ({ items: [] })}
+          onOpenTask={onOpenTask}
+          onOpenProject={() => {}}
+          onOpenNote={() => {}}
+        />,
+      );
+
+      const input = screen.getByRole("combobox");
+      fireEvent.change(input, { target: { value: "Task" } });
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(
+          SEARCH_DEBOUNCE_MS + SEARCH_SETTLE_MS,
+        );
+      });
+
+      // Blur the input to simulate focus elsewhere
+      input.blur();
+      expect(document.activeElement).not.toBe(input);
+
+      // ArrowDown on window
+      act(() => {
+        window.dispatchEvent(
+          new KeyboardEvent("keydown", { key: "ArrowDown" }),
+        );
+      });
+
+      const options = screen.getAllByRole("option");
+      expect(options[0].getAttribute("aria-selected")).toBe("true");
+
+      // Enter on window
+      act(() => {
+        window.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter" }));
+      });
       expect(onOpenTask).toHaveBeenCalledWith("t-1");
     } finally {
       vi.useRealTimers();

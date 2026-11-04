@@ -10,6 +10,7 @@ use App\Services\Clock\ClockInterface;
 use DateTimeImmutable;
 use DateTimeZone;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
 
@@ -52,22 +53,20 @@ final class UpcomingQuery
         $startDate = $from && preg_match('/^\d{4}-\d{2}-\d{2}$/', $from) ? $from : $tomorrow;
         $pageDays = max(1, $days);
 
-        $query = Task::query()
-            ->where('done', false)
-            ->whereNotNull('due_date')
-            ->where('due_date', '>=', $startDate);
+        $query = Task::query()->where('done', false);
 
         if ($filter === 'scheduled') {
-            $query->whereNotNull('start_time');
+            $query->where('start_date', '>=', $startDate);
         } elseif ($filter === 'due') {
-            $query->whereNull('start_time');
+            $query->where('due_date', '>=', $startDate);
+        } else {
+            $query->where(fn (Builder $q) => $q->where('due_date', '>=', $startDate)->orWhere('start_date', '>=', $startDate));
         }
 
         $totalCount = (clone $query)->count();
 
         /** @var Collection<int, Task> $tasks */
         $tasks = $query
-            ->orderBy('due_date', 'asc')
             ->orderByRaw('case when start_time is not null then 0 else 1 end asc')
             ->orderByRaw('start_time asc nulls last')
             ->orderByRaw(self::PRIORITY_ORDER)
@@ -83,32 +82,65 @@ final class UpcomingQuery
             ];
         }
 
-        $firstDate = substr((string) $tasks->first()->due_date, 0, 10);
-        $lastDate = (new DateTimeImmutable($firstDate))->modify('+'.($pageDays - 1).' days')->format('Y-m-d');
-
         /** @var array<string, Collection<int, Task>> $byDay */
         $byDay = [];
-        $nextFrom = null;
 
         foreach ($tasks as $task) {
-            $dueDate = substr((string) $task->due_date, 0, 10);
-            if ($dueDate > $lastDate) {
-                $nextFrom = $dueDate;
-                break;
+            $dates = [];
+            if ($filter === 'scheduled') {
+                if ($task->start_date !== null) {
+                    $dates[] = substr((string) $task->start_date, 0, 10);
+                }
+            } elseif ($filter === 'due') {
+                if ($task->due_date !== null) {
+                    $dates[] = substr((string) $task->due_date, 0, 10);
+                }
+            } else {
+                if ($task->start_date !== null) {
+                    $dates[] = substr((string) $task->start_date, 0, 10);
+                }
+                if ($task->due_date !== null) {
+                    $dates[] = substr((string) $task->due_date, 0, 10);
+                }
             }
 
-            if (! isset($byDay[$dueDate])) {
-                $byDay[$dueDate] = new Collection;
+            $dates = array_values(array_unique($dates));
+
+            foreach ($dates as $date) {
+                if ($date >= $startDate) {
+                    if (! isset($byDay[$date])) {
+                        $byDay[$date] = new Collection;
+                    }
+                    $byDay[$date]->push($task);
+                }
             }
-            $byDay[$dueDate]->push($task);
         }
 
-        $daysResult = [];
-        foreach ($byDay as $date => $dayTasks) {
-            $daysResult[] = [
-                'date' => $date,
-                'tasks' => TaskResource::collection($dayTasks)->resolve(),
+        ksort($byDay);
+
+        if (empty($byDay)) {
+            return [
+                'days' => [],
+                'next_from' => null,
+                'total_count' => 0,
             ];
+        }
+
+        $firstDate = (string) array_key_first($byDay);
+        $lastDate = (new DateTimeImmutable($firstDate))->modify('+'.($pageDays - 1).' days')->format('Y-m-d');
+
+        $daysResult = [];
+        $nextFrom = null;
+
+        foreach ($byDay as $date => $dayTasks) {
+            if ($date <= $lastDate) {
+                $daysResult[] = [
+                    'date' => $date,
+                    'tasks' => TaskResource::collection($dayTasks)->resolve(),
+                ];
+            } elseif ($nextFrom === null) {
+                $nextFrom = $date;
+            }
         }
 
         return [

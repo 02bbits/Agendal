@@ -29,6 +29,26 @@ function Screen({ id }: { id: string }) {
 }
 
 describe("Delete a task (TK-5)", () => {
+  it("leaves the screen only after the dialog took its history entry off", async () => {
+    const t0 = task({ title: "Pay phone bill" });
+    const { wrap } = setup([t0]);
+    const historyBack = vi
+      .spyOn(window.history, "back")
+      .mockImplementation(() => {});
+    const onDeleted = vi.fn();
+    render(wrap(<DeleteTask task={t0} onDeleted={onDeleted} />));
+
+    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    await waitFor(() => expect(onDeleted).toHaveBeenCalled());
+    expect(historyBack).toHaveBeenCalled();
+    expect(historyBack.mock.invocationCallOrder[0]!).toBeLessThan(
+      onDeleted.mock.invocationCallOrder[0]!,
+    );
+    historyBack.mockRestore();
+  });
+
   it("asks first, with a red Delete and focus on Cancel (T-TK-40)", async () => {
     const t0 = task({ title: "Pay phone bill" });
     const { wrap, memory } = setup([t0]);

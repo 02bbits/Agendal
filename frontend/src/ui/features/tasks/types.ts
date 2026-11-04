@@ -63,6 +63,8 @@ export interface TaskStoreProviderProps {
   initialTasks: Task[];
   initialProjects: Project[];
   timeFormat?: TimeFormat;
+  /** Sends toasts to the app's toast, for a screen that closes right after one (task details). */
+  onToast?: (draft: ToastDraft) => void;
   children: ReactNode;
 }
 

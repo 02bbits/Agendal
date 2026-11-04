@@ -2,22 +2,19 @@ import type { ReactElement } from "react";
 import { PlusIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { dayHeading, dayHeadingShort } from "../../domain/week";
-import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
+import { EntryBlocks } from "./EntryBlocks";
 import type { UpcomingBoardProps } from "./types";
 import { UpcomingOverdue } from "./UpcomingOverdue";
 
 export function UpcomingBoard({
   days,
-  tasksByDay,
+  entriesByDay,
   overdueTasks,
   today,
   selectedTaskId,
   navigate,
   onAddTask,
 }: UpcomingBoardProps): ReactElement {
-  const store = useTaskStore();
-
   return (
     <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
       {overdueTasks && overdueTasks.length > 0 && (
@@ -32,8 +29,8 @@ export function UpcomingBoard({
       {days.map((date) => {
         const shortHeading = dayHeadingShort(date, today);
         const fullHeading = dayHeading(date, today);
-        const dayTasks = tasksByDay[date] ?? [];
-        const count = dayTasks.length;
+        const dayEntries = entriesByDay[date] ?? [];
+        const count = dayEntries.length;
 
         return (
           <section
@@ -53,24 +50,14 @@ export function UpcomingBoard({
               </span>
             </div>
 
-            {dayTasks.length > 0 && (
-              <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
-                <ul className="m-0 list-none p-0">
-                  {dayTasks.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      project={store.projectOf(task)}
-                      today={today}
-                      timeFormat={store.timeFormat}
-                      onToggle={store.toggle}
-                      navigate={navigate}
-                      selected={task.id === selectedTaskId}
-                      settling={store.isSettling(task.id)}
-                    />
-                  ))}
-                </ul>
-              </div>
+            {dayEntries.length > 0 && (
+              <EntryBlocks
+                entries={dayEntries}
+                variant="board"
+                today={today}
+                selectedTaskId={selectedTaskId ?? undefined}
+                navigate={navigate}
+              />
             )}
 
             <button

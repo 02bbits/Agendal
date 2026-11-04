@@ -62,7 +62,6 @@ export function ProjectCompletedList({
               project={project}
               today={today}
               timeFormat={timeFormat}
-              showDue
               selected={x.id === selectedTaskId}
               onToggle={onToggleTask ?? (() => {})}
               navigate={navigate}

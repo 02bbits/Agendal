@@ -65,7 +65,7 @@ export function UpcomingDayStrip({
                     {day}
                   </span>
                   {/* Tells the reader which day is today */}
-                  <span className="text-tab font-medium text-ink-tertiary md:text-footnote md:font-normal">
+                  <span className="hidden text-footnote font-normal text-ink-tertiary md:inline">
                     {t("list.strip_today")}
                   </span>
                 </>
@@ -97,6 +97,13 @@ export function UpcomingDayStrip({
                 />
               )}
             </div>
+
+            {/* On phones under the dot, so all seven dots stay on one line */}
+            {isToday && (
+              <span className="mt-0.5 text-tab font-medium text-ink-tertiary md:hidden">
+                {t("list.strip_today")}
+              </span>
+            )}
           </button>
         );
       })}
