@@ -177,11 +177,15 @@ describe("TaskRow (LV-4)", () => {
       },
     );
     expect(container.querySelector("li")!.className).toContain("is-done");
-    expect(container.querySelector("li")!.className).not.toContain("is-overdue");
+    expect(container.querySelector("li")!.className).not.toContain(
+      "is-overdue",
+    );
     const checkCircle = container.querySelector("button[role='checkbox'] span");
     expect(checkCircle?.className).toContain("bg-ink");
     expect(checkCircle?.className).not.toContain("border-error");
-    expect(container.querySelector('[data-slot="meta"] .text-error')).toBeNull();
+    expect(
+      container.querySelector('[data-slot="meta"] .text-error'),
+    ).toBeNull();
   });
 
   it("reads no priority when the API sends priority: null", () => {

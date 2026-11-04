@@ -80,9 +80,15 @@ export function TaskPanel({
         return;
       }
       if (
-        ["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "].includes(
-          e.key,
-        )
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "PageUp",
+          "PageDown",
+          "Home",
+          "End",
+          " ",
+        ].includes(e.key)
       ) {
         if (!aside || !aside.contains(document.activeElement)) {
           e.preventDefault();
