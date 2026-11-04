@@ -29,11 +29,11 @@ it('SEC-10: every NF-13 limit is defined', function (string $name, array $expect
     'POST /files/extract' => ['files', [[10, 3600], [30, 86400]]],
     'search' => ['search', [[60, 60]]],
     'sync' => ['sync', [[30, 60]]],
-    'everything else, user' => ['api', [[120, 60]]],
+    'everything else, user' => ['api', [[300, 60], [20, 1]]],
 ]);
 
-it('SEC-10: guests get 300 a minute per IP', function () {
-    expect(limitsOf('api'))->toBe([[300, 60]]);
+it('SEC-10: guests get 300 a minute and 20 a second per IP', function () {
+    expect(limitsOf('api'))->toBe([[300, 60], [20, 1]]);
 });
 
 it('SEC-10: past the limit the API answers 429 with Retry-After and the rate-limit code', function () {

@@ -12,8 +12,9 @@ import { useTaskStore } from "../tasks/store";
 import { PriorityField } from "../tasks/details/PriorityField";
 import { SettingsRows } from "../tasks/details/SettingsRows";
 import { NotesField } from "../tasks/details/NotesField";
+import { DiscardDialog } from "../tasks/new/DiscardDialog";
 
-/** A proposed task is a local form: Cancel discards it, Done updates only the waiting plan. */
+/** A proposed task is a local form: Cancel discards it (asking first once edited), Done updates only the waiting plan. */
 export function NoteTaskEditor({
   task,
   onCancel,
@@ -37,8 +38,17 @@ export function NoteTaskEditor({
   const root = useRef<HTMLElement>(null);
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useId();
-  useHistoryEntry(!wide, onCancel);
-  useModalFocus(root, heading, true, onCancel);
+  const [discarding, setDiscarding] = useState(false);
+  // Cancel, Escape and Back ask before dropping edits (UX-13); `false` keeps Back's history entry
+  const requestCancel = () => {
+    const edited =
+      draft.title !== task.title || Object.keys(changes.current).length > 0;
+    if (!edited) return onCancel();
+    setDiscarding(true);
+    return false;
+  };
+  useHistoryEntry(!wide, requestCancel);
+  useModalFocus(root, heading, true, requestCancel);
   useEffect(() => {
     if (wide) heading.current?.focus();
   }, [wide]);
@@ -62,15 +72,15 @@ export function NoteTaskEditor({
         if (event.key === "Escape" && !event.defaultPrevented) {
           event.preventDefault();
           event.stopPropagation();
-          onCancel();
+          requestCancel();
         }
       }}
       className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-paper md:left-[248px] xl:absolute xl:inset-0 xl:z-10"
     >
       <header className="sticky top-0 z-10 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-paper px-4 pt-[env(safe-area-inset-top)]">
         <button
-          className="focus-ring min-h-11 justify-self-start rounded-field px-2 text-body"
-          onClick={onCancel}
+          className="focus-ring min-h-11 justify-self-start rounded-field px-2 text-body hover:bg-fill"
+          onClick={requestCancel}
         >
           {t("common.cancel")}
         </button>
@@ -83,7 +93,7 @@ export function NoteTaskEditor({
           {t("note.edit_task")}
         </h2>
         <button
-          className="focus-ring min-h-11 justify-self-end rounded-field px-2 font-semibold disabled:opacity-40"
+          className="focus-ring min-h-11 justify-self-end rounded-field px-2 font-semibold hover:bg-fill disabled:opacity-40 disabled:hover:bg-transparent"
           disabled={!draft.title.trim() || !!error}
           onClick={() =>
             onDone({ ...changes.current, title: draft.title.trim() })
@@ -141,6 +151,11 @@ export function NoteTaskEditor({
           {t(creating ? "note.dont_add" : "note.skip_change")}
         </Button>
       </div>
+      <DiscardDialog
+        open={discarding}
+        onDiscard={onCancel}
+        onKeepEditing={() => setDiscarding(false)}
+      />
     </section>
   );
 }

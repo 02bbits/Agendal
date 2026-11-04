@@ -20,6 +20,7 @@ use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -48,6 +49,23 @@ final class NoteApplier
         private NoteSplitter $splitter,
         private CommandMatcher $matcher,
     ) {}
+
+    /**
+     * The rows Check this first shows (NU-5): the plan applied in a savepoint and rolled back, so nothing persists.
+     * ponytail: preview task ids differ from the ones apply makes; confirm rows don't link to tasks.
+     *
+     * @param  ValidatedPlan  $plan
+     * @return list<array<string, mixed>>
+     */
+    public function preview(Note $note, array $plan): array
+    {
+        DB::beginTransaction();
+        try {
+            return $this->apply($note, $plan)['changes'];
+        } finally {
+            DB::rollBack();
+        }
+    }
 
     /**
      * @param  ValidatedPlan  $plan

@@ -64,7 +64,7 @@ export function Sidebar({
       <button
         type="button"
         onClick={onSearch}
-        className="focus-ring flex min-h-10 items-center gap-2 rounded-field bg-fill px-3 text-callout text-ink-tertiary w-full text-left cursor-pointer border-0"
+        className="focus-ring flex min-h-10 items-center gap-2 rounded-field bg-fill px-3 text-callout text-ink-tertiary hover:bg-fill-2 w-full text-left cursor-pointer border-0"
       >
         <SearchIcon size={18} />
         {t("search.placeholder")}

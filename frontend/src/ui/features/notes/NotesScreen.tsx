@@ -1,7 +1,7 @@
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
 import { t } from "../../copy";
-import { formatDay, formatTime } from "../../domain/dates";
+import { formatDay, formatLongDate, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
 import { ScreenHeader } from "../shell/ScreenHeader";
@@ -41,6 +41,7 @@ export function NotesScreen({
   return (
     <>
       <ScreenHeader
+        overline={formatLongDate(today)}
         title={t("nav.notes")}
         accountInitial={accountInitial}
         navigate={navigate}

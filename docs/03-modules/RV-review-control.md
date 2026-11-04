@@ -207,7 +207,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 - **State machine:** every action is valid only from the status in the [state transitions](../02-domain/domain.md#state-transitions), plus `undone → done` for redo and `→ new` for Edit note (ASVS 11.1.1).
 - **Idempotency:** repeating an action that has already happened returns `200` with the current note ([RV-E5](#rv-e5)).
-- **Limits:** these endpoints share the general limit of 120/min per user ([NF-13](../05-quality/nfr.md#nf-13)).
+- **Limits:** these endpoints share the general limit of 300/min and 20/s per user ([NF-13](../05-quality/nfr.md#nf-13)).
 
 ## 8. Data, validation and authorization
 

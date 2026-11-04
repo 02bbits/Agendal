@@ -54,9 +54,11 @@ function NotesContent({ noteId }: { noteId?: string }) {
     const refresh = () => setRevision((value) => value + 1);
     window.addEventListener("agendal:note-updated", refresh);
     window.addEventListener("agendal:task-created", refresh);
+    window.addEventListener("agendal:note-renamed", refresh);
     return () => {
       window.removeEventListener("agendal:note-updated", refresh);
       window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener("agendal:note-renamed", refresh);
     };
   }, []);
   useEffect(() => {
@@ -74,7 +76,12 @@ function NotesContent({ noteId }: { noteId?: string }) {
       router.back();
     } else back();
   }, [router, back]);
-  useModalFocus(panelRef, panelRef, !!selected, close);
+  // The note's screen may ask first (Check this first, nothing applied yet) before ×, the backdrop or Escape close it
+  const closeGuard = useRef<(() => boolean) | null>(null);
+  const requestClose = useCallback(() => {
+    if (closeGuard.current?.() !== false) close();
+  }, [close]);
+  useModalFocus(panelRef, panelRef, !!selected, requestClose);
   useEffect(() => {
     if (!selected) return;
     const background = [
@@ -145,10 +152,27 @@ function NotesContent({ noteId }: { noteId?: string }) {
             accountInitial={user?.display_name ?? user?.email ?? ""}
             navigate={navigate}
           />
-        ) : (
+        ) : error ? (
           <p role="status" className="py-8 text-body">
-            {error ? t("error.generic", { request_id: "" }) : t("nav.notes")}
+            {t("error.generic", { request_id: "" })}
           </p>
+        ) : (
+          // Loading: the header, filter chips and a few rows in place, like the note screen's skeleton
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={t("nav.notes")}
+            className="flex animate-pulse flex-col gap-4 pt-3 md:pt-8"
+          >
+            <div className="h-3 w-40 rounded bg-surface" />
+            <div className="h-10 w-32 rounded bg-surface" />
+            <div className="flex gap-2">
+              <div className="h-7 w-12 rounded-full bg-surface" />
+              <div className="h-7 w-20 rounded-full bg-surface" />
+              <div className="h-7 w-16 rounded-full bg-surface" />
+            </div>
+            <div className="h-80 w-full rounded-box bg-surface" />
+          </div>
         )}
         {error && (
           <Button onClick={() => setRevision((value) => value + 1)}>
@@ -167,7 +191,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             aria-hidden="true"
             className="fixed inset-0 z-[54] bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
             onMouseDown={(event) => event.preventDefault()}
-            onClick={close}
+            onClick={requestClose}
           />
           <aside
             ref={panelRef}
@@ -186,7 +210,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
                   plain
                   label={t("common.close")}
                   icon={<XIcon />}
-                  onClick={close}
+                  onClick={requestClose}
                 />
               </header>
             )}
@@ -201,6 +225,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
                 id={selected}
                 presentation={wide ? "panel" : "screen"}
                 onClose={close}
+                closeGuardRef={closeGuard}
               />
             </div>
           </aside>

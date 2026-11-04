@@ -54,7 +54,7 @@ export function PickerTrigger({
         isIcon
           ? "size-8 min-h-8 justify-center rounded-full bg-fill p-0 hover:bg-fill-2"
           : isScreen
-            ? "justify-end gap-1 bg-transparent py-1 pr-5 text-right text-body text-ink-secondary"
+            ? "justify-end gap-1 bg-transparent py-1 pr-5 text-right text-body text-ink-secondary enabled:hover:text-ink"
             : "gap-1.5 rounded-full bg-fill py-1 pl-3 pr-6 text-footnote font-medium",
       )}
     >

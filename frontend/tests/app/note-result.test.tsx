@@ -529,6 +529,30 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     ).toBeTruthy();
   });
 
+  it("leaving the review asks first, and Discard leaves the note pending", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.back") }),
+    );
+    await screen.findByText(t("note.discard_review_title"));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.keep_editing") }),
+    );
+    expect(screen.queryByText(t("note.discard_review_title"))).toBeNull();
+    expect(router.replace).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.back") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    );
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(0);
+  });
+
   // The server's answer to the toast's undo and redo
 
   function serveUndo(undo: Response) {
@@ -692,7 +716,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(router.replace).not.toHaveBeenCalled();
   });
 
-  it("Cancel discards a task edit and Apply sends no edits", async () => {
+  it("Cancel asks before discarding a task edit, and Apply then sends no edits (UX-13)", async () => {
     serveConfirm();
 
     await open();
@@ -714,7 +738,9 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: t("common.cancel") }),
     );
-
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    );
     expect(screen.queryByText("Discard this title")).toBeNull();
 
     await userEvent.click(
@@ -796,9 +822,10 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     skipped: [],
   };
 
-  it("keeps the note as a task then opens real Task details (T-RV-22)", async () => {
+  it("Keep it as task opens the review first; nothing is made until Apply (T-RV-22)", async () => {
     serve({}, () => json(200, followup), {
-      "/api/v1/notes/n1/make-task": () => json(200, result),
+      "/api/v1/notes/n1/make-task": () =>
+        json(200, { ...result, note: { ...result.note, status: "confirm" } }),
     });
 
     await open();
@@ -806,12 +833,12 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: t("note.make_one") }),
     );
-
-    await waitFor(() =>
-      expect(router.push).toHaveBeenCalledWith("/tasks/t-sql"),
-    );
-
+    await screen.findByText(t("note.review_title"));
+    expect(
+      screen.getByRole("button", { name: t("note.apply_preview") }),
+    ).toBeTruthy();
     expect(calls("POST", "/api/v1/notes/n1/make-task")).toHaveLength(1);
+    expect(router.push).not.toHaveBeenCalledWith("/tasks/t-sql");
   });
 
   it("a failed manual creation keeps the follow-up available for retry", async () => {

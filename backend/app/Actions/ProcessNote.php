@@ -167,27 +167,10 @@ class ProcessNote
             $note->plan = [...$plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
             $note->save();
         } elseif ($build->status === PlanStatus::Confirm) {
-            $note->plan = [...$plan, 'changes' => $this->preview($note, $plan)];
+            $note->plan = [...$plan, 'changes' => $this->applier->preview($note, $plan)];
             $note->save();
         }
 
         return $note->refresh();
-    }
-
-    /**
-     * The rows Check this first shows (NU-5): the plan applied in a savepoint and rolled back, so nothing persists.
-     * ponytail: preview task ids differ from the ones apply makes; confirm rows don't link to tasks.
-     *
-     * @param  ValidatedPlan  $plan
-     * @return list<array<string, mixed>>
-     */
-    private function preview(Note $note, array $plan): array
-    {
-        DB::beginTransaction();
-        try {
-            return $this->applier->apply($note, $plan)['changes'];
-        } finally {
-            DB::rollBack();
-        }
     }
 }
