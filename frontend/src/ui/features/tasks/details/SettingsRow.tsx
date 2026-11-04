@@ -1,6 +1,5 @@
 import type { ReactElement, ReactNode } from "react";
 import { cx } from "../../../components/cx";
-import { LayeredIcon } from "../../../components/LayeredIcon";
 
 export interface SettingsRowProps {
   variant?: "panel" | "screen";
@@ -56,8 +55,8 @@ export function SettingsRow({
         <>
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-3">
-              <div className="flex size-8 shrink-0 items-center justify-center text-ink">
-                <LayeredIcon>{icon}</LayeredIcon>
+              <div className="flex size-8 shrink-0 items-center justify-center text-ink-secondary">
+                {icon}
               </div>
               <span className="text-body font-normal text-ink">{label}</span>
             </div>
