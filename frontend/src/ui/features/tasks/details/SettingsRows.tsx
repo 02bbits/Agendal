@@ -118,7 +118,7 @@ export function SettingsRows({
             id="task-repeat"
             label={t("task.repeat")}
             value={task.repeat}
-            className="max-w-[180px]"
+            className="max-w-[180px] [&>div]:max-w-full [&>div>button]:max-w-full [&>div>button>span]:truncate"
             options={REPEATS.map((r) => ({
               value: r,
               label:
