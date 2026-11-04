@@ -85,7 +85,6 @@ export function SettingsRows({
       <SettingsRow
         variant={variant}
         icon={<BellIcon size={18} />}
-        tileBg="bg-project-orange/15 text-project-orange"
         label={t("task.reminder")}
         helper={reminderHelper}
         helperId="task-reminder-helper"
@@ -107,7 +106,6 @@ export function SettingsRows({
       <SettingsRow
         variant={variant}
         icon={<RepeatIcon size={18} />}
-        tileBg="bg-fill text-ink-secondary"
         label={t("task.repeat")}
         control={
           <Picker<Repeat>

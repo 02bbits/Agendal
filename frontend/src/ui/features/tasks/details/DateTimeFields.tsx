@@ -47,7 +47,6 @@ export function DateTimeFields({
       <SettingsRow
         variant={variant}
         icon={<CalendarIcon size={18} />}
-        tileBg="bg-project-blue/15 text-project-blue"
         label={t("task.start_date")}
         control={
           <div className="flex items-center gap-1.5">
@@ -86,7 +85,6 @@ export function DateTimeFields({
       <SettingsRow
         variant={variant}
         icon={<CalendarIcon size={18} />}
-        tileBg="bg-project-red/15 text-project-red"
         label={t("task.due")}
         error={errorText}
         errorId={errorId}

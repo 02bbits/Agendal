@@ -82,7 +82,6 @@ export function ProjectField({
     <SettingsRow
       variant={variant}
       icon={<FolderIcon size={18} />}
-      tileBg="bg-project-blue/15 text-project-blue"
       label={t("task.project")}
       control={control}
       helper={helper}
