@@ -202,20 +202,15 @@ describe("Inbox screen", () => {
     );
   });
 
-  it("renders tasks due today inside a dashed due block", () => {
+  it("renders tasks due today as normal task rows, not inside a dashed due block", () => {
     const { wrap } = setup([
       task({ title: "Due today task", due_date: TODAY }),
       task({ title: "Start today task", start_date: TODAY }),
     ]);
     const { container } = render(wrap(<InboxScreen accountInitial="e" />));
-    const dueBlock = container.querySelector(".border-dashed.border-due");
-    expect(dueBlock).toBeTruthy();
-    expect(
-      within(dueBlock as HTMLElement).getByText("Due today task"),
-    ).toBeTruthy();
-    expect(
-      within(dueBlock as HTMLElement).queryByText("Start today task"),
-    ).toBeNull();
+    expect(container.querySelector(".border-dashed.border-due")).toBeNull();
+    expect(screen.getByText("Due today task")).toBeTruthy();
+    expect(screen.getByText("Start today task")).toBeTruthy();
   });
 
   it("collapses No date and Completed as disclosures (A11Y-53)", async () => {
