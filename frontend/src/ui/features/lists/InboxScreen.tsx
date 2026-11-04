@@ -154,19 +154,21 @@ export function InboxScreen({
           </h2>
         </section>
       ) : (
-        <div className={TASK_COLUMN_CLASS}>
+        <div className="w-full">
           {!allDone && (
-            <ProgressSummary
-              progress={view.progress}
-              next={nextUp(
-                [...view.today, ...view.overdue].filter((x) => !x.done),
-                store.today,
-              )}
-              timeFormat={store.timeFormat}
-            />
+            <div className={TASK_COLUMN_CLASS}>
+              <ProgressSummary
+                progress={view.progress}
+                next={nextUp(
+                  [...view.today, ...view.overdue].filter((x) => !x.done),
+                  store.today,
+                )}
+                timeFormat={store.timeFormat}
+              />
+            </div>
           )}
           {allDone && (
-            <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
+            <section className="flex w-full flex-col items-center justify-center gap-2 px-5 py-8 text-center">
               <span className="text-ink-tertiary" aria-hidden="true">
                 <CheckIcon size={28} />
               </span>
@@ -191,73 +193,75 @@ export function InboxScreen({
               </Link>
             </section>
           )}
-          {view.overdue.length > 0 && (
-            <Section
-              title={t("list.overdue")}
-              count={view.overdue.length}
-              tone="danger"
-              collapsible
-              open={openOverdue}
-              onToggle={handleToggleOverdue}
-            >
-              {view.overdue.map((x) =>
-                row(x, { showDue: true, overdue: true }),
-              )}
-            </Section>
-          )}
-          {view.today.length > 0 && (
-            <Section
-              title={t("list.today")}
-              count={view.today.length}
-              collapsible
-              open={openToday}
-              onToggle={handleToggleToday}
-            >
-              {view.today.map((x) => row(x))}
-            </Section>
-          )}
-          {view.noDate.length > 0 && (
-            <Section
-              title={t("list.no_date")}
-              count={view.noDate.length}
-              collapsible
-              open={openNoDate}
-              onToggle={handleToggleNoDate}
-            >
-              {view.noDate.map((x) => row(x, { showDue: true }))}
-            </Section>
-          )}
-          {view.completed.length > 0 && (
-            <Section
-              title={t("list.completed")}
-              count={view.completed.length}
-              collapsible
-              open={openCompleted}
-              onToggle={handleToggleCompleted}
-              footer={
-                hasHiddenCompleted ? (
-                  <Button
-                    variant="secondary"
-                    className="mt-3 w-full"
-                    onClick={() => setShowAllCompleted(true)}
-                  >
-                    {t("list.show_all")}
-                  </Button>
-                ) : showAllCompleted &&
-                  INBOX_COMPLETED_PAGE < totalCompleted ? (
-                  <Button
-                    variant="secondary"
-                    className="mt-3 w-full"
-                    onClick={() => setShowAllCompleted(false)}
-                  >
-                    {t("list.show_less")}
-                  </Button>
-                ) : null
-              }
-            >
-              {visibleCompleted.map((x) => row(x))}
-            </Section>
-          )}
+          <div className={TASK_COLUMN_CLASS}>
+            {view.overdue.length > 0 && (
+              <Section
+                title={t("list.overdue")}
+                count={view.overdue.length}
+                tone="danger"
+                collapsible
+                open={openOverdue}
+                onToggle={handleToggleOverdue}
+              >
+                {view.overdue.map((x) =>
+                  row(x, { showDue: true, overdue: true }),
+                )}
+              </Section>
+            )}
+            {view.today.length > 0 && (
+              <Section
+                title={t("list.today")}
+                count={view.today.length}
+                collapsible
+                open={openToday}
+                onToggle={handleToggleToday}
+              >
+                {view.today.map((x) => row(x))}
+              </Section>
+            )}
+            {view.noDate.length > 0 && (
+              <Section
+                title={t("list.no_date")}
+                count={view.noDate.length}
+                collapsible
+                open={openNoDate}
+                onToggle={handleToggleNoDate}
+              >
+                {view.noDate.map((x) => row(x, { showDue: true }))}
+              </Section>
+            )}
+            {view.completed.length > 0 && (
+              <Section
+                title={t("list.completed")}
+                count={view.completed.length}
+                collapsible
+                open={openCompleted}
+                onToggle={handleToggleCompleted}
+                footer={
+                  hasHiddenCompleted ? (
+                    <Button
+                      variant="secondary"
+                      className="mt-3 w-full"
+                      onClick={() => setShowAllCompleted(true)}
+                    >
+                      {t("list.show_all")}
+                    </Button>
+                  ) : showAllCompleted &&
+                    INBOX_COMPLETED_PAGE < totalCompleted ? (
+                    <Button
+                      variant="secondary"
+                      className="mt-3 w-full"
+                      onClick={() => setShowAllCompleted(false)}
+                    >
+                      {t("list.show_less")}
+                    </Button>
+                  ) : null
+                }
+              >
+                {visibleCompleted.map((x) => row(x))}
+              </Section>
+            )}
+          </div>
         </div>
       )}
     </div>

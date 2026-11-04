@@ -163,6 +163,31 @@ describe("TaskRow (LV-4)", () => {
     expect(container.querySelector("li")!.className).toContain("is-overdue");
   });
 
+  it("switches from overdue style to completed tick style when done", () => {
+    const { container } = renderRow(
+      task({
+        title: "Submit HCI reflection",
+        project_id: "p-hci",
+        due_date: "2026-10-21",
+        done: true,
+      }),
+      {
+        showDue: true,
+        overdue: true,
+      },
+    );
+    expect(container.querySelector("li")!.className).toContain("is-done");
+    expect(container.querySelector("li")!.className).not.toContain(
+      "is-overdue",
+    );
+    const checkCircle = container.querySelector("button[role='checkbox'] span");
+    expect(checkCircle?.className).toContain("bg-ink");
+    expect(checkCircle?.className).not.toContain("border-error");
+    expect(
+      container.querySelector('[data-slot="meta"] .text-error'),
+    ).toBeNull();
+  });
+
   it("reads no priority when the API sends priority: null", () => {
     renderRow(task({ title: "Call mum", priority: null }));
     expect(screen.getByRole("link").getAttribute("aria-label")).toBe(

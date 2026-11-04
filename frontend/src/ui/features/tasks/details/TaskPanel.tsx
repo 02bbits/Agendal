@@ -37,6 +37,7 @@ export function TaskPanel({
     return t.id === taskId;
   });
   const triggerRef = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -48,14 +49,64 @@ export function TaskPanel({
   }, []);
 
   // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
-  // short of it instead of covering Clear and Delete (see AppShell)
+  // short of it instead of covering Clear and Delete (see AppShell).
+  // Also intercepts wheel and touchmove events outside the panel to prevent
+  // the background page from scrolling without mutating html/body overflow,
+  // which preserves sticky sidebar and header positioning (UX-28).
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.taskPanel = "open";
+
+    const aside = panelRef.current;
+
+    const onWheel = (e: WheelEvent) => {
+      const isInside = e.target instanceof Node && aside?.contains(e.target);
+      if (!isInside) {
+        e.preventDefault();
+      }
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      const isInside = e.target instanceof Node && aside?.contains(e.target);
+      if (!isInside) {
+        e.preventDefault();
+      }
+    };
+
+    const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (
+        [
+          "ArrowUp",
+          "ArrowDown",
+          "PageUp",
+          "PageDown",
+          "Home",
+          "End",
+          " ",
+        ].includes(e.key)
+      ) {
+        if (!aside || !aside.contains(document.activeElement)) {
+          e.preventDefault();
+        }
+      }
+    };
+
+    window.addEventListener("wheel", onWheel, { passive: false });
+    window.addEventListener("touchmove", onTouchMove, { passive: false });
+    window.addEventListener("keydown", onWindowKeyDown);
+
     return () => {
       delete root.dataset.taskPanel;
+      window.removeEventListener("wheel", onWheel);
+      window.removeEventListener("touchmove", onTouchMove);
+      window.removeEventListener("keydown", onWindowKeyDown);
     };
-  }, []);
+  }, [onClose]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
@@ -68,45 +119,56 @@ export function TaskPanel({
   );
 
   return (
-    <aside
-      aria-label={t("task.heading")}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-      className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
-    >
-      {task ? (
-        <TaskDetails
-          key={task.id}
-          task={task}
-          onBack={onClose}
-          onClose={onClose}
-          variant="panel"
-          projects={projects}
-          projectsStatus={projectsStatus}
-          onRetryProjects={onRetryProjects}
-          deleteAction={
-            <DeleteTask
-              task={task}
-              onDeleted={onDelete ?? onClose}
-              label={t("common.delete")}
-            />
-          }
-          autoFocusTitle
-          weekStart={weekStart}
-        />
-      ) : (
-        <div className="flex h-full flex-col">
-          <PanelHeader onClose={onClose} />
-          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-            <p className="text-body text-ink-secondary">
-              {t("error.not_found")}
-            </p>
-            <Button variant="secondary" onClick={onClose} className="mt-4">
-              {t("common.close")}
-            </Button>
+    <>
+      <div
+        data-testid="task-panel-backdrop"
+        aria-hidden="true"
+        onClick={onClose}
+        onWheel={(e) => e.preventDefault()}
+        onTouchMove={(e) => e.preventDefault()}
+        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+      />
+      <aside
+        ref={panelRef}
+        aria-label={t("task.heading")}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in will-change-transform shadow-2xl"
+      >
+        {task ? (
+          <TaskDetails
+            key={task.id}
+            task={task}
+            onBack={onClose}
+            onClose={onClose}
+            variant="panel"
+            projects={projects}
+            projectsStatus={projectsStatus}
+            onRetryProjects={onRetryProjects}
+            deleteAction={
+              <DeleteTask
+                task={task}
+                onDeleted={onDelete ?? onClose}
+                label={t("common.delete")}
+              />
+            }
+            autoFocusTitle
+            weekStart={weekStart}
+          />
+        ) : (
+          <div className="flex h-full flex-col">
+            <PanelHeader onClose={onClose} />
+            <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+              <p className="text-body text-ink-secondary">
+                {t("error.not_found")}
+              </p>
+              <Button variant="secondary" onClick={onClose} className="mt-4">
+                {t("common.close")}
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
-    </aside>
+        )}
+      </aside>
+    </>
   );
 }
