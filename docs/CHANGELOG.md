@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-04
+
+- `05-quality/nfr.md` NF-13, `03-modules/RV-review-control.md`: general API limit raised from 120/min per user to 300/min plus a 20/s burst cap, per user and per IP for guests.
+
 ## 2026-11-03
 
 - **A time needs its date (Refs #129).** [TK §2.2](03-modules/TK-tasks.md#22-task-details-and-editing-tk-2-tk-3) and [TK §8](03-modules/TK-tasks.md#8-data-validation-and-authorization): a start or due time is only set with its date (the server answers 422 and the database has CHECKs, instead of filling in a date); the date pickers get a **No date** choice.
