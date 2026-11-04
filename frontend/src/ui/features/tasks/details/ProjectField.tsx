@@ -1,10 +1,13 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
+import { createPortal } from "react-dom";
 import { Button } from "../../../components/Button";
-import { FolderIcon } from "../../../components/icons";
+import { FolderIcon, PlusIcon } from "../../../components/icons";
 import { Picker } from "../../../components/Picker";
 import { ProjectDot } from "../../../components/ProjectDot";
 import { t } from "../../../copy";
 import type { Project } from "../../../domain/types";
+import { createProject } from "../../../../lib/projectApi";
+import { ProjectSheet } from "../../projects/ProjectSheet";
 import { SettingsRow } from "./SettingsRow";
 
 export interface ProjectFieldProps {
@@ -18,12 +21,22 @@ export interface ProjectFieldProps {
 
 export function ProjectField({
   projectId,
-  projects,
+  projects: propProjects,
   projectsStatus = "ready",
   onRetryProjects,
   onChange,
   variant = "panel",
 }: ProjectFieldProps): ReactElement {
+  const [creating, setCreating] = useState(false);
+  const [localProjects, setLocalProjects] = useState<Project[]>([]);
+
+  const projects = [...propProjects];
+  for (const lp of localProjects) {
+    if (!projects.some((p) => p.id === lp.id)) {
+      projects.push(lp);
+    }
+  }
+
   const knownProject = projectId
     ? projects.find((p) => p.id === projectId)
     : undefined;
@@ -44,6 +57,11 @@ export function ProjectField({
           label: p.name,
           leading: <ProjectDot colour={p.colour} />,
         })),
+        {
+          value: "__new__",
+          label: t("project.new_option"),
+          leading: <PlusIcon size={16} />,
+        },
       ]
     : [
         {
@@ -55,6 +73,23 @@ export function ProjectField({
         },
       ];
 
+  const handleSelect = (val: string) => {
+    if (val === "__new__") {
+      setCreating(true);
+      return;
+    }
+    onChange(val ? val : null);
+  };
+
+  const handleCreated = (newProject: Project) => {
+    setLocalProjects((prev) => [...prev, newProject]);
+    onChange(newProject.id);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+    }
+    setCreating(false);
+  };
+
   const control = (
     <Picker<string>
       id="task-project"
@@ -62,7 +97,7 @@ export function ProjectField({
       value={projectId ?? ""}
       options={options}
       disabled={disabled}
-      onChange={(val) => onChange(val ? val : null)}
+      onChange={handleSelect}
       variant={variant}
     />
   );
@@ -79,14 +114,30 @@ export function ProjectField({
   ) : undefined;
 
   return (
-    <SettingsRow
-      variant={variant}
-      icon={<FolderIcon size={18} />}
-      tileBg="bg-project-blue/15 text-project-blue"
-      label={t("task.project")}
-      control={control}
-      helper={helper}
-      helperId="task-project-helper"
-    />
+    <>
+      <SettingsRow
+        variant={variant}
+        icon={<FolderIcon size={18} />}
+        tileBg="bg-project-blue/15 text-project-blue"
+        label={t("task.project")}
+        control={control}
+        helper={helper}
+        helperId="task-project-helper"
+      />
+      {/* New task keeps this field in its form: forms can't nest, and a submit here must not add the task */}
+      {creating &&
+        createPortal(
+          <div onSubmit={(e) => e.stopPropagation()}>
+            <ProjectSheet
+              open
+              projects={projects}
+              onCreate={createProject}
+              onCreated={handleCreated}
+              onClose={() => setCreating(false)}
+            />
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

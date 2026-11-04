@@ -33,6 +33,13 @@ export function TaskStoreProvider({
   const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
     useTaskSync(initialTasks);
   const [projects, setProjects] = React.useState(initialProjects);
+  // A project made from a picker reaches the rows when the screen refetches
+  const projectsKey = JSON.stringify(initialProjects);
+  const [seenProjects, setSeenProjects] = React.useState(projectsKey);
+  if (projectsKey !== seenProjects) {
+    setSeenProjects(projectsKey);
+    setProjects(initialProjects);
+  }
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
   const toastSeq = React.useRef(0);
