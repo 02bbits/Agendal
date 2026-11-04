@@ -291,11 +291,6 @@ export function NoteResultScreen({
         </section>
       )}
 
-      {confirming && (
-        <p className="my-4 text-footnote text-ink-secondary">
-          {t("note.preview_hint")}
-        </p>
-      )}
       {omittedCount > 0 && (
         <div className="my-3 text-footnote">
           <p className="m-0">{t("note.omitted", { count: omittedCount })}</p>
@@ -520,7 +515,12 @@ function ChangeRow({
         <span className="block text-footnote text-ink-secondary">{meta}</span>
       </span>
       {opens && (
-        <PencilIcon size={18} aria-hidden="true" className="mt-1 shrink-0" />
+        <span
+          aria-hidden="true"
+          className="inline-flex size-9 shrink-0 items-center justify-center self-center rounded-full border border-control bg-fill text-ink shadow-xs"
+        >
+          <PencilIcon size={20} />
+        </span>
       )}
     </>
   );
