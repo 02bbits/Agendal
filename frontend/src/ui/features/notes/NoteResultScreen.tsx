@@ -3,6 +3,7 @@ import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
+import { IconButton } from "../../components/IconButton";
 import { PencilIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
@@ -45,6 +46,8 @@ export interface NoteResultScreenProps {
   onApply?: () => void;
   onEdit?: () => void;
   onMakeTask?: () => void;
+  /** Renames the note; resolves `false` when it couldn't be saved, so the field stays open. */
+  onRename?: (name: string) => Promise<boolean>;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -100,6 +103,7 @@ export function NoteResultScreen({
   onApply,
   onEdit,
   onMakeTask,
+  onRename,
   busy = false,
   offline = false,
   onOpenTask,
@@ -113,6 +117,13 @@ export function NoteResultScreen({
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const [expanded, setExpanded] = useState(false);
+  // Renaming: the field's text while open. Enter or leaving the field saves, Escape cancels
+  const [naming, setNaming] = useState<string | null>(null);
+  const saveName = async () => {
+    const name = naming?.trim();
+    if (!name || name === nameOf(result)) return setNaming(null);
+    if (await onRename!(name)) setNaming(null);
+  };
   // A11Y-20, UX-61: focus goes to the heading, whose name includes the overline
   useEffect(() => heading.current?.focus(), []);
 
@@ -214,15 +225,47 @@ export function NoteResultScreen({
       >
         {overline}
       </p>
-      <Heading
-        ref={heading}
-        id={titleId}
-        tabIndex={-1}
-        aria-labelledby={`${overlineId} ${titleId}`}
-        className="mt-1 mb-0 text-display font-bold focus:outline-none"
-      >
-        {nameOf(result)}
-      </Heading>
+      {naming === null ? (
+        <div className="mt-1 flex items-start gap-2">
+          <Heading
+            ref={heading}
+            id={titleId}
+            tabIndex={-1}
+            aria-labelledby={`${overlineId} ${titleId}`}
+            className="m-0 min-w-0 flex-1 text-display font-bold [overflow-wrap:anywhere] focus:outline-none"
+          >
+            {nameOf(result)}
+          </Heading>
+          {onRename && (
+            <IconButton
+              plain
+              label={t("note.rename")}
+              icon={<PencilIcon size={18} />}
+              disabled={offline}
+              onClick={() => setNaming(nameOf(result))}
+            />
+          )}
+        </div>
+      ) : (
+        <input
+          autoFocus
+          aria-label={t("note.name_label")}
+          value={naming}
+          onChange={(event) => setNaming(event.target.value)}
+          onKeyDown={async (event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setNaming(null);
+            }
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            await saveName();
+          }}
+          onBlur={saveName}
+          className="focus-ring mt-1 w-full rounded-field border-0 bg-surface px-2 py-1 text-display font-bold text-ink"
+        />
+      )}
       {confirming && (
         <p className="mt-2 mb-0 text-callout text-ink-secondary">
           {tc("note.confirm_body", changes.length)}
@@ -258,7 +301,7 @@ export function NoteResultScreen({
       {changes.length > 0 && (
         <section className="overflow-hidden rounded-box bg-surface">
           {confirming && (
-            <p className="m-0 px-4 pt-3 text-overline font-semibold uppercase text-ink-secondary">
+            <p className="m-0 border-b border-separator px-4 pt-3 pb-2.5 text-overline font-semibold uppercase text-ink-secondary">
               {t("note.planned_count", { count: changes.length })}
             </p>
           )}
@@ -295,7 +338,7 @@ export function NoteResultScreen({
         <div className="my-3 text-footnote">
           <p className="m-0">{t("note.omitted", { count: omittedCount })}</p>
           <button
-            className="focus-ring min-h-11 rounded-field text-primary"
+            className="focus-ring min-h-11 rounded-field px-2 text-primary hover:bg-fill"
             onClick={onRestoreOmission}
           >
             {t("note.undo_omit")}
@@ -532,7 +575,7 @@ function ChangeRow({
           type="button"
           onClick={() => onOpen(task)}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink"
+          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink hover:bg-fill"
         >
           {body}
         </button>
@@ -541,7 +584,7 @@ function ChangeRow({
           href={ROUTES.task(task.id)}
           navigate={navigate}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline"
+          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-fill"
         >
           {body}
         </Link>

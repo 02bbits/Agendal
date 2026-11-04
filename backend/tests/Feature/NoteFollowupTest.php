@@ -28,13 +28,18 @@ it('keeps the whole note as one task without extracting fields (T-RV-22)', funct
     $note = $this->postJson('/api/v1/notes', followupPayload($text))->assertCreated()->assertJsonPath('note.status', 'followup');
     expect(Task::count())->toBe(0);
     $id = $note->json('note.id');
-    $made = $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('note.status', 'done')->assertJsonCount(1, 'changes');
+    // Keep it as task only plans the task: Check this first shows it and nothing is made until Apply.
+    $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('note.status', 'confirm')->assertJsonCount(1, 'changes')
+        ->assertJsonPath('changes.0.kind', 'created')->assertJsonPath('changes.0.task.title', 'idea: sql quiz tomorrow 9am urgent fyi: gym every day');
+    $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('note.status', 'confirm');
+    expect(Task::count())->toBe(0);
+    $made = $this->postJson("/api/v1/notes/$id/apply")->assertOk()->assertJsonPath('note.status', 'done')->assertJsonCount(1, 'changes');
     $task = Task::firstOrFail();
     expect($task->title)->toBe('idea: sql quiz tomorrow 9am urgent fyi: gym every day')
         ->and([$task->due_date, $task->start_time, $task->due_time, $task->project_id])->toBe([null, null, null, null])
         ->and([$task->priority, $task->repeat, $task->reminder, $task->created_by])->toBe(['low', 'never', 'none', 'assistant'])
         ->and($task->source_note_id)->toBe($id)->and($made->json('note.text'))->toBe($text);
-    $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('changes.0.task.id', $task->id);
+    $this->postJson("/api/v1/notes/$id/make-task")->assertStatus(409);
     expect(Task::count())->toBe(1)->and(Note::count())->toBe(1);
 });
 
@@ -42,6 +47,7 @@ it('cuts a long manual title at a word boundary and preserves the overflow', fun
     $text = 'idea: '.str_repeat('portfolio research ', 25).'end';
     $id = $this->postJson('/api/v1/notes', followupPayload($text))->json('note.id');
     $this->postJson("/api/v1/notes/$id/make-task")->assertOk();
+    $this->postJson("/api/v1/notes/$id/apply")->assertOk();
     $task = Task::firstOrFail();
     expect(mb_strlen($task->title))->toBeLessThanOrEqual(200)
         ->and($task->title.' '.$task->notes)->toBe($text);
@@ -50,6 +56,7 @@ it('cuts a long manual title at a word boundary and preserves the overflow', fun
 it('records the manual task for Undo and Redo', function () {
     $id = $this->postJson('/api/v1/notes', followupPayload('idea: a little garden'))->json('note.id');
     $this->postJson("/api/v1/notes/$id/make-task")->assertOk();
+    $this->postJson("/api/v1/notes/$id/apply")->assertOk();
     $taskId = Task::firstOrFail()->id;
     expect(Note::findOrFail($id)->applied)->toHaveCount(1);
     $this->postJson("/api/v1/notes/$id/undo")->assertOk()->assertJsonPath('note.status', 'undone');

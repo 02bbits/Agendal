@@ -21,6 +21,11 @@ export const pending = {
   "notes.load_more": "Load more",
   "note.discard_edit_title": "Discard your changes?",
   "note.discard_edit_body": "The saved note will stay as it was.",
+  "note.rename": "Rename note",
+  "note.name_label": "Note name",
+  "note.discard_review_title": "Discard this review?",
+  "note.discard_review_body":
+    "Nothing has been applied yet. The note stays in Pending.",
   "nav.inbox": "Inbox",
   "nav.upcoming": "Upcoming",
   "nav.projects": "Projects",

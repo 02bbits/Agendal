@@ -158,6 +158,31 @@ export async function makeFollowupTask(
   }
 }
 
+/** The user renames a note (`PATCH /notes/{id}`): the note as it is now, or the copy saying why not. */
+export async function renameNote(
+  id: string,
+  name: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return {
+      error:
+        error instanceof ApiRequestError && isCopyKey(error.code)
+          ? error.code
+          : "error.save_failed",
+    };
+  }
+}
+
 /** IM-46 edits a follow-up in place; editing applied notes remains IM-47. */
 export async function replanFollowup(id: string, text: string): NoteSubmission {
   try {

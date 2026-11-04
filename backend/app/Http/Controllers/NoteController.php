@@ -69,6 +69,15 @@ class NoteController extends Controller
         return new NoteResultResource($process->replanFollowup($user, $note, $request->all()));
     }
 
+    /** The user renames a note; its plan and tasks don't change. Edit note names it again (RV-5). */
+    public function rename(Request $request, Note $note): NoteResultResource
+    {
+        $input = $request->validate(['name' => ['required', 'string', 'max:'.(int) config('notes.name_limit')]]);
+        $note->forceFill(['name' => trim($input['name'])])->save();
+
+        return new NoteResultResource($note);
+    }
+
     public function apply(Request $request, Note $note, NoteConfirm $confirm): NoteResultResource
     {
         // Edits from Check this first, by entry ref: only the fields a task patch may set (TK §7).
