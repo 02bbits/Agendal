@@ -1158,7 +1158,7 @@ describe("Upcoming screen (Section 8)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: "November 2026" }),
     );
-    await userEvent.click(screen.getByRole("button", { name: "Overdue 2" }));
+    await userEvent.click(screen.getByRole("button", { name: "Overdue" }));
     expect(document.getElementById("day-overdue")).toBeTruthy();
   });
 
