@@ -1,6 +1,6 @@
 # Handover
 
-_A starting point for picking Agendal up, written 2026-11-03 for 02bbits from `main` at `de2ada1`. It is a snapshot: the live build status is section 13 of [SUMMARY.md](SUMMARY.md), and the spec in `docs/01-product` to `docs/08-project` is the source of truth._
+_A starting point for picking Agendal up, written 2026-11-03 for 02bbits, updated 2026-11-04 from `main` at `b30b8b2`. It is a snapshot: the live build status is section 13 of [SUMMARY.md](SUMMARY.md), and the spec in `docs/01-product` to `docs/08-project` is the source of truth._
 
 ## 1. The project in four lines
 
@@ -51,12 +51,7 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 
 ## 5. Your work
 
-**In review, yours**
-
-| PR                                    | What                                                                   | Next                                                         |
-| ------------------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
-| #127 IM-44 Undo all and the 10 s redo | Per-note undo with conflict dialog, redo, Undo in the post-Apply toast | Get review, merge; then IM-47 Edit note can reuse `NoteUndo` |
-| #126 IM-37 created row label          | A created row's meta is date · time · project                          | Get review, merge                                            |
+Your #126 (row label) and #127 (Undo all) are merged, so IM-47 Edit note can now reuse `NoteUndo`.
 
 **Assigned to you, not started**
 
@@ -69,14 +64,14 @@ cd frontend && npm run format:check && npm run lint && npm run typecheck && npm 
 | IM-65 Deploy                             | The demo must run on the public URL                                                                                                 |
 | #77 Branded emails                       | Reset and password-changed mails still use Laravel's default layout                                                                 |
 
-A sensible order: merge #126 and #127, do IM-46 (small, closes the note flow's last dead end), then IM-50 → IM-51 → IM-52 → IM-53.
+A sensible order: IM-46 (small, closes the note flow's last dead end), then IM-50 → IM-51 → IM-52 → IM-53.
 
 ## 6. Decisions waiting on the team
 
-- **Start date vs due date** (#124, docs PR #125 by 3HoTuan3). Adds `start_date` and `due_time` and a displayed priority. It touches the task model, lists, reminders and the note parser, so it affects IM-51/52 (what the device stores and syncs). Worth settling before phase 5.
-- **NVIDIA API in the LLM fallback** (PR #123 by khang-ngo4444). ADR-008 names only OpenRouter; if NVIDIA stays, the ADR and the security notes on prompt retention need an update. It also adds an `unclear` status and `POST /notes/{id}/clarify`, which the note status machine (IM-49) and the Notes tab must know about.
+- **Lists after the start/due change** (#131 merged). Inbox and Upcoming still group by due date only; the spec's start-day entries, "Planned" and dashed due-day cards aren't built. It affects IM-51/52 too (what the device stores and syncs).
+- **LLM fallback** (IM-38). The issue is closed, but the code is on a branch, not `main` (PR #123, with NVIDIA next to OpenRouter, was closed). Ask khang-ngo4444 where it stands before building IM-49 or the Notes tab.
 - **Recurrence scope** (#121: should "3 times every day" make three series?) and the lost "for 3 months" end (#120).
-- **Stale threshold text.** Five places still say "any delete or 5 or more changes" after the 2026-11-03 change to "every note with a change": `01-product/overview.md`, `02-domain/domain.md`, TS-05, Q5 and the IM-36 row.
+- **Stale spec text.** See the last row of SUMMARY §13.
 
 ## 7. Things that will bite
 
