@@ -49,6 +49,15 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
       "fetch",
       vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
         const urlStr = url.toString();
+        if (urlStr.startsWith("/api/v1/notes"))
+          return new Response(
+            JSON.stringify({
+              items: [],
+              total: 0,
+              needs_count: 0,
+              next_cursor: null,
+            }),
+          );
         if (urlStr.includes("/me")) {
           return new Response(JSON.stringify(user), {
             status: 200,
@@ -225,6 +234,15 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
       "fetch",
       vi.fn(async (url: RequestInfo | URL, init?: RequestInit) => {
         const urlStr = url.toString();
+        if (urlStr.startsWith("/api/v1/notes"))
+          return new Response(
+            JSON.stringify({
+              items: [],
+              total: 0,
+              needs_count: 0,
+              next_cursor: null,
+            }),
+          );
         if (urlStr.includes("/me")) {
           return new Response(JSON.stringify(user), {
             status: 200,

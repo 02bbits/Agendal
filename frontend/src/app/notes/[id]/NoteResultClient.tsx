@@ -29,11 +29,18 @@ import {
   type Task,
 } from "../../../ui";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
+import { useMediaQuery } from "../../../ui/components/useMediaQuery";
+import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
+import { useHistoryEntry } from "../../../ui/components/useHistoryEntry";
+import { TaskDetails } from "../../../ui/features/tasks/details/TaskDetails";
+import { DeleteTask } from "../../../ui/features/tasks/DeleteTask";
 
 export const SKELETON_DELAY_MS = 300;
 
 interface ClientProps {
   id: string;
+  presentation?: "screen" | "panel";
+  onClose?: () => void;
 }
 
 interface Loaded {
@@ -48,6 +55,53 @@ interface Loaded {
 
 const touched = (result: NoteResult) =>
   result.changes.filter((change) => change.kind !== "deleted");
+
+function OpenedTask({
+  id,
+  wide,
+  onClose,
+  weekStart,
+}: {
+  id: string;
+  wide: boolean;
+  onClose: () => void;
+  weekStart: "mon" | "sun";
+}) {
+  const store = useTaskStore();
+  const task = store.tasks.find((task) => task.id === id);
+  if (wide)
+    return (
+      <TaskPanel
+        taskId={id}
+        onClose={onClose}
+        projects={store.projects}
+        weekStart={weekStart}
+      />
+    );
+  return (
+    task && (
+      <div
+        className="fixed inset-0 z-[60] overflow-y-auto bg-paper md:left-[248px]"
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !event.defaultPrevented) {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        <TaskDetails
+          task={task}
+          variant="screen"
+          onBack={onClose}
+          weekStart={weekStart}
+          autoFocusTitle
+          deleteAction={<DeleteTask task={task} onDeleted={onClose} />}
+        />
+      </div>
+    )
+  );
+}
 
 /**
  * A result just made in this session is already here, so the note isn't asked for again. Each
@@ -77,7 +131,12 @@ async function load(id: string): Promise<Loaded> {
       }
     }),
   );
-  return { result, tasks, gone, projects: [] };
+  return {
+    result,
+    tasks,
+    gone,
+    projects: (await projects().catch(() => null)) ?? [],
+  };
 }
 
 function ResultContainer({
@@ -91,6 +150,7 @@ function ResultContainer({
   editFollowupNote,
   edits,
   projectList,
+  presentation,
 }: {
   result: NoteResult;
   gone: ReadonlySet<string>;
@@ -102,6 +162,7 @@ function ResultContainer({
   editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
   edits?: Parameters<typeof confirmNote>[2];
   projectList: Project[];
+  presentation: "screen" | "panel";
 }): ReactElement {
   const store = useTaskStore();
   const offline = useOffline();
@@ -109,6 +170,19 @@ function ResultContainer({
   const [conflicts, setConflicts] = useState(0);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<string[]>([]);
+  const wide = useMediaQuery("(min-width: 1280px)");
+  const [openedTask, setOpenedTask] = useState<Task | null>(null);
+  const closeTask = () => {
+    setOpenedTask(null);
+    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+  };
+  useHistoryEntry(!!openedTask, closeTask);
+  const openTask = (task: Task) => {
+    if (result.note.status === "confirm") setOpenId(task.id);
+    else if (wide) setOpenedTask(task);
+    else navigate?.(ROUTES.task(task.id));
+  };
   // The note's tasks changed under the lists: Inbox, Upcoming and the sidebar load them again
   const listsChanged = () =>
     window.dispatchEvent(new CustomEvent("agendal:task-created"));
@@ -138,7 +212,7 @@ function ResultContainer({
   // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, "apply", edits);
+    const outcome = await confirmNote(result.note.id, "apply", edits, excluded);
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
@@ -201,7 +275,10 @@ function ResultContainer({
     const task = outcome.changes.find(
       (change) => change.kind === "created",
     )?.task;
-    if (task) navigate?.(ROUTES.task(task.id));
+    if (task) {
+      if (wide) setOpenedTask(task);
+      else navigate?.(ROUTES.task(task.id));
+    }
   };
   const live = useMemo(
     () => ({
@@ -212,33 +289,75 @@ function ResultContainer({
   );
   return (
     <>
-      <NoteResultScreen
-        result={result}
-        live={live}
-        today={store.today}
-        timeZone={store.clock.timeZone}
-        timeFormat={store.timeFormat}
-        weekStart={weekStart}
-        onDone={back}
-        onApply={apply}
-        onEdit={edit}
-        onMakeTask={makeTask}
-        busy={busy}
-        onUndo={undo}
-        conflicts={conflicts}
-        onCancelUndo={() => setConflicts(0)}
-        offline={offline}
-        onSetDue={(task, date) => store.update(task, { due_date: date })}
-        onOpenTask={(task) => setOpenId(task.id)}
-        navigate={navigate}
-      />
-      {openId && (
-        <TaskPanel
-          taskId={openId}
-          onClose={() => setOpenId(null)}
+      <div inert={!!openId || !!openedTask}>
+        <NoteResultScreen
+          result={{
+            ...result,
+            changes: result.changes.filter(
+              (change) => !change.ref || !excluded.includes(change.ref),
+            ),
+          }}
+          presentation={presentation}
           projects={projectList}
+          omittedCount={excluded.length}
+          onRestoreOmission={() => setExcluded((values) => values.slice(0, -1))}
+          live={live}
+          today={store.today}
+          timeZone={store.clock.timeZone}
+          timeFormat={store.timeFormat}
           weekStart={weekStart}
+          onDone={back}
+          onApply={apply}
+          onEdit={edit}
+          onMakeTask={makeTask}
+          busy={busy}
+          onUndo={undo}
+          conflicts={conflicts}
+          onCancelUndo={() => setConflicts(0)}
+          offline={offline}
+          onSetDue={(task, date) => store.update(task, { due_date: date })}
+          onOpenTask={openTask}
+          navigate={navigate}
         />
+      </div>
+      {openId && result.note.status === "confirm" && (
+        <NoteTaskEditor
+          key={openId}
+          creating={
+            result.changes.find((change) => change.task.id === openId)?.kind ===
+            "created"
+          }
+          task={store.tasks.find((task) => task.id === openId)!}
+          weekStart={weekStart}
+          onCancel={() => setOpenId(null)}
+          onDone={(patch) => {
+            store.update(openId, patch);
+            setOpenId(null);
+          }}
+          onOmit={() => {
+            const ref = result.changes.find(
+              (change) => change.task.id === openId,
+            )?.ref;
+            if (ref) setExcluded((values) => [...values, ref]);
+            setOpenId(null);
+          }}
+        />
+      )}
+      {openedTask && (
+        <TaskStoreProvider
+          api={httpTaskApi}
+          clock={store.clock}
+          initialTasks={[openedTask]}
+          initialProjects={projectList}
+          timeFormat={store.timeFormat}
+        >
+          <OpenedTask
+            id={openedTask.id}
+            wide={wide}
+            onClose={closeTask}
+            weekStart={weekStart}
+          />
+        </TaskStoreProvider>
       )}
     </>
   );
@@ -247,6 +366,8 @@ function ResultContainer({
 /** `/notes/{id}`: what a note did (RV-1), or will do once applied (NU-5). */
 export default function NoteResultClient({
   id,
+  presentation = "screen",
+  onClose,
 }: ClientProps): ReactElement | null {
   const {
     back,
@@ -364,7 +485,7 @@ export default function NoteResultClient({
       <ResultContainer
         result={loaded.result}
         gone={loaded.gone}
-        back={back}
+        back={onClose ?? back}
         navigate={navigate}
         weekStart={settings.weekStart}
         showToast={showToast}
@@ -372,6 +493,7 @@ export default function NoteResultClient({
         editFollowupNote={editFollowupNote}
         edits={preview?.edits}
         projectList={loaded.projects}
+        presentation={presentation}
       />
     </TaskStoreProvider>
   );

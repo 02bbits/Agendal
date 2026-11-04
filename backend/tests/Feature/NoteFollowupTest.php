@@ -31,7 +31,7 @@ it('keeps the whole note as one task without extracting fields (T-RV-22)', funct
     $made = $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('note.status', 'done')->assertJsonCount(1, 'changes');
     $task = Task::firstOrFail();
     expect($task->title)->toBe('idea: sql quiz tomorrow 9am urgent fyi: gym every day')
-        ->and([$task->due_date, $task->start_time, $task->end_time, $task->project_id])->toBe([null, null, null, null])
+        ->and([$task->due_date, $task->start_time, $task->due_time, $task->project_id])->toBe([null, null, null, null])
         ->and([$task->priority, $task->repeat, $task->reminder, $task->created_by])->toBe(['low', 'never', 'none', 'assistant'])
         ->and($task->source_note_id)->toBe($id)->and($made->json('note.text'))->toBe($text);
     $this->postJson("/api/v1/notes/$id/make-task")->assertOk()->assertJsonPath('changes.0.task.id', $task->id);

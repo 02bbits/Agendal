@@ -3,7 +3,7 @@ import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
 import { isCopyKey, type CopyKey } from "../ui/copy";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
-import type { NoteResult } from "../ui/domain/types";
+import type { NoteResult, NoteListEntry, NoteFilter } from "../ui/domain/types";
 
 /** Why a note wasn't made: the copy to show, and for 429 the seconds until it may be sent again. */
 export interface NoteSubmitFailure {
@@ -120,6 +120,21 @@ export async function getNote(id: string): Promise<NoteResult> {
   );
 }
 
+export interface NoteListPage {
+  items: NoteListEntry[];
+  next_cursor: string | null;
+  total: number;
+  needs_count: number;
+}
+export async function listNotes(
+  filter: NoteFilter = "all",
+  cursor?: string,
+): Promise<NoteListPage> {
+  const params = new URLSearchParams({ filter });
+  if (cursor) params.set("cursor", cursor);
+  return handleResponse<NoteListPage>(await api(`/notes?${params}`));
+}
+
 /** RV-3: explicitly keep a follow-up's whole text as one task. */
 export async function makeFollowupTask(
   id: string,
@@ -167,13 +182,18 @@ export async function confirmNote(
   id: string,
   action: "apply" | "cancel",
   edits: Record<string, TaskPatch> = {},
+  exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
       await api(`/notes/${encodeURIComponent(id)}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(action === "apply" ? { edits } : {}),
+        body: JSON.stringify(
+          action === "apply"
+            ? { edits, ...(exclude.length ? { exclude } : {}) }
+            : {},
+        ),
       }),
     );
     rememberNote(result);

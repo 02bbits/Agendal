@@ -39,7 +39,18 @@ beforeEach(() => {
   router.push.mockClear();
   router.replace.mockClear();
   router.back.mockClear();
-  session.mockReset().mockImplementation(async () => signedIn());
+  session.mockReset().mockImplementation(async (url: string) =>
+    url.startsWith("/api/v1/notes")
+      ? new Response(
+          JSON.stringify({
+            items: [],
+            total: 0,
+            needs_count: 0,
+            next_cursor: null,
+          }),
+        )
+      : signedIn(),
+  );
   vi.stubGlobal("fetch", session);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -67,11 +78,9 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     async (path, Page, title, empty) => {
       renderAt(path, Page);
       expect(
-        screen.getByRole("heading", { level: 1, name: title }),
+        await screen.findByRole("heading", { level: 1, name: title }),
       ).toBeTruthy();
-      expect(
-        await screen.findByRole("heading", { level: 2, name: empty }),
-      ).toBeTruthy();
+      expect(await screen.findByText(empty)).toBeTruthy();
       const nav = screen.getByRole("navigation", { name: "Main" });
       expect(
         within(nav)
@@ -92,13 +101,14 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
       "the Notes tab",
       () =>
         within(screen.getByRole("main")).getByRole("button", {
-          name: "Write a note",
+          name: "New note",
         }),
     ],
   ])(
     "%s opens the full-screen editor with the cursor in the text (T-NC-01)",
     async (_, opener) => {
       renderAt("/notes", NotesPage);
+      await screen.findByRole("heading", { level: 1, name: "Notes" });
       const bar = screen.getByRole("navigation", {
         name: "Main",
       }).parentElement!;
@@ -165,8 +175,9 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     );
   });
 
-  it("other tabs leave the overline empty", () => {
+  it("other tabs leave the overline empty", async () => {
     renderAt("/notes", NotesPage);
+    await screen.findByRole("heading", { level: 1, name: "Notes" });
     expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
   });
 

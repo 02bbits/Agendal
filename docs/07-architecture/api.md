@@ -126,3 +126,9 @@ Each operation applies per-field LWW and runs in a transaction. A stale `at` can
 ### Presentation
 
 The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_rule` and `repeat_anchor` into English/Vietnamese text. Backend scheduling is authoritative. The PHP-only Try notes development page uses the RRULE library's own preview text.
+
+### Saved Notes and preview exclusions
+
+`GET /notes?cursor=&limit=20&filter=all` returns owner-scoped `{items, next_cursor, total, needs_count}`. Items are summaries (id, status, name, a 140-character excerpt, created/updated/deleted counts, written_at and source_file_name), ordered by written_at then id descending. Filters are all, made, needs (confirm/followup), and kept. Limit is 1–50.
+
+`POST /notes/{id}/apply` accepts optional `exclude: [ref]` alongside `edits`. Exclusions are stored in the plan audit data and never applied or included in Undo. Unknown or duplicate refs, or excluding every proposed change, return 422 without a write.

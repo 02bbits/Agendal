@@ -351,13 +351,15 @@ describe("Check this first (IM-45, NU-5)", () => {
 
   it("T-RV-40: says nothing happens yet, lists the rows, and offers Edit note and Apply changes", () => {
     open(confirm([sql, old]));
-    expect(screen.getByText(t("note.confirm_title"))).toBeTruthy();
+    expect(screen.getByText(t("note.review_title"))).toBeTruthy();
     expect(
       screen.getByText(t("note.confirm_body_other", { count: 2 })),
     ).toBeTruthy();
     expect(screen.getByText("SQL quiz")).toBeTruthy();
     expect(screen.getByRole("button", { name: t("note.edit") })).toBeTruthy();
-    expect(screen.getByRole("button", { name: t("note.apply") })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: t("note.apply_preview") }),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
   });
 
@@ -371,18 +373,23 @@ describe("Check this first (IM-45, NU-5)", () => {
       screen.queryByRole("button", { name: /Old reading list/ }),
     ).toBeNull();
     expect(
-      screen.getByRole("group", { name: t("note.ask_when") }),
-    ).toBeTruthy();
+      screen.queryByRole("group", { name: t("note.ask_when") }),
+    ).toBeNull();
   });
 
   it("a row rescheduled here shows its new date instead of the note's", () => {
     open(confirm([sql]), {
       onOpenTask: vi.fn(),
       live: {
-        "t-sql": { ...sql.task, due_date: "2026-10-30", start_time: "14:00" },
+        "t-sql": {
+          ...sql.task,
+          start_date: "2026-10-30",
+          due_date: "2026-10-30",
+          start_time: "14:00",
+        },
       },
     });
-    expect(screen.getByText("Fri 30 Oct · 14:00")).toBeTruthy();
+    expect(screen.getByText(/Fri 30 Oct, 14:00/)).toBeTruthy();
   });
 
   it("Apply changes and Edit note hand over", async () => {
@@ -390,7 +397,7 @@ describe("Check this first (IM-45, NU-5)", () => {
     const onEdit = vi.fn();
     open(confirm([sql]), { onApply, onEdit });
     await userEvent.click(
-      screen.getByRole("button", { name: t("note.apply") }),
+      screen.getByRole("button", { name: t("note.apply_preview") }),
     );
     await userEvent.click(screen.getByRole("button", { name: t("note.edit") }));
     expect(onApply).toHaveBeenCalledOnce();
@@ -400,7 +407,7 @@ describe("Check this first (IM-45, NU-5)", () => {
   it("offline: both are disabled and say why", () => {
     open(confirm([sql]), { offline: true });
     expect(screen.getByText(t("note.needs_connection"))).toBeTruthy();
-    for (const name of [t("note.apply"), t("note.edit")])
+    for (const name of [t("note.apply_preview"), t("note.edit")])
       expect(
         (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
       ).toBe(true);

@@ -36,6 +36,7 @@ import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
+import { useMediaQuery } from "@/ui/components/useMediaQuery";
 import {
   forgetNotes,
   rememberNote,
@@ -90,7 +91,8 @@ const TAB_BY_PATH: Record<string, TabId> = {
 // The tab a screen belongs to: /projects/5 → Projects, Account and Search → Inbox
 const tabRootOf = (path: string): string =>
   Object.keys(TAB_BY_PATH).find(
-    (root) => root !== ROUTES.inbox && path.startsWith(`${root}/`),
+    (root) =>
+      root !== ROUTES.inbox && (path === root || path.startsWith(`${root}/`)),
   ) ?? ROUTES.inbox;
 
 const DEFAULT_SETTINGS: AccountSettings = {
@@ -146,6 +148,7 @@ export function useAppFrame(): AppFrameValue {
  */
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const notePanelWide = useMediaQuery("(min-width: 1280px)");
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
@@ -239,15 +242,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
         if (done) return;
         done = true;
         window.removeEventListener("popstate", go);
-        if (pathname === ROUTES.note(id)) router.replace(ROUTES.note(id));
-        else router.push(ROUTES.note(id));
+        const target = notePanelWide
+          ? `/notes?note=${encodeURIComponent(id)}`
+          : ROUTES.note(id);
+        if (window.location.pathname + window.location.search === target)
+          router.replace(target, { scroll: false });
+        else router.push(target);
       };
       window.addEventListener("popstate", go);
       // The entry wasn't on top (nothing to take off): no popstate comes
       setTimeout(go, 250);
       setEditing(false);
     },
-    [router, pathname],
+    [router, notePanelWide],
   );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
@@ -603,8 +610,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }
             onSubmitted={(result) => {
               rememberNote(result);
-              if (editingNote)
-                window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+              window.dispatchEvent(new CustomEvent("agendal:note-updated"));
               openResult(result.note.id);
             }}
           />
