@@ -257,6 +257,7 @@ export function TaskStoreProvider({
       update,
       remove,
       restore,
+      ensureTask: insertRow,
       setProjects,
     }),
     [
@@ -276,6 +277,7 @@ export function TaskStoreProvider({
       update,
       remove,
       restore,
+      insertRow,
     ],
   );
 

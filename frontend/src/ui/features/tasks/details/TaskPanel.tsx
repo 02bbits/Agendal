@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type ReactElement,
 } from "react";
@@ -37,6 +38,28 @@ export function TaskPanel({
     return t.id === taskId;
   });
   const triggerRef = useRef<HTMLElement | null>(null);
+  const [missingId, setMissingId] = useState<string | null>(null);
+  const loadTask = store.api.get;
+  const { ensureTask } = store;
+
+  // Search can open a task that isn't in the list on screen: load it by id
+  useEffect(() => {
+    if (task || !loadTask) return;
+    let cancelled = false;
+    loadTask(taskId).then(
+      (row) => {
+        if (!cancelled) ensureTask(row);
+      },
+      () => {
+        if (!cancelled) setMissingId(taskId);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [task, taskId, loadTask, ensureTask]);
+
+  const loading = !task && Boolean(loadTask) && missingId !== taskId;
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -94,6 +117,10 @@ export function TaskPanel({
           autoFocusTitle
           weekStart={weekStart}
         />
+      ) : loading ? (
+        <div className="flex h-full flex-col" role="status" aria-busy="true">
+          <PanelHeader onClose={onClose} />
+        </div>
       ) : (
         <div className="flex h-full flex-col">
           <PanelHeader onClose={onClose} />

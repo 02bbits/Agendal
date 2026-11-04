@@ -971,6 +971,30 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
+  it("loads a task that isn't in the list by id, as Search opens it", async () => {
+    const ctx = setup([]);
+    ctx.memory.api.get = vi.fn(async () =>
+      task({ id: "t-far", title: "Far task" }),
+    );
+
+    render(ctx.wrap(<TaskPanel taskId="t-far" onClose={vi.fn()} />));
+
+    expect(screen.queryByText(t("error.not_found"))).toBeNull();
+    expect(await screen.findByDisplayValue("Far task")).toBeTruthy();
+    expect(ctx.memory.api.get).toHaveBeenCalledWith("t-far");
+  });
+
+  it("shows error.not_found when the task can't be loaded by id", async () => {
+    const ctx = setup([]);
+    ctx.memory.api.get = vi.fn(async () => {
+      throw new Error("404");
+    });
+
+    render(ctx.wrap(<TaskPanel taskId="t-gone" onClose={vi.fn()} />));
+
+    expect(await screen.findByText(t("error.not_found"))).toBeTruthy();
+  });
+
   it("TaskPanel flags the page while open so the shell's bottom bar stops short of it", () => {
     const t1 = task({ id: "t-flag", title: "Flag Task" });
     const ctx = setup([t1]);
