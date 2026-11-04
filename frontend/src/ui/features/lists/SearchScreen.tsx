@@ -16,8 +16,7 @@ import type { Navigate } from "../shell/routes";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 
-export const SEARCH_DEBOUNCE_MS = 250;
-export const SEARCH_SKELETON_MS = 300;
+export const SEARCH_DEBOUNCE_MS = 800;
 /** Results per page (LV §2.3). */
 export const SEARCH_PAGE = 50;
 
@@ -70,7 +69,6 @@ export function SearchScreen({
     nextCursor: null,
   });
   const [loading, setLoading] = useState(false);
-  const [showSkeleton, setShowSkeleton] = useState(false);
   const [error, setError] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -92,15 +90,8 @@ export function SearchScreen({
     setLoading(true);
     setError(false);
 
-    const skeletonTimer = setTimeout(() => {
-      if (!cancelled) {
-        setShowSkeleton(true);
-      }
-    }, SEARCH_SKELETON_MS);
-
     activeSearch({ q: query.trim(), status })
       .then((res) => {
-        clearTimeout(skeletonTimer);
         if (cancelled) return;
         setRemoteResults({
           query: query.trim(),
@@ -110,25 +101,21 @@ export function SearchScreen({
           nextCursor: res.next_cursor,
         });
         setLoading(false);
-        setShowSkeleton(false);
       })
       .catch(() => {
-        clearTimeout(skeletonTimer);
         if (cancelled) return;
         setError(true);
         setLoading(false);
-        setShowSkeleton(false);
       });
 
     return () => {
       cancelled = true;
-      clearTimeout(skeletonTimer);
     };
   }, [activeSearch, query, status, hasQuery, retrySeq]);
 
   const localResult = searchTasks(store.tasks, query, status);
   const matchingRemote =
-    activeSearch &&
+    Boolean(activeSearch) &&
     remoteResults.query === query.trim() &&
     remoteResults.status === status;
   const items = !hasQuery
@@ -145,6 +132,12 @@ export function SearchScreen({
         ? remoteResults.counts
         : { all: 0, open: 0, completed: 0 }
       : localResult.counts;
+
+  const hasInput = input.trim().length > 0;
+  const isTyping = hasInput && input.trim() !== query.trim();
+  const isPending =
+    hasInput &&
+    (isTyping || loading || (Boolean(activeSearch) && !matchingRemote));
   const pageKey = `${status}:${query}`;
   const shown = paging.key === pageKey ? paging.shown : SEARCH_PAGE;
   const hasMore = activeSearch
@@ -269,7 +262,7 @@ export function SearchScreen({
             {t("common.retry")}
           </Button>
         </div>
-      ) : loading && showSkeleton && items.length === 0 ? (
+      ) : isPending && items.length === 0 ? (
         <div
           className="mt-3 flex flex-col gap-2"
           role="status"
@@ -289,9 +282,9 @@ export function SearchScreen({
             </div>
           ))}
         </div>
-      ) : !hasQuery ? (
+      ) : !hasQuery && !hasInput ? (
         <EmptyState title={t("search.hint")} />
-      ) : items.length === 0 && !loading ? (
+      ) : !isPending && items.length === 0 ? (
         <EmptyState title={t("search.no_match", { query: query.trim() })} />
       ) : (
         <ul className="m-0 mt-3 list-none p-0">

@@ -106,7 +106,7 @@ describe("Search screen", () => {
     await act(async () => vi.advanceTimersByTime(SEARCH_DEBOUNCE_MS));
   };
 
-  it("focuses the field, shows the hint, then results after 250 ms with counts", async () => {
+  it("focuses the field, shows the hint, then results after debounce with counts", async () => {
     vi.useFakeTimers();
     try {
       const { wrap } = setup(corpus());
