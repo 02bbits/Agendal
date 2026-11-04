@@ -46,6 +46,7 @@ export {
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
+export { useToday } from "./tasks/useToday";
 export { useMediaQuery } from "./tasks/useMediaQuery";
 export { useTaskPanel, type TaskPanelState } from "./tasks/useTaskPanel";
 export { TASK_COLUMN_CLASS } from "./tasks/layout";
@@ -98,6 +99,16 @@ export {
   type UpcomingScreenProps,
   type UpcomingViewMode,
 } from "./lists/UpcomingScreen";
+export { SearchScreen, type SearchScreenProps } from "./lists/SearchScreen";
+export { SearchPanel, type SearchPanelProps } from "./lists/SearchPanel";
+export { SearchPopup, type SearchPopupProps } from "./lists/SearchPopup";
+export {
+  useSearch,
+  SEARCH_DEBOUNCE_MS,
+  SEARCH_SETTLE_MS,
+  type UseSearchOptions,
+  type UseSearchResult,
+} from "./lists/useSearch";
 export {
   UpcomingViewSwitch,
   type UpcomingViewSwitchProps,

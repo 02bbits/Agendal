@@ -100,9 +100,9 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 
 ## <a id="ts-15"></a>TS-15 — Search (LV-3)
 - **When** the user searches "quiz"
-- **Then** open and completed matches are listed, with All / Open / Completed counts
+- **Then** open and completed matches are listed, with All / Tasks / Projects / Notes counts
 - **When** they search "zzz"
-- **Then** "No tasks match “zzz”" shows
+- **Then** "Nothing matches “zzz”" shows
 - **Tests:** T-LV-20–22
 
 ## <a id="ts-16"></a>TS-16 — Delete a project (PJ-4)

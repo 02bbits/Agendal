@@ -55,6 +55,7 @@ class AppServiceProvider extends ServiceProvider
             Limit::perDay(30)->by('files-day:'.$perUser($request)),
         ]);
         RateLimiter::for('search', fn (Request $request) => Limit::perMinute(60)->by('search:'.$perUser($request)));
+        RateLimiter::for('search-notes', fn (Request $request) => Limit::perMinute(60)->by('search-notes:'.$perUser($request)));
         RateLimiter::for('sync', fn (Request $request) => Limit::perMinute(30)->by('sync:'.$perUser($request)));
 
         // The reset link opens the app, with the token in the fragment so it never reaches a

@@ -2,10 +2,12 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type ReactElement,
 } from "react";
 import { Button } from "../../../components/Button";
+import { useBackgroundScrollLock } from "../../../components/useBackgroundScrollLock";
 import { t } from "../../../copy";
 import type { Project, WeekStart } from "../../../domain/types";
 import { useTaskStore } from "../store";
@@ -38,6 +40,28 @@ export function TaskPanel({
   });
   const triggerRef = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
+  const [missingId, setMissingId] = useState<string | null>(null);
+  const loadTask = store.api.get;
+  const { ensureTask } = store;
+
+  // Search can open a task that isn't in the list on screen: load it by id
+  useEffect(() => {
+    if (task || !loadTask) return;
+    let cancelled = false;
+    loadTask(taskId).then(
+      (row) => {
+        if (!cancelled) ensureTask(row);
+      },
+      () => {
+        if (!cancelled) setMissingId(taskId);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [task, taskId, loadTask, ensureTask]);
+
+  const loading = !task && Boolean(loadTask) && missingId !== taskId;
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -48,62 +72,26 @@ export function TaskPanel({
     };
   }, []);
 
+  useBackgroundScrollLock(panelRef);
+
   // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
-  // short of it instead of covering Clear and Delete (see AppShell).
-  // Also intercepts wheel and touchmove events outside the panel to prevent
-  // the background page from scrolling without mutating html/body overflow,
-  // which preserves sticky sidebar and header positioning (UX-28).
+  // short of it instead of covering Clear and Delete (see AppShell)
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.taskPanel = "open";
 
-    const aside = panelRef.current;
-
-    const onWheel = (e: WheelEvent) => {
-      const isInside = e.target instanceof Node && aside?.contains(e.target);
-      if (!isInside) {
-        e.preventDefault();
-      }
-    };
-
-    const onTouchMove = (e: TouchEvent) => {
-      const isInside = e.target instanceof Node && aside?.contains(e.target);
-      if (!isInside) {
-        e.preventDefault();
-      }
-    };
-
     const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      // Esc closes the top layer first, e.g. Search opened over the panel
+      if (document.querySelector('[aria-modal="true"]')) return;
       if (e.key === "Escape" && !e.defaultPrevented) {
         e.preventDefault();
         onClose();
-        return;
-      }
-      if (
-        [
-          "ArrowUp",
-          "ArrowDown",
-          "PageUp",
-          "PageDown",
-          "Home",
-          "End",
-          " ",
-        ].includes(e.key)
-      ) {
-        if (!aside || !aside.contains(document.activeElement)) {
-          e.preventDefault();
-        }
       }
     };
 
-    window.addEventListener("wheel", onWheel, { passive: false });
-    window.addEventListener("touchmove", onTouchMove, { passive: false });
     window.addEventListener("keydown", onWindowKeyDown);
-
     return () => {
       delete root.dataset.taskPanel;
-      window.removeEventListener("wheel", onWheel);
-      window.removeEventListener("touchmove", onTouchMove);
       window.removeEventListener("keydown", onWindowKeyDown);
     };
   }, [onClose]);
@@ -155,6 +143,10 @@ export function TaskPanel({
             autoFocusTitle
             weekStart={weekStart}
           />
+        ) : loading ? (
+          <div className="flex h-full flex-col" role="status" aria-busy="true">
+            <PanelHeader onClose={onClose} />
+          </div>
         ) : (
           <div className="flex h-full flex-col">
             <PanelHeader onClose={onClose} />

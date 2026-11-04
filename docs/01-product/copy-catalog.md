@@ -185,10 +185,10 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `list.filter_scheduled` | Scheduled | Chip |
 | `list.filter_due` | Due only | Chip |
 | `list.upcoming_empty` † | Nothing coming up. Write a note to plan ahead. | Upcoming empty state |
-| `search.placeholder` † | Search tasks | Search field |
+| `search.placeholder` † | Search tasks and notes | Search field |
 | `search.filter_open` | Open | Chip |
 | `search.filter_completed` | Completed | Chip |
-| `search.no_match` | No tasks match “{query}” | Empty result ([LV-3](../03-modules/LV-lists-search.md#lv-3)) |
+| `search.no_match` | Nothing matches “{query}” | Empty result ([LV-3](../03-modules/LV-lists-search.md#lv-3)) |
 | `search.hint` † | Search titles and notes | Search with an empty query |
 | `search.offline` † | Showing results saved on this device | Search footer while offline |
 
