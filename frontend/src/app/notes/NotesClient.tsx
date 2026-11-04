@@ -83,13 +83,27 @@ function NotesContent({ noteId }: { noteId?: string }) {
     background.forEach((element) => {
       element.inert = true;
     });
-    const overflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    // Match TaskPanel's scroll lock without moving sticky shell elements.
+    const preventBackgroundScroll = (event: WheelEvent | TouchEvent) => {
+      if (
+        event.target instanceof Node &&
+        panelRef.current?.contains(event.target)
+      )
+        return;
+      event.preventDefault();
+    };
+    window.addEventListener("wheel", preventBackgroundScroll, {
+      passive: false,
+    });
+    window.addEventListener("touchmove", preventBackgroundScroll, {
+      passive: false,
+    });
     return () => {
       background.forEach((element, index) => {
         element.inert = previous[index]!;
       });
-      document.body.style.overflow = overflow;
+      window.removeEventListener("wheel", preventBackgroundScroll);
+      window.removeEventListener("touchmove", preventBackgroundScroll);
     };
   }, [selected]);
   const navigate = useCallback(
@@ -167,7 +181,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
         <>
           <div
             aria-hidden="true"
-            className="fixed inset-0 z-[54] bg-black/60"
+            className="fixed inset-0 z-[54] bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
             onMouseDown={(event) => event.preventDefault()}
             onClick={close}
           />
@@ -192,7 +206,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
               </header>
             )}
             <div
-              className="relative min-h-0 flex-1 overflow-y-auto px-4 xl:pt-4"
+              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 xl:pt-4"
               onKeyDown={(event) => {
                 if (event.key === "Escape") event.stopPropagation();
               }}

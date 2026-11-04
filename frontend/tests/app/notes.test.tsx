@@ -156,7 +156,19 @@ it("locks the background and traps focus until the Notes modal closes", async ()
     ).inert,
   ).toBe(true);
   expect(opener.closest("[inert]")).not.toBeNull();
-  expect(document.body.style.overflow).toBe("hidden");
+  expect(document.body.style.overflow).toBe("");
+  const outsideScroll = new WheelEvent("wheel", {
+    bubbles: true,
+    cancelable: true,
+  });
+  window.dispatchEvent(outsideScroll);
+  expect(outsideScroll.defaultPrevented).toBe(true);
+  const insideScroll = new WheelEvent("wheel", {
+    bubbles: true,
+    cancelable: true,
+  });
+  modal.dispatchEvent(insideScroll);
+  expect(insideScroll.defaultPrevented).toBe(false);
   const close = screen.getByRole("button", { name: t("common.close") });
   close.focus();
   await userEvent.tab();
@@ -182,4 +194,7 @@ it("locks the background and traps focus until the Notes modal closes", async ()
   ).toBeFalsy();
   expect(opener.closest("[inert]")).toBeNull();
   expect(document.body.style.overflow).toBe("");
+  const restoredScroll = new WheelEvent("wheel", { cancelable: true });
+  window.dispatchEvent(restoredScroll);
+  expect(restoredScroll.defaultPrevented).toBe(false);
 });

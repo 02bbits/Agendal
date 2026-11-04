@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-04
 
+- **Notes backdrop aligned with main (Refs #45, #134).** [Agent brief](AGENT-BRIEF.md): Notes uses TaskPanel's theme-aware scrim, blur and event-based scroll lock while preserving IM-46 focus trapping and nested task dialogs.
 - **Follow-up and responsive review (Refs #45).** [RV](03-modules/RV-review-control.md), [API](07-architecture/api.md), [agent brief](AGENT-BRIEF.md), [handover](HANDOVER.md) and [summary](SUMMARY.md): literal Keep it as task, same-note follow-up editing, saved-note summaries, preview exclusions and modal desktop/full-screen mobile review. Documents the implementation prepared on `feat/issue-45-followup`; applied-note editing remains IM-47 and pending/offline Notes-list work remains IM-48. Task schemas stay identical to main (`start_date`, `due_time`).
 
 ## 2026-11-03
