@@ -212,7 +212,7 @@ export function NoteEditor({
         <div className="mx-auto grid w-full max-w-[600px] grid-cols-[1fr_auto_1fr] items-center px-gutter pt-[env(safe-area-inset-top)] md:max-w-[712px] md:px-gutter-wide">
           <button
             type="button"
-            className="focus-ring -ml-2 min-h-11 justify-self-start rounded-field px-2 text-body text-primary"
+            className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field px-2 text-body text-primary hover:bg-fill"
             onClick={requestClose}
           >
             {t("common.cancel")}

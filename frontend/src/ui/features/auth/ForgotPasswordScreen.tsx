@@ -115,7 +115,7 @@ export function ForgotPasswordScreen({
       <Link
         href={signInHref}
         navigate={navigate}
-        className="focus-ring self-center text-footnote text-primary"
+        className="focus-ring self-center text-footnote text-primary hover:underline"
       >
         {t("auth.back_to_sign_in")}
       </Link>

@@ -22,8 +22,8 @@ export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
         type={type}
         aria-label={label}
         className={cx(
-          "btn btn-circle focus-ring size-11 min-h-11 border-0 bg-fill text-ink shadow-none disabled:opacity-40",
-          plain && "bg-transparent!",
+          "btn btn-circle focus-ring size-11 min-h-11 border-0 bg-fill text-ink shadow-none hover:bg-fill-2 disabled:opacity-40",
+          plain && "bg-transparent! hover:bg-fill!",
           className,
         )}
         {...rest}

@@ -60,7 +60,7 @@ export function TaskHeader({
         <div className="flex h-11 items-center justify-between border-b border-separator px-4">
           <button
             type="button"
-            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary"
+            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary hover:underline underline-offset-2"
             onClick={onBack}
           >
             <ChevronLeftIcon size={18} />

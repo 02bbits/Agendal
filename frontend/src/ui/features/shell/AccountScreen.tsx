@@ -150,7 +150,7 @@ export function AccountScreen({
         {onSignOutEverywhere && (
           <button
             type="button"
-            className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
+            className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill"
             onClick={onSignOutEverywhere}
           >
             {t("auth.signout_everywhere")}
