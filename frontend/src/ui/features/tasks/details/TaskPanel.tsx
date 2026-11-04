@@ -2,10 +2,12 @@ import {
   useCallback,
   useEffect,
   useRef,
+  useState,
   type KeyboardEvent,
   type ReactElement,
 } from "react";
 import { Button } from "../../../components/Button";
+import { useBackgroundScrollLock } from "../../../components/useBackgroundScrollLock";
 import { t } from "../../../copy";
 import type { Project, WeekStart } from "../../../domain/types";
 import { useTaskStore } from "../store";
@@ -37,6 +39,29 @@ export function TaskPanel({
     return t.id === taskId;
   });
   const triggerRef = useRef<HTMLElement | null>(null);
+  const panelRef = useRef<HTMLElement | null>(null);
+  const [missingId, setMissingId] = useState<string | null>(null);
+  const loadTask = store.api.get;
+  const { ensureTask } = store;
+
+  // Search can open a task that isn't in the list on screen: load it by id
+  useEffect(() => {
+    if (task || !loadTask) return;
+    let cancelled = false;
+    loadTask(taskId).then(
+      (row) => {
+        if (!cancelled) ensureTask(row);
+      },
+      () => {
+        if (!cancelled) setMissingId(taskId);
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [task, taskId, loadTask, ensureTask]);
+
+  const loading = !task && Boolean(loadTask) && missingId !== taskId;
 
   useEffect(() => {
     if (typeof document !== "undefined" && !triggerRef.current) {
@@ -47,15 +72,29 @@ export function TaskPanel({
     };
   }, []);
 
+  useBackgroundScrollLock(panelRef);
+
   // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
   // short of it instead of covering Clear and Delete (see AppShell)
   useEffect(() => {
     const root = document.documentElement;
     root.dataset.taskPanel = "open";
+
+    const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
+      // Esc closes the top layer first, e.g. Search opened over the panel
+      if (document.querySelector('[aria-modal="true"]')) return;
+      if (e.key === "Escape" && !e.defaultPrevented) {
+        e.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener("keydown", onWindowKeyDown);
     return () => {
       delete root.dataset.taskPanel;
+      window.removeEventListener("keydown", onWindowKeyDown);
     };
-  }, []);
+  }, [onClose]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
@@ -68,45 +107,60 @@ export function TaskPanel({
   );
 
   return (
-    <aside
-      aria-label={t("task.heading")}
-      tabIndex={-1}
-      onKeyDown={handleKeyDown}
-      className="fixed inset-y-0 right-0 z-40 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto outline-none motion-safe:animate-panel-in will-change-transform"
-    >
-      {task ? (
-        <TaskDetails
-          key={task.id}
-          task={task}
-          onBack={onClose}
-          onClose={onClose}
-          variant="panel"
-          projects={projects}
-          projectsStatus={projectsStatus}
-          onRetryProjects={onRetryProjects}
-          deleteAction={
-            <DeleteTask
-              task={task}
-              onDeleted={onDelete ?? onClose}
-              label={t("common.delete")}
-            />
-          }
-          autoFocusTitle
-          weekStart={weekStart}
-        />
-      ) : (
-        <div className="flex h-full flex-col">
-          <PanelHeader onClose={onClose} />
-          <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-            <p className="text-body text-ink-secondary">
-              {t("error.not_found")}
-            </p>
-            <Button variant="secondary" onClick={onClose} className="mt-4">
-              {t("common.close")}
-            </Button>
+    <>
+      <div
+        data-testid="task-panel-backdrop"
+        aria-hidden="true"
+        onClick={onClose}
+        onWheel={(e) => e.preventDefault()}
+        onTouchMove={(e) => e.preventDefault()}
+        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+      />
+      <aside
+        ref={panelRef}
+        aria-label={t("task.heading")}
+        tabIndex={-1}
+        onKeyDown={handleKeyDown}
+        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in will-change-transform shadow-2xl"
+      >
+        {task ? (
+          <TaskDetails
+            key={task.id}
+            task={task}
+            onBack={onClose}
+            onClose={onClose}
+            variant="panel"
+            projects={projects}
+            projectsStatus={projectsStatus}
+            onRetryProjects={onRetryProjects}
+            deleteAction={
+              <DeleteTask
+                task={task}
+                onDeleted={onDelete ?? onClose}
+                label={t("common.delete")}
+              />
+            }
+            autoFocusTitle
+            weekStart={weekStart}
+          />
+        ) : loading ? (
+          <div className="flex h-full flex-col" role="status" aria-busy="true">
+            <PanelHeader onClose={onClose} />
           </div>
-        </div>
-      )}
-    </aside>
+        ) : (
+          <div className="flex h-full flex-col">
+            <PanelHeader onClose={onClose} />
+            <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+              <p className="text-body text-ink-secondary">
+                {t("error.not_found")}
+              </p>
+              <Button variant="secondary" onClick={onClose} className="mt-4">
+                {t("common.close")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </aside>
+    </>
   );
 }

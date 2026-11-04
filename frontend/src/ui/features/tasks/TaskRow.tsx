@@ -63,7 +63,7 @@ export function TaskRow({
         "group/task relative flex min-h-[56px] items-center gap-3 border-b border-separator/60 px-4 py-3 transition-colors hover:bg-surface-hover/40 last:border-b-0",
         selected && "bg-surface-hover/60",
         task.done && "is-done",
-        overdue && "is-overdue",
+        overdue && !task.done && "is-overdue",
       )}
     >
       <button
@@ -85,10 +85,10 @@ export function TaskRow({
         <span
           className={cx(
             "inline-flex size-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors",
-            overdue
-              ? "border-error shadow-[inset_0_0_0_1px_var(--color-error)]"
-              : task.done
-                ? "border-ink bg-ink text-surface"
+            task.done
+              ? "border-ink bg-ink text-surface"
+              : overdue
+                ? "border-error shadow-[inset_0_0_0_1px_var(--color-error)]"
                 : "border-ink-tertiary group-hover/check:border-ink-secondary",
           )}
           aria-hidden="true"
@@ -105,7 +105,7 @@ export function TaskRow({
         aria-current={selected ? "true" : undefined}
       >
         <span
-          className="line-clamp-2 text-body font-medium group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
+          className="line-clamp-2 text-body font-medium transition-colors group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
           data-slot="title"
         >
           {renderTitle ? renderTitle(task.title) : task.title}
@@ -117,7 +117,11 @@ export function TaskRow({
         >
           {showDue && task.due_date && (
             <>
-              <span className={cx(overdue && "text-error font-medium")}>
+              <span
+                className={cx(
+                  overdue && !task.done ? "text-error font-medium" : undefined,
+                )}
+              >
                 {formatDay(task.due_date, today)}
               </span>
               <span>·</span>

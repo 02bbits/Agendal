@@ -971,15 +971,60 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it("TaskPanel flags the page while open so the shell's bottom bar stops short of it", () => {
+  it("loads a task that isn't in the list by id, as Search opens it", async () => {
+    const ctx = setup([]);
+    ctx.memory.api.get = vi.fn(async () =>
+      task({ id: "t-far", title: "Far task" }),
+    );
+
+    render(ctx.wrap(<TaskPanel taskId="t-far" onClose={vi.fn()} />));
+
+    expect(screen.queryByText(t("error.not_found"))).toBeNull();
+    expect(await screen.findByDisplayValue("Far task")).toBeTruthy();
+    expect(ctx.memory.api.get).toHaveBeenCalledWith("t-far");
+  });
+
+  it("shows error.not_found when the task can't be loaded by id", async () => {
+    const ctx = setup([]);
+    ctx.memory.api.get = vi.fn(async () => {
+      throw new Error("404");
+    });
+
+    render(ctx.wrap(<TaskPanel taskId="t-gone" onClose={vi.fn()} />));
+
+    expect(await screen.findByText(t("error.not_found"))).toBeTruthy();
+  });
+
+  it("TaskPanel flags the page and intercepts background scroll events while preserving sticky positioning", () => {
     const t1 = task({ id: "t-flag", title: "Flag Task" });
     const ctx = setup([t1]);
     const view = render(
       ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
     );
     expect(document.documentElement.dataset.taskPanel).toBe("open");
+    expect(document.documentElement.style.overflow).toBe("");
+    expect(document.body.style.overflow).toBe("");
+
+    // Wheel outside the panel is prevented
+    const outsideEvent = new WheelEvent("wheel", { cancelable: true });
+    window.dispatchEvent(outsideEvent);
+    expect(outsideEvent.defaultPrevented).toBe(true);
+
     view.unmount();
     expect(document.documentElement.dataset.taskPanel).toBeUndefined();
+  });
+
+  it("TaskPanel renders a backdrop overlay that closes the panel when clicked", async () => {
+    const t1 = task({ id: "t-backdrop", title: "Backdrop Task" });
+    const ctx = setup([t1]);
+    const onClose = vi.fn();
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={onClose} />));
+
+    const backdrop = screen.getByTestId("task-panel-backdrop");
+    expect(backdrop).toBeTruthy();
+    expect(backdrop.className).toContain("backdrop-blur");
+    await userEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it("TaskPanel is axe clean in both themes", async () => {

@@ -3,6 +3,7 @@ import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
 import { isCopyKey, type CopyKey } from "../ui/copy";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
+import type { NoteHit } from "../ui/domain/search";
 import type { NoteResult } from "../ui/domain/types";
 
 /** Why a note wasn't made: the copy to show, and for 429 the seconds until it may be sent again. */
@@ -115,6 +116,14 @@ export async function getNote(id: string): Promise<NoteResult> {
   return handleResponse<NoteResult>(
     await api(`/notes/${encodeURIComponent(id)}`),
   );
+}
+
+/** `GET /notes/search?q=`: search note names and text. */
+export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
+  const query = new URLSearchParams();
+  if (q) query.set("q", q);
+  const response = await api(`/notes/search?${query.toString()}`);
+  return handleResponse<{ items: NoteHit[] }>(response);
 }
 
 /**

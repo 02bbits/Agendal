@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "@/lib/apiError";
+import { searchNotes } from "@/lib/noteApi";
 import {
   createTask,
   deleteTask,
@@ -8,6 +9,7 @@ import {
   patch,
   projects,
   restoreTask,
+  search,
 } from "@/lib/taskApi";
 
 describe("httpTaskApi (Refs #21, Refs #22)", () => {
@@ -449,5 +451,85 @@ describe("createTask (Refs #25)", () => {
     expect(url).toBe("/api/v1/tasks/t-123/restore");
     expect(init.method).toBe("POST");
     expect(result).toEqual(fakeTask);
+  });
+
+  it("calls GET /api/v1/tasks/search with params and returns SearchData", async () => {
+    const fakeData = {
+      items: [{ id: "t-1", title: "Search result" }],
+      counts: { all: 1, open: 1, completed: 0 },
+      next_cursor: "cursor-123",
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(fakeData), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await search({
+      q: "test",
+      status: "open",
+      cursor: "prev-cur",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/tasks/search?q=test&status=open&cursor=prev-cur");
+    expect(init?.method ?? "GET").toBe("GET");
+    expect(result).toEqual(fakeData);
+  });
+
+  it("calls GET /api/v1/tasks/search with filter and project_id in URL", async () => {
+    fetchMock.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          items: [],
+          counts: { all: 0, open: 0, completed: 0 },
+          next_cursor: null,
+        }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        },
+      ),
+    );
+
+    await search({
+      filter: "high_priority",
+      project_id: "0192e21b-6800-7000-8000-000000000001",
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe(
+      "/api/v1/tasks/search?filter=high_priority&project_id=0192e21b-6800-7000-8000-000000000001",
+    );
+  });
+
+  it("calls GET /api/v1/notes/search?q= with URLSearchParams", async () => {
+    const fakeData = {
+      items: [
+        {
+          id: "n-1",
+          title: "Note title",
+          snippet: "Note snippet",
+          status: "done",
+          written_at: "2026-10-23T08:00:00Z",
+        },
+      ],
+    };
+    fetchMock.mockResolvedValueOnce(
+      new Response(JSON.stringify(fakeData), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const result = await searchNotes("meeting notes");
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url] = fetchMock.mock.calls[0];
+    expect(url).toBe("/api/v1/notes/search?q=meeting+notes");
+    expect(result).toEqual(fakeData);
   });
 });

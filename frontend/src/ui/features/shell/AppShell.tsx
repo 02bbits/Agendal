@@ -1,9 +1,9 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { CaptureBar, type CaptureBarProps } from "./CaptureBar";
 import { Sidebar, type SidebarProps } from "./Sidebar";
 import { TabBar } from "./TabBar";
+import { ROUTES, type Navigate, type TabId } from "./routes";
 import { useKeyboardInset } from "./useKeyboardInset";
-import type { Navigate, TabId } from "./routes";
 
 export interface AppShellProps {
   /** Tab screens pass their tab; pushed screens (task, project, search, account) omit the bars. */
@@ -18,6 +18,7 @@ export interface AppShellProps {
   banner?: ReactNode;
   toast?: ReactNode;
   children: ReactNode;
+  onOpenSearch?: () => void;
 }
 
 /**
@@ -29,6 +30,7 @@ export interface AppShellProps {
 export function AppShell({
   tab,
   navigate,
+  onOpenSearch,
   capture,
   sidebar,
   aside,
@@ -37,6 +39,39 @@ export function AppShell({
   children,
 }: AppShellProps) {
   useKeyboardInset();
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const isSlash =
+        event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
+      const isK =
+        (event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k";
+
+      if (!isSlash && !isK) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+
+      if (isSlash) {
+        if (!tab) return;
+        const el = document.activeElement;
+        if (
+          el instanceof HTMLInputElement ||
+          el instanceof HTMLTextAreaElement ||
+          el instanceof HTMLSelectElement ||
+          (el as HTMLElement | null)?.isContentEditable
+        )
+          return;
+      }
+
+      event.preventDefault();
+      if (onOpenSearch) {
+        onOpenSearch();
+      } else if (navigate) {
+        navigate(ROUTES.search);
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [tab, navigate, onOpenSearch]);
 
   return (
     // --sidebar-w and --panel-w let fixed overlays (toasts) centre on the column
@@ -58,7 +93,7 @@ export function AppShell({
           {children}
         </main>
         {tab && (
-          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
+          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 [html[data-task-panel]_&]:z-30 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
             {capture && <CaptureBar {...capture} />}
             <TabBar active={tab} navigate={navigate} />
           </div>

@@ -115,16 +115,11 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     },
   );
 
-  it("/search is a pushed screen with Back and the search hint", async () => {
+  it("/search is a pushed screen with Cancel and the search field", async () => {
     renderAt("/search", SearchPage);
     expect(screen.queryByRole("navigation", { name: "Main" })).toBeNull();
-    expect(
-      screen.getByRole("heading", {
-        level: 2,
-        name: "Search titles and notes",
-      }),
-    ).toBeTruthy();
-    await userEvent.click(screen.getByRole("button", { name: "Back" }));
+    expect(screen.getByRole("combobox")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }));
     // Opened directly, so there is no earlier screen in the app: Back goes to Inbox (AP §2.4)
     expect(router.replace).toHaveBeenCalledWith("/");
     expect(router.back).not.toHaveBeenCalled();

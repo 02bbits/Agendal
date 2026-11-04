@@ -2,6 +2,7 @@ import { api } from "./api";
 import { handleResponse } from "./apiError";
 import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
+import type { SearchFilter } from "../ui/domain/search";
 import type { Project, Task } from "../ui/domain/types";
 
 export interface InboxData {
@@ -23,6 +24,16 @@ export interface UpcomingData {
   days: UpcomingDay[];
   next_from: string | null;
   total_count?: number;
+}
+
+export interface SearchData {
+  items: Task[];
+  counts: {
+    all: number;
+    open: number;
+    completed: number;
+  };
+  next_cursor: string | null;
 }
 
 async function postLifecycle<T>(
@@ -57,6 +68,23 @@ export async function upcoming(params?: {
   if (params?.filter) query.set("filter", params.filter);
   const response = await api(`/tasks?${query.toString()}`);
   return handleResponse<UpcomingData>(response);
+}
+
+export async function search(params: {
+  q?: string;
+  status?: "all" | "open" | "completed";
+  cursor?: string;
+  filter?: SearchFilter;
+  project_id?: string;
+}): Promise<SearchData> {
+  const query = new URLSearchParams();
+  if (params.q !== undefined && params.q !== "") query.set("q", params.q);
+  if (params.status) query.set("status", params.status);
+  if (params.cursor) query.set("cursor", params.cursor);
+  if (params.filter) query.set("filter", params.filter);
+  if (params.project_id) query.set("project_id", params.project_id);
+  const response = await api(`/tasks/search?${query.toString()}`);
+  return handleResponse<SearchData>(response);
 }
 
 export async function getTask(id: string): Promise<Task> {
@@ -134,5 +162,19 @@ export const httpTaskApi: TaskApi = {
 
   restore(id: string): Promise<Task> {
     return restoreTask(id);
+  },
+
+  get(id: string): Promise<Task> {
+    return getTask(id);
+  },
+
+  search(params: {
+    q?: string;
+    status?: "all" | "open" | "completed";
+    cursor?: string;
+    filter?: SearchFilter;
+    project_id?: string;
+  }): Promise<SearchData> {
+    return search(params);
   },
 };

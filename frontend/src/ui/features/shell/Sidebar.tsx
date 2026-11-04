@@ -29,6 +29,8 @@ export interface SidebarProps {
   projects?: ReactNode;
   /** Callback to create a new project from the PROJECTS header button. */
   onNewProject?: () => void;
+  /** Callback to open search. */
+  onSearch?: () => void;
   /** The signed-in user's name; the avatar shows its first letter. */
   accountName: string;
 }
@@ -40,6 +42,7 @@ export function Sidebar({
   counts,
   projects,
   onNewProject,
+  onSearch,
   accountName,
 }: SidebarProps) {
   return (
@@ -58,14 +61,14 @@ export function Sidebar({
         {t("app.name")}
       </p>
 
-      <Link
-        href={ROUTES.search}
-        navigate={navigate}
-        className="focus-ring flex min-h-10 items-center gap-2 rounded-field bg-fill px-3 text-callout text-ink-tertiary"
+      <button
+        type="button"
+        onClick={onSearch}
+        className="focus-ring flex min-h-10 items-center gap-2 rounded-field bg-fill px-3 text-callout text-ink-tertiary w-full text-left cursor-pointer border-0"
       >
         <SearchIcon size={18} />
         {t("search.placeholder")}
-      </Link>
+      </button>
 
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
         {TABS.map((tab) => {
