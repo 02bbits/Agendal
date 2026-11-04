@@ -7,6 +7,7 @@ import {
   type ReactElement,
 } from "react";
 import { Button } from "../../../components/Button";
+import { cx } from "../../../components/cx";
 import { useBackgroundScrollLock } from "../../../components/useBackgroundScrollLock";
 import { t } from "../../../copy";
 import type { Project, WeekStart } from "../../../domain/types";
@@ -129,7 +130,11 @@ export function TaskPanel({
         aria-label={t("task.heading")}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in will-change-transform shadow-2xl"
+        // A modal panel hosts its popovers; a transform would make their fixed position relative to it
+        className={cx(
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in shadow-2xl",
+          !modal && "will-change-transform",
+        )}
       >
         {task ? (
           <TaskDetails
