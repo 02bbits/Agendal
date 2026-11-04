@@ -2,6 +2,7 @@ import { api } from "./api";
 import { handleResponse } from "./apiError";
 import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
+import type { SearchFilter } from "../ui/domain/search";
 import type { Project, Task } from "../ui/domain/types";
 
 export interface InboxData {
@@ -70,14 +71,18 @@ export async function upcoming(params?: {
 }
 
 export async function search(params: {
-  q: string;
+  q?: string;
   status?: "all" | "open" | "completed";
   cursor?: string;
+  filter?: SearchFilter;
+  project_id?: string;
 }): Promise<SearchData> {
   const query = new URLSearchParams();
-  if (params.q) query.set("q", params.q);
+  if (params.q !== undefined && params.q !== "") query.set("q", params.q);
   if (params.status) query.set("status", params.status);
   if (params.cursor) query.set("cursor", params.cursor);
+  if (params.filter) query.set("filter", params.filter);
+  if (params.project_id) query.set("project_id", params.project_id);
   const response = await api(`/tasks/search?${query.toString()}`);
   return handleResponse<SearchData>(response);
 }
@@ -159,10 +164,16 @@ export const httpTaskApi: TaskApi = {
     return restoreTask(id);
   },
 
+  get(id: string): Promise<Task> {
+    return getTask(id);
+  },
+
   search(params: {
-    q: string;
+    q?: string;
     status?: "all" | "open" | "completed";
     cursor?: string;
+    filter?: SearchFilter;
+    project_id?: string;
   }): Promise<SearchData> {
     return search(params);
   },

@@ -3,6 +3,32 @@ import type { Task } from "./types";
 export const QUERY_MAX = 100;
 export type SearchStatus = "all" | "open" | "completed";
 
+export type SearchFilter =
+  "overdue" | "due_week" | "starts_today" | "high_priority" | "from_note";
+
+export type SearchTab = "all" | "tasks" | "projects" | "notes";
+
+export interface NoteHit {
+  id: string;
+  title: string;
+  snippet: string;
+  status: string;
+  written_at: string;
+}
+
+/** Projects whose name has every word, accent-insensitive; order kept. */
+export function searchProjects<P extends { name: string }>(
+  projects: readonly P[],
+  query: string,
+): P[] {
+  const words = queryWords(query);
+  if (!words.length) return [];
+  return projects.filter((project) => {
+    const name = normalize(project.name);
+    return words.every((w) => name.includes(w));
+  });
+}
+
 /**
  * Case- and accent-insensitive form (LV-3): "Bài tập" → "bai tap", "café" → "cafe".
  * Mirrors PostgreSQL `lower(unaccent(…))`, including đ → d.

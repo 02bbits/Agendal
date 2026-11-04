@@ -1,4 +1,5 @@
 import type { CopyKey } from "../copy";
+import type { SearchFilter } from "./search";
 import type { Task } from "./types";
 
 export type TaskRequest = () => Promise<{ task: Task; next?: Task }>;
@@ -38,11 +39,15 @@ export interface TaskApi {
   remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void>;
   /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
   restore(id: string): Promise<Task>;
+  /** `GET /tasks/{id}`: a task that isn't in the list on screen, e.g. opened from Search. */
+  get?(id: string): Promise<Task>;
   /** `GET /tasks/search?q=&status=&cursor=`: search titles and notes (LV-3). */
   search?(params: {
-    q: string;
+    q?: string;
     status?: "all" | "open" | "completed";
     cursor?: string;
+    filter?: SearchFilter;
+    project_id?: string;
   }): Promise<{
     items: Task[];
     counts: { all: number; open: number; completed: number };

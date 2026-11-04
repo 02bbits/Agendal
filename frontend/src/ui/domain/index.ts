@@ -8,5 +8,6 @@ export * from "./search";
 export * from "./edit";
 export * from "./sync";
 export * from "./projects";
+export * from "./recentSearches";
 export * from "./week";
 export * from "./newTask";
