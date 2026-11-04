@@ -284,50 +284,78 @@ class TaskController extends Controller
         Request $request,
         Task $task,
         ClockInterface $clock,
-    ): Response {
+        TaskRecurrence $recurrence,
+    ): Response|JsonResponse {
         if ($task->repeat !== 'never') {
             $scope = $request->input('scope');
-            if ($scope === 'future') {
-                throw ValidationException::withMessages([
-                    'scope' => ["This and all future isn't available yet."],
-                ]);
-            }
-
-            if ($scope !== 'one') {
+            if ($scope !== 'one' && $scope !== 'future') {
                 throw ValidationException::withMessages([
                     'scope' => ['Choose This task only or This and all future.'],
                 ]);
             }
         }
 
-        $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
-        /** @var array<string, string> $fieldUpdatedAt */
-        $fieldUpdatedAt = $task->field_updated_at ?? [];
-        $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
-        $task->field_updated_at = $fieldUpdatedAt;
-        $task->save();
-        $task->delete();
+        return DB::transaction(function () use ($task, $request, $clock, $recurrence): Response|JsonResponse {
+            $locked = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $scope = $request->input('scope');
+            $next = null;
+            if ($scope === 'one' && ! $locked->done) {
+                $next = $recurrence->next($locked, restoreDeleted: true);
+                if ($next?->trashed()) {
+                    $next = null;
+                }
+            }
 
-        return response()->noContent();
+            $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
+            /** @var array<string, string> $fieldUpdatedAt */
+            $fieldUpdatedAt = $locked->field_updated_at ?? [];
+            $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
+            $locked->field_updated_at = $fieldUpdatedAt;
+            $locked->save();
+            $locked->delete();
+
+            if ($next !== null) {
+                return response()->json(['next' => new TaskResource($next)], 200);
+            }
+
+            return response()->noContent();
+        });
     }
 
     public function restore(
         Task $task,
         ClockInterface $clock,
     ): TaskResource {
-        if ($task->trashed()) {
-            if (! $task->done) {
-                OpenTaskLimit::ensureRoom();
+        return DB::transaction(function () use ($task, $clock): TaskResource {
+            $locked = Task::withTrashed()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if ($locked->trashed()) {
+                if (! $locked->done) {
+                    $child = Task::withTrashed()
+                        ->where('previous_occurrence_id', $locked->id)
+                        ->lockForUpdate()
+                        ->first();
+                    if ($child !== null && ! $child->done && ! $child->trashed()) {
+                        $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
+                        /** @var array<string, string> $childFieldUpdatedAt */
+                        $childFieldUpdatedAt = $child->field_updated_at ?? [];
+                        $childFieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
+                        $child->field_updated_at = $childFieldUpdatedAt;
+                        $child->save();
+                        $child->delete();
+                    }
+                    OpenTaskLimit::ensureRoom();
+                }
+
+                $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
+                /** @var array<string, string> $fieldUpdatedAt */
+                $fieldUpdatedAt = $locked->field_updated_at ?? [];
+                $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
+                $locked->field_updated_at = $fieldUpdatedAt;
+                $locked->save();
+                $locked->restore();
             }
 
-            $now = $clock->now()->setTimezone(new DateTimeZone('UTC'));
-            /** @var array<string, string> $fieldUpdatedAt */
-            $fieldUpdatedAt = $task->field_updated_at ?? [];
-            $fieldUpdatedAt['deleted'] = $now->format('Y-m-d\TH:i:s\Z');
-            $task->field_updated_at = $fieldUpdatedAt;
-            $task->restore();
-        }
-
-        return new TaskResource($task);
+            return new TaskResource($locked);
+        });
     }
 }
