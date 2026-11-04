@@ -136,7 +136,7 @@ it('filters scheduled and due only', function () {
         'user_id' => $user->id,
         'title' => 'Scheduled task',
         'start_date' => '2026-10-25',
-        'due_date' => '2026-10-25',
+        'due_date' => null,
         'start_time' => '10:00:00',
         'done' => false,
     ]);
@@ -144,6 +144,7 @@ it('filters scheduled and due only', function () {
         'id' => (string) Str::uuid(),
         'user_id' => $user->id,
         'title' => 'Due only task',
+        'start_date' => null,
         'due_date' => '2026-10-25',
         'start_time' => null,
         'done' => false,
@@ -162,6 +163,210 @@ it('filters scheduled and due only', function () {
 
     expect($dueRes['days'][0]['tasks'])->toHaveCount(1);
     expect($dueRes['days'][0]['tasks'][0]['title'])->toBe('Due only task');
+});
+
+it('shows a task start Thu, due Sat under both days in all', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Span task',
+        'start_date' => '2026-10-29',
+        'due_date' => '2026-10-31',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=all')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toHaveCount(2);
+    expect($res['days'][0]['date'])->toBe('2026-10-29');
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Span task');
+    expect($res['days'][1]['date'])->toBe('2026-10-31');
+    expect($res['days'][1]['tasks'][0]['title'])->toBe('Span task');
+    expect($res['total_count'])->toBe(1);
+});
+
+it('shows a task once when start and due are the same day', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Same day task',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-25',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=all')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toHaveCount(1);
+    expect($res['days'][0]['date'])->toBe('2026-10-25');
+    expect($res['days'][0]['tasks'])->toHaveCount(1);
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Same day task');
+});
+
+it('shows a start-only task on its start date', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Start only task',
+        'start_date' => '2026-10-26',
+        'due_date' => null,
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toHaveCount(1);
+    expect($res['days'][0]['date'])->toBe('2026-10-26');
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Start only task');
+});
+
+it('shows start day only in scheduled filter, including task with start date and no time, while due-only task is excluded', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Span task',
+        'start_date' => '2026-10-29',
+        'due_date' => '2026-10-31',
+        'done' => false,
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Untimed start task',
+        'start_date' => '2026-10-26',
+        'start_time' => null,
+        'done' => false,
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Due only task',
+        'due_date' => '2026-10-27',
+        'start_date' => null,
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=scheduled')
+        ->assertOk()
+        ->json();
+
+    $dates = collect($res['days'])->pluck('date')->all();
+    expect($dates)->toBe(['2026-10-26', '2026-10-29']);
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Untimed start task');
+    expect($res['days'][1]['tasks'][0]['title'])->toBe('Span task');
+    expect(collect($res['days'])->flatMap(fn ($d) => $d['tasks'])->pluck('title'))->not->toContain('Due only task');
+});
+
+it('shows due day only in due filter, including task with start time', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Span task with start time',
+        'start_date' => '2026-10-29',
+        'due_date' => '2026-10-31',
+        'start_time' => '10:00:00',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=due')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toHaveCount(1);
+    expect($res['days'][0]['date'])->toBe('2026-10-31');
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Span task with start time');
+});
+
+it('shows a task whose start date has passed only under its due day', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Passed start task',
+        'start_date' => '2026-10-20',
+        'due_date' => '2026-10-25',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toHaveCount(1);
+    expect($res['days'][0]['date'])->toBe('2026-10-25');
+    expect($res['days'][0]['tasks'][0]['title'])->toBe('Passed start task');
+});
+
+it('never shows a done task or another user task', function () {
+    $user = User::factory()->create();
+    $other = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Done task',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-26',
+        'done' => true,
+        'done_at' => now(),
+    ]);
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $other->id,
+        'title' => 'Other user task',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-26',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming')
+        ->assertOk()
+        ->json();
+
+    expect($res['days'])->toBeEmpty();
+    expect($res['total_count'])->toBe(0);
+});
+
+it('counts a two-day task once in total_count and next_from works with days=2', function () {
+    $user = User::factory()->create();
+
+    Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Span task',
+        'start_date' => '2026-10-24',
+        'due_date' => '2026-10-28',
+        'done' => false,
+    ]);
+
+    $res = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&days=2')
+        ->assertOk()
+        ->json();
+
+    expect($res['total_count'])->toBe(1);
+    expect($res['days'])->toHaveCount(1);
+    expect($res['days'][0]['date'])->toBe('2026-10-24');
+    expect($res['next_from'])->toBe('2026-10-28');
 });
 
 it('excludes soft-deleted, done, and other user tasks', function () {

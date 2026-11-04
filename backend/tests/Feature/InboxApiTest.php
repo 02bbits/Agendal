@@ -385,3 +385,90 @@ it('handles local-midnight boundary across timezones (task due tomorrow in UTC l
     expect(collect($response->json('today'))->pluck('id')->all())->toBe([$task->id]);
     expect(collect($response->json('overdue'))->pluck('id')->all())->toBe([$overdueTask->id]);
 });
+
+it('includes all LV-1 today cases in today section and excludes future-start tasks from today and no-date', function () {
+    $user = User::factory()->create();
+
+    // 1. due_date = today
+    $dueToday = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Due today',
+        'due_date' => '2026-10-23',
+        'done' => false,
+    ]);
+
+    // 2. start_date = today
+    $startToday = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Start today',
+        'start_date' => '2026-10-23',
+        'due_date' => null,
+        'done' => false,
+    ]);
+
+    // 3. start_date < today AND due_date > today (in progress)
+    $inProgress = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'In progress',
+        'start_date' => '2026-10-20',
+        'due_date' => '2026-10-25',
+        'done' => false,
+    ]);
+
+    // 4. start_date < today AND due_date IS NULL (start only, passed)
+    $startPassed = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Start only passed',
+        'start_date' => '2026-10-20',
+        'due_date' => null,
+        'done' => false,
+    ]);
+
+    // Future start task (start_date > today, no due date)
+    $futureStart = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Future start',
+        'start_date' => '2026-10-25',
+        'due_date' => null,
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/tasks?view=inbox')->assertStatus(200);
+
+    $todayIds = collect($response->json('today'))->pluck('id')->all();
+    expect($todayIds)->toContain($dueToday->id)
+        ->toContain($startToday->id)
+        ->toContain($inProgress->id)
+        ->toContain($startPassed->id)
+        ->not->toContain($futureStart->id);
+
+    $noDateIds = collect($response->json('no_date'))->pluck('id')->all();
+    expect($noDateIds)->not->toContain($futureStart->id)
+        ->not->toContain($startToday->id)
+        ->not->toContain($startPassed->id);
+});
+
+it('counts a start-today task completed today in progress', function () {
+    $user = User::factory()->create();
+
+    // Start-today task completed today
+    $startTodayDone = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Start today done',
+        'start_date' => '2026-10-23',
+        'due_date' => null,
+        'done' => true,
+        'done_at' => Carbon::parse('2026-10-23T04:00:00Z'),
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/tasks?view=inbox')->assertStatus(200);
+
+    expect($response->json('progress'))->toBe(['done' => 1, 'total' => 1]);
+    expect(collect($response->json('completed_today'))->pluck('id')->all())->toContain($startTodayDone->id);
+});

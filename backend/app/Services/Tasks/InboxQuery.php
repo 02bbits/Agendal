@@ -87,7 +87,18 @@ final class InboxQuery
         /** @var Collection<int, Task> $tasks */
         $tasks = $this->baseQuery()
             ->where('done', false)
-            ->where('due_date', $today)
+            ->where(function (Builder $query) use ($today) {
+                $query->where('due_date', $today)
+                    ->orWhere('start_date', $today)
+                    ->orWhere(function (Builder $q) use ($today) {
+                        $q->where('start_date', '<', $today)
+                            ->where('due_date', '>', $today);
+                    })
+                    ->orWhere(function (Builder $q) use ($today) {
+                        $q->where('start_date', '<', $today)
+                            ->whereNull('due_date');
+                    });
+            })
             ->orderByRaw('case when start_time is not null then 0 else 1 end asc')
             ->orderByRaw('start_time asc nulls last')
             ->orderByRaw(self::PRIORITY_ORDER)
@@ -106,6 +117,7 @@ final class InboxQuery
         $query = $this->baseQuery()
             ->where('done', false)
             ->whereNull('due_date')
+            ->whereNull('start_date')
             ->orderByRaw(self::PRIORITY_ORDER)
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc');
@@ -141,8 +153,15 @@ final class InboxQuery
     private function progress(Collection $overdueTasks, Collection $todayTasks, string $today, DateTimeZone $zone): array
     {
         $done = (clone $this->completedTodayQuery($today, $zone))
-            ->whereNotNull('due_date')
-            ->where('due_date', '<=', $today)
+            ->where(function (Builder $q) use ($today) {
+                $q->where(function (Builder $sub) use ($today) {
+                    $sub->whereNotNull('due_date')
+                        ->where('due_date', '<=', $today);
+                })->orWhere(function (Builder $sub) use ($today) {
+                    $sub->whereNotNull('start_date')
+                        ->where('start_date', '<=', $today);
+                });
+            })
             ->count();
 
         $openDueOrOverdue = $overdueTasks->count() + $todayTasks->count();
