@@ -38,7 +38,7 @@ export function UpcomingDayStrip({
             aria-current={ariaCurrent}
             aria-label={t("list.day_with_count", { day: heading, count })}
             className={cx(
-              "focus-ring relative flex flex-col items-center justify-center rounded-xl border-0 bg-transparent py-1.5 transition-colors",
+              "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px] md:min-h-0 md:justify-center",
               isPast || isToday
                 ? "cursor-default"
                 : "cursor-pointer hover:bg-surface-hover/50",
@@ -65,7 +65,7 @@ export function UpcomingDayStrip({
                     {day}
                   </span>
                   {/* Tells the reader which day is today */}
-                  <span className="text-footnote text-ink-tertiary">
+                  <span className="text-tab font-medium text-ink-tertiary md:text-footnote md:font-normal">
                     {t("list.strip_today")}
                   </span>
                 </>

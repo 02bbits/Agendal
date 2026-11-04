@@ -9,6 +9,7 @@ import { Button } from "../../../components/Button";
 import { t } from "../../../copy";
 import type { Project, WeekStart } from "../../../domain/types";
 import { useTaskStore } from "../store";
+import { DeleteTask } from "../DeleteTask";
 import { PanelHeader } from "./PanelHeader";
 import { TaskDetails } from "./TaskDetails";
 
@@ -83,7 +84,13 @@ export function TaskPanel({
           projects={projects}
           projectsStatus={projectsStatus}
           onRetryProjects={onRetryProjects}
-          onDelete={onDelete}
+          deleteAction={
+            <DeleteTask
+              task={task}
+              onDeleted={onDelete ?? onClose}
+              label={t("common.delete")}
+            />
+          }
           autoFocusTitle
           weekStart={weekStart}
         />

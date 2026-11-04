@@ -7,6 +7,7 @@ import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
+  DeleteTask,
   TaskDetails,
   TaskStoreProvider,
   t,
@@ -78,6 +79,9 @@ function TaskDetailsContainer({
         variant="screen"
         backLabel={getBackLabel()}
         weekStart={weekStart}
+        deleteAction={
+          <DeleteTask task={currentTask} onDeleted={back} isScreen />
+        }
       />
       {/* "Completed …" with Undo, like the lists */}
       <Toast toast={store.toast} onDismiss={store.dismissToast} />

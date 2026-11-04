@@ -21,6 +21,8 @@ export interface UseTaskSyncReturn {
   ) => void;
   getTask: (id: string) => Task | undefined;
   acceptOccurrence: (task: Task, remove: boolean) => void;
+  removeRow: (id: string) => void;
+  insertRow: (task: Task) => void;
 }
 
 export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
@@ -57,9 +59,21 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
         setTasks(rowsRef.current);
       }
     };
+    const onTaskDeleted = (e: Event) => {
+      const customEvent = e as CustomEvent<{ id: string }>;
+      const deletedId = customEvent?.detail?.id;
+      if (deletedId) {
+        rowsRef.current = rowsRef.current.filter((t) => t.id !== deletedId);
+        syncState.current.confirmed.delete(deletedId);
+        syncState.current.writers.delete(deletedId);
+        setTasks(rowsRef.current);
+      }
+    };
     window.addEventListener("agendal:task-created", onTaskCreated);
+    window.addEventListener("agendal:task-deleted", onTaskDeleted);
     return () => {
       window.removeEventListener("agendal:task-created", onTaskCreated);
+      window.removeEventListener("agendal:task-deleted", onTaskDeleted);
     };
   }, []);
 
@@ -80,6 +94,26 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
       syncState.current.writers.delete(task.id);
     } else if (!rowsRef.current.some((row) => row.id === task.id)) {
       rowsRef.current = [...rowsRef.current, task];
+      syncState.current.confirmed.set(task.id, task);
+    }
+    setTasks(rowsRef.current);
+  }, []);
+
+  const removeRow = useCallback((id: string) => {
+    rowsRef.current = rowsRef.current.filter((row) => row.id !== id);
+    syncState.current.confirmed.delete(id);
+    syncState.current.writers.delete(id);
+    setTasks(rowsRef.current);
+  }, []);
+
+  const insertRow = useCallback((task: Task) => {
+    if (!rowsRef.current.some((row) => row.id === task.id)) {
+      rowsRef.current = [...rowsRef.current, task];
+      syncState.current.confirmed.set(task.id, task);
+    } else {
+      rowsRef.current = rowsRef.current.map((row) =>
+        row.id === task.id ? task : row,
+      );
       syncState.current.confirmed.set(task.id, task);
     }
     setTasks(rowsRef.current);
@@ -147,5 +181,5 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
     [replaceRow],
   );
 
-  return { tasks, change, getTask, acceptOccurrence };
+  return { tasks, change, getTask, acceptOccurrence, removeRow, insertRow };
 }

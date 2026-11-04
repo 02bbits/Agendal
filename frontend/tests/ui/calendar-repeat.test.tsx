@@ -60,6 +60,8 @@ it("shows the generated occurrence, removes it on Undo and restores it once on r
     complete: vi.fn(async () => ({ task: { ...task, done: true }, next })),
     reopen: vi.fn(async () => ({ task, next })),
     patch: vi.fn(async () => task),
+    remove: vi.fn(async () => {}),
+    restore: vi.fn(async () => task),
   };
   render(
     <TaskStoreProvider
@@ -105,6 +107,8 @@ it("fast complete → Undo → complete keeps exactly one generated occurrence",
       return { task, next: n1 };
     }),
     patch: vi.fn(async () => task),
+    remove: vi.fn(async () => {}),
+    restore: vi.fn(async () => task),
   };
   render(
     <TaskStoreProvider
@@ -138,6 +142,8 @@ it("ignores more clicks on a task's tick while it settles after Complete", async
     })),
     reopen: vi.fn(async () => ({ task })),
     patch: vi.fn(async () => task),
+    remove: vi.fn(async () => {}),
+    restore: vi.fn(async () => task),
   };
   render(
     <TaskStoreProvider

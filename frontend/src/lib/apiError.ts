@@ -48,5 +48,14 @@ export async function handleResponse<T>(response: Response): Promise<T> {
     );
   }
 
-  return response.json();
+  if (response.status === 204) {
+    return undefined as unknown as T;
+  }
+
+  const text = await response.text();
+  if (!text) {
+    return undefined as unknown as T;
+  }
+
+  return JSON.parse(text) as T;
 }

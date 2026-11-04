@@ -1,6 +1,6 @@
 import { api } from "./api";
 import { handleResponse } from "./apiError";
-import type { TaskApi, TaskPatch } from "../ui/domain/api";
+import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { Project, Task } from "../ui/domain/types";
 
@@ -97,6 +97,24 @@ export async function createTask(body: CreateTaskBody): Promise<Task> {
   return handleResponse<Task>(response);
 }
 
+export async function deleteTask(
+  id: string,
+  scope?: DeleteScope,
+): Promise<{ next?: Task } | void> {
+  const query = scope ? `?scope=${encodeURIComponent(scope)}` : "";
+  const response = await api(`/tasks/${encodeURIComponent(id)}${query}`, {
+    method: "DELETE",
+  });
+  return handleResponse<{ next?: Task } | void>(response);
+}
+
+export async function restoreTask(id: string): Promise<Task> {
+  const response = await api(`/tasks/${encodeURIComponent(id)}/restore`, {
+    method: "POST",
+  });
+  return handleResponse<Task>(response);
+}
+
 export const httpTaskApi: TaskApi = {
   complete(id: string, at: string): Promise<{ task: Task; next?: Task }> {
     return postLifecycle(id, "complete", at);
@@ -108,5 +126,13 @@ export const httpTaskApi: TaskApi = {
 
   patch(id: string, fields: TaskPatch, at: string): Promise<Task> {
     return patch(id, fields, at);
+  },
+
+  remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void> {
+    return deleteTask(id, scope);
+  },
+
+  restore(id: string): Promise<Task> {
+    return restoreTask(id);
   },
 };
