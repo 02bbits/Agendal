@@ -49,11 +49,7 @@ export function SettingsRows({
   const isReminderPast = reminderPast(task, clock.now(), clock.timeZone);
 
   const hasDate = Boolean(task.start_date || task.due_date);
-  const reminderHelper = !hasDate
-    ? t("task.reminder_needs_date")
-    : isReminderPast
-      ? t("task.reminder_past")
-      : undefined;
+  const reminderHelper = isReminderPast ? t("task.reminder_past") : undefined;
 
   const repeatDescription = describeRepeat(task);
   const repeatLabel = repeatDescription
