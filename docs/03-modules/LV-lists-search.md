@@ -78,7 +78,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.3 Search (LV-3)
 
 - **When it runs:**
-  - **From 768 px:** a popup over the current screen, on a dark blurred backdrop; clicking the backdrop or Esc closes it. `/search` opens the popup over Inbox. Below 768 px: the full Search screen with Cancel.
+  - **From 768 px:** a popup over the current screen, on the same blurred backdrop as the task panel, and the page behind doesn't scroll; clicking the backdrop or Esc closes it. `/search` opens the popup over Inbox. Below 768 px: the full Search screen with Cancel.
   - The field is focused on open. Search runs 250 ms after the last keystroke, with 1 character minimum.
   - Enter runs it at once, or opens the active row. ↑ and ↓ move through the rows. No key hints are shown.
   - **Before typing:** Quick filters (Overdue, Due this week, Starts today, High priority, From a note, Completed), Recent searches (the last 5, on this device only, cleared at sign-out), Notes (empty until the Notes screen is done) and Search in a project. Quick filters and the project work with an empty field.
