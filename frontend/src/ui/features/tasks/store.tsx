@@ -27,6 +27,7 @@ export function TaskStoreProvider({
   initialTasks,
   initialProjects,
   timeFormat = "24h",
+  onToast,
   children,
 }: types.TaskStoreProviderProps) {
   const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
@@ -68,8 +69,9 @@ export function TaskStoreProvider({
   );
 
   const showToast = React.useCallback(
-    (d: types.ToastDraft) => setToast({ ...d, id: ++toastSeq.current }),
-    [],
+    (d: types.ToastDraft) =>
+      onToast ? onToast(d) : setToast({ ...d, id: ++toastSeq.current }),
+    [onToast],
   );
   const dismissToast = React.useCallback(
     (id: ToastData["id"]) => setToast((c) => (c?.id === id ? null : c)),

@@ -84,7 +84,7 @@ describe("TaskRow (LV-4)", () => {
     });
     const { container } = renderRow(t);
     const meta = container.querySelector('[data-slot="meta"]')!;
-    expect(meta.textContent).toBe("HCI·16:00 – 17:00");
+    expect(meta.textContent).toBe("HCI·16:00 – 17:00·Due");
     expect(meta.querySelectorAll("svg")).toHaveLength(2);
     expect(
       (container.querySelector('[data-slot="dot"]') as HTMLElement).style
@@ -137,7 +137,7 @@ describe("TaskRow (LV-4)", () => {
     }
   });
 
-  it("starts the meta line with the due date when asked, in red when overdue", () => {
+  it("shows overdue text in red on the meta line when overdue", () => {
     const { container } = renderRow(
       task({
         title: "Submit HCI reflection",
@@ -147,19 +147,18 @@ describe("TaskRow (LV-4)", () => {
         priority: "high",
       }),
       {
-        showDue: true,
         overdue: true,
       },
     );
     expect(container.querySelector('[data-slot="meta"]')!.textContent).toBe(
-      "Wed 21 Oct·HCI·23:59",
+      "HCI·Due Wed 21 Oct",
     );
     expect(
       container.querySelectorAll('[data-slot="meta"] .text-error'),
     ).toHaveLength(1);
     expect(
       container.querySelector('[data-slot="meta"] .text-error')!.textContent,
-    ).toBe("Wed 21 Oct");
+    ).toBe("Due Wed 21 Oct");
     expect(container.querySelector("li")!.className).toContain("is-overdue");
   });
 
@@ -172,7 +171,6 @@ describe("TaskRow (LV-4)", () => {
         done: true,
       }),
       {
-        showDue: true,
         overdue: true,
       },
     );
@@ -206,10 +204,9 @@ describe("TaskRow (LV-4)", () => {
         reminder: "1h",
         repeat: "weekly",
       }),
-      { showDue: true },
     );
     expect(screen.getByRole("link").getAttribute("aria-label")).toBe(
-      "SQL quiz, Mon 26 Oct, 09:00, SQL Course, High priority, reminder set, repeats weekly on Monday",
+      "SQL quiz, Due Mon 26 Oct, SQL Course, High priority, reminder set, repeats weekly on Monday",
     );
   });
 

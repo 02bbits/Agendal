@@ -47,7 +47,11 @@ export function useModalFocus(
     };
     focusTarget();
 
+    // On the document: a click on the scrim leaves focus on body, and Esc must still work.
+    // Only the top layer answers, so Esc closes one at a time
     const onKeyDown = (event: KeyboardEvent) => {
+      const layers = document.querySelectorAll('[aria-modal="true"]');
+      if (layers[layers.length - 1] !== container) return;
       if (event.key === "Escape") {
         event.stopPropagation();
         escape.current();
@@ -76,10 +80,10 @@ export function useModalFocus(
       }
     };
 
-    container.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
     return () => {
       cancelAnimationFrame(frame);
-      container.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
       if (opener && opener.isConnected) opener.focus();
     };
   }, [open, containerRef, titleRef, initialFocusRef]);

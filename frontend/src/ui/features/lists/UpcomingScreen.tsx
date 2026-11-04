@@ -1,4 +1,9 @@
-import { useState, type CSSProperties, type ReactElement } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type ReactElement,
+} from "react";
 import { Button } from "../../components/Button";
 import { ChipGroup } from "../../components/ChipGroup";
 import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
@@ -18,7 +23,13 @@ export type { UpcomingScreenProps, UpcomingViewMode };
 
 export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   const store = useTaskStore();
-  const [anchor, setAnchor] = useState<string>(() => store.today);
+  const initialViewResolved =
+    typeof props.initialView === "function"
+      ? props.initialView()
+      : props.initialView;
+  const [anchor, setAnchor] = useState<string>(
+    () => initialViewResolved?.anchor ?? store.today,
+  );
   const { filter, chooseFilter, viewMode, chooseViewMode } =
     useUpcomingPreferences(props, () => setAnchor(listWindow.activeDay));
 
@@ -26,7 +37,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     isBoard,
     listWindow,
     renderedDays,
-    tasksByDay,
+    entriesByDay,
     overdueTasks,
     countsByDay,
     navProps,
@@ -39,11 +50,18 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     weekStart: props.weekStart ?? "mon",
     viewMode,
     filter,
+    initialDay: initialViewResolved?.day,
   });
+
+  const onViewChange = props.onViewChange;
+  const currentActiveDay = isBoard ? anchor : listWindow.activeDay;
+  useEffect(() => {
+    onViewChange?.({ anchor, day: currentActiveDay });
+  }, [anchor, currentActiveDay, onViewChange]);
 
   const viewProps = {
     days: renderedDays,
-    tasksByDay,
+    entriesByDay,
     overdueTasks,
     today: store.today,
     selectedTaskId: props.selectedTaskId,

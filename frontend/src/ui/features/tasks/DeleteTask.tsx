@@ -1,4 +1,5 @@
 import { useRef, useState, type ReactElement } from "react";
+import { flushSync } from "react-dom";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
 import { TrashIcon } from "../../components/icons";
@@ -29,9 +30,11 @@ export function DeleteTask({
   const repeating = task.repeat !== "never";
 
   const confirm = (scope?: DeleteScope) => {
-    setAsking(false);
+    // The dialog takes its history entry off in a timer; leaving queues behind it,
+    // or Back would only remove that entry and stay on the deleted task
+    flushSync(() => setAsking(false));
     store.remove(task, scope);
-    onDeleted?.();
+    setTimeout(() => onDeleted?.());
   };
 
   return (

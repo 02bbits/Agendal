@@ -4,22 +4,19 @@ import { PlusIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { dayHeading } from "../../domain/week";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
-import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
+import { EntryBlocks } from "./EntryBlocks";
 import type { UpcomingDayListProps } from "./types";
 import { UpcomingOverdue } from "./UpcomingOverdue";
 
 export function UpcomingDayList({
   days,
-  tasksByDay,
+  entriesByDay,
   overdueTasks,
   today,
   selectedTaskId,
   navigate,
   onAddTask,
 }: UpcomingDayListProps): ReactElement {
-  const store = useTaskStore();
-
   return (
     <div className={cx("space-y-6", TASK_COLUMN_CLASS)}>
       {overdueTasks && overdueTasks.length > 0 && (
@@ -33,7 +30,7 @@ export function UpcomingDayList({
       )}
       {days.map((date, index) => {
         const heading = dayHeading(date, today);
-        const dayTasks = tasksByDay[date] ?? [];
+        const dayEntries = entriesByDay[date] ?? [];
         const isLast = index === days.length - 1;
 
         return (
@@ -53,23 +50,15 @@ export function UpcomingDayList({
               {heading}
             </h2>
 
-            {dayTasks.length > 0 && (
-              <div className="mt-2 overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
-                <ul className="m-0 list-none p-0">
-                  {dayTasks.map((task) => (
-                    <TaskRow
-                      key={task.id}
-                      task={task}
-                      project={store.projectOf(task)}
-                      today={today}
-                      timeFormat={store.timeFormat}
-                      onToggle={store.toggle}
-                      navigate={navigate}
-                      selected={task.id === selectedTaskId}
-                      settling={store.isSettling(task.id)}
-                    />
-                  ))}
-                </ul>
+            {dayEntries.length > 0 && (
+              <div className="mt-2">
+                <EntryBlocks
+                  entries={dayEntries}
+                  variant="list"
+                  today={today}
+                  selectedTaskId={selectedTaskId ?? undefined}
+                  navigate={navigate}
+                />
               </div>
             )}
 

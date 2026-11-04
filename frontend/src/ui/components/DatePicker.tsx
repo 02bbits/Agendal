@@ -28,6 +28,8 @@ export interface DatePickerProps {
   onOpenChange?: (open: boolean) => void;
   /** Adds a "No date" chip that clears the value. */
   clearable?: boolean;
+  /** Takes the Today chip's place, for a screen where today can't be picked. */
+  todayChip?: { label: string; disabled?: boolean; onSelect: () => void };
 }
 
 export function DatePicker({
@@ -43,6 +45,7 @@ export function DatePicker({
   className,
   onOpenChange,
   clearable = false,
+  todayChip,
 }: DatePickerProps): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `datepicker-${autoId}`;
@@ -121,15 +124,28 @@ export function DatePicker({
                 {t("task.no_date")}
               </Chip>
             )}
-            {chips.map((c) => (
-              <Chip
-                key={c.k}
-                selected={value === c.d}
-                onClick={() => selectAndClose(c.d)}
-              >
-                {c.l}
-              </Chip>
-            ))}
+            {chips.map((c) =>
+              c.k === "today" && todayChip ? (
+                <Chip
+                  key={c.k}
+                  disabled={todayChip.disabled}
+                  onClick={() => {
+                    setOpen(false);
+                    todayChip.onSelect();
+                  }}
+                >
+                  {todayChip.label}
+                </Chip>
+              ) : (
+                <Chip
+                  key={c.k}
+                  selected={value === c.d}
+                  onClick={() => selectAndClose(c.d)}
+                >
+                  {c.l}
+                </Chip>
+              ),
+            )}
           </div>
 
           <CalendarMonth

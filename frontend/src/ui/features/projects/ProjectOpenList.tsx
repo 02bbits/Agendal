@@ -34,7 +34,6 @@ export function ProjectOpenList({
             project={project}
             today={today}
             timeFormat={timeFormat}
-            showDue
             selected={x.id === selectedTaskId}
             settling={isSettling?.(x.id) ?? false}
             onToggle={onToggleTask ?? (() => {})}

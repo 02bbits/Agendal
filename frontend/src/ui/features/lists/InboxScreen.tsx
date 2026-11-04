@@ -120,7 +120,7 @@ export function InboxScreen({
 
   const row = (
     task: (typeof view.today)[number],
-    opts: { showDue?: boolean; overdue?: boolean } = {},
+    opts: { overdue?: boolean } = {},
   ) => (
     <TaskRow
       key={task.id}
@@ -203,9 +203,7 @@ export function InboxScreen({
                 open={openOverdue}
                 onToggle={handleToggleOverdue}
               >
-                {view.overdue.map((x) =>
-                  row(x, { showDue: true, overdue: true }),
-                )}
+                {view.overdue.map((x) => row(x, { overdue: true }))}
               </Section>
             )}
             {view.today.length > 0 && (
@@ -227,7 +225,7 @@ export function InboxScreen({
                 open={openNoDate}
                 onToggle={handleToggleNoDate}
               >
-                {view.noDate.map((x) => row(x, { showDue: true }))}
+                {view.noDate.map((x) => row(x))}
               </Section>
             )}
             {view.completed.length > 0 && (

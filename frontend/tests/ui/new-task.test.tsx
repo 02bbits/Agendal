@@ -1,3 +1,4 @@
+import { Dialog } from "../../src/ui/components/Dialog";
 import {
   cleanup,
   fireEvent,
@@ -288,6 +289,31 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
         ),
       ).toBeTruthy();
     });
+  });
+
+  it("Esc closes the top layer even when focus fell to the page", () => {
+    const onClose = vi.fn();
+    render(
+      <Dialog open title="Discard changes?" onClose={onClose} actions={null} />,
+    );
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+
+    fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("the discard dialog stacks above the sheet, not behind it", () => {
+    render(
+      <Dialog
+        open
+        title="Discard changes?"
+        onClose={() => {}}
+        actions={null}
+      />,
+    );
+    const layer = screen.getByRole("alertdialog").parentElement!;
+    expect(layer.className).toContain("z-[1000]");
   });
 
   it("shows discard dialog on close with input, closes immediately with no input", async () => {
