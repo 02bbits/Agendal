@@ -1,4 +1,5 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
+import { localTime, now, timeZone } from "../../../lib/clock";
 import { t } from "../../copy";
 import { cx } from "../../components/cx";
 import {
@@ -7,8 +8,9 @@ import {
   FlagIcon,
   RepeatIcon,
 } from "../../components/icons";
-import { formatDay, formatTimeRange } from "../../domain/dates";
 import { taskAccessibleName } from "../../domain/describe";
+import type { EntryKind } from "../../domain/entries";
+import { rowMeta, type MetaTone } from "../../domain/rowMeta";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -18,8 +20,8 @@ export interface TaskRowProps {
   project?: Project | null;
   today: string;
   timeFormat: TimeFormat;
-  /** Overdue, Search and No date rows start the meta line with the due date (LV-4). */
-  showDue?: boolean;
+  entry?: EntryKind;
+  tone?: "due";
   /** Overdue rows: red ring and red date, next to the "Overdue" heading word. */
   overdue?: boolean;
   onToggle: (task: Task) => void;
@@ -31,13 +33,21 @@ export interface TaskRowProps {
   renderTitle?: (title: string) => ReactNode;
 }
 
+function metaToneClass(tone: MetaTone): string | undefined {
+  if (tone === "due") return "font-semibold text-due-ink";
+  if (tone === "late") return "font-medium text-error";
+  if (tone === "muted") return "text-ink-tertiary";
+  return undefined;
+}
+
 /** One task: circular checkbox, title, meta line and priority flag matching Figma design. */
 export function TaskRow({
   task,
   project,
   today,
   timeFormat,
-  showDue = false,
+  entry,
+  tone,
   overdue = false,
   selected = false,
   settling = false,
@@ -45,10 +55,12 @@ export function TaskRow({
   navigate,
   renderTitle,
 }: TaskRowProps) {
+  const nowTime = localTime(timeZone(), now());
   const accessibleName = taskAccessibleName(task, project, {
     today,
     timeFormat,
-    showDue,
+    nowTime,
+    entry,
   });
   const flag =
     task.priority === "high"
@@ -57,11 +69,21 @@ export function TaskRow({
         ? "warning"
         : null;
 
+  const metaParts = rowMeta(task, {
+    today,
+    timeFormat,
+    nowTime,
+    entry,
+  });
+
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[56px] items-center gap-3 border-b border-separator/60 px-4 py-3 transition-colors hover:bg-surface-hover/40 last:border-b-0",
-        selected && "bg-surface-hover/60",
+        "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0",
+        tone === "due"
+          ? "border-dashed border-due/60 hover:bg-due/10"
+          : "border-separator/60 hover:bg-surface-hover/40",
+        selected && (tone === "due" ? "bg-due/20" : "bg-surface-hover/60"),
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
       )}
@@ -115,18 +137,6 @@ export function TaskRow({
           data-slot="meta"
           aria-hidden="true"
         >
-          {showDue && task.due_date && (
-            <>
-              <span
-                className={cx(
-                  overdue && !task.done ? "text-error font-medium" : undefined,
-                )}
-              >
-                {formatDay(task.due_date, today)}
-              </span>
-              <span>·</span>
-            </>
-          )}
           <span
             className="mr-0.5 inline-block size-2 shrink-0 rounded-full"
             data-slot="dot"
@@ -135,18 +145,12 @@ export function TaskRow({
             }}
           />
           <span>{project ? project.name : t("project.none")}</span>
-          {task.start_time && (
-            <>
+          {metaParts.map((part, index) => (
+            <Fragment key={index}>
               <span>·</span>
-              <span>
-                {formatTimeRange(
-                  task.start_time,
-                  task.start_date === task.due_date ? task.due_time : null,
-                  timeFormat,
-                )}
-              </span>
-            </>
-          )}
+              <span className={metaToneClass(part.tone)}>{part.text}</span>
+            </Fragment>
+          ))}
           {task.reminder !== "none" && (
             <BellIcon size={13} className="text-ink-tertiary" />
           )}

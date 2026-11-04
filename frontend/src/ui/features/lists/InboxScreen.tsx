@@ -12,6 +12,8 @@ import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { ProgressSummary } from "../tasks/ProgressSummary";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
+import { EntryBlocks } from "./EntryBlocks";
+import type { EntryKind } from "../../domain/entries";
 import { Section } from "./Section";
 
 export const INBOX_COMPLETED_PAGE = 5;
@@ -120,7 +122,7 @@ export function InboxScreen({
 
   const row = (
     task: (typeof view.today)[number],
-    opts: { showDue?: boolean; overdue?: boolean } = {},
+    opts: { overdue?: boolean } = {},
   ) => (
     <TaskRow
       key={task.id}
@@ -135,6 +137,12 @@ export function InboxScreen({
       {...opts}
     />
   );
+
+  const entriesFor = view.today.map((task) => ({
+    task,
+    kind: (task.due_date === store.today ? "due" : "start") as EntryKind,
+    date: store.today,
+  }));
 
   return (
     <div className="pb-8">
@@ -203,9 +211,7 @@ export function InboxScreen({
                 open={openOverdue}
                 onToggle={handleToggleOverdue}
               >
-                {view.overdue.map((x) =>
-                  row(x, { showDue: true, overdue: true }),
-                )}
+                {view.overdue.map((x) => row(x, { overdue: true }))}
               </Section>
             )}
             {view.today.length > 0 && (
@@ -215,8 +221,15 @@ export function InboxScreen({
                 collapsible
                 open={openToday}
                 onToggle={handleToggleToday}
+                rawChildren
               >
-                {view.today.map((x) => row(x))}
+                <EntryBlocks
+                  entries={entriesFor}
+                  variant="list"
+                  today={store.today}
+                  selectedTaskId={selectedTaskId ?? undefined}
+                  navigate={navigate}
+                />
               </Section>
             )}
             {view.noDate.length > 0 && (
@@ -227,7 +240,7 @@ export function InboxScreen({
                 open={openNoDate}
                 onToggle={handleToggleNoDate}
               >
-                {view.noDate.map((x) => row(x, { showDue: true }))}
+                {view.noDate.map((x) => row(x))}
               </Section>
             )}
             {view.completed.length > 0 && (

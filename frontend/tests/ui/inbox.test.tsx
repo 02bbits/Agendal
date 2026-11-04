@@ -112,6 +112,61 @@ describe("buildInbox (LV-1)", () => {
     ]);
     expect(view.progress).toEqual({ done: 0, total: 0 });
   });
+
+  it("matches all 4 Today cases (LV-1): due today, start today, in progress, and start passed", () => {
+    const tasks = [
+      task({ title: "due today", due_date: TODAY }),
+      task({ title: "start today", start_date: TODAY }),
+      task({
+        title: "in progress",
+        start_date: "2026-10-20",
+        due_date: "2026-10-25",
+      }),
+      task({ title: "start passed", start_date: "2026-10-20" }),
+      task({ title: "future start", start_date: "2026-10-25" }),
+      task({ title: "undated" }),
+    ];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.today.map((x) => x.title)).toEqual([
+      "due today",
+      "start today",
+      "in progress",
+      "start passed",
+    ]);
+  });
+
+  it("excludes future-start tasks from Today and No date", () => {
+    const tasks = [task({ title: "future start", start_date: "2026-10-25" })];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.today).toHaveLength(0);
+    expect(view.noDate).toHaveLength(0);
+    expect(view.overdue).toHaveLength(0);
+  });
+
+  it("excludes start-only tasks from No date", () => {
+    const tasks = [
+      task({ title: "start passed", start_date: "2026-10-20" }),
+      task({ title: "start today", start_date: TODAY }),
+      task({ title: "start future", start_date: "2026-10-25" }),
+      task({ title: "truly undated" }),
+    ];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.noDate.map((x) => x.title)).toEqual(["truly undated"]);
+  });
+
+  it("counts a start-today task completed today in progress (LV-1)", () => {
+    const tasks = [
+      task({ title: "open start today", start_date: TODAY }),
+      task({
+        title: "done start today",
+        start_date: TODAY,
+        done: true,
+        done_at: "2026-10-23T04:00:00Z",
+      }),
+    ];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.progress).toEqual({ done: 1, total: 2 });
+  });
 });
 
 describe("Inbox screen", () => {
@@ -143,8 +198,24 @@ describe("Inbox screen", () => {
     expect(overdue.querySelector(".text-error")!.textContent).toBe("Overdue");
     const row = within(overdue.closest("section")!).getByRole("link");
     expect(row.getAttribute("aria-label")).toBe(
-      "Submit HCI reflection, Yesterday, 23:59, HCI, High priority",
+      "Submit HCI reflection, Due Yesterday, HCI, High priority",
     );
+  });
+
+  it("renders tasks due today inside a dashed due block", () => {
+    const { wrap } = setup([
+      task({ title: "Due today task", due_date: TODAY }),
+      task({ title: "Start today task", start_date: TODAY }),
+    ]);
+    const { container } = render(wrap(<InboxScreen accountInitial="e" />));
+    const dueBlock = container.querySelector(".border-dashed.border-due");
+    expect(dueBlock).toBeTruthy();
+    expect(
+      within(dueBlock as HTMLElement).getByText("Due today task"),
+    ).toBeTruthy();
+    expect(
+      within(dueBlock as HTMLElement).queryByText("Start today task"),
+    ).toBeNull();
   });
 
   it("collapses No date and Completed as disclosures (A11Y-53)", async () => {
