@@ -231,7 +231,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(tue3Btn.getAttribute("aria-current")).toBe("date");
     expect(tue3Btn.disabled).toBe(true);
     expect(within(tue3Btn).getByText("3").className).toContain("bg-fill");
-    expect(within(tue3Btn).getByText("(Today)")).toBeTruthy();
+    expect(within(tue3Btn).getAllByText("(Today)")).toHaveLength(2);
 
     const wed4Btn = screen.getByRole("button", {
       name: /^4 Nov · Tomorrow · Wednesday,/,
@@ -490,14 +490,21 @@ describe("Upcoming screen (Section 8)", () => {
     expect(wed4Btn.disabled).toBe(false);
   });
 
-  it("Strip: today has no dot even with a task that day", () => {
+  it("Strip: today keeps its dot, and the label sits after it for phones", () => {
     const { wrap } = setupUpcoming([
       task({ id: "t-today", title: "Today task", due_date: "2026-11-03" }),
     ]);
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
     const tue3Btn = screen.getByRole("button", { name: /^3 Nov.*tasks?$/ });
-    expect(within(tue3Btn).queryByTestId("day-dot")).toBeNull();
+    const dot = within(tue3Btn).getByTestId("day-dot");
+    const labels = within(tue3Btn).getAllByText("(Today)");
+    expect(labels).toHaveLength(2);
+    expect(labels[1]!.className).toContain("md:hidden");
+    expect(
+      dot.compareDocumentPosition(labels[1]!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   it("axe clean in both themes for List view", async () => {
