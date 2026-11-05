@@ -138,6 +138,46 @@ describe("buildInbox (LV-1)", () => {
     ]);
   });
 
+  it("sorts Today by group order: Due today, Starts today, In progress, Planned {date}", () => {
+    const tasks = [
+      task({
+        title: "Planned yesterday",
+        start_date: "2026-10-22",
+        start_time: "08:00",
+      }),
+      task({
+        title: "In progress",
+        start_date: "2026-10-20",
+        due_date: "2026-10-28",
+        priority: "high",
+      }),
+      task({
+        title: "Starts today",
+        start_date: TODAY,
+        start_time: "09:00",
+        due_date: "2026-10-27",
+      }),
+      task({
+        title: "Due today untimed",
+        due_date: TODAY,
+        priority: "low",
+      }),
+      task({
+        title: "Due today timed",
+        due_date: TODAY,
+        due_time: "14:00",
+      }),
+    ];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.today.map((x) => x.title)).toEqual([
+      "Due today timed",
+      "Due today untimed",
+      "Starts today",
+      "In progress",
+      "Planned yesterday",
+    ]);
+  });
+
   it("excludes future-start tasks from Today and No date", () => {
     const tasks = [task({ title: "future start", start_date: "2026-10-25" })];
     const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
