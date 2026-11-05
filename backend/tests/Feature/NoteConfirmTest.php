@@ -10,6 +10,37 @@ use Tests\Support\FrozenClock;
 
 uses(RefreshDatabase::class);
 
+it('omits a proposed creation without writing it and undoes only the applied task', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow, buy milk'))->assertCreated();
+    $id = $note->json('note.id');
+    $ref = $note->json('changes.0.ref');
+    $this->postJson("/api/v1/notes/{$id}/apply", ['exclude' => [$ref]])->assertOk()->assertJsonCount(1, 'changes');
+    expect(Task::count())->toBe(1)->and(Note::findOrFail($id)->applied)->toHaveCount(1);
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk();
+    expect(Task::count())->toBe(0);
+    $this->postJson("/api/v1/notes/{$id}/redo")->assertOk();
+    expect(Task::count())->toBe(1);
+});
+
+it('omits a planned deletion without deleting the existing task', function () {
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->user->id, 'title' => 'Old reading list'])->save();
+    $note = $this->postJson('/api/v1/notes', confirmNote('delete old reading list, buy milk'))->assertCreated();
+    $ref = collect($note->json('changes'))->firstWhere('kind', 'deleted')['ref'];
+    $this->postJson('/api/v1/notes/'.$note->json('note.id').'/apply', ['exclude' => [$ref]])->assertOk()->assertJsonCount(1, 'changes');
+    expect($task->fresh())->not->toBeNull()->and(Task::count())->toBe(2);
+});
+
+it('refuses unknown duplicate and all-omitted refs without changing the plan', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->assertCreated();
+    $id = $note->json('note.id');
+    $ref = $note->json('changes.0.ref');
+    foreach ([['unknown'], [$ref, $ref], [$ref]] as $refs) {
+        $this->postJson("/api/v1/notes/{$id}/apply", ['exclude' => $refs])->assertUnprocessable();
+    }
+    expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('confirm');
+});
+
 function confirmNote(string $text): array
 {
     return ['client_id' => (string) Str::uuid(), 'text' => $text, 'written_at' => '2026-10-23T08:12:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'];

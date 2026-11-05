@@ -776,13 +776,13 @@ describe("Field edge cases and accessibility", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("disables reminder without a due date and shows explanation", () => {
+  it("disables reminder on an undated task without showing a hint", () => {
     open(task({ title: "No Date", due_date: null }));
     const trigger = screen.getByRole("button", {
       name: t("task.reminder"),
     }) as HTMLButtonElement;
     expect(trigger.disabled).toBe(true);
-    expect(screen.getByText(t("task.reminder_needs_date"))).toBeTruthy();
+    expect(screen.queryByText(t("task.reminder_needs_date"))).toBeNull();
   });
 
   it("shows helper when reminder time has already passed (TK-E4)", () => {

@@ -1,6 +1,7 @@
 import { useId, type ReactElement } from "react";
 import { cx } from "../../../components/cx";
 import { Segmented } from "../../../components/Segmented";
+import { FlagIcon } from "../../../components/icons";
 import { t, type CopyKey } from "../../../copy";
 import { PRIORITIES, type Priority } from "../../../domain/types";
 
@@ -42,6 +43,13 @@ export function PriorityField({
         options={PRIORITIES.map((p) => ({
           value: p,
           label: t(PRIORITY_COPY_KEYS[p]),
+          icon:
+            p === "low" ? undefined : (
+              <FlagIcon
+                size={14}
+                className={p === "high" ? "text-error" : "text-warning"}
+              />
+            ),
         }))}
         onChange={onChange}
       />

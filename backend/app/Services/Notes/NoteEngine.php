@@ -6,6 +6,7 @@ namespace App\Services\Notes;
 
 use App\Enums\ItemKind;
 use App\Enums\NoteEngineKind;
+use App\Enums\PlanStatus;
 use App\Enums\SkipReason;
 use Illuminate\Validation\ValidationException;
 
@@ -28,6 +29,15 @@ final class NoteEngine
         private PlanValidator $validator,
         private NoteNamer $namer,
     ) {}
+
+    /** RV-3: the user explicitly keeps the whole note as one task, without extracting any fields. */
+    public function plainTask(string $text, NoteContext $context): NoteBuild
+    {
+        $fields = $this->extractor->plain((string) preg_replace('/\s+/u', ' ', $text));
+        $plan = $this->validator->validate([...self::EMPTY_PLAN, 'create' => [$this->createEntry('i1', $fields, null)]], [], []);
+
+        return new NoteBuild($plan, PlanStatus::Done, $this->namer->name($plan, $text, $context, []), NoteEngineKind::Rules, []);
+    }
 
     /** The note item an entry came from, counted from 0: "i3" and "i3-2" are item 2. */
     public static function itemIndex(string $ref): ?int

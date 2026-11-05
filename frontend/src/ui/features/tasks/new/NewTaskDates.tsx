@@ -54,6 +54,7 @@ export function NewTaskDates({
         control={
           <Picker<string>
             id="new-task-due-time"
+            variant="row"
             label={t("task.due_time")}
             value={dueTime}
             options={buildTimeOptions(
@@ -76,6 +77,7 @@ export function NewTaskDates({
           <div className="flex items-center gap-1.5">
             <DatePicker
               id="new-task-start-date"
+              variant="row"
               label={t("task.start_date")}
               value={startDate || null}
               clearable
@@ -84,6 +86,7 @@ export function NewTaskDates({
             />
             <Picker<string>
               id="new-task-start"
+              variant="row"
               label={t("task.start")}
               value={startTime}
               options={buildTimeOptions(null, startTime, timeFormat)}

@@ -187,7 +187,7 @@ export function InboxScreen({
               <Link
                 href={ROUTES.upcoming}
                 navigate={navigate}
-                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
+                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill"
               >
                 {t("list.see_upcoming")}
               </Link>

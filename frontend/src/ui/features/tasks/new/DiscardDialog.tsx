@@ -6,6 +6,8 @@ import type { DiscardDialogProps } from "./types";
 
 export function DiscardDialog({
   open,
+  title = t("common.discard"),
+  description,
   onDiscard,
   onKeepEditing,
 }: DiscardDialogProps): ReactElement | null {
@@ -13,7 +15,8 @@ export function DiscardDialog({
     <Dialog
       open={open}
       history={false}
-      title={t("common.discard")}
+      title={title}
+      description={description}
       onClose={onKeepEditing}
       actions={
         <>

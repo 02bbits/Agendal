@@ -26,6 +26,8 @@ Agendal: phone-first PWA. A note (typed; voice and files later) becomes tasks. E
 
 **After Apply:** back to the list where the note was written, toast `note.made_*` with Undo (Undo all). The result screen (`/notes/{id}`) is reached from a note, or after an all-skips note.
 
+**Follow-up and review (IM-46):** Keep it as task creates one literal task through the applier; Edit the note re-plans the same follow-up id with server edit time, preserving written_at. The saved Notes list has All / Accepted / Pending filters; only Pending labels are yellow and row icons stay neutral. Desktop uses a modal 400px result panel with a dimmed, inert background; clicking the scrim, Close or Escape dismisses it. Notes follows TaskPanel's theme-aware scrim and 2px blur, and uses the shared useBackgroundScrollLock hook from main to preserve sticky shell positioning and scrolling in nested dialogs. Smaller screens show the selected note full-screen. Preview task forms use Cancel/Done locally; Apply sends edits and excluded refs. Pending/offline Notes-list work remains IM-48.
+
 **Task fields:** `title` (1–200, required), `project_id?`, `start_date?` + `start_time?`, `due_date?` + `due_time?`, `priority?` (low/medium/high), `reminder` (none, 5/15/30 min, 1 h, 1 day), `repeat` (never/daily/weekly/monthly/yearly) + `repeat_rule?` (RRULE ≤ 300) + server-set `repeat_anchor`, `notes?` (≤ 5,000), `done`, `done_at`, `created_by` (user/assistant), `source_note_id`, `field_updated_at` (per-field LWW stamps), `remind_at` (UTC). No `end_time` (migrated into `due_time`).
 
 - A time needs its date. Start (date + time) strictly before due. Repeats shift start and due together. Reminder: start time → 09:00 start date → due time → 09:00 due date.
@@ -38,7 +40,7 @@ Agendal: phone-first PWA. A note (typed; voice and files later) becomes tasks. E
 **Auth** (ADR-007): Sanctum cookie session, `__Host-` cookie (Chrome/Firefox locally, not Safari), CSRF header on writes. Lockout 3 failures → 60 s per (email, IP). Signed-out visitors see the shell; only a `401` redirects to Sign in.
 
 **API** (`/api/v1`, JSON, one error shape `{error: {code, message, request_id, fields?}}`, other users' ids → 404, client-generated UUIDs for tasks/projects/notes):
-`auth/register|login|logout|logout-everywhere|forgot-password|reset-password` · `GET/PATCH me` · `POST notes`, `GET notes/{id}`, `POST notes/{id}/apply|cancel|undo|redo` · projects CRUD + `GET projects/none` + `POST projects/{id}/restore` · tasks CRUD + `POST tasks/{id}/complete|reopen|restore`. Not built: search, notes list, sync, clarify.
+`auth/register|login|logout|logout-everywhere|forgot-password|reset-password` · `GET/PATCH me` · `GET/POST notes`, `GET/PUT notes/{id}`, `POST notes/{id}/apply|cancel|undo|redo|make-task` · projects CRUD + `GET projects/none` + `POST projects/{id}/restore` · tasks CRUD + `POST tasks/{id}/complete|reopen|restore`. Not built: search, sync, clarify.
 
 ## Where code lives
 

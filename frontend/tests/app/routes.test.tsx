@@ -39,7 +39,18 @@ beforeEach(() => {
   router.push.mockClear();
   router.replace.mockClear();
   router.back.mockClear();
-  session.mockReset().mockImplementation(async () => signedIn());
+  session.mockReset().mockImplementation(async (url: string) =>
+    url.startsWith("/api/v1/notes")
+      ? new Response(
+          JSON.stringify({
+            items: [],
+            total: 0,
+            needs_count: 0,
+            next_cursor: null,
+          }),
+        )
+      : signedIn(),
+  );
   vi.stubGlobal("fetch", session);
 });
 afterEach(() => vi.unstubAllGlobals());
@@ -67,11 +78,9 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     async (path, Page, title, empty) => {
       renderAt(path, Page);
       expect(
-        screen.getByRole("heading", { level: 1, name: title }),
+        await screen.findByRole("heading", { level: 1, name: title }),
       ).toBeTruthy();
-      expect(
-        await screen.findByRole("heading", { level: 2, name: empty }),
-      ).toBeTruthy();
+      expect(await screen.findByText(empty)).toBeTruthy();
       const nav = screen.getByRole("navigation", { name: "Main" });
       expect(
         within(nav)
@@ -82,38 +91,30 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     },
   );
 
-  it.each([
-    [
-      "the capture bar",
-      (bar: HTMLElement) =>
-        within(bar).getByRole("button", { name: "Write a note" }),
-    ],
-    [
-      "the Notes tab",
-      () =>
-        within(screen.getByRole("main")).getByRole("button", {
-          name: "Write a note",
-        }),
-    ],
-  ])(
-    "%s opens the full-screen editor with the cursor in the text (T-NC-01)",
-    async (_, opener) => {
-      renderAt("/notes", NotesPage);
-      const bar = screen.getByRole("navigation", {
-        name: "Main",
-      }).parentElement!;
-      await userEvent.click(opener(bar));
-      const editor = screen.getByRole("dialog", { name: "New note" });
-      expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
-        document.activeElement,
-      );
-      expect(router.push).not.toHaveBeenCalled();
-      await userEvent.click(
-        within(editor).getByRole("button", { name: "Cancel" }),
-      );
-      expect(screen.queryByRole("dialog")).toBeNull();
-    },
-  );
+  it("the Notes capture bar opens the editor without a duplicate header action (T-NC-01)", async () => {
+    renderAt("/notes", NotesPage);
+    await screen.findByRole("heading", { level: 1, name: "Notes" });
+    const bar = screen.getByRole("navigation", {
+      name: "Main",
+    }).parentElement!;
+    expect(
+      within(screen.getByRole("main")).queryByRole("button", {
+        name: "New note",
+      }),
+    ).toBeNull();
+    await userEvent.click(
+      within(bar).getByRole("button", { name: "Write a note" }),
+    );
+    const editor = screen.getByRole("dialog", { name: "New note" });
+    expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
+      document.activeElement,
+    );
+    expect(router.push).not.toHaveBeenCalled();
+    await userEvent.click(
+      within(editor).getByRole("button", { name: "Cancel" }),
+    );
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
 
   it("/search is a pushed screen with Cancel and the search field", async () => {
     renderAt("/search", SearchPage);
@@ -160,9 +161,14 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     );
   });
 
-  it("other tabs leave the overline empty", () => {
+  it("Notes shows today's date above the title, like Inbox", async () => {
     renderAt("/notes", NotesPage);
-    expect(screen.getByRole("banner").querySelector("p")!.textContent).toBe("");
+    await screen.findByRole("heading", { level: 1, name: "Notes" });
+    expect(
+      within(screen.getByRole("banner")).getByText(
+        /^[A-Z][a-z]+day, \d{1,2} [A-Z][a-z]+$/,
+      ),
+    ).toBeTruthy();
   });
 
   it("tab links and header links go through the Next.js router", async () => {

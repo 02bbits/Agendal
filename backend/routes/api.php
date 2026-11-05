@@ -29,8 +29,12 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [MeController::class, 'show']);
     Route::patch('me', [MeController::class, 'update']);
     Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
+    Route::get('notes', [NoteController::class, 'index']);
     Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');
     Route::get('notes/{note}', [NoteController::class, 'show']);
+    Route::put('notes/{note}', [NoteController::class, 'update'])->middleware('throttle:notes');
+    Route::patch('notes/{note}', [NoteController::class, 'rename']);
+    Route::post('notes/{note}/make-task', [NoteController::class, 'makeTask']);
     Route::post('notes/{note}/apply', [NoteController::class, 'apply']);
     Route::post('notes/{note}/cancel', [NoteController::class, 'cancel']);
     Route::post('notes/{note}/undo', [NoteController::class, 'undo']);

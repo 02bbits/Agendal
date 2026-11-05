@@ -47,7 +47,6 @@ export function DateTimeFields({
       <SettingsRow
         variant={variant}
         icon={<CalendarIcon size={18} />}
-        tileBg="bg-project-blue/15 text-project-blue"
         label={t("task.start_date")}
         control={
           <div className="flex items-center gap-1.5">
@@ -64,7 +63,7 @@ export function DateTimeFields({
                 )
               }
               weekStart={weekStart}
-              variant={variant}
+              variant="row"
             />
             <Picker<string>
               id="task-start"
@@ -77,7 +76,7 @@ export function DateTimeFields({
               )}
               disabled={!task.start_date}
               onChange={(val) => save({ start_time: val || null })}
-              variant={variant}
+              variant="row"
               ariaDescribedBy={describedBy}
             />
           </div>
@@ -86,7 +85,6 @@ export function DateTimeFields({
       <SettingsRow
         variant={variant}
         icon={<CalendarIcon size={18} />}
-        tileBg="bg-project-red/15 text-project-red"
         label={t("task.due")}
         error={errorText}
         errorId={errorId}
@@ -103,7 +101,7 @@ export function DateTimeFields({
                 )
               }
               weekStart={weekStart}
-              variant={variant}
+              variant="row"
             />
             <Picker<string>
               id="task-due-time"
@@ -116,7 +114,7 @@ export function DateTimeFields({
               )}
               disabled={!task.due_date}
               onChange={(val) => save({ due_time: val || null })}
-              variant={variant}
+              variant="row"
               ariaDescribedBy={describedBy}
             />
           </div>

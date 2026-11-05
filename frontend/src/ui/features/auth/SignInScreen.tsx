@@ -107,7 +107,7 @@ export function SignInScreen({
         <Link
           href={forgotPasswordHref}
           navigate={navigate}
-          className="focus-ring inline-flex min-h-11 items-center self-start px-1 text-footnote text-primary"
+          className="focus-ring inline-flex min-h-11 items-center self-start px-1 text-footnote text-primary hover:underline"
         >
           {t("auth.forgot_password")}
         </Link>
@@ -140,7 +140,7 @@ export function SignInScreen({
         <Link
           href={createAccountHref}
           navigate={navigate}
-          className="focus-ring text-primary"
+          className="focus-ring text-primary hover:underline"
         >
           {t("auth.create_title")}
         </Link>

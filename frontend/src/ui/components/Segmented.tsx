@@ -1,8 +1,9 @@
-import { useId, useRef, type KeyboardEvent } from "react";
+import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 export interface SegmentedOption<V extends string> {
   value: V;
   label: string;
+  icon?: ReactNode;
 }
 
 export interface SegmentedProps<V extends string> {
@@ -66,7 +67,14 @@ export function Segmented<V extends string>({
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}
           >
-            {option.label}
+            <span className="inline-flex items-center justify-center gap-1.5">
+              {option.icon && (
+                <span aria-hidden="true" className="inline-flex shrink-0">
+                  {option.icon}
+                </span>
+              )}
+              {option.label}
+            </span>
           </button>
         );
       })}

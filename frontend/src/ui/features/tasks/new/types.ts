@@ -38,6 +38,9 @@ export interface PriorityChipsProps {
 
 export interface DiscardDialogProps {
   open: boolean;
+  /** Defaults to "Discard changes?" */
+  title?: string;
+  description?: string;
   onDiscard: () => void;
   onKeepEditing: () => void;
 }

@@ -846,7 +846,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                       {nextCursor && (
                         <button
                           type="button"
-                          className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary mt-2 w-full text-center"
+                          className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill mt-2 w-full text-center"
                           onClick={() => {
                             void loadMore();
                           }}

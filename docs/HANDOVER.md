@@ -4,6 +4,8 @@ _A starting point for picking Agendal up, written 2026-11-03 for 02bbits, update
 
 ## 1. The project in four lines
 
+**IM-46 branch update:** `feat/issue-45-followup` now implements follow-up resolution, same-note follow-up editing, a minimal saved Notes list, preview task edits/exclusions and responsive modal review. The work is prepared for a PR; it is not yet merged into main. The main-only status and future-work snapshot below predate this branch. See [RV](03-modules/RV-review-control.md) for the implemented behavior; IM-47 and pending/offline IM-48 remain separate.
+
 - **Agendal** is a phone-first PWA: write a note ("sql quiz monday 9am, buy ink tomorrow") and it becomes dated tasks you can review and undo. English and Vietnamese notes, English UI. A VNUK _Advanced Web Development_ course demo.
 - **Stack:** Next.js 16 (TypeScript strict) in `frontend/`, Laravel 13 API at `/api/v1` in `backend/`, PostgreSQL 18, all on one Linux server.
 - **Where it is:** phases 0 to 2 are mostly built, the note engine (phase 3) applies plans, and the note flow (phase 4) reaches Check this first. Offline, install and release (phases 5 and 6) haven't started.

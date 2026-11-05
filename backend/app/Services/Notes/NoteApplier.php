@@ -20,6 +20,7 @@ use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
 
@@ -50,6 +51,23 @@ final class NoteApplier
     ) {}
 
     /**
+     * The rows Check this first shows (NU-5): the plan applied in a savepoint and rolled back, so nothing persists.
+     * ponytail: preview task ids differ from the ones apply makes; confirm rows don't link to tasks.
+     *
+     * @param  ValidatedPlan  $plan
+     * @return list<array<string, mixed>>
+     */
+    public function preview(Note $note, array $plan): array
+    {
+        DB::beginTransaction();
+        try {
+            return $this->apply($note, $plan)['changes'];
+        } finally {
+            DB::rollBack();
+        }
+    }
+
+    /**
      * @param  ValidatedPlan  $plan
      * @param  array<string, array<string, mixed>>  $edits  Fields the user changed on Check this first, by entry ref
      * @return array{applied: list<AppliedChange>, changes: list<array<string, mixed>>, skipped: list<array<string, mixed>>}
@@ -59,7 +77,7 @@ final class NoteApplier
         $user = User::query()->findOrFail($note->user_id);
         $timezone = (string) $user->timezone;
         $projects = Project::query()->where('user_id', $note->user_id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-        $context = new NoteContext($note->written_at->toDateTimeImmutable(), (string) $note->written_tz, $projects,
+        $context = new NoteContext(($note->edited_at ?? $note->written_at)->toDateTimeImmutable(), (string) ($note->plan['edit_timezone'] ?? $note->written_tz), $projects,
             WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
         $locked = $this->lockTargets($note, $plan);
         [$plan, $gone] = $this->revalidate($note, $plan, $locked, $context, $edits);

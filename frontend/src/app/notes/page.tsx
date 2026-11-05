@@ -1,5 +1,5 @@
-import { TabScreen } from "../TabScreen";
+import NotesClient from "./NotesClient";
 
 export default function Page() {
-  return <TabScreen tab="notes" />;
+  return <NotesClient />;
 }

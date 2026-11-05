@@ -3,6 +3,7 @@ import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
+import { IconButton } from "../../components/IconButton";
 import { PencilIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
@@ -20,12 +21,19 @@ import type {
   Task,
   TimeFormat,
   WeekStart,
+  Project,
 } from "../../domain/types";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
+/** Whether a rename was saved. Named so the type stays out of NF-12's JSX text check. */
+type RenameSaved = Promise<boolean>;
+
 export interface NoteResultScreenProps {
   result: NoteResultData;
+  presentation?: "screen" | "panel";
+  projects?: Project[];
+  omittedCount?: number;
   /**
    * The tasks as they are now, by id. `null` means the task was removed since the note made its
    * change (RV-E13). A task that isn't listed is taken as the note left it.
@@ -36,9 +44,11 @@ export interface NoteResultScreenProps {
   timeFormat: TimeFormat;
   weekStart: WeekStart;
   onDone: () => void;
+  onRestoreOmission?: () => void;
   /** Check this first (`confirm`): Apply changes, and Edit note (NU-5, WF-02). */
   onApply?: () => void;
   onEdit?: () => void;
+  onMakeTask?: () => void;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -53,6 +63,8 @@ export interface NoteResultScreenProps {
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
+  /** Renames the note; resolves `false` when it couldn't be saved, so the field stays open. */
+  onRename?: (name: string) => RenameSaved;
 }
 
 const BADGE = {
@@ -81,6 +93,10 @@ const LONG_QUOTE = 160;
  */
 export function NoteResultScreen({
   result,
+  presentation = "screen",
+  projects = [],
+  omittedCount = 0,
+  onRestoreOmission,
   live = {},
   today,
   timeZone,
@@ -89,6 +105,8 @@ export function NoteResultScreen({
   onDone,
   onApply,
   onEdit,
+  onMakeTask,
+  onRename,
   busy = false,
   offline = false,
   onOpenTask,
@@ -102,10 +120,69 @@ export function NoteResultScreen({
   const titleId = useId();
   const heading = useRef<HTMLHeadingElement>(null);
   const [expanded, setExpanded] = useState(false);
+  // Renaming: the field's text while open. Enter or leaving the field saves, Escape cancels
+  const [naming, setNaming] = useState<string | null>(null);
+  const saveName = async () => {
+    const name = naming?.trim();
+    if (!name || name === nameOf(result)) return setNaming(null);
+    if (await onRename!(name)) setNaming(null);
+  };
   // A11Y-20, UX-61: focus goes to the heading, whose name includes the overline
   useEffect(() => heading.current?.focus(), []);
 
   const { note, changes, skipped } = result;
+  const Heading = presentation === "panel" ? "h2" : "h1";
+  if (note.status === "followup")
+    return (
+      <div
+        className={cx(
+          "flex flex-col",
+          presentation === "panel" ? "min-h-[calc(100dvh-72px)]" : "min-h-dvh",
+        )}
+      >
+        {presentation === "screen" && (
+          <NavBar backLabel={t("common.back")} onBack={onDone} />
+        )}
+        <Heading
+          ref={heading}
+          tabIndex={-1}
+          className="mt-1 mb-0 text-display font-bold focus:outline-none"
+        >
+          {t("note.followup_title")}
+        </Heading>
+        <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
+          <p className="m-0 whitespace-pre-line [overflow-wrap:anywhere]">
+            {note.text}
+          </p>
+        </blockquote>
+        <div className="sticky bottom-0 mt-auto flex flex-col gap-3 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+          {offline && (
+            <p className="m-0 text-footnote text-ink-secondary">
+              {t("note.needs_connection")}
+            </p>
+          )}
+          <Button
+            variant="secondary"
+            size="lg"
+            fullWidth
+            disabled={offline || busy}
+            onClick={onEdit}
+          >
+            {t("note.followup_edit")}
+          </Button>
+          <Button
+            variant="primary"
+            size="lg"
+            fullWidth
+            disabled={offline || busy}
+            busy={busy}
+            onClick={onMakeTask}
+          >
+            {t("note.make_one")}
+          </Button>
+        </div>
+      </div>
+    );
   const written = localDateTime(note.processed_at, timeZone);
   const count = (kind: NoteChange["kind"]) =>
     changes.filter((change) => change.kind === kind).length;
@@ -117,7 +194,7 @@ export function NoteResultScreen({
   // RV-E2: after 30 days the note stays, but Undo all is gone
   const expired = undoExpired(written.date, today);
   const overline = confirming
-    ? t("note.confirm_title")
+    ? t("note.review_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
         undone && t("note.undone_label"),
@@ -135,8 +212,15 @@ export function NoteResultScreen({
     note.text.length > LONG_QUOTE || note.text.split("\n").length > 4;
 
   return (
-    <div className="pb-8">
-      <NavBar backLabel={t("common.back")} onBack={onDone} />
+    <div
+      className={cx(
+        "flex flex-col",
+        presentation === "panel" ? "min-h-[calc(100dvh-72px)]" : "min-h-dvh",
+      )}
+    >
+      {presentation === "screen" && (
+        <NavBar backLabel={t("common.back")} onBack={onDone} />
+      )}
 
       <p
         id={overlineId}
@@ -144,15 +228,47 @@ export function NoteResultScreen({
       >
         {overline}
       </p>
-      <h1
-        ref={heading}
-        id={titleId}
-        tabIndex={-1}
-        aria-labelledby={`${overlineId} ${titleId}`}
-        className="mt-1 mb-0 text-display font-bold focus:outline-none"
-      >
-        {nameOf(result)}
-      </h1>
+      {naming === null ? (
+        <div className="mt-1 flex items-start gap-2">
+          <Heading
+            ref={heading}
+            id={titleId}
+            tabIndex={-1}
+            aria-labelledby={`${overlineId} ${titleId}`}
+            className="m-0 min-w-0 flex-1 text-display font-bold [overflow-wrap:anywhere] focus:outline-none"
+          >
+            {nameOf(result)}
+          </Heading>
+          {onRename && (
+            <IconButton
+              plain
+              label={t("note.rename")}
+              icon={<PencilIcon size={18} />}
+              disabled={offline}
+              onClick={() => setNaming(nameOf(result))}
+            />
+          )}
+        </div>
+      ) : (
+        <input
+          autoFocus
+          aria-label={t("note.name_label")}
+          value={naming}
+          onChange={(event) => setNaming(event.target.value)}
+          onKeyDown={async (event) => {
+            if (event.key === "Escape") {
+              event.preventDefault();
+              event.stopPropagation();
+              setNaming(null);
+            }
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            await saveName();
+          }}
+          onBlur={saveName}
+          className="focus-ring mt-1 w-full rounded-field border-0 bg-surface px-2 py-1 text-display font-bold text-ink"
+        />
+      )}
       {confirming && (
         <p className="mt-2 mb-0 text-callout text-ink-secondary">
           {tc("note.confirm_body", changes.length)}
@@ -164,9 +280,12 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
+      <blockquote className="my-4 rounded-box bg-surface px-4 py-3 text-note text-ink">
         <p
-          className={cx("m-0 whitespace-pre-line", !expanded && "line-clamp-4")}
+          className={cx(
+            "m-0 whitespace-pre-line [overflow-wrap:anywhere]",
+            !expanded && "line-clamp-4",
+          )}
         >
           {note.text}
         </p>
@@ -183,22 +302,51 @@ export function NoteResultScreen({
       </blockquote>
 
       {changes.length > 0 && (
-        <ul className="m-0 list-none overflow-hidden rounded-box bg-surface p-0">
-          {changes.map((change) => (
-            <ChangeRow
-              key={`${change.kind}-${change.task.id}`}
-              change={change}
-              current={live[change.task.id]}
-              onOpen={confirming ? onOpenTask : undefined}
-              undone={undone}
-              today={today}
-              timeFormat={timeFormat}
-              weekStart={weekStart}
-              onSetDue={onSetDue}
-              navigate={navigate}
-            />
-          ))}
-        </ul>
+        <section className="overflow-hidden rounded-box bg-surface">
+          {confirming && (
+            <p className="m-0 border-b border-separator px-4 pt-3 pb-2.5 text-overline font-semibold uppercase text-ink-secondary">
+              {t("note.planned_count", { count: changes.length })}
+            </p>
+          )}
+          <ul className="m-0 list-none p-0">
+            {changes.map((change) => (
+              <ChangeRow
+                key={`${change.kind}-${change.task.id}`}
+                change={change}
+                current={live[change.task.id]}
+                onOpen={
+                  confirming || presentation === "panel"
+                    ? onOpenTask
+                    : undefined
+                }
+                undone={undone}
+                today={today}
+                timeFormat={timeFormat}
+                weekStart={weekStart}
+                onSetDue={onSetDue}
+                navigate={navigate}
+                preview={confirming}
+                project={projects.find(
+                  (project) =>
+                    project.id ===
+                    (live[change.task.id] ?? change.task).project_id,
+                )}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {omittedCount > 0 && (
+        <div className="my-3 text-footnote">
+          <p className="m-0">{t("note.omitted", { count: omittedCount })}</p>
+          <button
+            className="focus-ring min-h-11 rounded-field px-2 text-primary hover:bg-fill"
+            onClick={onRestoreOmission}
+          >
+            {t("note.undo_omit")}
+          </button>
+        </div>
       )}
 
       {skipped.length > 0 && (
@@ -228,7 +376,7 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <div className="sticky bottom-0 mt-6 flex flex-col gap-2 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         {confirming ? (
           <>
             {offline && (
@@ -249,11 +397,11 @@ export function NoteResultScreen({
                 variant="primary"
                 size="lg"
                 className="flex-1"
-                disabled={offline}
+                disabled={offline || busy || changes.length === 0}
                 busy={busy}
                 onClick={onApply}
               >
-                {t("note.apply")}
+                {t("note.apply_preview")}
               </Button>
             </div>
           </>
@@ -284,7 +432,7 @@ export function NoteResultScreen({
                 </>
               ))}
             <Button variant="primary" size="lg" fullWidth onClick={onDone}>
-              {t("common.done")}
+              {t(presentation === "panel" ? "common.close" : "common.done")}
             </Button>
           </>
         )}
@@ -311,6 +459,8 @@ export function NoteResultScreen({
 }
 
 interface ChangeRowProps {
+  preview?: boolean;
+  project?: Project;
   change: NoteChange;
   current: Task | null | undefined;
   /** Check this first: the task isn't made yet, so the row opens it here instead of its page. */
@@ -325,6 +475,8 @@ interface ChangeRowProps {
 }
 
 function ChangeRow({
+  preview = false,
+  project,
   change,
   current,
   onOpen,
@@ -336,7 +488,8 @@ function ChangeRow({
   navigate,
 }: ChangeRowProps) {
   const badge = BADGE[change.kind];
-  const badgeText = t(badge.key);
+  const badgeText =
+    preview && change.kind === "created" ? t("note.preview_new") : t(badge.key);
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
   const gone = current === null;
@@ -348,26 +501,50 @@ function ChangeRow({
     (task.due_date !== change.task.due_date ||
       task.start_time !== change.task.start_time);
   // A date given from here (When? chip) shows in front of what the note said
-  const meta = gone
-    ? t("note.gone_since")
-    : moved
-      ? [
-          task.due_date ? formatDay(task.due_date, today) : t("task.no_date"),
-          task.start_time && formatTime(task.start_time, timeFormat),
-        ]
-          .filter(Boolean)
-          .join(" · ")
-      : [
-          change.task.due_date === null &&
-            task.due_date &&
+  const meta = preview
+    ? [
+        project?.name ?? t("project.none"),
+        task.start_date &&
+          [
+            formatDay(task.start_date, today),
+            task.start_time && formatTime(task.start_time, timeFormat),
+          ]
+            .filter(Boolean)
+            .join(", "),
+        task.due_date &&
+          (task.due_date !== task.start_date || task.due_time) &&
+          [
             formatDay(task.due_date, today),
-          change.label,
-          change.was && t("note.was", { value: change.was }),
-        ]
-          .filter(Boolean)
-          .join(" · ");
+            task.due_time && formatTime(task.due_time, timeFormat),
+          ]
+            .filter(Boolean)
+            .join(", "),
+        t(`priority.${task.priority ?? "low"}`),
+        task.reminder !== "none" && t(`reminder.${task.reminder}`),
+        task.repeat !== "never" && t(`repeat.${task.repeat}`),
+      ]
+        .filter(Boolean)
+        .join(" · ")
+    : gone
+      ? t("note.gone_since")
+      : moved
+        ? [
+            task.due_date ? formatDay(task.due_date, today) : t("task.no_date"),
+            task.start_time && formatTime(task.start_time, timeFormat),
+          ]
+            .filter(Boolean)
+            .join(" · ")
+        : [
+            change.task.due_date === null &&
+              task.due_date &&
+              formatDay(task.due_date, today),
+            change.label,
+            change.was && t("note.was", { value: change.was }),
+          ]
+            .filter(Boolean)
+            .join(" · ");
   const askWhen =
-    change.kind === "created" && !gone && !undone && !task.due_date;
+    !preview && change.kind === "created" && !gone && !undone && !task.due_date;
 
   const body = (
     <>
@@ -384,7 +561,12 @@ function ChangeRow({
         <span className="block text-footnote text-ink-secondary">{meta}</span>
       </span>
       {opens && (
-        <PencilIcon size={18} aria-hidden="true" className="mt-1 shrink-0" />
+        <span
+          aria-hidden="true"
+          className="inline-flex size-9 shrink-0 items-center justify-center self-center text-ink-secondary"
+        >
+          <PencilIcon size={18} />
+        </span>
       )}
     </>
   );
@@ -396,7 +578,7 @@ function ChangeRow({
           type="button"
           onClick={() => onOpen(task)}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink"
+          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink hover:bg-fill"
         >
           {body}
         </button>
@@ -405,7 +587,7 @@ function ChangeRow({
           href={ROUTES.task(task.id)}
           navigate={navigate}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline"
+          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-fill"
         >
           {body}
         </Link>
