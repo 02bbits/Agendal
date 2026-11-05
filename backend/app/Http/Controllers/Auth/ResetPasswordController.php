@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use App\Support\Audit;
 use App\Support\NewPassword;
+use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -32,6 +33,7 @@ class ResetPasswordController extends Controller
 
         // The token first: without a valid link, nothing else runs (no password rules, no call to the
         // breach service)
+        /** @var PasswordBroker $broker getUser() and tokenExists() live on the concrete broker */
         $broker = Password::broker();
         $owner = $broker->getUser(['email' => $input['email']]);
         if ($owner === null || ! $broker->tokenExists($owner, (string) $input['token'])) {
