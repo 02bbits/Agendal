@@ -4,7 +4,7 @@ import { now, timeZone } from "./clock";
 import { isCopyKey, type CopyKey } from "../ui/copy";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { NoteHit } from "../ui/domain/search";
-import type { NoteResult } from "../ui/domain/types";
+import type { NoteResult, NoteListEntry, NoteFilter } from "../ui/domain/types";
 
 /** Why a note wasn't made: the copy to show, and for 429 the seconds until it may be sent again. */
 export interface NoteSubmitFailure {
@@ -37,18 +37,21 @@ export async function submitNote(
       }),
     );
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.send_failed" };
-    if (error.status === 429)
-      return {
-        error: "error.rate_limited",
-        retryAfter: error.retryAfter ?? 60,
-      };
-    if (error.status === 422)
-      return { error: isCopyKey(error.code) ? error.code : "error.invalid" };
-    // 5xx, 503, 401, 419 and 404 all read as "couldn't send, try again"
-    return { error: "note.send_failed" };
+    return submitFailure(error);
   }
+}
+
+function submitFailure(error: unknown): NoteSubmitFailure {
+  if (!(error instanceof ApiRequestError)) return { error: "note.send_failed" };
+  if (error.status === 429)
+    return {
+      error: "error.rate_limited",
+      retryAfter: error.retryAfter ?? 60,
+    };
+  if (error.status === 422)
+    return { error: isCopyKey(error.code) ? error.code : "error.invalid" };
+  // 5xx, 503, 401, 419 and 404 all read as "couldn't send, try again"
+  return { error: "note.send_failed" };
 }
 
 /** What Undo all and its redo answer: the note as it is now, how many tasks conflict, or why not. */
@@ -118,6 +121,85 @@ export async function getNote(id: string): Promise<NoteResult> {
   );
 }
 
+export interface NoteListPage {
+  items: NoteListEntry[];
+  next_cursor: string | null;
+  total: number;
+  needs_count: number;
+}
+export async function listNotes(
+  filter: NoteFilter = "all",
+  cursor?: string,
+): Promise<NoteListPage> {
+  const params = new URLSearchParams({ filter });
+  if (cursor) params.set("cursor", cursor);
+  return handleResponse<NoteListPage>(await api(`/notes?${params}`));
+}
+
+/** RV-3: explicitly keep a follow-up's whole text as one task. */
+export async function makeFollowupTask(
+  id: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}/make-task`, {
+        method: "POST",
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return {
+      error:
+        error instanceof ApiRequestError && isCopyKey(error.code)
+          ? error.code
+          : "note.needs_connection",
+    };
+  }
+}
+
+/** The user renames a note (`PATCH /notes/{id}`): the note as it is now, or the copy saying why not. */
+export async function renameNote(
+  id: string,
+  name: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name }),
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return {
+      error:
+        error instanceof ApiRequestError && isCopyKey(error.code)
+          ? error.code
+          : "error.save_failed",
+    };
+  }
+}
+
+/** IM-46 edits a follow-up in place; editing applied notes remains IM-47. */
+export async function replanFollowup(id: string, text: string): NoteSubmission {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text, timezone: timeZone() }),
+      }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return submitFailure(error);
+  }
+}
+
 /** `GET /notes/search?q=`: search note names and text. */
 export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
   const query = new URLSearchParams();
@@ -134,13 +216,18 @@ export async function confirmNote(
   id: string,
   action: "apply" | "cancel",
   edits: Record<string, TaskPatch> = {},
+  exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
       await api(`/notes/${encodeURIComponent(id)}/${action}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(action === "apply" ? { edits } : {}),
+        body: JSON.stringify(
+          action === "apply"
+            ? { edits, ...(exclude.length ? { exclude } : {}) }
+            : {},
+        ),
       }),
     );
     rememberNote(result);

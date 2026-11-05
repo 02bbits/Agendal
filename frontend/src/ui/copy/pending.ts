@@ -3,6 +3,29 @@
 // catalog, delete it here (test/copy.test.ts fails on duplicates).
 
 export const pending = {
+  "note.edit_task": "Edit task",
+  "note.dont_add": "Don't add this task",
+  "note.skip_change": "Don't apply this change",
+  "note.omitted": "Left out: {count}",
+  "note.undo_omit": "Undo omission",
+  "note.review_title": "Review before applying",
+  "note.preview_new": "NEW",
+  "note.apply_preview": "Apply",
+  "note.preview_hint":
+    "Nothing is added to your lists until you press Apply. Tap a pencil to adjust a task, or Edit note to rewrite the note.",
+  "note.planned_count": "{count} changes to apply",
+  "notes.all": "All",
+  "notes.made": "Accepted",
+  "notes.needs": "Pending",
+  "notes.summary": "{count} notes · {needs} pending",
+  "notes.load_more": "Load more",
+  "note.discard_edit_title": "Discard your changes?",
+  "note.discard_edit_body": "The saved note will stay as it was.",
+  "note.rename": "Rename note",
+  "note.name_label": "Note name",
+  "note.discard_review_title": "Discard this review?",
+  "note.discard_review_body":
+    "Nothing has been applied yet. The note stays in Pending.",
   "nav.inbox": "Inbox",
   "nav.upcoming": "Upcoming",
   "nav.projects": "Projects",

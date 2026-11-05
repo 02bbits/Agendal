@@ -15,6 +15,7 @@ use Illuminate\Support\Carbon;
  * @property array{redo_until: string, changes: list<array{task_id: string, before: array<string, mixed>, after: array<string, mixed>}>}|null $undo_log
  * @property CarbonImmutable $written_at
  * @property CarbonImmutable $processed_at
+ * @property ?CarbonImmutable $edited_at
  */
 class Note extends Model
 {
@@ -25,7 +26,7 @@ class Note extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime'];
+        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime'];
     }
 
     public function freshTimestamp(): Carbon

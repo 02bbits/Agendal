@@ -13,6 +13,7 @@ const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
   usePathname: () => "/notes/n1",
   useRouter: () => router,
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const fetchMock = vi.fn();
@@ -50,6 +51,13 @@ function serve(
   actions: Record<string, (body: unknown) => Response> = {},
 ) {
   fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.startsWith("/api/v1/notes?"))
+      return json(200, {
+        items: [],
+        total: 0,
+        needs_count: 0,
+        next_cursor: null,
+      });
     const action = actions[url];
     if (action) return action(JSON.parse(String(init?.body ?? "{}")));
     if (url === "/api/v1/me") return json(200, { id: 1, email: "u@test.com" });
@@ -338,6 +346,13 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     serve({}, () => json(200, pending));
     const base = fetchMock.getMockImplementation()!;
     fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/v1/notes?"))
+        return json(200, {
+          items: [],
+          total: 0,
+          needs_count: 0,
+          next_cursor: null,
+        });
       if (url === "/api/v1/notes/n1/apply")
         return json(200, { ...result, note: { ...result.note } });
       if (url === "/api/v1/notes/n1/cancel")
@@ -352,7 +367,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
   it("doesn't look up the previewed tasks: they don't exist yet", async () => {
     serveConfirm();
     await open();
-    await screen.findByText(t("note.confirm_title"));
+    await screen.findByText(t("note.review_title"));
     expect(calls("GET", "/api/v1/tasks/")).toHaveLength(0);
   });
 
@@ -360,7 +375,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     serveConfirm();
     await open();
     await userEvent.click(
-      await screen.findByRole("button", { name: t("note.apply") }),
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
     );
 
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
@@ -368,6 +383,30 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(
       await screen.findByText(t("note.made_other", { count: 2 })),
     ).toBeTruthy();
+  });
+
+  it("leaving the review asks first, and Discard leaves the note pending", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.back") }),
+    );
+    await screen.findByText(t("note.discard_review_title"));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.keep_editing") }),
+    );
+    expect(screen.queryByText(t("note.discard_review_title"))).toBeNull();
+    expect(router.replace).not.toHaveBeenCalled();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.back") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    );
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(0);
   });
 
   // The server's answer to the toast's undo and redo
@@ -389,7 +428,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     window.addEventListener("agendal:task-created", refetched);
     await open();
     await userEvent.click(
-      await screen.findByRole("button", { name: t("note.apply") }),
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
     );
     await userEvent.click(
       await screen.findByRole("button", { name: t("common.undo") }),
@@ -422,7 +461,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     );
     await open();
     await userEvent.click(
-      await screen.findByRole("button", { name: t("note.apply") }),
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
     );
     await userEvent.click(
       await screen.findByRole("button", { name: t("common.undo") }),
@@ -462,7 +501,10 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     );
     await userEvent.click(screen.getByRole("radio", { name: /high/i }));
     await userEvent.click(
-      screen.getByRole("button", { name: t("note.apply") }),
+      screen.getByRole("button", { name: t("common.done") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.apply_preview") }),
     );
 
     await waitFor(() =>
@@ -486,10 +528,189 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     );
     await open();
     await userEvent.click(
-      await screen.findByRole("button", { name: t("note.apply") }),
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
     );
 
     expect(await screen.findByText(t("note.needs_connection"))).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
+  });
+
+  it("Cancel asks before discarding a task edit, and Apply then sends no edits (UX-13)", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.clear(
+      screen.getByRole("textbox", { name: t("task.title") }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: t("task.title") }),
+      "Discard this title",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.cancel") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    );
+    expect(screen.queryByText("Discard this title")).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.apply_preview") }),
+    );
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(1),
+    );
+    expect(
+      JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
+    ).toEqual({ edits: {} });
+    expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
+  });
+
+  it("omits a proposed task without deleting it, supports undo, and disables Apply when all are omitted", async () => {
+    const proposed = {
+      ...pending,
+      changes: pending.changes.map((change, index) => ({
+        ...change,
+        ref: `i${index + 1}`,
+      })),
+    };
+    serve({}, () => json(200, proposed));
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.dont_add") }),
+    );
+    expect(screen.queryByRole("button", { name: /SQL quiz/ })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.undo_omit") }),
+    );
+    expect(screen.getByRole("button", { name: /SQL quiz/ })).toBeTruthy();
+    for (const title of [/SQL quiz/, /Buy printer ink/]) {
+      await userEvent.click(screen.getByRole("button", { name: title }));
+      await userEvent.click(
+        screen.getByRole("button", { name: t("note.dont_add") }),
+      );
+    }
+    expect(
+      (
+        screen.getByRole("button", {
+          name: t("note.apply_preview"),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    expect(calls("DELETE", "/api/v1/tasks/")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(0);
+  });
+});
+
+describe("Follow-up /notes/[id] (IM-46)", () => {
+  const followup: NoteResult = {
+    ...result,
+    note: { ...result.note, status: "followup", text: "idea: a garden" },
+    changes: [],
+    skipped: [],
+  };
+
+  it("Keep it as task opens the review first; nothing is made until Apply (T-RV-22)", async () => {
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/make-task": () =>
+        json(200, { ...result, note: { ...result.note, status: "confirm" } }),
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.make_one") }),
+    );
+    await screen.findByText(t("note.review_title"));
+    expect(
+      screen.getByRole("button", { name: t("note.apply_preview") }),
+    ).toBeTruthy();
+    expect(calls("POST", "/api/v1/notes/n1/make-task")).toHaveLength(1);
+    expect(router.push).not.toHaveBeenCalledWith("/tasks/t-sql");
+  });
+
+  it("a failed manual creation keeps the follow-up available for retry", async () => {
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/make-task": () =>
+        json(500, { error: { code: "error.generic" } }),
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.make_one") }),
+    );
+    expect(await screen.findByText(/Something went wrong/)).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: t("note.followup_title") }),
+    ).toBeTruthy();
+    expect(
+      (
+        screen.getByRole("button", {
+          name: t("note.make_one"),
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(false);
+  });
+
+  it("Edit opens the original text, sends PUT for the same note and refreshes its result (T-RV-23)", async () => {
+    let current = followup;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url.startsWith("/api/v1/notes?"))
+        return json(200, {
+          items: [],
+          total: 0,
+          needs_count: 0,
+          next_cursor: null,
+        });
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/notes/n1") {
+        if (init?.method === "PUT")
+          current = {
+            ...followup,
+            note: {
+              ...followup.note,
+              text: "read tomorrow",
+              status: "confirm",
+              edited_at: "2026-10-23T08:13:00+07:00",
+            },
+          };
+        return json(200, current);
+      }
+      return json(200, []);
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.followup_edit") }),
+    );
+    const field = screen.getByRole("textbox", { name: t("note.text_label") });
+    expect((field as HTMLTextAreaElement).value).toBe(followup.note.text);
+    await userEvent.clear(field);
+    await userEvent.type(field, "read tomorrow");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("note.replan") }),
+    );
+    await screen.findByRole("button", { name: t("note.apply_preview") });
+    expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(1);
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes")).toHaveLength(0);
+  });
+
+  it("closing an unchanged follow-up editor leaves its status and text untouched", async () => {
+    serve({}, () => json(200, followup));
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.followup_edit") }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.cancel") }),
+    );
+    expect(screen.queryByRole("textbox")).toBeNull();
+    expect(
+      screen.getByRole("heading", { name: t("note.followup_title") }),
+    ).toBeTruthy();
+    expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(0);
+    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
   });
 });

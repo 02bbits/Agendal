@@ -1,5 +1,6 @@
 import { use } from "react";
-import NoteResultClient, { SKELETON_DELAY_MS } from "./NoteResultClient";
+import { SKELETON_DELAY_MS } from "./NoteResultClient";
+import NotesClient from "../NotesClient";
 
 export const instant = false;
 export { SKELETON_DELAY_MS };
@@ -10,5 +11,5 @@ interface PageProps {
 
 export default function NoteResultPage({ params }: PageProps) {
   const { id } = use(params);
-  return <NoteResultClient id={id} />;
+  return <NotesClient noteId={id} />;
 }

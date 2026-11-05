@@ -4,12 +4,19 @@ import { cx } from "./cx";
 export type ButtonVariant = "primary" | "secondary" | "outline" | "destructive";
 export type ButtonSize = "lg" | "md" | "sm";
 
+// Hover washes the button toward the contrasting colour: the page colour on the strong primary
+// fill, the text colour on the tints, so it reads in both themes
+const WASH_PAGE =
+  "enabled:hover:shadow-[inset_0_0_0_100vmax_color-mix(in_srgb,var(--color-base-100)_18%,transparent)]";
+const WASH_TEXT =
+  "enabled:hover:shadow-[inset_0_0_0_100vmax_color-mix(in_srgb,var(--color-base-content)_12%,transparent)]";
+
 // daisyUI's btn, sized and coloured to the theme guide (not daisyUI defaults)
 const VARIANT: Record<ButtonVariant, string> = {
-  primary: "btn-primary",
-  secondary: "bg-primary-tint text-primary",
-  outline: "bg-fill text-ink",
-  destructive: "bg-danger-tint text-error",
+  primary: `btn-primary ${WASH_PAGE}`,
+  secondary: `bg-primary-tint text-primary ${WASH_TEXT}`,
+  outline: `bg-fill text-ink ${WASH_TEXT}`,
+  destructive: `bg-danger-tint text-error ${WASH_TEXT}`,
 };
 const SIZE: Record<ButtonSize, string> = {
   lg: "h-11 min-h-11 text-callout",
@@ -58,7 +65,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         ref={ref}
         type={type}
         className={cx(
-          "btn focus-ring gap-2 border-0 px-5 font-semibold shadow-none disabled:opacity-40 aria-busy:cursor-progress",
+          "btn focus-ring gap-2 border-0 px-5 font-semibold shadow-none transition-shadow disabled:opacity-40 aria-busy:cursor-progress",
           isPill ? "rounded-full!" : "rounded-xl",
           VARIANT[variant],
           SIZE[size],

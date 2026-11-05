@@ -1,7 +1,10 @@
 #!/bin/sh
 # First run sets up vendor/, .env and the app key; every run migrates and seeds.
 set -e
-composer install --no-interaction
+# Reuse installed packages on restart; refresh them when dependency files change.
+if [ ! -f vendor/autoload.php ] || [ ! -f vendor/composer/installed.json ] || [ composer.lock -nt vendor/composer/installed.json ] || [ composer.json -nt vendor/composer/installed.json ]; then
+    composer install --no-interaction
+fi
 [ -f .env ] || cp .env.example .env
 grep -q '^APP_KEY=.' .env || php artisan key:generate
 php artisan migrate --seed --force

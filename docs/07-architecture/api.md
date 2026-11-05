@@ -27,6 +27,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `GET /notes`, `GET /notes/{id}` | Notes tab and a note's result | [RV-4](../03-modules/RV-review-control.md#rv-4), [RV-1](../03-modules/RV-review-control.md#rv-1) |
 | `POST /notes/{id}/apply` · `/cancel` | Confirm or cancel a `confirm` plan | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
 | `POST /notes/{id}/make-task` | Keep a `followup` as a task (Edit the note uses `PUT /notes/{id}`) | [RV-3](../03-modules/RV-review-control.md#rv-3) |
+| `PUT /notes/{id}` | Re-plan a `followup` in place with `{text, timezone}`; uses the server's edit time and the notes rate limiter. Editing applied notes is IM-47 | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
 | `POST /files/extract` | File (≤ 5 MB) → text. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
 | `GET /tasks?view=inbox\|upcoming&filter=` | Lists | [LV-1](../03-modules/LV-lists-search.md#lv-1), [LV-2](../03-modules/LV-lists-search.md#lv-2) |
@@ -126,3 +127,9 @@ Each operation applies per-field LWW and runs in a transaction. A stale `at` can
 ### Presentation
 
 The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_rule` and `repeat_anchor` into English/Vietnamese text. Backend scheduling is authoritative. The PHP-only Try notes development page uses the RRULE library's own preview text.
+
+### Saved Notes and preview exclusions
+
+`GET /notes?cursor=&limit=20&filter=all` returns owner-scoped `{items, next_cursor, total, needs_count}`. Items are summaries (id, status, name, a 140-character excerpt, created/updated/deleted counts, written_at and source_file_name), ordered by written_at then id descending. Filters are all, made, needs (confirm/followup), and kept. Limit is 1–50.
+
+`POST /notes/{id}/apply` accepts optional `exclude: [ref]` alongside `edits`. Exclusions are stored in the plan audit data and never applied or included in Undo. Unknown or duplicate refs, or excluding every proposed change, return 422 without a write.

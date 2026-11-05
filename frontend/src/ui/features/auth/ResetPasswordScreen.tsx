@@ -65,7 +65,7 @@ export function ResetPasswordScreen({
           <Link
             href={forgotPasswordHref}
             navigate={navigate}
-            className="focus-ring self-start text-callout text-primary"
+            className="focus-ring self-start text-callout text-primary hover:underline"
           >
             {t("auth.reset_request_new")}
           </Link>

@@ -49,13 +49,13 @@ export function SettingsRows({
   const isReminderPast = reminderPast(task, clock.now(), clock.timeZone);
 
   const hasDate = Boolean(task.start_date || task.due_date);
-  const reminderHelper = !hasDate
-    ? t("task.reminder_needs_date")
-    : isReminderPast
-      ? t("task.reminder_past")
-      : undefined;
+  const reminderHelper = isReminderPast ? t("task.reminder_past") : undefined;
 
-  const repeatHelper = describeRepeat(task);
+  const repeatDescription = describeRepeat(task);
+  const repeatLabel = repeatDescription
+    ? repeatDescription.charAt(0).toLocaleUpperCase() +
+      repeatDescription.slice(1)
+    : undefined;
 
   const isScreen = variant === "screen";
 
@@ -85,7 +85,6 @@ export function SettingsRows({
       <SettingsRow
         variant={variant}
         icon={<BellIcon size={18} />}
-        tileBg="bg-project-orange/15 text-project-orange"
         label={t("task.reminder")}
         helper={reminderHelper}
         helperId="task-reminder-helper"
@@ -100,29 +99,29 @@ export function SettingsRows({
               label: t(`reminder.${r}` as CopyKey),
             }))}
             onChange={(reminder) => onSave({ reminder })}
-            variant={variant}
+            variant="row"
           />
         }
       />
       <SettingsRow
         variant={variant}
         icon={<RepeatIcon size={18} />}
-        tileBg="bg-fill text-ink-secondary"
         label={t("task.repeat")}
-        helper={repeatHelper}
-        helperId="task-repeat-helper"
         control={
           <Picker<Repeat>
             id="task-repeat"
             label={t("task.repeat")}
             value={task.repeat}
+            className="max-w-[180px] [&>div]:max-w-full [&>div>button]:max-w-full [&>div>button>span]:truncate"
             options={REPEATS.map((r) => ({
               value: r,
-              label: t(`repeat.${r}` as CopyKey),
+              label:
+                r === task.repeat && repeatLabel
+                  ? repeatLabel
+                  : t(`repeat.${r}` as CopyKey),
             }))}
             onChange={(repeat) => onSave({ repeat })}
-            variant={variant}
-            ariaDescribedBy={repeatHelper ? "task-repeat-helper" : undefined}
+            variant="row"
           />
         }
       />

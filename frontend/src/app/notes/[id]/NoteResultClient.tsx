@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ReactElement,
+  type RefObject,
+} from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
@@ -9,9 +15,11 @@ import { saveDraft } from "../../../lib/draft";
 import {
   confirmNote,
   getNote,
+  makeFollowupTask,
   previewTaskApi,
   recallNote,
   redoNote,
+  renameNote,
   undoNote,
 } from "../../../lib/noteApi";
 import { useOffline } from "../../../lib/online";
@@ -28,11 +36,21 @@ import {
   type Task,
 } from "../../../ui";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
+import { useMediaQuery } from "../../../ui/components/useMediaQuery";
+import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
+import { useHistoryEntry } from "../../../ui/components/useHistoryEntry";
+import { TaskDetails } from "../../../ui/features/tasks/details/TaskDetails";
+import { DeleteTask } from "../../../ui/features/tasks/DeleteTask";
+import { DiscardDialog } from "../../../ui/features/tasks/new/DiscardDialog";
 
 export const SKELETON_DELAY_MS = 300;
 
 interface ClientProps {
   id: string;
+  presentation?: "screen" | "panel";
+  onClose?: () => void;
+  /** Set while the note is shown: `false` means it asked first and stays open */
+  closeGuardRef?: RefObject<(() => boolean) | null>;
 }
 
 interface Loaded {
@@ -47,6 +65,54 @@ interface Loaded {
 
 const touched = (result: NoteResult) =>
   result.changes.filter((change) => change.kind !== "deleted");
+
+function OpenedTask({
+  id,
+  wide,
+  onClose,
+  weekStart,
+}: {
+  id: string;
+  wide: boolean;
+  onClose: () => void;
+  weekStart: "mon" | "sun";
+}) {
+  const store = useTaskStore();
+  const task = store.tasks.find((task) => task.id === id);
+  if (wide)
+    return (
+      <TaskPanel
+        modal
+        taskId={id}
+        onClose={onClose}
+        projects={store.projects}
+        weekStart={weekStart}
+      />
+    );
+  return (
+    task && (
+      <div
+        className="fixed inset-0 z-[60] overflow-y-auto bg-paper md:left-[248px]"
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && !event.defaultPrevented) {
+            event.preventDefault();
+            event.stopPropagation();
+            onClose();
+          }
+        }}
+      >
+        <TaskDetails
+          task={task}
+          variant="screen"
+          onBack={onClose}
+          weekStart={weekStart}
+          autoFocusTitle
+          deleteAction={<DeleteTask task={task} onDeleted={onClose} />}
+        />
+      </div>
+    )
+  );
+}
 
 /**
  * A result just made in this session is already here, so the note isn't asked for again. Each
@@ -76,7 +142,12 @@ async function load(id: string): Promise<Loaded> {
       }
     }),
   );
-  return { result, tasks, gone, projects: [] };
+  return {
+    result,
+    tasks,
+    gone,
+    projects: (await projects().catch(() => null)) ?? [],
+  };
 }
 
 function ResultContainer({
@@ -87,8 +158,11 @@ function ResultContainer({
   weekStart,
   showToast,
   openNoteEditor,
+  editFollowupNote,
   edits,
   projectList,
+  presentation,
+  closeGuardRef,
 }: {
   result: NoteResult;
   gone: ReadonlySet<string>;
@@ -97,8 +171,11 @@ function ResultContainer({
   weekStart: "mon" | "sun";
   showToast: ReturnType<typeof useAppFrame>["showToast"];
   openNoteEditor: () => void;
+  editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
   edits?: Parameters<typeof confirmNote>[2];
   projectList: Project[];
+  presentation: "screen" | "panel";
+  closeGuardRef?: ClientProps["closeGuardRef"];
 }): ReactElement {
   const store = useTaskStore();
   const offline = useOffline();
@@ -106,6 +183,33 @@ function ResultContainer({
   const [conflicts, setConflicts] = useState(0);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
+  const [excluded, setExcluded] = useState<string[]>([]);
+  // Check this first hasn't applied anything yet: leaving asks first, and the note stays pending
+  const reviewing = result.note.status === "confirm";
+  const [askDiscard, setAskDiscard] = useState(false);
+  const leave = () => (reviewing ? setAskDiscard(true) : back());
+  useEffect(() => {
+    if (!closeGuardRef) return;
+    closeGuardRef.current = () => {
+      if (reviewing) setAskDiscard(true);
+      return !reviewing;
+    };
+    return () => {
+      closeGuardRef.current = null;
+    };
+  }, [closeGuardRef, reviewing]);
+  const wide = useMediaQuery("(min-width: 1280px)");
+  const [openedTask, setOpenedTask] = useState<Task | null>(null);
+  const closeTask = () => {
+    setOpenedTask(null);
+    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+  };
+  useHistoryEntry(!!openedTask, closeTask);
+  const openTask = (task: Task) => {
+    if (result.note.status === "confirm") setOpenId(task.id);
+    else if (wide) setOpenedTask(task);
+    else navigate?.(ROUTES.task(task.id));
+  };
   // The note's tasks changed under the lists: Inbox, Upcoming and the sidebar load them again
   const listsChanged = () =>
     window.dispatchEvent(new CustomEvent("agendal:task-created"));
@@ -135,7 +239,7 @@ function ResultContainer({
   // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, "apply", edits);
+    const outcome = await confirmNote(result.note.id, "apply", edits, excluded);
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
@@ -165,6 +269,10 @@ function ResultContainer({
   // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
   // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
   const edit = async () => {
+    if (result.note.status === "followup") {
+      editFollowupNote(result.note);
+      return;
+    }
     setBusy(true);
     const outcome = await confirmNote(result.note.id, "cancel");
     if ("error" in outcome) {
@@ -183,6 +291,16 @@ function ResultContainer({
     setTimeout(open, 250);
     back();
   };
+  // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
+  // nothing is made until Apply (RV-3)
+  const makeTask = async () => {
+    setBusy(true);
+    const outcome = await makeFollowupTask(result.note.id);
+    setBusy(false);
+    if ("error" in outcome)
+      return showToast(t(outcome.error, { request_id: "" }));
+    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+  };
   const live = useMemo(
     () => ({
       ...Object.fromEntries(store.tasks.map((task) => [task.id, task])),
@@ -192,33 +310,97 @@ function ResultContainer({
   );
   return (
     <>
-      <NoteResultScreen
-        result={result}
-        live={live}
-        today={store.today}
-        timeZone={store.clock.timeZone}
-        timeFormat={store.timeFormat}
-        weekStart={weekStart}
-        onDone={back}
-        onApply={apply}
-        onEdit={edit}
-        busy={busy}
-        onUndo={undo}
-        conflicts={conflicts}
-        onCancelUndo={() => setConflicts(0)}
-        offline={offline}
-        onSetDue={(task, date) => store.update(task, { due_date: date })}
-        onOpenTask={(task) => setOpenId(task.id)}
-        navigate={navigate}
-      />
-      {openId && (
-        <TaskPanel
-          taskId={openId}
-          onClose={() => setOpenId(null)}
+      <div inert={!!openId || !!openedTask}>
+        <NoteResultScreen
+          result={{
+            ...result,
+            changes: result.changes.filter(
+              (change) => !change.ref || !excluded.includes(change.ref),
+            ),
+          }}
+          presentation={presentation}
           projects={projectList}
+          omittedCount={excluded.length}
+          onRestoreOmission={() => setExcluded((values) => values.slice(0, -1))}
+          live={live}
+          today={store.today}
+          timeZone={store.clock.timeZone}
+          timeFormat={store.timeFormat}
           weekStart={weekStart}
+          onDone={leave}
+          onApply={apply}
+          onEdit={edit}
+          onMakeTask={makeTask}
+          onRename={async (name) => {
+            const outcome = await renameNote(result.note.id, name);
+            if ("error" in outcome) {
+              showToast(t(outcome.error, { request_id: "" }));
+              return false;
+            }
+            // Only the name changed: keep this screen (and any planned edits), refresh the list
+            setResult((current) => ({ ...current, note: outcome.note }));
+            window.dispatchEvent(new CustomEvent("agendal:note-renamed"));
+            return true;
+          }}
+          busy={busy}
+          onUndo={undo}
+          conflicts={conflicts}
+          onCancelUndo={() => setConflicts(0)}
+          offline={offline}
+          onSetDue={(task, date) => store.update(task, { due_date: date })}
+          onOpenTask={openTask}
+          navigate={navigate}
+        />
+      </div>
+      {openId && result.note.status === "confirm" && (
+        <NoteTaskEditor
+          key={openId}
+          creating={
+            result.changes.find((change) => change.task.id === openId)?.kind ===
+            "created"
+          }
+          task={store.tasks.find((task) => task.id === openId)!}
+          weekStart={weekStart}
+          onCancel={() => setOpenId(null)}
+          onDone={(patch) => {
+            store.update(openId, patch);
+            setOpenId(null);
+          }}
+          onOmit={() => {
+            const ref = result.changes.find(
+              (change) => change.task.id === openId,
+            )?.ref;
+            if (ref) setExcluded((values) => [...values, ref]);
+            setOpenId(null);
+          }}
         />
       )}
+      {openedTask && (
+        <TaskStoreProvider
+          api={httpTaskApi}
+          clock={store.clock}
+          initialTasks={[openedTask]}
+          initialProjects={projectList}
+          timeFormat={store.timeFormat}
+        >
+          <OpenedTask
+            id={openedTask.id}
+            wide={wide}
+            onClose={closeTask}
+            weekStart={weekStart}
+          />
+        </TaskStoreProvider>
+      )}
+      <DiscardDialog
+        open={askDiscard}
+        title={t("note.discard_review_title")}
+        description={t("note.discard_review_body")}
+        onDiscard={() => {
+          setAskDiscard(false);
+          back();
+        }}
+        onKeepEditing={() => setAskDiscard(false)}
+      />
     </>
   );
 }
@@ -226,8 +408,18 @@ function ResultContainer({
 /** `/notes/{id}`: what a note did (RV-1), or will do once applied (NU-5). */
 export default function NoteResultClient({
   id,
+  presentation = "screen",
+  onClose,
+  closeGuardRef,
 }: ClientProps): ReactElement | null {
-  const { back, navigate, settings, showToast, openNoteEditor } = useAppFrame();
+  const {
+    back,
+    navigate,
+    settings,
+    showToast,
+    openNoteEditor,
+    editFollowupNote,
+  } = useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -236,6 +428,16 @@ export default function NoteResultClient({
     message?: string;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+
+  useEffect(() => {
+    const changed = () => {
+      setLoaded(null);
+      setErrorState(null);
+      setReloadKey((key) => key + 1);
+    };
+    window.addEventListener("agendal:note-updated", changed);
+    return () => window.removeEventListener("agendal:note-updated", changed);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -326,13 +528,16 @@ export default function NoteResultClient({
       <ResultContainer
         result={loaded.result}
         gone={loaded.gone}
-        back={back}
+        back={onClose ?? back}
         navigate={navigate}
         weekStart={settings.weekStart}
         showToast={showToast}
         openNoteEditor={openNoteEditor}
+        editFollowupNote={editFollowupNote}
         edits={preview?.edits}
         projectList={loaded.projects}
+        presentation={presentation}
+        closeGuardRef={closeGuardRef}
       />
     </TaskStoreProvider>
   );

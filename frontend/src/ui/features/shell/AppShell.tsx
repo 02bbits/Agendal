@@ -83,22 +83,33 @@ export function AppShell({
       }
     >
       {sidebar && (
-        <div className="sticky top-0 hidden h-dvh w-[248px] shrink-0 overflow-y-auto border-r border-separator bg-surface md:block">
+        <div
+          data-shell-navigation
+          className="sticky top-0 hidden h-dvh w-[248px] shrink-0 overflow-y-auto border-r border-separator bg-surface md:block"
+        >
           <Sidebar active={tab} navigate={navigate} {...sidebar} />
         </div>
       )}
       <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1">
-        <main className="flex-1 px-gutter pb-[calc(160px+env(safe-area-inset-bottom))] [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6">
+        <main
+          className={
+            "flex-1 px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
+            (tab ? "pb-[calc(160px+env(safe-area-inset-bottom))]" : "pb-0")
+          }
+        >
           {banner}
           {children}
         </main>
         {tab && (
-          <div className="fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 [html[data-task-panel]_&]:z-30 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]">
+          <div
+            data-shell-navigation
+            className="max-xl:[html[data-note-selected]_&]:hidden fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 [html[data-task-panel]_&]:z-30 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] xl:[html[data-note-panel]_&]:ml-0 xl:[html[data-note-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]"
+          >
             {capture && <CaptureBar {...capture} />}
             <TabBar active={tab} navigate={navigate} />
           </div>
         )}
-        {toast}
+        <div data-shell-navigation>{toast}</div>
       </div>
       {aside && (
         <div className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">

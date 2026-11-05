@@ -6,7 +6,7 @@ import { forgetNotes, recallNote } from "../../src/lib/noteApi";
 import { type NoteResult } from "../../src/ui";
 import { task } from "../ui/fixtures";
 
-// IM-43: what a finished submit does. `done` opens the result; the other statuses have no screen yet
+// Finished notes, confirmation previews and follow-ups share the note route.
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -94,11 +94,12 @@ describe("Make tasks hands over to the result (IM-43)", () => {
     expect(recallNote("n7")?.changes).toHaveLength(1);
   });
 
-  it("a note that needs a look keeps the interim until Check this first and the follow-up exist", async () => {
+  it("a follow-up opens its question instead of a misleading zero-tasks toast (IM-46)", async () => {
     await makeTasks(result("followup"));
 
-    expect(await screen.findByText("0 tasks made")).toBeTruthy();
-    expect(router.push).not.toHaveBeenCalled();
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/notes/n7"));
+    expect(screen.queryByText("0 tasks made")).toBeNull();
+    expect(recallNote("n7")?.note.status).toBe("followup");
     expect(screen.queryByRole("textbox", { name: "Your note" })).toBeNull();
   });
 });

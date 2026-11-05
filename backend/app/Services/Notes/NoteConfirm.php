@@ -9,6 +9,7 @@ use App\Exceptions\ApiError;
 use App\Models\Note;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Apply changes and Edit note on Check this first (NU-5, WF-02). Each locks the note, so a double tap applies once.
@@ -23,19 +24,28 @@ final class NoteConfirm
      * Applies a `confirm` plan, re-validated against the tasks as they are now (NU-E38), with the user's edits.
      *
      * @param  array<string, array<string, mixed>>  $edits
+     * @param  list<string>  $exclude
      */
-    public function apply(Note $note, array $edits = []): Note
+    public function apply(Note $note, array $edits = [], array $exclude = []): Note
     {
-        return DB::transaction(function () use ($note, $edits): Note {
+        return DB::transaction(function () use ($note, $edits, $exclude): Note {
             // The user row first, as POST /notes locks it, so a note and an apply can't deadlock.
             User::query()->whereKey($note->user_id)->lockForUpdate()->firstOrFail();
             $note = $this->locked($note);
             /** @var ValidatedPlan $plan */
             $plan = $note->plan;
+            $originalPlan = $plan;
+            $refs = array_column([...$plan['create'], ...$plan['update'], ...$plan['delete']], 'ref');
+            if (array_diff($exclude, $refs) !== [] || ($exclude !== [] && array_diff($refs, $exclude) === [])) {
+                throw ValidationException::withMessages(['exclude' => ['error.invalid']]);
+            }
+            foreach (['create', 'update', 'delete', 'ambiguous'] as $kind) {
+                $plan[$kind] = array_values(array_filter($plan[$kind], fn (array $entry): bool => ! in_array($entry['ref'], $exclude, true)));
+            }
             $applied = $this->applier->apply($note, $plan, $edits);
             $note->forceFill([
                 'status' => PlanStatus::Done->value, 'applied' => $applied['applied'],
-                'plan' => [...$plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']],
+                'plan' => [...$originalPlan, 'excluded' => $exclude, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']],
             ])->save();
 
             return $note->refresh();

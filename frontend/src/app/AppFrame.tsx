@@ -21,11 +21,11 @@ import {
   SearchPopup,
   sortProjects,
   t,
-  tc,
   Toast,
   useMediaQuery,
   type AccountSettings,
   type Navigate,
+  type NoteResult,
   type Project,
   type ProjectWithCounts,
   type TabId,
@@ -41,6 +41,7 @@ import { useNewTask } from "./useNewTask";
 import {
   forgetNotes,
   rememberNote,
+  replanFollowup,
   searchNotes,
   submitNote,
 } from "@/lib/noteApi";
@@ -93,7 +94,8 @@ const TAB_BY_PATH: Record<string, TabId> = {
 // The tab a screen belongs to: /projects/5 → Projects, Account and Search → Inbox
 const tabRootOf = (path: string): string =>
   Object.keys(TAB_BY_PATH).find(
-    (root) => root !== ROUTES.inbox && path.startsWith(`${root}/`),
+    (root) =>
+      root !== ROUTES.inbox && (path === root || path.startsWith(`${root}/`)),
   ) ?? ROUTES.inbox;
 
 const DEFAULT_SETTINGS: AccountSettings = {
@@ -122,6 +124,7 @@ interface AppFrameValue {
   showToast: (messageOrDraft: string | Omit<ToastData, "id">) => void;
   /** Opens the full-screen note editor (NC-1) from the capture bar or the Notes tab. */
   openNoteEditor: () => void;
+  editFollowupNote: (note: NoteResult["note"]) => void;
   /** Opens the search popup or navigates to search. */
   openSearch: () => void;
   /** Opens the new task bottom sheet. */
@@ -150,6 +153,7 @@ export function useAppFrame(): AppFrameValue {
  */
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const notePanelWide = useMediaQuery("(min-width: 1280px)");
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
@@ -217,9 +221,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     else router.back();
   }, [router, pathname]);
   const [editing, setEditing] = useState(false);
-  const openNoteEditor = useCallback(() => setEditing(true), []);
-  const closeNoteEditor = useCallback(() => setEditing(false), []);
-
+  const [editingNote, setEditingNote] = useState<NoteResult["note"] | null>(
+    null,
+  );
+  const openNoteEditor = useCallback(() => {
+    setEditingNote(null);
+    setEditing(true);
+  }, []);
+  const editFollowupNote = useCallback((note: NoteResult["note"]) => {
+    setEditingNote(note);
+    setEditing(true);
+  }, []);
+  const closeNoteEditor = useCallback(() => {
+    setEditing(false);
+    setEditingNote(null);
+  }, []);
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
@@ -236,14 +252,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
         if (done) return;
         done = true;
         window.removeEventListener("popstate", go);
-        router.push(ROUTES.note(id));
+        const target = notePanelWide
+          ? `/notes?note=${encodeURIComponent(id)}`
+          : ROUTES.note(id);
+        if (window.location.pathname + window.location.search === target)
+          router.replace(target, { scroll: false });
+        else router.push(target);
       };
       window.addEventListener("popstate", go);
       // The entry wasn't on top (nothing to take off): no popstate comes
       setTimeout(go, 250);
       setEditing(false);
     },
-    [router],
+    [router, notePanelWide],
   );
   const [toast, setToast] = useState<ToastData | null>(null);
   const showToast = useCallback(
@@ -416,6 +437,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      editFollowupNote,
       openSearch: handleOpenSearch,
       openNewTask,
       user,
@@ -428,6 +450,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       changeSettings,
       showToast,
       openNoteEditor,
+      editFollowupNote,
       handleOpenSearch,
       openNewTask,
       user,
@@ -631,19 +654,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {children}
         {editing && (
           <NoteEditor
+            note={editingNote ?? undefined}
             onClose={closeNoteEditor}
             onDraftRestored={() => showToast(t("note.draft_restored"))}
-            onSubmit={submitNote}
+            onSubmit={
+              editingNote
+                ? (text) => replanFollowup(editingNote.id, text)
+                : submitNote
+            }
             onSubmitted={(result) => {
-              // Check this first (`confirm`) and the result (`done`) share the note screen
-              if (result.note.status !== "followup") {
-                rememberNote(result);
-                openResult(result.note.id);
-                return;
-              }
-              // ponytail: the follow-up (IM-46) has no screen yet
-              closeNoteEditor();
-              showToast(tc("note.made", result.changes.length));
+              rememberNote(result);
+              window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+              openResult(result.note.id);
             }}
           />
         )}

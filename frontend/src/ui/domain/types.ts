@@ -94,3 +94,14 @@ export interface NoteResult {
   /** Only after Undo all: redo is allowed until then (RV §7) */
   redo_until?: string;
 }
+
+export type NoteFilter = "all" | "made" | "needs" | "kept";
+export interface NoteListEntry {
+  id: string;
+  status: NoteResult["note"]["status"];
+  name: string | null;
+  excerpt: string;
+  written_at: string;
+  source_file_name: string | null;
+  counts: { created: number; updated: number; deleted: number };
+}

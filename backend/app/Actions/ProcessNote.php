@@ -6,6 +6,7 @@ namespace App\Actions;
 
 use App\Enums\PlanStatus;
 use App\Enums\WeekStart;
+use App\Exceptions\ApiError;
 use App\Models\Note;
 use App\Models\Project;
 use App\Models\User;
@@ -52,78 +53,91 @@ class ProcessNote
             if ($existing !== null) {
                 return ['note' => $existing, 'replay' => true];
             }
-            Validator::make($input, [
-                'text' => ['required', 'string'],
-                'written_at' => ['required', 'string', 'date', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/'],
-                'timezone' => ['required', 'string'], 'source_file_name' => ['nullable', 'string', 'max:255'],
-            ])->validate();
-            try {
-                $clientClock = ClientClock::fromWrittenAt($input['written_at'], $this->clock);
-            } catch (InvalidArgumentException) {
-                throw ValidationException::withMessages(['written_at' => ['error.invalid']]);
-            }
-            $zone = in_array($input['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true) ? $input['timezone'] : (string) $user->timezone;
-            $projects = Project::query()->where('user_id', $user->id)->whereNull('deleted_at')->pluck('name', 'id')->all();
-            $context = new NoteContext($clientClock->now(), $zone, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
-            $budgetMs = (float) config('notes.engine_budget_ms');
-            $started = hrtime(true);
-            $text = $this->splitter->normalize($input['text']);
-            $open = [];
-            $done = [];
-            foreach ($this->splitter->split($text, array_values($projects)) as $item) {
-                if ((hrtime(true) - $started) / 1e6 >= $budgetMs) {
-                    break;
-                }
-                $groups = $this->matcher->candidateWords($item, $context);
-                foreach ($this->candidates->findEach($user->id, $groups) as $task) {
-                    $open[$task['id']] = $task;
-                }
-                foreach ($this->candidates->findEach($user->id, $groups, true) as $task) {
-                    $done[$task['id']] = $task;
-                }
-            }
-            $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
-            $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
-            if ($build->plan['dropped'] > 0) {
-                Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
-            }
-            $note = new Note;
-            $file = isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null;
-            $note->forceFill([
-                'user_id' => $user->id, 'client_id' => $input['client_id'], 'text' => $text, 'name' => $build->name,
-                'status' => $build->status->value, 'engine' => $build->engine->value,
-                'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
-                'written_at' => $clientClock->now(), 'written_tz' => $zone, 'processed_at' => $this->clock->now(),
-                'plan' => $build->plan, 'applied' => [],
-            ])->save();
-            if ($build->status === PlanStatus::Done) {
-                $applied = $this->applier->apply($note, $build->plan);
-                $note->applied = $applied['applied'];
-                $note->plan = [...$build->plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
-                $note->save();
-            } elseif ($build->status === PlanStatus::Confirm) {
-                $note->plan = [...$build->plan, 'changes' => $this->preview($note, $build->plan)];
-                $note->save();
-            }
 
-            return ['note' => $note->refresh(), 'replay' => false];
+            return ['note' => $this->process($user, $input), 'replay' => false];
         }, 3);
     }
 
-    /**
-     * The rows Check this first shows (NU-5): the plan applied in a savepoint and rolled back, so nothing persists.
-     * ponytail: preview task ids differ from the ones apply makes; confirm rows don't link to tasks.
-     *
-     * @param  ValidatedPlan  $plan
-     * @return list<array<string, mixed>>
-     */
-    private function preview(Note $note, array $plan): array
+    /** @param array<string, mixed> $input */
+    public function replanFollowup(User $user, Note $note, array $input): Note
     {
-        DB::beginTransaction();
+        return DB::transaction(function () use ($user, $note, $input): Note {
+            User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
+            $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();
+            Validator::make($input, ['text' => ['required', 'string'], 'timezone' => ['required', 'string']])->validate();
+            $text = $this->splitter->normalize($input['text']);
+            // Unchanged text and a retry after a lost reply return the already stored result.
+            if ($text === $note->text) {
+                return $note;
+            }
+            if ($note->status !== PlanStatus::Followup->value) {
+                throw new ApiError('note.wrong_status', 'Only a follow-up note can be edited here.', 409);
+            }
+            $input['written_at'] = $this->clock->now()->format(DATE_ATOM);
+
+            return $this->process($user, $input, $note);
+        }, 3);
+    }
+
+    /** @param array<string, mixed> $input */
+    private function process(User $user, array $input, ?Note $note = null): Note
+    {
+        Validator::make($input, [
+            'text' => ['required', 'string'],
+            'written_at' => ['required', 'string', 'date', 'regex:/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/'],
+            'timezone' => ['required', 'string'], 'source_file_name' => ['nullable', 'string', 'max:255'],
+        ])->validate();
         try {
-            return $this->applier->apply($note, $plan)['changes'];
-        } finally {
-            DB::rollBack();
+            $clientClock = ClientClock::fromWrittenAt($input['written_at'], $this->clock);
+        } catch (InvalidArgumentException) {
+            throw ValidationException::withMessages(['written_at' => ['error.invalid']]);
         }
+        $zone = in_array($input['timezone'], DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC), true) ? $input['timezone'] : (string) $user->timezone;
+        $projects = Project::query()->where('user_id', $user->id)->whereNull('deleted_at')->pluck('name', 'id')->all();
+        $context = new NoteContext($clientClock->now(), $zone, $projects, WeekStart::tryFrom((string) $user->week_start) ?? WeekStart::Monday, $user->time_format === '12h');
+        $budgetMs = (float) config('notes.engine_budget_ms');
+        $started = hrtime(true);
+        $text = $this->splitter->normalize($input['text']);
+        $open = [];
+        $done = [];
+        foreach ($this->splitter->split($text, array_values($projects)) as $item) {
+            if ((hrtime(true) - $started) / 1e6 >= $budgetMs) {
+                break;
+            }
+            $groups = $this->matcher->candidateWords($item, $context);
+            foreach ($this->candidates->findEach($user->id, $groups) as $task) {
+                $open[$task['id']] = $task;
+            }
+            foreach ($this->candidates->findEach($user->id, $groups, true) as $task) {
+                $done[$task['id']] = $task;
+            }
+        }
+        $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
+        $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
+        if ($build->plan['dropped'] > 0) {
+            Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
+        }
+        $note ??= new Note;
+        $plan = $note->exists ? [...$build->plan, 'edit_timezone' => $zone] : $build->plan;
+        $file = $note->exists ? $note->source_file_name : (isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null);
+        $note->forceFill([
+            'user_id' => $user->id, 'client_id' => $note->exists ? $note->client_id : $input['client_id'], 'text' => $text, 'name' => $build->name,
+            'status' => $build->status->value, 'engine' => $build->engine->value,
+            'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
+            'written_at' => $note->exists ? $note->written_at : $clientClock->now(), 'written_tz' => $note->exists ? $note->written_tz : $zone, 'processed_at' => $this->clock->now(),
+            'edited_at' => $note->exists ? $this->clock->now() : null,
+            'plan' => $plan, 'applied' => [],
+        ])->save();
+        if ($build->status === PlanStatus::Done) {
+            $applied = $this->applier->apply($note, $plan);
+            $note->applied = $applied['applied'];
+            $note->plan = [...$plan, 'changes' => $applied['changes'], 'skipped' => $applied['skipped']];
+            $note->save();
+        } elseif ($build->status === PlanStatus::Confirm) {
+            $note->plan = [...$plan, 'changes' => $this->applier->preview($note, $plan)];
+            $note->save();
+        }
+
+        return $note->refresh();
     }
 }

@@ -4,7 +4,6 @@ import { cx } from "../../../components/cx";
 export interface SettingsRowProps {
   variant?: "panel" | "screen";
   icon: ReactNode;
-  tileBg?: string;
   label: string;
   control: ReactNode;
   extraAction?: ReactNode;
@@ -17,7 +16,6 @@ export interface SettingsRowProps {
 export function SettingsRow({
   variant = "panel",
   icon,
-  tileBg,
   label,
   control,
   extraAction,
@@ -57,12 +55,7 @@ export function SettingsRow({
         <>
           <div className="flex min-w-0 flex-col">
             <div className="flex items-center gap-3">
-              <div
-                className={cx(
-                  "flex size-7 shrink-0 items-center justify-center rounded-tile",
-                  tileBg ?? "bg-fill text-ink-secondary",
-                )}
-              >
+              <div className="flex size-8 shrink-0 items-center justify-center text-ink-secondary">
                 {icon}
               </div>
               <span className="text-body font-normal text-ink">{label}</span>

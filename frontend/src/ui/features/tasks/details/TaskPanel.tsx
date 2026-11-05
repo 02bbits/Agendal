@@ -7,6 +7,7 @@ import {
   type ReactElement,
 } from "react";
 import { Button } from "../../../components/Button";
+import { cx } from "../../../components/cx";
 import { useBackgroundScrollLock } from "../../../components/useBackgroundScrollLock";
 import { t } from "../../../copy";
 import type { Project, WeekStart } from "../../../domain/types";
@@ -14,8 +15,10 @@ import { useTaskStore } from "../store";
 import { DeleteTask } from "../DeleteTask";
 import { PanelHeader } from "./PanelHeader";
 import { TaskDetails } from "./TaskDetails";
+import { useModalFocus } from "../../../components/useModalFocus";
 
 export interface TaskPanelProps {
+  modal?: boolean;
   taskId: string;
   onClose: () => void;
   projects?: Project[];
@@ -26,6 +29,7 @@ export interface TaskPanelProps {
 }
 
 export function TaskPanel({
+  modal = false,
   taskId,
   onClose,
   projects,
@@ -40,6 +44,7 @@ export function TaskPanel({
   });
   const triggerRef = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
+  useModalFocus(panelRef, panelRef, modal, onClose);
   const [missingId, setMissingId] = useState<string | null>(null);
   const loadTask = store.api.get;
   const { ensureTask } = store;
@@ -64,13 +69,14 @@ export function TaskPanel({
   const loading = !task && Boolean(loadTask) && missingId !== taskId;
 
   useEffect(() => {
+    if (modal) return;
     if (typeof document !== "undefined" && !triggerRef.current) {
       triggerRef.current = (document.activeElement as HTMLElement) ?? null;
     }
     return () => {
       triggerRef.current?.focus();
     };
-  }, []);
+  }, [modal]);
 
   useBackgroundScrollLock(panelRef);
 
@@ -118,10 +124,17 @@ export function TaskPanel({
       />
       <aside
         ref={panelRef}
+        data-modal-host={modal ? true : undefined}
+        role={modal ? "dialog" : undefined}
+        aria-modal={modal ? true : undefined}
         aria-label={t("task.heading")}
         tabIndex={-1}
         onKeyDown={handleKeyDown}
-        className="fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in will-change-transform shadow-2xl"
+        // A modal panel hosts its popovers; a transform would make their fixed position relative to it
+        className={cx(
+          "fixed inset-y-0 right-0 z-50 flex w-full max-w-[400px] flex-col border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] overflow-y-auto overscroll-contain outline-none motion-safe:animate-panel-in shadow-2xl",
+          !modal && "will-change-transform",
+        )}
       >
         {task ? (
           <TaskDetails

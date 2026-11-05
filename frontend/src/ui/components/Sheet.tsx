@@ -81,7 +81,7 @@ export function Sheet({
           {confirmLabel && onConfirm ? (
             <button
               type="button"
-              className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-2 text-heading font-semibold text-primary disabled:opacity-40"
+              className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-2 text-heading font-semibold text-primary enabled:hover:bg-fill disabled:opacity-40"
               onClick={onConfirm}
               disabled={confirmDisabled}
             >
