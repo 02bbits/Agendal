@@ -118,8 +118,13 @@ export function rowMeta(
     ) {
       const parts: MetaPart[] = [];
       if (task.start_time) {
+        const timeStr = time(task.start_time);
+        const text =
+          !opts.entry && task.start_date === opts.today
+            ? t("task.starts_at", { time: timeStr })
+            : timeStr;
         parts.push({
-          text: time(task.start_time),
+          text,
           tone: "plain",
         });
       }

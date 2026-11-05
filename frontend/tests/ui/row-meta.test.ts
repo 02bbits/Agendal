@@ -227,7 +227,7 @@ describe("rowMeta", () => {
       });
       const expectedDay22 = formatDay("2026-11-22", TODAY_WED_18_NOV);
       expect(parts).toEqual([
-        { text: "08:30", tone: "plain" },
+        { text: "Start at 08:30", tone: "plain" },
         { text: `Due ${expectedDay22}, 17:00`, tone: "plain" },
       ]);
     });
