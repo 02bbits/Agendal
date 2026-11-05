@@ -146,7 +146,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`.
+`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`, `task.starts_at`.
 
 ## 6. Accessibility
 
