@@ -521,4 +521,63 @@ describe("Project detail page /projects/[id]", () => {
       fetchMock.mock.calls.some(([url]) => String(url).endsWith("/reopen")),
     ).toBe(false);
   });
+
+  it("displays server progress accurately when completed tasks are paginated", async () => {
+    pathname = "/projects/p-paginated";
+    const paginatedProjectData = {
+      project: {
+        id: "p-paginated",
+        name: "Personal",
+        colour: "purple",
+        open: 8,
+        done: 44,
+        created_at: "2026-09-01T08:00:00Z",
+      },
+      progress: { done: 44, total: 52 },
+      open: Array.from({ length: 8 }, (_, i) =>
+        task({
+          id: `t-open-${i}`,
+          title: `Open Task ${i}`,
+          project_id: "p-paginated",
+        }),
+      ),
+      completed: Array.from({ length: 10 }, (_, i) =>
+        task({
+          id: `t-done-${i}`,
+          title: `Done Task ${i}`,
+          project_id: "p-paginated",
+          done: true,
+          done_at: "2026-10-23T10:00:00Z",
+        }),
+      ),
+      next_cursor: "cursor-token",
+    };
+
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-paginated")
+        return json(200, paginatedProjectData);
+      if (url === "/api/v1/projects")
+        return json(200, [paginatedProjectData.project]);
+      if (url === "/api/v1/tasks/inbox") return json(200, {});
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-paginated" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    // Confirms progress text displays 44 of 52 tasks completed, NOT 10 of 18
+    expect(screen.getByText("44 of 52 tasks completed")).toBeTruthy();
+    const progressbar = screen.getByRole("progressbar");
+    expect(progressbar.getAttribute("aria-valuenow")).toBe("44");
+    expect(progressbar.getAttribute("aria-valuemax")).toBe("52");
+  });
 });

@@ -12,39 +12,28 @@ import {
 import { SettingsRow } from "../details/SettingsRow";
 import { buildTimeOptions } from "../details/timeOptions";
 
-export interface NewTaskDatesProps {
-  dueDate: string | null;
-  dueTime: string;
-  onDueTimeChange: (value: string) => void;
+export interface NewTaskStartDateProps {
   startDate: string;
   onStartDateChange: (value: string) => void;
   startTime: string;
   onStartTimeChange: (value: string) => void;
-  repeat: Repeat;
-  onRepeatChange: (value: Repeat) => void;
   error: CopyKey | null;
   timeFormat?: TimeFormat;
   weekStart?: WeekStart;
 }
 
-/** Due time, then start date with its start time, under the due chips (TK §2.2). */
-export function NewTaskDates({
-  dueDate,
-  dueTime,
-  onDueTimeChange,
+/** Start date and start time row above due chips (TK §2.2). */
+export function NewTaskStartDate({
   startDate,
   onStartDateChange,
   startTime,
   onStartTimeChange,
-  repeat,
-  onRepeatChange,
   error,
   timeFormat = "24h",
   weekStart = "mon",
-}: NewTaskDatesProps): ReactElement {
+}: NewTaskStartDateProps): ReactElement {
   const errorId = "new-task-dates-error";
   const describedBy = error ? errorId : undefined;
-  const sameDay = startDate !== "" && startDate === dueDate;
 
   return (
     <div className="flex flex-col">
@@ -77,6 +66,43 @@ export function NewTaskDates({
           </div>
         }
       />
+    </div>
+  );
+}
+
+export interface NewTaskDatesProps {
+  dueDate: string | null;
+  dueTime: string;
+  onDueTimeChange: (value: string) => void;
+  startDate?: string;
+  onStartDateChange?: (value: string) => void;
+  startTime?: string;
+  onStartTimeChange?: (value: string) => void;
+  repeat: Repeat;
+  onRepeatChange: (value: Repeat) => void;
+  error: CopyKey | null;
+  timeFormat?: TimeFormat;
+  weekStart?: WeekStart;
+}
+
+/** Due time and repeat rows under the due chips (TK §2.2). */
+export function NewTaskDates({
+  dueDate,
+  dueTime,
+  onDueTimeChange,
+  startDate = "",
+  startTime = "",
+  repeat,
+  onRepeatChange,
+  error,
+  timeFormat = "24h",
+}: NewTaskDatesProps): ReactElement {
+  const errorId = "new-task-dates-error";
+  const describedBy = error ? errorId : undefined;
+  const sameDay = startDate !== "" && startDate === dueDate;
+
+  return (
+    <div className="flex flex-col">
       <SettingsRow
         icon={<ClockIcon size={18} />}
         label={t("task.due_time")}

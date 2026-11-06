@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ProjectScreen,
   ProjectSheet,
@@ -252,6 +252,9 @@ export function ProjectClient({ id }: { id: string }) {
       >
         <ProjectContent
           project={data.project}
+          initialProgress={data.progress}
+          initialOpen={data.open}
+          initialCompleted={data.completed}
           hasMoreCompleted={Boolean(nextCursor)}
           onLoadMoreCompleted={handleLoadMoreCompleted}
           loadingMore={loadingMore}
@@ -299,6 +302,9 @@ export function ProjectClient({ id }: { id: string }) {
 
 function ProjectContent({
   project,
+  initialProgress,
+  initialOpen = [],
+  initialCompleted = [],
   hasMoreCompleted,
   onLoadMoreCompleted,
   loadingMore,
@@ -312,6 +318,9 @@ function ProjectContent({
   navigate,
 }: {
   project: Project;
+  initialProgress?: { done: number; total: number };
+  initialOpen?: Task[];
+  initialCompleted?: Task[];
   hasMoreCompleted: boolean;
   onLoadMoreCompleted: () => Promise<void>;
   loadingMore: boolean;
@@ -332,6 +341,15 @@ function ProjectContent({
     closePanel: handleClosePanel,
   } = useTaskPanel(navigate);
 
+  const initialOpenIds = useMemo(
+    () => new Set(initialOpen.map((t) => t.id)),
+    [initialOpen],
+  );
+  const initialCompletedIds = useMemo(
+    () => new Set(initialCompleted.map((t) => t.id)),
+    [initialCompleted],
+  );
+
   // A task moved to another project leaves this screen. A task just completed
   // stays in Open with its tick while it settles, like the Inbox (LV-1)
   const isNoProject = project.id === "none";
@@ -341,14 +359,70 @@ function ProjectContent({
   const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
   const completedTasks = tasks.filter((t) => t.done && !store.isSettling(t.id));
 
+  const progress = useMemo(() => {
+    if (!initialProgress) {
+      return {
+        done: completedTasks.length,
+        total: openTasks.length + completedTasks.length,
+      };
+    }
+    const openSet = initialOpenIds ?? new Set<string>();
+    const completedSet = initialCompletedIds ?? new Set<string>();
+
+    // Tasks that were initially open and are now completed (and not settling)
+    const newlyDone = tasks.filter(
+      (t) => openSet.has(t.id) && t.done && !store.isSettling(t.id),
+    ).length;
+
+    // Tasks that were initially completed and have been uncompleted (now open or settling)
+    const newlyUndone = tasks.filter(
+      (t) => completedSet.has(t.id) && (!t.done || store.isSettling(t.id)),
+    ).length;
+
+    // Newly created tasks in this project (not in openSet or completedSet) that are completed
+    const createdDone = tasks.filter(
+      (t) =>
+        !openSet.has(t.id) &&
+        !completedSet.has(t.id) &&
+        t.done &&
+        !store.isSettling(t.id),
+    ).length;
+
+    // Any initially completed tasks that were deleted from the store
+    const currentTaskIds = new Set(tasks.map((t) => t.id));
+    const deletedCompleted = Array.from(completedSet).filter(
+      (id) => !currentTaskIds.has(id),
+    ).length;
+
+    const liveDone = Math.max(
+      0,
+      initialProgress.done +
+        newlyDone +
+        createdDone -
+        newlyUndone -
+        deletedCompleted,
+    );
+    const liveTotal = liveDone + openTasks.length;
+
+    return {
+      done: liveDone,
+      total: liveTotal,
+    };
+  }, [
+    initialProgress,
+    initialOpenIds,
+    initialCompletedIds,
+    tasks,
+    openTasks.length,
+    completedTasks.length,
+    store,
+  ]);
+
   return (
     <>
       <ProjectScreen
         project={project}
-        progress={{
-          done: completedTasks.length,
-          total: openTasks.length + completedTasks.length,
-        }}
+        progress={progress}
         openTasks={openTasks}
         completedTasks={completedTasks}
         hasMoreCompleted={hasMoreCompleted}
