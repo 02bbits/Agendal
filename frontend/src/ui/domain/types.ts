@@ -81,7 +81,7 @@ export interface NoteResult {
   note: {
     id: string;
     client_id: string;
-    status: "done" | "confirm" | "followup" | "kept" | "undone";
+    status: "done" | "confirm" | "followup" | "kept" | "pending";
     name: string | null;
     text: string;
     source_file_name: string | null;

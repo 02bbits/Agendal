@@ -14,6 +14,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
+    config(['notes.engine_budget_ms' => 60_000]);
     $this->user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
     $this->actingAs($this->user);
 });
@@ -59,7 +60,7 @@ it('records the manual task for Undo and Redo', function () {
     $this->postJson("/api/v1/notes/$id/apply")->assertOk();
     $taskId = Task::firstOrFail()->id;
     expect(Note::findOrFail($id)->applied)->toHaveCount(1);
-    $this->postJson("/api/v1/notes/$id/undo")->assertOk()->assertJsonPath('note.status', 'undone');
+    $this->postJson("/api/v1/notes/$id/undo")->assertOk()->assertJsonPath('note.status', 'pending');
     expect(Task::find($taskId))->toBeNull();
     $this->postJson("/api/v1/notes/$id/redo")->assertOk()->assertJsonPath('note.status', 'done');
     expect(Task::find($taskId))->not->toBeNull()->and(Task::count())->toBe(1);

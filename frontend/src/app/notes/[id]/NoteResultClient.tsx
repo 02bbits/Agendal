@@ -13,6 +13,7 @@ import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
 import {
   confirmNote,
+  deleteNote,
   getNote,
   makeFollowupTask,
   previewTaskApi,
@@ -34,6 +35,7 @@ import {
   type Project,
   type Task,
 } from "../../../ui";
+import { nameOf } from "../../../ui/features/notes/NoteResultScreen";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
 import { useMediaQuery } from "../../../ui/components/useMediaQuery";
 import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
@@ -269,6 +271,21 @@ function ResultContainer({
   };
   // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
   // nothing is made until Apply (RV-3)
+  const remove = async () => {
+    setBusy(true);
+    let outcome: Awaited<ReturnType<typeof deleteNote>>;
+    try {
+      outcome = await deleteNote(result.note.id);
+    } finally {
+      setBusy(false);
+    }
+    if (outcome !== true)
+      return showToast(t(outcome.error, { request_id: "" }));
+    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    showToast(t("note.deleted", { name: nameOf(result) }));
+    back();
+  };
+
   const makeTask = async () => {
     setBusy(true);
     const outcome = await makeFollowupTask(result.note.id);
@@ -307,6 +324,7 @@ function ResultContainer({
           onApply={apply}
           onEdit={edit}
           onMakeTask={makeTask}
+          onDelete={remove}
           onRename={async (name) => {
             const outcome = await renameNote(result.note.id, name);
             if ("error" in outcome) {

@@ -34,11 +34,11 @@ function makeNote(string $text): array
     return test()->postJson("/api/v1/notes/{$id}/apply")->assertOk()->json();
 }
 
-it('removes created tasks and keeps the note as undone (T-RV-10, T-RV-12)', function () {
+it('removes created tasks and keeps the note as pending (T-RV-10, T-RV-12)', function () {
     $id = makeNote('call mum tomorrow; read report')['note']['id'];
     expect(Task::count())->toBe(2);
-    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'undone')->assertJsonStructure(['redo_until']);
-    expect(Task::count())->toBe(0)->and(Task::onlyTrashed()->count())->toBe(2)->and(Note::findOrFail($id)->status)->toBe('undone');
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'pending')->assertJsonStructure(['redo_until']);
+    expect(Task::count())->toBe(0)->and(Task::onlyTrashed()->count())->toBe(2)->and(Note::findOrFail($id)->status)->toBe('pending');
 });
 
 it('gives a rescheduled task its old date back (T-RV-10)', function () {
@@ -95,10 +95,12 @@ it('refuses after 30 days and a note that is not done (RV-E2)', function () {
     expect(Task::count())->toBe(1);
 });
 
-it('answers a second undo with the note already undone (T-RV-105, RV-E5)', function () {
+it('answers a second undo by redoing back to done', function () {
     $id = makeNote('call mum tomorrow')['note']['id'];
-    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk();
-    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'undone');
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'pending');
+    expect(Task::count())->toBe(0);
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'done');
+    expect(Task::count())->toBe(1)->and(Note::findOrFail($id)->status)->toBe('done');
 });
 
 it('changes nothing when a failure hits mid-undo (T-RV-13, NF-11)', function () {
@@ -123,7 +125,7 @@ it('redoes within 10 s and not after (T-RV-106, RV-E6)', function () {
     $this->postJson("/api/v1/notes/{$id}/undo")->assertOk();
     $this->clock->advance('+11 seconds');
     $this->postJson("/api/v1/notes/{$id}/redo")->assertStatus(409)->assertJsonPath('error.code', 'note.redo_expired');
-    expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('undone');
+    expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('pending');
 });
 
 it('returns a note by id and 404 for someone else (SEC-12)', function () {

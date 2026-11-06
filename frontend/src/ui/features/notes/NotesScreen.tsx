@@ -85,13 +85,13 @@ export function NotesScreen({
           <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
             {rows.map((note) => {
               const needsLook =
-                note.status === "confirm" || note.status === "followup";
+                note.status === "confirm" ||
+                note.status === "followup" ||
+                note.status === "pending";
               const status = needsLook
                 ? t("notes.needs")
                 : note.status === "done"
                   ? t("notes.made")
-                  : note.status === "undone"
-                    ? t("note.undone_label")
                     : note.status === "kept"
                       ? t("note.kept_label")
                       : null;

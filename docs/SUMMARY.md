@@ -157,12 +157,12 @@ stateDiagram-v2
     confirm --> done : Apply changes
     confirm --> kept : Edit note (text goes to a new note)
     followup --> done : Keep it as task
-    done --> undone : Undo all
-    undone --> done : redo (toast, 10 s)
+    done --> pending : Undo all
+    pending --> done : redo (toast, 10 s) or a second Undo all
     done --> new : Edit note
     followup --> new : Edit note
     kept --> new : Edit note
-    undone --> new : Edit note
+    pending --> new : Edit note
 ```
 
 _Edit note_ on Check this first does not re-plan the same note: the note is kept (`kept`) and its text opens in the editor, where Make tasks creates a new note. _Edit note_ from the result screen (IM-47) re-plans the same note.
@@ -178,7 +178,8 @@ The point of this module is trust: the user can always see what the assistant di
 - **Follow-up.** For a note with nothing actionable: "I couldn't find a task in this note." with **Keep it as task** or **Edit the note**. _Keep it as task_ makes one task titled with the note's whole text (cut at 200 characters, the rest in the task's notes), marks the note done so Undo all works, and opens Task details so a date can be added. _Edit the note_ opens the editor with the text and works like Edit note. Until the user chooses, the note stays in the follow-up state and shows in the Notes tab as needing a look. The _kept_ state comes only from Edit note on Check this first.
 - **Undo all.** One tap reverses a note: created tasks are removed, changed fields get their old values back, deleted tasks come back. It works for **30 days** (matching how long deleted rows are kept). Fields you changed by hand since the note are left alone; if you edited or completed a task the note _created_, a dialog asks before it is removed. An Undo toast offers a 10-second **redo**. Undo needs a connection.
 - **Edit note.** Opens the note text in the editor; Make tasks first undoes what the note applied, then plans the new text from scratch under the same safety rules, in one step. The note keeps its id, gets a new name, and shows "Edited". A `done` note past the 30-day undo window can no longer be edited, because its changes can no longer be undone.
-- **Notes tab.** All notes, newest first (by when they were written), 20 per page, with time, name, two-line excerpt and a status line (tasks made, needs a look, kept, undone, edited, waiting for connection).
+- **Delete note.** A trash icon on the result and follow-up screens asks "Delete “{name}”?" and, on confirm, removes the note and shows "Deleted “{name}”". Tasks made from it are kept.
+- **Notes tab.** All notes, newest first (by when they were written), 20 per page, with time, name, two-line excerpt and a status line (tasks made, needs a look, kept, pending after Undo all, edited, waiting for connection).
 
 ---
 
@@ -321,7 +322,7 @@ erDiagram
     NOTE |o--o{ TASK : "source of"
 ```
 
-- **Note**: the text, a generated name, status (pending, new, done, confirm, followup, kept, undone), the **plan**, the **applied** change list, the engine that produced it (rules, rules plus LLM, or rules after a fallback), and when it was written and in which zone.
+- **Note**: the text, a generated name, status (pending, new, done, confirm, followup, kept; pending is also the status after Undo all), the **plan**, the **applied** change list, the engine that produced it (rules, rules plus LLM, or rules after a fallback), and when it was written and in which zone.
 - **Task**: as in section 5 (start date and time, due date and time; `end_time` is gone, migrated into `due_time`), plus a per-field timestamp map (for conflict resolution), a UTC reminder instant, and repeat data: the frequency, an optional RRULE (`repeat_rule`, up to 300 characters), the series' anchor date (set by the server) and the previous occurrence.
 - **Project**: name and colour. **User**: email, display name, zone, theme, week start, time format.
 - Supporting tables: push subscriptions, reminder deliveries (one row per reminder, so each is sent once) and an audit log (kept 90 days, no secrets).

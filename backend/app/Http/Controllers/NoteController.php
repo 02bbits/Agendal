@@ -14,6 +14,7 @@ use App\Services\Notes\NoteFollowup;
 use App\Services\Notes\NoteUndo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class NoteController extends Controller
 {
@@ -23,7 +24,7 @@ class NoteController extends Controller
         $query = Note::query();
         match ($input['filter'] ?? 'all') {
             'made' => $query->where('status', 'done'),
-            'needs' => $query->whereIn('status', ['confirm', 'followup']),
+            'needs' => $query->whereIn('status', ['confirm', 'followup', 'pending']),
             'kept' => $query->where('status', 'kept'),
             default => $query,
         };
@@ -38,7 +39,7 @@ class NoteController extends Controller
             })->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
             'total' => (int) $counts->sum(),
-            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0),
+            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0) + (int) ($counts['pending'] ?? 0),
         ]);
     }
 
@@ -99,5 +100,12 @@ class NoteController extends Controller
     public function redo(Note $note, NoteUndo $undo): NoteResultResource
     {
         return new NoteResultResource($undo->redo($note));
+    }
+
+    public function destroy(Note $note): Response
+    {
+        $note->delete();
+
+        return response()->noContent();
     }
 }

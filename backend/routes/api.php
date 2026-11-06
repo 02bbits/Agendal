@@ -35,6 +35,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('notes/{note}/cancel', [NoteController::class, 'cancel']);
     Route::post('notes/{note}/undo', [NoteController::class, 'undo']);
     Route::post('notes/{note}/redo', [NoteController::class, 'redo']);
+    Route::delete('notes/{note}', [NoteController::class, 'destroy']);
     Route::get('projects', [ProjectController::class, 'index']);
     Route::post('projects', [ProjectController::class, 'store']);
     Route::get('projects/none', [ProjectController::class, 'none']);

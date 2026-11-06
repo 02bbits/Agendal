@@ -37,22 +37,30 @@ final class NoteUndo
 
     public function undo(Note $note, bool $confirmConflicts): Note
     {
-        return DB::transaction(function () use ($note, $confirmConflicts): Note {
+        $redo = false;
+        $note = DB::transaction(function () use ($note, $confirmConflicts, &$redo): Note {
             $note = $this->lock($note);
-            if ($note->status === 'undone') {
-                return $note; // RV-E5: the second request changes nothing
+            if ($note->status === 'pending') {
+                if ($note->undo_log === null) {
+                    throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
+                }
+                $redo = true; // redo after this transaction: its expiry write must not roll back with the ApiError
+
+                return $note;
             }
             if ($note->status !== 'done') {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
             $changes = $this->reverseApplied($note, $confirmConflicts);
             $redoUntil = $this->clock->now()->modify('+'.self::REDO_SECONDS.' seconds');
-            $note->status = 'undone';
+            $note->status = 'pending';
             $note->undo_log = ['redo_until' => $redoUntil->format(DATE_ATOM), 'changes' => $changes];
             $note->save();
 
             return $note->refresh();
         }, 3);
+
+        return $redo ? $this->redo($note) : $note;
     }
 
     /**
@@ -99,7 +107,7 @@ final class NoteUndo
             if ($note->status === 'done') {
                 return $note;
             }
-            if ($note->status !== 'undone') {
+            if ($note->status !== 'pending') {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
             $log = $note->undo_log ?? [];

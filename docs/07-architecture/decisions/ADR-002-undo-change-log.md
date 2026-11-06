@@ -7,7 +7,7 @@ Undo all must reverse a whole note exactly, possibly long after it was applied (
 
 ## Decision
 - Applying a plan writes one entry per change into `notes.applied`: `{kind, task_id, before, after, label}`, in the same transaction as the task writes.
-- Undo replays the log in reverse in one transaction. It deletes created tasks, restores `before` values on changed tasks (only for fields that still hold `after`), and restores soft-deleted tasks. The note becomes `undone`.
+- Undo replays the log in reverse in one transaction. It deletes created tasks, restores `before` values on changed tasks (only for fields that still hold `after`), and restores soft-deleted tasks. The note becomes `pending`.
 - Tasks deleted by a note stay soft-deleted while that note can still be undone.
 
 ## Consequences

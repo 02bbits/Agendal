@@ -98,7 +98,10 @@ function serve(
 
     if (url === "/api/v1/me") return json(200, { id: 1, email: "u@test.com" });
 
-    if (url === "/api/v1/notes/n1") return note();
+    if (url === "/api/v1/notes/n1") {
+      if (init?.method === "DELETE") return new Response(null, { status: 204 });
+      return note();
+    }
 
     const id = url.match(/^\/api\/v1\/tasks\/(.+)$/)?.[1];
 
@@ -330,7 +333,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     const undone: NoteResult = {
       ...result,
 
-      note: { ...result.note, status: "undone" },
+      note: { ...result.note, status: "pending" },
 
       redo_until: "2026-10-23T08:12:11+07:00",
     };
@@ -354,7 +357,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
         await screen.findByRole("button", { name: t("note.undo_all") }),
       );
 
-      expect(await screen.findByText(/Undone/)).toBeTruthy();
+      expect(await screen.findByText(/· Pending/)).toBeTruthy();
 
       expect(
         screen.queryByRole("button", { name: t("note.undo_all") }),
@@ -418,7 +421,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
 
       expect(screen.queryByRole("alertdialog")).toBeNull();
 
-      expect(screen.queryByText(/Undone/)).toBeNull();
+      expect(screen.queryByText(/· Pending/)).toBeNull();
 
       await userEvent.click(
         screen.getByRole("button", { name: t("note.undo_all") }),
@@ -430,7 +433,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
         }),
       );
 
-      expect(await screen.findByText(/Undone/)).toBeTruthy();
+      expect(await screen.findByText(/· Pending/)).toBeTruthy();
 
       conflicted = false;
 
@@ -571,7 +574,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     serveConfirm();
 
     serveUndo(
-      json(200, { ...result, note: { ...result.note, status: "undone" } }),
+      json(200, { ...result, note: { ...result.note, status: "pending" } }),
     );
 
     const refetched = vi.fn();
@@ -957,5 +960,22 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(0);
 
     expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
+  });
+  it("deleting a follow-up note calls DELETE /api/v1/notes/{id} and shows toast", async () => {
+    serve({}, () => json(200, followup));
+
+    await open();
+
+    const deleteBtn = await screen.findByRole("button", { name: t("note.delete") });
+    await userEvent.click(deleteBtn);
+
+    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: t("common.delete"),
+    });
+    await userEvent.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(calls("DELETE", "/api/v1/notes/n1")).toHaveLength(1);
+    });
   });
 });

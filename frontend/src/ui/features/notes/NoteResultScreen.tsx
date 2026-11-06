@@ -4,7 +4,7 @@ import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
-import { PencilIcon } from "../../components/icons";
+import { PencilIcon, TrashIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
 import {
@@ -48,6 +48,8 @@ export interface NoteResultScreenProps {
   onMakeTask?: () => void;
   /** Renames the note; resolves `false` when it couldn't be saved, so the field stays open. */
   onRename?: (name: string) => Promise<boolean>;
+  /** Deletes the note once the user confirms; the screen is left by the caller. */
+  onDelete?: () => Promise<void> | void;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -75,7 +77,7 @@ const sentence = (word: string) =>
   word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 
 // The note's name, or its first words while it has none
-const nameOf = (result: NoteResultData) =>
+export const nameOf = (result: NoteResultData) =>
   result.note.name ?? result.note.text.split(/\s+/).slice(0, 6).join(" ");
 
 const LONG_QUOTE = 160;
@@ -104,6 +106,7 @@ export function NoteResultScreen({
   onEdit,
   onMakeTask,
   onRename,
+  onDelete,
   busy = false,
   offline = false,
   onOpenTask,
@@ -119,6 +122,7 @@ export function NoteResultScreen({
   const [expanded, setExpanded] = useState(false);
   // Renaming: the field's text while open. Enter or leaving the field saves, Escape cancels
   const [naming, setNaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const saveName = async () => {
     const name = naming?.trim();
     if (!name || name === nameOf(result)) return setNaming(null);
@@ -129,6 +133,30 @@ export function NoteResultScreen({
 
   const { note, changes, skipped } = result;
   const Heading = presentation === "panel" ? "h2" : "h1";
+  const deleteDialog = (
+    <Dialog
+      open={deleting}
+      title={t("note.delete_title", { name: nameOf(result) })}
+      description={t("note.delete_body")}
+      onClose={() => setDeleting(false)}
+      actions={
+        <>
+          <Button onClick={() => setDeleting(false)}>
+            {t("common.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              setDeleting(false);
+              await onDelete?.();
+            }}
+          >
+            {t("common.delete")}
+          </Button>
+        </>
+      }
+    />
+  );
   if (note.status === "followup")
     return (
       <div
@@ -140,13 +168,24 @@ export function NoteResultScreen({
         {presentation === "screen" && (
           <NavBar backLabel={t("common.back")} onBack={onDone} />
         )}
-        <Heading
-          ref={heading}
-          tabIndex={-1}
-          className="mt-1 mb-0 text-display font-bold focus:outline-none"
-        >
-          {t("note.followup_title")}
-        </Heading>
+        <div className="mt-1 flex items-start gap-2">
+          <Heading
+            ref={heading}
+            tabIndex={-1}
+            className="m-0 min-w-0 flex-1 text-display font-bold focus:outline-none"
+          >
+            {t("note.followup_title")}
+          </Heading>
+          {onDelete && (
+            <IconButton
+              plain
+              label={t("note.delete")}
+              icon={<TrashIcon size={18} />}
+              disabled={offline}
+              onClick={() => setDeleting(true)}
+            />
+          )}
+        </div>
         <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
           <p className="m-0 whitespace-pre-line [overflow-wrap:anywhere]">
             {note.text}
@@ -178,6 +217,7 @@ export function NoteResultScreen({
             {t("note.make_one")}
           </Button>
         </div>
+        {deleteDialog}
       </div>
     );
   const written = localDateTime(note.processed_at, timeZone);
@@ -187,14 +227,14 @@ export function NoteResultScreen({
   const updated = count("updated");
   const deleted = count("deleted");
   const confirming = note.status === "confirm";
-  const undone = note.status === "undone";
+  const undone = note.status === "pending";
   // RV-E2: after 30 days the note stays, but Undo all is gone
   const expired = undoExpired(written.date, today);
   const overline = confirming
     ? t("note.review_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-        undone && t("note.undone_label"),
+        undone && t("notes.needs"),
         !undone && created > 0 && tc("note.made", created),
         !undone &&
           updated > 0 &&
@@ -243,6 +283,15 @@ export function NoteResultScreen({
               icon={<PencilIcon size={18} />}
               disabled={offline}
               onClick={() => setNaming(nameOf(result))}
+            />
+          )}
+          {onDelete && (
+            <IconButton
+              plain
+              label={t("note.delete")}
+              icon={<TrashIcon size={18} />}
+              disabled={offline}
+              onClick={() => setDeleting(true)}
             />
           )}
         </div>
@@ -434,6 +483,8 @@ export function NoteResultScreen({
           </>
         )}
       </div>
+
+      {deleteDialog}
 
       <Dialog
         open={conflicts > 0}

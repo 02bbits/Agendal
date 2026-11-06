@@ -37,7 +37,7 @@ Domain terms, used the same way in requirements, UI copy, and code. For acronyms
 | Skipped text | Items that make no task: ideas, FYIs, filler ([NU-4](../03-modules/NU-note-understanding.md#nu-4)) |
 | Change | One applied create, change or delete, with enough data to undo it |
 | Result screen | Lists every change from a note with CREATED / UPDATED / DELETED badges ([RV-1](../03-modules/RV-review-control.md#rv-1)) |
-| Undo all | Reverses every change from one note. The note is kept and marked Undone ([RV-2](../03-modules/RV-review-control.md#rv-2)) |
+| Undo all | Reverses every change from one note. The note is kept and marked Pending ([RV-2](../03-modules/RV-review-control.md#rv-2)) |
 | Check this first | The confirmation shown before a risky plan: any delete, or 5 or more changes ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
 | Follow-up | The one question for a note with nothing actionable: Keep it as task, or Edit the note ([RV-3](../03-modules/RV-review-control.md#rv-3)) |
 | Note name | A name generated from the plan, e.g. "This week" or "SQL Course to-dos" ([NU-6](../03-modules/NU-note-understanding.md#nu-6)) |
@@ -61,7 +61,7 @@ The note is the centre of v2: every assistant action comes from one note, and th
 | text | What the user wrote, or the checked text from dictation or a file |
 | name | Generated name ([naming rules](business-rules.md#naming-a-note-nu-6)) |
 | source file name | Set when the note came from a file. The file itself is not kept ([NF-9](../05-quality/nfr.md#nf-9)) |
-| status | `pending`, `new`, `done`, `confirm`, `followup`, `kept`, `undone` ([state transitions](#state-transitions)) |
+| status | `pending`, `new`, `done`, `confirm`, `followup`, `kept` ([state transitions](#state-transitions)) |
 | plan | What the assistant intends to do (below) |
 | applied | The list of changes actually made (below) |
 | created at, processed at | Timestamps. Pending notes have no `processed at` until reconnect |
@@ -160,13 +160,12 @@ All three are due within 7 days, so the note is named **"This week"**. 3 changes
 
 | Status | Meaning | Next |
 |---|---|---|
-| `pending` | Saved offline, not yet read | Processed on reconnect → `new` |
+| `pending` | Saved offline, not yet read; or applied, then reversed by Undo all | Processed on reconnect → `new`; after Undo all → `done` (redo from the toast, within 10 s, or a second Undo all), `new` (Edit note) |
 | `new` | Being processed | `done`, `confirm` or `followup` |
-| `done` | Plan applied | `undone` (Undo all), `new` (Edit note) |
+| `done` | Plan applied | `pending` (Undo all), `new` (Edit note) |
 | `confirm` | Plan waits for Apply changes | `done` (Apply), `kept` (Cancel), `new` (Edit note) |
 | `followup` | Nothing actionable found | `done` (Keep it as task), `new` (Edit the note) |
 | `kept` | Saved as a note only, after Cancel in Check this first | `new` (Edit note) |
-| `undone` | Applied, then reversed | `done` (redo from the toast, within 10 s), `new` (Edit note) |
 
 ```mermaid
 stateDiagram-v2
@@ -179,14 +178,16 @@ stateDiagram-v2
     confirm --> done : Apply changes
     confirm --> kept : Cancel
     followup --> done : Keep it as task
-    done --> undone : Undo all
-    undone --> done : redo (toast, 10 s)
+    done --> pending : Undo all
+    pending --> done : redo (toast, 10 s) or a second Undo all
     done --> new : Edit note
     confirm --> new : Edit note
     followup --> new : Edit note
     kept --> new : Edit note
-    undone --> new : Edit note
+    pending --> new : Edit note
 ```
+
+**Delete note** removes the note from any status; its tasks are kept with their source note cleared ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)).
 
 **Edit note** first undoes whatever the note applied (the same rules as Undo all), then plans the new text from scratch ([RV-5](../03-modules/RV-review-control.md#rv-5)).
 

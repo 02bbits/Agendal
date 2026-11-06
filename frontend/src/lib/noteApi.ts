@@ -109,6 +109,11 @@ export function recallNote(id: string): NoteResult | undefined {
   return recent.get(id);
 }
 
+/** Drops one kept result, e.g. a deleted note. */
+export function forgetNote(id: string) {
+  recent.delete(id);
+}
+
 /** Drops the kept results: sign-out leaves nothing of the account in memory (SC-19). */
 export function forgetNotes() {
   recent.clear();
@@ -262,4 +267,26 @@ export function previewTaskApi(result: NoteResult) {
     restore: refuse,
   };
   return { api, edits };
+}
+
+/**
+ * `DELETE /notes/{id}`: deletes a note.
+ */
+export async function deleteNote(
+  id: string,
+): Promise<true | { error: CopyKey }> {
+  try {
+    const response = await api(`/notes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    if (response.ok) {
+      forgetNote(id);
+      return true;
+    }
+    return { error: "error.generic" };
+  } catch (error) {
+    if (!(error instanceof ApiRequestError))
+      return { error: "note.needs_connection" };
+    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+  }
 }

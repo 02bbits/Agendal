@@ -288,9 +288,9 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(onUndo).toHaveBeenCalledWith(false);
     });
 
-    it("T-RV-12: an undone note says Undone, mutes its rows and hides Undo all", () => {
-      open(resultOf([sql, ink], [], { status: "undone" }));
-      expect(screen.getByText("Today 08:12 · Undone")).toBeTruthy();
+    it("T-RV-12: an undone note says Pending, mutes its rows and hides Undo all", () => {
+      open(resultOf([sql, ink], [], { status: "pending" }));
+      expect(screen.getByText("Today 08:12 · Pending")).toBeTruthy();
       expect(
         screen.queryByRole("button", { name: t("note.undo_all") }),
       ).toBeNull();
@@ -337,7 +337,7 @@ describe("Note result (IM-43, RV-1)", () => {
     });
 
     it("is axe clean undone, and with the dialog open", async () => {
-      open(resultOf([sql, hci, old], [], { status: "undone" }), {
+      open(resultOf([sql, hci, old], [], { status: "pending" }), {
         conflicts: 1,
       });
       await expectAxeCleanInBothThemes();
@@ -483,5 +483,29 @@ describe("Follow-up (IM-46, RV-3)", () => {
   it("has no axe violations in either theme", async () => {
     open(followup);
     await expectAxeCleanInBothThemes();
+  });
+  it("opens delete confirmation dialog and triggers onDelete", async () => {
+    const onDelete = vi.fn();
+    render(
+      <NoteResultScreen
+        result={resultOf([sql])}
+        onDone={() => {}}
+        onSetDue={() => {}}
+        onDelete={onDelete}
+        today={TODAY}
+        timeZone="Asia/Ho_Chi_Minh"
+        timeFormat="24h"
+        weekStart="mon"
+      />,
+    );
+    const deleteBtn = screen.getByRole("button", { name: t("note.delete") });
+    await userEvent.click(deleteBtn);
+    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    expect(screen.getByText(t("note.delete_title", { name: "This week" }))).toBeTruthy();
+    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: t("common.delete"),
+    });
+    await userEvent.click(confirmBtn);
+    expect(onDelete).toHaveBeenCalledOnce();
   });
 });

@@ -95,7 +95,6 @@ export const catalog = {
   "note.was": "was {value}",
   "note.undo_all": "Undo all",
   "note.undone": "Note undone. Its changes have been reversed.",
-  "note.undone_label": "Undone",
   "note.undo_expired": "Notes can be undone for 30 days.",
   "note.undo_conflict_title": "Undo this note?",
   "note.undo_conflict_body":
