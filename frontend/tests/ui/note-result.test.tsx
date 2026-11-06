@@ -501,10 +501,15 @@ describe("Follow-up (IM-46, RV-3)", () => {
     const deleteBtn = screen.getByRole("button", { name: t("note.delete") });
     await userEvent.click(deleteBtn);
     expect(screen.getByRole("alertdialog")).toBeTruthy();
-    expect(screen.getByText(t("note.delete_title", { name: "This week" }))).toBeTruthy();
-    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole("button", {
-      name: t("common.delete"),
-    });
+    expect(
+      screen.getByText(t("note.delete_title", { name: "This week" })),
+    ).toBeTruthy();
+    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole(
+      "button",
+      {
+        name: t("common.delete"),
+      },
+    );
     await userEvent.click(confirmBtn);
     expect(onDelete).toHaveBeenCalledOnce();
   });

@@ -966,12 +966,17 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
 
     await open();
 
-    const deleteBtn = await screen.findByRole("button", { name: t("note.delete") });
+    const deleteBtn = await screen.findByRole("button", {
+      name: t("note.delete"),
+    });
     await userEvent.click(deleteBtn);
 
-    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole("button", {
-      name: t("common.delete"),
-    });
+    const confirmBtn = within(screen.getByRole("alertdialog")).getByRole(
+      "button",
+      {
+        name: t("common.delete"),
+      },
+    );
     await userEvent.click(confirmBtn);
 
     await waitFor(() => {
