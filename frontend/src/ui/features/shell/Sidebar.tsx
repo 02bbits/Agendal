@@ -64,10 +64,10 @@ export function Sidebar({
       <button
         type="button"
         onClick={onSearch}
-        className="focus-ring flex min-h-10 items-center gap-2 rounded-field bg-fill px-3 text-callout text-ink-tertiary hover:bg-fill-2 w-full text-left cursor-pointer border-0"
+        className="focus-ring flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-field border border-transparent bg-fill px-3 text-left text-callout text-ink-tertiary shadow-none transition-all duration-150 hover:border-separator hover:bg-fill-2/70 hover:text-ink hover:shadow-xs motion-reduce:transition-none"
       >
-        <SearchIcon size={18} />
-        {t("search.placeholder")}
+        <SearchIcon size={18} className="shrink-0 transition-colors" />
+        <span className="flex-1 truncate">{t("search.placeholder")}</span>
       </button>
 
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0">

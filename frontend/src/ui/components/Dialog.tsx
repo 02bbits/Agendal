@@ -38,9 +38,10 @@ export function Dialog({
 
   if (!open || typeof document === "undefined") return null;
 
+  // Above a sheet (daisyUI .modal is 999): "Discard changes?" opens over it
   return createPortal(
     <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
+      className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 px-gutter backdrop-blur-[1px]"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();

@@ -12,7 +12,6 @@ import {
   TaskStoreProvider,
   t,
   useTaskStore,
-  Toast,
   type Project,
   type Task,
 } from "../../../ui";
@@ -68,31 +67,25 @@ function TaskDetailsContainer({
   const currentTask =
     store.tasks.find((t) => t.id === initialTask.id) ?? initialTask;
   return (
-    <>
-      <TaskDetails
-        task={currentTask}
-        onBack={back}
-        navigate={navigate}
-        projects={projects}
-        projectsStatus={projectsStatus}
-        onRetryProjects={onRetryProjects}
-        variant="screen"
-        backLabel={getBackLabel()}
-        weekStart={weekStart}
-        deleteAction={
-          <DeleteTask task={currentTask} onDeleted={back} isScreen />
-        }
-      />
-      {/* "Completed …" with Undo, like the lists */}
-      <Toast toast={store.toast} onDismiss={store.dismissToast} />
-    </>
+    <TaskDetails
+      task={currentTask}
+      onBack={back}
+      navigate={navigate}
+      projects={projects}
+      projectsStatus={projectsStatus}
+      onRetryProjects={onRetryProjects}
+      variant="screen"
+      backLabel={getBackLabel()}
+      weekStart={weekStart}
+      deleteAction={<DeleteTask task={currentTask} onDeleted={back} isScreen />}
+    />
   );
 }
 
 export default function TaskDetailsClient({
   id,
 }: ClientProps): ReactElement | null {
-  const { back, navigate, settings } = useAppFrame();
+  const { back, navigate, settings, showToast } = useAppFrame();
 
   const [task, setTask] = useState<Task | null>(null);
   const [projectList, setProjectList] = useState<Project[]>([]);
@@ -225,6 +218,7 @@ export default function TaskDetailsClient({
       initialTasks={[task]}
       initialProjects={projectList}
       timeFormat={settings.timeFormat}
+      onToast={showToast}
     >
       <TaskDetailsContainer
         initialTask={task}

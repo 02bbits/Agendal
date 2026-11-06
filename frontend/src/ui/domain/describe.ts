@@ -1,25 +1,25 @@
 import { t, type CopyKey } from "../copy";
-import { formatDay, formatTimeRange } from "./dates";
+import type { EntryKind } from "./entries";
 import { describeRepeat } from "./repeat";
+import { rowMeta } from "./rowMeta";
 import type { Project, Task, TimeFormat } from "./types";
 
-/** Accessible name of a task row (A11Y-51): "{title}, {due}, {time}, {project}, {priority} priority, reminder set, repeats {repeat}". */
+/** Accessible name of a task row (A11Y-51): "{title}, {meta parts}, {project}, {priority} priority, reminder set, repeats {repeat}". */
 export function taskAccessibleName(
   task: Task,
   project: Project | null | undefined,
-  opts: { today: string; timeFormat: TimeFormat; showDue: boolean },
+  opts: {
+    today: string;
+    timeFormat: TimeFormat;
+    nowTime?: string;
+    entry?: EntryKind;
+  },
 ): string {
   const parts: string[] = [task.title];
-  if (opts.showDue && task.due_date)
-    parts.push(formatDay(task.due_date, opts.today));
-  if (task.start_time)
-    parts.push(
-      formatTimeRange(
-        task.start_time,
-        task.start_date === task.due_date ? task.due_time : null,
-        opts.timeFormat,
-      ),
-    );
+  const meta = rowMeta(task, opts);
+  for (const part of meta) {
+    parts.push(part.text);
+  }
   parts.push(project ? project.name : t("project.none"));
   if (task.priority === "medium" || task.priority === "high")
     parts.push(

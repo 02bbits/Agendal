@@ -124,8 +124,18 @@ describe("inboxProgress (LV-1)", () => {
   it("picks the next timed task first", () => {
     const tasks = [
       task({ title: "untimed", due_date: TODAY }),
-      task({ title: "later", due_date: TODAY, start_time: "20:00" }),
-      task({ title: "sooner", due_date: TODAY, start_time: "16:00" }),
+      task({
+        title: "later",
+        start_date: TODAY,
+        due_date: TODAY,
+        start_time: "20:00",
+      }),
+      task({
+        title: "sooner",
+        start_date: TODAY,
+        due_date: TODAY,
+        start_time: "16:00",
+      }),
     ];
     expect(nextUp(tasks, TODAY)!.title).toBe("sooner");
   });

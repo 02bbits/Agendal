@@ -59,6 +59,9 @@
   --ag-danger-tint: #f8e4e2;
   --ag-success-tint: #e5efe8;
   --ag-warning-tint: #f5ecdc;
+  --ag-due: #5b7fb5;
+  --ag-due-ink: #2c5187;
+  --ag-due-tint: #eef3fa;
   --ag-bar: rgba(242, 242, 242, 0.94);
   --ag-scrim: rgba(0, 0, 0, 0.32);
 }
@@ -113,6 +116,9 @@
   --ag-danger-tint: #3a2321;
   --ag-success-tint: #1f3326;
   --ag-warning-tint: #3a2e18;
+  --ag-due: #7c9ccb;
+  --ag-due-ink: #b9cdee;
+  --ag-due-tint: #1f2a36;
   --ag-bar: rgba(26, 26, 26, 0.94);
   --ag-scrim: rgba(0, 0, 0, 0.6);
 }
@@ -135,6 +141,9 @@
   --color-danger-tint: var(--ag-danger-tint);
   --color-success-tint: var(--ag-success-tint);
   --color-warning-tint: var(--ag-warning-tint);
+  --color-due: var(--ag-due);
+  --color-due-ink: var(--ag-due-ink);
+  --color-due-tint: var(--ag-due-tint);
   --color-bar: var(--ag-bar);
   --color-scrim: var(--ag-scrim);
 }

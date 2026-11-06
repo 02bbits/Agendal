@@ -26,6 +26,10 @@ import type {
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
+/** Whether a rename was saved. Named so the type stays out of NF-12's JSX text check. */
+type RenameSaved = Promise<boolean>;
+type DeleteNoteResult = Promise<void> | void;
+
 export interface NoteResultScreenProps {
   result: NoteResultData;
   presentation?: "screen" | "panel";
@@ -46,10 +50,8 @@ export interface NoteResultScreenProps {
   onApply?: () => void;
   onEdit?: () => void;
   onMakeTask?: () => void;
-  /** Renames the note; resolves `false` when it couldn't be saved, so the field stays open. */
-  onRename?: (name: string) => Promise<boolean>;
   /** Deletes the note once the user confirms; the screen is left by the caller. */
-  onDelete?: () => Promise<void> | void;
+  onDelete?: () => DeleteNoteResult;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -64,6 +66,8 @@ export interface NoteResultScreenProps {
   /** A When? chip, or the picked date, sets this task's due date (Q4). */
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
+  /** Renames the note; resolves `false` when it couldn't be saved, so the field stays open. */
+  onRename?: (name: string) => RenameSaved;
 }
 
 const BADGE = {

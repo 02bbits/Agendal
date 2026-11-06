@@ -143,17 +143,18 @@ describe("NoteEditor (IM-41)", () => {
     const onClose = vi.fn();
     render(<NoteEditor onClose={onClose} />);
     await userEvent.type(field(), "unsent");
+    // Wait for the popstate rather than a fixed delay: the full suite can be slower than 20 ms
     await act(async () => {
       window.history.back();
-      await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    expect(screen.getByRole("alertdialog")).toBeTruthy();
+    expect(await screen.findByRole("alertdialog")).toBeTruthy();
     expect(onClose).not.toHaveBeenCalled();
     await act(async () => {
       window.history.back();
-      await new Promise((resolve) => setTimeout(resolve, 20));
     });
-    expect(screen.queryByRole("alertdialog")).toBeNull();
+    await vi.waitFor(() =>
+      expect(screen.queryByRole("alertdialog")).toBeNull(),
+    );
     expect(onClose).not.toHaveBeenCalled();
     expect(field()).toBe(screen.getByRole("textbox", { name: "Your note" }));
   });
