@@ -90,7 +90,7 @@ export function AccountScreen({
   };
 
   return (
-    <div className="w-full max-w-[960px] pb-16">
+    <div className="mx-auto w-full max-w-[960px] pb-16">
       <NavBar
         backLabel={t("common.back")}
         onBack={onBack}
@@ -112,7 +112,7 @@ export function AccountScreen({
         </div>
       </section>
 
-      <div className="flex flex-col md:flex-row md:items-start md:gap-10">
+      <div className="flex flex-col md:flex-row md:items-start md:gap-10 md:justify-center">
         {/* Left sub-taskbar */}
         <nav
           className="mb-6 w-full md:mb-0 md:w-60 md:shrink-0 md:border-r md:border-separator/50 md:pr-8 md:py-1"
