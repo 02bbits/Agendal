@@ -78,6 +78,17 @@ export function UpcomingClient() {
     } catch {}
   }, []);
 
+  useEffect(() => {
+    if (viewMode === "board") {
+      document.documentElement.dataset.boardView = "true";
+    } else {
+      delete document.documentElement.dataset.boardView;
+    }
+    return () => {
+      delete document.documentElement.dataset.boardView;
+    };
+  }, [viewMode]);
+
   const date = useSyncExternalStore(
     subscribeHeaderDate,
     () => headerDate(),
@@ -199,6 +210,70 @@ export function UpcomingClient() {
     };
   }, []);
 
+  const isFull = settings.pageView === "full";
+
+  const filterChipsMd = (
+    <ChipGroup
+      label={t("list.filter_label")}
+      value={filter}
+      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
+      size="md"
+      options={[
+        { value: "all", label: t("list.filter_all") },
+        {
+          value: "scheduled",
+          label: t("list.filter_scheduled"),
+          icon: <ClockIcon size={16} />,
+        },
+        {
+          value: "due",
+          label: t("list.filter_due"),
+          icon: <CalendarIcon size={16} />,
+        },
+      ]}
+    />
+  );
+
+  const filterChipsSm = (
+    <ChipGroup
+      label={t("list.filter_label")}
+      value={filter}
+      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
+      options={[
+        { value: "all", label: t("list.filter_all") },
+        {
+          value: "scheduled",
+          label: t("list.filter_scheduled"),
+          icon: <ClockIcon size={14} />,
+        },
+        {
+          value: "due",
+          label: t("list.filter_due"),
+          icon: <CalendarIcon size={14} />,
+        },
+      ]}
+    />
+  );
+
+  const headerControls = (
+    <div className="flex items-center gap-3">
+      {isFull && <div className="hidden md:block">{filterChipsMd}</div>}
+      <UpcomingViewSwitch
+        viewMode={viewMode}
+        onChange={handleViewModeChange}
+      />
+      <Button
+        variant="primary"
+        pill
+        className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
+        onClick={openNewTask}
+      >
+        <PlusIcon size={16} />
+        {t("task.new")}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="pb-8">
       <ScreenHeader
@@ -206,71 +281,22 @@ export function UpcomingClient() {
         title={t("nav.upcoming")}
         accountInitial={accountInitial}
         navigate={navigate}
-        action={
-          <div className="flex items-center gap-3">
-            <div className="hidden md:block">
-              <ChipGroup
-                label={t("list.filter_label")}
-                value={filter}
-                onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-                size="md"
-                options={[
-                  { value: "all", label: t("list.filter_all") },
-                  {
-                    value: "scheduled",
-                    label: t("list.filter_scheduled"),
-                    icon: <ClockIcon size={16} />,
-                  },
-                  {
-                    value: "due",
-                    label: t("list.filter_due"),
-                    icon: <CalendarIcon size={16} />,
-                  },
-                ]}
-              />
-            </div>
-            <UpcomingViewSwitch
-              viewMode={viewMode}
-              onChange={handleViewModeChange}
-            />
-            <Button
-              variant="primary"
-              pill
-              className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
-              onClick={openNewTask}
-            >
-              <PlusIcon size={16} />
-              {t("task.new")}
-            </Button>
-          </div>
-        }
+        action={isFull ? headerControls : undefined}
       >
         {subtitle && (
           <p className="m-0 mt-1 text-footnote text-ink-secondary">
             {subtitle}
           </p>
         )}
-        <div className="mt-4 md:hidden">
-          <ChipGroup
-            label={t("list.filter_label")}
-            value={filter}
-            onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-            options={[
-              { value: "all", label: t("list.filter_all") },
-              {
-                value: "scheduled",
-                label: t("list.filter_scheduled"),
-                icon: <ClockIcon size={14} />,
-              },
-              {
-                value: "due",
-                label: t("list.filter_due"),
-                icon: <CalendarIcon size={14} />,
-              },
-            ]}
-          />
-        </div>
+        {isFull && <div className="mt-4 md:hidden">{filterChipsSm}</div>}
       </ScreenHeader>
+
+      {!isFull && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          {filterChipsMd}
+          {headerControls}
+        </div>
+      )}
 
       {status === "loading" && (
         <div
@@ -316,7 +342,7 @@ export function UpcomingClient() {
             weekStart={settings.weekStart}
             initialView={() => viewRef.current}
             onViewChange={(view) => {
-              viewRef.current = view;
+              viewRef.current = { anchor: view.anchor, day: "" };
             }}
             onAddTask={(date) => {
               viewRef.current = { anchor: date, day: date };
@@ -326,6 +352,7 @@ export function UpcomingClient() {
           />
           {isWide && selectedTaskId && (
             <TaskPanel
+              variant={settings.pageView === "full" ? "aside" : "popup"}
               taskId={selectedTaskId}
               onClose={closePanel}
               projects={projectList}

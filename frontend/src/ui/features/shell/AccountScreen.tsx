@@ -14,12 +14,14 @@ import { Switch } from "../../components/Switch";
 import type { TimeFormat, WeekStart } from "../../domain/types";
 
 export type ThemeSetting = "system" | "light" | "dark";
+export type PageViewMode = "flat" | "full";
 
 export interface AccountSettings {
   theme: ThemeSetting;
   weekStart: WeekStart;
   timeFormat: TimeFormat;
   rememberDevice: boolean;
+  pageView?: PageViewMode;
 }
 
 export interface AccountScreenProps {
@@ -179,6 +181,21 @@ export function AccountScreen({
                     { value: "system", label: t("app.theme_system") },
                     { value: "light", label: t("app.theme_light") },
                     { value: "dark", label: t("app.theme_dark") },
+                  ]}
+                />
+                <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
+                  {t("app.page_view")}
+                </h2>
+                <Segmented
+                  label={t("app.page_view")}
+                  value={settings.pageView ?? "flat"}
+                  onChange={(pageView) =>
+                    onChange({ pageView: pageView as PageViewMode })
+                  }
+                  size="lg"
+                  options={[
+                    { value: "flat", label: t("app.view_flat") },
+                    { value: "full", label: t("app.view_full") },
                   ]}
                 />
                 <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">

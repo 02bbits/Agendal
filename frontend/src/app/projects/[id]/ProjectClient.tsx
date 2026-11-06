@@ -333,6 +333,7 @@ function ProjectContent({
   onDeleteProject?: (action: ProjectTaskAction) => Promise<void>;
   navigate: Navigate;
 }) {
+  const { settings } = useAppFrame();
   const store = useTaskStore();
   const {
     selectedTaskId,
@@ -440,6 +441,7 @@ function ProjectContent({
       />
       {isWide && selectedTaskId && (
         <TaskPanel
+          variant={settings.pageView === "full" ? "aside" : "popup"}
           taskId={selectedTaskId}
           onClose={handleClosePanel}
           projects={allProjects.length > 0 ? allProjects : [project]}

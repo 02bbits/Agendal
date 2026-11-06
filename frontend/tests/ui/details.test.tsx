@@ -1160,4 +1160,22 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />));
     await expectAxeCleanInBothThemes();
   });
+
+  it("TaskPanel popup variant renders centered modal and closes on backdrop click", async () => {
+    const t1 = task({ id: "t-popup", title: "Popup Task" });
+    const ctx = setup([t1]);
+    const onClose = vi.fn();
+    render(
+      ctx.wrap(<TaskPanel variant="popup" taskId={t1.id} onClose={onClose} />),
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeTruthy();
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+
+    const backdrop = screen.getByTestId("task-panel-backdrop");
+    await userEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(1);
+    await expectAxeCleanInBothThemes();
+  });
 });

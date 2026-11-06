@@ -150,6 +150,7 @@ function InboxContent() {
           />
           {isWide && selectedTaskId && (
             <TaskPanel
+              variant={settings.pageView === "full" ? "aside" : "popup"}
               taskId={selectedTaskId}
               onClose={closePanel}
               projects={projectList}

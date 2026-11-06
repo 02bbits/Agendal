@@ -78,6 +78,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   document.cookie = "XSRF-TOKEN=test-token";
+  window.localStorage.setItem("agendal.page_view", "full");
   mockMatchMedia(true);
 });
 

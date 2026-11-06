@@ -77,12 +77,14 @@ function OpenedTask({
   onClose: () => void;
   weekStart: "mon" | "sun";
 }) {
+  const { settings } = useAppFrame();
   const store = useTaskStore();
   const task = store.tasks.find((task) => task.id === id);
   if (wide)
     return (
       <TaskPanel
         modal
+        variant={settings.pageView === "full" ? "aside" : "popup"}
         taskId={id}
         onClose={onClose}
         projects={store.projects}

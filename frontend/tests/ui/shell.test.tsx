@@ -135,6 +135,7 @@ describe("AccountScreen", () => {
       weekStart: "mon",
       timeFormat: "24h",
       rememberDevice: true,
+      pageView: "flat",
     });
     return (
       <main>
@@ -170,6 +171,20 @@ describe("AccountScreen", () => {
     expect(document.activeElement).toBe(
       within(appearance).getByRole("radio", { name: "Light" }),
     );
+  });
+
+  it("changes page view between Flat view and Full width", async () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const pageView = screen.getByRole("radiogroup", { name: "Page view" });
+    await userEvent.click(
+      within(pageView).getByRole("radio", { name: "Full width" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ pageView: "full" });
+    await userEvent.click(
+      within(pageView).getByRole("radio", { name: "Flat view" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ pageView: "flat" });
   });
 
   it("toggles Remember me with a switch", async () => {
