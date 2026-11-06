@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-06
+
+- `08-project/tasks.md` IM-50: now also covers [UX-42](01-product/ux-standards.md#ux-42) (the "new version" toast needs a service worker to exist) and lists T-AP-105. The Lighthouse repeat-load check is run by hand and reported in the PR; Lighthouse CI stays with IM-63.
+
 ## 2026-11-04
 
 - `05-quality/nfr.md` NF-13, `03-modules/RV-review-control.md`: general API limit raised from 120/min per user to 300/min plus a 20/s burst cap, per user and per IP for guests.
