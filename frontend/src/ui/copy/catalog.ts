@@ -157,6 +157,8 @@ export const catalog = {
   "task.due_on": "Due {date}",
   "task.started_on": "Started {date}",
   "task.starts_at": "Start at {time}",
+  "task.starts_today": "Starts today",
+  "task.due_at_time": "Due at {time}",
   "list.progress": "{done} of {total} done",
   "list.encourage_one": "Nice work!",
   "list.encourage_progress": "{done} down, {left} to go!",

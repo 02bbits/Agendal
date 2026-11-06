@@ -165,6 +165,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `task.due_on` † | Due {date} | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 | `task.started_on` † | Started {date} | List row meta line on the due day ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 | `task.starts_at` † | Start at {time} | List row meta line on the start day ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.starts_today` † | Starts today | List row meta line on the start day without time ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.due_at_time` † | Due at {time} | List row meta line for same-day start and due ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 
 ## Lists and search (LV)
 

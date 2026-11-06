@@ -49,26 +49,6 @@ export function NewTaskDates({
   return (
     <div className="flex flex-col">
       <SettingsRow
-        icon={<ClockIcon size={18} />}
-        label={t("task.due_time")}
-        control={
-          <Picker<string>
-            id="new-task-due-time"
-            variant="row"
-            label={t("task.due_time")}
-            value={dueTime}
-            options={buildTimeOptions(
-              sameDay ? startTime || null : null,
-              dueTime,
-              timeFormat,
-            )}
-            disabled={!dueDate}
-            onChange={onDueTimeChange}
-            ariaDescribedBy={describedBy}
-          />
-        }
-      />
-      <SettingsRow
         icon={<CalendarIcon size={18} />}
         label={t("task.start_date")}
         error={error ? t(error) : undefined}
@@ -95,6 +75,26 @@ export function NewTaskDates({
               ariaDescribedBy={describedBy}
             />
           </div>
+        }
+      />
+      <SettingsRow
+        icon={<ClockIcon size={18} />}
+        label={t("task.due_time")}
+        control={
+          <Picker<string>
+            id="new-task-due-time"
+            variant="row"
+            label={t("task.due_time")}
+            value={dueTime}
+            options={buildTimeOptions(
+              sameDay ? startTime || null : null,
+              dueTime,
+              timeFormat,
+            )}
+            disabled={!dueDate}
+            onChange={onDueTimeChange}
+            ariaDescribedBy={describedBy}
+          />
         }
       />
       <SettingsRow

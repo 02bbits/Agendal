@@ -18,10 +18,10 @@ describe("rowMeta", () => {
       const opts = { today: TODAY_WED_18_NOV, timeFormat: "24h" } as const;
       expect(
         rowMeta(t, { ...opts, entry: "start" }).map((p) => p.text),
-      ).toEqual(["10:00 – 11:00"]);
+      ).toEqual(["Start at 10:00", "Due at 11:00"]);
       expect(rowMeta(t, { ...opts, entry: "due" }).map((p) => p.text)).toEqual([
-        "10:00 – 11:00",
-        "Due",
+        "Start at 10:00",
+        "Due at 11:00",
       ]);
     });
 
@@ -109,8 +109,8 @@ describe("rowMeta", () => {
         timeFormat: "24h",
       });
       expect(parts).toEqual([
-        { text: "10:00 – 11:00", tone: "plain" },
-        { text: "Due", tone: "due" },
+        { text: "Start at 10:00", tone: "plain" },
+        { text: "Due at 11:00", tone: "due" },
       ]);
     });
 
@@ -174,7 +174,7 @@ describe("rowMeta", () => {
       ).toEqual([{ text: `Due ${expectedDay16}`, tone: "late" }]);
     });
 
-    it("case 3: start_date === due_date with no start_time → Due", () => {
+    it("case 3: start_date === due_date with no times in future has empty parts (no lone Due)", () => {
       const t = task({
         title: "Same day untimed",
         start_date: "2026-11-20",
@@ -182,7 +182,30 @@ describe("rowMeta", () => {
       });
       expect(
         rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
-      ).toEqual([{ text: "Due", tone: "due" }]);
+      ).toEqual([]);
+    });
+
+    it("case 3: start_date === due_date === today with no times → Starts today", () => {
+      const t = task({
+        title: "Same day today untimed",
+        start_date: TODAY_WED_18_NOV,
+        due_date: TODAY_WED_18_NOV,
+      });
+      expect(
+        rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
+      ).toEqual([{ text: "Starts today", tone: "plain" }]);
+    });
+
+    it("case 3: start_date === due_date with start_time and no due_time → Start at {time} without lone Due", () => {
+      const t = task({
+        title: "Start at 17:00 without due time",
+        start_date: "2026-11-20",
+        due_date: "2026-11-20",
+        start_time: "17:00",
+      });
+      expect(
+        rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
+      ).toEqual([{ text: "Start at 17:00", tone: "plain" }]);
     });
 
     it("case 4: due_date === today with due_time and nowTime >= due_time has late tone", () => {

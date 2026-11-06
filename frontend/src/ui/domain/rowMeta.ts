@@ -52,19 +52,22 @@ export function rowMeta(
       const parts: MetaPart[] = [];
       if (task.start_time) {
         parts.push({
-          text: formatTimeRange(
-            task.start_time,
-            task.due_time,
-            opts.timeFormat,
-          ),
+          text: t("task.starts_at", { time: time(task.start_time) }),
           tone: "plain",
         });
       }
-      // A normal card (Scheduled) has no due word
-      if (opts.entry !== "start") {
+      if (task.due_time) {
+        const text = task.start_time
+          ? t("task.due_at_time", { time: time(task.due_time) })
+          : t("task.due_at", { time: time(task.due_time) });
         parts.push({
-          text: t("task.due"),
-          tone: task.done ? "plain" : "due",
+          text,
+          tone: task.done ? "plain" : opts.entry !== "start" ? "due" : "plain",
+        });
+      } else if (!task.start_time && !opts.entry && task.start_date === opts.today) {
+        parts.push({
+          text: t("task.starts_today"),
+          tone: "plain",
         });
       }
       return parts;
@@ -85,10 +88,13 @@ export function rowMeta(
         tone = "plain";
       }
 
-      const firstText = task.due_time
-        ? t("task.due_at", { time: time(task.due_time) })
-        : t("task.due");
-      const parts: MetaPart[] = [{ text: firstText, tone }];
+      const parts: MetaPart[] = [];
+      if (task.due_time) {
+        parts.push({
+          text: t("task.due_at", { time: time(task.due_time) }),
+          tone,
+        });
+      }
       if (task.start_date) {
         parts.push({
           text: t("task.started_on", { date: day(task.start_date) }),
@@ -125,6 +131,11 @@ export function rowMeta(
             : timeStr;
         parts.push({
           text,
+          tone: "plain",
+        });
+      } else if (!opts.entry && task.start_date === opts.today) {
+        parts.push({
+          text: t("task.starts_today"),
           tone: "plain",
         });
       }
