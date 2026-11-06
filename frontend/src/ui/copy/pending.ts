@@ -23,10 +23,6 @@ export const pending = {
   "note.discard_edit_body": "The saved note will stay as it was.",
   "note.rename": "Rename note",
   "note.name_label": "Note name",
-  "note.delete": "Delete note",
-  "note.delete_title": "Delete “{name}”?",
-  "note.delete_body": "This note will be deleted.",
-  "note.deleted": "Deleted “{name}”",
   "note.discard_review_title": "Discard this review?",
   "note.discard_review_body":
     "Nothing has been applied yet. The note stays in Pending.",
