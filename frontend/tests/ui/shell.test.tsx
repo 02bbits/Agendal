@@ -117,7 +117,9 @@ describe("ScreenHeader", () => {
     expect(
       screen.getByRole("link", { name: "Search" }).getAttribute("href"),
     ).toBe("/search");
-    expect(screen.getByRole("link", { name: "Account" }).textContent).toBe("E");
+    expect(
+      screen.getByRole("link", { name: /Settings|Account/ }).textContent,
+    ).toBe("E");
     await expectAxeCleanInBothThemes();
   });
 });

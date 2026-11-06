@@ -31,7 +31,7 @@ export const pending = {
   "nav.projects": "Projects",
   "nav.notes": "Notes",
   "nav.search": "Search",
-  "nav.account": "Account",
+  "nav.account": "Settings",
   "nav.tabs": "Main",
   "nav.sidebar": "Menu",
   "app.name": "Agendal",

@@ -90,7 +90,7 @@ export function AccountScreen({
   };
 
   return (
-    <div className="w-full max-w-[820px] pb-12">
+    <div className="w-full max-w-[960px] pb-16">
       <NavBar
         backLabel={t("common.back")}
         onBack={onBack}
@@ -112,10 +112,10 @@ export function AccountScreen({
         </div>
       </section>
 
-      <div className="flex flex-col md:flex-row md:items-start md:gap-8">
+      <div className="flex flex-col md:flex-row md:items-start md:gap-10">
         {/* Left sub-taskbar */}
         <nav
-          className="mb-6 w-full md:mb-0 md:w-52 md:shrink-0 md:border-r md:border-separator/50 md:pr-6 md:py-1"
+          className="mb-6 w-full md:mb-0 md:w-60 md:shrink-0 md:border-r md:border-separator/50 md:pr-8 md:py-1"
           aria-label={t("nav.account")}
         >
           <div
@@ -138,7 +138,7 @@ export function AccountScreen({
                   onClick={() => setTab(item.value)}
                   onKeyDown={(e) => onTabKeyDown(e, index)}
                   className={cx(
-                    "focus-ring group flex flex-1 cursor-pointer items-center gap-2.5 rounded-xl px-3.5 py-2.5 text-left text-callout font-medium transition-colors md:w-full md:flex-none",
+                    "focus-ring group flex flex-1 cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 text-left text-body font-medium transition-colors md:w-full md:flex-none",
                     checked
                       ? "bg-surface font-semibold text-ink shadow-xs md:bg-fill"
                       : "text-ink-secondary hover:bg-fill/40 hover:text-ink",
@@ -163,58 +163,62 @@ export function AccountScreen({
         </nav>
 
         {/* Right content panel */}
-        <div className="min-w-0 flex-1 max-w-[520px]">
+        <div className="min-w-0 flex-1 max-w-[680px]">
           {tab === "general" && (
             <>
-              <h2 className="text-overline font-semibold uppercase mb-2 text-ink-secondary">
+              <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
                 {t("app.appearance")}
               </h2>
               <Segmented
                 label={t("app.appearance")}
                 value={settings.theme}
                 onChange={(theme) => onChange({ theme })}
+                size="lg"
                 options={[
                   { value: "system", label: t("app.theme_system") },
                   { value: "light", label: t("app.theme_light") },
                   { value: "dark", label: t("app.theme_dark") },
                 ]}
               />
-              <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
+              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
                 {t("app.week_start")}
               </h2>
               <Segmented
                 label={t("app.week_start")}
                 value={settings.weekStart}
                 onChange={(weekStart) => onChange({ weekStart })}
+                size="lg"
                 options={[
                   { value: "mon", label: t("app.week_mon") },
                   { value: "sun", label: t("app.week_sun") },
                 ]}
               />
-              <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
+              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
                 {t("app.time_format")}
               </h2>
               <Segmented
                 label={t("app.time_format")}
                 value={settings.timeFormat}
                 onChange={(timeFormat) => onChange({ timeFormat })}
+                size="lg"
                 options={[
                   { value: "24h", label: t("app.time_24h") },
                   { value: "12h", label: t("app.time_12h") },
                 ]}
               />
 
-              <h2 className="text-overline font-semibold uppercase mt-6 mb-2 text-ink-secondary">
+              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
                 {t("app.this_device")}
               </h2>
-              <div className="flex flex-col">
+              <div className="flex flex-col rounded-2xl border border-separator/40 bg-fill/30 px-4 py-1 divide-y divide-separator/30">
                 <Switch
                   label={t("app.remember_device")}
                   checked={settings.rememberDevice}
                   onChange={(rememberDevice) => onChange({ rememberDevice })}
+                  className="border-b-0 py-2.5 min-h-12"
                 />
                 {remindersStatus && (
-                  <div className="flex min-h-11 w-full items-center gap-3 border-b border-separator py-1 text-left text-body text-ink">
+                  <div className="flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink">
                     <span
                       className="inline-flex text-ink-secondary"
                       aria-hidden="true"
@@ -230,7 +234,7 @@ export function AccountScreen({
                 {onInstall && (
                   <button
                     type="button"
-                    className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-11 w-full items-center gap-3 border-b border-separator py-1 text-left text-body text-ink"
+                    className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink"
                     onClick={onInstall}
                   >
                     <span
@@ -248,10 +252,10 @@ export function AccountScreen({
                 )}
               </div>
 
-              <div className="mt-8 flex flex-col items-center gap-3">
+              <div className="mt-10 flex flex-col items-center gap-3">
                 <Button
                   variant="destructive"
-                  className="w-full max-w-[320px]"
+                  className="w-full max-w-[360px] h-12 min-h-12 text-body font-semibold rounded-xl"
                   onClick={onSignOut}
                 >
                   {t("app.sign_out")}
@@ -259,7 +263,7 @@ export function AccountScreen({
                 {onSignOutEverywhere && (
                   <button
                     type="button"
-                    className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill"
+                    className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-3 py-1.5 text-callout font-semibold text-primary hover:bg-fill"
                     onClick={onSignOutEverywhere}
                   >
                     {t("auth.signout_everywhere")}
