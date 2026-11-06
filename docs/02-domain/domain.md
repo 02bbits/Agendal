@@ -61,7 +61,7 @@ The note is the centre of v2: every assistant action comes from one note, and th
 | text | What the user wrote, or the checked text from dictation or a file |
 | name | Generated name ([naming rules](business-rules.md#naming-a-note-nu-6)) |
 | source file name | Set when the note came from a file. The file itself is not kept ([NF-9](../05-quality/nfr.md#nf-9)) |
-| status | `pending`, `new`, `done`, `confirm`, `followup`, `kept` ([state transitions](#state-transitions)) |
+| status | `pending`, `new`, `done`, `confirm`, `followup` ([state transitions](#state-transitions)) |
 | plan | What the assistant intends to do (below) |
 | applied | The list of changes actually made (below) |
 | created at, processed at | Timestamps. Pending notes have no `processed at` until reconnect |
@@ -160,12 +160,11 @@ All three are due within 7 days, so the note is named **"This week"**. 3 changes
 
 | Status | Meaning | Next |
 |---|---|---|
-| `pending` | Saved offline, not yet read; or applied, then reversed by Undo all | Processed on reconnect → `new`; after Undo all → `done` (redo from the toast, within 10 s, or a second Undo all), `new` (Edit note) |
+| `pending` | Saved offline, not yet read; or applied, then reversed by Undo all | Processed on reconnect → `new`; after Undo all → `done` (redo from the toast, within 10 s), `new` (Edit note) |
 | `new` | Being processed | `done`, `confirm` or `followup` |
 | `done` | Plan applied | `pending` (Undo all), `new` (Edit note) |
-| `confirm` | Plan waits for Apply changes | `done` (Apply), `kept` (Cancel), `new` (Edit note) |
+| `confirm` | Plan waits for Apply changes | `done` (Apply), `new` (Edit note) |
 | `followup` | Nothing actionable found | `done` (Keep it as task), `new` (Edit the note) |
-| `kept` | Saved as a note only, after Cancel in Check this first | `new` (Edit note) |
 
 ```mermaid
 stateDiagram-v2
@@ -176,14 +175,12 @@ stateDiagram-v2
     new --> confirm : any delete or 5+ changes
     new --> followup : nothing actionable
     confirm --> done : Apply changes
-    confirm --> kept : Cancel
     followup --> done : Keep it as task
     done --> pending : Undo all
-    pending --> done : redo (toast, 10 s) or a second Undo all
+    pending --> done : redo (toast, 10 s)
     done --> new : Edit note
     confirm --> new : Edit note
     followup --> new : Edit note
-    kept --> new : Edit note
     pending --> new : Edit note
 ```
 

@@ -92,9 +92,7 @@ export function NotesScreen({
                 ? t("notes.needs")
                 : note.status === "done"
                   ? t("notes.made")
-                  : note.status === "kept"
-                    ? t("note.kept_label")
-                    : null;
+                  : null;
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"

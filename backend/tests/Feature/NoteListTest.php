@@ -24,14 +24,13 @@ function savedListNote(int $owner, string $status = 'confirm'): Note
 }
 
 it('lists only the owners notes and counts with status filters', function () {
-    foreach (['confirm', 'followup', 'done', 'kept', 'pending'] as $status) {
+    foreach (['confirm', 'followup', 'done', 'pending'] as $status) {
         savedListNote($this->user->id, $status);
     }
     savedListNote(User::factory()->create()->id);
-    $this->getJson('/api/v1/notes')->assertOk()->assertJsonCount(5, 'items')->assertJsonPath('total', 5)->assertJsonPath('needs_count', 3);
+    $this->getJson('/api/v1/notes')->assertOk()->assertJsonCount(4, 'items')->assertJsonPath('total', 4)->assertJsonPath('needs_count', 3);
     $this->getJson('/api/v1/notes?filter=needs')->assertOk()->assertJsonCount(3, 'items');
     $this->getJson('/api/v1/notes?filter=made')->assertOk()->assertJsonCount(1, 'items')->assertJsonPath('items.0.status', 'done');
-    $this->getJson('/api/v1/notes?filter=kept')->assertOk()->assertJsonCount(1, 'items')->assertJsonPath('items.0.status', 'kept');
     $this->getJson('/api/v1/notes?filter=other')->assertUnprocessable();
 });
 

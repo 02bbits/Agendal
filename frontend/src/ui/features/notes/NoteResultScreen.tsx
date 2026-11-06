@@ -41,6 +41,8 @@ export interface NoteResultScreenProps {
    */
   live?: Readonly<Record<string, Task | null>>;
   today: string;
+  /** The current instant, for the 30-day undo window (RV-E2). */
+  now: Date;
   timeZone: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
@@ -102,6 +104,7 @@ export function NoteResultScreen({
   onRestoreOmission,
   live = {},
   today,
+  now,
   timeZone,
   timeFormat,
   weekStart,
@@ -145,9 +148,6 @@ export function NoteResultScreen({
       onClose={() => setDeleting(false)}
       actions={
         <>
-          <Button onClick={() => setDeleting(false)}>
-            {t("common.cancel")}
-          </Button>
           <Button
             variant="destructive"
             onClick={async () => {
@@ -156,6 +156,9 @@ export function NoteResultScreen({
             }}
           >
             {t("common.delete")}
+          </Button>
+          <Button onClick={() => setDeleting(false)}>
+            {t("common.cancel")}
           </Button>
         </>
       }
@@ -231,19 +234,20 @@ export function NoteResultScreen({
   const updated = count("updated");
   const deleted = count("deleted");
   const confirming = note.status === "confirm";
-  const undone = note.status === "pending";
+  // Pending (undone) notes applied nothing: no counts, rows stay a record
+  const notApplied = note.status === "pending";
   // RV-E2: after 30 days the note stays, but Undo all is gone
-  const expired = undoExpired(written.date, today);
+  const expired = undoExpired(note.processed_at, now);
   const overline = confirming
     ? t("note.review_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-        undone && t("notes.needs"),
-        !undone && created > 0 && tc("note.made", created),
-        !undone &&
+        notApplied && t("notes.needs"),
+        !notApplied && created > 0 && tc("note.made", created),
+        !notApplied &&
           updated > 0 &&
           t("note.overline_updated", { count: updated }),
-        !undone &&
+        !notApplied &&
           deleted > 0 &&
           t("note.overline_deleted", { count: deleted }),
       ]
@@ -355,7 +359,7 @@ export function NoteResultScreen({
         <section className="overflow-hidden rounded-box bg-surface">
           {confirming && (
             <p className="m-0 border-b border-separator px-4 pt-3 pb-2.5 text-overline font-semibold uppercase text-ink-secondary">
-              {t("note.planned_count", { count: changes.length })}
+              {tc("note.planned_count", changes.length)}
             </p>
           )}
           <ul className="m-0 list-none p-0">
@@ -369,7 +373,7 @@ export function NoteResultScreen({
                     ? onOpenTask
                     : undefined
                 }
-                undone={undone}
+                notApplied={notApplied}
                 today={today}
                 timeFormat={timeFormat}
                 weekStart={weekStart}
@@ -420,7 +424,7 @@ export function NoteResultScreen({
         </section>
       )}
 
-      {changes.length > 0 && !confirming && (
+      {changes.length > 0 && !confirming && !notApplied && (
         <p className="mt-4 mb-0 text-footnote text-ink-secondary">
           {t("note.result_hint")}
         </p>
@@ -457,6 +461,18 @@ export function NoteResultScreen({
           </>
         ) : (
           <>
+            {/* RV-E17: past the undo window a done note's changes can't be undone, so it can't be edited */}
+            {(note.status !== "done" || !expired) && onEdit && (
+              <Button
+                variant="secondary"
+                size="lg"
+                fullWidth
+                disabled={offline || busy}
+                onClick={onEdit}
+              >
+                {t("note.edit")}
+              </Button>
+            )}
             {note.status === "done" &&
               changes.length > 0 &&
               (expired ? (
@@ -518,7 +534,7 @@ interface ChangeRowProps {
   /** Check this first: the task isn't made yet, so the row opens it here instead of its page. */
   onOpen?: (task: Task) => void;
   /** The note was undone: rows stay as a record and stop opening (RV §2.1) */
-  undone: boolean;
+  notApplied: boolean;
   today: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
@@ -532,7 +548,7 @@ function ChangeRow({
   change,
   current,
   onOpen,
-  undone,
+  notApplied,
   today,
   timeFormat,
   weekStart,
@@ -544,8 +560,8 @@ function ChangeRow({
     preview && change.kind === "created" ? t("note.preview_new") : t(badge.key);
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
-  const gone = current === null;
-  const opens = change.kind !== "deleted" && !gone && !undone;
+  const gone = current === null && !notApplied;
+  const opens = change.kind !== "deleted" && !gone && !notApplied;
 
   // Rescheduled on Check this first: the new date and time replace what the note said
   const moved =
@@ -596,7 +612,11 @@ function ChangeRow({
             .filter(Boolean)
             .join(" · ");
   const askWhen =
-    !preview && change.kind === "created" && !gone && !undone && !task.due_date;
+    !preview &&
+    change.kind === "created" &&
+    !gone &&
+    !notApplied &&
+    !task.due_date;
 
   const body = (
     <>
@@ -647,7 +667,7 @@ function ChangeRow({
         <div
           className={cx(
             "flex min-h-[52px] items-start gap-3 px-3.5 py-3",
-            (gone || undone) && "opacity-60",
+            (gone || notApplied) && "opacity-60",
           )}
         >
           {body}

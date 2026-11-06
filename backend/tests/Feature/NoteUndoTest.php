@@ -95,12 +95,12 @@ it('refuses after 30 days and a note that is not done (RV-E2)', function () {
     expect(Task::count())->toBe(1);
 });
 
-it('answers a second undo by redoing back to done', function () {
+it('answers a second undo with the note already pending (T-RV-105, RV-E5)', function () {
     $id = makeNote('call mum tomorrow')['note']['id'];
     $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'pending');
     expect(Task::count())->toBe(0);
-    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'done');
-    expect(Task::count())->toBe(1)->and(Note::findOrFail($id)->status)->toBe('done');
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'pending');
+    expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('pending');
 });
 
 it('changes nothing when a failure hits mid-undo (T-RV-13, NF-11)', function () {

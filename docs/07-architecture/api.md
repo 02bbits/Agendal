@@ -26,7 +26,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /notes` | Submit a note `{client_id, text, written_at, timezone, source_file_name?}` → `{status, name, changes \| plan}`. Full contract: [NU module](../03-modules/NU-note-understanding.md#7-api-contract) | [NC-2](../03-modules/NC-note-capture.md#nc-2), [NC-6](../03-modules/NC-note-capture.md#nc-6), [NU-1](../03-modules/NU-note-understanding.md#nu-1)–6, [RV-1](../03-modules/RV-review-control.md#rv-1) |
 | `DELETE /notes/{id}` | Delete a note; `204`, `404` for another user's note. Its tasks are kept with `source_note_id` cleared | [RV §2.7](../03-modules/RV-review-control.md#27-delete-note) |
 | `GET /notes`, `GET /notes/{id}` | Notes tab and a note's result | [RV-4](../03-modules/RV-review-control.md#rv-4), [RV-1](../03-modules/RV-review-control.md#rv-1) |
-| `POST /notes/{id}/apply` · `/cancel` | Confirm or cancel a `confirm` plan | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
+| `POST /notes/{id}/apply` | Confirm a `confirm` plan | [NU-5](../03-modules/NU-note-understanding.md#nu-5) |
 | `POST /notes/{id}/make-task` | Keep a `followup` as a task (Edit the note uses `PUT /notes/{id}`) | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `PUT /notes/{id}` | Re-plan a `followup` in place with `{text, timezone}`; uses the server's edit time and the notes rate limiter. Editing applied notes is IM-47 | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
@@ -131,6 +131,6 @@ The frontend's shared `describeRepeat(task, locale)` formats `repeat`, `repeat_r
 
 ### Saved Notes and preview exclusions
 
-`GET /notes?cursor=&limit=20&filter=all` returns owner-scoped `{items, next_cursor, total, needs_count}`. Items are summaries (id, status, name, a 140-character excerpt, created/updated/deleted counts, written_at and source_file_name), ordered by written_at then id descending. Filters are all, made, needs (confirm/followup/pending), and kept. Limit is 1–50.
+`GET /notes?cursor=&limit=20&filter=all` returns owner-scoped `{items, next_cursor, total, needs_count}`. Items are summaries (id, status, name, a 140-character excerpt, created/updated/deleted counts, written_at and source_file_name), ordered by written_at then id descending. Filters are all, made, needs (confirm/followup/pending). Limit is 1–50.
 
 `POST /notes/{id}/apply` accepts optional `exclude: [ref]` alongside `edits`. Exclusions are stored in the plan audit data and never applied or included in Undo. Unknown or duplicate refs, or excluding every proposed change, return 422 without a write.

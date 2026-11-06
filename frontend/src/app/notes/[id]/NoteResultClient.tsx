@@ -171,7 +171,7 @@ function ResultContainer({
   weekStart: "mon" | "sun";
   showToast: ReturnType<typeof useAppFrame>["showToast"];
   editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
-  edits?: Parameters<typeof confirmNote>[2];
+  edits?: Parameters<typeof confirmNote>[1];
   projectList: Project[];
   presentation: "screen" | "panel";
   closeGuardRef?: ClientProps["closeGuardRef"];
@@ -238,7 +238,7 @@ function ResultContainer({
   // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, "apply", edits, excluded);
+    const outcome = await confirmNote(result.note.id, edits, excluded);
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
@@ -269,8 +269,6 @@ function ResultContainer({
   const edit = () => {
     editFollowupNote(result.note);
   };
-  // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
-  // nothing is made until Apply (RV-3)
   const remove = async () => {
     setBusy(true);
     let outcome: Awaited<ReturnType<typeof deleteNote>>;
@@ -286,6 +284,8 @@ function ResultContainer({
     back();
   };
 
+  // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
+  // nothing is made until Apply (RV-3)
   const makeTask = async () => {
     setBusy(true);
     const outcome = await makeFollowupTask(result.note.id);
@@ -317,6 +317,7 @@ function ResultContainer({
           onRestoreOmission={() => setExcluded((values) => values.slice(0, -1))}
           live={live}
           today={store.today}
+          now={store.clock.now()}
           timeZone={store.clock.timeZone}
           timeFormat={store.timeFormat}
           weekStart={weekStart}

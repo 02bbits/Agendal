@@ -15,6 +15,11 @@ export interface NoteSubmitFailure {
 /** What sending a note answers: the result, or why it wasn't made. */
 export type NoteSubmission = Promise<NoteResult | NoteSubmitFailure>;
 
+/** What Edit note answers: also `{conflicts}` when tasks edited by hand need an answer first (RV-E16). */
+export type NoteReplan = Promise<
+  NoteResult | NoteSubmitFailure | { conflicts: number }
+>;
+
 /**
  * `POST /notes` (NC §2.2, NU §7). The same `client_id` on a retry returns the stored result, so a
  * double tap or a lost reply never makes two notes (NC-E10, NC-E11).
@@ -58,6 +63,18 @@ function submitFailure(error: unknown): NoteSubmitFailure {
 export type NoteActionOutcome =
   { result: NoteResult } | { conflicts: number } | { error: CopyKey };
 
+/** How many tasks a `409 note.undo_conflicts` names (RV §2.4), or 0 for any other answer. */
+async function conflictCount(response: Response): Promise<number> {
+  if (response.status !== 409) return 0;
+  const data = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  return data?.error?.code === "note.undo_conflicts"
+    ? (data.error.tasks?.length ?? 1)
+    : 0;
+}
+
 /**
  * `POST /notes/{id}/undo` and `/redo` (RV §7). A `409 note.undo_conflicts` isn't a failure: it
  * asks the user first (RV §2.4). A network failure reads as "needs a connection".
@@ -73,14 +90,8 @@ async function noteAction(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (response.status === 409) {
-      const data = await response
-        .clone()
-        .json()
-        .catch(() => null);
-      if (data?.error?.code === "note.undo_conflicts")
-        return { conflicts: data.error.tasks?.length ?? 1 };
-    }
+    const conflicts = await conflictCount(response);
+    if (conflicts) return { conflicts };
     const result = await handleResponse<NoteResult>(response);
     rememberNote(result);
     return { result };
@@ -188,16 +199,28 @@ export async function renameNote(
   }
 }
 
-/** IM-46 edits a follow-up in place; editing applied notes remains IM-47. */
-export async function replanFollowup(id: string, text: string): NoteSubmission {
+/**
+ * Edit note (RV-5): `PUT /notes/{id}` re-plans the same note. A `done` note first undoes what it
+ * applied, so tasks edited by hand since answer `{conflicts}` to ask first (RV-E16).
+ */
+export async function replanFollowup(
+  id: string,
+  text: string,
+  confirmConflicts = false,
+): NoteReplan {
   try {
-    const result = await handleResponse<NoteResult>(
-      await api(`/notes/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, timezone: timeZone() }),
+    const response = await api(`/notes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        timezone: timeZone(),
+        confirm_conflicts: confirmConflicts,
       }),
-    );
+    });
+    const conflicts = await conflictCount(response);
+    if (conflicts) return { conflicts };
+    const result = await handleResponse<NoteResult>(response);
     rememberNote(result);
     return result;
   } catch (error) {
@@ -214,25 +237,23 @@ export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
 }
 
 /**
- * Apply changes and Edit note on Check this first: `POST /notes/{id}/apply` · `/cancel` (RV §7). The
+ * Apply changes and Edit note on Check this first: `POST /notes/{id}/apply` (RV §7). The
  * note as it is now, or the copy saying why not. A network failure reads as "needs a connection".
  */
 export async function confirmNote(
   id: string,
-  action: "apply" | "cancel",
   edits: Record<string, TaskPatch> = {},
   exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
-      await api(`/notes/${encodeURIComponent(id)}/${action}`, {
+      await api(`/notes/${encodeURIComponent(id)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          action === "apply"
-            ? { edits, ...(exclude.length ? { exclude } : {}) }
-            : {},
-        ),
+        body: JSON.stringify({
+          edits,
+          ...(exclude.length ? { exclude } : {}),
+        }),
       }),
     );
     rememberNote(result);

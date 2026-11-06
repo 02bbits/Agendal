@@ -659,7 +659,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onDraftRestored={() => showToast(t("note.draft_restored"))}
             onSubmit={
               editingNote
-                ? (text) => replanFollowup(editingNote.id, text)
+                ? (text, _clientId, confirmConflicts) =>
+                    replanFollowup(editingNote.id, text, confirmConflicts)
                 : submitNote
             }
             onSubmitted={(result) => {

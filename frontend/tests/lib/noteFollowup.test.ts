@@ -37,6 +37,24 @@ describe("follow-up API (IM-46)", () => {
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
       text: "read tomorrow",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      confirm_conflicts: false,
+    });
+  });
+  it("answers conflicts instead of an error, and sends the confirmation on request (RV-E16)", async () => {
+    fetchMock.mockResolvedValueOnce(
+      json(409, {
+        error: {
+          code: "note.undo_conflicts",
+          tasks: [{ id: "t1", title: "SQL" }],
+        },
+      }),
+    );
+    expect(await replanFollowup("n1", "read")).toEqual({ conflicts: 1 });
+    expect(recallNote(done.note.id)).toBeUndefined();
+    fetchMock.mockResolvedValueOnce(json(200, done));
+    expect(await replanFollowup("n1", "read", true)).toEqual(done);
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
+      confirm_conflicts: true,
     });
   });
   it("keeps validation and rate-limit errors actionable in the editor", async () => {

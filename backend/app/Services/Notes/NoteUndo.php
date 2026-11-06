@@ -37,16 +37,14 @@ final class NoteUndo
 
     public function undo(Note $note, bool $confirmConflicts): Note
     {
-        $redo = false;
-        $note = DB::transaction(function () use ($note, $confirmConflicts, &$redo): Note {
+        return DB::transaction(function () use ($note, $confirmConflicts): Note {
             $note = $this->lock($note);
             if ($note->status === 'pending') {
                 if ($note->undo_log === null) {
                     throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
                 }
-                $redo = true; // redo after this transaction: its expiry write must not roll back with the ApiError
 
-                return $note;
+                return $note; // a second Undo all (RV-E5): nothing changes twice
             }
             if ($note->status !== 'done') {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
@@ -59,8 +57,6 @@ final class NoteUndo
 
             return $note->refresh();
         }, 3);
-
-        return $redo ? $this->redo($note) : $note;
     }
 
     /**

@@ -22,7 +22,7 @@ Agendal: phone-first PWA. A note (typed; voice and files later) becomes tasks. E
 
 **Plan shape** (ADR-001): `create[]`, `update[]`, `delete[]`, `skipped[]`. Entries carry a `ref` (`i1`, `i1-2`). Plan entries still name the due time `end_time`; the applier maps it to `due_time`.
 
-**Note statuses:** `pending` (offline and not yet sent, not built; or applied then reversed by Undo all) → `new` → `confirm` (any change, or a tie) | `done` (only skips: already_done, not_found, no_change; zero changes) | `followup` (nothing actionable). `confirm` → Apply → `done`; `confirm` → Edit note → `kept` (text goes to a new note). `done` → Undo all → `pending` → redo 10 s (or a second Undo all) → `done`. Undo window 30 days. Edit note on a done note re-plans it (IM-47, not built). Delete note keeps the tasks.
+**Note statuses:** `pending` (offline and not yet sent, not built; or applied then reversed by Undo all) → `new` → `confirm` (any change, or a tie) | `done` (only skips: already_done, not_found, no_change; zero changes) | `followup` (nothing actionable). `confirm` → Apply → `done`; `confirm` → Edit note → re-planned in place (`PUT /notes/{id}`). `done` → Undo all → `pending` → redo 10 s → `done`; a second Undo all changes nothing. Undo window 30 days. Edit note on a done note re-plans it (IM-47); hidden after 30 days. Delete note keeps the tasks.
 
 **After Apply:** back to the list where the note was written, toast `note.made_*` with Undo (Undo all). The result screen (`/notes/{id}`) is reached from a note, or after an all-skips note.
 

@@ -104,7 +104,6 @@ export const catalog = {
   "note.wrong_status": "This note has already been handled.",
   "note.gone_since": "Removed since",
   "note.project_gone": "Its project was deleted, so it's in No project.",
-  "note.kept_label": "Kept as a note",
   "note.edited_label": "Edited",
   "note.edit": "Edit note",
   "note.delete": "Delete note",

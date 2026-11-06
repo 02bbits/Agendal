@@ -112,7 +112,6 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.wrong_status` † | This note has already been handled. | API code `409` for an action that isn't valid in the note's status |
 | `note.gone_since` † | Removed since | Result row for a task deleted after the note |
 | `note.project_gone` † | Its project was deleted, so it's in No project. | Result row after undo ([RV-E3](../03-modules/RV-review-control.md#rv-e3)) |
-| `note.kept_label` † | Kept as a note | Notes card status |
 | `note.edited_label` † | Edited | Notes card, after the status line ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.edit` † | Edit note | Result header menu ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.delete` | Delete note | Result and follow-up header ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)) |

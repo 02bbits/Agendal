@@ -20,12 +20,11 @@ class NoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs,kept'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
+        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
         $query = Note::query();
         match ($input['filter'] ?? 'all') {
             'made' => $query->where('status', 'done'),
             'needs' => $query->whereIn('status', ['confirm', 'followup', 'pending']),
-            'kept' => $query->where('status', 'kept'),
             default => $query,
         };
         $page = $query->orderByDesc('written_at')->orderByDesc('id')->cursorPaginate((int) ($input['limit'] ?? 20));
@@ -85,11 +84,6 @@ class NoteController extends Controller
         $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct']]);
 
         return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? []));
-    }
-
-    public function cancel(Note $note, NoteConfirm $confirm): NoteResultResource
-    {
-        return new NoteResultResource($confirm->cancel($note));
     }
 
     public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource

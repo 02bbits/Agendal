@@ -72,12 +72,11 @@ class ProcessNote
                 'confirm_conflicts' => ['sometimes', 'boolean'],
             ])->validate();
 
-            // Notes in done, confirm, followup, kept, pending can be edited (RV §2.5).
+            // Notes in done, confirm, followup, pending can be edited (RV §2.5).
             $allowed = [
                 PlanStatus::Done->value,
                 PlanStatus::Confirm->value,
                 PlanStatus::Followup->value,
-                'kept',
                 'pending',
             ];
             if (! in_array($note->status, $allowed, true)) {

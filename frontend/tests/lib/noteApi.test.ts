@@ -115,21 +115,21 @@ describe("submitNote (IM-42)", () => {
     expect(recallNote(made.note.id)).toBeUndefined();
   });
 
-  it("apply and cancel post to the note, keep the answer, and map failures to copy", async () => {
+  it("apply posts to the note, keep the answer, and map failures to copy", async () => {
     fetchMock.mockResolvedValueOnce(json(200, done));
-    expect(await confirmNote("n1", "apply")).toEqual(done);
+    expect(await confirmNote("n1")).toEqual(done);
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/apply");
     expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
 
     fetchMock.mockResolvedValueOnce(
       json(409, { error: { code: "note.wrong_status" } }),
     );
-    expect(await confirmNote("n1", "cancel")).toEqual({
+    expect(await confirmNote("n1")).toEqual({
       error: "note.wrong_status",
     });
 
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    expect(await confirmNote("n1", "apply")).toEqual({
+    expect(await confirmNote("n1")).toEqual({
       error: "note.needs_connection",
     });
   });

@@ -13,7 +13,8 @@ export const pending = {
   "note.apply_preview": "Apply",
   "note.preview_hint":
     "Nothing is added to your lists until you press Apply. Tap a pencil to adjust a task, or Edit note to rewrite the note.",
-  "note.planned_count": "{count} changes to apply",
+  "note.planned_count_one": "1 change to apply",
+  "note.planned_count_other": "{count} changes to apply",
   "notes.all": "All",
   "notes.made": "Accepted",
   "notes.needs": "Pending",

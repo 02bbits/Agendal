@@ -83,16 +83,6 @@ it('re-validates at apply: a task deleted since is skipped (NU-E38)', function (
     $this->postJson("/api/v1/notes/{$id}/apply")->assertOk()->assertJsonCount(0, 'changes')->assertJsonPath('skipped.0.reason', 'not_found');
 });
 
-it('keeps the note and changes nothing on Edit note (WF-02)', function () {
-    $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->json('note.id');
-
-    $this->postJson("/api/v1/notes/{$id}/cancel")->assertOk()->assertJsonPath('note.status', 'kept');
-
-    expect(Task::count())->toBe(0);
-    $this->postJson("/api/v1/notes/{$id}/apply")->assertStatus(409);
-    $this->postJson("/api/v1/notes/{$id}/cancel")->assertStatus(409);
-});
-
 it('shows a note to its owner only (RV §7)', function () {
     $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->json('note.id');
     $this->getJson("/api/v1/notes/{$id}")->assertOk()->assertJsonPath('note.status', 'confirm')->assertJsonCount(1, 'changes');
@@ -100,7 +90,6 @@ it('shows a note to its owner only (RV §7)', function () {
     $this->actingAs(User::factory()->create());
     $this->getJson("/api/v1/notes/{$id}")->assertNotFound();
     $this->postJson("/api/v1/notes/{$id}/apply")->assertNotFound();
-    $this->postJson("/api/v1/notes/{$id}/cancel")->assertNotFound();
 });
 
 it('applies the edits made on Check this first, by entry ref', function () {

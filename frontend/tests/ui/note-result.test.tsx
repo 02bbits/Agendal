@@ -14,6 +14,7 @@ import { TODAY } from "./fixtures";
 import { task } from "./fixtures";
 
 // IM-43: the result screen (RV-1). Friday 23 Oct 2026, 08:12 in Ho Chi Minh City
+const NOW = new Date("2026-10-23T08:30:00+07:00");
 
 const sql: NoteChange = {
   kind: "created",
@@ -69,6 +70,7 @@ function open(result: NoteResult, props: Partial<NoteResultScreenProps> = {}) {
       <NoteResultScreen
         result={result}
         today={TODAY}
+        now={NOW}
         timeZone="Asia/Ho_Chi_Minh"
         timeFormat="24h"
         weekStart="mon"
@@ -291,6 +293,7 @@ describe("Note result (IM-43, RV-1)", () => {
     it("T-RV-12: an undone note says Pending, mutes its rows and hides Undo all", () => {
       open(resultOf([sql, ink], [], { status: "pending" }));
       expect(screen.getByText("Today 08:12 · Pending")).toBeTruthy();
+      expect(screen.queryByText(t("note.result_hint"))).toBeNull();
       expect(
         screen.queryByRole("button", { name: t("note.undo_all") }),
       ).toBeNull();
@@ -306,6 +309,27 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(
         screen.queryByRole("button", { name: t("note.undo_all") }),
       ).toBeNull();
+    });
+
+    it("RV-E17: Edit note is offered on a done note, and not after 30 days", async () => {
+      const onEdit = vi.fn();
+      open(resultOf([sql]), { onEdit });
+      await userEvent.click(
+        screen.getByRole("button", { name: t("note.edit") }),
+      );
+      expect(onEdit).toHaveBeenCalledOnce();
+    });
+
+    it("RV-E17: after 30 days Edit note is not shown", () => {
+      open(resultOf([sql], [], { processed_at: "2026-09-20T08:12:01+07:00" }), {
+        onEdit: vi.fn(),
+      });
+      expect(screen.queryByRole("button", { name: t("note.edit") })).toBeNull();
+    });
+
+    it("RV-E17: Edit note is offered on a pending note", () => {
+      open(resultOf([sql], [], { status: "pending" }), { onEdit: vi.fn() });
+      expect(screen.getByRole("button", { name: t("note.edit") })).toBeTruthy();
     });
 
     it("offline, Undo all is disabled and says it needs a connection", () => {
@@ -348,6 +372,11 @@ describe("Note result (IM-43, RV-1)", () => {
 describe("Check this first (IM-45, NU-5)", () => {
   const confirm = (changes: NoteChange[]) =>
     resultOf(changes, [], { status: "confirm" });
+
+  it("counts the changes to apply with the right plural", () => {
+    open(confirm([sql]));
+    expect(screen.getByText("1 change to apply")).toBeTruthy();
+  });
 
   it("T-RV-40: says nothing happens yet, lists the rows, and offers Edit note and Apply changes", () => {
     open(confirm([sql, old]));
@@ -493,6 +522,7 @@ describe("Follow-up (IM-46, RV-3)", () => {
         onSetDue={() => {}}
         onDelete={onDelete}
         today={TODAY}
+        now={NOW}
         timeZone="Asia/Ho_Chi_Minh"
         timeFormat="24h"
         weekStart="mon"

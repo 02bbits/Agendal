@@ -493,13 +493,6 @@ describe("Check this first /notes/[id] (IM-45)", () => {
       if (url === "/api/v1/notes/n1/apply")
         return json(200, { ...result, note: { ...result.note } });
 
-      if (url === "/api/v1/notes/n1/cancel")
-        return json(200, {
-          ...pending,
-
-          note: { ...pending.note, status: "kept" },
-        });
-
       return base(url, init);
     });
   }
@@ -552,7 +545,6 @@ describe("Check this first /notes/[id] (IM-45)", () => {
       await screen.findByRole("button", { name: t("common.discard_action") }),
     );
     await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
-    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
     expect(calls("POST", "/api/v1/notes/n1/apply")).toHaveLength(0);
   });
 
@@ -933,8 +925,6 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
 
     expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(1);
 
-    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
-
     expect(calls("POST", "/api/v1/notes")).toHaveLength(0);
   });
 
@@ -958,8 +948,6 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     ).toBeTruthy();
 
     expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(0);
-
-    expect(calls("POST", "/api/v1/notes/n1/cancel")).toHaveLength(0);
   });
   it("deleting a follow-up note calls DELETE /api/v1/notes/{id} and shows toast", async () => {
     serve({}, () => json(200, followup));
