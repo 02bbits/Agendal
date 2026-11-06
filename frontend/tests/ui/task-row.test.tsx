@@ -287,6 +287,17 @@ describe("TaskRow (LV-4)", () => {
     expect(button.className).toContain("-m-1");
   });
 
+  it("renders blue border on checkbox circle for due cards (tone === 'due')", () => {
+    const dueTask = task({
+      title: "Due today task",
+      due_date: TODAY,
+      due_time: "10:00",
+    });
+    const { container } = renderRow(dueTask, { tone: "due" });
+    const checkboxSpan = container.querySelector('button[role="checkbox"] span')!;
+    expect(checkboxSpan.className).toContain("border-due-ink");
+  });
+
   it("is axe clean in both themes, open and done", async () => {
     render(
       <main>

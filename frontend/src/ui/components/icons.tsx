@@ -106,7 +106,10 @@ export const RepeatIcon = icon(
 );
 export const FlagIcon = icon(
   <>
-    <path d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z" />
+    <path
+      d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z"
+      fill="currentColor"
+    />
     <path d="M5 21.5v-7" />
   </>,
 );

@@ -111,7 +111,9 @@ export function TaskRow({
               ? "border-ink bg-ink text-surface"
               : overdue
                 ? "border-error shadow-[inset_0_0_0_1px_var(--color-error)]"
-                : "border-ink-tertiary group-hover/check:border-ink-secondary",
+                : tone === "due"
+                  ? "border-due-ink group-hover/check:border-due-ink"
+                  : "border-ink-tertiary group-hover/check:border-ink-secondary",
           )}
           aria-hidden="true"
         >
