@@ -112,10 +112,10 @@ export function AccountScreen({
         </div>
       </section>
 
-      <div className="flex flex-col md:flex-row md:items-start md:gap-10">
-        {/* Left sub-taskbar: remains on the left */}
+      <div className="grid grid-cols-1 md:grid-cols-[200px_1fr_200px] lg:grid-cols-[220px_1fr_220px] md:gap-8 items-start">
+        {/* Left sub-taskbar: pinned to the left */}
         <nav
-          className="mb-6 w-full md:mb-0 md:w-60 md:shrink-0 md:border-r md:border-separator/50 md:pr-8 md:py-1"
+          className="mb-6 w-full md:mb-0 md:border-r md:border-separator/50 md:pr-6 md:py-1"
           aria-label={t("nav.account")}
         >
           <div
@@ -155,16 +155,16 @@ export function AccountScreen({
                   >
                     {item.icon}
                   </span>
-                  <span className="flex-1">{item.label}</span>
+                  <span className="flex-1 truncate">{item.label}</span>
                 </button>
               );
             })}
           </div>
         </nav>
 
-        {/* Right content panel: centered in the remaining space */}
-        <div className="min-w-0 flex-1 flex justify-center">
-          <div className="w-full max-w-[680px]">
+        {/* Center content panel: mathematically centered in desktop viewport */}
+        <div className="min-w-0 w-full flex justify-center">
+          <div className="w-full max-w-[560px]">
             {tab === "general" && (
               <>
                 <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
@@ -409,6 +409,9 @@ export function AccountScreen({
             )}
           </div>
         </div>
+
+        {/* Right dummy spacer: balances Column 1 so Center panel is mathematically dead-center */}
+        <div className="hidden md:block w-full" aria-hidden="true" />
       </div>
     </div>
   );
