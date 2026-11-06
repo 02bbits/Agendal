@@ -193,6 +193,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (pathname === ROUTES.account) {
+      document.documentElement.setAttribute("data-account-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-account-page");
+    }
+  }, [pathname]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -691,11 +699,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
         navigate={navigate}
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
-        pageView={
-          pathname === ROUTES.account
-            ? "full"
-            : (settings.pageView ?? "flat")
-        }
         sidebar={
           PUBLIC_PATHS.includes(pathname)
             ? undefined

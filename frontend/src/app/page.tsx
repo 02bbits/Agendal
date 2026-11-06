@@ -6,9 +6,11 @@ import {
   InboxScreen,
   PlusIcon,
   ScreenHeader,
+  TASK_COLUMN_CLASS,
   TaskPanel,
   TaskStoreProvider,
   Toast,
+  cx,
   t,
   useTaskPanel,
   useTaskStore,
@@ -89,7 +91,7 @@ function InboxContent() {
       {status === "loading" && (
         <div
           data-testid="inbox-loading"
-          className="flex flex-col gap-6 animate-pulse"
+          className={cx("flex flex-col gap-6 animate-pulse", TASK_COLUMN_CLASS)}
         >
           {/* Progress summary card skeleton */}
           <div className="flex items-center gap-4.5 rounded-2xl border border-separator/50 bg-surface p-4.5 shadow-xs">

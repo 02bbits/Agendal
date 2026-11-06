@@ -78,13 +78,16 @@ export function useUpcomingListWindow({
     return daysAfter([...week1, ...week2], today);
   }, [anchor, weekStart, today]);
 
+  const initialValidDay =
+    initialDay && initialDay.trim().length > 0 ? initialDay : undefined;
+
   const { activeDay, setActiveDay, holdActiveDay } = useActiveDay(
-    initialDay ?? windowDays[0] ?? today,
+    initialValidDay ?? windowDays[0] ?? today,
     windowDays,
     { enabled, barHeight },
   );
 
-  const initialDayRef = useRef(initialDay);
+  const initialDayRef = useRef(initialValidDay);
   useEffect(() => {
     const targetDay = initialDayRef.current;
     if (!targetDay) return;

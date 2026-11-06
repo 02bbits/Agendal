@@ -76,10 +76,10 @@ export function Segmented<V extends string>({
             aria-checked={checked}
             tabIndex={checked ? 0 : -1}
             className={cx(
-              "focus-ring relative flex-1 cursor-pointer border-0 bg-transparent transition-colors select-none",
+              "focus-ring relative flex-1 cursor-pointer border-0 bg-transparent transition-colors select-none whitespace-nowrap",
               isLg
-                ? "min-h-12 rounded-xl py-2.5 px-4 text-body font-medium text-ink-secondary aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs"
-                : "min-h-8 rounded-tile text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs",
+                ? "min-h-12 rounded-xl py-2.5 px-2 sm:px-4 text-callout sm:text-body font-medium text-ink-secondary aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs"
+                : "min-h-8 rounded-tile px-2 text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs",
             )}
             onClick={() => onChange(option.value)}
             onKeyDown={(event) => onKeyDown(event, index)}

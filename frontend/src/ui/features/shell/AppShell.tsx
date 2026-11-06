@@ -19,7 +19,6 @@ export interface AppShellProps {
   toast?: ReactNode;
   children: ReactNode;
   onOpenSearch?: () => void;
-  pageView?: "flat" | "full";
 }
 
 /**
@@ -38,7 +37,6 @@ export function AppShell({
   banner,
   toast,
   children,
-  pageView = "flat",
 }: AppShellProps) {
   useKeyboardInset();
 
@@ -96,9 +94,7 @@ export function AppShell({
         <main
           className={
             "flex-1 px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
-            (pageView === "flat"
-              ? "[html:not([data-page-view='full'])_&]:mx-auto [html:not([data-page-view='full'])_&]:w-full [html:not([data-page-view='full'])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none "
-              : "") +
+            "[html:not([data-page-view='full']):not([data-account-page])_&]:mx-auto [html:not([data-page-view='full']):not([data-account-page])_&]:w-full [html:not([data-page-view='full']):not([data-account-page])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none " +
             (tab ? "pb-[calc(160px+env(safe-area-inset-bottom))]" : "pb-0")
           }
         >
@@ -111,13 +107,7 @@ export function AppShell({
             className="max-xl:[html[data-note-selected]_&]:hidden fixed inset-x-0 bottom-[var(--keyboard-inset,0px)] z-50 [html[data-task-panel]_&]:z-30 mx-auto max-w-[600px] md:sticky md:w-full md:max-w-none xl:[html[data-task-panel]_&]:ml-0 xl:[html[data-task-panel]_&]:w-[calc(100%-400px)] xl:[html[data-note-panel]_&]:ml-0 xl:[html[data-note-panel]_&]:w-[calc(100%-400px)] md:bg-linear-to-t md:from-paper md:from-70% md:to-transparent md:pb-[calc(12px+env(safe-area-inset-bottom))]"
           >
             {capture && (
-              <div
-                className={
-                  pageView === "flat"
-                    ? "[html:not([data-page-view='full'])_&]:mx-auto [html:not([data-page-view='full'])_&]:w-full [html:not([data-page-view='full'])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none"
-                    : ""
-                }
-              >
+              <div className="[html:not([data-page-view='full']):not([data-account-page])_&]:mx-auto [html:not([data-page-view='full']):not([data-account-page])_&]:w-full [html:not([data-page-view='full']):not([data-account-page])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none">
                 <CaptureBar {...capture} />
               </div>
             )}

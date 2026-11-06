@@ -103,7 +103,7 @@ export function ProjectsClient() {
           />
           <div
             data-testid="projects-loading"
-            className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 animate-pulse"
+            className="grid grid-cols-1 gap-4 [html[data-page-view='full']_&]:sm:grid-cols-2 [html[data-page-view='full']_&]:lg:grid-cols-3 [html[data-page-view='full']_&]:xl:grid-cols-4 animate-pulse"
           >
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div
