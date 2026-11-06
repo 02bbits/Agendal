@@ -353,7 +353,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       if (patch.pageView && typeof window !== "undefined") {
         try {
           localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
-          document.documentElement.setAttribute("data-page-view", patch.pageView);
+          document.documentElement.setAttribute(
+            "data-page-view",
+            patch.pageView,
+          );
         } catch {}
       }
       const body = Object.fromEntries(

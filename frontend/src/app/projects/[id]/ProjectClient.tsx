@@ -198,7 +198,10 @@ export function ProjectClient({ id }: { id: string }) {
       <div
         role="status"
         aria-busy="true"
-        className={cx("flex animate-pulse flex-col gap-4 pb-8", TASK_COLUMN_CLASS)}
+        className={cx(
+          "flex animate-pulse flex-col gap-4 pb-8",
+          TASK_COLUMN_CLASS,
+        )}
       >
         <div className="flex items-center justify-between py-2">
           <div className="h-8 w-20 rounded-full bg-surface-hover/60" />

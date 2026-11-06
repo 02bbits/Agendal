@@ -260,10 +260,7 @@ export function UpcomingClient() {
   const headerControls = (
     <div className="flex items-center gap-3">
       {isFull && <div className="hidden md:block">{filterChipsMd}</div>}
-      <UpcomingViewSwitch
-        viewMode={viewMode}
-        onChange={handleViewModeChange}
-      />
+      <UpcomingViewSwitch viewMode={viewMode} onChange={handleViewModeChange} />
       <Button
         variant="primary"
         pill
@@ -319,7 +316,10 @@ export function UpcomingClient() {
         ) : (
           <div
             data-testid="upcoming-loading"
-            className={cx("flex flex-col gap-6 animate-pulse", TASK_COLUMN_CLASS)}
+            className={cx(
+              "flex flex-col gap-6 animate-pulse",
+              TASK_COLUMN_CLASS,
+            )}
           >
             {/* Week navigation placeholder */}
             <div className="border-b border-separator/50 pb-3">
