@@ -238,6 +238,28 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `app.reload` † | Reload | Toast action |
 | `app.conflict` † | “{title}” was also changed on another device. The latest edit was kept. | Toast (AP module) |
 | `app.storage_low` † | Your device is low on storage. Offline notes might not be saved. | Banner |
+| `app.tab_general` † | General | Account tab label |
+| `app.tab_notifications` † | Notifications | Account tab label |
+| `app.notification_diag_title` † | Device Notifications & Reminders | Account notification settings title |
+| `app.notification_diag_desc` † | Receive reminders on this device before tasks start or are due. | Account notification settings description |
+| `app.browser_permission` † | Browser Permission | Account notification permission field |
+| `app.server_push_service` † | Server Push Service | Account notification server field |
+| `app.enable_notifications` † | Enable Notifications | Account notification button |
+| `app.send_test_notification` † | Send Test Notification | Account notification button |
+| `app.perm_unsupported` † | Unsupported | Account notification status |
+| `app.perm_enabled` † | Enabled | Account notification status |
+| `app.perm_blocked` † | Blocked | Account notification status |
+| `app.perm_not_configured` † | Not configured | Account notification status |
+| `app.perm_desc_unsupported` † | Web Push is not supported in this browser mode or environment. | Account notification status description |
+| `app.perm_desc_enabled` † | Notifications are allowed and active on this browser. | Account notification status description |
+| `app.perm_desc_blocked` † | Notifications are blocked. Please enable notifications in your browser site settings. | Account notification status description |
+| `app.perm_desc_not_configured` † | Notifications have not been enabled yet on this device. | Account notification status description |
+| `app.vapid_ready` † | Ready | Account VAPID status |
+| `app.vapid_missing` † | Missing VAPID | Account VAPID status |
+| `app.vapid_checking` † | Checking… | Account VAPID status |
+| `app.vapid_desc_ready` † | VAPID keys are configured on the server. | Account VAPID status description |
+| `app.vapid_desc_missing` † | VAPID keys not configured on server (VAPID_PUBLIC_KEY missing in .env). | Account VAPID status description |
+| `app.vapid_desc_checking` † | Verifying server configuration… | Account VAPID status description |
 
 ## Errors (any screen)
 

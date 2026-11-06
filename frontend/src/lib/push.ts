@@ -134,3 +134,43 @@ export async function removeSubscription(): Promise<void> {
     // never throws
   }
 }
+
+export async function sendTestNotification(): Promise<boolean> {
+  if (!pushSupported() || pushPermission() !== "granted") {
+    return false;
+  }
+  try {
+    const reg = await navigator.serviceWorker?.ready;
+    if (reg && "showNotification" in reg) {
+      await reg.showNotification("Agendal", {
+        body: "Reminders are working! 🔔",
+        icon: "/favicon.ico",
+        badge: "/favicon.ico",
+      });
+      return true;
+    }
+    if (typeof window !== "undefined" && "Notification" in window) {
+      new Notification("Agendal", {
+        body: "Reminders are working! 🔔",
+        icon: "/favicon.ico",
+      });
+      return true;
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+export async function checkVapidConfig(): Promise<{
+  configured: boolean;
+  key: string | null;
+}> {
+  try {
+    const res = await api("/push-subscriptions/key");
+    const data = await handleResponse<{ key: string | null }>(res);
+    return { configured: Boolean(data?.key), key: data?.key ?? null };
+  } catch {
+    return { configured: false, key: null };
+  }
+}

@@ -1,5 +1,5 @@
 import { t } from "../copy";
-import { addDays, formatDay, formatTime, formatTimeRange } from "./dates";
+import { addDays, formatDay, formatTime } from "./dates";
 import type { EntryKind } from "./entries";
 import { describeRepeat } from "./repeat";
 import type { Task, TimeFormat } from "./types";
@@ -64,7 +64,11 @@ export function rowMeta(
           text,
           tone: task.done ? "plain" : opts.entry !== "start" ? "due" : "plain",
         });
-      } else if (!task.start_time && !opts.entry && task.start_date === opts.today) {
+      } else if (
+        !task.start_time &&
+        !opts.entry &&
+        task.start_date === opts.today
+      ) {
         parts.push({
           text: t("task.starts_today"),
           tone: "plain",

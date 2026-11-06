@@ -130,7 +130,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`app.install_title`, `app.install`, `app.install_ios`, `app.install_firefox`, `common.not_now`, `app.offline`, `app.offline_body`, `app.no_offline`, `app.conflict`, `app.storage_low`, `app.week_start`, `app.time_format`, `app.update_ready`, `app.reload`, `app.dark_mode`, `app.appearance`, `app.last_synced`, `error.generic`.
+`app.install_title`, `app.install`, `app.install_ios`, `app.install_firefox`, `common.not_now`, `app.offline`, `app.offline_body`, `app.no_offline`, `app.conflict`, `app.storage_low`, `app.week_start`, `app.time_format`, `app.update_ready`, `app.reload`, `app.dark_mode`, `app.appearance`, `app.last_synced`, `error.generic`, `app.tab_general`, `app.tab_notifications`, `app.notification_diag_title`, `app.notification_diag_desc`, `app.browser_permission`, `app.server_push_service`, `app.enable_notifications`, `app.send_test_notification`, `app.perm_unsupported`, `app.perm_enabled`, `app.perm_blocked`, `app.perm_not_configured`, `app.perm_desc_unsupported`, `app.perm_desc_enabled`, `app.perm_desc_blocked`, `app.perm_desc_not_configured`, `app.vapid_ready`, `app.vapid_missing`, `app.vapid_checking`, `app.vapid_desc_ready`, `app.vapid_desc_missing`, `app.vapid_desc_checking`.
 
 ## 6. Accessibility
 

@@ -181,6 +181,43 @@ describe("AccountScreen", () => {
     expect(onChange).toHaveBeenLastCalledWith({ rememberDevice: false });
   });
 
+  it("switches to Notifications tab and triggers test notification", async () => {
+    const onSendTestNotification = vi.fn();
+    render(
+      <main>
+        <AccountScreen
+          name="Alice"
+          email="alice@example.com"
+          settings={{
+            theme: "system",
+            weekStart: "mon",
+            timeFormat: "24h",
+            rememberDevice: true,
+          }}
+          onChange={() => {}}
+          onBack={() => {}}
+          onSignOut={() => {}}
+          notificationSupported={true}
+          notificationPermission="granted"
+          vapidConfigured={true}
+          onSendTestNotification={onSendTestNotification}
+        />
+      </main>,
+    );
+
+    // Switch to Notifications tab
+    await userEvent.click(screen.getByRole("radio", { name: "Notifications" }));
+    expect(screen.getByTestId("notifications-tab")).toBeTruthy();
+    expect(screen.getByText("Enabled")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
+
+    // Click Send Test Notification
+    await userEvent.click(
+      screen.getByRole("button", { name: /Send Test Notification/i }),
+    );
+    expect(onSendTestNotification).toHaveBeenCalledTimes(1);
+  });
+
   it("is axe clean in both themes", async () => {
     render(<Harness onChange={() => {}} />);
     await expectAxeCleanInBothThemes();

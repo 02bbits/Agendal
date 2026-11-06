@@ -84,7 +84,7 @@ describe("TaskRow (LV-4)", () => {
     });
     const { container } = renderRow(t);
     const meta = container.querySelector('[data-slot="meta"]')!;
-    expect(meta.textContent).toBe("HCI·16:00 – 17:00·Due·Every week");
+    expect(meta.textContent).toBe("HCI·Start at 16:00·Due at 17:00·Every week");
     expect(meta.querySelectorAll("svg")).toHaveLength(2);
     expect(
       (container.querySelector('[data-slot="dot"]') as HTMLElement).style
@@ -294,7 +294,9 @@ describe("TaskRow (LV-4)", () => {
       due_time: "10:00",
     });
     const { container } = renderRow(dueTask, { tone: "due" });
-    const checkboxSpan = container.querySelector('button[role="checkbox"] span')!;
+    const checkboxSpan = container.querySelector(
+      'button[role="checkbox"] span',
+    )!;
     expect(checkboxSpan.className).toContain("border-due-ink");
   });
 
