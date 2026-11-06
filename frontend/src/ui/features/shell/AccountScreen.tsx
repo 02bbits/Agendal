@@ -90,7 +90,7 @@ export function AccountScreen({
   };
 
   return (
-    <div className="mx-auto w-full max-w-[960px] pb-16">
+    <div className="w-full pb-16">
       <NavBar
         backLabel={t("common.back")}
         onBack={onBack}
@@ -112,8 +112,8 @@ export function AccountScreen({
         </div>
       </section>
 
-      <div className="flex flex-col md:flex-row md:items-start md:gap-10 md:justify-center">
-        {/* Left sub-taskbar */}
+      <div className="flex flex-col md:flex-row md:items-start md:gap-10">
+        {/* Left sub-taskbar: remains on the left */}
         <nav
           className="mb-6 w-full md:mb-0 md:w-60 md:shrink-0 md:border-r md:border-separator/50 md:pr-8 md:py-1"
           aria-label={t("nav.account")}
@@ -162,250 +162,252 @@ export function AccountScreen({
           </div>
         </nav>
 
-        {/* Right content panel */}
-        <div className="min-w-0 flex-1 max-w-[680px]">
-          {tab === "general" && (
-            <>
-              <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                {t("app.appearance")}
-              </h2>
-              <Segmented
-                label={t("app.appearance")}
-                value={settings.theme}
-                onChange={(theme) => onChange({ theme })}
-                size="lg"
-                options={[
-                  { value: "system", label: t("app.theme_system") },
-                  { value: "light", label: t("app.theme_light") },
-                  { value: "dark", label: t("app.theme_dark") },
-                ]}
-              />
-              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
-                {t("app.week_start")}
-              </h2>
-              <Segmented
-                label={t("app.week_start")}
-                value={settings.weekStart}
-                onChange={(weekStart) => onChange({ weekStart })}
-                size="lg"
-                options={[
-                  { value: "mon", label: t("app.week_mon") },
-                  { value: "sun", label: t("app.week_sun") },
-                ]}
-              />
-              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
-                {t("app.time_format")}
-              </h2>
-              <Segmented
-                label={t("app.time_format")}
-                value={settings.timeFormat}
-                onChange={(timeFormat) => onChange({ timeFormat })}
-                size="lg"
-                options={[
-                  { value: "24h", label: t("app.time_24h") },
-                  { value: "12h", label: t("app.time_12h") },
-                ]}
-              />
-
-              <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
-                {t("app.this_device")}
-              </h2>
-              <div className="flex flex-col rounded-2xl border border-separator/40 bg-fill/30 px-4 py-1 divide-y divide-separator/30">
-                <Switch
-                  label={t("app.remember_device")}
-                  checked={settings.rememberDevice}
-                  onChange={(rememberDevice) => onChange({ rememberDevice })}
-                  className="border-b-0 py-2.5 min-h-12"
+        {/* Right content panel: centered in the remaining space */}
+        <div className="min-w-0 flex-1 flex justify-center">
+          <div className="w-full max-w-[680px]">
+            {tab === "general" && (
+              <>
+                <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
+                  {t("app.appearance")}
+                </h2>
+                <Segmented
+                  label={t("app.appearance")}
+                  value={settings.theme}
+                  onChange={(theme) => onChange({ theme })}
+                  size="lg"
+                  options={[
+                    { value: "system", label: t("app.theme_system") },
+                    { value: "light", label: t("app.theme_light") },
+                    { value: "dark", label: t("app.theme_dark") },
+                  ]}
                 />
-                {remindersStatus && (
-                  <div className="flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink">
-                    <span
-                      className="inline-flex text-ink-secondary"
-                      aria-hidden="true"
-                    >
-                      <BellIcon size={18} />
-                    </span>
-                    <span className="flex-1">{t("app.reminders")}</span>
-                    <span className="text-ink-secondary">
-                      {remindersStatus}
-                    </span>
-                  </div>
-                )}
-                {onInstall && (
-                  <button
-                    type="button"
-                    className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink"
-                    onClick={onInstall}
-                  >
-                    <span
-                      className="inline-flex text-ink-secondary"
-                      aria-hidden="true"
-                    >
-                      <ArrowUpIcon size={18} />
-                    </span>
-                    <span className="flex-1">{t("app.install_app")}</span>
-                    <ChevronRightIcon
-                      size={18}
-                      className="shrink-0 text-ink-tertiary"
-                    />
-                  </button>
-                )}
-              </div>
+                <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
+                  {t("app.week_start")}
+                </h2>
+                <Segmented
+                  label={t("app.week_start")}
+                  value={settings.weekStart}
+                  onChange={(weekStart) => onChange({ weekStart })}
+                  size="lg"
+                  options={[
+                    { value: "mon", label: t("app.week_mon") },
+                    { value: "sun", label: t("app.week_sun") },
+                  ]}
+                />
+                <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
+                  {t("app.time_format")}
+                </h2>
+                <Segmented
+                  label={t("app.time_format")}
+                  value={settings.timeFormat}
+                  onChange={(timeFormat) => onChange({ timeFormat })}
+                  size="lg"
+                  options={[
+                    { value: "24h", label: t("app.time_24h") },
+                    { value: "12h", label: t("app.time_12h") },
+                  ]}
+                />
 
-              <div className="mt-10 flex flex-col items-center gap-3">
-                <Button
-                  variant="destructive"
-                  className="w-full max-w-[360px] h-12 min-h-12 text-body font-semibold rounded-xl"
-                  onClick={onSignOut}
-                >
-                  {t("app.sign_out")}
-                </Button>
-                {onSignOutEverywhere && (
-                  <button
-                    type="button"
-                    className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-3 py-1.5 text-callout font-semibold text-primary hover:bg-fill"
-                    onClick={onSignOutEverywhere}
-                  >
-                    {t("auth.signout_everywhere")}
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-
-          {tab === "notifications" && (
-            <div
-              className="flex flex-col gap-6"
-              data-testid="notifications-tab"
-            >
-              <section
-                className="flex flex-col gap-4 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
-                aria-label={t("app.notification_diag_title")}
-              >
-                <div>
-                  <h3 className="m-0 text-heading font-semibold text-ink">
-                    {t("app.notification_diag_title")}
-                  </h3>
-                  <p className="m-0 mt-1 text-footnote text-ink-secondary">
-                    {t("app.notification_diag_desc")}
-                  </p>
-                </div>
-
-                {/* Browser permission diagnostic */}
-                <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-callout font-medium text-ink">
-                      {t("app.browser_permission")}
-                    </span>
-                    <span
-                      className={cx(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                        !notificationSupported
-                          ? "bg-fill text-ink-secondary"
-                          : notificationPermission === "granted"
-                            ? "bg-success/15 text-success"
-                            : notificationPermission === "denied"
-                              ? "bg-error/15 text-error"
-                              : "bg-warning/15 text-warning",
-                      )}
+                <h2 className="text-overline font-semibold uppercase tracking-wider mt-8 mb-2.5 text-ink-secondary">
+                  {t("app.this_device")}
+                </h2>
+                <div className="flex flex-col rounded-2xl border border-separator/40 bg-fill/30 px-4 py-1 divide-y divide-separator/30">
+                  <Switch
+                    label={t("app.remember_device")}
+                    checked={settings.rememberDevice}
+                    onChange={(rememberDevice) => onChange({ rememberDevice })}
+                    className="border-b-0 py-2.5 min-h-12"
+                  />
+                  {remindersStatus && (
+                    <div className="flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink">
+                      <span
+                        className="inline-flex text-ink-secondary"
+                        aria-hidden="true"
+                      >
+                        <BellIcon size={18} />
+                      </span>
+                      <span className="flex-1">{t("app.reminders")}</span>
+                      <span className="text-ink-secondary">
+                        {remindersStatus}
+                      </span>
+                    </div>
+                  )}
+                  {onInstall && (
+                    <button
+                      type="button"
+                      className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink"
+                      onClick={onInstall}
                     >
                       <span
-                        className={cx(
-                          "size-2 rounded-full",
-                          !notificationSupported
-                            ? "bg-ink-tertiary"
-                            : notificationPermission === "granted"
-                              ? "bg-success"
-                              : notificationPermission === "denied"
-                                ? "bg-error"
-                                : "bg-warning",
-                        )}
+                        className="inline-flex text-ink-secondary"
+                        aria-hidden="true"
+                      >
+                        <ArrowUpIcon size={18} />
+                      </span>
+                      <span className="flex-1">{t("app.install_app")}</span>
+                      <ChevronRightIcon
+                        size={18}
+                        className="shrink-0 text-ink-tertiary"
                       />
-                      {!notificationSupported
-                        ? t("app.perm_unsupported")
-                        : notificationPermission === "granted"
-                          ? t("app.perm_enabled")
-                          : notificationPermission === "denied"
-                            ? t("app.perm_blocked")
-                            : t("app.perm_not_configured")}
-                    </span>
-                  </div>
-                  <p className="m-0 text-footnote text-ink-secondary">
-                    {!notificationSupported
-                      ? t("app.perm_desc_unsupported")
-                      : notificationPermission === "granted"
-                        ? t("app.perm_desc_enabled")
-                        : notificationPermission === "denied"
-                          ? t("app.perm_desc_blocked")
-                          : t("app.perm_desc_not_configured")}
-                  </p>
-                </div>
-
-                {/* VAPID Server Status */}
-                <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-callout font-medium text-ink">
-                      {t("app.server_push_service")}
-                    </span>
-                    <span
-                      className={cx(
-                        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                        vapidConfigured === true
-                          ? "bg-success/15 text-success"
-                          : vapidConfigured === false
-                            ? "bg-error/15 text-error"
-                            : "bg-fill text-ink-secondary",
-                      )}
-                    >
-                      <span
-                        className={cx(
-                          "size-2 rounded-full",
-                          vapidConfigured === true
-                            ? "bg-success"
-                            : vapidConfigured === false
-                              ? "bg-error"
-                              : "bg-ink-tertiary",
-                        )}
-                      />
-                      {vapidConfigured === true
-                        ? t("app.vapid_ready")
-                        : vapidConfigured === false
-                          ? t("app.vapid_missing")
-                          : t("app.vapid_checking")}
-                    </span>
-                  </div>
-                  <p className="m-0 text-footnote text-ink-secondary">
-                    {vapidConfigured === true
-                      ? t("app.vapid_desc_ready")
-                      : vapidConfigured === false
-                        ? t("app.vapid_desc_missing")
-                        : t("app.vapid_desc_checking")}
-                  </p>
-                </div>
-
-                {/* Action buttons */}
-                <div className="mt-2 flex flex-col gap-2.5">
-                  {notificationPermission !== "granted" ? (
-                    <Button
-                      variant="primary"
-                      disabled={!notificationSupported}
-                      onClick={onEnableNotifications}
-                    >
-                      {t("app.enable_notifications")}
-                    </Button>
-                  ) : (
-                    <Button
-                      variant="secondary"
-                      onClick={onSendTestNotification}
-                    >
-                      <BellIcon size={16} />
-                      {t("app.send_test_notification")}
-                    </Button>
+                    </button>
                   )}
                 </div>
-              </section>
-            </div>
-          )}
+
+                <div className="mt-10 flex flex-col items-center gap-3">
+                  <Button
+                    variant="destructive"
+                    className="w-full max-w-[360px] h-12 min-h-12 text-body font-semibold rounded-xl"
+                    onClick={onSignOut}
+                  >
+                    {t("app.sign_out")}
+                  </Button>
+                  {onSignOutEverywhere && (
+                    <button
+                      type="button"
+                      className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-3 py-1.5 text-callout font-semibold text-primary hover:bg-fill"
+                      onClick={onSignOutEverywhere}
+                    >
+                      {t("auth.signout_everywhere")}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+
+            {tab === "notifications" && (
+              <div
+                className="flex flex-col gap-6"
+                data-testid="notifications-tab"
+              >
+                <section
+                  className="flex flex-col gap-4 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
+                  aria-label={t("app.notification_diag_title")}
+                >
+                  <div>
+                    <h3 className="m-0 text-heading font-semibold text-ink">
+                      {t("app.notification_diag_title")}
+                    </h3>
+                    <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                      {t("app.notification_diag_desc")}
+                    </p>
+                  </div>
+
+                  {/* Browser permission diagnostic */}
+                  <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-callout font-medium text-ink">
+                        {t("app.browser_permission")}
+                      </span>
+                      <span
+                        className={cx(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
+                          !notificationSupported
+                            ? "bg-fill text-ink-secondary"
+                            : notificationPermission === "granted"
+                              ? "bg-success/15 text-success"
+                              : notificationPermission === "denied"
+                                ? "bg-error/15 text-error"
+                                : "bg-warning/15 text-warning",
+                        )}
+                      >
+                        <span
+                          className={cx(
+                            "size-2 rounded-full",
+                            !notificationSupported
+                              ? "bg-ink-tertiary"
+                              : notificationPermission === "granted"
+                                ? "bg-success"
+                                : notificationPermission === "denied"
+                                  ? "bg-error"
+                                  : "bg-warning",
+                          )}
+                        />
+                        {!notificationSupported
+                          ? t("app.perm_unsupported")
+                          : notificationPermission === "granted"
+                            ? t("app.perm_enabled")
+                            : notificationPermission === "denied"
+                              ? t("app.perm_blocked")
+                              : t("app.perm_not_configured")}
+                      </span>
+                    </div>
+                    <p className="m-0 text-footnote text-ink-secondary">
+                      {!notificationSupported
+                        ? t("app.perm_desc_unsupported")
+                        : notificationPermission === "granted"
+                          ? t("app.perm_desc_enabled")
+                          : notificationPermission === "denied"
+                            ? t("app.perm_desc_blocked")
+                            : t("app.perm_desc_not_configured")}
+                    </p>
+                  </div>
+
+                  {/* VAPID Server Status */}
+                  <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-callout font-medium text-ink">
+                        {t("app.server_push_service")}
+                      </span>
+                      <span
+                        className={cx(
+                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
+                          vapidConfigured === true
+                            ? "bg-success/15 text-success"
+                            : vapidConfigured === false
+                              ? "bg-error/15 text-error"
+                              : "bg-fill text-ink-secondary",
+                        )}
+                      >
+                        <span
+                          className={cx(
+                            "size-2 rounded-full",
+                            vapidConfigured === true
+                              ? "bg-success"
+                              : vapidConfigured === false
+                                ? "bg-error"
+                                : "bg-ink-tertiary",
+                          )}
+                        />
+                        {vapidConfigured === true
+                          ? t("app.vapid_ready")
+                          : vapidConfigured === false
+                            ? t("app.vapid_missing")
+                            : t("app.vapid_checking")}
+                      </span>
+                    </div>
+                    <p className="m-0 text-footnote text-ink-secondary">
+                      {vapidConfigured === true
+                        ? t("app.vapid_desc_ready")
+                        : vapidConfigured === false
+                          ? t("app.vapid_desc_missing")
+                          : t("app.vapid_desc_checking")}
+                    </p>
+                  </div>
+
+                  {/* Action buttons */}
+                  <div className="mt-2 flex flex-col gap-2.5">
+                    {notificationPermission !== "granted" ? (
+                      <Button
+                        variant="primary"
+                        disabled={!notificationSupported}
+                        onClick={onEnableNotifications}
+                      >
+                        {t("app.enable_notifications")}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        onClick={onSendTestNotification}
+                      >
+                        <BellIcon size={16} />
+                        {t("app.send_test_notification")}
+                      </Button>
+                    )}
+                  </div>
+                </section>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
