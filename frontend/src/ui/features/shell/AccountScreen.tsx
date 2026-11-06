@@ -61,7 +61,7 @@ export function AccountScreen({
   const [tab, setTab] = useState<"general" | "notifications">("general");
 
   return (
-    <div className="pb-8">
+    <div className="w-full max-w-[580px] pb-8">
       <NavBar
         backLabel={t("common.back")}
         onBack={onBack}
@@ -177,8 +177,12 @@ export function AccountScreen({
             )}
           </div>
 
-          <div className="mt-6 flex flex-col items-center gap-3">
-            <Button variant="destructive" fullWidth onClick={onSignOut}>
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <Button
+              variant="destructive"
+              className="w-full max-w-[320px]"
+              onClick={onSignOut}
+            >
               {t("app.sign_out")}
             </Button>
             {onSignOutEverywhere && (

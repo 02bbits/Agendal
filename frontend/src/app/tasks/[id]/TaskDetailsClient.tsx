@@ -180,12 +180,47 @@ export default function TaskDetailsClient({
       <div
         role="status"
         aria-busy="true"
-        className="flex animate-pulse flex-col gap-6 pb-8"
+        className="flex animate-pulse flex-col gap-5 pb-8 pt-1"
       >
-        <div className="h-10 w-24 rounded bg-surface" />
-        <div className="h-14 w-full rounded bg-surface" />
-        <div className="h-32 w-full rounded bg-surface" />
-        <div className="h-32 w-full rounded bg-surface" />
+        <div className="flex items-center justify-between py-1">
+          <div className="h-9 w-20 rounded-full bg-surface-hover/60" />
+        </div>
+        <div className="flex items-center gap-3 py-1">
+          <div className="size-6 shrink-0 rounded-full bg-fill/80" />
+          <div className="h-6 w-3/4 rounded-xl bg-fill/80" />
+        </div>
+        <div className="h-20 w-full rounded-2xl border border-separator/40 bg-surface/70" />
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-16 rounded-full bg-surface-hover/60" />
+          <div className="h-8 w-20 rounded-full bg-surface-hover/60" />
+          <div className="h-8 w-16 rounded-full bg-surface-hover/60" />
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface/80 divide-y divide-separator/40">
+          {[1, 2, 3, 4].map((i) => (
+            <div
+              key={i}
+              className="flex items-center justify-between px-4 py-3.5"
+            >
+              <div className="flex items-center gap-3">
+                <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+                <div
+                  className="h-4 rounded-lg bg-fill/80"
+                  style={{
+                    width:
+                      i === 1
+                        ? "100px"
+                        : i === 2
+                          ? "80px"
+                          : i === 3
+                            ? "90px"
+                            : "110px",
+                  }}
+                />
+              </div>
+              <div className="h-4 w-16 shrink-0 rounded-lg bg-fill/60" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

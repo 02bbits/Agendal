@@ -79,10 +79,10 @@ export function TaskRow({
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0",
+        "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 cursor-pointer",
         tone === "due"
-          ? "border-dashed border-due/60 hover:bg-due/10"
-          : "border-separator/60 hover:bg-surface-hover/40",
+          ? "border-dashed border-due/60 hover:bg-due/10 active:bg-due/20"
+          : "border-separator/60 hover:bg-surface-hover/40 active:bg-surface-hover/60",
         selected && (tone === "due" ? "bg-due/20" : "bg-surface-hover/60"),
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
@@ -124,7 +124,7 @@ export function TaskRow({
       <Link
         href={ROUTES.task(task.id)}
         navigate={navigate}
-        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink"
+        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink active:opacity-90"
         aria-label={accessibleName}
         aria-current={selected ? "true" : undefined}
       >

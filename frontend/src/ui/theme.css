@@ -132,6 +132,7 @@
   --color-ink: var(--color-base-content);
   --color-danger: var(--color-error);
   --color-surface: var(--ag-surface);
+  --color-surface-hover: var(--color-base-200);
   --color-surface-elevated: var(--ag-surface-elevated);
   --color-fill-thumb: var(--ag-fill-thumb);
   --color-control: var(--ag-control-border);
