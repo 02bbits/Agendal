@@ -12,12 +12,19 @@ const repoRoot = path.join(__dirname, "..");
 const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
+  // The service worker URL carries this, so each build is a new worker (IM-50, UX-42)
+  env: { NEXT_PUBLIC_BUILD_ID: String(Date.now()) },
   cacheComponents: true,
   partialPrefetching: true,
   // NF-16 on every page. No script allow-list: Next.js inlines its bootstrap scripts
   // and a nonce would turn off the prerendered static pages (ASVS deviation 4).
   headers() {
     return Promise.resolve([
+      // The browser must recheck the worker script itself on every load, or updates never arrive
+      {
+        source: "/sw.js",
+        headers: [{ key: "Cache-Control", value: "no-cache" }],
+      },
       {
         source: "/:path*",
         headers: [
