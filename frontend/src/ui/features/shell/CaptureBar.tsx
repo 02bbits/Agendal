@@ -15,7 +15,7 @@ export interface CaptureBarProps {
 export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
   return (
     <div
-      className={`grid items-center gap-2 px-gutter py-2 md:px-gutter-wide ${onAdd ? "grid-cols-[minmax(0,1fr)_44px]" : "grid-cols-[minmax(0,1fr)]"}`}
+      className={`grid items-center gap-2 px-gutter py-2 mb-1 md:px-gutter-wide ${onAdd ? "grid-cols-[minmax(0,1fr)_44px]" : "grid-cols-[minmax(0,1fr)]"}`}
     >
       <div className="flex h-11 min-w-0 items-center rounded-full border border-separator bg-surface-elevated pr-1 pl-4 shadow-sm">
         <button

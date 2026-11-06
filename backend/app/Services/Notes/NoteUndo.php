@@ -39,44 +39,60 @@ final class NoteUndo
     {
         return DB::transaction(function () use ($note, $confirmConflicts): Note {
             $note = $this->lock($note);
-            if ($note->status === 'undone') {
-                return $note; // RV-E5: the second request changes nothing
+            if ($note->status === 'pending') {
+                if ($note->undo_log === null) {
+                    throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
+                }
+
+                return $note; // a second Undo all (RV-E5): nothing changes twice
             }
             if ($note->status !== 'done') {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
-            if ($note->processed_at->modify('+'.self::UNDO_DAYS.' days') < $this->clock->now()) {
-                throw new ApiError('note.undo_expired', 'Notes can be undone for 30 days.', 409);
-            }
-            $tasks = Task::withTrashed()->where('user_id', $note->user_id)->whereIn('id', array_column($note->applied, 'task_id'))
-                ->lockForUpdate()->get()->keyBy('id');
-            $conflicts = $this->conflicts($note->applied, $tasks->all());
-            if ($conflicts !== [] && ! $confirmConflicts) {
-                throw new ApiError('note.undo_conflicts', 'Some tasks from this note were edited since.', 409, extra: ['tasks' => $conflicts]);
-            }
-            $zone = (string) User::query()->findOrFail($note->user_id)->timezone;
-            $changes = [];
-            foreach (array_reverse($note->applied) as $entry) {
-                $task = $tasks[$entry['task_id']] ?? null;
-                if ($task === null) {
-                    continue;
-                }
-                $was = $task->attributesToArray();
-                match ($entry['kind']) {
-                    ChangeKind::Created->value => $this->remove($task),
-                    ChangeKind::Updated->value => $this->revert($task, $entry, $zone),
-                    ChangeKind::Deleted->value => $this->bringBack($task),
-                    default => null,
-                };
-                $changes[] = ['task_id' => $task->id, 'before' => $was, 'after' => $task->attributesToArray()];
-            }
+            $changes = $this->reverseApplied($note, $confirmConflicts);
             $redoUntil = $this->clock->now()->modify('+'.self::REDO_SECONDS.' seconds');
-            $note->status = 'undone';
+            $note->status = 'pending';
             $note->undo_log = ['redo_until' => $redoUntil->format(DATE_ATOM), 'changes' => $changes];
             $note->save();
 
             return $note->refresh();
         }, 3);
+    }
+
+    /**
+     * Undoes the applied tasks of a note (used by undo and Edit note / replan).
+     *
+     * @return list<array{task_id: string, before: array<string, mixed>, after: array<string, mixed>}> Changes recorded during reversal
+     */
+    public function reverseApplied(Note $note, bool $confirmConflicts): array
+    {
+        if ($note->processed_at->modify('+'.self::UNDO_DAYS.' days') < $this->clock->now()) {
+            throw new ApiError('note.undo_expired', 'Notes can be undone for 30 days.', 409);
+        }
+        $tasks = Task::withTrashed()->where('user_id', $note->user_id)->whereIn('id', array_column($note->applied, 'task_id'))
+            ->lockForUpdate()->get()->keyBy('id');
+        $conflicts = $this->conflicts($note->applied, $tasks->all());
+        if ($conflicts !== [] && ! $confirmConflicts) {
+            throw new ApiError('note.undo_conflicts', 'Some tasks from this note were edited since.', 409, extra: ['tasks' => $conflicts]);
+        }
+        $zone = (string) User::query()->findOrFail($note->user_id)->timezone;
+        $changes = [];
+        foreach (array_reverse($note->applied) as $entry) {
+            $task = $tasks[$entry['task_id']] ?? null;
+            if ($task === null) {
+                continue;
+            }
+            $was = $task->attributesToArray();
+            match ($entry['kind']) {
+                ChangeKind::Created->value => $this->remove($task),
+                ChangeKind::Updated->value => $this->revert($task, $entry, $zone),
+                ChangeKind::Deleted->value => $this->bringBack($task),
+                default => null,
+            };
+            $changes[] = ['task_id' => $task->id, 'before' => $was, 'after' => $task->attributesToArray()];
+        }
+
+        return $changes;
     }
 
     public function redo(Note $note): Note
@@ -87,7 +103,7 @@ final class NoteUndo
             if ($note->status === 'done') {
                 return $note;
             }
-            if ($note->status !== 'undone') {
+            if ($note->status !== 'pending') {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
             $log = $note->undo_log ?? [];

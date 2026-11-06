@@ -4,7 +4,7 @@ import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
-import { PencilIcon } from "../../components/icons";
+import { PencilIcon, TrashIcon } from "../../components/icons";
 import { NavBar } from "../../components/NavBar";
 import { t, tc } from "../../copy";
 import {
@@ -28,6 +28,7 @@ import { ROUTES, type Navigate } from "../shell/routes";
 
 /** Whether a rename was saved. Named so the type stays out of NF-12's JSX text check. */
 type RenameSaved = Promise<boolean>;
+type DeleteNoteResult = Promise<void> | void;
 
 export interface NoteResultScreenProps {
   result: NoteResultData;
@@ -40,6 +41,8 @@ export interface NoteResultScreenProps {
    */
   live?: Readonly<Record<string, Task | null>>;
   today: string;
+  /** The current instant, for the 30-day undo window (RV-E2). */
+  now: Date;
   timeZone: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
@@ -49,6 +52,8 @@ export interface NoteResultScreenProps {
   onApply?: () => void;
   onEdit?: () => void;
   onMakeTask?: () => void;
+  /** Deletes the note once the user confirms; the screen is left by the caller. */
+  onDelete?: () => DeleteNoteResult;
   /** Apply or Edit note is waiting on the server. */
   busy?: boolean;
   /** No connection: Apply, Edit note and Undo all can't reach the server (RV §2.4). */
@@ -78,7 +83,7 @@ const sentence = (word: string) =>
   word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
 
 // The note's name, or its first words while it has none
-const nameOf = (result: NoteResultData) =>
+export const nameOf = (result: NoteResultData) =>
   result.note.name ?? result.note.text.split(/\s+/).slice(0, 6).join(" ");
 
 const LONG_QUOTE = 160;
@@ -99,6 +104,7 @@ export function NoteResultScreen({
   onRestoreOmission,
   live = {},
   today,
+  now,
   timeZone,
   timeFormat,
   weekStart,
@@ -107,6 +113,7 @@ export function NoteResultScreen({
   onEdit,
   onMakeTask,
   onRename,
+  onDelete,
   busy = false,
   offline = false,
   onOpenTask,
@@ -122,6 +129,7 @@ export function NoteResultScreen({
   const [expanded, setExpanded] = useState(false);
   // Renaming: the field's text while open. Enter or leaving the field saves, Escape cancels
   const [naming, setNaming] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
   const saveName = async () => {
     const name = naming?.trim();
     if (!name || name === nameOf(result)) return setNaming(null);
@@ -132,6 +140,30 @@ export function NoteResultScreen({
 
   const { note, changes, skipped } = result;
   const Heading = presentation === "panel" ? "h2" : "h1";
+  const deleteDialog = (
+    <Dialog
+      open={deleting}
+      title={t("note.delete_title", { name: nameOf(result) })}
+      description={t("note.delete_body")}
+      onClose={() => setDeleting(false)}
+      actions={
+        <>
+          <Button
+            variant="destructive"
+            onClick={async () => {
+              setDeleting(false);
+              await onDelete?.();
+            }}
+          >
+            {t("common.delete")}
+          </Button>
+          <Button onClick={() => setDeleting(false)}>
+            {t("common.cancel")}
+          </Button>
+        </>
+      }
+    />
+  );
   if (note.status === "followup")
     return (
       <div
@@ -143,13 +175,24 @@ export function NoteResultScreen({
         {presentation === "screen" && (
           <NavBar backLabel={t("common.back")} onBack={onDone} />
         )}
-        <Heading
-          ref={heading}
-          tabIndex={-1}
-          className="mt-1 mb-0 text-display font-bold focus:outline-none"
-        >
-          {t("note.followup_title")}
-        </Heading>
+        <div className="mt-1 flex items-start gap-2">
+          <Heading
+            ref={heading}
+            tabIndex={-1}
+            className="m-0 min-w-0 flex-1 text-display font-bold focus:outline-none"
+          >
+            {t("note.followup_title")}
+          </Heading>
+          {onDelete && (
+            <IconButton
+              plain
+              label={t("note.delete")}
+              icon={<TrashIcon size={18} />}
+              disabled={offline}
+              onClick={() => setDeleting(true)}
+            />
+          )}
+        </div>
         <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
           <p className="m-0 whitespace-pre-line [overflow-wrap:anywhere]">
             {note.text}
@@ -181,6 +224,7 @@ export function NoteResultScreen({
             {t("note.make_one")}
           </Button>
         </div>
+        {deleteDialog}
       </div>
     );
   const written = localDateTime(note.processed_at, timeZone);
@@ -190,19 +234,20 @@ export function NoteResultScreen({
   const updated = count("updated");
   const deleted = count("deleted");
   const confirming = note.status === "confirm";
-  const undone = note.status === "undone";
+  // Pending (undone) notes applied nothing: no counts, rows stay a record
+  const notApplied = note.status === "pending";
   // RV-E2: after 30 days the note stays, but Undo all is gone
-  const expired = undoExpired(written.date, today);
+  const expired = undoExpired(note.processed_at, now);
   const overline = confirming
     ? t("note.review_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-        undone && t("note.undone_label"),
-        !undone && created > 0 && tc("note.made", created),
-        !undone &&
+        notApplied && t("notes.needs"),
+        !notApplied && created > 0 && tc("note.made", created),
+        !notApplied &&
           updated > 0 &&
           t("note.overline_updated", { count: updated }),
-        !undone &&
+        !notApplied &&
           deleted > 0 &&
           t("note.overline_deleted", { count: deleted }),
       ]
@@ -246,6 +291,15 @@ export function NoteResultScreen({
               icon={<PencilIcon size={18} />}
               disabled={offline}
               onClick={() => setNaming(nameOf(result))}
+            />
+          )}
+          {onDelete && (
+            <IconButton
+              plain
+              label={t("note.delete")}
+              icon={<TrashIcon size={18} />}
+              disabled={offline}
+              onClick={() => setDeleting(true)}
             />
           )}
         </div>
@@ -305,7 +359,7 @@ export function NoteResultScreen({
         <section className="overflow-hidden rounded-box bg-surface">
           {confirming && (
             <p className="m-0 border-b border-separator px-4 pt-3 pb-2.5 text-overline font-semibold uppercase text-ink-secondary">
-              {t("note.planned_count", { count: changes.length })}
+              {tc("note.planned_count", changes.length)}
             </p>
           )}
           <ul className="m-0 list-none p-0">
@@ -319,7 +373,7 @@ export function NoteResultScreen({
                     ? onOpenTask
                     : undefined
                 }
-                undone={undone}
+                notApplied={notApplied}
                 today={today}
                 timeFormat={timeFormat}
                 weekStart={weekStart}
@@ -370,7 +424,7 @@ export function NoteResultScreen({
         </section>
       )}
 
-      {changes.length > 0 && !confirming && (
+      {changes.length > 0 && !confirming && !notApplied && (
         <p className="mt-4 mb-0 text-footnote text-ink-secondary">
           {t("note.result_hint")}
         </p>
@@ -407,6 +461,18 @@ export function NoteResultScreen({
           </>
         ) : (
           <>
+            {/* RV-E17: past the undo window a done note's changes can't be undone, so it can't be edited */}
+            {(note.status !== "done" || !expired) && onEdit && (
+              <Button
+                variant="secondary"
+                size="lg"
+                fullWidth
+                disabled={offline || busy}
+                onClick={onEdit}
+              >
+                {t("note.edit")}
+              </Button>
+            )}
             {note.status === "done" &&
               changes.length > 0 &&
               (expired ? (
@@ -438,6 +504,8 @@ export function NoteResultScreen({
         )}
       </div>
 
+      {deleteDialog}
+
       <Dialog
         open={conflicts > 0}
         title={t("note.undo_conflict_title")}
@@ -466,7 +534,7 @@ interface ChangeRowProps {
   /** Check this first: the task isn't made yet, so the row opens it here instead of its page. */
   onOpen?: (task: Task) => void;
   /** The note was undone: rows stay as a record and stop opening (RV §2.1) */
-  undone: boolean;
+  notApplied: boolean;
   today: string;
   timeFormat: TimeFormat;
   weekStart: WeekStart;
@@ -480,7 +548,7 @@ function ChangeRow({
   change,
   current,
   onOpen,
-  undone,
+  notApplied,
   today,
   timeFormat,
   weekStart,
@@ -492,8 +560,8 @@ function ChangeRow({
     preview && change.kind === "created" ? t("note.preview_new") : t(badge.key);
   const task = current ?? change.task;
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
-  const gone = current === null;
-  const opens = change.kind !== "deleted" && !gone && !undone;
+  const gone = current === null && !notApplied;
+  const opens = change.kind !== "deleted" && !gone && !notApplied;
 
   // Rescheduled on Check this first: the new date and time replace what the note said
   const moved =
@@ -544,7 +612,11 @@ function ChangeRow({
             .filter(Boolean)
             .join(" · ");
   const askWhen =
-    !preview && change.kind === "created" && !gone && !undone && !task.due_date;
+    !preview &&
+    change.kind === "created" &&
+    !gone &&
+    !notApplied &&
+    !task.due_date;
 
   const body = (
     <>
@@ -595,7 +667,7 @@ function ChangeRow({
         <div
           className={cx(
             "flex min-h-[52px] items-start gap-3 px-3.5 py-3",
-            (gone || undone) && "opacity-60",
+            (gone || notApplied) && "opacity-60",
           )}
         >
           {body}

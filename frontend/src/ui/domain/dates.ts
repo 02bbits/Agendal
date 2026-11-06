@@ -98,6 +98,9 @@ export function weekdayOrder(weekStart: WeekStart): number[] {
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
 
-/** RV-E2: a note can be undone for 30 days after it was processed (dates as `YYYY-MM-DD`). */
-export const undoExpired = (processed: string, today: string) =>
-  addDays(processed, 30) < today;
+export const UNDO_DAYS = 30;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** RV-E2: a note can be undone for 30 days after it was processed; the same instant rule as the API. */
+export const undoExpired = (processedAt: string, now: Date) =>
+  Date.parse(processedAt) + UNDO_DAYS * DAY_MS < now.getTime();

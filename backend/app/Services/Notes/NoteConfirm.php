@@ -52,17 +52,6 @@ final class NoteConfirm
         });
     }
 
-    /** Edit note on Check this first: nothing is applied and the note is kept (WF-02). */
-    public function cancel(Note $note): Note
-    {
-        return DB::transaction(function () use ($note): Note {
-            $note = $this->locked($note);
-            $note->forceFill(['status' => 'kept'])->save();
-
-            return $note->refresh();
-        });
-    }
-
     private function locked(Note $note): Note
     {
         $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();

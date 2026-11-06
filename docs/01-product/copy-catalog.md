@@ -104,7 +104,6 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.was` | was {value} | Change meta, e.g. "Due Fri (was today)" |
 | `note.undo_all` | Undo all | Result |
 | `note.undone` † | Note undone. Its changes have been reversed. | Toast after Undo all |
-| `note.undone_label` | Undone | Notes card and result status |
 | `note.undo_expired` † | Notes can be undone for 30 days. | Replaces Undo all after the window ([RV-E2](../03-modules/RV-review-control.md#rv-e2)). Also the API code |
 | `note.undo_conflict_title` † | Undo this note? | Dialog when tasks were edited after the note (RV) |
 | `note.undo_conflict_body` † | {count} of its tasks were edited after it was made. Undoing removes them anyway. | Same dialog. Buttons: Undo all (red) / Cancel |
@@ -113,9 +112,12 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.wrong_status` † | This note has already been handled. | API code `409` for an action that isn't valid in the note's status |
 | `note.gone_since` † | Removed since | Result row for a task deleted after the note |
 | `note.project_gone` † | Its project was deleted, so it's in No project. | Result row after undo ([RV-E3](../03-modules/RV-review-control.md#rv-e3)) |
-| `note.kept_label` † | Kept as a note | Notes card status |
 | `note.edited_label` † | Edited | Notes card, after the status line ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.edit` † | Edit note | Result header menu ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
+| `note.delete` | Delete note | Result and follow-up header ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)) |
+| `note.delete_title` | Delete “{name}”? | Delete note dialog |
+| `note.delete_body` | This note will be deleted. | Delete note dialog |
+| `note.deleted` | Deleted “{name}” | Toast after deleting |
 | `note.replan` † | Make tasks again | Editor primary button when editing a saved note ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.ask_when` † | When? | Result row for a created task with no date, before the chips Today / Tomorrow / Next week / Pick date… ([Q4](../08-project/open-questions.md#q4)) |
 | `note.needs_connection` † | This needs a connection. | Disabled note actions while offline |

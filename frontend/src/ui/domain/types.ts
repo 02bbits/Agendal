@@ -81,7 +81,7 @@ export interface NoteResult {
   note: {
     id: string;
     client_id: string;
-    status: "done" | "confirm" | "followup" | "kept" | "undone";
+    status: "done" | "confirm" | "followup" | "pending";
     name: string | null;
     text: string;
     source_file_name: string | null;
@@ -95,13 +95,14 @@ export interface NoteResult {
   redo_until?: string;
 }
 
-export type NoteFilter = "all" | "made" | "needs" | "kept";
+export type NoteFilter = "all" | "made" | "needs";
 export interface NoteListEntry {
   id: string;
   status: NoteResult["note"]["status"];
   name: string | null;
   excerpt: string;
   written_at: string;
+  edited_at?: string | null;
   source_file_name: string | null;
   counts: { created: number; updated: number; deleted: number };
 }

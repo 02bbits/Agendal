@@ -85,14 +85,14 @@ export function NotesScreen({
           <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
             {rows.map((note) => {
               const needsLook =
-                note.status === "confirm" || note.status === "followup";
+                note.status === "confirm" ||
+                note.status === "followup" ||
+                note.status === "pending";
               const status = needsLook
                 ? t("notes.needs")
                 : note.status === "done"
                   ? t("notes.made")
-                  : note.status === "undone"
-                    ? t("note.undone_label")
-                    : null;
+                  : null;
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -123,6 +123,12 @@ export function NotesScreen({
                       className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
                     >
                       {status}
+                      {status && note.edited_at ? " · " : ""}
+                      {note.edited_at ? (
+                        <span className="text-ink-secondary">
+                          {t("note.edited_label")}
+                        </span>
+                      ) : null}
                     </span>
                     <time className="hidden text-footnote text-ink-secondary sm:block">
                       {formatTime(

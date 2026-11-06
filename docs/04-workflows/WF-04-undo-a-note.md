@@ -5,7 +5,7 @@
 ## Main flow
 
 1. The note's changes are reversed using their before values ([NF-11](../05-quality/nfr.md#nf-11)). Created tasks are removed, changed tasks get their old values back, and deleted tasks are restored ([RV-2](../03-modules/RV-review-control.md#rv-2)).
-2. The note is kept and marked **Undone** (status `undone`).
+2. The note is kept and marked **Pending** (status `pending`).
 3. Every list updates.
 
 ## Alternatives

@@ -14,7 +14,7 @@
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "client_id": { "type": "string", "format": "uuid" },
-        "status": { "enum": ["done", "confirm", "followup", "kept", "undone"] },
+        "status": { "enum": ["done", "confirm", "followup", "pending"] },
         "name": { "type": ["string", "null"], "maxLength": 35 },
         "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
         "source_file_name": { "type": ["string", "null"], "maxLength": 255 },

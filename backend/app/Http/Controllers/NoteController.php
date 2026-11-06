@@ -14,17 +14,17 @@ use App\Services\Notes\NoteFollowup;
 use App\Services\Notes\NoteUndo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class NoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs,kept'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
+        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
         $query = Note::query();
         match ($input['filter'] ?? 'all') {
             'made' => $query->where('status', 'done'),
-            'needs' => $query->whereIn('status', ['confirm', 'followup']),
-            'kept' => $query->where('status', 'kept'),
+            'needs' => $query->whereIn('status', ['confirm', 'followup', 'pending']),
             default => $query,
         };
         $page = $query->orderByDesc('written_at')->orderByDesc('id')->cursorPaginate((int) ($input['limit'] ?? 20));
@@ -34,11 +34,11 @@ class NoteController extends Controller
             'items' => $page->getCollection()->map(function (Note $note): array {
                 $kinds = array_count_values(array_column($note->plan['changes'] ?? [], 'kind'));
 
-                return ['id' => $note->id, 'status' => $note->status, 'name' => $note->name, 'excerpt' => mb_substr($note->text, 0, 140), 'written_at' => $note->written_at->format(DATE_ATOM), 'source_file_name' => $note->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
+                return ['id' => $note->id, 'status' => $note->status, 'name' => $note->name, 'excerpt' => mb_substr($note->text, 0, 140), 'written_at' => $note->written_at->format(DATE_ATOM), 'edited_at' => $note->edited_at?->format(DATE_ATOM), 'source_file_name' => $note->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
             })->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
             'total' => (int) $counts->sum(),
-            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0),
+            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0) + (int) ($counts['pending'] ?? 0),
         ]);
     }
 
@@ -66,7 +66,7 @@ class NoteController extends Controller
         $user = $request->user();
         assert($user instanceof User);
 
-        return new NoteResultResource($process->replanFollowup($user, $note, $request->all()));
+        return new NoteResultResource($process->replan($user, $note, $request->all()));
     }
 
     /** The user renames a note; its plan and tasks don't change. Edit note names it again (RV-5). */
@@ -86,11 +86,6 @@ class NoteController extends Controller
         return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? []));
     }
 
-    public function cancel(Note $note, NoteConfirm $confirm): NoteResultResource
-    {
-        return new NoteResultResource($confirm->cancel($note));
-    }
-
     public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource
     {
         return new NoteResultResource($undo->undo($note, $request->boolean('confirm_conflicts')));
@@ -99,5 +94,12 @@ class NoteController extends Controller
     public function redo(Note $note, NoteUndo $undo): NoteResultResource
     {
         return new NoteResultResource($undo->redo($note));
+    }
+
+    public function destroy(Note $note): Response
+    {
+        $note->delete();
+
+        return response()->noContent();
     }
 }
