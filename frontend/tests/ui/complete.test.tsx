@@ -558,7 +558,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
       });
     });
 
-    expect(screen.getByText("Recurring next instance")).toBeTruthy();
+    expect(await screen.findByText("Recurring next instance")).toBeTruthy();
   });
 
   it("bug 3: a field changed while complete is in flight survives its failure (Refs #21)", async () => {

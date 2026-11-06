@@ -44,6 +44,7 @@ export function TaskStoreProvider({
   const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
   const toastSeq = React.useRef(0);
   const settleTimers = React.useRef<types.SettleTimerMap>(new Map());
+  const pendingOccurrences = React.useRef<Map<string, Task>>(new Map());
   const lifecycleRef = React.useRef<types.LifecycleFn>(() => {});
   const removeRef = React.useRef<(task: Task, scope?: DeleteScope) => void>(
     () => {},
@@ -56,6 +57,7 @@ export function TaskStoreProvider({
     () => () => {
       settleTimers.current.forEach(clearTimeout);
       settleTimers.current.clear();
+      pendingOccurrences.current.clear();
     },
     [],
   );
@@ -89,6 +91,7 @@ export function TaskStoreProvider({
     const timer = settleTimers.current.get(id);
     if (timer) clearTimeout(timer);
     settleTimers.current.delete(id);
+    pendingOccurrences.current.delete(id);
     setSettling((s) =>
       s.has(id) ? new Set([...s].filter((x) => x !== id)) : s,
     );
@@ -103,10 +106,15 @@ export function TaskStoreProvider({
         setTimeout(() => {
           settleTimers.current.delete(id);
           setSettling((s) => new Set([...s].filter((x) => x !== id)));
+          const pending = pendingOccurrences.current.get(id);
+          if (pending) {
+            pendingOccurrences.current.delete(id);
+            acceptOccurrence(pending, false);
+          }
         }, types.SETTLE_MS),
       );
     },
-    [clearSettle],
+    [acceptOccurrence, clearSettle],
   );
 
   const handleSaveError = React.useCallback(
@@ -140,7 +148,13 @@ export function TaskStoreProvider({
           // Requests for one task run in order, so every answer is applied:
           // complete adds the next occurrence, reopen removes the one the
           // server deleted. Skipping a stale answer left a duplicate row
-          if (r.next) acceptOccurrence(r.next, !isComplete);
+          if (r.next) {
+            if (isComplete && settleTimers.current.has(id)) {
+              pendingOccurrences.current.set(id, r.next);
+            } else {
+              acceptOccurrence(r.next, !isComplete);
+            }
+          }
           return r.task;
         });
       change(id, fields, req, (err) =>
