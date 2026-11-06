@@ -8,6 +8,7 @@ import { ApiRequestError } from "../../../lib/apiError";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
   DeleteTask,
+  ROUTES,
   TaskDetails,
   TaskStoreProvider,
   t,
@@ -77,7 +78,33 @@ function TaskDetailsContainer({
       variant="screen"
       backLabel={getBackLabel()}
       weekStart={weekStart}
-      deleteAction={<DeleteTask task={currentTask} onDeleted={back} isScreen />}
+      deleteAction={
+        <DeleteTask
+          task={currentTask}
+          onDeleted={() => {
+            let done = false;
+            const go = () => {
+              if (done) return;
+              done = true;
+              if (typeof window !== "undefined") {
+                window.removeEventListener("popstate", go);
+              }
+              if (getBackLabel()) {
+                back();
+              } else if (navigate) {
+                navigate(ROUTES.inbox);
+              } else {
+                back();
+              }
+            };
+            if (typeof window !== "undefined") {
+              window.addEventListener("popstate", go);
+            }
+            setTimeout(go, 120);
+          }}
+          isScreen
+        />
+      }
     />
   );
 }

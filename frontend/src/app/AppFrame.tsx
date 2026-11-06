@@ -17,12 +17,14 @@ import {
   NewTaskSheet,
   NoteEditor,
   ProjectSheet,
+  PushExplainer,
   ROUTES,
   SearchPopup,
   sortProjects,
   t,
   Toast,
   useMediaQuery,
+  usePushPrompt,
   type AccountSettings,
   type Navigate,
   type NoteResult,
@@ -175,6 +177,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
+  const pushPrompt = usePushPrompt(appClock);
+
+  useEffect(() => {
+    const onReminderSet = () => {
+      pushPrompt.onReminderSet();
+    };
+    window.addEventListener("agendal:reminder-set", onReminderSet);
+    return () => {
+      window.removeEventListener("agendal:reminder-set", onReminderSet);
+    };
+  }, [pushPrompt]);
 
   useEffect(() => {
     try {
@@ -765,6 +778,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onCreated={handleProjectCreated}
           />
         )}
+        <PushExplainer
+          dialog={pushPrompt.dialog}
+          onAllow={pushPrompt.allow}
+          onNotNow={pushPrompt.notNow}
+        />
       </AppShell>
     </AppFrameContext.Provider>
   );

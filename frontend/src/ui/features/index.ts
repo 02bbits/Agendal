@@ -67,6 +67,8 @@ export {
   type TaskDetailsProps,
 } from "./tasks/details/TaskDetails";
 export { DeleteTask, type DeleteTaskProps } from "./tasks/DeleteTask";
+export { PushExplainer, type PushExplainerProps } from "./tasks/PushExplainer";
+export { usePushPrompt } from "./tasks/usePushPrompt";
 export {
   RepeatScopeDialog,
   type RepeatScopeDialogProps,

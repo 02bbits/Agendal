@@ -1,4 +1,4 @@
-> **A summary for humans. Not a source of truth.** The spec in `docs/01-product` to `docs/08-project` wins. Agents keep this file in step with the spec and the build (section 13), but never cite it as the authority for a decision.
+> **For humans only. Not a source of truth.** Agents and automated tools: do not read, cite or update this file. Use the spec in `docs/01-product` to `docs/08-project`.
 
 # Agendal in one read
 
