@@ -138,7 +138,7 @@ export function AccountScreen({
                   onClick={() => setTab(item.value)}
                   onKeyDown={(e) => onTabKeyDown(e, index)}
                   className={cx(
-                    "focus-ring group flex flex-1 cursor-pointer items-center gap-3 rounded-2xl px-4 py-3 text-left text-body font-medium transition-colors md:w-full md:flex-none",
+                    "focus-ring group flex flex-1 cursor-pointer items-center justify-center gap-2.5 rounded-2xl px-4 py-3 text-center text-body font-medium transition-colors md:w-full md:flex-none md:justify-start md:text-left",
                     checked
                       ? "bg-surface font-semibold text-ink shadow-xs md:bg-fill"
                       : "text-ink-secondary hover:bg-fill/40 hover:text-ink",
@@ -155,7 +155,7 @@ export function AccountScreen({
                   >
                     {item.icon}
                   </span>
-                  <span className="flex-1 truncate">{item.label}</span>
+                  <span className="truncate md:flex-1">{item.label}</span>
                 </button>
               );
             })}
