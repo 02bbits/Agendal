@@ -195,6 +195,7 @@ describe("upcomingPage (LV-2, T-LV-10)", () => {
       );
     expect(titles("scheduled")).toEqual([
       "Draft portfolio case study",
+      "Plan the week",
       "Adv Web sprint demo",
     ]);
     expect(titles("due")).toEqual([
@@ -1073,6 +1074,33 @@ describe("Upcoming screen (Section 8)", () => {
     expect(within(sec7()!).getByText("Both days task")).toBeTruthy();
   });
 
+  it("shows list.filter_empty with a Show all button when filter has no matches (T-LV-112)", async () => {
+    const taskDueOnly = task({
+      id: "t-due-only-112",
+      title: "Due only task 112",
+      due_date: "2026-11-05",
+      repeat: "never",
+    });
+    const { wrap } = setupUpcoming([taskDueOnly], undefined, tuesdayClock);
+    render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
+
+    expect(screen.getByText("Due only task 112")).toBeTruthy();
+    expect(screen.queryByText(/Nothing matches this filter/)).toBeNull();
+
+    await userEvent.click(
+      screen.getAllByRole("radio", { name: /Scheduled/ })[0],
+    );
+
+    expect(screen.queryByText("Due only task 112")).toBeNull();
+    expect(screen.getByText(/Nothing matches this filter/)).toBeTruthy();
+    const showAllBtn = screen.getByRole("button", { name: "Show all" });
+    expect(showAllBtn).toBeTruthy();
+
+    await userEvent.click(showAllBtn);
+    expect(screen.getByText("Due only task 112")).toBeTruthy();
+    expect(screen.queryByText(/Nothing matches this filter/)).toBeNull();
+  });
+
   it("navigation arrows: next week lands on first day (or Sunday when weekStart=sun); prev week lands on tomorrow; prev disabled on current week", async () => {
     const { wrap } = setupUpcoming([], undefined, tuesdayClock);
     const { unmount } = render(
@@ -1181,5 +1209,15 @@ describe("Upcoming screen (Section 8)", () => {
     expect(day12Btn.getAttribute("aria-current")).toBe("true");
 
     unmount();
+  });
+
+  it("A11Y-52: Upcoming filter chips are a radiogroup", () => {
+    const { wrap } = setupUpcoming([]);
+    render(wrap(<UpcomingScreen accountInitial="e" />));
+
+    const radiogroup = screen.getAllByRole("radiogroup")[0];
+    expect(radiogroup).toBeTruthy();
+    const radios = within(radiogroup).getAllByRole("radio");
+    expect(radios.length).toBeGreaterThan(0);
   });
 });

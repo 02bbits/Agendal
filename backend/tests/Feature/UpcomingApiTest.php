@@ -405,3 +405,66 @@ it('excludes soft-deleted, done, and other user tasks', function () {
 
     expect($res['days'])->toBeEmpty();
 });
+
+it('filter scheduled includes repeating tasks with no start date on their due day', function () {
+    $user = User::factory()->create();
+
+    // Repeating task with no start date and due_date >= tomorrow
+    $repeatingDueOnlyId = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $repeatingDueOnlyId,
+        'user_id' => $user->id,
+        'title' => 'Weekly review without start date',
+        'start_date' => null,
+        'due_date' => '2026-10-25',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    // Non-repeating due-only task
+    $nonRepeatingDueOnlyId = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $nonRepeatingDueOnlyId,
+        'user_id' => $user->id,
+        'title' => 'One-time due only task',
+        'start_date' => null,
+        'due_date' => '2026-10-25',
+        'repeat' => 'never',
+        'done' => false,
+    ]);
+
+    // Standard scheduled task with start_date
+    $scheduledId = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $scheduledId,
+        'user_id' => $user->id,
+        'title' => 'Standard scheduled task',
+        'start_date' => '2026-10-26',
+        'due_date' => null,
+        'repeat' => 'never',
+        'done' => false,
+    ]);
+
+    $resScheduled = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=scheduled')
+        ->assertOk()
+        ->json();
+
+    expect($resScheduled['total_count'])->toBe(2);
+    $allScheduledIds = collect($resScheduled['days'])->flatMap(fn ($d) => collect($d['tasks'])->pluck('id'))->all();
+    expect($allScheduledIds)->toContain($repeatingDueOnlyId)
+        ->and($allScheduledIds)->toContain($scheduledId)
+        ->and($allScheduledIds)->not->toContain($nonRepeatingDueOnlyId);
+
+    $oct25 = collect($resScheduled['days'])->firstWhere('date', '2026-10-25');
+    expect($oct25)->not->toBeNull();
+    $oct25Ids = collect($oct25['tasks'])->pluck('id')->all();
+    expect($oct25Ids)->toContain($repeatingDueOnlyId);
+
+    $resDue = $this->actingAs($user)->getJson('/api/v1/tasks?view=upcoming&filter=due')
+        ->assertOk()
+        ->json();
+    $allDueIds = collect($resDue['days'])->flatMap(fn ($d) => collect($d['tasks'])->pluck('id'))->all();
+    expect($allDueIds)->toContain($repeatingDueOnlyId)
+        ->and($allDueIds)->toContain($nonRepeatingDueOnlyId)
+        ->and($allDueIds)->not->toContain($scheduledId);
+});

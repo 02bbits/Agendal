@@ -68,6 +68,7 @@ describe("Inbox task panel integration", () => {
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(new Date("2026-10-23T08:00:00Z"));
     setTimeZone("Asia/Ho_Chi_Minh");
+    window.localStorage.setItem("agendal.page_view", "full");
     pathname = "/";
     searchParams = new URLSearchParams();
     mockMatchMedia(true);

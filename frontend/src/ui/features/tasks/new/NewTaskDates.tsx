@@ -1,16 +1,18 @@
 import type { ReactElement } from "react";
 import { DatePicker } from "../../../components/DatePicker";
-import { CalendarIcon, ClockIcon } from "../../../components/icons";
+import { CalendarIcon, ClockIcon, RepeatIcon } from "../../../components/icons";
 import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
-import type { TimeFormat, WeekStart } from "../../../domain/types";
+import {
+  REPEATS,
+  type Repeat,
+  type TimeFormat,
+  type WeekStart,
+} from "../../../domain/types";
 import { SettingsRow } from "../details/SettingsRow";
 import { buildTimeOptions } from "../details/timeOptions";
 
-export interface NewTaskDatesProps {
-  dueDate: string | null;
-  dueTime: string;
-  onDueTimeChange: (value: string) => void;
+export interface NewTaskStartDateProps {
   startDate: string;
   onStartDateChange: (value: string) => void;
   startTime: string;
@@ -20,11 +22,8 @@ export interface NewTaskDatesProps {
   weekStart?: WeekStart;
 }
 
-/** Due time, then start date with its start time, under the due chips (TK §2.2). */
-export function NewTaskDates({
-  dueDate,
-  dueTime,
-  onDueTimeChange,
+/** Start date and start time row above due chips (TK §2.2). */
+export function NewTaskStartDate({
   startDate,
   onStartDateChange,
   startTime,
@@ -32,6 +31,71 @@ export function NewTaskDates({
   error,
   timeFormat = "24h",
   weekStart = "mon",
+}: NewTaskStartDateProps): ReactElement {
+  const errorId = "new-task-dates-error";
+  const describedBy = error ? errorId : undefined;
+
+  return (
+    <div className="flex flex-col">
+      <SettingsRow
+        icon={<CalendarIcon size={18} />}
+        label={t("task.start_date")}
+        error={error ? t(error) : undefined}
+        errorId={errorId}
+        control={
+          <div className="flex items-center gap-1.5">
+            <DatePicker
+              id="new-task-start-date"
+              variant="row"
+              label={t("task.start_date")}
+              value={startDate || null}
+              clearable
+              onChange={(val) => onStartDateChange(val ?? "")}
+              weekStart={weekStart}
+            />
+            <Picker<string>
+              id="new-task-start"
+              variant="row"
+              label={t("task.start")}
+              value={startTime}
+              options={buildTimeOptions(null, startTime, timeFormat)}
+              disabled={!startDate}
+              onChange={onStartTimeChange}
+              ariaDescribedBy={describedBy}
+            />
+          </div>
+        }
+      />
+    </div>
+  );
+}
+
+export interface NewTaskDatesProps {
+  dueDate: string | null;
+  dueTime: string;
+  onDueTimeChange: (value: string) => void;
+  startDate?: string;
+  onStartDateChange?: (value: string) => void;
+  startTime?: string;
+  onStartTimeChange?: (value: string) => void;
+  repeat: Repeat;
+  onRepeatChange: (value: Repeat) => void;
+  error: CopyKey | null;
+  timeFormat?: TimeFormat;
+  weekStart?: WeekStart;
+}
+
+/** Due time and repeat rows under the due chips (TK §2.2). */
+export function NewTaskDates({
+  dueDate,
+  dueTime,
+  onDueTimeChange,
+  startDate = "",
+  startTime = "",
+  repeat,
+  onRepeatChange,
+  error,
+  timeFormat = "24h",
 }: NewTaskDatesProps): ReactElement {
   const errorId = "new-task-dates-error";
   const describedBy = error ? errorId : undefined;
@@ -60,32 +124,19 @@ export function NewTaskDates({
         }
       />
       <SettingsRow
-        icon={<CalendarIcon size={18} />}
-        label={t("task.start_date")}
-        error={error ? t(error) : undefined}
-        errorId={errorId}
+        icon={<RepeatIcon size={18} />}
+        label={t("task.repeat")}
         control={
-          <div className="flex items-center gap-1.5">
-            <DatePicker
-              id="new-task-start-date"
-              variant="row"
-              label={t("task.start_date")}
-              value={startDate || null}
-              clearable
-              onChange={(val) => onStartDateChange(val ?? "")}
-              weekStart={weekStart}
-            />
-            <Picker<string>
-              id="new-task-start"
-              variant="row"
-              label={t("task.start")}
-              value={startTime}
-              options={buildTimeOptions(null, startTime, timeFormat)}
-              disabled={!startDate}
-              onChange={onStartTimeChange}
-              ariaDescribedBy={describedBy}
-            />
-          </div>
+          <Picker<Repeat>
+            id="new-task-repeat"
+            label={t("task.repeat")}
+            value={repeat}
+            options={REPEATS.map((r) => ({
+              value: r,
+              label: t(`repeat.${r}` as CopyKey),
+            }))}
+            onChange={onRepeatChange}
+          />
         }
       />
     </div>

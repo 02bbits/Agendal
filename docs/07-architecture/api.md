@@ -38,7 +38,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /tasks/{id}/restore` | Toast Undo after a delete | [TK-5](../03-modules/TK-tasks.md#tk-5) |
 | `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}?tasks=move\|delete` | Projects | [PJ-1](../03-modules/PJ-projects.md#pj-1)–4 |
 | `POST /projects/{id}/restore` | Toast Undo after deleting a project | [PJ-4](../03-modules/PJ-projects.md#pj-4) |
-| `POST /push-subscriptions`, `DELETE /push-subscriptions` | Register or remove a device for reminders | [TK-6](../03-modules/TK-tasks.md#tk-6) |
+| `GET /push-subscriptions/key`, `POST /push-subscriptions`, `DELETE /push-subscriptions` | Read the public key, register or remove a device for reminders | [TK-6](../03-modules/TK-tasks.md#tk-6) |
 | `GET /sync?cursor=&limit=` | Pull changes since a cursor. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
 | `POST /auth/logout-everywhere` | End all sessions (Should) | [ADR-007](decisions/ADR-007-session-and-auth.md) |

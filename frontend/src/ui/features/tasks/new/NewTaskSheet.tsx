@@ -5,7 +5,7 @@ import { t } from "../../../copy";
 import { ProjectField } from "../details/ProjectField";
 import { DiscardDialog } from "./DiscardDialog";
 import { DueChips } from "./DueChips";
-import { NewTaskDates } from "./NewTaskDates";
+import { NewTaskDates, NewTaskStartDate } from "./NewTaskDates";
 import { PriorityChips } from "./PriorityChips";
 import type { NewTaskSheetProps } from "./types";
 import { useNewTaskForm } from "./useNewTaskForm";
@@ -65,6 +65,16 @@ export function NewTaskSheet({
             onKeyDown={form.onTitleKeyDown}
           />
 
+          <NewTaskStartDate
+            startDate={form.startDate}
+            onStartDateChange={form.setStartDate}
+            startTime={form.startTime}
+            onStartTimeChange={form.setStartTime}
+            error={form.datesError}
+            timeFormat={timeFormat}
+            weekStart={weekStart}
+          />
+
           <DueChips
             value={form.due}
             picked={form.picked}
@@ -82,6 +92,8 @@ export function NewTaskSheet({
             onStartDateChange={form.setStartDate}
             startTime={form.startTime}
             onStartTimeChange={form.setStartTime}
+            repeat={form.repeat}
+            onRepeatChange={form.handleRepeatChange}
             error={form.datesError}
             timeFormat={timeFormat}
             weekStart={weekStart}

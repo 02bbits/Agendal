@@ -132,6 +132,7 @@
   --color-ink: var(--color-base-content);
   --color-danger: var(--color-error);
   --color-surface: var(--ag-surface);
+  --color-surface-hover: var(--color-base-200);
   --color-surface-elevated: var(--ag-surface-elevated);
   --color-fill-thumb: var(--ag-fill-thumb);
   --color-control: var(--ag-control-border);
@@ -210,11 +211,22 @@
   --animate-fade-in: fade-in 180ms ease-out;
   --animate-slide-up: slide-up 180ms ease-out;
   --animate-panel-in: panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  --animate-scale-in: scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-fade-quick: fade-in 100ms linear;
 
   @keyframes fade-in {
     from {
       opacity: 0;
+    }
+  }
+  @keyframes scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
     }
   }
   @keyframes slide-up {

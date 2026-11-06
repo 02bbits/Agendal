@@ -27,6 +27,154 @@ export interface ToastProps {
   duration?: number;
 }
 
+interface ToastAlertProps {
+  toast: ToastData;
+  duration: number;
+  onDismiss: (id: ToastData["id"]) => void;
+  regionRef: React.RefObject<HTMLDivElement | null>;
+}
+
+function ToastAlert({
+  toast,
+  duration,
+  onDismiss,
+  regionRef,
+}: ToastAlertProps) {
+  const [paused, setPaused] = useState(false);
+  const [dragOffset, setDragOffset] = useState(0);
+  const dragOffsetRef = useRef(0);
+  const dragStartRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
+
+  useEffect(() => {
+    if (paused) return;
+    const timer = setTimeout(() => onDismiss(toast.id), duration);
+    return () => clearTimeout(timer);
+  }, [toast.id, paused, duration, onDismiss]);
+
+  const pause = useCallback(() => setPaused(true), []);
+  const resume = useCallback(() => {
+    if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
+  }, [regionRef]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    pause();
+    dragStartRef.current = e.touches[0].clientX;
+    dragOffsetRef.current = 0;
+    isDraggingRef.current = true;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDraggingRef.current || dragStartRef.current === null) return;
+    const diff = e.touches[0].clientX - dragStartRef.current;
+    dragOffsetRef.current = diff;
+    setDragOffset(diff);
+  };
+
+  const handleTouchEnd = () => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    const finalOffset = dragOffsetRef.current;
+    if (Math.abs(finalOffset) > 70) {
+      onDismiss(toast.id);
+    } else {
+      dragOffsetRef.current = 0;
+      setDragOffset(0);
+      resume();
+    }
+  };
+
+  const handlePointerDown = (e: React.PointerEvent) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    pause();
+    dragStartRef.current = e.clientX ?? 0;
+    dragOffsetRef.current = 0;
+    isDraggingRef.current = true;
+    try {
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
+    } catch {
+      // Ignored in test environments
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current || dragStartRef.current === null) return;
+    const clientX = e.clientX ?? 0;
+    const diff = clientX - dragStartRef.current;
+    dragOffsetRef.current = diff;
+    setDragOffset(diff);
+  };
+
+  const handlePointerUp = (e: React.PointerEvent) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    try {
+      (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+    } catch {
+      // Ignored if capture already lost
+    }
+    const finalOffset = dragOffsetRef.current;
+    if (Math.abs(finalOffset) > 70) {
+      onDismiss(toast.id);
+    } else {
+      dragOffsetRef.current = 0;
+      setDragOffset(0);
+      resume();
+    }
+  };
+
+  const runAction = () => {
+    toast.onAction?.();
+    onDismiss(toast.id);
+  };
+
+  return (
+    <div
+      className="alert pointer-events-auto flex min-h-11 w-full cursor-grab active:cursor-grabbing touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pr-2 pl-4 text-callout text-neutral-content shadow-md motion-safe:animate-slide-up motion-reduce:animate-fade-quick"
+      style={{
+        transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
+        opacity: dragOffset
+          ? Math.max(0.2, 1 - Math.abs(dragOffset) / 200)
+          : undefined,
+        transition: dragOffset
+          ? "none"
+          : "transform 200ms ease-out, opacity 200ms ease-out",
+      }}
+      onMouseEnter={pause}
+      onMouseLeave={resume}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      onTouchCancel={handleTouchEnd}
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
+      onFocus={pause}
+      onBlur={(event) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+          setPaused(false);
+      }}
+    >
+      {toast.icon && (
+        <span className="inline-flex shrink-0" aria-hidden="true">
+          {toast.icon}
+        </span>
+      )}
+      <span className="flex-1 [overflow-wrap:anywhere]">{toast.message}</span>
+      {toast.actionLabel && toast.onAction && (
+        <button
+          type="button"
+          className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content underline underline-offset-[3px] hover:bg-neutral-content/10"
+          onClick={runAction}
+        >
+          {toast.actionLabel}
+        </button>
+      )}
+    </div>
+  );
+}
+
 /**
  * Always-mounted live region with at most one toast. Shows for 5 s; hover, focus
  * or touch pauses the timer, which restarts when it leaves (UX-04, WCAG 2.2.1).
@@ -37,33 +185,7 @@ export function Toast({
   assertive = false,
   duration = TOAST_DURATION_MS,
 }: ToastProps) {
-  const [pausedId, setPausedId] = useState<ToastData["id"] | null>(null);
   const regionRef = useRef<HTMLDivElement>(null);
-  const toastId = toast?.id;
-  // Pausing belongs to one toast: a new toast starts unpaused
-  const paused = pausedId !== null && pausedId === toastId;
-  const setPaused = useCallback(
-    (value: boolean) =>
-      setPausedId(value && toastId !== undefined ? toastId : null),
-    [toastId],
-  );
-
-  useEffect(() => {
-    if (toastId === undefined || paused) return;
-    const timer = setTimeout(() => onDismiss(toastId), duration);
-    return () => clearTimeout(timer);
-  }, [toastId, paused, duration, onDismiss]);
-
-  const pause = useCallback(() => setPaused(true), [setPaused]);
-  const resume = useCallback(() => {
-    if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
-  }, [setPaused]);
-
-  const runAction = () => {
-    if (!toast) return;
-    toast.onAction?.();
-    onDismiss(toast.id);
-  };
 
   return (
     <div
@@ -74,37 +196,13 @@ export function Toast({
       aria-atomic="true"
     >
       {toast && (
-        <div
-          className="alert pointer-events-auto flex min-h-11 w-full items-center gap-3 rounded-field border-0 bg-neutral py-2 pr-2 pl-4 text-callout text-neutral-content shadow-md motion-safe:animate-slide-up motion-reduce:animate-fade-quick"
-          onMouseEnter={pause}
-          onMouseLeave={resume}
-          onTouchStart={pause}
-          onFocus={pause}
-          onBlur={(event) => {
-            if (
-              !event.currentTarget.contains(event.relatedTarget as Node | null)
-            )
-              setPaused(false);
-          }}
-        >
-          {toast.icon && (
-            <span className="inline-flex shrink-0" aria-hidden="true">
-              {toast.icon}
-            </span>
-          )}
-          <span className="flex-1 [overflow-wrap:anywhere]">
-            {toast.message}
-          </span>
-          {toast.actionLabel && toast.onAction && (
-            <button
-              type="button"
-              className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content underline underline-offset-[3px] hover:bg-neutral-content/10"
-              onClick={runAction}
-            >
-              {toast.actionLabel}
-            </button>
-          )}
-        </div>
+        <ToastAlert
+          key={toast.id}
+          toast={toast}
+          duration={duration}
+          onDismiss={onDismiss}
+          regionRef={regionRef}
+        />
       )}
     </div>
   );

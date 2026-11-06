@@ -35,6 +35,7 @@ export function DeleteProjectDialog({
   return (
     <Dialog
       open={open}
+      initialFocusRef={cancelRef}
       title={t("project.delete_title", { name: project.name })}
       description={taskCount ? tc("project.delete_body", taskCount) : undefined}
       onClose={onCancel}

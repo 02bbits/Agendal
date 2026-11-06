@@ -1,3 +1,4 @@
+import { useState } from "react";
 import {
   fireEvent,
   render,
@@ -20,8 +21,10 @@ import {
   type Task,
 } from "../../src/ui";
 import * as datePickerModule from "../../src/ui/components/DatePicker";
+import * as projectApi from "../../src/lib/projectApi";
 import { DateTimeFields } from "../../src/ui/features/tasks/details/DateTimeFields";
 import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
+import { ProjectField } from "../../src/ui/features/tasks/details/ProjectField";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
@@ -466,6 +469,55 @@ describe("Task details fields (T-TK-10)", () => {
     expect(patchSpy).not.toHaveBeenCalled();
   });
 
+  it("choosing New project… opens ProjectSheet and creates project without navigating (T-TK-114)", async () => {
+    const createdProject = {
+      id: "p-new-1",
+      name: "Biology 101",
+      colour: "green" as const,
+      created_at: new Date().toISOString(),
+    };
+    const createSpy = vi
+      .spyOn(projectApi, "createProject")
+      .mockResolvedValue(createdProject);
+    const eventSpy = vi.fn();
+    window.addEventListener("agendal:projects-changed", eventSpy);
+
+    const { patchSpy } = open(
+      task({ title: "Task with ProjectField", project_id: null }),
+    );
+    const trigger = screen.getByRole("button", { name: t("task.project") });
+    await userEvent.click(trigger);
+
+    const newOption = screen.getByRole("option", {
+      name: t("project.new_option"),
+    });
+    expect(newOption).toBeTruthy();
+
+    await userEvent.click(newOption);
+    expect(patchSpy).not.toHaveBeenCalled();
+    expect(screen.getByRole("dialog", { name: t("project.new") })).toBeTruthy();
+
+    const nameInput = screen.getByLabelText(t("project.name"));
+    await userEvent.type(nameInput, "Biology 101");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.create") }),
+    );
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalled();
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { project_id: "p-new-1" },
+        expect.any(String),
+      );
+      expect(eventSpy).toHaveBeenCalledTimes(1);
+    });
+
+    expect(screen.queryByRole("dialog", { name: t("project.new") })).toBeNull();
+    window.removeEventListener("agendal:projects-changed", eventSpy);
+    createSpy.mockRestore();
+  });
+
   it("saves notes on blur", async () => {
     const { patchSpy } = open(task({ title: "Task", notes: "Old notes" }));
     const textarea = screen.getByLabelText(t("task.notes"));
@@ -527,6 +579,81 @@ describe("Schedule validation (T-TK-20)", () => {
       ),
     );
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("A11Y-41: the schedule error is linked with aria-describedby and is assertive", async () => {
+    open(
+      task({
+        title: "Schedule Task",
+        start_date: TODAY,
+        due_date: TODAY,
+        due_time: "10:00",
+      }),
+    );
+
+    const startTime = screen.getByRole("button", { name: t("task.start") });
+    await userEvent.click(startTime);
+    await userEvent.click(screen.getByRole("option", { name: "14:00" }));
+
+    const alert = screen.getByRole("alert");
+    expect(alert).toBeTruthy();
+    expect(alert.textContent).toBe(t("task.start_after_due"));
+    expect(alert.id).toBe("task-dates-error");
+    expect(startTime.getAttribute("aria-describedby")).toBe("task-dates-error");
+    expect(alert.getAttribute("role")).toBe("alert");
+  });
+
+  it("T-TK-114 extra: ProjectField inside a form whose onSubmit is a spy. Create a project from the sheet by pressing Enter: the spy is not called, and the new project is selected. The sheet renders in a portal on document.body", async () => {
+    const formSubmitSpy = vi.fn((e) => e.preventDefault());
+    const onChangeSpy = vi.fn();
+    const createSpy = vi
+      .spyOn(projectApi, "createProject")
+      .mockResolvedValueOnce({
+        id: "p-new-created",
+        name: "Chemistry 101",
+        colour: "blue",
+        created_at: "2026-10-23T01:12:00Z",
+      });
+
+    function TestForm() {
+      const [selectedId, setSelectedId] = useState<string | null>(null);
+      return (
+        <form onSubmit={formSubmitSpy}>
+          <ProjectField
+            projectId={selectedId}
+            projects={[]}
+            onChange={(val) => {
+              setSelectedId(val);
+              onChangeSpy(val);
+            }}
+          />
+        </form>
+      );
+    }
+
+    render(<TestForm />);
+
+    const trigger = screen.getByRole("button", { name: t("task.project") });
+    await userEvent.click(trigger);
+
+    const newOption = screen.getByRole("option", {
+      name: t("project.new_option"),
+    });
+    await userEvent.click(newOption);
+
+    const dialog = screen.getByRole("dialog", { name: t("project.new") });
+    expect(document.body.contains(dialog)).toBe(true);
+
+    const nameInput = screen.getByLabelText(t("project.name"));
+    await userEvent.type(nameInput, "Chemistry 101{enter}");
+
+    await waitFor(() => {
+      expect(createSpy).toHaveBeenCalled();
+      expect(onChangeSpy).toHaveBeenCalledWith("p-new-created");
+    });
+
+    expect(formSubmitSpy).not.toHaveBeenCalled();
+    createSpy.mockRestore();
   });
 
   it("start time disabled without start date", () => {
@@ -1031,6 +1158,24 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     const t1 = task({ id: "t-axe", title: "Axe Task" });
     const ctx = setup([t1]);
     render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />));
+    await expectAxeCleanInBothThemes();
+  });
+
+  it("TaskPanel popup variant renders centered modal and closes on backdrop click", async () => {
+    const t1 = task({ id: "t-popup", title: "Popup Task" });
+    const ctx = setup([t1]);
+    const onClose = vi.fn();
+    render(
+      ctx.wrap(<TaskPanel variant="popup" taskId={t1.id} onClose={onClose} />),
+    );
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toBeTruthy();
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+
+    const backdrop = screen.getByTestId("task-panel-backdrop");
+    await userEvent.click(backdrop);
+    expect(onClose).toHaveBeenCalledTimes(1);
     await expectAxeCleanInBothThemes();
   });
 });

@@ -2,6 +2,16 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-05
+
+- **Reminders are sent (Refs #30).** [TK §2.5](03-modules/TK-tasks.md#25-reminders-tk-6-should) and [TK §7](03-modules/TK-tasks.md#7-api-contract): a subscription moves to the signed-in user, sign-out removes it and a device with permission subscribes again on load. Sending needs VAPID keys and the scheduler. `GET /push-subscriptions/key` is new, also in [api.md](07-architecture/api.md).
+- **Deleting a repeating task (Refs #30).** [TK §2.3](03-modules/TK-tasks.md#23-repeating-tasks-tk-4) and [TK §7](03-modules/TK-tasks.md#7-api-contract): `DELETE /tasks/{id}` with `scope=one` returns `200 {next}`, Undo removes that next occurrence, and a completed occurrence makes none.
+- **Next occurrence wording (Refs #30).** [TK §2.3](03-modules/TK-tasks.md#23-repeating-tasks-tk-4): it comes from the start date, else the due date, the due date keeps the same number of days after the start, and a gap longer than the period is allowed. [TK-E9](03-modules/TK-tasks.md#tk-e9) now allows a start time with no due time.
+- **Repeat on rows and in Scheduled (Refs #30).** [LV §2.2](03-modules/LV-lists-search.md#22-upcoming-lv-2) and the task row: repeating tasks with no start date show in Scheduled on their due day, and open rows show the repeat in blue with its text.
+- **Repeat in New task (Refs #30).** [NC §2.5](03-modules/NC-note-capture.md#25-new-task-sheet-nc-7): a Repeat row under Start date, and New project opens over the sheet.
+- **Local performance check (Refs #30).** [scalability.md](05-quality/scalability.md): PERF-03 and PERF-05 can run locally from `backend/tests/Performance`, for [LV-E8](03-modules/LV-lists-search.md#lv-e8) and [TK-E12](03-modules/TK-tasks.md#tk-e12).
+- **Summary (Refs #30).** [SUMMARY §5](SUMMARY.md): repeat, delete, reminders, the Scheduled filter and the task row match the above.
+
 ## 2026-11-04
 
 - `05-quality/nfr.md` NF-13, `03-modules/RV-review-control.md`: general API limit raised from 120/min per user to 300/min plus a 20/s burst cap, per user and per IP for guests.

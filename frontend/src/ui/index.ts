@@ -56,6 +56,7 @@ export {
   PopoverOrSheet,
   type PopoverOrSheetProps,
 } from "./components/PopoverOrSheet";
+export { cx } from "./components/cx";
 export {
   t,
   tc,

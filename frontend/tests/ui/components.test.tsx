@@ -394,6 +394,32 @@ describe("Toast", () => {
       "assertive",
     );
   });
+
+  it("dismisses on horizontal swipe / drag past threshold", () => {
+    const onDismiss = vi.fn();
+    const { container } = render(
+      <Toast
+        toast={{
+          id: "toast-swipe",
+          message: "Swipeable toast message",
+        }}
+        onDismiss={onDismiss}
+      />,
+    );
+    const alert = container.querySelector(".alert")!;
+    expect(alert).toBeTruthy();
+
+    // Swipe right past 70px threshold via touch
+    fireEvent.touchStart(alert, {
+      touches: [{ clientX: 100 }],
+    });
+    fireEvent.touchMove(alert, {
+      touches: [{ clientX: 200 }],
+    });
+    fireEvent.touchEnd(alert);
+
+    expect(onDismiss).toHaveBeenCalledWith("toast-swipe");
+  });
 });
 
 describe("EmptyState", () => {

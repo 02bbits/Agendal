@@ -156,6 +156,9 @@ export const catalog = {
   "task.due_at": "Due {time}",
   "task.due_on": "Due {date}",
   "task.started_on": "Started {date}",
+  "task.starts_at": "Start at {time}",
+  "task.starts_today": "Starts today",
+  "task.due_at_time": "Due at {time}",
   "list.progress": "{done} of {total} done",
   "list.encourage_one": "Nice work!",
   "list.encourage_progress": "{done} down, {left} to go!",
@@ -218,6 +221,34 @@ export const catalog = {
     "“{title}” was also changed on another device. The latest edit was kept.",
   "app.storage_low":
     "Your device is low on storage. Offline notes might not be saved.",
+  "app.tab_general": "General",
+  "app.tab_notifications": "Notifications",
+  "app.notification_diag_title": "Device Notifications & Reminders",
+  "app.notification_diag_desc":
+    "Receive reminders on this device before tasks start or are due.",
+  "app.browser_permission": "Browser Permission",
+  "app.server_push_service": "Server Push Service",
+  "app.enable_notifications": "Enable Notifications",
+  "app.send_test_notification": "Send Test Notification",
+  "app.perm_unsupported": "Unsupported",
+  "app.perm_enabled": "Enabled",
+  "app.perm_blocked": "Blocked",
+  "app.perm_not_configured": "Not configured",
+  "app.perm_desc_unsupported":
+    "Web Push is not supported in this browser mode or environment.",
+  "app.perm_desc_enabled":
+    "Notifications are allowed and active on this browser.",
+  "app.perm_desc_blocked":
+    "Notifications are blocked. Please enable notifications in your browser site settings.",
+  "app.perm_desc_not_configured":
+    "Notifications have not been enabled yet on this device.",
+  "app.vapid_ready": "Ready",
+  "app.vapid_missing": "Missing VAPID",
+  "app.vapid_checking": "Checking…",
+  "app.vapid_desc_ready": "VAPID keys are configured on the server.",
+  "app.vapid_desc_missing":
+    "VAPID keys not configured on server (VAPID_PUBLIC_KEY missing in .env).",
+  "app.vapid_desc_checking": "Verifying server configuration…",
   "error.generic": "Something went wrong. Try again. (Ref {request_id})",
   "error.save_failed": "Couldn't save that change.",
   "error.slow": "This is taking longer than usual.",

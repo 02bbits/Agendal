@@ -77,12 +77,14 @@ function OpenedTask({
   onClose: () => void;
   weekStart: "mon" | "sun";
 }) {
+  const { settings } = useAppFrame();
   const store = useTaskStore();
   const task = store.tasks.find((task) => task.id === id);
   if (wide)
     return (
       <TaskPanel
         modal
+        variant={settings.pageView === "full" ? "aside" : "popup"}
         taskId={id}
         onClose={onClose}
         projects={store.projects}
@@ -245,6 +247,12 @@ function ResultContainer({
       return showToast(t(outcome.error, { request_id: "" }));
     const id = outcome.note.id;
     listsChanged();
+    const hasReminder = outcome.changes.some(
+      (change) => change.task.reminder && change.task.reminder !== "none",
+    );
+    if (hasReminder && typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agendal:reminder-set"));
+    }
     showToast({
       message: tc("note.made", outcome.changes.length),
       actionLabel: t("common.undo"),

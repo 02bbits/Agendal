@@ -91,7 +91,7 @@ export function ProjectsScreen({
             noProjectCounts={noProjectCounts}
             navigate={navigate}
           />
-          <ul className="m-0 hidden grid-cols-1 gap-4 p-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <ul className="m-0 hidden grid-cols-1 gap-4 p-0 md:grid [html[data-page-view='full']_&]:md:grid-cols-2 [html[data-page-view='full']_&]:lg:grid-cols-3 [html[data-page-view='full']_&]:xl:grid-cols-4">
             {sortedProjects.map((p) => {
               const done = p.done ?? 0;
               const open = p.open ?? 0;

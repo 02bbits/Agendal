@@ -1,10 +1,13 @@
+import { useEffect } from "react";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   InboxScreen,
+  TaskRow,
   TaskStoreProvider,
   buildInbox,
+  useTaskStore,
   type Clock,
 } from "../../src/ui";
 import Page from "../../src/app/page";
@@ -132,6 +135,46 @@ describe("buildInbox (LV-1)", () => {
       "start today",
       "in progress",
       "start passed",
+    ]);
+  });
+
+  it("sorts Today by group order: Due today, Starts today, In progress, Planned {date}", () => {
+    const tasks = [
+      task({
+        title: "Planned yesterday",
+        start_date: "2026-10-22",
+        start_time: "08:00",
+      }),
+      task({
+        title: "In progress",
+        start_date: "2026-10-20",
+        due_date: "2026-10-28",
+        priority: "high",
+      }),
+      task({
+        title: "Starts today",
+        start_date: TODAY,
+        start_time: "09:00",
+        due_date: "2026-10-27",
+      }),
+      task({
+        title: "Due today untimed",
+        due_date: TODAY,
+        priority: "low",
+      }),
+      task({
+        title: "Due today timed",
+        due_date: TODAY,
+        due_time: "14:00",
+      }),
+    ];
+    const view = buildInbox(tasks, TODAY, { completedToday: doneToday });
+    expect(view.today.map((x) => x.title)).toEqual([
+      "Due today timed",
+      "Due today untimed",
+      "Starts today",
+      "In progress",
+      "Planned yesterday",
     ]);
   });
 
@@ -740,5 +783,69 @@ describe("Inbox Page (app/page.tsx)", () => {
     await userEvent.click(overdueBtn);
     expect(overdueBtn.getAttribute("aria-expanded")).toBe("true");
     expect(screen.getByRole("link", { name: /Overdue Item/ })).toBeTruthy();
+  });
+
+  it("rerender TaskStoreProvider with a new initialProjects containing a new project; a row with that project_id shows its name without remounting", () => {
+    const unmountSpy = vi.fn();
+    function TaskRowTest({ taskId }: { taskId: string }) {
+      const store = useTaskStore();
+      const t = store.tasks.find((x) => x.id === taskId)!;
+      useEffect(() => {
+        return () => {
+          unmountSpy();
+        };
+      }, []);
+      return (
+        <TaskRow
+          task={t}
+          project={store.projectOf(t)}
+          today={store.today}
+          timeFormat={store.timeFormat}
+          onToggle={() => {}}
+        />
+      );
+    }
+
+    const t0 = task({ id: "t-1", title: "My Task", project_id: "p-new" });
+    const memory = createMemoryApi({ tasks: [t0], projects: [] });
+    const clock = {
+      now: () => new Date("2026-10-23T10:00:00Z"),
+      timeZone: "UTC",
+    };
+
+    const { rerender } = render(
+      <TaskStoreProvider
+        api={memory.api}
+        clock={clock}
+        initialTasks={[t0]}
+        initialProjects={[]}
+      >
+        <TaskRowTest taskId="t-1" />
+      </TaskStoreProvider>,
+    );
+
+    expect(screen.getByText("No project")).toBeTruthy();
+
+    const newProj = {
+      id: "p-new",
+      name: "New Special Project",
+      colour: "blue" as const,
+      created_at: "2026-10-23T01:12:00Z",
+    };
+
+    rerender(
+      <TaskStoreProvider
+        api={memory.api}
+        clock={clock}
+        initialTasks={[t0]}
+        initialProjects={[newProj]}
+      >
+        <TaskRowTest taskId="t-1" />
+      </TaskStoreProvider>,
+    );
+
+    expect(screen.getByText("New Special Project")).toBeTruthy();
+    expect(screen.queryByText("No project")).toBeNull();
+    expect(unmountSpy).not.toHaveBeenCalled();
   });
 });

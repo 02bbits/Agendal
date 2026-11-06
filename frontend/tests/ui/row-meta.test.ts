@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { formatDay } from "../../src/ui/domain/dates";
-import { rowMeta } from "../../src/ui/domain/rowMeta";
+import { repeatLabel, rowMeta } from "../../src/ui/domain/rowMeta";
 import { task } from "./fixtures";
 
 describe("rowMeta", () => {
@@ -18,10 +18,10 @@ describe("rowMeta", () => {
       const opts = { today: TODAY_WED_18_NOV, timeFormat: "24h" } as const;
       expect(
         rowMeta(t, { ...opts, entry: "start" }).map((p) => p.text),
-      ).toEqual(["10:00 – 11:00"]);
+      ).toEqual(["Start at 10:00", "Due at 11:00"]);
       expect(rowMeta(t, { ...opts, entry: "due" }).map((p) => p.text)).toEqual([
-        "10:00 – 11:00",
-        "Due",
+        "Start at 10:00",
+        "Due at 11:00",
       ]);
     });
 
@@ -109,8 +109,8 @@ describe("rowMeta", () => {
         timeFormat: "24h",
       });
       expect(parts).toEqual([
-        { text: "10:00 – 11:00", tone: "plain" },
-        { text: "Due", tone: "due" },
+        { text: "Start at 10:00", tone: "plain" },
+        { text: "Due at 11:00", tone: "due" },
       ]);
     });
 
@@ -174,7 +174,7 @@ describe("rowMeta", () => {
       ).toEqual([{ text: `Due ${expectedDay16}`, tone: "late" }]);
     });
 
-    it("case 3: start_date === due_date with no start_time → Due", () => {
+    it("case 3: start_date === due_date with no times in future has empty parts (no lone Due)", () => {
       const t = task({
         title: "Same day untimed",
         start_date: "2026-11-20",
@@ -182,7 +182,30 @@ describe("rowMeta", () => {
       });
       expect(
         rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
-      ).toEqual([{ text: "Due", tone: "due" }]);
+      ).toEqual([]);
+    });
+
+    it("case 3: start_date === due_date === today with no times → Starts today", () => {
+      const t = task({
+        title: "Same day today untimed",
+        start_date: TODAY_WED_18_NOV,
+        due_date: TODAY_WED_18_NOV,
+      });
+      expect(
+        rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
+      ).toEqual([{ text: "Starts today", tone: "plain" }]);
+    });
+
+    it("case 3: start_date === due_date with start_time and no due_time → Start at {time} without lone Due", () => {
+      const t = task({
+        title: "Start at 17:00 without due time",
+        start_date: "2026-11-20",
+        due_date: "2026-11-20",
+        start_time: "17:00",
+      });
+      expect(
+        rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
+      ).toEqual([{ text: "Start at 17:00", tone: "plain" }]);
     });
 
     it("case 4: due_date === today with due_time and nowTime >= due_time has late tone", () => {
@@ -227,7 +250,7 @@ describe("rowMeta", () => {
       });
       const expectedDay22 = formatDay("2026-11-22", TODAY_WED_18_NOV);
       expect(parts).toEqual([
-        { text: "08:30", tone: "plain" },
+        { text: "Start at 08:30", tone: "plain" },
         { text: `Due ${expectedDay22}, 17:00`, tone: "plain" },
       ]);
     });
@@ -305,6 +328,75 @@ describe("rowMeta", () => {
         nowTime: "12:00",
       });
       expect(partsDueToday[0]?.tone).toBe("plain");
+    });
+
+    it("T-TK-119 (TK-E19): the due label turns red when the due time has passed today", () => {
+      const t = task({
+        title: "Past due time today",
+        due_date: TODAY_WED_18_NOV,
+        due_time: "10:00",
+        done: false,
+      });
+      const parts = rowMeta(t, {
+        today: TODAY_WED_18_NOV,
+        timeFormat: "24h",
+        nowTime: "12:00",
+      });
+      expect(parts[0]?.tone).toBe("late");
+    });
+
+    it("case 4b: repeating task with no start_date on Scheduled (entry: start)", () => {
+      const tTimed = task({
+        title: "Repeating due only timed",
+        start_date: null,
+        due_date: "2026-11-20",
+        due_time: "17:00",
+        repeat: "weekly",
+      });
+      const partsTimed = rowMeta(tTimed, {
+        today: TODAY_WED_18_NOV,
+        timeFormat: "24h",
+        entry: "start",
+      });
+      expect(partsTimed).toEqual([{ text: "17:00", tone: "plain" }]);
+      expect(partsTimed.some((p) => p.text.includes("Due"))).toBe(false);
+
+      const tUntimed = task({
+        title: "Repeating due only untimed",
+        start_date: null,
+        due_date: "2026-11-20",
+        repeat: "weekly",
+      });
+      const partsUntimed = rowMeta(tUntimed, {
+        today: TODAY_WED_18_NOV,
+        timeFormat: "24h",
+        entry: "start",
+      });
+      expect(partsUntimed).toEqual([]);
+    });
+
+    it("repeatLabel generates correct text", () => {
+      expect(repeatLabel(task({ title: "T", repeat: "daily" }))).toBe(
+        "Every day",
+      );
+      expect(repeatLabel(task({ title: "T", repeat: "weekly" }))).toBe(
+        "Every week",
+      );
+      expect(repeatLabel(task({ title: "T", repeat: "monthly" }))).toBe(
+        "Every month",
+      );
+      expect(repeatLabel(task({ title: "T", repeat: "yearly" }))).toBe(
+        "Every year",
+      );
+      expect(
+        repeatLabel(
+          task({
+            title: "T",
+            repeat: "weekly",
+            repeat_rule: "FREQ=WEEKLY;BYDAY=MO",
+          }),
+        ),
+      ).toBe("weekly on Monday, forever");
     });
   });
 });

@@ -16,8 +16,13 @@ export function ProjectProgressBar({
   return (
     <div className="mb-6 flex flex-col gap-1.5 [&_p]:m-0">
       <span
+        role="progressbar"
+        aria-label={t("project.progress", { done, total })}
+        aria-valuenow={done}
+        aria-valuemin={0}
+        aria-valuemax={total}
+        aria-valuetext={t("project.progress", { done, total })}
         className="block h-1.5 overflow-hidden rounded-full bg-fill"
-        aria-hidden="true"
       >
         <span
           className="block h-full rounded-[inherit]"
@@ -27,7 +32,7 @@ export function ProjectProgressBar({
           }}
         />
       </span>
-      <p className="text-footnote text-ink-secondary">
+      <p className="text-footnote text-ink-secondary" aria-hidden="true">
         {t("project.progress", { done, total })}
       </p>
     </div>

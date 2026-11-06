@@ -74,8 +74,8 @@ export interface UpcomingScreenProps {
   selectedTaskId?: string | null;
   weekStart?: WeekStart;
   initialView?:
-    | { anchor: string; day: string }
-    | (() => { anchor: string; day: string } | null)
+    | { anchor: string; day?: string }
+    | (() => { anchor: string; day?: string } | null)
     | null;
-  onViewChange?: (view: { anchor: string; day: string }) => void;
+  onViewChange?: (view: { anchor: string; day?: string }) => void;
 }
