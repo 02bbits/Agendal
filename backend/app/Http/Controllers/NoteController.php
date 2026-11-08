@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\ProcessNote;
+use App\Enums\PlanStatus;
 use App\Http\Resources\NoteResultResource;
 use App\Models\Note;
 use App\Models\Task;
@@ -23,8 +24,8 @@ class NoteController extends Controller
         $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
         $query = Note::query();
         match ($input['filter'] ?? 'all') {
-            'made' => $query->where('status', 'done'),
-            'needs' => $query->whereIn('status', ['confirm', 'followup', 'pending']),
+            'made' => $query->where('status', PlanStatus::Done->value),
+            'needs' => $query->whereIn('status', PlanStatus::needsLook()),
             default => $query,
         };
         $page = $query->orderByDesc('written_at')->orderByDesc('id')->cursorPaginate((int) ($input['limit'] ?? 20));
@@ -38,7 +39,7 @@ class NoteController extends Controller
             })->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
             'total' => (int) $counts->sum(),
-            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0) + (int) ($counts['pending'] ?? 0),
+            'needs_count' => (int) $counts->only(PlanStatus::needsLook())->sum(),
         ]);
     }
 
@@ -81,9 +82,9 @@ class NoteController extends Controller
     public function apply(Request $request, Note $note, NoteConfirm $confirm): NoteResultResource
     {
         // Edits from Check this first, by entry ref: only the fields a task patch may set (TK §7).
-        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct']]);
+        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct'], 'processed_at' => ['sometimes', 'date']]);
 
-        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? []));
+        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? [], $input['processed_at'] ?? null));
     }
 
     public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource

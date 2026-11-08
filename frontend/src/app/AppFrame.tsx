@@ -40,8 +40,9 @@ import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
 import {
   forgetNotes,
+  notesChanged,
   rememberNote,
-  replanFollowup,
+  replanNote,
   searchNotes,
   submitNote,
 } from "@/lib/noteApi";
@@ -660,12 +661,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onSubmit={
               editingNote
                 ? (text, _clientId, confirmConflicts) =>
-                    replanFollowup(editingNote.id, text, confirmConflicts)
+                    replanNote(editingNote.id, text, confirmConflicts)
                 : submitNote
             }
             onSubmitted={(result) => {
               rememberNote(result);
-              window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+              notesChanged();
               openResult(result.note.id);
             }}
           />

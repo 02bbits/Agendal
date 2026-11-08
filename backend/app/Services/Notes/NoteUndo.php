@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Notes;
 
 use App\Enums\ChangeKind;
+use App\Enums\PlanStatus;
 use App\Exceptions\ApiError;
 use App\Models\Note;
 use App\Models\Project;
@@ -39,19 +40,19 @@ final class NoteUndo
     {
         return DB::transaction(function () use ($note, $confirmConflicts): Note {
             $note = $this->lock($note);
-            if ($note->status === 'pending') {
+            if ($note->status === PlanStatus::Pending->value) {
                 if ($note->undo_log === null) {
                     throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
                 }
 
                 return $note; // a second Undo all (RV-E5): nothing changes twice
             }
-            if ($note->status !== 'done') {
+            if ($note->status !== PlanStatus::Done->value) {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
             $changes = $this->reverseApplied($note, $confirmConflicts);
             $redoUntil = $this->clock->now()->modify('+'.self::REDO_SECONDS.' seconds');
-            $note->status = 'pending';
+            $note->status = PlanStatus::Pending->value;
             $note->undo_log = ['redo_until' => $redoUntil->format(DATE_ATOM), 'changes' => $changes];
             $note->save();
 
@@ -100,10 +101,10 @@ final class NoteUndo
         $expired = false;
         $note = DB::transaction(function () use ($note, &$expired): Note {
             $note = $this->lock($note);
-            if ($note->status === 'done') {
+            if ($note->status === PlanStatus::Done->value) {
                 return $note;
             }
-            if ($note->status !== 'pending') {
+            if ($note->status !== PlanStatus::Pending->value) {
                 throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
             }
             $log = $note->undo_log ?? [];
@@ -128,7 +129,7 @@ final class NoteUndo
                 $task->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
                 $task->save();
             }
-            $note->status = 'done';
+            $note->status = PlanStatus::Done->value;
             $note->undo_log = null;
             $note->save();
 

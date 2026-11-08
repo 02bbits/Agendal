@@ -709,6 +709,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
       JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
     ).toEqual({
       edits: { i1: { priority: "high" } },
+      processed_at: result.note.processed_at,
     });
 
     expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
@@ -773,9 +774,70 @@ describe("Check this first /notes/[id] (IM-45)", () => {
 
     expect(
       JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
-    ).toEqual({ edits: {} });
+    ).toEqual({ edits: {}, processed_at: result.note.processed_at });
 
     expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
+  });
+
+  it("Escape asks before dropping notes typed but not yet saved (UX-13)", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+
+    await userEvent.type(
+      screen.getByRole("textbox", { name: t("task.notes") }),
+      "Bring the slides",
+    );
+    await userEvent.keyboard("{Escape}");
+
+    expect(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    ).toBeTruthy();
+  });
+
+  it("a field set back to what it was is no edit: Cancel closes without asking", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    const before = screen
+      .getAllByRole("radio")
+      .find((radio) => radio.getAttribute("aria-checked") === "true")!;
+
+    await userEvent.click(screen.getByRole("radio", { name: /high/i }));
+    await userEvent.click(before);
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.cancel") }),
+    );
+
+    expect(
+      screen.queryByRole("button", { name: t("common.discard_action") }),
+    ).toBeNull();
+    expect(screen.queryByRole("textbox", { name: t("task.title") })).toBeNull();
+  });
+
+  it("a plan changed on another device reloads instead of applying these edits", async () => {
+    serveConfirm();
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      url === "/api/v1/notes/n1/apply"
+        ? json(409, { error: { code: "note.plan_changed" } })
+        : base(url, init),
+    );
+    await open();
+    const loads = calls("GET", "/api/v1/notes/n1").length;
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
+    );
+
+    expect(await screen.findByText(t("note.plan_changed"))).toBeTruthy();
+    await waitFor(() =>
+      expect(calls("GET", "/api/v1/notes/n1").length).toBeGreaterThan(loads),
+    );
   });
 
   it("Discard drops the review's edits: coming back to the kept page shows the plan as stored", async () => {
@@ -1049,6 +1111,37 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     );
     await waitFor(() => expect(refreshed).toHaveBeenCalled());
     window.removeEventListener("agendal:note-updated", refreshed);
+  });
+
+  it("a failed restore offers it again: Retry restores the still-deleted note", async () => {
+    let failing = true;
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/restore": () =>
+        failing
+          ? json(500, { error: { code: "error.generic" } })
+          : json(200, followup),
+    });
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.delete") }),
+    );
+    await userEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: t("common.delete"),
+      }),
+    );
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.undo") }),
+    );
+    failing = false;
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.retry") }),
+    );
+
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/restore")).toHaveLength(2),
+    );
   });
 
   it("RV §2.4: Make tasks again on a pending note replans its text and shows the new result", async () => {

@@ -8,6 +8,7 @@ use App\Enums\PlanStatus;
 use App\Exceptions\ApiError;
 use App\Models\Note;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -23,15 +24,21 @@ final class NoteConfirm
     /**
      * Applies a `confirm` plan, re-validated against the tasks as they are now (NU-E38), with the user's edits.
      *
+     * `$plannedAt` is the `processed_at` of the plan the user reviewed: edits and exclusions name its
+     * refs, so a plan made since (Edit note on another device) refuses them instead of taking them.
+     *
      * @param  array<string, array<string, mixed>>  $edits
      * @param  list<string>  $exclude
      */
-    public function apply(Note $note, array $edits = [], array $exclude = []): Note
+    public function apply(Note $note, array $edits = [], array $exclude = [], ?string $plannedAt = null): Note
     {
-        return DB::transaction(function () use ($note, $edits, $exclude): Note {
+        return DB::transaction(function () use ($note, $edits, $exclude, $plannedAt): Note {
             // The user row first, as POST /notes locks it, so a note and an apply can't deadlock.
             User::query()->whereKey($note->user_id)->lockForUpdate()->firstOrFail();
             $note = $this->locked($note);
+            if ($plannedAt !== null && CarbonImmutable::parse($plannedAt)->getTimestamp() !== $note->processed_at->getTimestamp()) {
+                throw new ApiError('note.plan_changed', 'This note changed since it was reviewed.', 409);
+            }
             /** @var ValidatedPlan $plan */
             $plan = $note->plan;
             $originalPlan = $plan;

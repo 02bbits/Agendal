@@ -73,21 +73,15 @@ class ProcessNote
                 'confirm_conflicts' => ['sometimes', 'boolean'],
             ])->validate();
 
-            // Notes in done, confirm, followup, pending can be edited (RV §2.5).
-            $allowed = [
-                PlanStatus::Done->value,
-                PlanStatus::Confirm->value,
-                PlanStatus::Followup->value,
-                'pending',
-            ];
-            if (! in_array($note->status, $allowed, true)) {
+            // Every note status can be edited (RV §2.5); a note still being planned (`new`) can't.
+            if (PlanStatus::tryFrom($note->status) === null) {
                 throw new ApiError('note.wrong_status', 'This note cannot be edited.', 409);
             }
 
             $text = $this->splitter->normalize($input['text']);
             // Unchanged text and a retry after a lost reply return the already stored result (RV-E18);
             // a pending note is planned again: Make tasks again after Undo all (RV §2.4).
-            if ($text === $note->text && $note->status !== 'pending') {
+            if ($text === $note->text && $note->status !== PlanStatus::Pending->value) {
                 return $note;
             }
 
@@ -107,12 +101,6 @@ class ProcessNote
 
             return $this->process($user, $input, $note);
         }, 3);
-    }
-
-    /** @param array<string, mixed> $input */
-    public function replanFollowup(User $user, Note $note, array $input): Note
-    {
-        return $this->replan($user, $note, $input);
     }
 
     /** @param array<string, mixed> $input */

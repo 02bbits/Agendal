@@ -170,7 +170,7 @@ final class PlanValidator
         $result = $kind === 'create' ? $entry : array_replace($tasks[$entry['task_id']], $entry);
 
         return RepeatSchedule::validFor($result['repeat_rule'] ?? null, $result['repeat'] ?? 'never')
-            && $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($result);
+            && $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($entry, $result);
     }
 
     /**
@@ -229,16 +229,24 @@ final class PlanValidator
     }
 
     /**
-     * The end is after the start; an end alone has nothing to follow (TK-3).
+     * The start comes before the due when both exist (TK-3): an earlier start date is enough, and on one day the end
+     * time follows the start time. An end time alone is a due time, as on any task. Only a start date the entry sets
+     * (an edit on Check this first) counts: a move pulls the task's own start along when it is applied.
      *
-     * @param  array<string, mixed>  $task
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $task  the task after the entry
      */
-    private function endsAfterStart(array $task): bool
+    private function endsAfterStart(array $entry, array $task): bool
     {
+        $dueDate = $task['due_date'] ?? null;
+        $startDate = $entry['start_date'] ?? $dueDate;
+        if ($startDate !== null && $dueDate !== null && $startDate !== $dueDate) {
+            return $startDate < $dueDate;
+        }
         $start = $task['start_time'] ?? null;
         $end = $task['end_time'] ?? null;
 
-        return $end === null || ($start !== null && $end > $start);
+        return $start === null || $end === null || $end > $start;
     }
 
     /**

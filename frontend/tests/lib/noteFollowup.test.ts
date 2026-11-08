@@ -3,7 +3,7 @@ import {
   forgetNotes,
   makeFollowupTask,
   recallNote,
-  replanFollowup,
+  replanNote,
 } from "@/lib/noteApi";
 import done from "../../../docs/07-architecture/contracts/fixtures/note-result-done.json";
 
@@ -31,7 +31,7 @@ describe("follow-up API (IM-46)", () => {
   });
   it("updates the same note with PUT and its current device zone", async () => {
     fetchMock.mockResolvedValueOnce(json(200, done));
-    await replanFollowup("n1", "read tomorrow");
+    await replanNote("n1", "read tomorrow");
     expect(fetchMock.mock.calls[0][0]).toBe("/api/v1/notes/n1");
     expect(fetchMock.mock.calls[0][1].method).toBe("PUT");
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
@@ -49,10 +49,10 @@ describe("follow-up API (IM-46)", () => {
         },
       }),
     );
-    expect(await replanFollowup("n1", "read")).toEqual({ conflicts: 1 });
+    expect(await replanNote("n1", "read")).toEqual({ conflicts: 1 });
     expect(recallNote(done.note.id)).toBeUndefined();
     fetchMock.mockResolvedValueOnce(json(200, done));
-    expect(await replanFollowup("n1", "read", true)).toEqual(done);
+    expect(await replanNote("n1", "read", true)).toEqual(done);
     expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toMatchObject({
       confirm_conflicts: true,
     });
@@ -61,7 +61,7 @@ describe("follow-up API (IM-46)", () => {
     fetchMock.mockResolvedValueOnce(
       json(422, { error: { code: "note.too_long" } }),
     );
-    expect(await replanFollowup("n1", "long")).toEqual({
+    expect(await replanNote("n1", "long")).toEqual({
       error: "note.too_long",
     });
     fetchMock.mockResolvedValueOnce(
@@ -71,7 +71,7 @@ describe("follow-up API (IM-46)", () => {
         { "Retry-After": "12" },
       ),
     );
-    expect(await replanFollowup("n1", "read")).toEqual({
+    expect(await replanNote("n1", "read")).toEqual({
       error: "error.rate_limited",
       retryAfter: 12,
     });

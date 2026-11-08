@@ -133,21 +133,25 @@ describe("submitNote (IM-42)", () => {
     });
   });
 
-  it("apply posts to the note, keep the answer, and map failures to copy", async () => {
+  it("apply posts the reviewed plan, keeps the answer, and maps failures to copy", async () => {
+    const note = { id: "n1", processed_at: "2026-10-23T08:12:00+07:00" };
     fetchMock.mockResolvedValueOnce(json(200, done));
-    expect(await confirmNote("n1")).toEqual(done);
+    expect(await confirmNote(note)).toEqual(done);
     expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/apply");
     expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body).processed_at).toBe(
+      note.processed_at,
+    );
 
     fetchMock.mockResolvedValueOnce(
-      json(409, { error: { code: "note.wrong_status" } }),
+      json(409, { error: { code: "note.plan_changed" } }),
     );
-    expect(await confirmNote("n1")).toEqual({
-      error: "note.wrong_status",
+    expect(await confirmNote(note)).toEqual({
+      error: "note.plan_changed",
     });
 
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    expect(await confirmNote("n1")).toEqual({
+    expect(await confirmNote(note)).toEqual({
       error: "note.needs_connection",
     });
   });

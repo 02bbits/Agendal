@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type RefObject } from "react";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
@@ -14,6 +14,9 @@ import { SettingsRows } from "../tasks/details/SettingsRows";
 import { NotesField } from "../tasks/details/NotesField";
 import { DiscardDialog } from "../tasks/new/DiscardDialog";
 
+/** Set while the editor is open; `false` means it asked before dropping its draft and stays open. */
+type CloseGuardRef = RefObject<(() => boolean) | null>;
+
 /** A proposed task is a local form: Cancel discards it (asking first once edited), Done updates only the waiting plan. */
 export function NoteTaskEditor({
   task,
@@ -22,6 +25,7 @@ export function NoteTaskEditor({
   onOmit,
   weekStart,
   creating = true,
+  closeGuardRef,
 }: {
   task: Task;
   onCancel: () => void;
@@ -29,6 +33,8 @@ export function NoteTaskEditor({
   onOmit: () => void;
   weekStart: "mon" | "sun";
   creating?: boolean;
+  /** Closing the screen around it (close button, backdrop, Back) asks this editor first */
+  closeGuardRef?: CloseGuardRef;
 }) {
   const store = useTaskStore();
   const wide = useMediaQuery("(min-width: 1280px)");
@@ -39,15 +45,29 @@ export function NoteTaskEditor({
   const heading = useRef<HTMLHeadingElement>(null);
   const title = useId();
   const [discarding, setDiscarding] = useState(false);
+  // What differs from the planned task. normalizePatch drops a field set back to its old value,
+  // and the title and notes are read as typed, before Done or a blur (UX-13)
+  const edits = () =>
+    normalizePatch(
+      task,
+      { ...changes.current, title: draft.title, notes: draft.notes },
+      store.today,
+    );
   // Cancel, Escape and Back ask before dropping edits (UX-13); `false` keeps Back's history entry
   const requestCancel = () => {
-    const edited =
-      draft.title !== task.title || Object.keys(changes.current).length > 0;
-    if (!edited) return onCancel();
+    if (Object.keys(edits()).length === 0) return onCancel();
     setDiscarding(true);
     return false;
   };
-  useHistoryEntry(!wide, requestCancel);
+  useEffect(() => {
+    if (!closeGuardRef) return;
+    closeGuardRef.current = () => requestCancel() !== false;
+    return () => {
+      closeGuardRef.current = null;
+    };
+  });
+  // Every width: on desktop the note panel follows the URL, so Back would close it past this draft
+  useHistoryEntry(true, requestCancel);
   useModalFocus(root, heading, true, requestCancel);
   useEffect(() => {
     if (wide) heading.current?.focus();
@@ -95,9 +115,7 @@ export function NoteTaskEditor({
         <button
           className="focus-ring min-h-11 justify-self-end rounded-field px-2 font-semibold hover:bg-fill disabled:opacity-40 disabled:hover:bg-transparent"
           disabled={!draft.title.trim() || !!error}
-          onClick={() =>
-            onDone({ ...changes.current, title: draft.title.trim() })
-          }
+          onClick={() => onDone(edits())}
         >
           {t("common.done")}
         </button>
@@ -137,6 +155,7 @@ export function NoteTaskEditor({
           <NotesField
             value={draft.notes}
             onSave={(notes) => save({ notes })}
+            onChange={(notes) => setDraft((current) => ({ ...current, notes }))}
             variant="screen"
           />
         </div>

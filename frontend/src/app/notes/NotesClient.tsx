@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
 import { useToday } from "../../ui/features/tasks/useToday";
-import { listNotes, type NoteListPage } from "../../lib/noteApi";
+import { listNotes, NOTE_UPDATED, type NoteListPage } from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
 import { useModalFocus } from "../../ui/components/useModalFocus";
 import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
@@ -52,11 +52,11 @@ function NotesContent({ noteId }: { noteId?: string }) {
   }, [filter, requestKey]);
   useEffect(() => {
     const refresh = () => setRevision((value) => value + 1);
-    window.addEventListener("agendal:note-updated", refresh);
+    window.addEventListener(NOTE_UPDATED, refresh);
     window.addEventListener("agendal:task-created", refresh);
     window.addEventListener("agendal:note-renamed", refresh);
     return () => {
-      window.removeEventListener("agendal:note-updated", refresh);
+      window.removeEventListener(NOTE_UPDATED, refresh);
       window.removeEventListener("agendal:task-created", refresh);
       window.removeEventListener("agendal:note-renamed", refresh);
     };

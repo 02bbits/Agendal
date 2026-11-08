@@ -4,6 +4,8 @@
 
 export const pending = {
   "note.edit_task": "Edit task",
+  "note.plan_changed":
+    "This note changed on another device. Check the new plan before applying.",
   "note.dont_add": "Don't add this task",
   "note.skip_change": "Don't apply this change",
   "note.omitted": "Left out: {count}",

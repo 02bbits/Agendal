@@ -38,7 +38,7 @@ final class NoteApplier
     private const KIND_BY_ENTRY = ['create' => ChangeKind::Created, 'update' => ChangeKind::Updated, 'delete' => ChangeKind::Deleted];
 
     /** Update fields that schedule a task: an update with one of them is a move, planned again at apply (NU-E38). */
-    private const MOVE_FIELDS = ['due_date', 'start_time', 'end_time'];
+    private const MOVE_FIELDS = ['due_date', 'start_date', 'start_time', 'end_time'];
 
     public function __construct(
         private ClockInterface $clock,
@@ -139,6 +139,7 @@ final class NoteApplier
      */
     private function revalidate(Note $note, array $plan, array $locked, NoteContext $context, array $edits): array
     {
+        $edits = array_map(self::inPlanTerms(...), $edits);
         $projects = $context->projects;
         $items = $this->splitter->split($note->text, array_values($projects));
         $gone = [];
@@ -166,14 +167,61 @@ final class NoteApplier
             }
         }
         // The user's edits go in before the last validation, so an edited value is checked like a planned one.
+        $rows = array_map(fn (Task $task): array => $this->row($task), $locked);
+        $edited = [];
         foreach (['create', 'update'] as $kind) {
             foreach ($plan[$kind] as $index => $entry) {
-                $plan[$kind][$index] = [...$entry, ...$edits[$entry['ref']] ?? []];
+                $edit = $edits[$entry['ref']] ?? [];
+                $row = $kind === 'update' ? $rows[$entry['task_id']] ?? null : null;
+                if ($edit === [] || ($kind === 'update' && $row === null)) {
+                    continue;
+                }
+                $shownStart = $kind === 'create' ? (($entry['start_time'] ?? null) !== null ? $entry['due_date'] ?? null : null) : $row['start_date'];
+                $plan[$kind][$index] = $this->withEdits($entry, $edit, $shownStart);
+                $edited[] = $entry['ref'];
             }
         }
-        $rows = array_map(fn (Task $task): array => $this->row($task), $locked);
+        $validated = $this->validator->validate($plan, $projects, $rows);
+        // An edit the plan can't take fails the apply: dropping its task while answering 200 would lose it unseen
+        $kept = array_column([...$validated['create'], ...$validated['update']], 'ref');
+        if (array_diff($edited, $kept) !== []) {
+            throw ValidationException::withMessages(['edits' => ['error.invalid']]);
+        }
 
-        return [$this->validator->validate($plan, $projects, $rows), $gone];
+        return [$validated, $gone];
+    }
+
+    /**
+     * An edit from Task details names task fields; a plan entry calls the due time its end time.
+     *
+     * @param  array<string, mixed>  $edit
+     * @return array<string, mixed>
+     */
+    private static function inPlanTerms(array $edit): array
+    {
+        if (array_key_exists('due_time', $edit)) {
+            $edit['end_time'] = $edit['due_time'];
+            unset($edit['due_time']);
+        }
+
+        return $edit;
+    }
+
+    /**
+     * The edit over the entry. A new due date keeps the start date Check this first showed instead of moving it
+     * along, as the plan would derive it from the due date (TK-3).
+     *
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $edit  in plan terms
+     * @return array<string, mixed>
+     */
+    private function withEdits(array $entry, array $edit, ?string $shownStart): array
+    {
+        if (array_key_exists('due_date', $edit) && ! array_key_exists('start_date', $edit) && $shownStart !== null) {
+            $edit['start_date'] = $shownStart;
+        }
+
+        return [...$entry, ...$edit];
     }
 
     /**
@@ -276,7 +324,8 @@ final class NoteApplier
             return $entry;
         }
         $follows = $oldStartDate === null ? $startTime !== null : $oldStartDate === $oldDueDate || $oldStartDate > $dueDate;
-        if ($follows && $dueDate !== $oldStartDate) {
+        // A start date the user set on Check this first stays where they put it
+        if ($follows && $dueDate !== $oldStartDate && ! array_key_exists('start_date', $entry)) {
             $entry['start_date'] = $dueDate;
         }
         $dueTime = $hourMinute(array_key_exists('due_time', $entry) ? $entry['due_time'] : $task->due_time);
@@ -308,6 +357,7 @@ final class NoteApplier
         $row['start_time'] = isset($row['start_time']) ? substr((string) $row['start_time'], 0, 5) : null;
         $row['end_time'] = TaskCandidates::sessionEnd($task);
         $row['due_date'] = isset($row['due_date']) ? substr((string) $row['due_date'], 0, 10) : null;
+        $row['start_date'] = isset($row['start_date']) ? substr((string) $row['start_date'], 0, 10) : null;
 
         return $row;
     }

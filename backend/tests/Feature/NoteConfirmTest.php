@@ -102,6 +102,50 @@ it('applies the edits made on Check this first, by entry ref', function () {
     expect([$task->title, substr((string) $task->due_date, 0, 10), $task->priority])->toBe(['Call mum back', '2026-10-30', 'high']);
 });
 
+it('applies schedule edits a task allows: start date, due time, and a due date that leaves the start', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow at 9am'))->assertJsonPath('changes.0.task.start_date', '2026-10-24');
+    $id = $note->json('note.id');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['start_date' => '2026-10-24', 'due_date' => '2026-10-30', 'due_time' => '18:00']]])
+        ->assertOk()->assertJsonCount(1, 'changes');
+
+    $task = Task::firstOrFail();
+    expect([substr((string) $task->start_date, 0, 10), substr((string) $task->due_date, 0, 10), substr((string) $task->due_time, 0, 5)])
+        ->toBe(['2026-10-24', '2026-10-30', '18:00']);
+});
+
+it('keeps the start Check this first showed when only the due date is edited', function () {
+    $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow at 9am'))->json('note.id');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['due_date' => '2026-10-30']]])->assertOk();
+
+    $task = Task::firstOrFail();
+    expect([substr((string) $task->start_date, 0, 10), substr((string) $task->due_date, 0, 10)])->toBe(['2026-10-24', '2026-10-30']);
+});
+
+it('refuses an edit the plan cannot take instead of dropping its task', function () {
+    $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow at 9am'))->json('note.id');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['start_date' => '2026-10-31']]])->assertUnprocessable();
+
+    expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('confirm');
+});
+
+it('refuses edits made on a plan the note no longer has (Edit note elsewhere)', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->assertCreated();
+    $id = $note->json('note.id');
+    $reviewed = $note->json('note.processed_at');
+    app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:20:00+07:00'));
+    $this->putJson("/api/v1/notes/{$id}", ['text' => 'buy milk friday', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertOk()->assertJsonPath('note.status', 'confirm');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['title' => 'Stale title']], 'processed_at' => $reviewed])
+        ->assertStatus(409)->assertJsonPath('error.code', 'note.plan_changed');
+    expect(Task::count())->toBe(0);
+
+    $current = $this->getJson("/api/v1/notes/{$id}")->json('note.processed_at');
+    $this->postJson("/api/v1/notes/{$id}/apply", ['processed_at' => $current])->assertOk()->assertJsonPath('changes.0.task.title', 'Buy milk');
+});
+
 it('keeps a moved task where the user put it instead of planning the move again', function () {
     $task = new Task;
     $task->forceFill(['user_id' => $this->user->id, 'title' => 'Gym', 'due_date' => '2026-10-24'])->save();

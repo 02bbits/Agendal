@@ -24,6 +24,7 @@ import type {
   Project,
 } from "../../domain/types";
 import { Link } from "../shell/Link";
+import { UndoConflictDialog } from "./UndoConflictDialog";
 import { ROUTES, type Navigate } from "../shell/routes";
 
 /** Whether a rename was saved. Named so the type stays out of NF-12's JSX text check. */
@@ -143,6 +144,15 @@ export function NoteResultScreen({
 
   const { note, changes, skipped } = result;
   const Heading = presentation === "panel" ? "h2" : "h1";
+  const deleteButton = onDelete && (
+    <IconButton
+      plain
+      label={t("note.delete")}
+      icon={<TrashIcon size={18} />}
+      disabled={offline}
+      onClick={() => setDeleting(true)}
+    />
+  );
   const deleteDialog = (
     <Dialog
       open={deleting}
@@ -186,15 +196,7 @@ export function NoteResultScreen({
           >
             {t("note.followup_title")}
           </Heading>
-          {onDelete && (
-            <IconButton
-              plain
-              label={t("note.delete")}
-              icon={<TrashIcon size={18} />}
-              disabled={offline}
-              onClick={() => setDeleting(true)}
-            />
-          )}
+          {deleteButton}
         </div>
         <blockquote className="my-4 border-l-2 border-separator pl-3 text-note text-ink-secondary">
           <p className="m-0 whitespace-pre-line [overflow-wrap:anywhere]">
@@ -296,15 +298,7 @@ export function NoteResultScreen({
               onClick={() => setNaming(nameOf(result))}
             />
           )}
-          {onDelete && (
-            <IconButton
-              plain
-              label={t("note.delete")}
-              icon={<TrashIcon size={18} />}
-              disabled={offline}
-              onClick={() => setDeleting(true)}
-            />
-          )}
+          {deleteButton}
         </div>
       ) : (
         <input
@@ -526,21 +520,10 @@ export function NoteResultScreen({
 
       {deleteDialog}
 
-      <Dialog
-        open={conflicts > 0}
-        title={t("note.undo_conflict_title")}
-        description={t("note.undo_conflict_body", { count: conflicts })}
-        onClose={() => onCancelUndo?.()}
-        actions={
-          <>
-            <Button variant="destructive" onClick={() => onUndo?.(true)}>
-              {t("note.undo_all")}
-            </Button>
-            <Button variant="outline" onClick={() => onCancelUndo?.()}>
-              {t("common.cancel")}
-            </Button>
-          </>
-        }
+      <UndoConflictDialog
+        count={conflicts}
+        onConfirm={() => onUndo?.(true)}
+        onCancel={() => onCancelUndo?.()}
       />
     </div>
   );

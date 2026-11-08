@@ -63,6 +63,13 @@ function submitFailure(error: unknown): NoteSubmitFailure {
 export type NoteActionOutcome =
   { result: NoteResult } | { conflicts: number } | { error: CopyKey };
 
+/** A note action's failure as copy: the server's code when it has copy, "needs a connection" offline. */
+function actionError(error: unknown): { error: CopyKey } {
+  if (!(error instanceof ApiRequestError))
+    return { error: "note.needs_connection" };
+  return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+}
+
 /** How many tasks a `409 note.undo_conflicts` names (RV §2.4), or 0 for any other answer. */
 async function conflictCount(response: Response): Promise<number> {
   if (response.status !== 409) return 0;
@@ -96,9 +103,7 @@ async function noteAction(
     rememberNote(result);
     return { result };
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    return actionError(error);
   }
 }
 
@@ -119,6 +124,11 @@ export function rememberNote(result: NoteResult) {
 export function recallNote(id: string): NoteResult | undefined {
   return recent.get(id);
 }
+
+/** A note was made, changed, deleted or restored: the Notes list and an open note load again. */
+export const NOTE_UPDATED = "agendal:note-updated";
+export const notesChanged = () =>
+  window.dispatchEvent(new CustomEvent(NOTE_UPDATED));
 
 /** Drops one kept result, e.g. a deleted note. */
 export function forgetNote(id: string) {
@@ -203,7 +213,7 @@ export async function renameNote(
  * Edit note (RV-5): `PUT /notes/{id}` re-plans the same note. A `done` note first undoes what it
  * applied, so tasks edited by hand since answer `{conflicts}` to ask first (RV-E16).
  */
-export async function replanFollowup(
+export async function replanNote(
   id: string,
   text: string,
   confirmConflicts = false,
@@ -241,17 +251,19 @@ export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
  * note as it is now, or the copy saying why not. A network failure reads as "needs a connection".
  */
 export async function confirmNote(
-  id: string,
+  note: Pick<NoteResult["note"], "id" | "processed_at">,
   edits: Record<string, TaskPatch> = {},
   exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
-      await api(`/notes/${encodeURIComponent(id)}/apply`, {
+      await api(`/notes/${encodeURIComponent(note.id)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        // `processed_at` names the reviewed plan: one made since answers 409 note.plan_changed
         body: JSON.stringify({
           edits,
+          processed_at: note.processed_at,
           ...(exclude.length ? { exclude } : {}),
         }),
       }),
@@ -259,9 +271,7 @@ export async function confirmNote(
     rememberNote(result);
     return result;
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    return actionError(error);
   }
 }
 
@@ -300,15 +310,12 @@ export async function deleteNote(
     const response = await api(`/notes/${encodeURIComponent(id)}`, {
       method: "DELETE",
     });
-    if (response.ok) {
-      forgetNote(id);
-      return true;
-    }
-    return { error: "error.generic" };
+    // 204 has no body to read; a failure throws with the server's code
+    if (!response.ok) await handleResponse(response);
+    forgetNote(id);
+    return true;
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    return actionError(error);
   }
 }
 
@@ -317,12 +324,12 @@ export async function restoreNote(
   id: string,
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
-    return await handleResponse<NoteResult>(
+    const result = await handleResponse<NoteResult>(
       await api(`/notes/${encodeURIComponent(id)}/restore`, { method: "POST" }),
     );
+    rememberNote(result);
+    return result;
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    return actionError(error);
   }
 }

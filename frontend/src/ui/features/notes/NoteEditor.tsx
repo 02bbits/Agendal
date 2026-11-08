@@ -17,6 +17,7 @@ import { Dialog } from "../../components/Dialog";
 import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
+import { UndoConflictDialog } from "./UndoConflictDialog";
 
 const EXAMPLES = [
   "note.example_1",
@@ -318,28 +319,14 @@ export function NoteEditor({
           </div>
         </div>
       </div>
-      <Dialog
-        open={conflicts > 0}
+      <UndoConflictDialog
+        count={conflicts}
         history={false}
-        title={t("note.undo_conflict_title")}
-        description={t("note.undo_conflict_body", { count: conflicts })}
-        onClose={() => setConflicts(0)}
-        actions={
-          <>
-            <Button
-              variant="destructive"
-              onClick={() => {
-                setConflicts(0);
-                void submit(true);
-              }}
-            >
-              {t("note.undo_all")}
-            </Button>
-            <Button variant="outline" onClick={() => setConflicts(0)}>
-              {t("common.cancel")}
-            </Button>
-          </>
-        }
+        onConfirm={() => {
+          setConflicts(0);
+          void submit(true);
+        }}
+        onCancel={() => setConflicts(0)}
       />
       <Dialog
         open={confirming}

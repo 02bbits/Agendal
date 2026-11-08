@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type RefObject,
@@ -17,11 +18,13 @@ import {
   deleteNote,
   getNote,
   makeFollowupTask,
+  NOTE_UPDATED,
+  notesChanged,
   previewTaskApi,
   recallNote,
   redoNote,
   renameNote,
-  replanFollowup,
+  replanNote,
   restoreNote,
   undoNote,
 } from "../../../lib/noteApi";
@@ -196,23 +199,29 @@ function ResultContainer({
     [reviewing, excluded, edits],
   );
   const [askDiscard, setAskDiscard] = useState(false);
-  const leave = () => (changed() ? setAskDiscard(true) : back());
+  // An open task editor answers first: it asks before dropping its own draft (UX-13)
+  const taskEditorGuard = useRef<(() => boolean) | null>(null);
+  const mayLeave = useCallback(() => {
+    if (taskEditorGuard.current?.() === false) return false;
+    const ask = changed();
+    if (ask) setAskDiscard(true);
+    return !ask;
+  }, [changed]);
+  const leave = () => {
+    if (mayLeave()) back();
+  };
   useEffect(() => {
     if (!closeGuardRef) return;
-    closeGuardRef.current = () => {
-      const ask = changed();
-      if (ask) setAskDiscard(true);
-      return !ask;
-    };
+    closeGuardRef.current = mayLeave;
     return () => {
       closeGuardRef.current = null;
     };
-  }, [closeGuardRef, changed]);
+  }, [closeGuardRef, mayLeave]);
   const wide = useMediaQuery("(min-width: 1280px)");
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
   const closeTask = () => {
     setOpenedTask(null);
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged();
   };
   useHistoryEntry(!!openedTask, closeTask);
   const openTask = (task: Task) => {
@@ -249,10 +258,14 @@ function ResultContainer({
   // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, edits, excluded);
+    const outcome = await confirmNote(result.note, edits, excluded);
     setBusy(false);
-    if ("error" in outcome)
-      return showToast(t(outcome.error, { request_id: "" }));
+    if ("error" in outcome) {
+      showToast(t(outcome.error, { request_id: "" }));
+      // Re-planned elsewhere: load the new plan, since these edits named the old one's rows
+      if (outcome.error === "note.plan_changed") notesChanged();
+      return;
+    }
     const id = outcome.note.id;
     listsChanged();
     showToast({
@@ -290,16 +303,22 @@ function ResultContainer({
     }
     if (outcome !== true)
       return showToast(t(outcome.error, { request_id: "" }));
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged();
+    // The Undo; a failed restore offers it again, since the note stays deleted until it lands
+    const restore = async () => {
+      const restored = await restoreNote(result.note.id);
+      if ("error" in restored)
+        return showToast({
+          message: t(restored.error, { request_id: "" }),
+          actionLabel: t("common.retry"),
+          onAction: restore,
+        });
+      notesChanged();
+    };
     showToast({
       message: t("note.deleted", { name: nameOf(result) }),
       actionLabel: t("common.undo"),
-      onAction: async () => {
-        const restored = await restoreNote(result.note.id);
-        if ("error" in restored)
-          return showToast(t(restored.error, { request_id: "" }));
-        window.dispatchEvent(new CustomEvent("agendal:note-updated"));
-      },
+      onAction: restore,
     });
     back();
   };
@@ -307,13 +326,13 @@ function ResultContainer({
   // Make tasks again (RV §2.4): plans the note's text anew; the screen reloads on the new result
   const replan = async () => {
     setBusy(true);
-    const outcome = await replanFollowup(result.note.id, result.note.text);
+    const outcome = await replanNote(result.note.id, result.note.text);
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
     if ("conflicts" in outcome) return;
     listsChanged();
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged();
   };
 
   // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
@@ -324,7 +343,7 @@ function ResultContainer({
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged();
   };
   const live = useMemo(
     () => ({
@@ -335,7 +354,8 @@ function ResultContainer({
   );
   return (
     <>
-      <div inert={!!openId || !!openedTask}>
+      {/* Busy: Apply, Delete or Make tasks again is on its way; an edit now would never reach it */}
+      <div inert={!!openId || !!openedTask || busy}>
         <NoteResultScreen
           result={{
             ...result,
@@ -389,6 +409,7 @@ function ResultContainer({
           }
           task={store.tasks.find((task) => task.id === openId)!}
           weekStart={weekStart}
+          closeGuardRef={taskEditorGuard}
           onCancel={() => setOpenId(null)}
           onDone={(patch) => {
             store.update(openId, patch);
@@ -457,8 +478,8 @@ export default function NoteResultClient({
       setErrorState(null);
       setReloadKey((key) => key + 1);
     };
-    window.addEventListener("agendal:note-updated", changed);
-    return () => window.removeEventListener("agendal:note-updated", changed);
+    window.addEventListener(NOTE_UPDATED, changed);
+    return () => window.removeEventListener(NOTE_UPDATED, changed);
   }, []);
 
   useEffect(() => {
