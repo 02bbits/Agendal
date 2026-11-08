@@ -63,8 +63,18 @@ function ToastAlert({
   const onAction = (e: React.SyntheticEvent) =>
     (e.target as Element).closest?.("button") !== null;
 
+  const isDesktop = () => {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.matchMedia === "function"
+    ) {
+      return window.matchMedia("(min-width: 768px)").matches;
+    }
+    return false;
+  };
+
   const handleTouchStart = (e: React.TouchEvent) => {
-    if (onAction(e)) return;
+    if (isDesktop() || onAction(e)) return;
     pause();
     dragStartRef.current = e.touches[0].clientX;
     dragOffsetRef.current = 0;
@@ -92,7 +102,15 @@ function ToastAlert({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if ((e.button !== undefined && e.button !== 0) || onAction(e)) return;
+    // Swipe is only enabled for touch/pen on mobile, disabled for mouse and desktop
+    if (
+      e.pointerType === "mouse" ||
+      isDesktop() ||
+      (e.button !== undefined && e.button !== 0) ||
+      onAction(e)
+    ) {
+      return;
+    }
     pause();
     dragStartRef.current = e.clientX ?? 0;
     dragOffsetRef.current = 0;
@@ -137,7 +155,7 @@ function ToastAlert({
 
   return (
     <div
-      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full cursor-grab active:cursor-grabbing touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pr-2 pl-4 text-callout text-neutral-content shadow-md motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
+      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:pr-2 motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
       style={{
         transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
         opacity: dragOffset
@@ -181,7 +199,7 @@ function ToastAlert({
       <button
         type="button"
         aria-label={t("common.close")}
-        className="focus-ring -ml-[13px] inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-neutral-content/70 transition-colors hover:text-neutral-content"
+        className="focus-ring -ml-[13px] hidden size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-neutral-content/70 transition-colors hover:text-neutral-content md:inline-flex"
         onClick={() => onDismiss(toast.id)}
       >
         <XIcon size={18} aria-hidden="true" />
