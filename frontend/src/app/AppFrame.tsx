@@ -666,7 +666,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }
             onSubmitted={(result) => {
               rememberNote(result);
-              notesChanged();
+              notesChanged(result.note.id);
               openResult(result.note.id);
             }}
           />

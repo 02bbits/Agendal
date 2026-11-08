@@ -150,7 +150,7 @@ class ProcessNote
             'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
             'written_at' => $note->exists ? $note->written_at : $clientClock->now(), 'written_tz' => $note->exists ? $note->written_tz : $zone, 'processed_at' => $this->clock->now(),
             'edited_at' => $note->exists ? $this->clock->now() : null,
-            'plan' => $plan, 'applied' => [],
+            'plan' => $plan, 'plan_version' => $note->nextPlanVersion(), 'applied' => [],
         ])->save();
         if ($build->status === PlanStatus::Done) {
             $applied = $this->applier->apply($note, $plan);

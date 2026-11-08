@@ -28,7 +28,7 @@ final class PlanValidator
     private const ENTRY_KEYS = ['ref', 'task_id', 'label'];
 
     /** Fields that schedule a task: an entry setting one has to leave a date when the task has a time, repeat or reminder. */
-    private const SCHEDULE_FIELDS = ['due_date', 'start_time', 'repeat', 'reminder'];
+    private const SCHEDULE_FIELDS = ['due_date', 'start_date', 'start_time', 'repeat', 'reminder'];
 
     private Validator $schema;
 
@@ -212,8 +212,8 @@ final class PlanValidator
     }
 
     /**
-     * A task the entry schedules keeps a due date while it has a time, repeat or reminder; the engine always gives
-     * one (NU-E5).
+     * A task the entry schedules keeps a date while it has a time, repeat or reminder: a due date, or a start date as
+     * any task may have instead (TK-3). The engine always gives a due date (NU-E5).
      *
      * @param  array<string, mixed>  $entry
      * @param  array<string, mixed>  $task  the task after the entry
@@ -225,7 +225,7 @@ final class PlanValidator
             || ($task['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
             || ($task['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
 
-        return ! $schedules || ! $needsDate || ($task['due_date'] ?? null) !== null;
+        return ! $schedules || ! $needsDate || ($task['due_date'] ?? $task['start_date'] ?? null) !== null;
     }
 
     /**

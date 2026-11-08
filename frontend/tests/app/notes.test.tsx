@@ -56,6 +56,8 @@ const note: NoteResult["note"] = {
   written_at: "2026-11-04T02:00:00Z",
 
   processed_at: "2026-11-04T02:00:00Z",
+
+  plan_version: 1,
 };
 
 const fetchMock = vi.fn();

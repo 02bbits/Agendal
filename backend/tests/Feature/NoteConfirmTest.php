@@ -114,13 +114,23 @@ it('applies schedule edits a task allows: start date, due time, and a due date t
         ->toBe(['2026-10-24', '2026-10-30', '18:00']);
 });
 
-it('keeps the start Check this first showed when only the due date is edited', function () {
+it('applies the start date Check this first sends with a new due date', function () {
     $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow at 9am'))->json('note.id');
 
-    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['due_date' => '2026-10-30']]])->assertOk();
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['start_date' => '2026-10-24', 'due_date' => '2026-10-30']]])->assertOk();
 
     $task = Task::firstOrFail();
     expect([substr((string) $task->start_date, 0, 10), substr((string) $task->due_date, 0, 10)])->toBe(['2026-10-24', '2026-10-30']);
+});
+
+it('keeps a start date without a due date, as any task may (TK-3)', function () {
+    $id = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow at 9am'))->json('note.id');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['start_date' => '2026-10-24', 'due_date' => null, 'due_time' => null]]])
+        ->assertOk()->assertJsonCount(1, 'changes');
+
+    $task = Task::firstOrFail();
+    expect([substr((string) $task->start_date, 0, 10), $task->due_date])->toBe(['2026-10-24', null]);
 });
 
 it('refuses an edit the plan cannot take instead of dropping its task', function () {
@@ -131,19 +141,30 @@ it('refuses an edit the plan cannot take instead of dropping its task', function
     expect(Task::count())->toBe(0)->and(Note::findOrFail($id)->status)->toBe('confirm');
 });
 
-it('refuses edits made on a plan the note no longer has (Edit note elsewhere)', function () {
+it('refuses edits made on a plan the note no longer has, even re-planned in the same second', function () {
     $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->assertCreated();
     $id = $note->json('note.id');
-    $reviewed = $note->json('note.processed_at');
-    app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:20:00+07:00'));
+    $reviewed = $note->json('note.plan_version');
     $this->putJson("/api/v1/notes/{$id}", ['text' => 'buy milk friday', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertOk()->assertJsonPath('note.status', 'confirm');
 
-    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['title' => 'Stale title']], 'processed_at' => $reviewed])
+    $this->postJson("/api/v1/notes/{$id}/apply", ['edits' => ['i1' => ['title' => 'Stale title']], 'plan_version' => $reviewed])
         ->assertStatus(409)->assertJsonPath('error.code', 'note.plan_changed');
     expect(Task::count())->toBe(0);
 
-    $current = $this->getJson("/api/v1/notes/{$id}")->json('note.processed_at');
-    $this->postJson("/api/v1/notes/{$id}/apply", ['processed_at' => $current])->assertOk()->assertJsonPath('changes.0.task.title', 'Buy milk');
+    $current = $this->getJson("/api/v1/notes/{$id}")->assertJsonPath('note.plan_version', $reviewed + 1)->json('note.plan_version');
+    $this->postJson("/api/v1/notes/{$id}/apply", ['plan_version' => $current])->assertOk()->assertJsonPath('changes.0.task.title', 'Buy milk');
+});
+
+it('answers a repeated apply of the same plan with the note as it is (lost reply, RV §7)', function () {
+    $note = $this->postJson('/api/v1/notes', confirmNote('call mum tomorrow'))->assertCreated();
+    $id = $note->json('note.id');
+    $version = $note->json('note.plan_version');
+
+    $this->postJson("/api/v1/notes/{$id}/apply", ['plan_version' => $version])->assertOk()->assertJsonPath('note.status', 'done');
+    $this->postJson("/api/v1/notes/{$id}/apply", ['plan_version' => $version])->assertOk()->assertJsonPath('note.status', 'done')->assertJsonCount(1, 'changes');
+
+    expect(Task::count())->toBe(1);
+    $this->postJson("/api/v1/notes/{$id}/apply")->assertStatus(409)->assertJsonPath('error.code', 'note.wrong_status');
 });
 
 it('keeps a moved task where the user put it instead of planning the move again', function () {

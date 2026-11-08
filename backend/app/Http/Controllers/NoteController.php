@@ -82,9 +82,9 @@ class NoteController extends Controller
     public function apply(Request $request, Note $note, NoteConfirm $confirm): NoteResultResource
     {
         // Edits from Check this first, by entry ref: only the fields a task patch may set (TK §7).
-        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct'], 'processed_at' => ['sometimes', 'date']]);
+        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct'], 'plan_version' => ['sometimes', 'integer', 'min:1']]);
 
-        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? [], $input['processed_at'] ?? null));
+        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? [], isset($input['plan_version']) ? (int) $input['plan_version'] : null));
     }
 
     public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource

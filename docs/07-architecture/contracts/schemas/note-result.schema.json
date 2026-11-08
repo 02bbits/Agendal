@@ -9,7 +9,7 @@
   "properties": {
     "note": {
       "type": "object",
-      "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine"],
+      "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine", "plan_version"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "format": "uuid" },
@@ -21,6 +21,7 @@
         "written_at": { "type": "string", "format": "date-time" },
         "processed_at": { "type": "string", "format": "date-time" },
         "edited_at": { "type": ["string", "null"], "format": "date-time" },
+        "plan_version": { "type": "integer", "minimum": 1, "description": "Which plan the note holds; Apply names the one reviewed (RV §7)." },
         "engine": { "enum": ["rules", "rules_llm", "rules_fallback"] }
       }
     },

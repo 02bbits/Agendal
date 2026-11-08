@@ -172,12 +172,11 @@ final class NoteApplier
         foreach (['create', 'update'] as $kind) {
             foreach ($plan[$kind] as $index => $entry) {
                 $edit = $edits[$entry['ref']] ?? [];
-                $row = $kind === 'update' ? $rows[$entry['task_id']] ?? null : null;
-                if ($edit === [] || ($kind === 'update' && $row === null)) {
+                if ($edit === [] || ($kind === 'update' && ! isset($rows[$entry['task_id']]))) {
                     continue;
                 }
-                $shownStart = $kind === 'create' ? (($entry['start_time'] ?? null) !== null ? $entry['due_date'] ?? null : null) : $row['start_date'];
-                $plan[$kind][$index] = $this->withEdits($entry, $edit, $shownStart);
+                // The edit carries the schedule as Check this first showed it, its start date included
+                $plan[$kind][$index] = [...$entry, ...$edit];
                 $edited[] = $entry['ref'];
             }
         }
@@ -205,23 +204,6 @@ final class NoteApplier
         }
 
         return $edit;
-    }
-
-    /**
-     * The edit over the entry. A new due date keeps the start date Check this first showed instead of moving it
-     * along, as the plan would derive it from the due date (TK-3).
-     *
-     * @param  array<string, mixed>  $entry
-     * @param  array<string, mixed>  $edit  in plan terms
-     * @return array<string, mixed>
-     */
-    private function withEdits(array $entry, array $edit, ?string $shownStart): array
-    {
-        if (array_key_exists('due_date', $edit) && ! array_key_exists('start_date', $edit) && $shownStart !== null) {
-            $edit['start_date'] = $shownStart;
-        }
-
-        return [...$entry, ...$edit];
     }
 
     /**

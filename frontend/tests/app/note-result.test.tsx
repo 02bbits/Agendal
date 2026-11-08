@@ -64,6 +64,7 @@ const result: NoteResult = {
     written_at: "2026-10-23T08:12:00+07:00",
 
     processed_at: "2026-10-23T08:12:01+07:00",
+    plan_version: 1,
   },
 
   changes,
@@ -709,7 +710,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
       JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
     ).toEqual({
       edits: { i1: { priority: "high" } },
-      processed_at: result.note.processed_at,
+      plan_version: result.note.plan_version,
     });
 
     expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
@@ -774,7 +775,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
 
     expect(
       JSON.parse(String(calls("POST", "/api/v1/notes/n1/apply")[0]![1].body)),
-    ).toEqual({ edits: {}, processed_at: result.note.processed_at });
+    ).toEqual({ edits: {}, plan_version: result.note.plan_version });
 
     expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
   });
@@ -795,6 +796,39 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(
       await screen.findByRole("button", { name: t("common.discard_action") }),
     ).toBeTruthy();
+  });
+
+  it("Escape in a picker closes the picker only; Back over Discard closes Discard", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.click(screen.getByRole("radio", { name: /high/i }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.project") }),
+    );
+    await userEvent.keyboard("{Escape}");
+
+    expect(
+      screen.queryByRole("button", { name: t("common.discard_action") }),
+    ).toBeNull();
+    expect(screen.getByRole("textbox", { name: t("task.title") })).toBeTruthy();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.cancel") }),
+    );
+    expect(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    ).toBeTruthy();
+    await act(async () => {
+      window.history.back();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(
+      screen.queryByRole("button", { name: t("common.discard_action") }),
+    ).toBeNull();
+    expect(screen.getByRole("textbox", { name: t("task.title") })).toBeTruthy();
   });
 
   it("a field set back to what it was is no edit: Cancel closes without asking", async () => {

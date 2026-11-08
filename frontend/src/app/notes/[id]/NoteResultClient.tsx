@@ -18,6 +18,7 @@ import {
   deleteNote,
   getNote,
   makeFollowupTask,
+  concernsNote,
   NOTE_UPDATED,
   notesChanged,
   previewTaskApi,
@@ -122,8 +123,9 @@ function OpenedTask({
 }
 
 /**
- * A result just made in this session is already here, so the note isn't asked for again. Each
- * task is always checked, so a row opened and deleted since shows "Removed since" (RV-E13).
+ * A result just made in this session is already here, so the note isn't asked for again; one known
+ * to be stale (a plan changed elsewhere) is dropped from that cache first. Each task is always
+ * checked, so a row opened and deleted since shows "Removed since" (RV-E13).
  */
 async function load(id: string): Promise<Loaded> {
   const result = recallNote(id) ?? (await getNote(id));
@@ -210,6 +212,17 @@ function ResultContainer({
   const leave = () => {
     if (mayLeave()) back();
   };
+  // An answer that lands after this screen closed (the user moved on) must not navigate from it
+  const shown = useRef(true);
+  useEffect(
+    () => () => {
+      shown.current = false;
+    },
+    [],
+  );
+  const backIfShown = () => {
+    if (shown.current) back();
+  };
   useEffect(() => {
     if (!closeGuardRef) return;
     closeGuardRef.current = mayLeave;
@@ -221,7 +234,7 @@ function ResultContainer({
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
   const closeTask = () => {
     setOpenedTask(null);
-    notesChanged();
+    notesChanged(result.note.id);
   };
   useHistoryEntry(!!openedTask, closeTask);
   const openTask = (task: Task) => {
@@ -263,7 +276,7 @@ function ResultContainer({
     if ("error" in outcome) {
       showToast(t(outcome.error, { request_id: "" }));
       // Re-planned elsewhere: load the new plan, since these edits named the old one's rows
-      if (outcome.error === "note.plan_changed") notesChanged();
+      if (outcome.error === "note.plan_changed") notesChanged(result.note.id);
       return;
     }
     const id = outcome.note.id;
@@ -287,7 +300,7 @@ function ResultContainer({
         });
       },
     });
-    back();
+    backIfShown();
   };
   // Edit note (RV-5): opens the note's text in the editor; Make tasks replans it.
   const edit = () => {
@@ -303,7 +316,7 @@ function ResultContainer({
     }
     if (outcome !== true)
       return showToast(t(outcome.error, { request_id: "" }));
-    notesChanged();
+    notesChanged(result.note.id);
     // The Undo; a failed restore offers it again, since the note stays deleted until it lands
     const restore = async () => {
       const restored = await restoreNote(result.note.id);
@@ -313,14 +326,14 @@ function ResultContainer({
           actionLabel: t("common.retry"),
           onAction: restore,
         });
-      notesChanged();
+      notesChanged(result.note.id);
     };
     showToast({
       message: t("note.deleted", { name: nameOf(result) }),
       actionLabel: t("common.undo"),
       onAction: restore,
     });
-    back();
+    backIfShown();
   };
 
   // Make tasks again (RV §2.4): plans the note's text anew; the screen reloads on the new result
@@ -332,7 +345,7 @@ function ResultContainer({
       return showToast(t(outcome.error, { request_id: "" }));
     if ("conflicts" in outcome) return;
     listsChanged();
-    notesChanged();
+    notesChanged(result.note.id);
   };
 
   // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
@@ -343,7 +356,7 @@ function ResultContainer({
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
-    notesChanged();
+    notesChanged(result.note.id);
   };
   const live = useMemo(
     () => ({
@@ -473,14 +486,15 @@ export default function NoteResultClient({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const changed = () => {
+    const changed = (event: Event) => {
+      if (!concernsNote(event, id)) return;
       setLoaded(null);
       setErrorState(null);
       setReloadKey((key) => key + 1);
     };
     window.addEventListener(NOTE_UPDATED, changed);
     return () => window.removeEventListener(NOTE_UPDATED, changed);
-  }, []);
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;

@@ -87,6 +87,8 @@ export interface NoteResult {
     source_file_name: string | null;
     written_at: string;
     processed_at: string;
+    /** Which plan the note holds; Apply names the one reviewed (RV §7). */
+    plan_version: number;
     edited_at?: string | null;
   };
   changes: NoteChange[];

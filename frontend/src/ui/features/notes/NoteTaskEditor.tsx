@@ -53,8 +53,13 @@ export function NoteTaskEditor({
       { ...changes.current, title: draft.title, notes: draft.notes },
       store.today,
     );
-  // Cancel, Escape and Back ask before dropping edits (UX-13); `false` keeps Back's history entry
+  // Cancel, Escape and Back ask before dropping edits (UX-13); `false` keeps Back's history entry.
+  // With Discard? open, Back closes it first: that dialog has no history entry of its own
   const requestCancel = () => {
+    if (discarding) {
+      setDiscarding(false);
+      return false;
+    }
     if (Object.keys(edits()).length === 0) return onCancel();
     setDiscarding(true);
     return false;
@@ -85,16 +90,11 @@ export function NoteTaskEditor({
     <section
       data-modal-host
       ref={root}
-      role={wide ? "region" : "dialog"}
-      aria-modal={wide ? undefined : true}
+      // A modal layer at every width, so Escape reaches it through useModalFocus's layer order only:
+      // a picker opened from it closes first, and the note panel under it waits
+      role="dialog"
+      aria-modal
       aria-labelledby={title}
-      onKeyDown={(event) => {
-        if (event.key === "Escape" && !event.defaultPrevented) {
-          event.preventDefault();
-          event.stopPropagation();
-          requestCancel();
-        }
-      }}
       className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-paper md:left-[248px] xl:absolute xl:inset-0 xl:z-10"
     >
       <header className="sticky top-0 z-10 grid min-h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 bg-paper px-4 pt-[env(safe-area-inset-top)]">

@@ -127,8 +127,14 @@ export function recallNote(id: string): NoteResult | undefined {
 
 /** A note was made, changed, deleted or restored: the Notes list and an open note load again. */
 export const NOTE_UPDATED = "agendal:note-updated";
-export const notesChanged = () =>
-  window.dispatchEvent(new CustomEvent(NOTE_UPDATED));
+/** `id` names the note that changed: only its open screen loads again, others keep their review. */
+export const notesChanged = (id?: string) =>
+  window.dispatchEvent(new CustomEvent(NOTE_UPDATED, { detail: { id } }));
+/** Whether a NOTE_UPDATED event concerns the note `id` (an event naming no note concerns every note). */
+export const concernsNote = (event: Event, id: string) => {
+  const changed = (event as CustomEvent<{ id?: string } | null>).detail?.id;
+  return changed === undefined || changed === id;
+};
 
 /** Drops one kept result, e.g. a deleted note. */
 export function forgetNote(id: string) {
@@ -251,7 +257,7 @@ export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
  * note as it is now, or the copy saying why not. A network failure reads as "needs a connection".
  */
 export async function confirmNote(
-  note: Pick<NoteResult["note"], "id" | "processed_at">,
+  note: Pick<NoteResult["note"], "id" | "plan_version">,
   edits: Record<string, TaskPatch> = {},
   exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
@@ -260,10 +266,11 @@ export async function confirmNote(
       await api(`/notes/${encodeURIComponent(note.id)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        // `processed_at` names the reviewed plan: one made since answers 409 note.plan_changed
+        // `plan_version` names the reviewed plan: one made since answers 409 note.plan_changed, and a
+        // repeat of an apply that already landed answers with the note as it is
         body: JSON.stringify({
           edits,
-          processed_at: note.processed_at,
+          plan_version: note.plan_version,
           ...(exclude.length ? { exclude } : {}),
         }),
       }),
@@ -271,6 +278,12 @@ export async function confirmNote(
     rememberNote(result);
     return result;
   } catch (error) {
+    // The note isn't the one this screen showed: what this session kept of it is stale too
+    if (
+      error instanceof ApiRequestError &&
+      (error.code === "note.plan_changed" || error.code === "note.wrong_status")
+    )
+      forgetNote(note.id);
     return actionError(error);
   }
 }
@@ -289,7 +302,13 @@ export function previewTaskApi(result: NoteResult) {
       const task = { ...tasks.get(id)!, ...fields };
       tasks.set(id, task);
       const ref = refs.get(id);
-      if (ref) edits[ref] = { ...edits[ref], ...fields };
+      // A new due date goes with the start date shown beside it: the server would otherwise derive
+      // the start from the plan, which can differ from what this screen showed
+      const shown =
+        "due_date" in fields && task.start_date !== null
+          ? { start_date: task.start_date }
+          : {};
+      if (ref) edits[ref] = { ...edits[ref], ...shown, ...fields };
       return task;
     },
     complete: refuse,

@@ -214,12 +214,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
                 />
               </header>
             )}
-            <div
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 xl:pt-4"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") event.stopPropagation();
-              }}
-            >
+            <div className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 xl:pt-4">
               <NoteResultClient
                 key={selected}
                 id={selected}
