@@ -212,7 +212,7 @@ export function UpcomingClient() {
     };
   }, []);
 
-  const isFull = settings.pageView === "full";
+  const isFull = settings.pageView === "full" || viewMode === "board";
 
   const filterChipsMd = (
     <ChipGroup

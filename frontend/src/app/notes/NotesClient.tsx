@@ -11,6 +11,7 @@ import { useModalFocus } from "../../ui/components/useModalFocus";
 import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
 import { Button } from "../../ui/components/Button";
+import { TextButton } from "../../ui/components/TextButton";
 import { IconButton } from "../../ui/components/IconButton";
 import { XIcon } from "../../ui/components/icons";
 import { t } from "../../ui/copy";
@@ -180,16 +181,16 @@ function NotesContent({ noteId }: { noteId?: string }) {
           </Button>
         )}
         {data?.next_cursor && (
-          <Button busy={busy} onClick={more}>
+          <TextButton busy={busy} onClick={more}>
             {t("notes.load_more")}
-          </Button>
+          </TextButton>
         )}
       </div>
       {selected && (
         <>
           <div
             aria-hidden="true"
-            className="fixed inset-0 z-[54] bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+            className="fixed inset-0 z-[54] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
             onMouseDown={(event) => event.preventDefault()}
             onClick={requestClose}
           />
@@ -200,7 +201,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             tabIndex={-1}
             data-modal-host
             aria-label={t("nav.notes")}
-            className="fixed inset-0 z-[55] flex flex-col bg-paper outline-none shadow-2xl md:left-[248px] xl:left-auto xl:w-[400px] xl:border-l xl:border-separator"
+            className="fixed inset-0 z-[55] flex flex-col bg-paper outline-none shadow-2xl motion-safe:animate-panel-in md:left-[248px] xl:left-auto xl:w-[400px] xl:border-l xl:border-separator"
           >
             <NoteScrollLock panelRef={panelRef} />
             {wide && (

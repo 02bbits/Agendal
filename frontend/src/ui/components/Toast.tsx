@@ -5,6 +5,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { t } from "../copy";
+import { XIcon } from "./icons";
 
 export const TOAST_DURATION_MS = 5000;
 
@@ -57,7 +59,12 @@ function ToastAlert({
     if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
   }, [regionRef]);
 
+  // A press on Undo/Retry is a tap, not a drag: capturing it would send the click to the toast, not the button
+  const onAction = (e: React.SyntheticEvent) =>
+    (e.target as Element).closest?.("button") !== null;
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (onAction(e)) return;
     pause();
     dragStartRef.current = e.touches[0].clientX;
     dragOffsetRef.current = 0;
@@ -85,7 +92,7 @@ function ToastAlert({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== undefined && e.button !== 0) return;
+    if ((e.button !== undefined && e.button !== 0) || onAction(e)) return;
     pause();
     dragStartRef.current = e.clientX ?? 0;
     dragOffsetRef.current = 0;
@@ -130,7 +137,7 @@ function ToastAlert({
 
   return (
     <div
-      className="alert pointer-events-auto flex min-h-11 w-full cursor-grab active:cursor-grabbing touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pr-2 pl-4 text-callout text-neutral-content shadow-md motion-safe:animate-slide-up motion-reduce:animate-fade-quick"
+      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full cursor-grab active:cursor-grabbing touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pr-2 pl-4 text-callout text-neutral-content shadow-md motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
       style={{
         transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
         opacity: dragOffset
@@ -161,16 +168,24 @@ function ToastAlert({
           {toast.icon}
         </span>
       )}
-      <span className="flex-1 [overflow-wrap:anywhere]">{toast.message}</span>
+      <span className="min-w-0 [overflow-wrap:anywhere]">{toast.message}</span>
       {toast.actionLabel && toast.onAction && (
         <button
           type="button"
-          className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content underline underline-offset-[3px] hover:bg-neutral-content/10"
+          className="focus-ring min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content"
           onClick={runAction}
         >
-          {toast.actionLabel}
+          <span className="link-swipe">{toast.actionLabel}</span>
         </button>
       )}
+      <button
+        type="button"
+        aria-label={t("common.close")}
+        className="focus-ring -ml-[13px] inline-flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-neutral-content/70 transition-colors hover:text-neutral-content"
+        onClick={() => onDismiss(toast.id)}
+      >
+        <XIcon size={18} aria-hidden="true" />
+      </button>
     </div>
   );
 }
@@ -190,7 +205,7 @@ export function Toast({
   return (
     <div
       ref={regionRef}
-      className="toast toast-bottom toast-center pointer-events-none z-[110] ml-[calc((var(--sidebar-w,0px)-var(--panel-w,0px))/2)] w-full max-w-[600px] whitespace-normal px-gutter md:mb-20"
+      className="toast toast-bottom toast-start pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
       aria-atomic="true"

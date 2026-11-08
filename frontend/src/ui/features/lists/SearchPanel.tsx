@@ -11,6 +11,7 @@ import {
 } from "react";
 import { timeZone } from "../../../lib/clock";
 import { Button } from "../../components/Button";
+import { TextButton } from "../../components/TextButton";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { EmptyState } from "../../components/EmptyState";
@@ -433,7 +434,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
           </div>
         ) : (
           <div className="flex items-center gap-2 px-4 pb-2">
-            <div className="flex h-[52px] flex-1 items-center gap-2 rounded-field border border-control bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-primary">
+            <div className="flex h-[52px] flex-1 items-center gap-2 rounded-field border border-control bg-surface px-4 field-ring">
               <SearchIcon size={18} className="shrink-0 text-ink-secondary" />
               <input
                 ref={internalInputRef}
@@ -457,7 +458,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
               <button
                 type="button"
                 onClick={onCancel}
-                className="focus-ring shrink-0 text-callout font-medium text-ink-secondary hover:text-ink px-1"
+                className="focus-ring shrink-0 link-swipe text-callout font-medium text-ink-secondary hover:text-ink px-1"
               >
                 {t("common.cancel")}
               </button>
@@ -547,7 +548,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                     </span>
                     <button
                       type="button"
-                      className="focus-ring text-footnote font-medium text-ink-secondary hover:text-ink cursor-pointer"
+                      className="focus-ring link-swipe text-footnote font-medium text-ink-secondary hover:text-ink cursor-pointer"
                       onClick={handleClearRecent}
                     >
                       {t("common.clear")}
@@ -844,15 +845,14 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                       </div>
 
                       {nextCursor && (
-                        <button
-                          type="button"
-                          className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill mt-2 w-full text-center"
+                        <TextButton
+                          className="mt-2 w-full"
                           onClick={() => {
                             void loadMore();
                           }}
                         >
                           {t("search.load_more")}
-                        </button>
+                        </TextButton>
                       )}
                     </div>
                   )}

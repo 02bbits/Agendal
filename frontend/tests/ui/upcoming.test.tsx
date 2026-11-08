@@ -232,7 +232,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(tue3Btn.getAttribute("aria-current")).toBe("date");
     expect(tue3Btn.disabled).toBe(true);
     expect(within(tue3Btn).getByText("3").className).toContain("bg-fill");
-    expect(within(tue3Btn).getAllByText("(Today)")).toHaveLength(2);
+    expect(within(tue3Btn).getAllByText("(Today)")).toHaveLength(1);
 
     const wed4Btn = screen.getByRole("button", {
       name: /^4 Nov · Tomorrow · Wednesday,/,
@@ -491,7 +491,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(wed4Btn.disabled).toBe(false);
   });
 
-  it("Strip: today keeps its dot, and the label sits after it for phones", () => {
+  it("Strip: today keeps its dot, and the label sits under it", () => {
     const { wrap } = setupUpcoming([
       task({ id: "t-today", title: "Today task", due_date: "2026-11-03" }),
     ]);
@@ -500,10 +500,9 @@ describe("Upcoming screen (Section 8)", () => {
     const tue3Btn = screen.getByRole("button", { name: /^3 Nov.*tasks?$/ });
     const dot = within(tue3Btn).getByTestId("day-dot");
     const labels = within(tue3Btn).getAllByText("(Today)");
-    expect(labels).toHaveLength(2);
-    expect(labels[1]!.className).toContain("md:hidden");
+    expect(labels).toHaveLength(1);
     expect(
-      dot.compareDocumentPosition(labels[1]!) &
+      dot.compareDocumentPosition(labels[0]!) &
         Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
   });

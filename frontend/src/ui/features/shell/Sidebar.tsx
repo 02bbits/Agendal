@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { t } from "../../copy";
 import {
   CalendarIcon,
@@ -6,6 +6,7 @@ import {
   FolderIcon,
   InboxIcon,
   NotesIcon,
+  ChevronRightIcon,
   PlusIcon,
   SearchIcon,
 } from "../../components/icons";
@@ -45,6 +46,7 @@ export function Sidebar({
   onSearch,
   accountName,
 }: SidebarProps) {
+  const [projectsOpen, setProjectsOpen] = useState(true);
   return (
     // One landmark for the whole sidebar, so the mark, Search and Account are inside it
     <nav
@@ -79,8 +81,8 @@ export function Sidebar({
                 href={tab.href}
                 navigate={navigate}
                 className={cx(
-                  "focus-ring flex min-h-10 items-center gap-3 rounded-field px-3 text-body text-ink hover:bg-fill",
-                  current && "bg-primary-tint! font-semibold text-primary!",
+                  "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body text-ink-secondary",
+                  current && "bg-primary-tint! text-ink!",
                 )}
                 aria-current={current ? "page" : undefined}
               >
@@ -92,7 +94,7 @@ export function Sidebar({
                   <span
                     className={cx(
                       "text-footnote tabular-nums",
-                      current ? "text-primary" : "text-ink-tertiary",
+                      current ? "text-ink" : "text-ink-tertiary",
                     )}
                   >
                     {counts[tab.id]}
@@ -107,28 +109,42 @@ export function Sidebar({
       {projects && (
         <section className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <h2 className="m-0 text-overline font-semibold uppercase text-ink-tertiary">
-              {t("nav.projects")}
+            <h2 className="m-0 text-overline font-semibold uppercase">
+              <button
+                type="button"
+                aria-expanded={projectsOpen}
+                onClick={() => setProjectsOpen(!projectsOpen)}
+                className="focus-ring inline-flex cursor-pointer items-center gap-1 uppercase border-0 bg-transparent p-0 text-ink-tertiary hover:text-ink"
+              >
+                <span className="link-swipe">{t("nav.projects")}</span>
+                <ChevronRightIcon
+                  size={12}
+                  className={cx(
+                    "transition-transform duration-150 motion-reduce:transition-none",
+                    projectsOpen && "rotate-90",
+                  )}
+                />
+              </button>
             </h2>
             {onNewProject && (
               <button
                 type="button"
                 onClick={onNewProject}
-                className="inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                className="-mr-[5px] inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
                 aria-label={t("project.new")}
               >
                 <PlusIcon size={14} />
               </button>
             )}
           </div>
-          {projects}
+          {projectsOpen && projects}
         </section>
       )}
 
       <Link
         href={ROUTES.account}
         navigate={navigate}
-        className="focus-ring mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink hover:bg-fill"
+        className="focus-ring row-hover mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink"
       >
         <span
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"

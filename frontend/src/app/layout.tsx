@@ -28,6 +28,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     // AppFrame sets data-theme on the client when Appearance isn't System
     <html lang="en" className={sans.variable} suppressHydrationWarning>
       <head>
+        <meta name="darkreader-lock" />
         {/* Blocking on purpose: sets the theme before first paint (AP-3, T-AP-22) */}
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/theme.js" />
