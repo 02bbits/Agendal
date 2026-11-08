@@ -19,6 +19,7 @@ function icon(paths: ReactNode) {
         strokeLinejoin="round"
         focusable="false"
         aria-hidden="true"
+        suppressHydrationWarning
         {...rest}
       >
         {paths}

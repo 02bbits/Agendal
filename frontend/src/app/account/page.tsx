@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AccountScreen } from "@/ui";
+import { AccountScreen } from "../../ui";
 import { useAppFrame } from "../AppFrame";
 import {
   checkVapidConfig,
