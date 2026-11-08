@@ -445,6 +445,15 @@ describe("Toast", () => {
     fireEvent.touchEnd(alert);
     expect(onDismiss).toHaveBeenCalledWith(1);
   });
+  it("centers toast on mobile and aligns left on desktop with bottom offset", () => {
+    const { container } = render(
+      <Toast toast={completed(() => {})} onDismiss={() => {}} />,
+    );
+    const toastRegion = container.querySelector(".toast")!;
+    expect(toastRegion.className).toContain("toast-center");
+    expect(toastRegion.className).toContain("md:toast-start");
+    expect(toastRegion.className).toContain("items-center");
+    expect(toastRegion.className).toContain("md:items-start");
   });
 });
 
