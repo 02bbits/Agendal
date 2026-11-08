@@ -38,12 +38,12 @@ export function UpcomingDayStrip({
             aria-current={ariaCurrent}
             aria-label={t("list.day_with_count", { day: heading, count })}
             className={cx(
-              "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px] md:min-h-0 md:justify-center",
+              "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px]",
               isPast || isToday ? "cursor-default" : "cursor-pointer row-hover",
               isPast && "opacity-50",
             )}
           >
-            <div className="flex flex-col items-center justify-center whitespace-nowrap md:flex-row md:gap-1.5">
+            <div className="flex flex-col items-center justify-center whitespace-nowrap [html[data-page-view='full']_&]:md:flex-row [html[data-page-view='full']_&]:md:gap-1.5">
               <span
                 className={cx(
                   "text-footnote",

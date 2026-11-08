@@ -83,7 +83,10 @@ export function TaskRow({
         tone === "due"
           ? "border-dashed border-due/60 hover:bg-due/10 active:bg-due/20"
           : "border-separator/60 hover:bg-surface-hover/40 active:bg-surface-hover/60",
-        selected && (tone === "due" ? "bg-due/20" : "bg-surface-hover/60"),
+        selected &&
+          (tone === "due"
+            ? "bg-due/20 ring-1 ring-inset ring-due/60"
+            : "bg-surface-hover/60 ring-1 ring-inset ring-primary/40"),
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
       )}

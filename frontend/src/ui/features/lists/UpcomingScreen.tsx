@@ -59,6 +59,21 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     onViewChange?.({ anchor, day: currentActiveDay });
   }, [anchor, currentActiveDay, onViewChange]);
 
+  useEffect(() => {
+    if (typeof document !== "undefined") {
+      if (viewMode === "board") {
+        document.documentElement.dataset.boardView = "true";
+      } else {
+        delete document.documentElement.dataset.boardView;
+      }
+    }
+    return () => {
+      if (typeof document !== "undefined") {
+        delete document.documentElement.dataset.boardView;
+      }
+    };
+  }, [viewMode]);
+
   const viewProps = {
     days: renderedDays,
     entriesByDay,

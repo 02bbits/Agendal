@@ -1,4 +1,5 @@
-import type { ReactElement } from "react";
+import { type ReactElement, useEffect, useRef, useState } from "react";
+import { cx } from "../../components/cx";
 import { PlusIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { dayHeading, dayHeadingShort } from "../../domain/week";
@@ -15,8 +16,68 @@ export function UpcomingBoard({
   navigate,
   onAddTask,
 }: UpcomingBoardProps): ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({
+    isDown: false,
+    startX: 0,
+    scrollLeft: 0,
+  });
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest("button, a, input, textarea, select, [role='button']")) {
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    dragRef.current = {
+      isDown: true,
+      startX: e.pageX - container.offsetLeft,
+      scrollLeft: container.scrollLeft,
+    };
+    setIsDragging(true);
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!dragRef.current.isDown) return;
+      const container = containerRef.current;
+      if (!container) return;
+
+      e.preventDefault();
+      const x = e.pageX - container.offsetLeft;
+      const walk = x - dragRef.current.startX;
+      container.scrollLeft = dragRef.current.scrollLeft - walk;
+    };
+
+    const onMouseUp = () => {
+      if (dragRef.current.isDown) {
+        dragRef.current.isDown = false;
+        setIsDragging(false);
+      }
+    };
+
+    window.addEventListener("mousemove", onMouseMove);
+    window.addEventListener("mouseup", onMouseUp);
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove);
+      window.removeEventListener("mouseup", onMouseUp);
+    };
+  }, []);
+
   return (
-    <div className="flex gap-4 overflow-x-auto pb-4 snap-x">
+    <div
+      ref={containerRef}
+      onMouseDown={onMouseDown}
+      className={cx(
+        "flex gap-4 overflow-x-auto px-2 pt-2 pb-4 cursor-grab",
+        isDragging ? "cursor-grabbing select-none snap-none" : "snap-x",
+      )}
+    >
       {overdueTasks && overdueTasks.length > 0 && (
         <UpcomingOverdue
           variant="board"
@@ -27,6 +88,7 @@ export function UpcomingBoard({
         />
       )}
       {days.map((date) => {
+        const isToday = date === today;
         const shortHeading = dayHeadingShort(date, today);
         const fullHeading = dayHeading(date, today);
         const dayEntries = entriesByDay[date] ?? [];
@@ -36,16 +98,28 @@ export function UpcomingBoard({
           <section
             key={date}
             aria-label={fullHeading}
-            className="flex w-[272px] shrink-0 snap-start flex-col"
+            className={cx(
+              "flex w-[272px] shrink-0 snap-start flex-col rounded-2xl transition-colors",
+              isToday &&
+                "bg-surface/30 p-2.5 -m-2.5 border border-primary/25 shadow-xs",
+            )}
           >
             <div className="flex items-baseline justify-between gap-1.5 pb-2">
               <h2
                 id={"day-" + date}
-                className="m-0 scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] text-callout font-semibold text-ink-secondary"
+                className={cx(
+                  "m-0 scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] text-callout font-semibold",
+                  isToday ? "text-ink font-bold" : "text-ink-secondary",
+                )}
               >
                 {shortHeading}
               </h2>
-              <span className="text-footnote font-normal text-ink-tertiary">
+              <span
+                className={cx(
+                  "text-footnote font-normal",
+                  isToday ? "font-semibold text-ink" : "text-ink-tertiary",
+                )}
+              >
                 {count}
               </span>
             </div>
