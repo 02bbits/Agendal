@@ -1,4 +1,5 @@
 import { useId, type ReactNode } from "react";
+import { cx } from "./cx";
 
 export interface SwitchProps {
   label: string;
@@ -6,6 +7,7 @@ export interface SwitchProps {
   onChange: (checked: boolean) => void;
   disabled?: boolean;
   icon?: ReactNode;
+  className?: string;
 }
 
 /** A settings row with a switch; the whole row is the 44px target. */
@@ -15,10 +17,16 @@ export function Switch({
   onChange,
   disabled,
   icon,
+  className,
 }: SwitchProps) {
   const id = useId();
   return (
-    <div className="flex min-h-11 w-full items-center gap-3 border-b border-separator py-1 text-left text-body text-ink">
+    <div
+      className={cx(
+        "flex min-h-11 w-full items-center gap-3 border-b border-separator py-1 text-left text-body text-ink",
+        className,
+      )}
+    >
       {icon && (
         <span className="inline-flex text-ink-secondary" aria-hidden="true">
           {icon}

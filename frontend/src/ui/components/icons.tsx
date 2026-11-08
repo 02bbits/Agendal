@@ -96,6 +96,19 @@ export const BellIcon = icon(
     <path d="M10.3 20.5a1.94 1.94 0 0 0 3.4 0" />
   </>,
 );
+export const SlidersIcon = icon(
+  <>
+    <line x1="4" x2="4" y1="21" y2="14" />
+    <line x1="4" x2="4" y1="10" y2="3" />
+    <line x1="12" x2="12" y1="21" y2="12" />
+    <line x1="12" x2="12" y1="8" y2="3" />
+    <line x1="20" x2="20" y1="21" y2="16" />
+    <line x1="20" x2="20" y1="12" y2="3" />
+    <line x1="1" x2="7" y1="14" y2="14" />
+    <line x1="9" x2="15" y1="8" y2="8" />
+    <line x1="17" x2="23" y1="16" y2="16" />
+  </>,
+);
 export const RepeatIcon = icon(
   <>
     <path d="m17 2 4 4-4 4" />
@@ -106,7 +119,10 @@ export const RepeatIcon = icon(
 );
 export const FlagIcon = icon(
   <>
-    <path d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z" />
+    <path
+      d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z"
+      fill="currentColor"
+    />
     <path d="M5 21.5v-7" />
   </>,
 );

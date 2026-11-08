@@ -98,19 +98,32 @@ const tabRootOf = (path: string): string =>
       root !== ROUTES.inbox && (path === root || path.startsWith(`${root}/`)),
   ) ?? ROUTES.inbox;
 
+const PAGE_VIEW_KEY = "agendal.page_view";
+
 const DEFAULT_SETTINGS: AccountSettings = {
   theme: "system",
   weekStart: "mon",
   timeFormat: "24h",
   rememberDevice: true,
+  pageView: "flat",
 };
 
-const settingsOf = (me: SignedInUser): AccountSettings => ({
-  theme: me.theme ?? DEFAULT_SETTINGS.theme,
-  weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
-  timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
-  rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-});
+const settingsOf = (me: SignedInUser): AccountSettings => {
+  const localPageView =
+    typeof window !== "undefined"
+      ? (localStorage.getItem(PAGE_VIEW_KEY) as AccountSettings["pageView"])
+      : undefined;
+  return {
+    theme: me.theme ?? DEFAULT_SETTINGS.theme,
+    weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
+    timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
+    rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
+    pageView:
+      localPageView === "full" || localPageView === "flat"
+        ? localPageView
+        : DEFAULT_SETTINGS.pageView,
+  };
+};
 
 const DAISY_THEME = { light: "agendal-light", dark: "agendal-dark" } as const;
 
@@ -157,6 +170,32 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(
+        PAGE_VIEW_KEY,
+      ) as AccountSettings["pageView"];
+      if (saved === "flat" || saved === "full") {
+        queueMicrotask(() => {
+          setSettings((prev) =>
+            prev.pageView === saved ? prev : { ...prev, pageView: saved },
+          );
+        });
+        document.documentElement.setAttribute("data-page-view", saved);
+      } else {
+        document.documentElement.setAttribute("data-page-view", "flat");
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (pathname === ROUTES.account) {
+      document.documentElement.setAttribute("data-account-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-account-page");
+    }
+  }, [pathname]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -302,12 +341,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       );
       settingsRef.current = { ...before, ...patch };
       setSettings(settingsRef.current);
+      if (patch.pageView && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
+          document.documentElement.setAttribute(
+            "data-page-view",
+            patch.pageView,
+          );
+        } catch {}
+      }
       const body = Object.fromEntries(
-        Object.entries(patch).map(([key, value]) => [
-          SETTING_FIELDS[key as keyof AccountSettings],
-          value,
-        ]),
+        Object.entries(patch)
+          .map(([key, value]) => [
+            SETTING_FIELDS[key as keyof typeof SETTING_FIELDS],
+            value,
+          ])
+          .filter(([field]) => Boolean(field)),
       );
+      if (Object.keys(body).length === 0) return;
       api("/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },

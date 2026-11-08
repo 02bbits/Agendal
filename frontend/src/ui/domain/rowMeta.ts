@@ -1,7 +1,17 @@
 import { t } from "../copy";
-import { addDays, formatDay, formatTime, formatTimeRange } from "./dates";
+import { addDays, formatDay, formatTime } from "./dates";
 import type { EntryKind } from "./entries";
+import { describeRepeat } from "./repeat";
 import type { Task, TimeFormat } from "./types";
+
+export function repeatLabel(task: Task): string {
+  if (task.repeat === "never") return "";
+  if (task.repeat_rule) {
+    const desc = describeRepeat(task);
+    if (desc) return desc;
+  }
+  return t(`repeat.every_${task.repeat}`);
+}
 
 export type MetaTone = "plain" | "due" | "late" | "muted";
 
@@ -42,19 +52,26 @@ export function rowMeta(
       const parts: MetaPart[] = [];
       if (task.start_time) {
         parts.push({
-          text: formatTimeRange(
-            task.start_time,
-            task.due_time,
-            opts.timeFormat,
-          ),
+          text: t("task.starts_at", { time: time(task.start_time) }),
           tone: "plain",
         });
       }
-      // A normal card (Scheduled) has no due word
-      if (opts.entry !== "start") {
+      if (task.due_time) {
+        const text = task.start_time
+          ? t("task.due_at_time", { time: time(task.due_time) })
+          : t("task.due_at", { time: time(task.due_time) });
         parts.push({
-          text: t("task.due"),
-          tone: task.done ? "plain" : "due",
+          text,
+          tone: task.done ? "plain" : opts.entry !== "start" ? "due" : "plain",
+        });
+      } else if (
+        !task.start_time &&
+        !opts.entry &&
+        task.start_date === opts.today
+      ) {
+        parts.push({
+          text: t("task.starts_today"),
+          tone: "plain",
         });
       }
       return parts;
@@ -75,10 +92,13 @@ export function rowMeta(
         tone = "plain";
       }
 
-      const firstText = task.due_time
-        ? t("task.due_at", { time: time(task.due_time) })
-        : t("task.due");
-      const parts: MetaPart[] = [{ text: firstText, tone }];
+      const parts: MetaPart[] = [];
+      if (task.due_time) {
+        parts.push({
+          text: t("task.due_at", { time: time(task.due_time) }),
+          tone,
+        });
+      }
       if (task.start_date) {
         parts.push({
           text: t("task.started_on", { date: day(task.start_date) }),
@@ -88,6 +108,19 @@ export function rowMeta(
       return parts;
     }
 
+    // 4b. Repeating task with no start_date on Scheduled (entry === "start")
+    if (
+      opts.entry === "start" &&
+      !task.start_date &&
+      task.repeat !== "never" &&
+      task.due_date
+    ) {
+      if (task.due_time) {
+        return [{ text: time(task.due_time), tone: "plain" }];
+      }
+      return [];
+    }
+
     // 5. entry === "start", or no entry and start_date === today
     if (
       opts.entry === "start" ||
@@ -95,8 +128,18 @@ export function rowMeta(
     ) {
       const parts: MetaPart[] = [];
       if (task.start_time) {
+        const timeStr = time(task.start_time);
+        const text =
+          !opts.entry && task.start_date === opts.today
+            ? t("task.starts_at", { time: timeStr })
+            : timeStr;
         parts.push({
-          text: time(task.start_time),
+          text,
+          tone: "plain",
+        });
+      } else if (!opts.entry && task.start_date === opts.today) {
+        parts.push({
+          text: t("task.starts_today"),
           tone: "plain",
         });
       }

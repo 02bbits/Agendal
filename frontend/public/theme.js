@@ -8,6 +8,8 @@
       (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
     if (theme === "light" || theme === "dark")
       document.documentElement.setAttribute("data-theme", "agendal-" + theme);
+    var pageView = localStorage.getItem("agendal.page_view") || "flat";
+    document.documentElement.setAttribute("data-page-view", pageView);
     var meta = document.createElement("meta");
     meta.name = "theme-color";
     meta.content = dark ? "#1a1a1a" : "#f2f2f2";

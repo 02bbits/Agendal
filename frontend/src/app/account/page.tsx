@@ -1,6 +1,6 @@
 "use client";
 
-import { AccountScreen } from "@/ui";
+import { AccountScreen } from "../../ui";
 import { useAppFrame } from "../AppFrame";
 
 /** Account: appearance applies at once. Name and email come from the session check. */
