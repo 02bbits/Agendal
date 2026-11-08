@@ -57,7 +57,12 @@ function ToastAlert({
     if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
   }, [regionRef]);
 
+  // A press on Undo/Retry is a tap, not a drag: capturing it would send the click to the toast, not the button
+  const onAction = (e: React.SyntheticEvent) =>
+    (e.target as Element).closest?.("button") !== null;
+
   const handleTouchStart = (e: React.TouchEvent) => {
+    if (onAction(e)) return;
     pause();
     dragStartRef.current = e.touches[0].clientX;
     dragOffsetRef.current = 0;
@@ -85,7 +90,7 @@ function ToastAlert({
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    if (e.button !== undefined && e.button !== 0) return;
+    if ((e.button !== undefined && e.button !== 0) || onAction(e)) return;
     pause();
     dragStartRef.current = e.clientX ?? 0;
     dragOffsetRef.current = 0;
