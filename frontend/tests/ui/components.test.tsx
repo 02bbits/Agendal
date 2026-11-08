@@ -420,6 +420,32 @@ describe("Toast", () => {
 
     expect(onDismiss).toHaveBeenCalledWith("toast-swipe");
   });
+
+  it("close button is hidden on mobile and shown on desktop", () => {
+    render(<ToastHarness onUndo={() => {}} initial={completed(() => {})} />);
+    const closeBtn = screen.getByRole("button", { name: "Close" });
+    expect(closeBtn.className).toContain("hidden");
+    expect(closeBtn.className).toContain("md:inline-flex");
+  });
+
+  it("touch swipe dismisses toast on mobile, but mouse drag does not", () => {
+    const onDismiss = vi.fn();
+    render(<Toast toast={completed(() => {})} onDismiss={onDismiss} />);
+    const alert = screen.getByRole("status").querySelector(".alert")!;
+
+    // Mouse drag on desktop -> should not dismiss
+    fireEvent.pointerDown(alert, { pointerType: "mouse", clientX: 100 });
+    fireEvent.pointerMove(alert, { clientX: 250 });
+    fireEvent.pointerUp(alert);
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    // Touch swipe on mobile -> dismisses
+    fireEvent.touchStart(alert, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(alert, { touches: [{ clientX: 200 }] });
+    fireEvent.touchEnd(alert);
+    expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+  });
 });
 
 describe("EmptyState", () => {
