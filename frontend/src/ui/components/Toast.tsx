@@ -172,7 +172,7 @@ function ToastAlert({
       {toast.actionLabel && toast.onAction && (
         <button
           type="button"
-          className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content"
+          className="focus-ring min-h-11 shrink-0 cursor-pointer whitespace-nowrap rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content"
           onClick={runAction}
         >
           <span className="link-swipe">{toast.actionLabel}</span>
@@ -205,7 +205,7 @@ export function Toast({
   return (
     <div
       ref={regionRef}
-      className="toast toast-bottom toast-start pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter md:mb-20"
+      className="toast toast-bottom toast-start pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
       aria-atomic="true"
