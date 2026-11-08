@@ -5,6 +5,7 @@ import {
   getNote,
   recallNote,
   rememberNote,
+  restoreNote,
   submitNote,
 } from "@/lib/noteApi";
 import type { NoteResult } from "@/ui";
@@ -113,6 +114,23 @@ describe("submitNote (IM-42)", () => {
     expect(recallNote(made.note.id)).toBe(made);
     forgetNotes();
     expect(recallNote(made.note.id)).toBeUndefined();
+  });
+
+  it("restore posts to the note's restore route, and maps failures to copy", async () => {
+    fetchMock.mockResolvedValueOnce(json(200, done));
+    expect(await restoreNote("n1")).toEqual(done);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/restore");
+    expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
+
+    fetchMock.mockResolvedValueOnce(
+      json(404, { error: { code: "error.not_found" } }),
+    );
+    expect(await restoreNote("n1")).toEqual({ error: "error.not_found" });
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    expect(await restoreNote("n1")).toEqual({
+      error: "note.needs_connection",
+    });
   });
 
   it("apply posts to the note, keep the answer, and map failures to copy", async () => {

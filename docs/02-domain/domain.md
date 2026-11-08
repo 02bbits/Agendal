@@ -184,7 +184,7 @@ stateDiagram-v2
     pending --> new : Edit note
 ```
 
-**Delete note** removes the note from any status; its tasks are kept with their source note cleared ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)).
+**Delete note** soft-deletes the note from any status and Undo restores it; its tasks are kept (their source note is cleared only if the note is purged) ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)).
 
 **Edit note** first undoes whatever the note applied (the same rules as Undo all), then plans the new text from scratch ([RV-5](../03-modules/RV-review-control.md#rv-5)).
 

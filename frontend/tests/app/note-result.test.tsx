@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Activity, Suspense } from "react";
 
 import { act, render, screen, waitFor, within } from "@testing-library/react";
 
@@ -469,6 +469,11 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     ...result,
 
     note: { ...result.note, status: "confirm" },
+
+    changes: changes.map((change, index) => ({
+      ...change,
+      ref: `i${index + 1}`,
+    })),
   };
 
   // The server's answer to apply and cancel
@@ -525,9 +530,29 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     ).toBeTruthy();
   });
 
-  it("leaving the review asks first, and Discard leaves the note pending", async () => {
+  it("leaving the review without changes goes back without asking", async () => {
     serveConfirm();
     await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.back") }),
+    );
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/notes"));
+    expect(screen.queryByText(t("note.discard_review_title"))).toBeNull();
+  });
+
+  it("leaving the review with an edit asks first, and Discard leaves the note pending", async () => {
+    serveConfirm();
+    await open();
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    await userEvent.type(
+      screen.getByRole("textbox", { name: t("task.title") }),
+      " again",
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.done") }),
+    );
     await userEvent.click(
       await screen.findByRole("button", { name: t("common.back") }),
     );
@@ -753,6 +778,46 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(calls("PATCH", "/api/v1/tasks/")).toHaveLength(0);
   });
 
+  it("Discard drops the review's edits: coming back to the kept page shows the plan as stored", async () => {
+    // Next keeps a page we left mounted but hidden (cacheComponents), then shows it again
+    serveConfirm();
+    const page = (mode: "visible" | "hidden") => (
+      <AppFrame>
+        <Suspense>
+          <Activity mode={mode}>
+            <NoteResultPage params={Promise.resolve({ id: "n1" })} />
+          </Activity>
+        </Suspense>
+      </AppFrame>
+    );
+    let view!: ReturnType<typeof render>;
+    await act(async () => {
+      view = render(page("visible"));
+    });
+    await userEvent.click(
+      await screen.findByRole("button", { name: /SQL quiz/ }),
+    );
+    const title = screen.getByRole("textbox", { name: t("task.title") });
+    await userEvent.clear(title);
+    await userEvent.type(title, "Edited title");
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.done") }),
+    );
+    expect(screen.getByText("Edited title")).toBeTruthy();
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.back") }),
+    );
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.discard_action") }),
+    );
+
+    await act(async () => view.rerender(page("hidden")));
+    await act(async () => view.rerender(page("visible")));
+
+    expect(await screen.findByText("SQL quiz")).toBeTruthy();
+    expect(screen.queryByText("Edited title")).toBeNull();
+  });
+
   it("omits a proposed task without deleting it, supports undo, and disables Apply when all are omitted", async () => {
     const proposed = {
       ...pending,
@@ -949,8 +1014,10 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
 
     expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(0);
   });
-  it("deleting a follow-up note calls DELETE /api/v1/notes/{id} and shows toast", async () => {
-    serve({}, () => json(200, followup));
+  it("deleting a follow-up note calls DELETE /api/v1/notes/{id}, and the toast's Undo restores it", async () => {
+    serve({}, () => json(200, followup), {
+      "/api/v1/notes/n1/restore": () => json(200, followup),
+    });
 
     await open();
 
@@ -970,5 +1037,49 @@ describe("Follow-up /notes/[id] (IM-46)", () => {
     await waitFor(() => {
       expect(calls("DELETE", "/api/v1/notes/n1")).toHaveLength(1);
     });
+
+    // Undo on the toast brings the note back and refreshes the Notes list
+    const refreshed = vi.fn();
+    window.addEventListener("agendal:note-updated", refreshed);
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("common.undo") }),
+    );
+    await waitFor(() =>
+      expect(calls("POST", "/api/v1/notes/n1/restore")).toHaveLength(1),
+    );
+    await waitFor(() => expect(refreshed).toHaveBeenCalled());
+    window.removeEventListener("agendal:note-updated", refreshed);
+  });
+
+  it("RV §2.4: Make tasks again on a pending note replans its text and shows the new result", async () => {
+    let current: NoteResult = {
+      ...result,
+      note: { ...result.note, status: "pending" },
+    };
+    serve({ "t-sql": sql, "t-ink": ink }, () => json(200, current));
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/notes/n1" && init?.method === "PUT") {
+        current = result;
+        return json(200, result);
+      }
+      return base(url, init);
+    });
+
+    await open();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.replan") }),
+    );
+
+    await waitFor(() =>
+      expect(calls("PUT", "/api/v1/notes/n1")).toHaveLength(1),
+    );
+    expect(
+      JSON.parse(String(calls("PUT", "/api/v1/notes/n1")[0]![1].body)),
+    ).toMatchObject({ text: result.note.text });
+    expect(
+      await screen.findByRole("button", { name: t("note.undo_all") }),
+    ).toBeTruthy();
   });
 });

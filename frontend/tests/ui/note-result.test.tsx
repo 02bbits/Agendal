@@ -332,6 +332,26 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(screen.getByRole("button", { name: t("note.edit") })).toBeTruthy();
     });
 
+    it("RV §2.4: a pending note offers Make tasks again, which replans it", async () => {
+      const onReplan = vi.fn();
+      open(resultOf([sql], [], { status: "pending" }), {
+        onEdit: vi.fn(),
+        onReplan,
+      });
+      await userEvent.click(
+        screen.getByRole("button", { name: t("note.replan") }),
+      );
+      expect(onReplan).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole("button", { name: t("note.edit") })).toBeTruthy();
+    });
+
+    it("offers no Make tasks again on a done note", () => {
+      open(resultOf([sql]), { onReplan: vi.fn() });
+      expect(
+        screen.queryByRole("button", { name: t("note.replan") }),
+      ).toBeNull();
+    });
+
     it("offline, Undo all is disabled and says it needs a connection", () => {
       open(resultOf([sql]), { offline: true });
       expect(

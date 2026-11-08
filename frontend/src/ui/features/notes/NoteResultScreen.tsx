@@ -51,6 +51,8 @@ export interface NoteResultScreenProps {
   /** Check this first (`confirm`): Apply changes, and Edit note (NU-5, WF-02). */
   onApply?: () => void;
   onEdit?: () => void;
+  /** A `pending` note (after Undo all): Make tasks again plans its text anew (RV §2.4). */
+  onReplan?: () => void;
   onMakeTask?: () => void;
   /** Deletes the note once the user confirms; the screen is left by the caller. */
   onDelete?: () => DeleteNoteResult;
@@ -111,6 +113,7 @@ export function NoteResultScreen({
   onDone,
   onApply,
   onEdit,
+  onReplan,
   onMakeTask,
   onRename,
   onDelete,
@@ -461,6 +464,18 @@ export function NoteResultScreen({
           </>
         ) : (
           <>
+            {notApplied && (
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                disabled={offline || busy}
+                busy={busy}
+                onClick={onReplan}
+              >
+                {t("note.replan")}
+              </Button>
+            )}
             {/* RV-E17: past the undo window a done note's changes can't be undone, so it can't be edited */}
             {(note.status !== "done" || !expired) && onEdit && (
               <Button
@@ -497,7 +512,12 @@ export function NoteResultScreen({
                   )}
                 </>
               ))}
-            <Button variant="primary" size="lg" fullWidth onClick={onDone}>
+            <Button
+              variant={notApplied ? "secondary" : "primary"}
+              size="lg"
+              fullWidth
+              onClick={onDone}
+            >
               {t(presentation === "panel" ? "common.close" : "common.done")}
             </Button>
           </>

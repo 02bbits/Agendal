@@ -58,6 +58,7 @@ Expected status for each endpoint. "Owner" = the resource belongs to the session
 | `POST /notes`, `GET /notes` | 401 | 201 / 200 | — |
 | `GET/PUT /notes/{id}`, `POST /notes/{id}/apply\|make-task\|undo\|redo` | 401 | 200 | **404** |
 | `DELETE /notes/{id}` | 401 | 204 | **404** |
+| `POST /notes/{id}/restore` | 401 | 200 | **404** |
 | `POST /files/extract` | 401 | 200 | — |
 | `GET /tasks`, `GET /tasks/search`, `GET /notes/search`, `POST /tasks` | 401 | 200 / 201 | — |
 | `GET/PATCH/DELETE /tasks/{id}`, `POST /tasks/{id}/complete\|reopen\|restore` | 401 | 200 / 204 | **404** |

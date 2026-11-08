@@ -27,6 +27,7 @@ function createTestNote(User $user, array $attributes = []): Note
         'status' => 'pending',
         'written_at' => '2026-10-23T08:12:00+07:00',
         'written_tz' => 'Asia/Ho_Chi_Minh',
+        'processed_at' => '2026-10-23T08:12:00+07:00',
         ...$attributes,
     ])->save();
 
@@ -78,7 +79,7 @@ it('requires authentication to delete a note', function () {
     expect(Note::withoutGlobalScopes()->find($note->id))->not->toBeNull();
 });
 
-it('clears source_note_id on tasks and keeps tasks intact when note is deleted', function () {
+it('keeps source_note_id on tasks while the note is only trashed', function () {
     $note = createTestNote($this->owner, ['status' => 'done']);
     $task = new Task;
     $task->forceFill([
@@ -94,6 +95,54 @@ it('clears source_note_id on tasks and keeps tasks intact when note is deleted',
         ->assertNoContent();
 
     expect(Note::find($note->id))->toBeNull()
-        ->and($task->fresh())->not->toBeNull()
-        ->and($task->fresh()->source_note_id)->toBeNull();
+        ->and(Note::withTrashed()->find($note->id)->trashed())->toBeTrue()
+        ->and($task->fresh()->source_note_id)->toBe($note->id);
+});
+
+it('restores a deleted note into the list and counts (Undo)', function () {
+    $note = createTestNote($this->owner, ['status' => 'pending']);
+    $this->actingAs($this->owner)->deleteJson("/api/v1/notes/{$note->id}")->assertNoContent();
+    $this->actingAs($this->owner)->getJson("/api/v1/notes/{$note->id}")->assertNotFound();
+
+    $this->actingAs($this->owner)->postJson("/api/v1/notes/{$note->id}/restore")
+        ->assertOk()->assertJsonPath('note.id', $note->id)->assertJsonPath('note.status', 'pending');
+
+    $list = $this->actingAs($this->owner)->getJson('/api/v1/notes')->json();
+    expect($list['total'])->toBe(1)->and($list['needs_count'])->toBe(1)
+        ->and(collect($list['items'])->pluck('id'))->toContain($note->id);
+});
+
+it('restores a live note as a no-op', function () {
+    $note = createTestNote($this->owner, ['status' => 'done']);
+
+    $this->actingAs($this->owner)->postJson("/api/v1/notes/{$note->id}/restore")
+        ->assertOk()->assertJsonPath('note.status', 'done');
+});
+
+it('refuses restoring by someone else with 404 (SEC-12)', function () {
+    $note = createTestNote($this->owner);
+    $note->delete();
+
+    $this->actingAs($this->stranger)->postJson("/api/v1/notes/{$note->id}/restore")->assertNotFound();
+
+    expect(Note::withoutGlobalScopes()->find($note->id)->trashed())->toBeTrue();
+});
+
+it('requires authentication to restore a note', function () {
+    $note = createTestNote($this->owner);
+    $note->delete();
+
+    $this->postJson("/api/v1/notes/{$note->id}/restore")->assertUnauthorized();
+});
+
+it('replays POST /notes of a trashed note by client_id without creating another', function () {
+    $note = createTestNote($this->owner);
+    $note->delete();
+
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', [
+        'client_id' => $note->client_id, 'text' => 'test note text',
+        'written_at' => '2026-10-23T08:12:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertOk()->assertJsonPath('note.id', $note->id);
+
+    expect(Note::withTrashed()->count())->toBe(1);
 });

@@ -72,6 +72,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Buttons:**
   - **Apply changes** (primary, or red when the plan has a delete) sends the choices and exclusions. The app goes back to where the note was written, and a toast says `note.made_*` with Undo. Undo there is Undo all (§2.4) from the list, followed by the `note.undone` toast and its redo. If a created task was edited in those seconds, Undo opens the note's result screen instead, where the conflict dialog asks first.
   - **Edit note** (secondary) opens the editor with the note's text. Make tasks re-plans the same note (`PUT /notes/{id}`, §2.5).
+  - Leaving (Back, ×, the backdrop or Escape) asks `note.discard_review_title` only when a task was edited or a row omitted. Discard drops those edits; with none, it goes back at once.
 - **Re-validation:** Apply re-checks the plan ([NU-E38](NU-note-understanding.md#nu-e38)). If anything changed since, the result screen lists the skipped entries.
 - **No expiry:** a `confirm` note waits indefinitely. Its Notes card shows `note.needs_look_one`.
 
@@ -105,6 +106,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Restored task whose project is gone:** it goes to No project, and the result row says so (`note.project_gone`).
 - **Atomic:** one transaction, in reverse log order. The note becomes `pending`, with `redo_until`.
 - **Toast:** `note.undone` with Undo. That **redo** replays the undo's own log, restores the note to `done`, and is available while the toast is open ([UX-04](../01-product/ux-standards.md#ux-04)).
+- **Afterwards:** a `pending` note's result screen has **Make tasks again** (`note.replan`, primary) beside Edit note (secondary). It plans the note's current text again against the current tasks (`PUT /notes/{id}`, §2.5) and shows the new result.
 - **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`.
 
 ### 2.5 Edit note (RV-5)
@@ -118,7 +120,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
   2. Plans the new text from scratch, with `now` = the time of the edit ([NU §2.1](NU-note-understanding.md#21-pipeline)).
   3. Applies the safety rules to the new plan: the result can be `done`, `confirm` or `followup`, like a new note.
 - **Afterwards:** the result screen shows the new plan's changes. Undo all reverses only the new plan. The old text isn't kept. The note keeps its `id`, gets a new name, and its card shows `note.edited_label`.
-- **Unchanged text:** Make tasks with the same text does nothing and returns to the result ([RV-E18](#rv-e18)).
+- **Unchanged text:** Make tasks with the same text does nothing and returns to the result ([RV-E18](#rv-e18)). A `pending` note is the exception: its text is planned again (Make tasks again, §2.4).
 - **Pending notes:** a note that hasn't synced yet is edited on the device. The new text replaces the queued one before it's sent ([RV-E19](#rv-e19)).
 - **Needs a connection** for any synced note, like Undo all.
 
@@ -146,8 +148,8 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 ### 2.7 Delete note
 
-- **Where:** the trash icon (`note.delete`) on the result screen and on the follow-up screen. It asks first: `note.delete_title` / `note.delete_body`. On confirm, a toast says `note.deleted` and the app goes back.
-- **Tasks are kept:** tasks made from the note stay, with their source note cleared. Deleting doesn't undo the note's changes.
+- **Where:** the trash icon (`note.delete`) on the result screen and on the follow-up screen. It asks first: `note.delete_title` / `note.delete_body`. On confirm, a toast says `note.deleted` with Undo and the app goes back. The note is soft-deleted and leaves the list and counts. Undo calls `POST /notes/{id}/restore` and the Notes list refreshes.
+- **Tasks are kept:** tasks made from the note stay and keep their source note while it is only deleted. Deleting doesn't undo the note's changes.
 
 ## 3. State matrix
 
@@ -179,7 +181,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | <a id="rv-e15"></a>RV-E15 | Deleting a pending (unsynced) note | Removed from the device and never sent. A note that has synced can't be deleted, only edited ([RV-5](#rv-5)) | T-RV-115 |
 | <a id="rv-e16"></a>RV-E16 | Edit note when a task from the note was edited by hand since | The Undo all conflict dialog shows first. Cancel keeps the note and its tasks as they are | T-RV-116 |
 | <a id="rv-e17"></a>RV-E17 | Edit note on a `done` note older than 30 days | Edit note isn't shown. `PUT /notes/{id}` returns `409 note.undo_expired` | T-RV-117 |
-| <a id="rv-e18"></a>RV-E18 | Make tasks with the text unchanged | Nothing happens. Returns `200` with the current result | T-RV-118 |
+| <a id="rv-e18"></a>RV-E18 | Make tasks with the text unchanged | Nothing happens. Returns `200` with the current result. Not for a `pending` note: it is planned again | T-RV-118 |
 | <a id="rv-e19"></a>RV-E19 | Editing a pending note on the device | The queued text is replaced. The `client_id` stays the same, so the server sees only the final text | T-RV-119 |
 | <a id="rv-e20"></a>RV-E20 | When? chip tapped offline | Saved on the device like any task edit and synced later ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)) | T-RV-120 |
 
@@ -205,7 +207,8 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | `POST /notes/{id}/make-task` | — | `201 {note, task}`. This is Keep it as task | `409 note.wrong_status` (not `followup`) |
 | `POST /notes/{id}/undo` | `{confirm_conflicts: bool}` | `200` note result, status `pending`, plus `redo_until`. On a `pending` note that still has its undo log it changes nothing and returns the note as it is | `409 note.undo_conflicts {tasks: [id, title]}` when there are conflicts and `confirm_conflicts` is false. `409 note.undo_expired` |
 | `POST /notes/{id}/redo` | — | `200`, status `done` | `409 note.wrong_status` (not `pending`), `409 note.redo_expired` (past `redo_until` = undo + 10 s) |
-| `DELETE /notes/{id}` | — | `204` | `401`, `404` (including another user's note) |
+| `DELETE /notes/{id}` | — | `204`. Soft delete | `401`, `404` (including another user's note) |
+| `POST /notes/{id}/restore` | — | `200` note result. A note that isn't deleted comes back unchanged | `401`, `404` (including another user's note) |
 | `PUT /notes/{id}` | `{text, written_at, timezone, confirm_conflicts: bool}` | `200` note result ([NU §7](NU-note-understanding.md#7-api-contract)) for the new plan, status `done`, `confirm` or `followup` | `409 note.wrong_status` (`new`), `409 note.undo_conflicts`, `409 note.undo_expired`, `422` as for `POST /notes` |
 
 - **State machine:** every action is valid only from the status in the [state transitions](../02-domain/domain.md#state-transitions), plus `pending → done` for redo and `→ new` for Edit note (ASVS 11.1.1).

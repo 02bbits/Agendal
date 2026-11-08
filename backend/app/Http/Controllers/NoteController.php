@@ -102,4 +102,12 @@ class NoteController extends Controller
 
         return response()->noContent();
     }
+
+    /** Undo of Delete note (RV §2.7); a note that is not deleted comes back unchanged. */
+    public function restore(Note $note): NoteResultResource
+    {
+        $note->restore();
+
+        return new NoteResultResource($note);
+    }
 }

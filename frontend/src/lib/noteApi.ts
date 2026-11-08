@@ -291,7 +291,7 @@ export function previewTaskApi(result: NoteResult) {
 }
 
 /**
- * `DELETE /notes/{id}`: deletes a note.
+ * `DELETE /notes/{id}`: deletes a note. Undo on the toast brings it back with `restoreNote`.
  */
 export async function deleteNote(
   id: string,
@@ -305,6 +305,21 @@ export async function deleteNote(
       return true;
     }
     return { error: "error.generic" };
+  } catch (error) {
+    if (!(error instanceof ApiRequestError))
+      return { error: "note.needs_connection" };
+    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+  }
+}
+
+/** `POST /notes/{id}/restore` (RV §7): the Undo of a deleted note; the note as it was. */
+export async function restoreNote(
+  id: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    return await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+    );
   } catch (error) {
     if (!(error instanceof ApiRequestError))
       return { error: "note.needs_connection" };

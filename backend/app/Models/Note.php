@@ -7,6 +7,7 @@ use App\Services\Clock\ClockInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -19,14 +20,14 @@ use Illuminate\Support\Carbon;
  */
 class Note extends Model
 {
-    use HasUuids, OwnedByUser;
+    use HasUuids, OwnedByUser, SoftDeletes;
 
     const UPDATED_AT = null;
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime'];
+        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime', 'deleted_at' => 'immutable_datetime'];
     }
 
     public function freshTimestamp(): Carbon

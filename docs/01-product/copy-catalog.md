@@ -118,7 +118,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.delete_title` | Delete “{name}”? | Delete note dialog |
 | `note.delete_body` | This note will be deleted. | Delete note dialog |
 | `note.deleted` | Deleted “{name}” | Toast after deleting |
-| `note.replan` † | Make tasks again | Editor primary button when editing a saved note ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
+| `note.replan` † | Make tasks again | Editor primary button when editing a saved note ([RV-5](../03-modules/RV-review-control.md#rv-5)); primary button on a `pending` note's result screen ([RV §2.4](../03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20)) |
 | `note.ask_when` † | When? | Result row for a created task with no date, before the chips Today / Tomorrow / Next week / Pick date… ([Q4](../08-project/open-questions.md#q4)) |
 | `note.needs_connection` † | This needs a connection. | Disabled note actions while offline |
 | `note.list_empty` † | Your notes will show here. Write one to get started. | Notes tab empty state |

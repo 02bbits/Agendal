@@ -181,3 +181,15 @@ it('returns current note unchanged when text is unchanged (RV-E18)', function ()
 
     expect(Note::findOrFail($id)->edited_at)->toBeNull();
 });
+
+it('plans a pending note again with the same text after Undo all (RV §2.4)', function () {
+    $res = createDoneNote('call mum tomorrow; read report');
+    $id = $res['note']['id'];
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk()->assertJsonPath('note.status', 'pending');
+    expect(Task::count())->toBe(0);
+
+    $status = $this->putJson("/api/v1/notes/{$id}", ['text' => 'call mum tomorrow; read report', 'timezone' => 'Asia/Ho_Chi_Minh'])
+        ->assertOk()->json('note.status');
+
+    expect($status)->toBeIn(['done', 'confirm'])->and(Note::findOrFail($id)->edited_at)->not->toBeNull();
+});

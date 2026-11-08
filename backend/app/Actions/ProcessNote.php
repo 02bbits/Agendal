@@ -51,7 +51,8 @@ class ProcessNote
         return DB::transaction(function () use ($user, $input): array {
             // Serializes client-id replays, open-task limits and notes from multiple devices.
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $existing = Note::query()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
+            // A trashed note still owns its client_id (unique index), so its replay returns it too.
+            $existing = Note::withTrashed()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
             if ($existing !== null) {
                 return ['note' => $existing, 'replay' => true];
             }
@@ -84,8 +85,9 @@ class ProcessNote
             }
 
             $text = $this->splitter->normalize($input['text']);
-            // Unchanged text and a retry after a lost reply return the already stored result (RV-E18).
-            if ($text === $note->text) {
+            // Unchanged text and a retry after a lost reply return the already stored result (RV-E18);
+            // a pending note is planned again: Make tasks again after Undo all (RV §2.4).
+            if ($text === $note->text && $note->status !== 'pending') {
                 return $note;
             }
 
