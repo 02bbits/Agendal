@@ -165,10 +165,10 @@ function ToastAlert({
       {toast.actionLabel && toast.onAction && (
         <button
           type="button"
-          className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content underline underline-offset-[3px] hover:bg-neutral-content/10"
+          className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-3 text-callout font-semibold text-neutral-content"
           onClick={runAction}
         >
-          {toast.actionLabel}
+          <span className="link-swipe">{toast.actionLabel}</span>
         </button>
       )}
     </div>

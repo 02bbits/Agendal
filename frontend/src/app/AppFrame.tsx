@@ -615,8 +615,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 href={ROUTES.project(p.id)}
                 navigate={navigate}
                 className={cx(
-                  "focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill",
-                  isCurrent && "bg-primary-tint! font-semibold text-primary!",
+                  "focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary",
+                  isCurrent && "bg-primary-tint! text-ink!",
                 )}
                 aria-current={isCurrent ? "page" : undefined}
               >
@@ -630,7 +630,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   <span
                     className={cx(
                       "text-footnote tabular-nums",
-                      isCurrent ? "text-primary" : "text-ink-tertiary",
+                      isCurrent ? "text-ink" : "text-ink-tertiary",
                     )}
                   >
                     {p.open}
@@ -644,7 +644,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <Link
             href={ROUTES.noProject}
             navigate={navigate}
-            className="focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill"
+            className="focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary"
           >
             <span
               className="inline-block size-2 shrink-0 rounded-full bg-neutral-content/60"
