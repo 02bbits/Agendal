@@ -155,7 +155,7 @@ function ToastAlert({
 
   return (
     <div
-      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:pr-2 motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
+      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:pr-2 motion-safe:animate-slide-up md:motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
       style={{
         transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
         opacity: dragOffset
@@ -223,7 +223,7 @@ export function Toast({
   return (
     <div
       ref={regionRef}
-      className="toast toast-bottom toast-start pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
+      className="toast toast-bottom toast-center md:toast-start items-center md:items-start bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))] md:bottom-4 pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
       aria-atomic="true"
