@@ -88,6 +88,21 @@ export function TaskRow({
         overdue && !task.done && "is-overdue",
       )}
     >
+      {/* Ticked: a tint wipes across left to right, red when overdue, blue for a due entry; the row moves after SETTLE_MS */}
+      {settling && task.done && (
+        <span
+          aria-hidden="true"
+          data-testid="swipe-fill"
+          className={cx(
+            "pointer-events-none absolute inset-0 origin-left motion-safe:animate-swipe-fill",
+            overdue
+              ? "bg-error/15"
+              : tone === "due"
+                ? "bg-due/20"
+                : "bg-ink/10",
+          )}
+        />
+      )}
       <button
         type="button"
         role="checkbox"

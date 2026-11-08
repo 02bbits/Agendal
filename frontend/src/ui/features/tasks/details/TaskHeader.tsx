@@ -60,11 +60,11 @@ export function TaskHeader({
         <div className="flex h-11 items-center justify-between border-b border-separator px-4">
           <button
             type="button"
-            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary hover:underline underline-offset-2"
+            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary"
             onClick={onBack}
           >
             <ChevronLeftIcon size={18} />
-            <span>{backLabel ?? t("common.back")}</span>
+            <span className="link-swipe">{backLabel ?? t("common.back")}</span>
           </button>
         </div>
       ) : (

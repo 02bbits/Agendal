@@ -165,7 +165,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
           <button
             type="button"
             onClick={() => chooseFilter("all")}
-            className="cursor-pointer font-medium text-primary hover:underline"
+            className="link-swipe cursor-pointer font-medium text-primary"
           >
             {showAllText}
           </button>

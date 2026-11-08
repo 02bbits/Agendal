@@ -64,7 +64,7 @@ export function UpcomingBoard({
               type="button"
               onClick={() => onAddTask(date)}
               aria-label={t("list.add_task_on", { day: fullHeading })}
-              className="focus-ring mt-2 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-callout text-ink-tertiary transition-colors hover:bg-surface-hover/50 hover:text-ink"
+              className="focus-ring mt-2 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-callout text-ink-tertiary row-hover hover:text-ink"
             >
               <span className="text-primary">
                 <PlusIcon size={16} />

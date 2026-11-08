@@ -165,7 +165,7 @@ export function TaskPanel({
           onClick={onClose}
           onWheel={(e) => e.preventDefault()}
           onTouchMove={(e) => e.preventDefault()}
-          className="fixed inset-0 z-40 bg-scrim/60 backdrop-blur-[2px] transition-opacity duration-200"
+          className="fixed inset-0 z-40 bg-scrim/60 backdrop-blur-[2px] motion-safe:animate-fade-in"
         />
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8 pointer-events-none">
           <div
@@ -193,7 +193,7 @@ export function TaskPanel({
         onClick={onClose}
         onWheel={(e) => e.preventDefault()}
         onTouchMove={(e) => e.preventDefault()}
-        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
       />
       <aside
         ref={panelRef}

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { Button } from "../../components/Button";
+import { TextButton } from "../../components/TextButton";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
@@ -266,7 +267,7 @@ export function NoteResultScreen({
             await saveName();
           }}
           onBlur={saveName}
-          className="focus-ring mt-1 w-full rounded-field border-0 bg-surface px-2 py-1 text-display font-bold text-ink"
+          className="field-ring mt-1 w-full rounded-field border border-control bg-surface px-2 py-1 text-display font-bold text-ink"
         />
       )}
       {confirming && (
@@ -290,14 +291,13 @@ export function NoteResultScreen({
           {note.text}
         </p>
         {longQuote && (
-          <button
-            type="button"
+          <TextButton
             aria-expanded={expanded}
-            className="focus-ring mt-1 cursor-pointer border-0 bg-transparent p-0 text-footnote font-medium text-primary underline underline-offset-2"
+            className="mt-1 min-h-0 p-0 text-footnote font-medium"
             onClick={() => setExpanded(!expanded)}
           >
             {t(expanded ? "note.show_less" : "note.show_all")}
-          </button>
+          </TextButton>
         )}
       </blockquote>
 
@@ -578,7 +578,7 @@ function ChangeRow({
           type="button"
           onClick={() => onOpen(task)}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink hover:bg-fill"
+          className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink row-hover"
         >
           {body}
         </button>
@@ -587,7 +587,7 @@ function ChangeRow({
           href={ROUTES.task(task.id)}
           navigate={navigate}
           aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
-          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-fill"
+          className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline row-hover"
         >
           {body}
         </Link>
@@ -646,7 +646,7 @@ function WhenChips({
         <input
           type="date"
           aria-label={t("task.pick_date")}
-          className="input focus-ring h-9 rounded-field border-control bg-surface px-2 text-footnote text-ink"
+          className="input field-ring h-9 rounded-field border-control bg-surface px-2 text-footnote text-ink"
           autoFocus
           onChange={(event) => event.target.value && onPick(event.target.value)}
         />

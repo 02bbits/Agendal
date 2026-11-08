@@ -213,6 +213,7 @@
   --animate-panel-in: panel-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
   --animate-scale-in: scale-in 180ms cubic-bezier(0.16, 1, 0.3, 1);
   --animate-fade-quick: fade-in 100ms linear;
+  --animate-swipe-fill: swipe-fill 500ms cubic-bezier(0.4, 0, 0.2, 1) forwards;
 
   @keyframes fade-in {
     from {
@@ -227,6 +228,14 @@
     to {
       opacity: 1;
       transform: scale(1);
+    }
+  }
+  @keyframes swipe-fill {
+    from {
+      transform: scaleX(0);
+    }
+    to {
+      transform: scaleX(1);
     }
   }
   @keyframes slide-up {
@@ -252,6 +261,51 @@
   &:focus-visible {
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
+  }
+}
+
+/* Border-only focus for text fields: the border takes the accent, no second ring. Beats daisyUI's .input outline */
+@utility field-ring {
+  &:focus,
+  &:focus-within {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+}
+
+/* Text-only hover: a 1px underline swipes in from the left. Put it on the text itself, or on a span inside a button or link */
+@utility link-swipe {
+  background-image: linear-gradient(currentColor, currentColor);
+  background-repeat: no-repeat;
+  background-position: 0 100%;
+  background-size: 0% 1px;
+  transition: background-size 250ms ease-out;
+  &:is(:hover, :focus-visible),
+  :where(a, button):is(:hover, :focus-visible):not(:disabled) > & {
+    background-size: 100% 1px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}
+
+/* One hover wash for every list row and row-like button, so Inbox, Upcoming and Notes match */
+@utility row-hover {
+  transition-property: background-color;
+  transition-duration: 150ms;
+  &:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--color-surface-hover) 40%,
+      transparent
+    );
+  }
+  &:active {
+    background-color: color-mix(
+      in srgb,
+      var(--color-surface-hover) 60%,
+      transparent
+    );
   }
 }
 

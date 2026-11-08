@@ -104,7 +104,7 @@ export function NotesScreen({
                     href={ROUTES.note(note.id)}
                     navigate={navigate}
                     aria-current={selected === note.id ? "true" : undefined}
-                    className={`focus-ring flex min-h-16 items-center gap-3 px-4 py-3 text-ink no-underline hover:bg-fill ${selected === note.id ? "bg-fill" : ""}`}
+                    className={`focus-ring flex min-h-16 items-center gap-3 px-4 py-3 text-ink no-underline row-hover ${selected === note.id ? "bg-surface-hover/60" : ""}`}
                   >
                     <Icon size={19} className="text-ink-secondary" />
                     <span className="min-w-0 flex-1">
