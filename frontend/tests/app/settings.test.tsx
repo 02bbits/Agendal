@@ -152,6 +152,24 @@ describe("Account settings (AP-3, AP-5)", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     expect(await screen.findByText(/Something went wrong/)).toBeTruthy();
   });
+
+  it("allows enabling and disabling sidebar navigation tabs via checkboxes", async () => {
+    await openAccount();
+    await userEvent.click(radio("Sidebar"));
+
+    const upcomingCheckbox = screen.getByRole("checkbox", {
+      name: "Upcoming",
+    }) as HTMLInputElement;
+    expect(upcomingCheckbox.checked).toBe(true);
+
+    await userEvent.click(upcomingCheckbox);
+    expect(upcomingCheckbox.checked).toBe(false);
+
+    const stored = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_enabled") || "{}",
+    );
+    expect(stored.upcoming).toBe(false);
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {
