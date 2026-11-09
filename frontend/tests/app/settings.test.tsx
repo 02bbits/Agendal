@@ -170,6 +170,32 @@ describe("Account settings (AP-3, AP-5)", () => {
     );
     expect(stored.upcoming).toBe(false);
   });
+
+  it("renders backdrop with blur and prevents background scrolling", async () => {
+    await openAccount();
+
+    const backdrop = screen.getByTestId("settings-backdrop");
+    expect(backdrop).toBeTruthy();
+    expect(backdrop.getAttribute("aria-hidden")).toBe("true");
+    expect(backdrop.className).toContain("backdrop-blur-[2px]");
+    expect(backdrop.className).toContain("bg-scrim/60");
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.className).toContain("overscroll-contain");
+
+    const preventDefault = vi.fn();
+    backdrop.dispatchEvent(
+      new WheelEvent("wheel", { bubbles: true, cancelable: true }),
+    );
+    const touchEvent = new Event("touchmove", {
+      bubbles: true,
+      cancelable: true,
+    });
+    touchEvent.preventDefault = preventDefault;
+    backdrop.dispatchEvent(touchEvent);
+    expect(preventDefault).toHaveBeenCalled();
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {
