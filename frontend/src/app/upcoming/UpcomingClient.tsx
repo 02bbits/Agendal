@@ -260,7 +260,12 @@ export function UpcomingClient() {
   const headerControls = (
     <div className="flex items-center gap-3">
       {isFull && <div className="hidden md:block">{filterChipsMd}</div>}
-      <UpcomingViewSwitch viewMode={viewMode} onChange={handleViewModeChange} />
+      {/* Pinned to the top-right corner of the page, level with the date (the AppShell column is relative) */}
+      <UpcomingViewSwitch
+        viewMode={viewMode}
+        onChange={handleViewModeChange}
+        className="md:absolute md:top-[34px] md:right-10"
+      />
       <Button
         variant="primary"
         pill

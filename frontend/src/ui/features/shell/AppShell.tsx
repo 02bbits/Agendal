@@ -90,7 +90,7 @@ export function AppShell({
           <Sidebar active={tab} navigate={navigate} {...sidebar} />
         </div>
       )}
-      <div className="mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1 [html[data-board-view]_&]:md:max-w-none">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1 [html[data-board-view]_&]:md:max-w-none">
         <main
           className={
             "flex-1 px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
