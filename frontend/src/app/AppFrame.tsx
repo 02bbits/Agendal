@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  AccountScreen,
   AppShell,
   Link,
   NewTaskSheet,
@@ -150,6 +151,10 @@ interface AppFrameValue {
   editFollowupNote: (note: NoteResult["note"]) => void;
   /** Opens the search popup or navigates to search. */
   openSearch: () => void;
+  /** Opens the settings popup. */
+  openSettings: () => void;
+  /** Closes the settings popup. */
+  closeSettings: () => void;
   /** Opens the new task bottom sheet. */
   openNewTask: {
     (opts?: { dueDate?: string }): void;
@@ -303,6 +308,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => {
+    if (pathname !== ROUTES.account) setSettingsOpen(true);
+  }, [pathname]);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
   // Closing the editor takes its history entry off with history.back(), which is only done a
@@ -519,6 +529,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       openNoteEditor,
       editFollowupNote,
       openSearch: handleOpenSearch,
+      openSettings,
+      closeSettings,
       openNewTask,
       user,
       signOut,
@@ -532,6 +544,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       openNoteEditor,
       editFollowupNote,
       handleOpenSearch,
+      openSettings,
+      closeSettings,
       openNewTask,
       user,
       signOut,
@@ -737,11 +751,39 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
                 onSearch: handleOpenSearch,
+                onAccount: openSettings,
               }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
+        {settingsOpen && pathname !== ROUTES.account && (
+          <AccountScreen
+            name={user?.display_name ?? ""}
+            email={user?.email ?? ""}
+            settings={settings}
+            onChange={changeSettings}
+            onBack={closeSettings}
+            onSignOut={() => {
+              closeSettings();
+              signOut();
+            }}
+            onSignOutEverywhere={() => {
+              closeSettings();
+              signOut(true);
+            }}
+            onUpdateName={async (newName: string) => {
+              try {
+                await api("/me", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ display_name: newName }),
+                });
+                setUser(user ? { ...user, display_name: newName } : null);
+              } catch {}
+            }}
+          />
+        )}
         {editing && (
           <NoteEditor
             note={editingNote ?? undefined}
