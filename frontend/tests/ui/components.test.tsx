@@ -426,7 +426,9 @@ describe("Toast", () => {
     );
     const toastRegion = container.querySelector(".toast")!;
     expect(toastRegion.className).toContain("toast-center");
-    expect(toastRegion.className).toContain("md:toast-start");
+    // daisyUI's toast-start can't take md:, so the left edge is set directly
+    expect(toastRegion.className).toContain("md:[--toast-x:0px]");
+    expect(toastRegion.className).toContain("md:[inset-inline:1rem_auto]");
     expect(toastRegion.className).toContain("items-center");
     expect(toastRegion.className).toContain("md:items-start");
   });

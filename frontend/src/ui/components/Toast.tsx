@@ -223,7 +223,7 @@ export function Toast({
   return (
     <div
       ref={regionRef}
-      className="toast toast-bottom toast-center md:toast-start items-center md:items-start bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))] md:bottom-4 pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
+      className="toast toast-bottom toast-center md:[--toast-x:0px] md:[inset-inline:1rem_auto] items-center md:items-start bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))] md:bottom-4 pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
       aria-atomic="true"
