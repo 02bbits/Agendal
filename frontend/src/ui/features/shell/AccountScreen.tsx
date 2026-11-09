@@ -161,10 +161,10 @@ export function AccountScreen({
   const [activePalette, setActivePalette] = useState(() => {
     try {
       return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.theme_palette") || "agendal"
-        : "agendal";
+        ? localStorage.getItem("agendal.theme_palette") || "default"
+        : "default";
     } catch {
-      return "agendal";
+      return "default";
     }
   });
   const [showTaskCounts, setShowTaskCounts] = useState(() => {
@@ -934,7 +934,12 @@ export function AccountScreen({
                           <div className="flex items-center gap-2">
                             <span
                               className="h-2 w-8 rounded-full shadow-xs"
-                              style={{ backgroundColor: item.color }}
+                              style={{
+                                backgroundColor:
+                                  item.id === "default"
+                                    ? "var(--color-ink)"
+                                    : item.color,
+                              }}
                             />
                             <span className="text-footnote font-semibold text-ink">
                               {item.name}
@@ -951,7 +956,12 @@ export function AccountScreen({
                           <div className="flex items-center gap-2">
                             <div
                               className="size-3 rounded-full border"
-                              style={{ borderColor: item.color }}
+                              style={{
+                                borderColor:
+                                  item.id === "default"
+                                    ? "var(--color-ink-secondary)"
+                                    : item.color,
+                              }}
                             />
                             <div className="h-1.5 w-24 rounded-full bg-fill-2" />
                           </div>

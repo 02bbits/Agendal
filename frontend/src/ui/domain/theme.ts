@@ -5,6 +5,7 @@ export interface ThemePalette {
 }
 
 export const THEME_PALETTES: Record<string, ThemePalette> = {
+  default: { id: "default", name: "Default", color: "#545454" },
   agendal: { id: "agendal", name: "Agendal", color: "#db4c3f" },
   moonstone: { id: "moonstone", name: "Moonstone", color: "#4a7298" },
   tangerine: { id: "tangerine", name: "Tangerine", color: "#ff7043" },
@@ -21,11 +22,16 @@ export function applyThemePalette(paletteId: string): void {
   if (typeof document === "undefined") return;
   const item = THEME_PALETTES[paletteId];
   if (!item) return;
-  document.documentElement.style.setProperty("--color-primary", item.color);
-  document.documentElement.style.setProperty(
-    "--color-primary-tint",
-    `${item.color}22`,
-  );
+  if (paletteId === "default") {
+    document.documentElement.style.removeProperty("--color-primary");
+    document.documentElement.style.removeProperty("--color-primary-tint");
+  } else {
+    document.documentElement.style.setProperty("--color-primary", item.color);
+    document.documentElement.style.setProperty(
+      "--color-primary-tint",
+      `${item.color}22`,
+    );
+  }
   try {
     localStorage.setItem("agendal.theme_palette", paletteId);
   } catch {}
