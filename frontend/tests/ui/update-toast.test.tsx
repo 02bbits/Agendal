@@ -24,6 +24,7 @@ beforeEach(() => {
     configurable: true,
     value: {
       controller: {},
+      ready: new Promise(() => {}),
       register: vi.fn(async () => ({
         waiting: worker,
         addEventListener: vi.fn(),
@@ -65,12 +66,20 @@ describe("update toast", () => {
   });
 
   it("stays quiet on the first install, which replaces nothing", async () => {
+    const active = { postMessage: vi.fn() };
     Object.defineProperty(navigator.serviceWorker, "controller", {
       value: null,
+    });
+    Object.defineProperty(navigator.serviceWorker, "ready", {
+      value: Promise.resolve({ active }),
     });
     render(<Host />);
 
     await act(() => vi.advanceTimersByTimeAsync(2000));
     expect(screen.queryByText("A new version is ready.")).toBeNull();
+    // AP §2.2: the files this first page loaded go to the new worker's cache
+    expect(active.postMessage).toHaveBeenCalledWith({
+      precache: expect.arrayContaining([window.location.pathname]),
+    });
   });
 });

@@ -26,8 +26,34 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// Same-origin pages and files only: the API and sign-in cookies stay uncached (SEC-51)
+const cacheable = (url) =>
+  url.origin === self.location.origin &&
+  !url.pathname.startsWith("/api/") &&
+  !url.pathname.startsWith("/sanctum/") &&
+  !url.searchParams.has("_rsc");
+
 self.addEventListener("message", (event) => {
   if (event.data === "skipWaiting") self.skipWaiting();
+  // First visit: the page loaded its assets before this worker took over, so it lists them here (AP §2.2)
+  else if (Array.isArray(event.data?.precache))
+    event.waitUntil(
+      Promise.all(
+        event.data.precache
+          .map((href) => new URL(href, self.location.origin))
+          .filter(cacheable)
+          .map((url) => new Request(url.href))
+          .map((request) =>
+            caches.match(request).then(
+              (hit) =>
+                hit ??
+                fetch(request)
+                  .then((r) => store(request, r))
+                  .catch(() => {}),
+            ),
+          ),
+      ),
+    );
 });
 
 const store = async (request, response) => {
@@ -40,14 +66,8 @@ const store = async (request, response) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
   const url = new URL(request.url);
-  // Anything else goes straight to the network: the API and sign-in cookies stay uncached (SEC-51)
-  if (
-    request.method !== "GET" ||
-    url.origin !== self.location.origin ||
-    url.pathname.startsWith("/api/") ||
-    url.pathname.startsWith("/sanctum/") ||
-    request.headers.has("RSC")
-  )
+  // Anything else goes straight to the network
+  if (request.method !== "GET" || !cacheable(url) || request.headers.has("RSC"))
     return;
 
   if (url.pathname.startsWith("/_next/static/")) {

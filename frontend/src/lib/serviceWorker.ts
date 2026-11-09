@@ -12,6 +12,19 @@ export function registerServiceWorker(
     // Without a controller this is the first install: nothing is being replaced
     if (worker && serviceWorker.controller) onWaiting(worker);
   };
+  if (!serviceWorker.controller)
+    // First visit: this page's files loaded before any worker, so hand them over to cache (AP §2.2)
+    void serviceWorker.ready.then((registration) =>
+      registration.active?.postMessage({
+        precache: [
+          window.location.pathname,
+          ...performance
+            .getEntriesByType("resource")
+            .map((entry) => entry.name)
+            .filter((name) => new URL(name).pathname.startsWith("/_next/")),
+        ],
+      }),
+    );
   serviceWorker
     .register(`/sw.js?v=${process.env.NEXT_PUBLIC_BUILD_ID ?? "dev"}`)
     .then((registration) => {

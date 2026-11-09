@@ -154,6 +154,32 @@ describe("service worker (SEC-51)", () => {
     expect(worker.self.clients.claim).toHaveBeenCalled();
   });
 
+  it("caches the files a first visit loaded before it took over, never the API", async () => {
+    const worker = loadWorker();
+    await worker.waited("install");
+    let pending: Promise<unknown> = Promise.resolve();
+    worker.listeners.message({
+      data: {
+        precache: [
+          "/inbox",
+          `${ORIGIN}/_next/static/chunk.js`,
+          `${ORIGIN}/api/v1/me`,
+          `${ORIGIN}/inbox?_rsc=1`,
+          "https://other.test/_next/static/x.js",
+        ],
+      },
+      waitUntil: (p: Promise<unknown>) => (pending = p),
+    });
+    await pending;
+
+    expect([...worker.caches.stores.get("agendal-shell-2")!.keys()]).toEqual([
+      `${ORIGIN}/`,
+      `${ORIGIN}/theme.js`,
+      `${ORIGIN}/inbox`,
+      `${ORIGIN}/_next/static/chunk.js`,
+    ]);
+  });
+
   it("waits for the page's say-so before taking over (UX-42)", async () => {
     const worker = loadWorker();
     await worker.waited("install");
