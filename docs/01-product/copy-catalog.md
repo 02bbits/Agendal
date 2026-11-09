@@ -78,7 +78,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.waiting` | Waiting for connection | Notes card, pending |
 | `note.back_online_one` | Back online. 1 note turned into {tasks} tasks. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
 | `note.back_online_other` | Back online. {count} notes turned into {tasks} tasks. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)). `{tasks}` also takes `_one` |
-| `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up |
+| `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up. Toast only: a Notes card uses `notes.needs` |
 | `note.needs_look_other` † | {count} need a look. | Same |
 | `note.couldnt_process` † | Couldn't turn this note into tasks. Tap to edit it. | Notes card, for a queued note rejected with a `422` |
 | `note.discard_title` † | Discard this note? | Closing the editor with text |
@@ -112,7 +112,7 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.wrong_status` † | This note has already been handled. | API code `409` for an action that isn't valid in the note's status |
 | `note.gone_since` † | Removed since | Result row for a task deleted after the note |
 | `note.project_gone` † | Its project was deleted, so it's in No project. | Result row after undo ([RV-E3](../03-modules/RV-review-control.md#rv-e3)) |
-| `note.edited_label` † | Edited | Notes card, after the status line ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
+| `note.edited_label` † | Edited | Notes card, after the name ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.edit` † | Edit note | Result header menu ([RV-5](../03-modules/RV-review-control.md#rv-5)) |
 | `note.delete` | Delete note | Result and follow-up header ([RV §2.7](../03-modules/RV-review-control.md#27-delete-note)) |
 | `note.delete_title` | Delete “{name}”? | Delete note dialog |
@@ -122,6 +122,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `note.ask_when` † | When? | Result row for a created task with no date, before the chips Today / Tomorrow / Next week / Pick date… ([Q4](../08-project/open-questions.md#q4)) |
 | `note.needs_connection` † | This needs a connection. | Disabled note actions while offline |
 | `note.list_empty` † | Your notes will show here. Write one to get started. | Notes tab empty state |
+| `notes.made` † | Accepted | A `done` note: Notes filter chip, card status line before `note.made_*` ([RV-4](../03-modules/RV-review-control.md#rv-4)) |
+| `notes.needs` † | Pending | A `confirm`, `followup` or `pending` note: Notes filter chip, card status line, result overline after Undo all ([RV-4](../03-modules/RV-review-control.md#rv-4)) |
 | `note.confirm_title` | Check this first | Confirm screen ([NU-5](../03-modules/NU-note-understanding.md#nu-5)) |
 | `note.confirm_body_one` † | This note will make 1 change. Nothing happens until you apply it. | Confirm screen |
 | `note.confirm_body_other` † | This note will make {count} changes. Nothing happens until you apply it. | Confirm screen |
