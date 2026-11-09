@@ -331,1136 +331,1162 @@ export function AccountScreen({
   });
 
   const modal = (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-scrim backdrop-blur-[2px] p-2 sm:p-4 md:p-6 motion-safe:animate-fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("settings.title")}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) onBack();
-      }}
-    >
+    <>
       <div
-        ref={modalRef}
-        className="relative flex h-[680px] max-h-[min(680px,calc(100dvh-32px))] w-full max-w-[960px] overflow-hidden rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
-      >
-        {/* Left Sidebar Navigation */}
-        <nav
-          className="flex w-[210px] sm:w-[240px] shrink-0 flex-col justify-between border-r border-separator/40 bg-fill/25 p-3.5 select-none"
-          aria-label={t("nav.account")}
+        data-testid="settings-backdrop"
+        aria-hidden="true"
+        onClick={onBack}
+        onWheel={(e) => e.preventDefault()}
+        onTouchMove={(e) => e.preventDefault()}
+        className="fixed inset-0 z-[100] bg-scrim/60 backdrop-blur-[2px] motion-safe:animate-fade-in"
+      />
+      <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4 md:p-6 pointer-events-none">
+        <div
+          ref={modalRef}
+          data-modal-host="true"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("settings.title")}
+          className="pointer-events-auto relative flex h-[680px] max-h-[min(680px,calc(100dvh-32px))] w-full max-w-[960px] overflow-hidden overscroll-contain rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
         >
-          <div className="flex flex-col min-h-0 flex-1">
-            <h1 className="px-2 pt-1 pb-2.5 text-heading font-bold text-ink">
-              {t("settings.title")}
-            </h1>
+          {/* Left Sidebar Navigation */}
+          <nav
+            className="flex w-[210px] sm:w-[240px] shrink-0 flex-col justify-between border-r border-separator/40 bg-fill/25 p-3.5 select-none"
+            aria-label={t("nav.account")}
+          >
+            <div className="flex flex-col min-h-0 flex-1">
+              <h1 className="px-2 pt-1 pb-2.5 text-heading font-bold text-ink">
+                {t("settings.title")}
+              </h1>
 
-            {/* Search Input */}
-            <div className="relative mb-2 px-0.5">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary">
-                <SearchIcon size={15} />
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("settings.search_placeholder")}
-                aria-label={t("settings.search_label")}
-                className="w-full rounded-lg border border-separator/50 bg-fill/50 pl-8 pr-2.5 py-1 text-footnote text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
-              />
-            </div>
-
-            {/* Tabs List */}
-            <div
-              className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain pr-1 py-1"
-              role="radiogroup"
-              aria-label={t("settings.nav_label")}
-            >
-              {visibleTabs.map((item, index) => {
-                const checked = tab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    ref={(el) => {
-                      tabRefs.current[index] = el;
-                    }}
-                    type="button"
-                    role="radio"
-                    aria-checked={checked}
-                    tabIndex={checked ? 0 : -1}
-                    onClick={() => setTab(item.id)}
-                    onKeyDown={(e) => onTabKeyDown(e, index)}
-                    className={cx(
-                      "focus-ring group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-footnote transition-colors",
-                      checked
-                        ? "bg-primary/15 font-semibold text-primary"
-                        : "text-ink-secondary hover:bg-fill/40 hover:text-ink",
-                    )}
-                  >
-                    <span
-                      className={cx(
-                        "shrink-0 transition-colors",
-                        checked
-                          ? "text-primary"
-                          : "text-ink-tertiary group-hover:text-ink",
-                      )}
-                      aria-hidden="true"
-                    >
-                      {item.icon}
-                    </span>
-                    <span className="truncate">{item.label}</span>
-                  </button>
-                );
-              })}
-              {visibleTabs.length === 0 && (
-                <p className="px-2 py-4 text-center text-footnote text-ink-tertiary">
-                  {t("settings.none_found")}
-                </p>
-              )}
-            </div>
-          </div>
-        </nav>
-
-        {/* Right Main Content Pane */}
-        <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
-          {/* Header Bar */}
-          <div className="flex h-14 items-center justify-between border-b border-separator/40 px-6 sm:px-8 shrink-0">
-            <span className="text-body sm:text-heading font-bold text-ink">
-              {currentTabObj?.label ?? t("settings.title")}
-            </span>
-            <button
-              type="button"
-              onClick={onBack}
-              aria-label={t("common.close")}
-              className="focus-ring cursor-pointer rounded-lg p-1.5 text-ink-tertiary hover:bg-fill hover:text-ink transition-colors"
-            >
-              <XIcon size={20} />
-            </button>
-          </div>
-
-          {/* Content Area */}
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 sm:px-8 py-6 space-y-6 text-callout">
-            {/* TAB: ACCOUNT */}
-            <div
-              className={cx(
-                "space-y-6 max-w-[620px]",
-                tab === "account"
-                  ? "opacity-100"
-                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
-              )}
-            >
-              {/* Plan */}
-              <section>
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                  {t("settings.plan_heading")}
-                </h2>
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-body font-semibold text-ink">
-                    {t("settings.plan_beginner")}
-                  </span>
-                  <Button variant="secondary" size="sm" className="rounded-lg">
-                    {t("settings.manage_plan")}
-                  </Button>
-                </div>
-              </section>
-
-              {/* Photo */}
-              <section>
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                  {t("settings.photo_heading")}
-                </h2>
-                <div className="flex items-center gap-4">
-                  <span
-                    className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-xl font-bold shadow-xs"
-                    aria-hidden="true"
-                  >
-                    {displayName ? displayName.slice(0, 1).toUpperCase() : "T"}
-                  </span>
-                  <div className="flex flex-col gap-1.5">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        className="rounded-lg"
-                      >
-                        {t("settings.change_photo")}
-                      </Button>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-error/40 px-3 py-1.5 text-footnote font-medium text-error hover:bg-error/10 transition-colors cursor-pointer"
-                      >
-                        {t("settings.remove_photo")}
-                      </button>
-                    </div>
-                    <p className="m-0 text-caption text-ink-tertiary">
-                      {t("settings.photo_max_size")}
-                    </p>
-                    <p className="m-0 text-caption text-ink-tertiary">
-                      {t("settings.photo_public")}
-                    </p>
-                  </div>
-                </div>
-              </section>
-
-              {/* Name */}
-              <section>
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
-                  {t("settings.name_heading")}
-                </h2>
-                <span className="sr-only">{displayName}</span>
+              {/* Search Input */}
+              <div className="relative mb-2 px-0.5">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-tertiary">
+                  <SearchIcon size={15} />
+                </span>
                 <input
                   type="text"
-                  value={displayName}
-                  maxLength={255}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  onBlur={handleNameBlur}
-                  placeholder={t("settings.name_placeholder")}
-                  className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-callout text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder={t("settings.search_placeholder")}
+                  aria-label={t("settings.search_label")}
+                  className="w-full rounded-lg border border-separator/50 bg-fill/50 pl-8 pr-2.5 py-1 text-footnote text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
                 />
-                <div className="mt-1 text-right text-caption text-ink-tertiary">
-                  {displayName.length}/255
-                </div>
-              </section>
-
-              {/* Email */}
-              <section>
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                  {t("settings.email_heading")}
-                </h2>
-                <p className="m-0 mb-2.5 text-callout text-ink font-medium">
-                  {email}
-                </p>
-                <Button variant="secondary" size="sm" className="rounded-lg">
-                  {t("settings.change_email")}
-                </Button>
-              </section>
-
-              {/* Password */}
-              <section>
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
-                  {t("settings.password_heading")}
-                </h2>
-                <Button variant="secondary" size="sm" className="rounded-lg">
-                  {t("settings.add_password")}
-                </Button>
-              </section>
-
-              {/* Connected accounts */}
-              <section className="border-t border-separator/40 pt-4">
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                  {t("settings.connected_accounts_heading")}
-                </h2>
-                <p className="m-0 text-footnote text-ink-secondary mb-2">
-                  {t("settings.connected_accounts_desc")}
-                </p>
-                <p className="m-0 text-footnote text-ink-secondary mb-3">
-                  {t("settings.connected_login_as", { email })}
-                </p>
-                <p className="m-0 text-caption text-ink-tertiary mb-3">
-                  {t("settings.connected_password_notice")}
-                </p>
-                <div className="flex flex-col gap-2 max-w-[320px]">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-lg w-full justify-center"
-                  >
-                    {t("settings.connect_facebook")}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="rounded-lg w-full justify-center"
-                  >
-                    {t("settings.connect_apple")}
-                  </Button>
-                </div>
-              </section>
-
-              {/* Sign out */}
-              <section className="border-t border-separator/40 pt-5 space-y-3">
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <Button
-                    variant="destructive"
-                    className="h-10 px-6 text-callout font-semibold rounded-xl"
-                    onClick={onSignOut}
-                  >
-                    {t("app.sign_out")}
-                  </Button>
-                  {onSignOutEverywhere && (
-                    <Button
-                      variant="secondary"
-                      className="h-10 px-4 text-callout font-medium rounded-xl"
-                      onClick={onSignOutEverywhere}
-                    >
-                      {t("auth.signout_everywhere")}
-                    </Button>
-                  )}
-                </div>
-              </section>
-
-              {/* Delete account */}
-              <section className="border-t border-separator/40 pt-5 pb-2">
-                <div className="rounded-xl border border-error/30 bg-error/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div>
-                    <div className="text-callout font-bold text-error flex items-center gap-2">
-                      <TrashIcon size={16} />
-                      {t("settings.delete_account")}
-                    </div>
-                    <div className="text-caption text-ink-secondary mt-1">
-                      {t("settings.delete_account_desc")}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-error/50 bg-error/10 hover:bg-error hover:text-white text-error font-semibold text-footnote px-3.5 py-1.5 transition-colors cursor-pointer shrink-0"
-                    onClick={() => {}}
-                  >
-                    {t("settings.delete_account")}
-                  </button>
-                </div>
-              </section>
-            </div>
-
-            {/* TAB: GENERAL */}
-            <div
-              className={cx(
-                "space-y-6 max-w-[620px]",
-                tab === "general"
-                  ? "opacity-100"
-                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
-              )}
-            >
-              {/* Language */}
-              <SelectDropdown
-                label={t("settings.language")}
-                value={language}
-                onChange={setLanguage}
-                options={[
-                  { value: "en", label: "English" },
-                  {
-                    value: "vi",
-                    label: "Tiếng Việt",
-                    disabled: true,
-                    badge: t("settings.coming_soon"),
-                  },
-                  {
-                    value: "fr",
-                    label: "Français",
-                    disabled: true,
-                    badge: t("settings.coming_soon"),
-                  },
-                  {
-                    value: "de",
-                    label: "Deutsch",
-                    disabled: true,
-                    badge: t("settings.coming_soon"),
-                  },
-                  {
-                    value: "es",
-                    label: "Español",
-                    disabled: true,
-                    badge: t("settings.coming_soon"),
-                  },
-                ]}
-              />
-
-              {/* Home view */}
-              <SelectDropdown
-                label={t("settings.home_view")}
-                value={homeView}
-                onChange={(val) => {
-                  setHomeView(val);
-                  try {
-                    localStorage.setItem("agendal.home_view", val);
-                  } catch {}
-                }}
-                options={[
-                  {
-                    value: "inbox",
-                    label: t("nav.inbox"),
-                    icon: <InboxIcon size={16} />,
-                  },
-                  {
-                    value: "upcoming",
-                    label: t("nav.upcoming"),
-                    icon: <CalendarIcon size={16} />,
-                  },
-                  {
-                    value: "projects",
-                    label: t("nav.projects"),
-                    icon: <SidebarIcon size={16} />,
-                  },
-                ]}
-              />
-
-              {/* Date & time section */}
-              <div className="pt-2">
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-3.5">
-                  {t("settings.date_time")}
-                </h2>
-
-                <div className="space-y-4">
-                  {/* Time zone */}
-                  <SelectDropdown
-                    label={t("settings.time_zone")}
-                    value={timeZone}
-                    onChange={(tz) => {
-                      setTimeZone(tz);
-                      try {
-                        localStorage.setItem("agendal.timezone", tz);
-                      } catch {}
-                    }}
-                    options={[
-                      { value: "Asia/Ho_Chi_Minh", label: "Asia/Ho_Chi_Minh" },
-                      { value: "UTC", label: "UTC" },
-                      { value: "America/New_York", label: "America/New_York" },
-                      { value: "Europe/London", label: "Europe/London" },
-                      { value: "Asia/Tokyo", label: "Asia/Tokyo" },
-                    ]}
-                  />
-
-                  {/* Time format (24h vs 12h) */}
-                  <SelectDropdown
-                    label={t("app.time_format")}
-                    value={settings.timeFormat}
-                    onChange={(timeFormat) => onChange({ timeFormat })}
-                    roleMode="radio"
-                    options={[
-                      { value: "24h", label: t("app.time_24h") },
-                      { value: "12h", label: t("app.time_12h") },
-                    ]}
-                  />
-
-                  {/* Date format */}
-                  <SelectDropdown
-                    label={t("settings.date_format")}
-                    value={dateFormat}
-                    onChange={(fmt) => {
-                      setDateFormat(fmt);
-                      try {
-                        localStorage.setItem("agendal.date_format", fmt);
-                      } catch {}
-                    }}
-                    options={[
-                      { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
-                      { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
-                      { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
-                      { value: "D MMM YYYY", label: "D MMM YYYY" },
-                    ]}
-                  />
-
-                  {/* Week start */}
-                  <SelectDropdown
-                    label={t("app.week_start")}
-                    value={settings.weekStart}
-                    onChange={(weekStart) => onChange({ weekStart })}
-                    helperText={t("settings.week_start_help")}
-                    roleMode="radio"
-                    options={[
-                      { value: "mon", label: t("app.week_mon") },
-                      { value: "sun", label: t("app.week_sun") },
-                    ]}
-                  />
-
-                  {/* Next week */}
-                  <SelectDropdown
-                    label={t("settings.next_week")}
-                    value={nextWeekDay}
-                    onChange={(day) => {
-                      setNextWeekDay(day);
-                      try {
-                        localStorage.setItem("agendal.next_week_day", day);
-                      } catch {}
-                    }}
-                    helperText={t("settings.next_week_help")}
-                    options={[
-                      { value: "mon", label: t("app.week_mon") },
-                      { value: "sun", label: t("app.week_sun") },
-                      { value: "sat", label: "Saturday" },
-                    ]}
-                  />
-
-                  {/* Weekend */}
-                  <SelectDropdown
-                    label={t("settings.weekend")}
-                    value={weekendDay}
-                    onChange={(day) => {
-                      setWeekendDay(day);
-                      try {
-                        localStorage.setItem("agendal.weekend_day", day);
-                      } catch {}
-                    }}
-                    helperText={t("settings.weekend_help")}
-                    options={[
-                      { value: "sat", label: "Saturday" },
-                      { value: "sun", label: t("app.week_sun") },
-                    ]}
-                  />
-
-                  {/* Karma notice */}
-                  <p className="m-0 text-caption text-ink-secondary pt-1">
-                    {t("settings.date_time_karma_notice")}{" "}
-                    <button
-                      type="button"
-                      onClick={() => setTab("productivity")}
-                      className="text-primary hover:underline font-medium cursor-pointer"
-                    >
-                      {t("settings.tab_productivity")}
-                    </button>
-                    .
-                  </p>
-
-                  {/* Page view setting */}
-                  <div className="pt-2">
-                    <SelectDropdown
-                      label={t("app.page_view")}
-                      value={settings.pageView ?? "flat"}
-                      onChange={(pageView) =>
-                        onChange({ pageView: pageView as PageViewMode })
-                      }
-                      roleMode="radio"
-                      options={[
-                        { value: "flat", label: t("app.view_flat") },
-                        { value: "full", label: t("app.view_full") },
-                      ]}
-                    />
-                  </div>
-
-                  {/* Smart date recognition */}
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between py-1">
-                      <div>
-                        <span className="block text-callout font-semibold text-ink">
-                          {t("settings.smart_date_recognition")}
-                        </span>
-                        <p className="m-0 text-caption text-ink-tertiary mt-0.5">
-                          {t("settings.smart_date_recognition_help")}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch
-                          label={t("settings.smart_date_recognition")}
-                          checked={smartDateRecognition}
-                          onChange={setSmartDateRecognition}
-                          className="border-b-0 py-0"
-                        />
-                        <span className="text-footnote font-medium text-ink w-8">
-                          {smartDateRecognition
-                            ? t("settings.on")
-                            : t("settings.off")}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
               </div>
 
-              {/* Device */}
-              <div className="border-t border-separator/40 pt-4 space-y-2">
-                <div className="flex items-center justify-between py-1">
-                  <span className="text-callout font-semibold text-ink">
-                    {t("app.remember_device")}
-                  </span>
-                  <Switch
-                    label={t("app.remember_device")}
-                    checked={settings.rememberDevice}
-                    onChange={(rememberDevice) => onChange({ rememberDevice })}
-                    className="border-b-0 py-0"
-                  />
-                </div>
-                {onInstall && (
-                  <button
-                    type="button"
-                    className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-10 w-full items-center gap-3 py-1.5 text-left text-callout text-ink hover:bg-fill/40 rounded-lg px-2"
-                    onClick={onInstall}
-                  >
-                    <span
-                      className="inline-flex text-ink-secondary"
-                      aria-hidden="true"
+              {/* Tabs List */}
+              <div
+                className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain pr-1 py-1"
+                role="radiogroup"
+                aria-label={t("settings.nav_label")}
+              >
+                {visibleTabs.map((item, index) => {
+                  const checked = tab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      ref={(el) => {
+                        tabRefs.current[index] = el;
+                      }}
+                      type="button"
+                      role="radio"
+                      aria-checked={checked}
+                      tabIndex={checked ? 0 : -1}
+                      onClick={() => setTab(item.id)}
+                      onKeyDown={(e) => onTabKeyDown(e, index)}
+                      className={cx(
+                        "focus-ring group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-footnote transition-colors",
+                        checked
+                          ? "bg-primary/15 font-semibold text-primary"
+                          : "text-ink-secondary hover:bg-fill/40 hover:text-ink",
+                      )}
                     >
-                      <ArrowUpIcon size={18} />
-                    </span>
-                    <span className="flex-1">{t("app.install_app")}</span>
-                    <ChevronRightIcon
-                      size={18}
-                      className="shrink-0 text-ink-tertiary"
-                    />
-                  </button>
+                      <span
+                        className={cx(
+                          "shrink-0 transition-colors",
+                          checked
+                            ? "text-primary"
+                            : "text-ink-tertiary group-hover:text-ink",
+                        )}
+                        aria-hidden="true"
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="truncate">{item.label}</span>
+                    </button>
+                  );
+                })}
+                {visibleTabs.length === 0 && (
+                  <p className="px-2 py-4 text-center text-footnote text-ink-tertiary">
+                    {t("settings.none_found")}
+                  </p>
                 )}
               </div>
             </div>
+          </nav>
 
-            {/* TAB: THEME */}
-            <div
-              className={cx(
-                "space-y-6 max-w-[620px]",
-                tab === "theme"
-                  ? "opacity-100"
-                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
-              )}
-            >
-              {/* Description */}
-              <p className="m-0 text-footnote text-ink-secondary">
-                {t("settings.theme_desc")}{" "}
-                <a
-                  href="#"
-                  onClick={(e) => e.preventDefault()}
-                  className="text-primary hover:underline font-medium"
-                >
-                  {t("settings.learn_more")}
-                </a>
-              </p>
-
-              {/* Sync theme toggle */}
-              <div className="flex items-center gap-3">
-                <Switch
-                  label={t("settings.sync_theme")}
-                  checked={syncTheme}
-                  onChange={setSyncTheme}
-                  className="border-b-0 py-0"
-                />
-                <span className="text-callout font-medium text-ink">
-                  {t("settings.sync_theme")}
-                </span>
-              </div>
-
-              {/* Appearance Segmented Pill */}
-              <section className="space-y-2.5">
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
-                  {t("app.appearance")}
-                </h2>
-                <Segmented
-                  label={t("app.appearance")}
-                  value={settings.theme}
-                  onChange={(theme) => onChange({ theme })}
-                  size="lg"
-                  options={[
-                    { value: "light", label: t("app.theme_light") },
-                    { value: "dark", label: t("app.theme_dark") },
-                    { value: "system", label: t("app.theme_system") },
-                  ]}
-                />
-              </section>
-
-              {/* Your themes */}
-              <section className="space-y-3">
-                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-3">
-                  {t("settings.your_themes")}
-                </h2>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-                  {ALL_THEME_PALETTES.map((item) => {
-                    const isCurrent = activePalette === item.id;
-                    return (
-                      <div
-                        key={item.id}
-                        onClick={() => {
-                          setActivePalette(item.id);
-                          applyThemePalette(item.id);
-                        }}
-                        className={cx(
-                          "rounded-xl border p-3 bg-surface/40 hover:border-separator transition-all cursor-pointer space-y-2.5",
-                          isCurrent
-                            ? "border-primary/80 ring-1 ring-primary/40 bg-fill/20"
-                            : "border-separator/50 hover:bg-fill/10",
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2">
-                            <span
-                              className="h-2 w-8 rounded-full shadow-xs"
-                              style={{
-                                backgroundColor:
-                                  item.id === "default"
-                                    ? "var(--color-ink)"
-                                    : item.color,
-                              }}
-                            />
-                            <span className="text-footnote font-semibold text-ink">
-                              {item.name}
-                            </span>
-                          </div>
-                          {isCurrent && (
-                            <span className="text-primary" aria-hidden="true">
-                              <CheckIcon size={15} />
-                            </span>
-                          )}
-                        </div>
-                        {/* Mockup task rows */}
-                        <div className="space-y-2 pt-1">
-                          <div className="flex items-center gap-2">
-                            <div
-                              className="size-3 rounded-full border"
-                              style={{
-                                borderColor:
-                                  item.id === "default"
-                                    ? "var(--color-ink-secondary)"
-                                    : item.color,
-                              }}
-                            />
-                            <div className="h-1.5 w-24 rounded-full bg-fill-2" />
-                          </div>
-                          <div className="pl-5">
-                            <div className="h-1.5 w-28 rounded-full bg-fill" />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </section>
+          {/* Right Main Content Pane */}
+          <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
+            {/* Header Bar */}
+            <div className="flex h-14 items-center justify-between border-b border-separator/40 px-6 sm:px-8 shrink-0">
+              <span className="text-body sm:text-heading font-bold text-ink">
+                {currentTabObj?.label ?? t("settings.title")}
+              </span>
+              <button
+                type="button"
+                onClick={onBack}
+                aria-label={t("common.close")}
+                className="focus-ring cursor-pointer rounded-lg p-1.5 text-ink-tertiary hover:bg-fill hover:text-ink transition-colors"
+              >
+                <XIcon size={20} />
+              </button>
             </div>
 
-            {/* TAB: SUBSCRIPTION */}
-            {tab === "subscription" && (
-              <div className="space-y-6 max-w-[620px]">
-                <div className="rounded-2xl border border-separator/50 bg-fill/20 p-5">
-                  <span className="text-caption font-semibold uppercase tracking-wider text-primary">
-                    {t("settings.current_plan_heading")}
-                  </span>
-                  <h3 className="mt-1 text-heading font-bold text-ink">
-                    {t("settings.beginner_plan_title")}
-                  </h3>
-                  <p className="mt-1 text-footnote text-ink-secondary">
-                    {t("settings.beginner_plan_desc")}
-                  </p>
-                  <div className="mt-4 flex gap-3">
-                    <Button variant="primary" size="sm" className="rounded-lg">
-                      {t("settings.upgrade_pro")}
-                    </Button>
+            {/* Content Area */}
+            <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 sm:px-8 py-6 space-y-6 text-callout">
+              {/* TAB: ACCOUNT */}
+              <div
+                className={cx(
+                  "space-y-6 max-w-[620px]",
+                  tab === "account"
+                    ? "opacity-100"
+                    : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+                )}
+              >
+                {/* Plan */}
+                <section>
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                    {t("settings.plan_heading")}
+                  </h2>
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-body font-semibold text-ink">
+                      {t("settings.plan_beginner")}
+                    </span>
                     <Button
                       variant="secondary"
                       size="sm"
                       className="rounded-lg"
                     >
-                      {t("settings.compare_plans")}
+                      {t("settings.manage_plan")}
                     </Button>
                   </div>
-                </div>
-              </div>
-            )}
+                </section>
 
-            {/* TAB: NOTIFICATIONS */}
-            {tab === "notifications" && (
-              <div
-                className="flex flex-col gap-6 max-w-[620px]"
-                data-testid="notifications-tab"
-              >
-                <section
-                  className="flex flex-col gap-4 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
-                  aria-label={t("app.notification_diag_title")}
-                >
-                  <div>
-                    <h3 className="m-0 text-heading font-semibold text-ink">
-                      {t("app.notification_diag_title")}
-                    </h3>
-                    <p className="m-0 mt-1 text-footnote text-ink-secondary">
-                      {t("app.notification_diag_desc")}
-                    </p>
-                  </div>
-
-                  {/* Browser permission diagnostic */}
-                  <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-callout font-medium text-ink">
-                        {t("app.browser_permission")}
-                      </span>
-                      <span
-                        className={cx(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                          !notificationSupported
-                            ? "bg-fill text-ink-secondary"
-                            : notificationPermission === "granted"
-                              ? "bg-success/15 text-success"
-                              : notificationPermission === "denied"
-                                ? "bg-error/15 text-error"
-                                : "bg-warning/15 text-warning",
-                        )}
-                      >
-                        <span
-                          className={cx(
-                            "size-2 rounded-full",
-                            !notificationSupported
-                              ? "bg-ink-tertiary"
-                              : notificationPermission === "granted"
-                                ? "bg-success"
-                                : notificationPermission === "denied"
-                                  ? "bg-error"
-                                  : "bg-warning",
-                          )}
-                        />
-                        {!notificationSupported
-                          ? t("app.perm_unsupported")
-                          : notificationPermission === "granted"
-                            ? t("app.perm_enabled")
-                            : notificationPermission === "denied"
-                              ? t("app.perm_blocked")
-                              : t("app.perm_not_configured")}
-                      </span>
+                {/* Photo */}
+                <section>
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                    {t("settings.photo_heading")}
+                  </h2>
+                  <div className="flex items-center gap-4">
+                    <span
+                      className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-xl font-bold shadow-xs"
+                      aria-hidden="true"
+                    >
+                      {displayName
+                        ? displayName.slice(0, 1).toUpperCase()
+                        : "T"}
+                    </span>
+                    <div className="flex flex-col gap-1.5">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-lg"
+                        >
+                          {t("settings.change_photo")}
+                        </Button>
+                        <button
+                          type="button"
+                          className="rounded-lg border border-error/40 px-3 py-1.5 text-footnote font-medium text-error hover:bg-error/10 transition-colors cursor-pointer"
+                        >
+                          {t("settings.remove_photo")}
+                        </button>
+                      </div>
+                      <p className="m-0 text-caption text-ink-tertiary">
+                        {t("settings.photo_max_size")}
+                      </p>
+                      <p className="m-0 text-caption text-ink-tertiary">
+                        {t("settings.photo_public")}
+                      </p>
                     </div>
-                    <p className="m-0 text-footnote text-ink-secondary">
-                      {!notificationSupported
-                        ? t("app.perm_desc_unsupported")
-                        : notificationPermission === "granted"
-                          ? t("app.perm_desc_enabled")
-                          : notificationPermission === "denied"
-                            ? t("app.perm_desc_blocked")
-                            : t("app.perm_desc_not_configured")}
-                    </p>
                   </div>
+                </section>
 
-                  {/* VAPID Server Status */}
-                  <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-callout font-medium text-ink">
-                        {t("app.server_push_service")}
-                      </span>
-                      <span
-                        className={cx(
-                          "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                          vapidConfigured === true
-                            ? "bg-success/15 text-success"
-                            : vapidConfigured === false
-                              ? "bg-error/15 text-error"
-                              : "bg-fill text-ink-secondary",
-                        )}
-                      >
-                        <span
-                          className={cx(
-                            "size-2 rounded-full",
-                            vapidConfigured === true
-                              ? "bg-success"
-                              : vapidConfigured === false
-                                ? "bg-error"
-                                : "bg-ink-tertiary",
-                          )}
-                        />
-                        {vapidConfigured === true
-                          ? t("app.vapid_ready")
-                          : vapidConfigured === false
-                            ? t("app.vapid_missing")
-                            : t("app.vapid_checking")}
-                      </span>
-                    </div>
-                    <p className="m-0 text-footnote text-ink-secondary">
-                      {vapidConfigured === true
-                        ? t("app.vapid_desc_ready")
-                        : vapidConfigured === false
-                          ? t("app.vapid_desc_missing")
-                          : t("app.vapid_desc_checking")}
-                    </p>
+                {/* Name */}
+                <section>
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+                    {t("settings.name_heading")}
+                  </h2>
+                  <span className="sr-only">{displayName}</span>
+                  <input
+                    type="text"
+                    value={displayName}
+                    maxLength={255}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    onBlur={handleNameBlur}
+                    placeholder={t("settings.name_placeholder")}
+                    className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-callout text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
+                  />
+                  <div className="mt-1 text-right text-caption text-ink-tertiary">
+                    {displayName.length}/255
                   </div>
+                </section>
 
-                  {/* Action buttons */}
-                  <div className="mt-2 flex flex-col gap-2.5">
-                    {notificationPermission !== "granted" ? (
-                      <Button
-                        variant="primary"
-                        disabled={!notificationSupported}
-                        onClick={onEnableNotifications}
-                      >
-                        {t("app.enable_notifications")}
-                      </Button>
-                    ) : (
+                {/* Email */}
+                <section>
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                    {t("settings.email_heading")}
+                  </h2>
+                  <p className="m-0 mb-2.5 text-callout text-ink font-medium">
+                    {email}
+                  </p>
+                  <Button variant="secondary" size="sm" className="rounded-lg">
+                    {t("settings.change_email")}
+                  </Button>
+                </section>
+
+                {/* Password */}
+                <section>
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+                    {t("settings.password_heading")}
+                  </h2>
+                  <Button variant="secondary" size="sm" className="rounded-lg">
+                    {t("settings.add_password")}
+                  </Button>
+                </section>
+
+                {/* Connected accounts */}
+                <section className="border-t border-separator/40 pt-4">
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                    {t("settings.connected_accounts_heading")}
+                  </h2>
+                  <p className="m-0 text-footnote text-ink-secondary mb-2">
+                    {t("settings.connected_accounts_desc")}
+                  </p>
+                  <p className="m-0 text-footnote text-ink-secondary mb-3">
+                    {t("settings.connected_login_as", { email })}
+                  </p>
+                  <p className="m-0 text-caption text-ink-tertiary mb-3">
+                    {t("settings.connected_password_notice")}
+                  </p>
+                  <div className="flex flex-col gap-2 max-w-[320px]">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="rounded-lg w-full justify-center"
+                    >
+                      {t("settings.connect_facebook")}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="rounded-lg w-full justify-center"
+                    >
+                      {t("settings.connect_apple")}
+                    </Button>
+                  </div>
+                </section>
+
+                {/* Sign out */}
+                <section className="border-t border-separator/40 pt-5 space-y-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                    <Button
+                      variant="destructive"
+                      className="h-10 px-6 text-callout font-semibold rounded-xl"
+                      onClick={onSignOut}
+                    >
+                      {t("app.sign_out")}
+                    </Button>
+                    {onSignOutEverywhere && (
                       <Button
                         variant="secondary"
-                        onClick={onSendTestNotification}
+                        className="h-10 px-4 text-callout font-medium rounded-xl"
+                        onClick={onSignOutEverywhere}
                       >
-                        <BellIcon size={16} />
-                        {t("app.send_test_notification")}
+                        {t("auth.signout_everywhere")}
                       </Button>
                     )}
                   </div>
                 </section>
-              </div>
-            )}
 
-            {/* TAB: REMINDERS */}
-            {tab === "reminders" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.reminders_permission_heading")}
-                  </h2>
-                  <div className="flex items-center justify-between rounded-xl border border-separator/40 bg-fill/30 p-4">
-                    <span className="text-callout text-ink">
-                      {t("settings.reminders_system_label")}
-                    </span>
-                    <span className="text-footnote font-semibold text-ink-secondary">
-                      {remindersStatus ?? "Allowed"}
-                    </span>
-                  </div>
-                </section>
-              </div>
-            )}
-
-            {/* TAB: SIDEBAR */}
-            {tab === "sidebar" && (
-              <div className="space-y-6 max-w-[620px]">
-                {/* Task counts setting */}
-                <section className="space-y-3">
-                  <div className="flex items-center justify-between py-1">
+                {/* Delete account */}
+                <section className="border-t border-separator/40 pt-5 pb-2">
+                  <div className="rounded-xl border border-error/30 bg-error/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
                     <div>
-                      <span className="block text-callout font-semibold text-ink">
-                        {t("settings.sidebar_show_task_counts")}
-                      </span>
-                      <p className="m-0 text-caption text-ink-tertiary mt-0.5">
-                        {t("settings.sidebar_show_task_counts_desc")}
-                      </p>
+                      <div className="text-callout font-bold text-error flex items-center gap-2">
+                        <TrashIcon size={16} />
+                        {t("settings.delete_account")}
+                      </div>
+                      <div className="text-caption text-ink-secondary mt-1">
+                        {t("settings.delete_account_desc")}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Switch
-                        label={t("settings.sidebar_show_task_counts")}
-                        checked={showTaskCounts}
-                        onChange={(checked) => {
-                          setShowTaskCounts(checked);
-                          try {
-                            localStorage.setItem(
-                              "agendal.sidebar_task_counts",
-                              String(checked),
-                            );
-                            window.dispatchEvent(
-                              new Event("agendal:sidebar_counts_changed"),
-                            );
-                          } catch {}
-                        }}
-                        className="border-b-0 py-0"
-                      />
-                      <span className="text-footnote font-medium text-ink w-8">
-                        {showTaskCounts ? t("settings.on") : t("settings.off")}
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Interactive Example Preview Mockup */}
-                  <div className="rounded-xl border border-separator/50 bg-fill/20 p-4 space-y-2.5">
-                    <span className="text-caption font-semibold uppercase tracking-wider text-ink-tertiary">
-                      {t("settings.sidebar_preview")}
-                    </span>
-                    <div className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs">
-                      {sidebarTabs.inbox !== false && (
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium text-footnote">
-                          <span className="flex items-center gap-2">
-                            <InboxIcon size={15} />
-                            <span>{t("nav.inbox")}</span>
-                          </span>
-                          {showTaskCounts && (
-                            <span className="text-caption font-semibold text-primary/80 tabular-nums">
-                              5
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {sidebarTabs.upcoming !== false && (
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                          <span className="flex items-center gap-2">
-                            <CalendarIcon size={15} />
-                            <span>{t("nav.upcoming")}</span>
-                          </span>
-                          {showTaskCounts && (
-                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                              12
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {sidebarTabs.notes !== false && (
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                          <span className="flex items-center gap-2">
-                            <NotesIcon size={15} />
-                            <span>{t("nav.notes")}</span>
-                          </span>
-                          {showTaskCounts && (
-                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                              2
-                            </span>
-                          )}
-                        </div>
-                      )}
-                      {sidebarTabs.projects !== false && (
-                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                          <span className="flex items-center gap-2">
-                            <FolderIcon size={15} />
-                            <span>{t("nav.projects")}</span>
-                          </span>
-                          {showTaskCounts && (
-                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                              3
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-error/50 bg-error/10 hover:bg-error hover:text-white text-error font-semibold text-footnote px-3.5 py-1.5 transition-colors cursor-pointer shrink-0"
+                      onClick={() => {}}
+                    >
+                      {t("settings.delete_account")}
+                    </button>
                   </div>
                 </section>
+              </div>
 
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.sidebar_nav_heading")}
+              {/* TAB: GENERAL */}
+              <div
+                className={cx(
+                  "space-y-6 max-w-[620px]",
+                  tab === "general"
+                    ? "opacity-100"
+                    : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+                )}
+              >
+                {/* Language */}
+                <SelectDropdown
+                  label={t("settings.language")}
+                  value={language}
+                  onChange={setLanguage}
+                  options={[
+                    { value: "en", label: "English" },
+                    {
+                      value: "vi",
+                      label: "Tiếng Việt",
+                      disabled: true,
+                      badge: t("settings.coming_soon"),
+                    },
+                    {
+                      value: "fr",
+                      label: "Français",
+                      disabled: true,
+                      badge: t("settings.coming_soon"),
+                    },
+                    {
+                      value: "de",
+                      label: "Deutsch",
+                      disabled: true,
+                      badge: t("settings.coming_soon"),
+                    },
+                    {
+                      value: "es",
+                      label: "Español",
+                      disabled: true,
+                      badge: t("settings.coming_soon"),
+                    },
+                  ]}
+                />
+
+                {/* Home view */}
+                <SelectDropdown
+                  label={t("settings.home_view")}
+                  value={homeView}
+                  onChange={(val) => {
+                    setHomeView(val);
+                    try {
+                      localStorage.setItem("agendal.home_view", val);
+                    } catch {}
+                  }}
+                  options={[
+                    {
+                      value: "inbox",
+                      label: t("nav.inbox"),
+                      icon: <InboxIcon size={16} />,
+                    },
+                    {
+                      value: "upcoming",
+                      label: t("nav.upcoming"),
+                      icon: <CalendarIcon size={16} />,
+                    },
+                    {
+                      value: "projects",
+                      label: t("nav.projects"),
+                      icon: <SidebarIcon size={16} />,
+                    },
+                  ]}
+                />
+
+                {/* Date & time section */}
+                <div className="pt-2">
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-3.5">
+                    {t("settings.date_time")}
                   </h2>
-                  <p className="text-footnote text-ink-secondary mb-4">
-                    {t("settings.sidebar_nav_desc")}
-                  </p>
-                  <div className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-3 py-1">
-                    {[
-                      {
-                        id: "inbox" as TabId,
-                        label: t("nav.inbox"),
-                        icon: <InboxIcon size={18} />,
-                      },
-                      {
-                        id: "upcoming" as TabId,
-                        label: t("nav.upcoming"),
-                        icon: <CalendarIcon size={18} />,
-                      },
-                      {
-                        id: "notes" as TabId,
-                        label: t("nav.notes"),
-                        icon: <NotesIcon size={18} />,
-                      },
-                      {
-                        id: "projects" as TabId,
-                        label: t("nav.projects"),
-                        icon: <FolderIcon size={18} />,
-                      },
-                    ].map((item) => {
-                      const isChecked = sidebarTabs[item.id] !== false;
-                      const enabledCount =
-                        Object.values(sidebarTabs).filter(Boolean).length;
-                      const isLastEnabled = isChecked && enabledCount <= 1;
 
+                  <div className="space-y-4">
+                    {/* Time zone */}
+                    <SelectDropdown
+                      label={t("settings.time_zone")}
+                      value={timeZone}
+                      onChange={(tz) => {
+                        setTimeZone(tz);
+                        try {
+                          localStorage.setItem("agendal.timezone", tz);
+                        } catch {}
+                      }}
+                      options={[
+                        {
+                          value: "Asia/Ho_Chi_Minh",
+                          label: "Asia/Ho_Chi_Minh",
+                        },
+                        { value: "UTC", label: "UTC" },
+                        {
+                          value: "America/New_York",
+                          label: "America/New_York",
+                        },
+                        { value: "Europe/London", label: "Europe/London" },
+                        { value: "Asia/Tokyo", label: "Asia/Tokyo" },
+                      ]}
+                    />
+
+                    {/* Time format (24h vs 12h) */}
+                    <SelectDropdown
+                      label={t("app.time_format")}
+                      value={settings.timeFormat}
+                      onChange={(timeFormat) => onChange({ timeFormat })}
+                      roleMode="radio"
+                      options={[
+                        { value: "24h", label: t("app.time_24h") },
+                        { value: "12h", label: t("app.time_12h") },
+                      ]}
+                    />
+
+                    {/* Date format */}
+                    <SelectDropdown
+                      label={t("settings.date_format")}
+                      value={dateFormat}
+                      onChange={(fmt) => {
+                        setDateFormat(fmt);
+                        try {
+                          localStorage.setItem("agendal.date_format", fmt);
+                        } catch {}
+                      }}
+                      options={[
+                        { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
+                        { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+                        { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
+                        { value: "D MMM YYYY", label: "D MMM YYYY" },
+                      ]}
+                    />
+
+                    {/* Week start */}
+                    <SelectDropdown
+                      label={t("app.week_start")}
+                      value={settings.weekStart}
+                      onChange={(weekStart) => onChange({ weekStart })}
+                      helperText={t("settings.week_start_help")}
+                      roleMode="radio"
+                      options={[
+                        { value: "mon", label: t("app.week_mon") },
+                        { value: "sun", label: t("app.week_sun") },
+                      ]}
+                    />
+
+                    {/* Next week */}
+                    <SelectDropdown
+                      label={t("settings.next_week")}
+                      value={nextWeekDay}
+                      onChange={(day) => {
+                        setNextWeekDay(day);
+                        try {
+                          localStorage.setItem("agendal.next_week_day", day);
+                        } catch {}
+                      }}
+                      helperText={t("settings.next_week_help")}
+                      options={[
+                        { value: "mon", label: t("app.week_mon") },
+                        { value: "sun", label: t("app.week_sun") },
+                        { value: "sat", label: "Saturday" },
+                      ]}
+                    />
+
+                    {/* Weekend */}
+                    <SelectDropdown
+                      label={t("settings.weekend")}
+                      value={weekendDay}
+                      onChange={(day) => {
+                        setWeekendDay(day);
+                        try {
+                          localStorage.setItem("agendal.weekend_day", day);
+                        } catch {}
+                      }}
+                      helperText={t("settings.weekend_help")}
+                      options={[
+                        { value: "sat", label: "Saturday" },
+                        { value: "sun", label: t("app.week_sun") },
+                      ]}
+                    />
+
+                    {/* Karma notice */}
+                    <p className="m-0 text-caption text-ink-secondary pt-1">
+                      {t("settings.date_time_karma_notice")}{" "}
+                      <button
+                        type="button"
+                        onClick={() => setTab("productivity")}
+                        className="text-primary hover:underline font-medium cursor-pointer"
+                      >
+                        {t("settings.tab_productivity")}
+                      </button>
+                      .
+                    </p>
+
+                    {/* Page view setting */}
+                    <div className="pt-2">
+                      <SelectDropdown
+                        label={t("app.page_view")}
+                        value={settings.pageView ?? "flat"}
+                        onChange={(pageView) =>
+                          onChange({ pageView: pageView as PageViewMode })
+                        }
+                        roleMode="radio"
+                        options={[
+                          { value: "flat", label: t("app.view_flat") },
+                          { value: "full", label: t("app.view_full") },
+                        ]}
+                      />
+                    </div>
+
+                    {/* Smart date recognition */}
+                    <div className="pt-2">
+                      <div className="flex items-center justify-between py-1">
+                        <div>
+                          <span className="block text-callout font-semibold text-ink">
+                            {t("settings.smart_date_recognition")}
+                          </span>
+                          <p className="m-0 text-caption text-ink-tertiary mt-0.5">
+                            {t("settings.smart_date_recognition_help")}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            label={t("settings.smart_date_recognition")}
+                            checked={smartDateRecognition}
+                            onChange={setSmartDateRecognition}
+                            className="border-b-0 py-0"
+                          />
+                          <span className="text-footnote font-medium text-ink w-8">
+                            {smartDateRecognition
+                              ? t("settings.on")
+                              : t("settings.off")}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Device */}
+                <div className="border-t border-separator/40 pt-4 space-y-2">
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-callout font-semibold text-ink">
+                      {t("app.remember_device")}
+                    </span>
+                    <Switch
+                      label={t("app.remember_device")}
+                      checked={settings.rememberDevice}
+                      onChange={(rememberDevice) =>
+                        onChange({ rememberDevice })
+                      }
+                      className="border-b-0 py-0"
+                    />
+                  </div>
+                  {onInstall && (
+                    <button
+                      type="button"
+                      className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-10 w-full items-center gap-3 py-1.5 text-left text-callout text-ink hover:bg-fill/40 rounded-lg px-2"
+                      onClick={onInstall}
+                    >
+                      <span
+                        className="inline-flex text-ink-secondary"
+                        aria-hidden="true"
+                      >
+                        <ArrowUpIcon size={18} />
+                      </span>
+                      <span className="flex-1">{t("app.install_app")}</span>
+                      <ChevronRightIcon
+                        size={18}
+                        className="shrink-0 text-ink-tertiary"
+                      />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* TAB: THEME */}
+              <div
+                className={cx(
+                  "space-y-6 max-w-[620px]",
+                  tab === "theme"
+                    ? "opacity-100"
+                    : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+                )}
+              >
+                {/* Description */}
+                <p className="m-0 text-footnote text-ink-secondary">
+                  {t("settings.theme_desc")}{" "}
+                  <a
+                    href="#"
+                    onClick={(e) => e.preventDefault()}
+                    className="text-primary hover:underline font-medium"
+                  >
+                    {t("settings.learn_more")}
+                  </a>
+                </p>
+
+                {/* Sync theme toggle */}
+                <div className="flex items-center gap-3">
+                  <Switch
+                    label={t("settings.sync_theme")}
+                    checked={syncTheme}
+                    onChange={setSyncTheme}
+                    className="border-b-0 py-0"
+                  />
+                  <span className="text-callout font-medium text-ink">
+                    {t("settings.sync_theme")}
+                  </span>
+                </div>
+
+                {/* Appearance Segmented Pill */}
+                <section className="space-y-2.5">
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
+                    {t("app.appearance")}
+                  </h2>
+                  <Segmented
+                    label={t("app.appearance")}
+                    value={settings.theme}
+                    onChange={(theme) => onChange({ theme })}
+                    size="lg"
+                    options={[
+                      { value: "light", label: t("app.theme_light") },
+                      { value: "dark", label: t("app.theme_dark") },
+                      { value: "system", label: t("app.theme_system") },
+                    ]}
+                  />
+                </section>
+
+                {/* Your themes */}
+                <section className="space-y-3">
+                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-3">
+                    {t("settings.your_themes")}
+                  </h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                    {ALL_THEME_PALETTES.map((item) => {
+                      const isCurrent = activePalette === item.id;
                       return (
-                        <label
+                        <div
                           key={item.id}
+                          onClick={() => {
+                            setActivePalette(item.id);
+                            applyThemePalette(item.id);
+                          }}
                           className={cx(
-                            "flex items-center justify-between py-3 px-2 rounded-lg cursor-pointer transition-colors select-none",
-                            isLastEnabled
-                              ? "cursor-not-allowed opacity-80"
-                              : "hover:bg-fill/40",
+                            "rounded-xl border p-3 bg-surface/40 hover:border-separator transition-all cursor-pointer space-y-2.5",
+                            isCurrent
+                              ? "border-primary/80 ring-1 ring-primary/40 bg-fill/20"
+                              : "border-separator/50 hover:bg-fill/10",
                           )}
                         >
-                          <div className="flex items-center gap-3">
-                            <GripVerticalIcon
-                              size={15}
-                              className="text-ink-tertiary/40 shrink-0"
-                            />
-                            <span className="text-ink-secondary shrink-0">
-                              {item.icon}
-                            </span>
-                            <span className="text-callout font-medium text-ink">
-                              {item.label}
-                            </span>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className="h-2 w-8 rounded-full shadow-xs"
+                                style={{
+                                  backgroundColor:
+                                    item.id === "default"
+                                      ? "var(--color-ink)"
+                                      : item.color,
+                                }}
+                              />
+                              <span className="text-footnote font-semibold text-ink">
+                                {item.name}
+                              </span>
+                            </div>
+                            {isCurrent && (
+                              <span className="text-primary" aria-hidden="true">
+                                <CheckIcon size={15} />
+                              </span>
+                            )}
                           </div>
-                          <input
-                            type="checkbox"
-                            checked={isChecked}
-                            disabled={isLastEnabled}
-                            onChange={() => toggleSidebarTab(item.id)}
-                            className="checkbox checkbox-primary size-5 rounded-md focus-ring"
-                            aria-label={item.label}
-                          />
-                        </label>
+                          {/* Mockup task rows */}
+                          <div className="space-y-2 pt-1">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="size-3 rounded-full border"
+                                style={{
+                                  borderColor:
+                                    item.id === "default"
+                                      ? "var(--color-ink-secondary)"
+                                      : item.color,
+                                }}
+                              />
+                              <div className="h-1.5 w-24 rounded-full bg-fill-2" />
+                            </div>
+                            <div className="pl-5">
+                              <div className="h-1.5 w-28 rounded-full bg-fill" />
+                            </div>
+                          </div>
+                        </div>
                       );
                     })}
                   </div>
                 </section>
               </div>
-            )}
 
-            {/* TAB: QUICK ADD */}
-            {tab === "quick_add" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.quick_add_heading")}
-                  </h2>
-                  <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                    <p className="text-footnote text-ink-secondary mb-0">
-                      {t("settings.quick_add_desc")}
+              {/* TAB: SUBSCRIPTION */}
+              {tab === "subscription" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <div className="rounded-2xl border border-separator/50 bg-fill/20 p-5">
+                    <span className="text-caption font-semibold uppercase tracking-wider text-primary">
+                      {t("settings.current_plan_heading")}
+                    </span>
+                    <h3 className="mt-1 text-heading font-bold text-ink">
+                      {t("settings.beginner_plan_title")}
+                    </h3>
+                    <p className="mt-1 text-footnote text-ink-secondary">
+                      {t("settings.beginner_plan_desc")}
                     </p>
+                    <div className="mt-4 flex gap-3">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="rounded-lg"
+                      >
+                        {t("settings.upgrade_pro")}
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="rounded-lg"
+                      >
+                        {t("settings.compare_plans")}
+                      </Button>
+                    </div>
                   </div>
-                </section>
-              </div>
-            )}
+                </div>
+              )}
 
-            {/* TAB: PRODUCTIVITY */}
-            {tab === "productivity" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.productivity_heading")}
-                  </h2>
-                  <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                    <p className="text-footnote text-ink-secondary mb-0">
-                      {t("settings.productivity_desc")}
-                    </p>
-                  </div>
-                </section>
-              </div>
-            )}
-
-            {/* TAB: BACKUPS */}
-            {tab === "backups" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.backups_heading")}
-                  </h2>
-                  <div className="rounded-xl border border-separator/40 bg-fill/30 p-4 flex items-center justify-between">
+              {/* TAB: NOTIFICATIONS */}
+              {tab === "notifications" && (
+                <div
+                  className="flex flex-col gap-6 max-w-[620px]"
+                  data-testid="notifications-tab"
+                >
+                  <section
+                    className="flex flex-col gap-4 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
+                    aria-label={t("app.notification_diag_title")}
+                  >
                     <div>
-                      <p className="text-callout font-medium text-ink mb-1">
-                        {t("settings.export_data_title")}
-                      </p>
-                      <p className="text-caption text-ink-secondary m-0">
-                        {t("settings.export_data_desc")}
+                      <h3 className="m-0 text-heading font-semibold text-ink">
+                        {t("app.notification_diag_title")}
+                      </h3>
+                      <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                        {t("app.notification_diag_desc")}
                       </p>
                     </div>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="rounded-lg"
-                    >
-                      {t("settings.export_json")}
-                    </Button>
-                  </div>
-                </section>
-              </div>
-            )}
 
-            {/* TAB: INTEGRATIONS */}
-            {tab === "integrations" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.integrations_heading")}
-                  </h2>
-                  <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                    <p className="text-footnote text-ink-secondary m-0">
-                      {t("settings.integrations_desc")}
-                    </p>
-                  </div>
-                </section>
-              </div>
-            )}
+                    {/* Browser permission diagnostic */}
+                    <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-callout font-medium text-ink">
+                          {t("app.browser_permission")}
+                        </span>
+                        <span
+                          className={cx(
+                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
+                            !notificationSupported
+                              ? "bg-fill text-ink-secondary"
+                              : notificationPermission === "granted"
+                                ? "bg-success/15 text-success"
+                                : notificationPermission === "denied"
+                                  ? "bg-error/15 text-error"
+                                  : "bg-warning/15 text-warning",
+                          )}
+                        >
+                          <span
+                            className={cx(
+                              "size-2 rounded-full",
+                              !notificationSupported
+                                ? "bg-ink-tertiary"
+                                : notificationPermission === "granted"
+                                  ? "bg-success"
+                                  : notificationPermission === "denied"
+                                    ? "bg-error"
+                                    : "bg-warning",
+                            )}
+                          />
+                          {!notificationSupported
+                            ? t("app.perm_unsupported")
+                            : notificationPermission === "granted"
+                              ? t("app.perm_enabled")
+                              : notificationPermission === "denied"
+                                ? t("app.perm_blocked")
+                                : t("app.perm_not_configured")}
+                        </span>
+                      </div>
+                      <p className="m-0 text-footnote text-ink-secondary">
+                        {!notificationSupported
+                          ? t("app.perm_desc_unsupported")
+                          : notificationPermission === "granted"
+                            ? t("app.perm_desc_enabled")
+                            : notificationPermission === "denied"
+                              ? t("app.perm_desc_blocked")
+                              : t("app.perm_desc_not_configured")}
+                      </p>
+                    </div>
 
-            {/* TAB: CALENDARS */}
-            {tab === "calendars" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.calendars_heading")}
-                  </h2>
-                  <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                    <p className="text-footnote text-ink-secondary m-0">
-                      {t("settings.calendars_desc")}
+                    {/* VAPID Server Status */}
+                    <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-callout font-medium text-ink">
+                          {t("app.server_push_service")}
+                        </span>
+                        <span
+                          className={cx(
+                            "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
+                            vapidConfigured === true
+                              ? "bg-success/15 text-success"
+                              : vapidConfigured === false
+                                ? "bg-error/15 text-error"
+                                : "bg-fill text-ink-secondary",
+                          )}
+                        >
+                          <span
+                            className={cx(
+                              "size-2 rounded-full",
+                              vapidConfigured === true
+                                ? "bg-success"
+                                : vapidConfigured === false
+                                  ? "bg-error"
+                                  : "bg-ink-tertiary",
+                            )}
+                          />
+                          {vapidConfigured === true
+                            ? t("app.vapid_ready")
+                            : vapidConfigured === false
+                              ? t("app.vapid_missing")
+                              : t("app.vapid_checking")}
+                        </span>
+                      </div>
+                      <p className="m-0 text-footnote text-ink-secondary">
+                        {vapidConfigured === true
+                          ? t("app.vapid_desc_ready")
+                          : vapidConfigured === false
+                            ? t("app.vapid_desc_missing")
+                            : t("app.vapid_desc_checking")}
+                      </p>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="mt-2 flex flex-col gap-2.5">
+                      {notificationPermission !== "granted" ? (
+                        <Button
+                          variant="primary"
+                          disabled={!notificationSupported}
+                          onClick={onEnableNotifications}
+                        >
+                          {t("app.enable_notifications")}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="secondary"
+                          onClick={onSendTestNotification}
+                        >
+                          <BellIcon size={16} />
+                          {t("app.send_test_notification")}
+                        </Button>
+                      )}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: REMINDERS */}
+              {tab === "reminders" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.reminders_permission_heading")}
+                    </h2>
+                    <div className="flex items-center justify-between rounded-xl border border-separator/40 bg-fill/30 p-4">
+                      <span className="text-callout text-ink">
+                        {t("settings.reminders_system_label")}
+                      </span>
+                      <span className="text-footnote font-semibold text-ink-secondary">
+                        {remindersStatus ?? "Allowed"}
+                      </span>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: SIDEBAR */}
+              {tab === "sidebar" && (
+                <div className="space-y-6 max-w-[620px]">
+                  {/* Task counts setting */}
+                  <section className="space-y-3">
+                    <div className="flex items-center justify-between py-1">
+                      <div>
+                        <span className="block text-callout font-semibold text-ink">
+                          {t("settings.sidebar_show_task_counts")}
+                        </span>
+                        <p className="m-0 text-caption text-ink-tertiary mt-0.5">
+                          {t("settings.sidebar_show_task_counts_desc")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          label={t("settings.sidebar_show_task_counts")}
+                          checked={showTaskCounts}
+                          onChange={(checked) => {
+                            setShowTaskCounts(checked);
+                            try {
+                              localStorage.setItem(
+                                "agendal.sidebar_task_counts",
+                                String(checked),
+                              );
+                              window.dispatchEvent(
+                                new Event("agendal:sidebar_counts_changed"),
+                              );
+                            } catch {}
+                          }}
+                          className="border-b-0 py-0"
+                        />
+                        <span className="text-footnote font-medium text-ink w-8">
+                          {showTaskCounts
+                            ? t("settings.on")
+                            : t("settings.off")}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Interactive Example Preview Mockup */}
+                    <div className="rounded-xl border border-separator/50 bg-fill/20 p-4 space-y-2.5">
+                      <span className="text-caption font-semibold uppercase tracking-wider text-ink-tertiary">
+                        {t("settings.sidebar_preview")}
+                      </span>
+                      <div className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs">
+                        {sidebarTabs.inbox !== false && (
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium text-footnote">
+                            <span className="flex items-center gap-2">
+                              <InboxIcon size={15} />
+                              <span>{t("nav.inbox")}</span>
+                            </span>
+                            {showTaskCounts && (
+                              <span className="text-caption font-semibold text-primary/80 tabular-nums">
+                                5
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {sidebarTabs.upcoming !== false && (
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                            <span className="flex items-center gap-2">
+                              <CalendarIcon size={15} />
+                              <span>{t("nav.upcoming")}</span>
+                            </span>
+                            {showTaskCounts && (
+                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                                12
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {sidebarTabs.notes !== false && (
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                            <span className="flex items-center gap-2">
+                              <NotesIcon size={15} />
+                              <span>{t("nav.notes")}</span>
+                            </span>
+                            {showTaskCounts && (
+                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                                2
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {sidebarTabs.projects !== false && (
+                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                            <span className="flex items-center gap-2">
+                              <FolderIcon size={15} />
+                              <span>{t("nav.projects")}</span>
+                            </span>
+                            {showTaskCounts && (
+                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                                3
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.sidebar_nav_heading")}
+                    </h2>
+                    <p className="text-footnote text-ink-secondary mb-4">
+                      {t("settings.sidebar_nav_desc")}
                     </p>
-                  </div>
-                </section>
-              </div>
-            )}
+                    <div className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-3 py-1">
+                      {[
+                        {
+                          id: "inbox" as TabId,
+                          label: t("nav.inbox"),
+                          icon: <InboxIcon size={18} />,
+                        },
+                        {
+                          id: "upcoming" as TabId,
+                          label: t("nav.upcoming"),
+                          icon: <CalendarIcon size={18} />,
+                        },
+                        {
+                          id: "notes" as TabId,
+                          label: t("nav.notes"),
+                          icon: <NotesIcon size={18} />,
+                        },
+                        {
+                          id: "projects" as TabId,
+                          label: t("nav.projects"),
+                          icon: <FolderIcon size={18} />,
+                        },
+                      ].map((item) => {
+                        const isChecked = sidebarTabs[item.id] !== false;
+                        const enabledCount =
+                          Object.values(sidebarTabs).filter(Boolean).length;
+                        const isLastEnabled = isChecked && enabledCount <= 1;
+
+                        return (
+                          <label
+                            key={item.id}
+                            className={cx(
+                              "flex items-center justify-between py-3 px-2 rounded-lg cursor-pointer transition-colors select-none",
+                              isLastEnabled
+                                ? "cursor-not-allowed opacity-80"
+                                : "hover:bg-fill/40",
+                            )}
+                          >
+                            <div className="flex items-center gap-3">
+                              <GripVerticalIcon
+                                size={15}
+                                className="text-ink-tertiary/40 shrink-0"
+                              />
+                              <span className="text-ink-secondary shrink-0">
+                                {item.icon}
+                              </span>
+                              <span className="text-callout font-medium text-ink">
+                                {item.label}
+                              </span>
+                            </div>
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              disabled={isLastEnabled}
+                              onChange={() => toggleSidebarTab(item.id)}
+                              className="checkbox checkbox-primary size-5 rounded-md focus-ring"
+                              aria-label={item.label}
+                            />
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: QUICK ADD */}
+              {tab === "quick_add" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.quick_add_heading")}
+                    </h2>
+                    <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
+                      <p className="text-footnote text-ink-secondary mb-0">
+                        {t("settings.quick_add_desc")}
+                      </p>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: PRODUCTIVITY */}
+              {tab === "productivity" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.productivity_heading")}
+                    </h2>
+                    <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
+                      <p className="text-footnote text-ink-secondary mb-0">
+                        {t("settings.productivity_desc")}
+                      </p>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: BACKUPS */}
+              {tab === "backups" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.backups_heading")}
+                    </h2>
+                    <div className="rounded-xl border border-separator/40 bg-fill/30 p-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-callout font-medium text-ink mb-1">
+                          {t("settings.export_data_title")}
+                        </p>
+                        <p className="text-caption text-ink-secondary m-0">
+                          {t("settings.export_data_desc")}
+                        </p>
+                      </div>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="rounded-lg"
+                      >
+                        {t("settings.export_json")}
+                      </Button>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: INTEGRATIONS */}
+              {tab === "integrations" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.integrations_heading")}
+                    </h2>
+                    <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
+                      <p className="text-footnote text-ink-secondary m-0">
+                        {t("settings.integrations_desc")}
+                      </p>
+                    </div>
+                  </section>
+                </div>
+              )}
+
+              {/* TAB: CALENDARS */}
+              {tab === "calendars" && (
+                <div className="space-y-6 max-w-[620px]">
+                  <section>
+                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                      {t("settings.calendars_heading")}
+                    </h2>
+                    <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
+                      <p className="text-footnote text-ink-secondary m-0">
+                        {t("settings.calendars_desc")}
+                      </p>
+                    </div>
+                  </section>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 
   if (portal && typeof document !== "undefined") {
