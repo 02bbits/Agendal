@@ -327,9 +327,10 @@ it("renders the Edited label when edited_at is present (T-RV-64)", async () => {
 
   render(<NotesClient />);
 
-  await screen.findByText("Call mum");
+  // Edited follows the name on the same line, so the card doesn't grow
+  const name = await screen.findByText(/Call mum/);
 
-  expect(screen.getByText(t("note.edited_label"))).toBeTruthy();
+  expect(name.textContent).toBe(`Call mum · ${t("note.edited_label")}`);
 });
 
 const entry = (overrides: Record<string, unknown>) => ({
@@ -400,10 +401,11 @@ it("T-RV-31: card shows time, name, excerpt and status line per status", async (
     screen.getByText(name).closest("a")?.textContent ?? "";
   const accepted = t("notes.made");
 
-  expect(card("Made note")).toContain(`${accepted} · ${tc("note.made", 2)}`);
+  // Short on screen ("Accepted · 2"), the full count for screen readers
+  expect(card("Made note")).toContain(`${accepted} · 2, ${tc("note.made", 2)}`);
 
   expect(card("Changed note")).toContain(
-    `${accepted} · ${t("note.overline_updated", { count: 1 })}`,
+    `${accepted} · 1, ${t("note.overline_updated", { count: 1 })}`,
   );
 
   expect(card("Look note")).toContain(t("notes.needs"));

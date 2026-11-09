@@ -9,15 +9,32 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
-// A note is Accepted (done) with its task count, or Pending (RV-4)
-function statusLine(note: NoteListEntry): string {
-  if (note.status !== "done") return t("notes.needs");
-  const { created, updated, deleted } = note.counts;
-  const taskCount =
-    created > 0
-      ? tc("note.made", created)
-      : t("note.overline_updated", { count: updated + deleted });
-  return `${t("notes.made")} · ${taskCount}`;
+// What a done note did: tasks made, else tasks changed (RV-4)
+function taskCount({ counts }: NoteListEntry): {
+  count: number;
+  label: string;
+} {
+  if (counts.created > 0)
+    return { count: counts.created, label: tc("note.made", counts.created) };
+  const changed = counts.updated + counts.deleted;
+  return {
+    count: changed,
+    label: t("note.overline_updated", { count: changed }),
+  };
+}
+
+// One short line that never wraps: "Accepted · 2" or "Pending"; screen readers hear the full count
+function StatusLine({ note }: { note: NoteListEntry }) {
+  if (note.status !== "done")
+    return <span className="text-warning">{t("notes.needs")}</span>;
+  const { count, label } = taskCount(note);
+  return (
+    <span className="text-ink-secondary">
+      {t("notes.made")}
+      <span aria-hidden="true"> · {count}</span>
+      <span className="sr-only">, {label}</span>
+    </span>
+  );
 }
 
 export function NotesScreen({
@@ -103,8 +120,6 @@ export function NotesScreen({
           </h2>
           <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
             {rows.map((note) => {
-              // A note is Accepted (done) or Pending, needing a look (RV-4)
-              const needsLook = note.status !== "done";
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -122,6 +137,12 @@ export function NotesScreen({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">
                         {note.name ?? note.excerpt.slice(0, 60)}
+                        {note.edited_at && (
+                          <span className="font-normal text-ink-secondary">
+                            {" · "}
+                            {t("note.edited_label")}
+                          </span>
+                        )}
                       </span>
                       <span className="line-clamp-2 text-footnote text-ink-secondary">
                         {note.source_file_name
@@ -131,16 +152,8 @@ export function NotesScreen({
                           : note.excerpt}
                       </span>
                     </span>
-                    <span
-                      className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
-                    >
-                      {statusLine(note)}
-                      {note.edited_at ? " · " : ""}
-                      {note.edited_at ? (
-                        <span className="text-ink-secondary">
-                          {t("note.edited_label")}
-                        </span>
-                      ) : null}
+                    <span className="shrink-0 text-footnote whitespace-nowrap">
+                      <StatusLine note={note} />
                     </span>
                     <time
                       dateTime={note.written_at}

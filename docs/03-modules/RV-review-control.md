@@ -137,9 +137,9 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 | Status | Status line |
 |---|---|
-| `done` | `notes.made`, then `note.made_*` (tasks made), or `note.overline_updated` when the note only changed tasks: "Accepted · 2 tasks made" |
+| `done` | `notes.made` and the number of tasks it made, or changed when it made none: "Accepted · 2". Screen readers hear the full `note.made_*` or `note.overline_updated` |
 | `confirm`, `followup`, `pending` (after Undo all) | `notes.needs` |
-| Edited at least once | `note.edited_label` after the status line |
+| Edited at least once | `note.edited_label` after the name, on the name's line ("Pay rent · Edited") |
 | Saved offline, not yet sent | `note.waiting` |
 | `422` on replay | `note.couldnt_process` (NU) |
 
