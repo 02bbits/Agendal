@@ -265,11 +265,11 @@ describe("Note result (IM-43, RV-1)", () => {
     );
   });
 
-  it("Done and Back both leave the screen", async () => {
+  it("Back leaves the screen; there is no Done button (the panel has its own Close)", async () => {
     const { onDone } = open(resultOf([sql]));
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Back" }));
-    expect(onDone).toHaveBeenCalledTimes(2);
+    expect(onDone).toHaveBeenCalledOnce();
   });
 
   it("is axe clean in both themes", async () => {

@@ -5,8 +5,7 @@ import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
-import { PencilIcon, TrashIcon } from "../../components/icons";
-import { NavBar } from "../../components/NavBar";
+import { ChevronLeftIcon, PencilIcon, TrashIcon } from "../../components/icons";
 import { t, tc } from "../../copy";
 import {
   addDays,
@@ -180,15 +179,8 @@ export function NoteResultScreen({
   );
   if (note.status === "followup")
     return (
-      <div
-        className={cx(
-          "flex flex-col",
-          presentation === "panel" ? "min-h-[calc(100dvh-72px)]" : "min-h-dvh",
-        )}
-      >
-        {presentation === "screen" && (
-          <NavBar backLabel={t("common.back")} onBack={onDone} />
-        )}
+      <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
+        {presentation === "screen" && <BackBar onBack={onDone} />}
         <div className="mt-1 flex items-start gap-2">
           <Heading
             ref={heading}
@@ -204,16 +196,16 @@ export function NoteResultScreen({
             {note.text}
           </p>
         </blockquote>
-        <div className="sticky bottom-0 mt-auto flex flex-col gap-3 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+        <div className="flex flex-wrap gap-3 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
           {offline && (
-            <p className="m-0 text-footnote text-ink-secondary">
+            <p className="m-0 basis-full text-footnote text-ink-secondary">
               {t("note.needs_connection")}
             </p>
           )}
           <Button
             variant="secondary"
             size="lg"
-            fullWidth
+            className="flex-1"
             disabled={offline || busy}
             onClick={onEdit}
           >
@@ -222,7 +214,7 @@ export function NoteResultScreen({
           <Button
             variant="primary"
             size="lg"
-            fullWidth
+            className="flex-1"
             disabled={offline || busy}
             busy={busy}
             onClick={onMakeTask}
@@ -263,15 +255,8 @@ export function NoteResultScreen({
     note.text.length > LONG_QUOTE || note.text.split("\n").length > 4;
 
   return (
-    <div
-      className={cx(
-        "flex flex-col",
-        presentation === "panel" ? "min-h-[calc(100dvh-72px)]" : "min-h-dvh",
-      )}
-    >
-      {presentation === "screen" && (
-        <NavBar backLabel={t("common.back")} onBack={onDone} />
-      )}
+    <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
+      {presentation === "screen" && <BackBar onBack={onDone} />}
 
       <p
         id={overlineId}
@@ -332,7 +317,7 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <blockquote className="my-4 rounded-box bg-surface px-4 py-3 text-note text-ink">
+      <blockquote className="my-4 rounded-2xl border border-separator/50 bg-surface px-4 py-3 text-note text-ink shadow-xs">
         <p
           className={cx(
             "m-0 whitespace-pre-line [overflow-wrap:anywhere]",
@@ -353,7 +338,7 @@ export function NoteResultScreen({
       </blockquote>
 
       {changes.length > 0 && (
-        <section className="overflow-hidden rounded-box bg-surface">
+        <section className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
           {confirming && (
             <p className="m-0 border-b border-separator px-4 pt-3 pb-2.5 text-overline font-semibold uppercase text-ink-secondary">
               {tc("note.planned_count", changes.length)}
@@ -427,15 +412,15 @@ export function NoteResultScreen({
         </p>
       )}
 
-      <div className="sticky bottom-0 mt-auto flex flex-col gap-2 bg-paper pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
+      <div className="flex flex-wrap gap-3 pt-4 pb-[calc(16px+env(safe-area-inset-bottom))]">
         {confirming ? (
           <>
             {offline && (
-              <p className="mt-0 mb-3 text-footnote text-ink-secondary">
+              <p className="m-0 basis-full text-footnote text-ink-secondary">
                 {t("note.needs_connection")}
               </p>
             )}
-            <div className="flex gap-3">
+            <div className="flex flex-1 gap-3">
               <Button
                 size="lg"
                 className="flex-1"
@@ -462,7 +447,7 @@ export function NoteResultScreen({
               <Button
                 variant="primary"
                 size="lg"
-                fullWidth
+                className="flex-1"
                 disabled={offline || busy}
                 busy={busy}
                 onClick={onReplan}
@@ -475,7 +460,7 @@ export function NoteResultScreen({
               <Button
                 variant="secondary"
                 size="lg"
-                fullWidth
+                className="flex-1"
                 disabled={offline || busy}
                 onClick={onEdit}
               >
@@ -485,7 +470,7 @@ export function NoteResultScreen({
             {note.status === "done" &&
               changes.length > 0 &&
               (expired ? (
-                <p className="m-0 text-center text-footnote text-ink-secondary">
+                <p className="m-0 basis-full text-center text-footnote text-ink-secondary">
                   {t("note.undo_expired")}
                 </p>
               ) : (
@@ -493,27 +478,19 @@ export function NoteResultScreen({
                   <Button
                     variant="secondary"
                     size="lg"
-                    fullWidth
+                    className="flex-1"
                     disabled={offline}
                     onClick={() => onUndo?.(false)}
                   >
                     {t("note.undo_all")}
                   </Button>
                   {offline && (
-                    <p className="m-0 text-center text-footnote text-ink-secondary">
+                    <p className="m-0 basis-full text-center text-footnote text-ink-secondary">
                       {t("note.needs_connection")}
                     </p>
                   )}
                 </>
               ))}
-            <Button
-              variant={notApplied ? "secondary" : "primary"}
-              size="lg"
-              fullWidth
-              onClick={onDone}
-            >
-              {t(presentation === "panel" ? "common.close" : "common.done")}
-            </Button>
           </>
         )}
       </div>
@@ -726,6 +703,22 @@ function WhenChips({
           onChange={(event) => event.target.value && onPick(event.target.value)}
         />
       )}
+    </div>
+  );
+}
+
+/** The task screen's back bar (TaskHeader), so a note and a task open the same way on a phone. */
+function BackBar({ onBack }: { onBack: () => void }) {
+  return (
+    <div className="-mx-4 mb-4 flex h-11 items-center border-b border-separator px-4">
+      <button
+        type="button"
+        className="focus-ring inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-callout font-medium text-primary"
+        onClick={onBack}
+      >
+        <ChevronLeftIcon size={18} />
+        <span className="link-swipe">{t("common.back")}</span>
+      </button>
     </div>
   );
 }

@@ -4,13 +4,18 @@ import { t } from "../../../copy";
 
 export interface PanelHeaderProps {
   onClose?: () => void;
+  /** Defaults to the task heading. */
+  title?: string;
 }
 
-export function PanelHeader({ onClose }: PanelHeaderProps): ReactElement {
+export function PanelHeader({
+  onClose,
+  title,
+}: PanelHeaderProps): ReactElement {
   return (
     <div className="flex h-11 items-center justify-between border-b border-separator px-4">
       <span className="text-footnote font-semibold text-ink">
-        {t("task.heading")}
+        {title ?? t("task.heading")}
       </span>
       <button
         type="button"

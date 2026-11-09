@@ -113,16 +113,17 @@ export function NotesScreen({
                           : note.excerpt}
                       </span>
                     </span>
-                    <span
-                      className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
-                    >
-                      {status}
-                      {note.edited_at ? " · " : ""}
+                    {/* Edited first, then the status: Pending grey, Accepted blue */}
+                    <span className="max-w-[30%] text-right text-footnote text-ink-secondary">
                       {note.edited_at ? (
-                        <span className="text-ink-secondary">
-                          {t("note.edited_label")}
-                        </span>
+                        <>
+                          <span>{t("note.edited_label")}</span>
+                          {" · "}
+                        </>
                       ) : null}
+                      <span className={needsLook ? undefined : "text-due-ink"}>
+                        {status}
+                      </span>
                     </span>
                     <time className="hidden text-footnote text-ink-secondary sm:block">
                       {formatTime(
