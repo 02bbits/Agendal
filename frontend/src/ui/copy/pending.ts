@@ -18,8 +18,6 @@ export const pending = {
   "note.planned_count_one": "1 change to apply",
   "note.planned_count_other": "{count} changes to apply",
   "notes.all": "All",
-  "notes.made": "Accepted",
-  "notes.needs": "Pending",
   "notes.summary": "{count} notes · {needs} pending",
   "notes.load_more": "Load more",
   "note.discard_edit_title": "Discard your changes?",

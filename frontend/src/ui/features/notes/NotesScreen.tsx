@@ -1,6 +1,7 @@
+import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
-import { t } from "../../copy";
+import { t, tc } from "../../copy";
 import { formatDay, formatLongDate, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
@@ -8,12 +9,41 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
+// What a done note did: tasks made, else tasks changed (RV-4)
+function taskCount({ counts }: NoteListEntry): {
+  count: number;
+  label: string;
+} {
+  if (counts.created > 0)
+    return { count: counts.created, label: tc("note.made", counts.created) };
+  const changed = counts.updated + counts.deleted;
+  return {
+    count: changed,
+    label: t("note.overline_updated", { count: changed }),
+  };
+}
+
+// One short line that never wraps: "Accepted · 2" or "Pending"; screen readers hear the full count
+function StatusLine({ note }: { note: NoteListEntry }) {
+  if (note.status !== "done")
+    return <span className="text-warning">{t("notes.needs")}</span>;
+  const { count, label } = taskCount(note);
+  return (
+    <span className="text-ink-secondary">
+      {t("notes.made")}
+      <span aria-hidden="true"> · {count}</span>
+      <span className="sr-only">, {label}</span>
+    </span>
+  );
+}
+
 export function NotesScreen({
   notes,
   total,
   needs,
   filter,
   onFilter,
+  onWriteNote,
   selected,
   today,
   timeZone,
@@ -26,6 +56,7 @@ export function NotesScreen({
   needs: number;
   filter: NoteFilter;
   onFilter: (filter: NoteFilter) => void;
+  onWriteNote: () => void;
   selected?: string | null;
   today: string;
   timeZone: string;
@@ -72,9 +103,14 @@ export function NotesScreen({
         ))}
       </div>
       {notes.length === 0 && (
-        <p className="py-8 text-body text-ink-secondary">
-          {t("note.list_empty")}
-        </p>
+        <div className="flex flex-col items-start gap-4 py-8">
+          <p className="text-body text-ink-secondary">{t("note.list_empty")}</p>
+          {filter === "all" && (
+            <Button variant="primary" onClick={onWriteNote}>
+              {t("note.capture_open")}
+            </Button>
+          )}
+        </div>
       )}
       {[...days].map(([day, rows]) => (
         <section key={day} className="mb-5">
@@ -84,9 +120,6 @@ export function NotesScreen({
           </h2>
           <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
             {rows.map((note) => {
-              // A note is Accepted (done) or Pending, needing a look (RV-4)
-              const needsLook = note.status !== "done";
-              const status = t(needsLook ? "notes.needs" : "notes.made");
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -104,8 +137,14 @@ export function NotesScreen({
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-semibold">
                         {note.name ?? note.excerpt.slice(0, 60)}
+                        {note.edited_at && (
+                          <span className="font-normal text-ink-secondary">
+                            {" · "}
+                            {t("note.edited_label")}
+                          </span>
+                        )}
                       </span>
-                      <span className="block truncate text-footnote text-ink-secondary">
+                      <span className="line-clamp-2 text-footnote text-ink-secondary">
                         {note.source_file_name
                           ? t("note.from_file", {
                               file_name: note.source_file_name,
@@ -113,18 +152,13 @@ export function NotesScreen({
                           : note.excerpt}
                       </span>
                     </span>
-                    <span
-                      className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
-                    >
-                      {status}
-                      {note.edited_at ? " · " : ""}
-                      {note.edited_at ? (
-                        <span className="text-ink-secondary">
-                          {t("note.edited_label")}
-                        </span>
-                      ) : null}
+                    <span className="shrink-0 text-footnote whitespace-nowrap">
+                      <StatusLine note={note} />
                     </span>
-                    <time className="hidden text-footnote text-ink-secondary sm:block">
+                    <time
+                      dateTime={note.written_at}
+                      className="shrink-0 text-footnote text-ink-secondary"
+                    >
                       {formatTime(
                         localDateTime(note.written_at, timeZone).time,
                         timeFormat,
