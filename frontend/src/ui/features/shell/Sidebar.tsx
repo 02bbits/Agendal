@@ -99,7 +99,12 @@ export function Sidebar({
       aria-label={t("nav.sidebar")}
       className="flex h-full flex-col gap-4 pt-5 pr-3 pb-[calc(12px+env(safe-area-inset-bottom))] pl-[calc(12px+env(safe-area-inset-left))]"
     >
-      <p className="m-0 flex items-center gap-2.5 px-2 text-title font-bold text-ink">
+      {/* The mark goes home to Inbox */}
+      <Link
+        href={ROUTES.inbox}
+        navigate={navigate}
+        className="focus-ring mt-1 mb-4 flex items-center gap-2.5 self-start rounded-field px-2 text-title font-bold text-ink no-underline"
+      >
         <span
           className="inline-flex size-8 items-center justify-center rounded-tile bg-neutral text-neutral-content"
           aria-hidden="true"
@@ -107,7 +112,7 @@ export function Sidebar({
           <CheckIcon size={18} strokeWidth={2.25} />
         </span>
         {t("app.name")}
-      </p>
+      </Link>
 
       <button
         type="button"
@@ -118,8 +123,8 @@ export function Sidebar({
         <span className="flex-1 truncate">{t("search.placeholder")}</span>
       </button>
 
-      <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
-        {TABS.filter((tab) => enabledTabs[tab.id] !== false).map((tab) => {
+      <ul className="m-0 -mt-1.5 flex list-none flex-col gap-0.5 p-0">
+        {TABS.map((tab) => {
           const current = tab.id === active;
           return (
             <li key={tab.id}>
