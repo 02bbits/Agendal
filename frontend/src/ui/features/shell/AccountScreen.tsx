@@ -5,9 +5,11 @@ import {
   type KeyboardEvent,
   type ReactElement,
 } from "react";
+import { createPortal } from "react-dom";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { cx } from "../../components/cx";
+import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
 import {
   ArrowUpIcon,
   BellIcon,
@@ -88,6 +90,7 @@ export interface AccountScreenProps {
   onSendTestNotification?: () => void;
   initialTab?: SettingsTab;
   onUpdateName?: { (name: string): Promise<void> };
+  portal?: boolean;
 }
 
 export function AccountScreen({
@@ -107,6 +110,7 @@ export function AccountScreen({
   onSendTestNotification,
   initialTab = "general",
   onUpdateName,
+  portal = false,
 }: AccountScreenProps): ReactElement {
   const [tab, setTab] = useState<SettingsTab>(
     initialTab === "subscription" ? "general" : initialTab,
@@ -206,6 +210,8 @@ export function AccountScreen({
   };
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
+
+  useBackgroundScrollLock(modalRef);
 
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
@@ -324,9 +330,9 @@ export function AccountScreen({
     return tItem.id === tab;
   });
 
-  return (
+  const modal = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] p-2 sm:p-4 md:p-6 motion-safe:animate-fade-in"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-scrim backdrop-blur-[2px] p-2 sm:p-4 md:p-6 motion-safe:animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
@@ -336,7 +342,7 @@ export function AccountScreen({
     >
       <div
         ref={modalRef}
-        className="relative flex h-[680px] max-h-[94vh] w-full max-w-[960px] overflow-hidden rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
+        className="relative flex h-[680px] max-h-[min(680px,calc(100dvh-32px))] w-full max-w-[960px] overflow-hidden rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
       >
         {/* Left Sidebar Navigation */}
         <nav
@@ -365,7 +371,7 @@ export function AccountScreen({
 
             {/* Tabs List */}
             <div
-              className="flex flex-1 flex-col gap-0.5 overflow-y-auto overscroll-contain pr-1 py-1"
+              className="flex flex-1 min-h-0 flex-col gap-0.5 overflow-y-auto overscroll-contain pr-1 py-1"
               role="radiogroup"
               aria-label={t("settings.nav_label")}
             >
@@ -415,7 +421,7 @@ export function AccountScreen({
         </nav>
 
         {/* Right Main Content Pane */}
-        <div className="flex flex-1 flex-col min-w-0 bg-surface">
+        <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
           {/* Header Bar */}
           <div className="flex h-14 items-center justify-between border-b border-separator/40 px-6 sm:px-8 shrink-0">
             <span className="text-body sm:text-heading font-bold text-ink">
@@ -432,7 +438,7 @@ export function AccountScreen({
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto overscroll-contain px-6 sm:px-8 py-6 space-y-6 text-callout">
+          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-6 sm:px-8 py-6 space-y-6 text-callout">
             {/* TAB: ACCOUNT */}
             <div
               className={cx(
@@ -1456,4 +1462,10 @@ export function AccountScreen({
       </div>
     </div>
   );
+
+  if (portal && typeof document !== "undefined") {
+    return createPortal(modal, document.body);
+  }
+
+  return modal;
 }
