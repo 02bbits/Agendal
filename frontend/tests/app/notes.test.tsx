@@ -396,13 +396,17 @@ it("T-RV-31: card shows time, name, excerpt and status line per status", async (
 
   await screen.findByText("Made note");
 
-  expect(screen.getByText(tc("note.made", 2))).toBeTruthy();
+  const card = (name: string) =>
+    screen.getByText(name).closest("a")?.textContent ?? "";
+  const accepted = t("notes.made");
 
-  expect(
-    screen.getByText(t("note.overline_updated", { count: 1 })),
-  ).toBeTruthy();
+  expect(card("Made note")).toContain(`${accepted} · ${tc("note.made", 2)}`);
 
-  expect(screen.getByText(t("note.needs_look_one"))).toBeTruthy();
+  expect(card("Changed note")).toContain(
+    `${accepted} · ${t("note.overline_updated", { count: 1 })}`,
+  );
+
+  expect(card("Look note")).toContain(t("notes.needs"));
 
   expect(screen.getAllByText(note.text)).toHaveLength(3);
 

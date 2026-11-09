@@ -9,13 +9,15 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
-// Made tasks when the note created any, else how many it changed; anything not done needs a look (RV-4)
+// A note is Accepted (done) with its task count, or Pending (RV-4)
 function statusLine(note: NoteListEntry): string {
-  if (note.status !== "done") return t("note.needs_look_one");
+  if (note.status !== "done") return t("notes.needs");
   const { created, updated, deleted } = note.counts;
-  return created > 0
-    ? tc("note.made", created)
-    : t("note.overline_updated", { count: updated + deleted });
+  const taskCount =
+    created > 0
+      ? tc("note.made", created)
+      : t("note.overline_updated", { count: updated + deleted });
+  return `${t("notes.made")} · ${taskCount}`;
 }
 
 export function NotesScreen({

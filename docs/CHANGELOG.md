@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-09
 
+- **Notes cards say Accepted or Pending (Refs #47, IM-48).** [RV §2.1–§2.3, §2.6](03-modules/RV-review-control.md#26-notes-tab-rv-4) and the [copy catalog](01-product/copy-catalog.md): a `done` card reads `notes.made` with its task count ("Accepted · 2 tasks made"); `confirm`, `followup` and `pending` cards, and the result overline after Undo all, read `notes.needs`. `note.needs_look_*` stays on the back-online toast only. Offline Notes cards are left to IM-53.
 - [UX-27](01-product/ux-standards.md#ux-27): the Notes tab in the sidebar counts every note (`total` from `GET /notes`).
 
 ## 2026-11-04
