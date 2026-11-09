@@ -1,11 +1,39 @@
-import type { ReactNode, SVGProps } from "react";
+import {
+  Children,
+  cloneElement,
+  Fragment,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 
 // Line icons: rounded caps and joins, drawn in currentColor (theme guide, Icons).
 // Decorative by default; give the control around them an accessible name.
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
+function suppressChildren(node: ReactNode): ReactNode {
+  if (!isValidElement(node)) return node;
+  const element = node as ReactElement<{
+    children?: ReactNode;
+    suppressHydrationWarning?: boolean;
+  }>;
+  const children = element.props?.children;
+  const newChildren = children
+    ? Children.map(children, suppressChildren)
+    : undefined;
+  if (element.type === Fragment) {
+    return cloneElement(element, undefined, newChildren);
+  }
+  return cloneElement(element, {
+    suppressHydrationWarning: true,
+    ...(newChildren ? { children: newChildren } : {}),
+  });
+}
+
 function icon(paths: ReactNode) {
+  const suppressedPaths = Children.map(paths, suppressChildren);
   return function Icon({ size = 20, ...rest }: IconProps) {
     return (
       <svg
@@ -22,7 +50,7 @@ function icon(paths: ReactNode) {
         suppressHydrationWarning
         {...rest}
       >
-        {paths}
+        {suppressedPaths}
       </svg>
     );
   };

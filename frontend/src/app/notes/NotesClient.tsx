@@ -5,15 +5,15 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
 import { useToday } from "../../ui/features/tasks/useToday";
-import { listNotes, type NoteListPage } from "../../lib/noteApi";
+import { listNotes, NOTE_UPDATED, type NoteListPage } from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
 import { useModalFocus } from "../../ui/components/useModalFocus";
 import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
 import { Button } from "../../ui/components/Button";
 import { TextButton } from "../../ui/components/TextButton";
-import { IconButton } from "../../ui/components/IconButton";
-import { XIcon } from "../../ui/components/icons";
+import { cx } from "../../ui/components/cx";
+import { PanelHeader } from "../../ui/features/tasks/details/PanelHeader";
 import { t } from "../../ui/copy";
 import type { NoteFilter } from "../../ui/domain/types";
 import NoteResultClient from "./[id]/NoteResultClient";
@@ -24,6 +24,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const search = useSearchParams();
   const selected = search.get("note") ?? noteId ?? null;
   const wide = useMediaQuery("(min-width: 1280px)");
+  const popup = settings.pageView !== "full";
   const today = useToday(appClock);
   const [filter, setFilter] = useState<NoteFilter>("all");
   const [loaded, setLoaded] = useState<{
@@ -53,11 +54,11 @@ function NotesContent({ noteId }: { noteId?: string }) {
   }, [filter, requestKey]);
   useEffect(() => {
     const refresh = () => setRevision((value) => value + 1);
-    window.addEventListener("agendal:note-updated", refresh);
+    window.addEventListener(NOTE_UPDATED, refresh);
     window.addEventListener("agendal:task-created", refresh);
     window.addEventListener("agendal:note-renamed", refresh);
     return () => {
-      window.removeEventListener("agendal:note-updated", refresh);
+      window.removeEventListener(NOTE_UPDATED, refresh);
       window.removeEventListener("agendal:task-created", refresh);
       window.removeEventListener("agendal:note-renamed", refresh);
     };
@@ -82,9 +83,9 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const requestClose = useCallback(() => {
     if (closeGuard.current?.() !== false) close();
   }, [close]);
-  useModalFocus(panelRef, panelRef, !!selected, requestClose);
+  useModalFocus(panelRef, panelRef, !!selected && wide, requestClose);
   useEffect(() => {
-    if (!selected) return;
+    if (!selected || !wide) return;
     const background = [
       ...document.querySelectorAll<HTMLElement>("[data-shell-navigation]"),
     ];
@@ -97,7 +98,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
         element.inert = previous[index]!;
       });
     };
-  }, [selected]);
+  }, [selected, wide]);
   const navigate = useCallback(
     (href: string) => {
       const match = href.match(/^\/notes\/([^/?#]+)/);
@@ -137,7 +138,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
     }
   };
   return (
-    <div className={wide && selected ? "pr-[400px]" : ""}>
+    <div>
       <div hidden={!!selected && !wide} inert={!!selected}>
         {data ? (
           <NotesScreen
@@ -181,55 +182,69 @@ function NotesContent({ noteId }: { noteId?: string }) {
           </Button>
         )}
         {data?.next_cursor && (
-          <TextButton busy={busy} onClick={more}>
+          <TextButton busy={busy} onClick={more} className="mx-auto block">
             {t("notes.load_more")}
           </TextButton>
         )}
       </div>
       {selected && (
         <>
-          <div
-            aria-hidden="true"
-            className="fixed inset-0 z-[54] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={requestClose}
-          />
-          <aside
-            ref={panelRef}
-            role="dialog"
-            aria-modal="true"
-            tabIndex={-1}
-            data-modal-host
-            aria-label={t("nav.notes")}
-            className="fixed inset-0 z-[55] flex flex-col bg-paper outline-none shadow-2xl motion-safe:animate-panel-in md:left-[248px] xl:left-auto xl:w-[400px] xl:border-l xl:border-separator"
-          >
-            <NoteScrollLock panelRef={panelRef} />
-            {wide && (
-              <header className="flex min-h-14 shrink-0 items-center justify-between border-b border-separator bg-surface px-4">
-                <span className="font-semibold">{t("nav.notes")}</span>
-                <IconButton
-                  plain
-                  label={t("common.close")}
-                  icon={<XIcon />}
-                  onClick={requestClose}
-                />
-              </header>
-            )}
+          {/* Wide: a modal like Task details (popup or side panel, by Page view). Narrower: a page in the
+              column, like the task screen. One tree for both, so a resize doesn't remount the note */}
+          {wide && (
             <div
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 xl:pt-4"
-              onKeyDown={(event) => {
-                if (event.key === "Escape") event.stopPropagation();
-              }}
+              aria-hidden="true"
+              className={cx(
+                "fixed inset-0 z-[54] backdrop-blur-[2px] motion-safe:animate-fade-in",
+                popup ? "bg-scrim/60" : "bg-scrim",
+              )}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={requestClose}
+            />
+          )}
+          <div
+            className={
+              wide && popup
+                ? "pointer-events-none fixed inset-0 z-[55] flex items-center justify-center p-4 sm:p-6 md:p-8"
+                : "contents"
+            }
+          >
+            <aside
+              ref={panelRef}
+              role={wide ? "dialog" : undefined}
+              aria-modal={wide || undefined}
+              tabIndex={-1}
+              data-modal-host={wide || undefined}
+              aria-label={t("nav.notes")}
+              className={cx(
+                "flex flex-col outline-none",
+                wide &&
+                  (popup
+                    ? "pointer-events-auto max-h-[85vh] w-full max-w-[760px] overflow-hidden rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
+                    : "fixed inset-y-0 right-0 z-[55] w-full max-w-[400px] border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] shadow-2xl motion-safe:animate-panel-in"),
+              )}
             >
-              <NoteResultClient
-                key={selected}
-                id={selected}
-                presentation={wide ? "panel" : "screen"}
-                onClose={close}
-                closeGuardRef={closeGuard}
-              />
-            </div>
-          </aside>
+              {wide && <NoteScrollLock panelRef={panelRef} />}
+              {wide && (
+                <PanelHeader title={t("nav.notes")} onClose={requestClose} />
+              )}
+              <div
+                className={
+                  wide
+                    ? "relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4"
+                    : undefined
+                }
+              >
+                <NoteResultClient
+                  key={selected}
+                  id={selected}
+                  presentation={wide ? "panel" : "screen"}
+                  onClose={close}
+                  closeGuardRef={closeGuard}
+                />
+              </div>
+            </aside>
+          </div>
         </>
       )}
     </div>

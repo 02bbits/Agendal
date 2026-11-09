@@ -84,15 +84,9 @@ export function NotesScreen({
           </h2>
           <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
             {rows.map((note) => {
-              const needsLook =
-                note.status === "confirm" || note.status === "followup";
-              const status = needsLook
-                ? t("notes.needs")
-                : note.status === "done"
-                  ? t("notes.made")
-                  : note.status === "undone"
-                    ? t("note.undone_label")
-                    : null;
+              // A note is Accepted (done) or Pending, needing a look (RV-4)
+              const needsLook = note.status !== "done";
+              const status = t(needsLook ? "notes.needs" : "notes.made");
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -119,10 +113,17 @@ export function NotesScreen({
                           : note.excerpt}
                       </span>
                     </span>
-                    <span
-                      className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
-                    >
-                      {status}
+                    {/* Edited first, then the status: Pending grey, Accepted blue */}
+                    <span className="max-w-[30%] text-right text-footnote text-ink-secondary">
+                      {note.edited_at ? (
+                        <>
+                          <span>{t("note.edited_label")}</span>
+                          {" · "}
+                        </>
+                      ) : null}
+                      <span className={needsLook ? undefined : "text-due-ink"}>
+                        {status}
+                      </span>
                     </span>
                     <time className="hidden text-footnote text-ink-secondary sm:block">
                       {formatTime(

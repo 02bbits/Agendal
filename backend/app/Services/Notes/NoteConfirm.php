@@ -23,15 +23,29 @@ final class NoteConfirm
     /**
      * Applies a `confirm` plan, re-validated against the tasks as they are now (NU-E38), with the user's edits.
      *
+     * `$planVersion` names the plan the user reviewed. Edits and exclusions name its refs, so a plan made since
+     * (Edit note on another device) refuses them instead of taking them; a repeat of an apply that already
+     * landed (a lost reply) answers with the note as it is (RV §7).
+     *
      * @param  array<string, array<string, mixed>>  $edits
      * @param  list<string>  $exclude
      */
-    public function apply(Note $note, array $edits = [], array $exclude = []): Note
+    public function apply(Note $note, array $edits = [], array $exclude = [], ?int $planVersion = null): Note
     {
-        return DB::transaction(function () use ($note, $edits, $exclude): Note {
+        return DB::transaction(function () use ($note, $edits, $exclude, $planVersion): Note {
             // The user row first, as POST /notes locks it, so a note and an apply can't deadlock.
             User::query()->whereKey($note->user_id)->lockForUpdate()->firstOrFail();
-            $note = $this->locked($note);
+            $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();
+            $reviewed = $planVersion === null || $planVersion === $note->plan_version;
+            if ($note->status === PlanStatus::Done->value && $planVersion !== null && $reviewed) {
+                return $note;
+            }
+            if ($note->status !== PlanStatus::Confirm->value) {
+                throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
+            }
+            if (! $reviewed) {
+                throw new ApiError('note.plan_changed', 'This note changed since it was reviewed.', 409);
+            }
             /** @var ValidatedPlan $plan */
             $plan = $note->plan;
             $originalPlan = $plan;
@@ -50,26 +64,5 @@ final class NoteConfirm
 
             return $note->refresh();
         });
-    }
-
-    /** Edit note on Check this first: nothing is applied and the note is kept (WF-02). */
-    public function cancel(Note $note): Note
-    {
-        return DB::transaction(function () use ($note): Note {
-            $note = $this->locked($note);
-            $note->forceFill(['status' => 'kept'])->save();
-
-            return $note->refresh();
-        });
-    }
-
-    private function locked(Note $note): Note
-    {
-        $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();
-        if ($note->status !== PlanStatus::Confirm->value) {
-            throw new ApiError('note.wrong_status', 'This note has already been handled.', 409);
-        }
-
-        return $note;
     }
 }

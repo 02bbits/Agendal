@@ -8,7 +8,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { clearDraft, loadDraft, saveDraft } from "../../../lib/draft";
-import type { NoteSubmission, NoteSubmitFailure } from "../../../lib/noteApi";
+import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t } from "../../copy";
 import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
@@ -17,6 +17,7 @@ import { Dialog } from "../../components/Dialog";
 import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
+import { UndoConflictDialog } from "./UndoConflictDialog";
 
 const EXAMPLES = [
   "note.example_1",
@@ -37,8 +38,14 @@ export interface NoteEditorProps {
   /**
    * Make tasks, and Ctrl/Cmd+Enter (UX-12): sends the note (NC §2.2) and answers with the result,
    * or why it wasn't made. `clientId` stays the same for a retry, so one note is made at most once.
+   * Editing a done note may answer `{conflicts}`: the editor asks first, then sends again with
+   * `confirmConflicts` (RV-E16).
    */
-  onSubmit?: (text: string, clientId: string) => NoteSubmission;
+  onSubmit?: (
+    text: string,
+    clientId: string,
+    confirmConflicts: boolean,
+  ) => NoteReplan;
   /** The note was made. The draft is already cleared; the editor stays until this closes it. */
   onSubmitted?: (result: NoteResult) => void;
 }
@@ -65,6 +72,8 @@ export function NoteEditor({
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [failure, setFailure] = useState<NoteSubmitFailure | null>(null);
+  // Tasks of the note edited by hand since: how many, while the dialog asks (RV-E16)
+  const [conflicts, setConflicts] = useState(0);
   // Seconds until a rate-limited note may be sent again (429)
   const [wait, setWait] = useState(0);
   const errorId = useId();
@@ -87,6 +96,11 @@ export function NoteEditor({
   const requestClose = () => {
     // Closing mid-request would leave the answer with nowhere to go
     if (sending.current) return false;
+    // The conflict dialog (RV-E16) closes first; the edited text stays
+    if (conflicts > 0) {
+      setConflicts(0);
+      return false;
+    }
     if (note && latest.current === note.text) return onClose();
     if (confirming) setConfirming(false);
     else if (VISIBLE.test(latest.current)) setConfirming(true);
@@ -157,18 +171,23 @@ export function NoteEditor({
   }, [wait]);
 
   const canSubmit = VISIBLE.test(text) && wait <= 0;
-  const submit = async () => {
+  const submit = async (confirmConflicts = false) => {
     // The ref, not `busy`: a second tap lands before React has re-rendered
     if (!canSubmit || !onSubmit || sending.current) return;
     sending.current = true;
     setBusy(true);
     setFailure(null);
     const timer = setTimeout(() => setReading(true), READING_AFTER_MS);
-    const result = await onSubmit(latest.current, clientId.current);
+    const result = await onSubmit(
+      latest.current,
+      clientId.current,
+      confirmConflicts,
+    );
     clearTimeout(timer);
     sending.current = false;
     setBusy(false);
     setReading(false);
+    if ("conflicts" in result) return setConflicts(result.conflicts);
     if ("error" in result) {
       setFailure(result);
       setWait(result.retryAfter ?? 0);
@@ -263,7 +282,7 @@ export function NoteEditor({
                 {message}
               </p>
               {failure?.error === "note.send_failed" && (
-                <Button variant="secondary" size="sm" onClick={submit}>
+                <Button variant="secondary" size="sm" onClick={() => submit()}>
                   {t("common.retry")}
                 </Button>
               )}
@@ -292,7 +311,7 @@ export function NoteEditor({
               fullWidth
               busy={busy}
               disabled={!canSubmit}
-              onClick={submit}
+              onClick={() => submit()}
             >
               <SparklesIcon size={18} />
               {t(note ? "note.replan" : "note.make_tasks")}
@@ -300,6 +319,15 @@ export function NoteEditor({
           </div>
         </div>
       </div>
+      <UndoConflictDialog
+        count={conflicts}
+        history={false}
+        onConfirm={() => {
+          setConflicts(0);
+          void submit(true);
+        }}
+        onCancel={() => setConflicts(0)}
+      />
       <Dialog
         open={confirming}
         history={false}

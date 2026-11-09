@@ -60,13 +60,16 @@ export function Dialog({
         <h2
           ref={titleRef}
           id={titleId}
-          className="m-0 text-dialog font-semibold text-balance focus:outline-none"
+          className="m-0 text-center text-dialog font-semibold text-balance focus:outline-none"
           tabIndex={-1}
         >
           {title}
         </h2>
         {description && (
-          <p id={descriptionId} className="m-0 text-callout text-ink-secondary">
+          <p
+            id={descriptionId}
+            className="m-0 text-center text-callout text-ink-secondary"
+          >
             {description}
           </p>
         )}

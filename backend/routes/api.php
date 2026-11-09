@@ -36,9 +36,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('notes/{note}', [NoteController::class, 'rename']);
     Route::post('notes/{note}/make-task', [NoteController::class, 'makeTask']);
     Route::post('notes/{note}/apply', [NoteController::class, 'apply']);
-    Route::post('notes/{note}/cancel', [NoteController::class, 'cancel']);
     Route::post('notes/{note}/undo', [NoteController::class, 'undo']);
     Route::post('notes/{note}/redo', [NoteController::class, 'redo']);
+    Route::delete('notes/{note}', [NoteController::class, 'destroy']);
+    Route::post('notes/{note}/restore', [NoteController::class, 'restore'])->withTrashed();
     Route::get('projects', [ProjectController::class, 'index']);
     Route::post('projects', [ProjectController::class, 'store']);
     Route::get('projects/none', [ProjectController::class, 'none']);

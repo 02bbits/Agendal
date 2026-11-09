@@ -61,6 +61,24 @@ describe("history entries for sheets and dialogs", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("Escape a field inside already handled (preventDefault) leaves the sheet open", async () => {
+    const onClose = vi.fn();
+    render(
+      <Sheet open title="Sheet" closeLabel="Close" onClose={onClose}>
+        <input
+          aria-label="Rename"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") event.preventDefault();
+          }}
+        />
+      </Sheet>,
+    );
+    await userEvent.click(screen.getByRole("textbox", { name: "Rename" }));
+    await userEvent.keyboard("{Escape}");
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
   it("closing with × takes its own entry off, so Back doesn't need an extra press", async () => {
     render(<Screen />);
     const before = window.history.state;

@@ -33,7 +33,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/theme.js" />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <AppFrame>{children}</AppFrame>
       </body>
     </html>

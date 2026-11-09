@@ -1,10 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  concernsNote,
   confirmNote,
   forgetNotes,
   getNote,
+  NOTE_UPDATED,
+  previewTaskApi,
   recallNote,
   rememberNote,
+  restoreNote,
   submitNote,
 } from "@/lib/noteApi";
 import type { NoteResult } from "@/ui";
@@ -115,22 +119,78 @@ describe("submitNote (IM-42)", () => {
     expect(recallNote(made.note.id)).toBeUndefined();
   });
 
-  it("apply and cancel post to the note, keep the answer, and map failures to copy", async () => {
+  it("restore posts to the note's restore route, and maps failures to copy", async () => {
     fetchMock.mockResolvedValueOnce(json(200, done));
-    expect(await confirmNote("n1", "apply")).toEqual(done);
-    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/apply");
+    expect(await restoreNote("n1")).toEqual(done);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/restore");
     expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
 
     fetchMock.mockResolvedValueOnce(
-      json(409, { error: { code: "note.wrong_status" } }),
+      json(404, { error: { code: "error.not_found" } }),
     );
-    expect(await confirmNote("n1", "cancel")).toEqual({
-      error: "note.wrong_status",
-    });
+    expect(await restoreNote("n1")).toEqual({ error: "error.not_found" });
 
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    expect(await confirmNote("n1", "apply")).toEqual({
+    expect(await restoreNote("n1")).toEqual({
       error: "note.needs_connection",
     });
+  });
+
+  it("apply posts the reviewed plan, keeps the answer, and maps failures to copy", async () => {
+    const note = { id: "n1", plan_version: 3 };
+    fetchMock.mockResolvedValueOnce(json(200, done));
+    expect(await confirmNote(note)).toEqual(done);
+    expect(fetchMock.mock.calls[0]![0]).toBe("/api/v1/notes/n1/apply");
+    expect(fetchMock.mock.calls[0]![1].method).toBe("POST");
+    expect(JSON.parse(fetchMock.mock.calls[0]![1].body).plan_version).toBe(
+      note.plan_version,
+    );
+
+    fetchMock.mockResolvedValueOnce(
+      json(409, { error: { code: "note.plan_changed" } }),
+    );
+    rememberNote({ ...done, note: { ...done.note, id: "n1" } } as NoteResult);
+    expect(await confirmNote(note)).toEqual({
+      error: "note.plan_changed",
+    });
+    // The kept copy is the old plan: the next load asks the server
+    expect(recallNote("n1")).toBeUndefined();
+
+    fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    expect(await confirmNote(note)).toEqual({
+      error: "note.needs_connection",
+    });
+  });
+
+  it("a planned task's new due date goes with the start date shown beside it", async () => {
+    const task = {
+      id: "t1",
+      start_date: "2026-10-24",
+      due_date: "2026-10-24",
+      start_time: "09:00",
+    };
+    const result = {
+      ...done,
+      changes: [{ kind: "created", ref: "i1", task, label: "" }],
+    } as unknown as NoteResult;
+    const { api, edits } = previewTaskApi(result);
+
+    await api.patch("t1", { due_date: "2026-10-30" }, "");
+    await api.patch("t1", { priority: "high" }, "");
+
+    expect(edits).toEqual({
+      i1: {
+        start_date: "2026-10-24",
+        due_date: "2026-10-30",
+        priority: "high",
+      },
+    });
+  });
+
+  it("a note event concerns only the note it names", () => {
+    const named = new CustomEvent(NOTE_UPDATED, { detail: { id: "n1" } });
+    expect(concernsNote(named, "n1")).toBe(true);
+    expect(concernsNote(named, "n2")).toBe(false);
+    expect(concernsNote(new CustomEvent(NOTE_UPDATED), "n2")).toBe(true);
   });
 });

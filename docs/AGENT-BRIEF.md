@@ -22,7 +22,7 @@ Agendal: phone-first PWA. A note (typed; voice and files later) becomes tasks. E
 
 **Plan shape** (ADR-001): `create[]`, `update[]`, `delete[]`, `skipped[]`. Entries carry a `ref` (`i1`, `i1-2`). Plan entries still name the due time `end_time`; the applier maps it to `due_time`.
 
-**Note statuses:** `pending` (offline, not built) → `new` → `confirm` (any change, or a tie) | `done` (only skips: already_done, not_found, no_change; zero changes) | `followup` (nothing actionable). `confirm` → Apply → `done`; `confirm` → Edit note → `kept` (text goes to a new note). `done` → Undo all → `undone` → redo 10 s → `done`. Undo window 30 days. Edit note on a done note re-plans it (IM-47, not built).
+**Note statuses:** `pending` (offline and not yet sent, not built; or applied then reversed by Undo all) → `new` → `confirm` (any change, or a tie) | `done` (only skips: already_done, not_found, no_change; zero changes) | `followup` (nothing actionable). `confirm` → Apply → `done`; `confirm` → Edit note → re-planned in place (`PUT /notes/{id}`). `done` → Undo all → `pending` → redo 10 s → `done`; a second Undo all changes nothing. Undo window 30 days. Edit note on a done note re-plans it (IM-47); hidden after 30 days. Delete note keeps the tasks.
 
 **After Apply:** back to the list where the note was written, toast `note.made_*` with Undo (Undo all). The result screen (`/notes/{id}`) is reached from a note, or after an all-skips note.
 
@@ -40,7 +40,7 @@ Agendal: phone-first PWA. A note (typed; voice and files later) becomes tasks. E
 **Auth** (ADR-007): Sanctum cookie session, `__Host-` cookie (Chrome/Firefox locally, not Safari), CSRF header on writes. Lockout 3 failures → 60 s per (email, IP). Signed-out visitors see the shell; only a `401` redirects to Sign in.
 
 **API** (`/api/v1`, JSON, one error shape `{error: {code, message, request_id, fields?}}`, other users' ids → 404, client-generated UUIDs for tasks/projects/notes):
-`auth/register|login|logout|logout-everywhere|forgot-password|reset-password` · `GET/PATCH me` · `GET/POST notes`, `GET/PUT notes/{id}`, `POST notes/{id}/apply|cancel|undo|redo|make-task` · projects CRUD + `GET projects/none` + `POST projects/{id}/restore` · tasks CRUD + `POST tasks/{id}/complete|reopen|restore`. Not built: search, sync, clarify.
+`auth/register|login|logout|logout-everywhere|forgot-password|reset-password` · `GET/PATCH me` · `GET/POST notes`, `GET/PUT/DELETE notes/{id}`, `POST notes/{id}/apply|cancel|undo|redo|make-task` · projects CRUD + `GET projects/none` + `POST projects/{id}/restore` · tasks CRUD + `POST tasks/{id}/complete|reopen|restore`. Not built: search, sync, clarify.
 
 ## Where code lives
 
