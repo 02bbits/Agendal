@@ -17,8 +17,17 @@ import { t } from "../../ui/copy";
 import type { NoteFilter } from "../../ui/domain/types";
 import NoteResultClient from "./[id]/NoteResultClient";
 
+// The next page loads once the end of the list is within one screen
+const ONE_SCREEN_AHEAD = "0px 0px 100% 0px";
+
 function NotesContent({ noteId }: { noteId?: string }) {
-  const { user, settings, navigate: baseNavigate, back } = useAppFrame();
+  const {
+    user,
+    settings,
+    navigate: baseNavigate,
+    back,
+    openNoteEditor,
+  } = useAppFrame();
   const router = useRouter();
   const search = useSearchParams();
   const selected = search.get("note") ?? noteId ?? null;
@@ -30,9 +39,11 @@ function NotesContent({ noteId }: { noteId?: string }) {
     page: NoteListPage | null;
     error: boolean;
   } | null>(null);
-  const [busy, setBusy] = useState(false);
   const [revision, setRevision] = useState(0);
   const requestKey = `${filter}:${revision}`;
+  // Keyed like `loaded`: a page still on its way for another filter must not block this list's next page
+  const [loadingMore, setLoadingMore] = useState<string | null>(null);
+  const busy = loadingMore === requestKey;
   const data = loaded?.key === requestKey ? loaded.page : null;
   const error = loaded?.key === requestKey && loaded.error;
   const pushed = useRef(false);
@@ -115,7 +126,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   );
   const more = async () => {
     if (!data?.next_cursor || busy) return;
-    setBusy(true);
+    setLoadingMore(requestKey);
     try {
       const page = await listNotes(filter, data.next_cursor);
       setLoaded((previous) =>
@@ -132,9 +143,28 @@ function NotesContent({ noteId }: { noteId?: string }) {
         previous?.key === requestKey ? { ...previous, error: true } : previous,
       );
     } finally {
-      setBusy(false);
+      setLoadingMore((key) => (key === requestKey ? null : key));
     }
   };
+  const moreRef = useRef(more);
+  useEffect(() => {
+    moreRef.current = more;
+  });
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const hasMore = !!data?.next_cursor;
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!hasMore || !sentinel || typeof IntersectionObserver === "undefined")
+      return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) void moreRef.current();
+      },
+      { rootMargin: ONE_SCREEN_AHEAD },
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, data?.items.length]);
   return (
     <div className={wide && selected ? "pr-[400px]" : ""}>
       <div hidden={!!selected && !wide} inert={!!selected}>
@@ -145,6 +175,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             needs={data.needs_count}
             filter={filter}
             onFilter={setFilter}
+            onWriteNote={openNoteEditor}
             selected={selected}
             today={today}
             timeZone={appClock.timeZone}
@@ -179,6 +210,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             {t("common.retry")}
           </Button>
         )}
+        {data?.next_cursor && <div ref={sentinelRef} aria-hidden="true" />}
         {data?.next_cursor && (
           <Button busy={busy} onClick={more}>
             {t("notes.load_more")}

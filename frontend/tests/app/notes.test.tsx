@@ -6,11 +6,13 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 import NotesClient from "../../src/app/notes/NotesClient";
 
-import { t, type NoteResult } from "../../src/ui";
+import { t, tc, type NoteResult } from "../../src/ui";
 
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 
 const navigate = vi.fn();
+
+const openNoteEditor = vi.fn();
 
 let query = new URLSearchParams();
 
@@ -27,6 +29,8 @@ vi.mock("../../src/app/AppFrame", () => ({
     settings: { timeFormat: "24h" },
 
     navigate,
+
+    openNoteEditor,
 
     back: router.back,
   }),
@@ -326,4 +330,201 @@ it("renders the Edited label when edited_at is present (T-RV-64)", async () => {
   await screen.findByText("Call mum");
 
   expect(screen.getByText(t("note.edited_label"))).toBeTruthy();
+});
+
+const entry = (overrides: Record<string, unknown>) => ({
+  ...note,
+
+  excerpt: note.text,
+
+  counts: { created: 0, updated: 0, deleted: 0 },
+
+  ...overrides,
+});
+
+const respondWith = (
+  items: unknown[],
+  next_cursor: string | null = null,
+  total = items.length,
+) =>
+  new Response(JSON.stringify({ items, total, needs_count: 0, next_cursor }));
+
+it("T-RV-30: lists notes newest first", async () => {
+  fetchMock.mockImplementationOnce(async () =>
+    respondWith([
+      entry({ id: "n2", name: "Newest", written_at: "2026-11-05T02:00:00Z" }),
+
+      entry({ id: "n1", name: "Oldest", written_at: "2026-11-04T02:00:00Z" }),
+    ]),
+  );
+
+  render(<NotesClient />);
+
+  await screen.findByText("Newest");
+
+  const names = screen
+    .getAllByRole("link")
+    .map((link) => link.textContent ?? "");
+
+  expect(names.findIndex((text) => text.includes("Newest"))).toBeLessThan(
+    names.findIndex((text) => text.includes("Oldest")),
+  );
+});
+
+it("T-RV-31: card shows time, name, excerpt and status line per status", async () => {
+  fetchMock.mockImplementationOnce(async () =>
+    respondWith([
+      entry({
+        id: "a",
+        name: "Made note",
+        status: "done",
+        counts: { created: 2, updated: 0, deleted: 0 },
+      }),
+
+      entry({
+        id: "b",
+        name: "Changed note",
+        status: "done",
+        counts: { created: 0, updated: 1, deleted: 0 },
+      }),
+
+      entry({ id: "c", name: "Look note", status: "confirm" }),
+    ]),
+  );
+
+  const { container } = render(<NotesClient />);
+
+  await screen.findByText("Made note");
+
+  expect(screen.getByText(tc("note.made", 2))).toBeTruthy();
+
+  expect(
+    screen.getByText(t("note.overline_updated", { count: 1 })),
+  ).toBeTruthy();
+
+  expect(screen.getByText(t("note.needs_look_one"))).toBeTruthy();
+
+  expect(screen.getAllByText(note.text)).toHaveLength(3);
+
+  expect(container.querySelector("time")?.getAttribute("datetime")).toBe(
+    note.written_at,
+  );
+});
+
+it("T-RV-32: loads the next page when the list nears its end", async () => {
+  let notify: IntersectionObserverCallback = () => {};
+
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+
+      observe() {}
+
+      disconnect() {}
+    },
+  );
+
+  fetchMock
+    .mockImplementationOnce(async () =>
+      respondWith([entry({ id: "p1", name: "First page" })], "cursor-2", 2),
+    )
+    .mockImplementationOnce(async () =>
+      respondWith([entry({ id: "p2", name: "Second page" })], null, 2),
+    );
+
+  render(<NotesClient />);
+
+  await screen.findByText("First page");
+
+  act(() =>
+    notify(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    ),
+  );
+
+  await screen.findByText("Second page");
+
+  expect(String(fetchMock.mock.calls[1]![0])).toContain("cursor-2");
+
+  expect(screen.getByText("First page")).toBeTruthy();
+});
+
+it("T-RV-32: a page still loading for another filter doesn't block the next page", async () => {
+  let notify: IntersectionObserverCallback = () => {};
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(callback: IntersectionObserverCallback) {
+        notify = callback;
+      }
+      observe() {}
+      disconnect() {}
+    },
+  );
+  const nearEnd = () =>
+    act(() =>
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+  let finishAll: (response: Response) => void = () => {};
+  fetchMock
+    .mockImplementationOnce(async () =>
+      respondWith([entry({ id: "a1", name: "All first" })], "all-2", 2),
+    )
+    .mockImplementationOnce(
+      () => new Promise<Response>((resolve) => (finishAll = resolve)),
+    )
+    .mockImplementationOnce(async () =>
+      respondWith(
+        [entry({ id: "n1", name: "Pending first", status: "confirm" })],
+        "needs-2",
+        2,
+      ),
+    )
+    .mockImplementationOnce(async () =>
+      respondWith(
+        [entry({ id: "n2", name: "Pending second", status: "confirm" })],
+        null,
+        2,
+      ),
+    );
+  render(<NotesClient />);
+  await screen.findByText("All first");
+  nearEnd();
+  await userEvent.click(screen.getByRole("button", { name: t("notes.needs") }));
+  await screen.findByText("Pending first");
+  nearEnd();
+
+  expect(await screen.findByText("Pending second")).toBeTruthy();
+  await act(async () => finishAll(respondWith([], null, 2)));
+});
+
+it("T-RV-33: a card opens its result", async () => {
+  width = 390;
+
+  render(<NotesClient />);
+
+  await userEvent.click(await screen.findByRole("link", { name: /Call mum/ }));
+
+  expect(navigate).toHaveBeenCalledWith("/notes/n1");
+});
+
+it("empty list offers Write a note, which opens the note editor", async () => {
+  fetchMock.mockImplementationOnce(async () => respondWith([]));
+
+  render(<NotesClient />);
+
+  expect(await screen.findByText(t("note.list_empty"))).toBeTruthy();
+
+  await userEvent.click(
+    screen.getByRole("button", { name: t("note.capture_open") }),
+  );
+
+  expect(openNoteEditor).toHaveBeenCalledOnce();
 });

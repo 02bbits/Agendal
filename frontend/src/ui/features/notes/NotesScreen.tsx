@@ -1,6 +1,7 @@
+import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
-import { t } from "../../copy";
+import { t, tc } from "../../copy";
 import { formatDay, formatLongDate, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
@@ -8,12 +9,22 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
 
+// Made tasks when the note created any, else how many it changed; anything not done needs a look (RV-4)
+function statusLine(note: NoteListEntry): string {
+  if (note.status !== "done") return t("note.needs_look_one");
+  const { created, updated, deleted } = note.counts;
+  return created > 0
+    ? tc("note.made", created)
+    : t("note.overline_updated", { count: updated + deleted });
+}
+
 export function NotesScreen({
   notes,
   total,
   needs,
   filter,
   onFilter,
+  onWriteNote,
   selected,
   today,
   timeZone,
@@ -26,6 +37,7 @@ export function NotesScreen({
   needs: number;
   filter: NoteFilter;
   onFilter: (filter: NoteFilter) => void;
+  onWriteNote: () => void;
   selected?: string | null;
   today: string;
   timeZone: string;
@@ -72,9 +84,14 @@ export function NotesScreen({
         ))}
       </div>
       {notes.length === 0 && (
-        <p className="py-8 text-body text-ink-secondary">
-          {t("note.list_empty")}
-        </p>
+        <div className="flex flex-col items-start gap-4 py-8">
+          <p className="text-body text-ink-secondary">{t("note.list_empty")}</p>
+          {filter === "all" && (
+            <Button variant="primary" onClick={onWriteNote}>
+              {t("note.capture_open")}
+            </Button>
+          )}
+        </div>
       )}
       {[...days].map(([day, rows]) => (
         <section key={day} className="mb-5">
@@ -86,7 +103,6 @@ export function NotesScreen({
             {rows.map((note) => {
               // A note is Accepted (done) or Pending, needing a look (RV-4)
               const needsLook = note.status !== "done";
-              const status = t(needsLook ? "notes.needs" : "notes.made");
               const Icon = note.source_file_name
                 ? PaperclipIcon
                 : note.status === "done"
@@ -105,7 +121,7 @@ export function NotesScreen({
                       <span className="block truncate font-semibold">
                         {note.name ?? note.excerpt.slice(0, 60)}
                       </span>
-                      <span className="block truncate text-footnote text-ink-secondary">
+                      <span className="line-clamp-2 text-footnote text-ink-secondary">
                         {note.source_file_name
                           ? t("note.from_file", {
                               file_name: note.source_file_name,
@@ -116,7 +132,7 @@ export function NotesScreen({
                     <span
                       className={`max-w-[30%] text-right text-footnote ${needsLook ? "text-warning" : "text-ink-secondary"}`}
                     >
-                      {status}
+                      {statusLine(note)}
                       {note.edited_at ? " · " : ""}
                       {note.edited_at ? (
                         <span className="text-ink-secondary">
@@ -124,7 +140,10 @@ export function NotesScreen({
                         </span>
                       ) : null}
                     </span>
-                    <time className="hidden text-footnote text-ink-secondary sm:block">
+                    <time
+                      dateTime={note.written_at}
+                      className="shrink-0 text-footnote text-ink-secondary"
+                    >
                       {formatTime(
                         localDateTime(note.written_at, timeZone).time,
                         timeFormat,
