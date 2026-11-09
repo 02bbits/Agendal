@@ -191,6 +191,10 @@ export const PaperclipIcon = icon(
   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 );
 export const ArrowUpIcon = icon(<path d="M12 19V5M5 12l7-7 7 7" />);
+export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
+export const RotateCcwIcon = icon(
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5" />,
+);
 export const EyeIcon = icon(
   <>
     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />

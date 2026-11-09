@@ -355,6 +355,10 @@ export const pending = {
   "settings.sidebar_show_task_counts": "Show task counts",
   "settings.sidebar_show_task_counts_desc":
     "Display the number of tasks next to each view in the navigation sidebar.",
+  "settings.reset_default": "Reset to default",
+  "settings.reorder_up": "Move up",
+  "settings.reorder_down": "Move down",
+  "settings.drag_reorder": "Drag to reorder",
   "settings.sidebar_preview": "Preview",
   "settings.delete_account_desc":
     "Permanently delete your account and all associated tasks, projects, and notes.",

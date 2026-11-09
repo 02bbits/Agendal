@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { t } from "../../copy";
 import {
   CalendarIcon,
@@ -16,6 +16,7 @@ import {
   ROUTES,
   TABS,
   getStoredSidebarTabs,
+  getStoredSidebarTabsOrder,
   type Navigate,
   type TabId,
 } from "./routes";
@@ -66,6 +67,7 @@ export function Sidebar({
     }
   });
   const [enabledTabs, setEnabledTabs] = useState(getStoredSidebarTabs);
+  const [tabOrder, setTabOrder] = useState(getStoredSidebarTabsOrder);
 
   useEffect(() => {
     const handleCounts = () => {
@@ -77,6 +79,7 @@ export function Sidebar({
     };
     const handleTabs = () => {
       setEnabledTabs(getStoredSidebarTabs());
+      setTabOrder(getStoredSidebarTabsOrder());
     };
     window.addEventListener("storage", handleCounts);
     window.addEventListener("agendal:sidebar_counts_changed", handleCounts);
@@ -92,6 +95,15 @@ export function Sidebar({
       window.removeEventListener("agendal:sidebar_tabs_changed", handleTabs);
     };
   }, []);
+
+  const sortedTabs = useMemo(() => {
+    const tabMap = new Map<TabId, (typeof TABS)[number]>(
+      TABS.map((t) => [t.id, t]),
+    );
+    return tabOrder
+      .map((id) => tabMap.get(id))
+      .filter((t): t is (typeof TABS)[number] => Boolean(t));
+  }, [tabOrder]);
 
   return (
     // One landmark for the whole sidebar, so the mark, Search and Account are inside it
@@ -124,37 +136,46 @@ export function Sidebar({
       </button>
 
       <ul className="m-0 -mt-1.5 flex list-none flex-col gap-0.5 p-0">
-        {TABS.map((tab) => {
-          const current = tab.id === active;
-          return (
-            <li key={tab.id}>
-              <Link
-                href={tab.href}
-                navigate={navigate}
-                className={cx(
-                  "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body text-ink-secondary",
-                  current && "bg-primary-tint! text-ink!",
-                )}
-                aria-current={current ? "page" : undefined}
-              >
-                <span className="inline-flex" aria-hidden="true">
-                  {ICONS[tab.id]}
-                </span>
-                <span className="flex-1">{t(tab.label)}</span>
-                {showCounts && counts?.[tab.id] !== undefined && (
+        {sortedTabs
+          .filter((tab: (typeof TABS)[number]) => enabledTabs[tab.id] !== false)
+          .map((tab: (typeof TABS)[number]) => {
+            const current = tab.id === active;
+            return (
+              <li key={tab.id}>
+                <Link
+                  href={tab.href}
+                  navigate={navigate}
+                  className={cx(
+                    "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body transition-colors",
+                    current
+                      ? "bg-primary/15! text-primary! font-semibold"
+                      : "text-ink-secondary hover:bg-fill/60 hover:text-ink",
+                  )}
+                  aria-current={current ? "page" : undefined}
+                >
                   <span
-                    className={cx(
-                      "text-footnote tabular-nums",
-                      current ? "text-ink" : "text-ink-tertiary",
-                    )}
+                    className={cx("inline-flex", current && "text-primary")}
+                    aria-hidden="true"
                   >
-                    {counts[tab.id]}
+                    {ICONS[tab.id]}
                   </span>
-                )}
-              </Link>
-            </li>
-          );
-        })}
+                  <span className="flex-1">{t(tab.label)}</span>
+                  {showCounts && counts?.[tab.id] !== undefined && (
+                    <span
+                      className={cx(
+                        "text-footnote tabular-nums",
+                        current
+                          ? "text-primary font-semibold"
+                          : "text-ink-tertiary",
+                      )}
+                    >
+                      {counts[tab.id]}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
       </ul>
 
       {projects && enabledTabs.projects !== false && (
