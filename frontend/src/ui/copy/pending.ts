@@ -322,6 +322,35 @@ export const pending = {
   "settings.calendars_heading": "Calendar Subscriptions",
   "settings.calendars_desc":
     "Subscribe to an iCal feed of all your scheduled tasks in Google Calendar or Apple Calendar.",
+  "settings.language": "Language",
+  "settings.home_view": "Home view",
+  "settings.date_time": "Date & time",
+  "settings.time_zone": "Time zone",
+  "settings.date_format": "Date format",
+  "settings.week_start_help":
+    "Begin your week on this day in Upcoming and calendar views.",
+  "settings.next_week": "Next week",
+  "settings.next_week_help":
+    "Postpone tasks to this day when using “Next week”.",
+  "settings.weekend": "Weekend",
+  "settings.weekend_help": "Postpone tasks to this day when using “Weekend”.",
+  "settings.date_time_karma_notice":
+    "Date & time settings do not affect how Karma is calculated. To set your days off for Karma, head to Productivity settings.",
+  "settings.smart_date_recognition": "Smart date recognition",
+  "settings.smart_date_recognition_help":
+    "Automatically recognize dates when typing a task's name.",
+  "settings.on": "On",
+  "settings.off": "Off",
+  "settings.theme_desc":
+    "Personalize your Agendal with colors to match your style, mood, and personality. Learn more",
+  "settings.sync_theme": "Sync theme",
+  "settings.your_themes": "Your themes",
+  "settings.pro_themes": "Pro themes",
+  "settings.unlock_more_themes": "Unlock more themes",
+  "settings.unlock_more_themes_desc":
+    "Upgrade to personalize your Agendal with more colors and themes.",
+  "settings.upgrade": "Upgrade",
+  "settings.learn_more": "Learn more",
   "auth.create_title": "Create account",
   "auth.create_button": "Create account",
   "auth.email": "Email",
