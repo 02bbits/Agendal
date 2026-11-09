@@ -736,6 +736,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {children}
         {settingsOpen && pathname !== ROUTES.account && (
           <AccountScreen
+            portal={true}
             name={user?.display_name ?? ""}
             email={user?.email ?? ""}
             settings={settings}
