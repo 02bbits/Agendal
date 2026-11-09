@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Actions\ProcessNote;
+use App\Enums\PlanStatus;
 use App\Http\Resources\NoteResultResource;
 use App\Models\Note;
 use App\Models\Task;
@@ -14,17 +15,17 @@ use App\Services\Notes\NoteFollowup;
 use App\Services\Notes\NoteUndo;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 
 class NoteController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs,kept'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
+        $input = $request->validate(['filter' => ['sometimes', 'in:all,made,needs'], 'cursor' => ['nullable', 'string', 'max:2048'], 'limit' => ['sometimes', 'integer', 'min:1', 'max:50']]);
         $query = Note::query();
         match ($input['filter'] ?? 'all') {
-            'made' => $query->where('status', 'done'),
-            'needs' => $query->whereIn('status', ['confirm', 'followup']),
-            'kept' => $query->where('status', 'kept'),
+            'made' => $query->where('status', PlanStatus::Done->value),
+            'needs' => $query->whereIn('status', PlanStatus::needsLook()),
             default => $query,
         };
         $page = $query->orderByDesc('written_at')->orderByDesc('id')->cursorPaginate((int) ($input['limit'] ?? 20));
@@ -34,11 +35,11 @@ class NoteController extends Controller
             'items' => $page->getCollection()->map(function (Note $note): array {
                 $kinds = array_count_values(array_column($note->plan['changes'] ?? [], 'kind'));
 
-                return ['id' => $note->id, 'status' => $note->status, 'name' => $note->name, 'excerpt' => mb_substr($note->text, 0, 140), 'written_at' => $note->written_at->format(DATE_ATOM), 'source_file_name' => $note->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
+                return ['id' => $note->id, 'status' => $note->status, 'name' => $note->name, 'excerpt' => mb_substr($note->text, 0, 140), 'written_at' => $note->written_at->format(DATE_ATOM), 'edited_at' => $note->edited_at?->format(DATE_ATOM), 'source_file_name' => $note->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
             })->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
             'total' => (int) $counts->sum(),
-            'needs_count' => (int) ($counts['confirm'] ?? 0) + (int) ($counts['followup'] ?? 0),
+            'needs_count' => (int) $counts->only(PlanStatus::needsLook())->sum(),
         ]);
     }
 
@@ -66,7 +67,7 @@ class NoteController extends Controller
         $user = $request->user();
         assert($user instanceof User);
 
-        return new NoteResultResource($process->replanFollowup($user, $note, $request->all()));
+        return new NoteResultResource($process->replan($user, $note, $request->all()));
     }
 
     /** The user renames a note; its plan and tasks don't change. Edit note names it again (RV-5). */
@@ -81,14 +82,9 @@ class NoteController extends Controller
     public function apply(Request $request, Note $note, NoteConfirm $confirm): NoteResultResource
     {
         // Edits from Check this first, by entry ref: only the fields a task patch may set (TK §7).
-        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct']]);
+        $input = $request->validate(['edits' => ['sometimes', 'array'], 'edits.*' => ['array:'.implode(',', Task::PATCHABLE)], 'exclude' => ['sometimes', 'array', 'max:30'], 'exclude.*' => ['string', 'distinct'], 'plan_version' => ['sometimes', 'integer', 'min:1']]);
 
-        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? []));
-    }
-
-    public function cancel(Note $note, NoteConfirm $confirm): NoteResultResource
-    {
-        return new NoteResultResource($confirm->cancel($note));
+        return new NoteResultResource($confirm->apply($note, $input['edits'] ?? [], $input['exclude'] ?? [], isset($input['plan_version']) ? (int) $input['plan_version'] : null));
     }
 
     public function undo(Request $request, Note $note, NoteUndo $undo): NoteResultResource
@@ -99,5 +95,20 @@ class NoteController extends Controller
     public function redo(Note $note, NoteUndo $undo): NoteResultResource
     {
         return new NoteResultResource($undo->redo($note));
+    }
+
+    public function destroy(Note $note): Response
+    {
+        $note->delete();
+
+        return response()->noContent();
+    }
+
+    /** Undo of Delete note (RV §2.7); a note that is not deleted comes back unchanged. */
+    public function restore(Note $note): NoteResultResource
+    {
+        $note->restore();
+
+        return new NoteResultResource($note);
     }
 }

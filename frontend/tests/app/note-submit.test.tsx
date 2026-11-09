@@ -35,6 +35,7 @@ const result = (status: NoteResult["note"]["status"]): NoteResult => ({
     source_file_name: null,
     written_at: "2026-10-23T08:12:00+07:00",
     processed_at: "2026-10-23T08:12:01+07:00",
+    plan_version: 1,
   },
   changes:
     status === "done"

@@ -28,7 +28,7 @@ final class PlanValidator
     private const ENTRY_KEYS = ['ref', 'task_id', 'label'];
 
     /** Fields that schedule a task: an entry setting one has to leave a date when the task has a time, repeat or reminder. */
-    private const SCHEDULE_FIELDS = ['due_date', 'start_time', 'repeat', 'reminder'];
+    private const SCHEDULE_FIELDS = ['due_date', 'start_date', 'start_time', 'repeat', 'reminder'];
 
     private Validator $schema;
 
@@ -170,7 +170,7 @@ final class PlanValidator
         $result = $kind === 'create' ? $entry : array_replace($tasks[$entry['task_id']], $entry);
 
         return RepeatSchedule::validFor($result['repeat_rule'] ?? null, $result['repeat'] ?? 'never')
-            && $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($result);
+            && $this->hasDateWhenNeeded($entry, $result) && $this->endsAfterStart($entry, $result);
     }
 
     /**
@@ -212,8 +212,8 @@ final class PlanValidator
     }
 
     /**
-     * A task the entry schedules keeps a due date while it has a time, repeat or reminder; the engine always gives
-     * one (NU-E5).
+     * A task the entry schedules keeps a date while it has a time, repeat or reminder: a due date, or a start date as
+     * any task may have instead (TK-3). The engine always gives a due date (NU-E5).
      *
      * @param  array<string, mixed>  $entry
      * @param  array<string, mixed>  $task  the task after the entry
@@ -225,20 +225,28 @@ final class PlanValidator
             || ($task['repeat'] ?? Repeat::Never->value) !== Repeat::Never->value
             || ($task['reminder'] ?? Reminder::None->value) !== Reminder::None->value;
 
-        return ! $schedules || ! $needsDate || ($task['due_date'] ?? null) !== null;
+        return ! $schedules || ! $needsDate || ($task['due_date'] ?? $task['start_date'] ?? null) !== null;
     }
 
     /**
-     * The end is after the start; an end alone has nothing to follow (TK-3).
+     * The start comes before the due when both exist (TK-3): an earlier start date is enough, and on one day the end
+     * time follows the start time. An end time alone is a due time, as on any task. Only a start date the entry sets
+     * (an edit on Check this first) counts: a move pulls the task's own start along when it is applied.
      *
-     * @param  array<string, mixed>  $task
+     * @param  array<string, mixed>  $entry
+     * @param  array<string, mixed>  $task  the task after the entry
      */
-    private function endsAfterStart(array $task): bool
+    private function endsAfterStart(array $entry, array $task): bool
     {
+        $dueDate = $task['due_date'] ?? null;
+        $startDate = $entry['start_date'] ?? $dueDate;
+        if ($startDate !== null && $dueDate !== null && $startDate !== $dueDate) {
+            return $startDate < $dueDate;
+        }
         $start = $task['start_time'] ?? null;
         $end = $task['end_time'] ?? null;
 
-        return $end === null || ($start !== null && $end > $start);
+        return $start === null || $end === null || $end > $start;
     }
 
     /**

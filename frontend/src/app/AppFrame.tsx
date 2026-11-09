@@ -40,8 +40,11 @@ import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
 import {
   forgetNotes,
+  listNotes,
+  NOTE_UPDATED,
+  notesChanged,
   rememberNote,
-  replanFollowup,
+  replanNote,
   searchNotes,
   submitNote,
 } from "@/lib/noteApi";
@@ -514,6 +517,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [upcomingCount, setUpcomingCount] = useState<number | undefined>(
     undefined,
   );
+  const [notesCount, setNotesCount] = useState<number | undefined>(undefined);
   const [projectsList, setProjectsList] = useState<ProjectWithCounts[]>([]);
   const [noProjectCount, setNoProjectCount] = useState<number | undefined>(
     undefined,
@@ -553,6 +557,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
       })
       .catch(() => {});
 
+    listNotes()
+      .then((data) => setNotesCount(data.total))
+      .catch(() => {});
+
     upcoming()
       .then((data) => {
         if (data) {
@@ -574,11 +582,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
     window.addEventListener("agendal:task-created", handleUpdate);
     window.addEventListener("agendal:projects-changed", handleUpdate);
+    window.addEventListener(NOTE_UPDATED, handleUpdate);
     document.addEventListener("visibilitychange", handleUpdate);
 
     return () => {
       window.removeEventListener("agendal:task-created", handleUpdate);
       window.removeEventListener("agendal:projects-changed", handleUpdate);
+      window.removeEventListener(NOTE_UPDATED, handleUpdate);
       document.removeEventListener("visibilitychange", handleUpdate);
     };
   }, [loadSidebarData]);
@@ -594,8 +604,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
     if (projectsList.length > 0) {
       counts.projects = projectsList.length + 1;
     }
+    if (notesCount !== undefined) {
+      counts.notes = notesCount;
+    }
     return counts;
-  }, [inboxCount, upcomingCount, projectsList.length]);
+  }, [inboxCount, upcomingCount, projectsList.length, notesCount]);
 
   const sortedSidebarProjects = useMemo(
     () => sortProjects(projectsList),
@@ -710,12 +723,13 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onDraftRestored={() => showToast(t("note.draft_restored"))}
             onSubmit={
               editingNote
-                ? (text) => replanFollowup(editingNote.id, text)
+                ? (text, _clientId, confirmConflicts) =>
+                    replanNote(editingNote.id, text, confirmConflicts)
                 : submitNote
             }
             onSubmitted={(result) => {
               rememberNote(result);
-              window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+              notesChanged(result.note.id);
               openResult(result.note.id);
             }}
           />

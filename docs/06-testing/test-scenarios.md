@@ -51,7 +51,7 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 ## <a id="ts-07"></a>TS-07 — Undo all (RV-2, NF-11)
 - **Given** a note that created 2 tasks, rescheduled 1 and (after confirmation) deleted 1
 - **When** the user taps Undo all
-- **Then** the 2 tasks are gone, the rescheduled task has its old date, the deleted task is back, and the note shows Undone
+- **Then** the 2 tasks are gone, the rescheduled task has its old date, the deleted task is back, and the note shows Pending
 - **Tests:** T-RV-10, T-RV-11, T-RV-13
 
 ## <a id="ts-08"></a>TS-08 — Offline note (NC-6, AP-2)
