@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { api } from "../../lib/api";
 import { AccountScreen } from "../../ui";
 import { useAppFrame } from "../AppFrame";
 import {
@@ -63,6 +64,16 @@ export default function AccountPage() {
     }
   };
 
+  const handleUpdateName = async (newName: string) => {
+    try {
+      await api("/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: newName }),
+      });
+    } catch {}
+  };
+
   return (
     <AccountScreen
       name={user?.display_name ?? ""}
@@ -77,6 +88,7 @@ export default function AccountPage() {
       vapidConfigured={vapidConfigured}
       onEnableNotifications={handleEnableNotifications}
       onSendTestNotification={handleSendTestNotification}
+      onUpdateName={handleUpdateName}
     />
   );
 }
