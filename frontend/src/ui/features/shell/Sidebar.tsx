@@ -32,6 +32,8 @@ export interface SidebarProps {
   onNewProject?: () => void;
   /** Callback to open search. */
   onSearch?: () => void;
+  /** Callback to open account / settings popup. */
+  onAccount?: () => void;
   /** The signed-in user's name; the avatar shows its first letter. */
   accountName: string;
 }
@@ -44,6 +46,7 @@ export function Sidebar({
   projects,
   onNewProject,
   onSearch,
+  onAccount,
   accountName,
 }: SidebarProps) {
   const [projectsOpen, setProjectsOpen] = useState(true);
@@ -144,7 +147,13 @@ export function Sidebar({
       <Link
         href={ROUTES.account}
         navigate={navigate}
-        className="focus-ring row-hover mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink"
+        onClick={(e) => {
+          if (onAccount) {
+            e.preventDefault();
+            onAccount();
+          }
+        }}
+        className="focus-ring row-hover mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink cursor-pointer"
       >
         <span
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"
