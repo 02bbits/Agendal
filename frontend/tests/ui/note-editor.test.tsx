@@ -70,7 +70,7 @@ describe("NoteEditor (IM-41)", () => {
     await userEvent.type(field(), "a");
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
     await userEvent.click(makeTasks());
-    expect(onSubmit).toHaveBeenCalledWith("a", expect.any(String));
+    expect(onSubmit).toHaveBeenCalledWith("a", expect.any(String), false);
   });
 
   it("keeps Make tasks disabled for spaces, line breaks and zero-width characters (T-NC-115)", async () => {
@@ -270,6 +270,7 @@ describe("NoteEditor submit (IM-42)", () => {
     expect(onSubmit).toHaveBeenCalledWith(
       "call mum",
       expect.stringMatching(/^[0-9a-f-]{36}$/),
+      false,
     );
     expect(clearDraft).toHaveBeenCalled();
     expect(onSubmitted).toHaveBeenCalledWith(made);
@@ -360,6 +361,82 @@ describe("NoteEditor submit (IM-42)", () => {
     const [[, first], [text, second]] = onSubmit.mock.calls;
     expect(text).toBe("call mum tonight");
     expect(second).not.toBe(first);
+  });
+
+  describe("Edit note over hand-edited tasks (RV-E16, T-RV-116)", () => {
+    const edited = { id: "n1", text: "call mum" } as NoteResult["note"];
+    const start = async (onSubmit: ReturnType<typeof vi.fn>) => {
+      const u = user();
+      render(
+        <NoteEditor note={edited} onClose={() => {}} onSubmit={onSubmit} />,
+      );
+      await u.type(field(), " tonight");
+      await u.click(screen.getByRole("button", { name: t("note.replan") }));
+      return u;
+    };
+
+    it("asks first with the Undo all dialog, and Cancel sends nothing more", async () => {
+      const onSubmit = vi.fn().mockResolvedValue({ conflicts: 2 });
+      const u = await start(onSubmit);
+      const dialog = await screen.findByRole("alertdialog");
+      expect(
+        within(dialog).getByText(t("note.undo_conflict_title")),
+      ).toBeTruthy();
+      await u.click(
+        within(dialog).getByRole("button", { name: t("common.cancel") }),
+      );
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(onSubmit.mock.calls[0]![2]).toBe(false);
+      expect((field() as HTMLTextAreaElement).value).toBe("call mum tonight");
+    });
+
+    it("Escape closes the dialog first, keeps the text and doesn't ask to discard", async () => {
+      const onClose = vi.fn();
+      const u = user();
+      render(
+        <NoteEditor
+          note={edited}
+          onClose={onClose}
+          onSubmit={vi.fn().mockResolvedValue({ conflicts: 2 })}
+        />,
+      );
+      await u.type(field(), " tonight");
+      await u.click(screen.getByRole("button", { name: t("note.replan") }));
+      await screen.findByRole("alertdialog");
+      await u.keyboard("{Escape}");
+      expect(screen.queryByRole("alertdialog")).toBeNull();
+      expect((field() as HTMLTextAreaElement).value).toBe("call mum tonight");
+      expect(onClose).not.toHaveBeenCalled();
+    });
+
+    it("Confirm sends the same text again with confirmConflicts", async () => {
+      const onSubmit = vi
+        .fn()
+        .mockResolvedValueOnce({ conflicts: 2 })
+        .mockResolvedValueOnce(made);
+      const onSubmitted = vi.fn();
+      const u = user();
+      render(
+        <NoteEditor
+          note={edited}
+          onClose={() => {}}
+          onSubmit={onSubmit}
+          onSubmitted={onSubmitted}
+        />,
+      );
+      await u.type(field(), " tonight");
+      await u.click(screen.getByRole("button", { name: t("note.replan") }));
+      await u.click(
+        within(await screen.findByRole("alertdialog")).getByRole("button", {
+          name: t("note.undo_all"),
+        }),
+      );
+      expect(onSubmit).toHaveBeenCalledTimes(2);
+      expect(onSubmit.mock.calls[1]![0]).toBe("call mum tonight");
+      expect(onSubmit.mock.calls[1]![2]).toBe(true);
+      expect(onSubmitted).toHaveBeenCalledWith(made);
+    });
   });
 
   it("× and Escape wait until the request has answered", async () => {

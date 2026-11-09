@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactElement,
   type RefObject,
@@ -11,15 +13,20 @@ import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
 import { ApiRequestError } from "../../../lib/apiError";
-import { saveDraft } from "../../../lib/draft";
 import {
   confirmNote,
+  deleteNote,
   getNote,
   makeFollowupTask,
+  concernsNote,
+  NOTE_UPDATED,
+  notesChanged,
   previewTaskApi,
   recallNote,
   redoNote,
   renameNote,
+  replanNote,
+  restoreNote,
   undoNote,
 } from "../../../lib/noteApi";
 import { useOffline } from "../../../lib/online";
@@ -35,6 +42,7 @@ import {
   type Project,
   type Task,
 } from "../../../ui";
+import { nameOf } from "../../../ui/features/notes/NoteResultScreen";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
 import { useMediaQuery } from "../../../ui/components/useMediaQuery";
 import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
@@ -115,8 +123,9 @@ function OpenedTask({
 }
 
 /**
- * A result just made in this session is already here, so the note isn't asked for again. Each
- * task is always checked, so a row opened and deleted since shows "Removed since" (RV-E13).
+ * A result just made in this session is already here, so the note isn't asked for again; one known
+ * to be stale (a plan changed elsewhere) is dropped from that cache first. Each task is always
+ * checked, so a row opened and deleted since shows "Removed since" (RV-E13).
  */
 async function load(id: string): Promise<Loaded> {
   const result = recallNote(id) ?? (await getNote(id));
@@ -157,7 +166,6 @@ function ResultContainer({
   navigate,
   weekStart,
   showToast,
-  openNoteEditor,
   editFollowupNote,
   edits,
   projectList,
@@ -170,9 +178,8 @@ function ResultContainer({
   navigate?: Navigate;
   weekStart: "mon" | "sun";
   showToast: ReturnType<typeof useAppFrame>["showToast"];
-  openNoteEditor: () => void;
   editFollowupNote: ReturnType<typeof useAppFrame>["editFollowupNote"];
-  edits?: Parameters<typeof confirmNote>[2];
+  edits?: Parameters<typeof confirmNote>[1];
   projectList: Project[];
   presentation: "screen" | "panel";
   closeGuardRef?: ClientProps["closeGuardRef"];
@@ -184,25 +191,51 @@ function ResultContainer({
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
-  // Check this first hasn't applied anything yet: leaving asks first, and the note stays pending
+  // Check this first hasn't applied anything yet: leaving it with edits or omitted rows asks first,
+  // and the note stays pending
   const reviewing = result.note.status === "confirm";
+  // Read when leaving: a task edit reaches `edits` after the render that shows it
+  const changed = useCallback(
+    () =>
+      reviewing && (excluded.length > 0 || Object.keys(edits ?? {}).length > 0),
+    [reviewing, excluded, edits],
+  );
   const [askDiscard, setAskDiscard] = useState(false);
-  const leave = () => (reviewing ? setAskDiscard(true) : back());
+  // An open task editor answers first: it asks before dropping its own draft (UX-13)
+  const taskEditorGuard = useRef<(() => boolean) | null>(null);
+  const mayLeave = useCallback(() => {
+    if (taskEditorGuard.current?.() === false) return false;
+    const ask = changed();
+    if (ask) setAskDiscard(true);
+    return !ask;
+  }, [changed]);
+  const leave = () => {
+    if (mayLeave()) back();
+  };
+  // An answer that lands after this screen closed (the user moved on) must not navigate from it
+  // Set on every mount too: Strict Mode runs cleanup then setup again on the same instance
+  const shown = useRef(true);
+  useEffect(() => {
+    shown.current = true;
+    return () => {
+      shown.current = false;
+    };
+  }, []);
+  const backIfShown = () => {
+    if (shown.current) back();
+  };
   useEffect(() => {
     if (!closeGuardRef) return;
-    closeGuardRef.current = () => {
-      if (reviewing) setAskDiscard(true);
-      return !reviewing;
-    };
+    closeGuardRef.current = mayLeave;
     return () => {
       closeGuardRef.current = null;
     };
-  }, [closeGuardRef, reviewing]);
+  }, [closeGuardRef, mayLeave]);
   const wide = useMediaQuery("(min-width: 1280px)");
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
   const closeTask = () => {
     setOpenedTask(null);
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged(result.note.id);
   };
   useHistoryEntry(!!openedTask, closeTask);
   const openTask = (task: Task) => {
@@ -239,10 +272,14 @@ function ResultContainer({
   // note's screen: ponytail: the toast opens it rather than asking from the list
   const apply = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, "apply", edits, excluded);
+    const outcome = await confirmNote(result.note, edits, excluded);
     setBusy(false);
-    if ("error" in outcome)
-      return showToast(t(outcome.error, { request_id: "" }));
+    if ("error" in outcome) {
+      showToast(t(outcome.error, { request_id: "" }));
+      // Re-planned elsewhere: load the new plan, since these edits named the old one's rows
+      if (outcome.error === "note.plan_changed") notesChanged(result.note.id);
+      return;
+    }
     const id = outcome.note.id;
     listsChanged();
     showToast({
@@ -264,33 +301,54 @@ function ResultContainer({
         });
       },
     });
-    back();
+    backIfShown();
   };
-  // Edit note keeps the note (`kept`) and reopens the editor with its text, once back where it was
-  // written (WF-02). A deep link's back is a replace, with no popstate: the timer opens it then
-  const edit = async () => {
-    if (result.note.status === "followup") {
-      editFollowupNote(result.note);
-      return;
-    }
+  // Edit note (RV-5): opens the note's text in the editor; Make tasks replans it.
+  const edit = () => {
+    editFollowupNote(result.note);
+  };
+  const remove = async () => {
     setBusy(true);
-    const outcome = await confirmNote(result.note.id, "cancel");
-    if ("error" in outcome) {
+    let outcome: Awaited<ReturnType<typeof deleteNote>>;
+    try {
+      outcome = await deleteNote(result.note.id);
+    } finally {
       setBusy(false);
-      return showToast(t(outcome.error, { request_id: "" }));
     }
-    await saveDraft(result.note.text).catch(() => {});
-    let opened = false;
-    const open = () => {
-      if (opened) return;
-      opened = true;
-      window.removeEventListener("popstate", open);
-      openNoteEditor();
+    if (outcome !== true)
+      return showToast(t(outcome.error, { request_id: "" }));
+    notesChanged(result.note.id);
+    // The Undo; a failed restore offers it again, since the note stays deleted until it lands
+    const restore = async () => {
+      const restored = await restoreNote(result.note.id);
+      if ("error" in restored)
+        return showToast({
+          message: t(restored.error, { request_id: "" }),
+          actionLabel: t("common.retry"),
+          onAction: restore,
+        });
+      notesChanged(result.note.id);
     };
-    window.addEventListener("popstate", open);
-    setTimeout(open, 250);
-    back();
+    showToast({
+      message: t("note.deleted", { name: nameOf(result) }),
+      actionLabel: t("common.undo"),
+      onAction: restore,
+    });
+    backIfShown();
   };
+
+  // Make tasks again (RV §2.4): plans the note's text anew; the screen reloads on the new result
+  const replan = async () => {
+    setBusy(true);
+    const outcome = await replanNote(result.note.id, result.note.text);
+    setBusy(false);
+    if ("error" in outcome)
+      return showToast(t(outcome.error, { request_id: "" }));
+    if ("conflicts" in outcome) return;
+    listsChanged();
+    notesChanged(result.note.id);
+  };
+
   // Keep it as task plans the note's text as one task: the note reloads as Check this first, and
   // nothing is made until Apply (RV-3)
   const makeTask = async () => {
@@ -299,7 +357,7 @@ function ResultContainer({
     setBusy(false);
     if ("error" in outcome)
       return showToast(t(outcome.error, { request_id: "" }));
-    window.dispatchEvent(new CustomEvent("agendal:note-updated"));
+    notesChanged(result.note.id);
   };
   const live = useMemo(
     () => ({
@@ -310,7 +368,8 @@ function ResultContainer({
   );
   return (
     <>
-      <div inert={!!openId || !!openedTask}>
+      {/* Busy: Apply, Delete or Make tasks again is on its way; an edit now would never reach it */}
+      <div inert={!!openId || !!openedTask || busy}>
         <NoteResultScreen
           result={{
             ...result,
@@ -324,13 +383,16 @@ function ResultContainer({
           onRestoreOmission={() => setExcluded((values) => values.slice(0, -1))}
           live={live}
           today={store.today}
+          now={store.clock.now()}
           timeZone={store.clock.timeZone}
           timeFormat={store.timeFormat}
           weekStart={weekStart}
           onDone={leave}
           onApply={apply}
           onEdit={edit}
+          onReplan={replan}
           onMakeTask={makeTask}
+          onDelete={remove}
           onRename={async (name) => {
             const outcome = await renameNote(result.note.id, name);
             if ("error" in outcome) {
@@ -361,6 +423,7 @@ function ResultContainer({
           }
           task={store.tasks.find((task) => task.id === openId)!}
           weekStart={weekStart}
+          closeGuardRef={taskEditorGuard}
           onCancel={() => setOpenId(null)}
           onDone={(patch) => {
             store.update(openId, patch);
@@ -412,14 +475,8 @@ export default function NoteResultClient({
   onClose,
   closeGuardRef,
 }: ClientProps): ReactElement | null {
-  const {
-    back,
-    navigate,
-    settings,
-    showToast,
-    openNoteEditor,
-    editFollowupNote,
-  } = useAppFrame();
+  const { back, navigate, settings, showToast, editFollowupNote } =
+    useAppFrame();
 
   const [loaded, setLoaded] = useState<Loaded | null>(null);
   const [showSkeleton, setShowSkeleton] = useState(false);
@@ -430,14 +487,15 @@ export default function NoteResultClient({
   const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
-    const changed = () => {
+    const changed = (event: Event) => {
+      if (!concernsNote(event, id)) return;
       setLoaded(null);
       setErrorState(null);
       setReloadKey((key) => key + 1);
     };
-    window.addEventListener("agendal:note-updated", changed);
-    return () => window.removeEventListener("agendal:note-updated", changed);
-  }, []);
+    window.addEventListener(NOTE_UPDATED, changed);
+    return () => window.removeEventListener(NOTE_UPDATED, changed);
+  }, [id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -460,6 +518,9 @@ export default function NoteResultClient({
       });
     return () => {
       cancelled = true;
+      // Next keeps this page mounted but hidden after we leave (cacheComponents) and runs the load
+      // again on return: dropping what was loaded drops the review's edits and omissions with it
+      setLoaded(null);
     };
   }, [id, reloadKey]);
 
@@ -532,7 +593,6 @@ export default function NoteResultClient({
         navigate={navigate}
         weekStart={settings.weekStart}
         showToast={showToast}
-        openNoteEditor={openNoteEditor}
         editFollowupNote={editFollowupNote}
         edits={preview?.edits}
         projectList={loaded.projects}

@@ -34,6 +34,7 @@ final class NoteFollowup
                 'name' => $build->name, 'status' => PlanStatus::Confirm->value, 'engine' => $build->engine->value,
                 'processed_at' => $this->clock->now(),
                 'plan' => [...$build->plan, 'changes' => $this->applier->preview($note, $build->plan), 'followup_task' => true],
+                'plan_version' => $note->nextPlanVersion(),
             ])->save();
 
             return $note->refresh();

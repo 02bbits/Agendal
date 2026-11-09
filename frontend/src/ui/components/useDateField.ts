@@ -188,6 +188,7 @@ export function useDateField({
       }
 
       if (e.key === "Escape") {
+        e.preventDefault();
         e.stopPropagation();
         onCancel?.();
         return;

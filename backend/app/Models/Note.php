@@ -7,6 +7,7 @@ use App\Services\Clock\ClockInterface;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -16,17 +17,24 @@ use Illuminate\Support\Carbon;
  * @property CarbonImmutable $written_at
  * @property CarbonImmutable $processed_at
  * @property ?CarbonImmutable $edited_at
+ * @property int $plan_version
  */
 class Note extends Model
 {
-    use HasUuids, OwnedByUser;
+    use HasUuids, OwnedByUser, SoftDeletes;
 
     const UPDATED_AT = null;
 
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime'];
+        return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime', 'deleted_at' => 'immutable_datetime', 'plan_version' => 'integer'];
+    }
+
+    /** The version a plan made now takes: Apply names the plan the user reviewed by it (RV §7). */
+    public function nextPlanVersion(): int
+    {
+        return $this->exists ? $this->plan_version + 1 : 1;
     }
 
     public function freshTimestamp(): Carbon

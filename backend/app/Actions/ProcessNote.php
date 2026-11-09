@@ -17,6 +17,7 @@ use App\Services\Notes\NoteApplier;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
 use App\Services\Notes\NoteSplitter;
+use App\Services\Notes\NoteUndo;
 use App\Services\Notes\PlanValidator;
 use App\Services\Notes\TaskCandidates;
 use DateTimeZone;
@@ -36,6 +37,7 @@ class ProcessNote
         private CommandMatcher $matcher,
         private TaskCandidates $candidates,
         private NoteApplier $applier,
+        private NoteUndo $undo,
     ) {}
 
     /**
@@ -49,7 +51,8 @@ class ProcessNote
         return DB::transaction(function () use ($user, $input): array {
             // Serializes client-id replays, open-task limits and notes from multiple devices.
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
-            $existing = Note::query()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
+            // A trashed note still owns its client_id (unique index), so its replay returns it too.
+            $existing = Note::withTrashed()->where('user_id', $user->id)->where('client_id', $input['client_id'])->first();
             if ($existing !== null) {
                 return ['note' => $existing, 'replay' => true];
             }
@@ -59,20 +62,41 @@ class ProcessNote
     }
 
     /** @param array<string, mixed> $input */
-    public function replanFollowup(User $user, Note $note, array $input): Note
+    public function replan(User $user, Note $note, array $input): Note
     {
         return DB::transaction(function () use ($user, $note, $input): Note {
             User::query()->whereKey($user->id)->lockForUpdate()->firstOrFail();
             $note = Note::query()->whereKey($note->id)->lockForUpdate()->firstOrFail();
-            Validator::make($input, ['text' => ['required', 'string'], 'timezone' => ['required', 'string']])->validate();
+            Validator::make($input, [
+                'text' => ['required', 'string'],
+                'timezone' => ['required', 'string'],
+                'confirm_conflicts' => ['sometimes', 'boolean'],
+            ])->validate();
+
+            // Every note status can be edited (RV §2.5); a note still being planned (`new`) can't.
+            if (PlanStatus::tryFrom($note->status) === null) {
+                throw new ApiError('note.wrong_status', 'This note cannot be edited.', 409);
+            }
+
             $text = $this->splitter->normalize($input['text']);
-            // Unchanged text and a retry after a lost reply return the already stored result.
-            if ($text === $note->text) {
+            // Unchanged text and a retry after a lost reply return the already stored result (RV-E18);
+            // a pending note is planned again: Make tasks again after Undo all (RV §2.4).
+            if ($text === $note->text && $note->status !== PlanStatus::Pending->value) {
                 return $note;
             }
-            if ($note->status !== PlanStatus::Followup->value) {
-                throw new ApiError('note.wrong_status', 'Only a follow-up note can be edited here.', 409);
+
+            // RV §2.5: If status is done, undo what the note applied first.
+            // RV-E17: older than 30 days throws note.undo_expired.
+            // RV-E16: conflicts without confirm_conflicts throws note.undo_conflicts.
+            if ($note->status === PlanStatus::Done->value) {
+                $confirmConflicts = (bool) ($input['confirm_conflicts'] ?? false);
+                $this->undo->reverseApplied($note, $confirmConflicts);
+                $note->applied = [];
+                $note->undo_log = null;
+            } else {
+                $note->undo_log = null;
             }
+
             $input['written_at'] = $this->clock->now()->format(DATE_ATOM);
 
             return $this->process($user, $input, $note);
@@ -126,7 +150,7 @@ class ProcessNote
             'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
             'written_at' => $note->exists ? $note->written_at : $clientClock->now(), 'written_tz' => $note->exists ? $note->written_tz : $zone, 'processed_at' => $this->clock->now(),
             'edited_at' => $note->exists ? $this->clock->now() : null,
-            'plan' => $plan, 'applied' => [],
+            'plan' => $plan, 'plan_version' => $note->nextPlanVersion(), 'applied' => [],
         ])->save();
         if ($build->status === PlanStatus::Done) {
             $applied = $this->applier->apply($note, $plan);

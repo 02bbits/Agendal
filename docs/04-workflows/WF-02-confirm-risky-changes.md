@@ -12,5 +12,5 @@
 
 | At | Condition | Behaviour |
 |---|---|---|
-| 3 | Edit note | Nothing changes. The note is kept (status `kept`), and the editor opens again with its text. Make tasks makes a new note |
+| 3 | Edit note | Nothing changes. The editor opens with the note's text. Make tasks re-plans the same note |
 | 1 | Offline note processed on reconnect | The same rule applies. The confirmation waits for the user ([BR-04](../02-domain/business-rules.md#br-04)) |

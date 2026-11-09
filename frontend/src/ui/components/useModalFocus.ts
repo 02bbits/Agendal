@@ -53,6 +53,9 @@ export function useModalFocus(
       const layers = document.querySelectorAll('[aria-modal="true"]');
       if (layers[layers.length - 1] !== container) return;
       if (event.key === "Escape") {
+        // A field, picker or popover inside already took this Escape (it calls preventDefault):
+        // React's stopPropagation can't stop a listener on the same document node
+        if (event.defaultPrevented) return;
         event.stopPropagation();
         escape.current();
         return;

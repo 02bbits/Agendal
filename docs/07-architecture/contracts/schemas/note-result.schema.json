@@ -9,18 +9,19 @@
   "properties": {
     "note": {
       "type": "object",
-      "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine"],
+      "required": ["id", "client_id", "status", "name", "text", "source_file_name", "written_at", "processed_at", "engine", "plan_version"],
       "additionalProperties": false,
       "properties": {
         "id": { "type": "string", "format": "uuid" },
         "client_id": { "type": "string", "format": "uuid" },
-        "status": { "enum": ["done", "confirm", "followup", "kept", "undone"] },
+        "status": { "enum": ["done", "confirm", "followup", "pending"] },
         "name": { "type": ["string", "null"], "maxLength": 35 },
         "text": { "type": "string", "minLength": 1, "maxLength": 5000 },
         "source_file_name": { "type": ["string", "null"], "maxLength": 255 },
         "written_at": { "type": "string", "format": "date-time" },
         "processed_at": { "type": "string", "format": "date-time" },
         "edited_at": { "type": ["string", "null"], "format": "date-time" },
+        "plan_version": { "type": "integer", "minimum": 1, "description": "Which plan the note holds; Apply names the one reviewed (RV §7)." },
         "engine": { "enum": ["rules", "rules_llm", "rules_fallback"] }
       }
     },
@@ -91,6 +92,7 @@
         "ref": { "type": "string" },
         "title": { "$ref": "task.schema.json#/$defs/title" },
         "due_date": { "$ref": "task.schema.json#/$defs/date" },
+        "start_date": { "$ref": "task.schema.json#/$defs/date" },
         "start_time": { "$ref": "task.schema.json#/$defs/time" },
         "end_time": { "$ref": "task.schema.json#/$defs/time" },
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
@@ -115,6 +117,7 @@
         "done": { "type": "boolean" },
         "title": { "$ref": "task.schema.json#/$defs/title" },
         "due_date": { "$ref": "task.schema.json#/$defs/date" },
+        "start_date": { "$ref": "task.schema.json#/$defs/date" },
         "start_time": { "$ref": "task.schema.json#/$defs/time" },
         "end_time": { "$ref": "task.schema.json#/$defs/time" },
         "priority": { "$ref": "task.schema.json#/$defs/priority" },
