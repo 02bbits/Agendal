@@ -12,6 +12,8 @@ export interface SelectOption<T extends string> {
   value: T;
   label: string;
   icon?: ReactNode;
+  disabled?: boolean;
+  badge?: string;
 }
 
 export interface SelectDropdownProps<T extends string> {
@@ -125,14 +127,15 @@ export function SelectDropdown<T extends string>({
           role={roleMode === "radio" ? "radiogroup" : "listbox"}
           aria-label={label}
           className={cx(
-            "z-50 rounded-xl border border-separator/70 bg-surface shadow-2xl py-1 transition-all max-h-60 overflow-y-auto",
+            "z-50 rounded-xl border border-separator/70 bg-surface/95 backdrop-blur-md shadow-2xl p-1 transition-all duration-150 ease-out origin-top max-h-60 overflow-y-auto space-y-0.5",
             isOpen
-              ? "absolute left-0 right-0 top-full mt-1.5 opacity-100 pointer-events-auto backdrop-blur-md"
-              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              ? "absolute left-0 right-0 top-full mt-1 opacity-100 scale-100 translate-y-0 pointer-events-auto"
+              : "opacity-0 scale-95 -translate-y-1 pointer-events-none absolute h-0 overflow-hidden",
           )}
         >
           {options.map((option, idx) => {
             const isSelected = option.value === value;
+            const isDisabled = Boolean(option.disabled);
             return (
               <button
                 key={option.value}
@@ -140,20 +143,25 @@ export function SelectDropdown<T extends string>({
                   optionRefs.current[idx] = el;
                 }}
                 type="button"
+                disabled={isDisabled}
                 role={roleMode === "radio" ? "radio" : "option"}
                 aria-checked={roleMode === "radio" ? isSelected : undefined}
                 aria-selected={roleMode === "option" ? isSelected : undefined}
-                tabIndex={isOpen ? 0 : -1}
+                aria-disabled={isDisabled ? true : undefined}
+                tabIndex={isOpen && !isDisabled ? 0 : -1}
                 onClick={() => {
+                  if (isDisabled) return;
                   onChange(option.value);
                   setIsOpen(false);
                   triggerRef.current?.focus();
                 }}
                 className={cx(
-                  "flex w-full items-center justify-between px-3.5 py-2 text-callout text-left transition-colors cursor-pointer",
-                  isSelected
-                    ? "font-semibold text-primary bg-primary/10"
-                    : "text-ink hover:bg-fill/40",
+                  "flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left transition-all duration-150",
+                  isDisabled
+                    ? "opacity-40 cursor-not-allowed select-none"
+                    : isSelected
+                      ? "font-semibold text-primary bg-primary/10 cursor-pointer"
+                      : "text-ink hover:bg-fill/50 active:bg-fill/70 cursor-pointer",
                 )}
               >
                 <span className="flex items-center gap-2.5 truncate">
@@ -167,11 +175,18 @@ export function SelectDropdown<T extends string>({
                   )}
                   <span>{option.label}</span>
                 </span>
-                {isSelected && (
-                  <span className="shrink-0 text-primary" aria-hidden="true">
-                    <CheckIcon size={16} />
-                  </span>
-                )}
+                <span className="flex items-center gap-2 shrink-0">
+                  {option.badge && (
+                    <span className="text-caption font-normal text-ink-tertiary">
+                      {option.badge}
+                    </span>
+                  )}
+                  {isSelected && (
+                    <span className="text-primary" aria-hidden="true">
+                      <CheckIcon size={16} />
+                    </span>
+                  )}
+                </span>
               </button>
             );
           })}

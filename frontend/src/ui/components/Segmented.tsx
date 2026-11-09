@@ -51,7 +51,7 @@ export function Segmented<V extends string>({
     <div
       className={cx(
         isLg
-          ? "flex gap-1 rounded-2xl bg-fill/70 p-1"
+          ? "inline-flex gap-1 rounded-full bg-fill/50 p-1 border border-separator/40"
           : "flex gap-0.5 rounded-segmented bg-fill p-0.5",
         className,
       )}
@@ -76,9 +76,9 @@ export function Segmented<V extends string>({
             aria-checked={checked}
             tabIndex={checked ? 0 : -1}
             className={cx(
-              "focus-ring relative flex-1 cursor-pointer border-0 bg-transparent transition-colors select-none whitespace-nowrap",
+              "focus-ring relative flex-1 cursor-pointer border-0 bg-transparent transition-all duration-150 select-none whitespace-nowrap",
               isLg
-                ? "min-h-12 rounded-xl py-2.5 px-2 sm:px-4 text-callout sm:text-body font-medium text-ink-secondary aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs"
+                ? "min-h-10 rounded-full py-2 px-5 text-callout font-medium text-ink-secondary hover:text-ink aria-checked:bg-surface-elevated aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs aria-checked:ring-1 aria-checked:ring-separator/40"
                 : "min-h-8 rounded-tile px-2 text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs",
             )}
             onClick={() => onChange(option.value)}

@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { t } from "../../copy";
 import {
   CalendarIcon,
@@ -50,6 +50,35 @@ export function Sidebar({
   accountName,
 }: SidebarProps) {
   const [projectsOpen, setProjectsOpen] = useState(true);
+  const [showCounts, setShowCounts] = useState(() => {
+    try {
+      return typeof localStorage !== "undefined"
+        ? localStorage.getItem("agendal.sidebar_task_counts") !== "false"
+        : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      try {
+        setShowCounts(
+          localStorage.getItem("agendal.sidebar_task_counts") !== "false",
+        );
+      } catch {}
+    };
+    window.addEventListener("storage", handleUpdate);
+    window.addEventListener("agendal:sidebar_counts_changed", handleUpdate);
+    return () => {
+      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener(
+        "agendal:sidebar_counts_changed",
+        handleUpdate,
+      );
+    };
+  }, []);
+
   return (
     // One landmark for the whole sidebar, so the mark, Search and Account are inside it
     <nav
@@ -93,7 +122,7 @@ export function Sidebar({
                   {ICONS[tab.id]}
                 </span>
                 <span className="flex-1">{t(tab.label)}</span>
-                {counts?.[tab.id] !== undefined && (
+                {showCounts && counts?.[tab.id] !== undefined && (
                   <span
                     className={cx(
                       "text-footnote tabular-nums",

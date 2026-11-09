@@ -11,5 +11,6 @@ export * from "./projects";
 export * from "./recentSearches";
 export * from "./week";
 export * from "./newTask";
+export * from "./theme";
 export * from "./entries";
 export * from "./rowMeta";
