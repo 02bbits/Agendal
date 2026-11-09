@@ -56,6 +56,17 @@ function icon(paths: ReactNode) {
   };
 }
 
+export const GripVerticalIcon = icon(
+  <>
+    <circle cx="9" cy="5" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="12" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="19" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="5" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="12" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="19" r="1.25" fill="currentColor" stroke="none" />
+  </>,
+);
+
 export const XIcon = icon(<path d="M18 6 6 18M6 6l12 12" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
 export const CheckIcon = icon(<path d="M20 6 9 17l-5-5" />);

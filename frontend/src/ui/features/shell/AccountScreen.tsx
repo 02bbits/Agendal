@@ -17,7 +17,10 @@ import {
   ChevronRightIcon,
   ClockIcon,
   CloudIcon,
+  FolderIcon,
+  GripVerticalIcon,
   InboxIcon,
+  NotesIcon,
   PaletteIcon,
   PlugIcon,
   PlusIcon,
@@ -33,6 +36,11 @@ import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import type { TimeFormat, WeekStart } from "../../domain/types";
+import {
+  getStoredSidebarTabs,
+  SIDEBAR_TABS_STORAGE_KEY,
+  type TabId,
+} from "./routes";
 
 export type ThemeSetting = "system" | "light" | "dark";
 export type PageViewMode = "flat" | "full";
@@ -176,6 +184,26 @@ export function AccountScreen({
       return true;
     }
   });
+  const [sidebarTabs, setSidebarTabs] = useState(getStoredSidebarTabs);
+
+  const toggleSidebarTab = (tabId: TabId) => {
+    const isCurrentlyEnabled = sidebarTabs[tabId] !== false;
+    const enabledCount = Object.values(sidebarTabs).filter(Boolean).length;
+    // Keep at least one tab enabled
+    if (isCurrentlyEnabled && enabledCount <= 1) return;
+
+    const next = {
+      ...sidebarTabs,
+      [tabId]: !isCurrentlyEnabled,
+    };
+    setSidebarTabs(next);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(SIDEBAR_TABS_STORAGE_KEY, JSON.stringify(next));
+      }
+    } catch {}
+    window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
+  };
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -1203,39 +1231,58 @@ export function AccountScreen({
                       {t("settings.sidebar_preview")}
                     </span>
                     <div className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs">
-                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium text-footnote">
-                        <span className="flex items-center gap-2">
-                          <InboxIcon size={15} />
-                          <span>{t("nav.inbox")}</span>
-                        </span>
-                        {showTaskCounts && (
-                          <span className="text-caption font-semibold text-primary/80 tabular-nums">
-                            5
+                      {sidebarTabs.inbox !== false && (
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium text-footnote">
+                          <span className="flex items-center gap-2">
+                            <InboxIcon size={15} />
+                            <span>{t("nav.inbox")}</span>
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                        <span className="flex items-center gap-2">
-                          <CalendarIcon size={15} />
-                          <span>{t("nav.upcoming")}</span>
-                        </span>
-                        {showTaskCounts && (
-                          <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                            12
+                          {showTaskCounts && (
+                            <span className="text-caption font-semibold text-primary/80 tabular-nums">
+                              5
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {sidebarTabs.upcoming !== false && (
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                          <span className="flex items-center gap-2">
+                            <CalendarIcon size={15} />
+                            <span>{t("nav.upcoming")}</span>
                           </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                        <span className="flex items-center gap-2">
-                          <SidebarIcon size={15} />
-                          <span>{t("nav.projects")}</span>
-                        </span>
-                        {showTaskCounts && (
-                          <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                            3
+                          {showTaskCounts && (
+                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                              12
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {sidebarTabs.notes !== false && (
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                          <span className="flex items-center gap-2">
+                            <NotesIcon size={15} />
+                            <span>{t("nav.notes")}</span>
                           </span>
-                        )}
-                      </div>
+                          {showTaskCounts && (
+                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                              2
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      {sidebarTabs.projects !== false && (
+                        <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
+                          <span className="flex items-center gap-2">
+                            <FolderIcon size={15} />
+                            <span>{t("nav.projects")}</span>
+                          </span>
+                          {showTaskCounts && (
+                            <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
+                              3
+                            </span>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </section>
@@ -1247,25 +1294,67 @@ export function AccountScreen({
                   <p className="text-footnote text-ink-secondary mb-4">
                     {t("settings.sidebar_nav_desc")}
                   </p>
-                  <div className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-4 py-1">
+                  <div className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-3 py-1">
                     {[
-                      t("nav.inbox"),
-                      t("nav.upcoming"),
-                      t("nav.notes"),
-                      t("nav.projects"),
-                    ].map((item) => (
-                      <div
-                        key={item}
-                        className="flex items-center justify-between py-3"
-                      >
-                        <span className="text-callout font-medium text-ink">
-                          {item}
-                        </span>
-                        <span className="text-caption font-semibold text-success">
-                          {t("settings.visible_label")}
-                        </span>
-                      </div>
-                    ))}
+                      {
+                        id: "inbox" as TabId,
+                        label: t("nav.inbox"),
+                        icon: <InboxIcon size={18} />,
+                      },
+                      {
+                        id: "upcoming" as TabId,
+                        label: t("nav.upcoming"),
+                        icon: <CalendarIcon size={18} />,
+                      },
+                      {
+                        id: "notes" as TabId,
+                        label: t("nav.notes"),
+                        icon: <NotesIcon size={18} />,
+                      },
+                      {
+                        id: "projects" as TabId,
+                        label: t("nav.projects"),
+                        icon: <FolderIcon size={18} />,
+                      },
+                    ].map((item) => {
+                      const isChecked = sidebarTabs[item.id] !== false;
+                      const enabledCount =
+                        Object.values(sidebarTabs).filter(Boolean).length;
+                      const isLastEnabled = isChecked && enabledCount <= 1;
+
+                      return (
+                        <label
+                          key={item.id}
+                          className={cx(
+                            "flex items-center justify-between py-3 px-2 rounded-lg cursor-pointer transition-colors select-none",
+                            isLastEnabled
+                              ? "cursor-not-allowed opacity-80"
+                              : "hover:bg-fill/40",
+                          )}
+                        >
+                          <div className="flex items-center gap-3">
+                            <GripVerticalIcon
+                              size={15}
+                              className="text-ink-tertiary/40 shrink-0"
+                            />
+                            <span className="text-ink-secondary shrink-0">
+                              {item.icon}
+                            </span>
+                            <span className="text-callout font-medium text-ink">
+                              {item.label}
+                            </span>
+                          </div>
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            disabled={isLastEnabled}
+                            onChange={() => toggleSidebarTab(item.id)}
+                            className="checkbox checkbox-primary size-5 rounded-md focus-ring"
+                            aria-label={item.label}
+                          />
+                        </label>
+                      );
+                    })}
                   </div>
                 </section>
               </div>

@@ -12,7 +12,13 @@ import {
 } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
-import { ROUTES, TABS, type Navigate, type TabId } from "./routes";
+import {
+  ROUTES,
+  TABS,
+  getStoredSidebarTabs,
+  type Navigate,
+  type TabId,
+} from "./routes";
 
 const ICONS: Record<TabId, ReactNode> = {
   inbox: <InboxIcon size={20} />,
@@ -59,23 +65,31 @@ export function Sidebar({
       return true;
     }
   });
+  const [enabledTabs, setEnabledTabs] = useState(getStoredSidebarTabs);
 
   useEffect(() => {
-    const handleUpdate = () => {
+    const handleCounts = () => {
       try {
         setShowCounts(
           localStorage.getItem("agendal.sidebar_task_counts") !== "false",
         );
       } catch {}
     };
-    window.addEventListener("storage", handleUpdate);
-    window.addEventListener("agendal:sidebar_counts_changed", handleUpdate);
+    const handleTabs = () => {
+      setEnabledTabs(getStoredSidebarTabs());
+    };
+    window.addEventListener("storage", handleCounts);
+    window.addEventListener("agendal:sidebar_counts_changed", handleCounts);
+    window.addEventListener("storage", handleTabs);
+    window.addEventListener("agendal:sidebar_tabs_changed", handleTabs);
     return () => {
-      window.removeEventListener("storage", handleUpdate);
+      window.removeEventListener("storage", handleCounts);
       window.removeEventListener(
         "agendal:sidebar_counts_changed",
-        handleUpdate,
+        handleCounts,
       );
+      window.removeEventListener("storage", handleTabs);
+      window.removeEventListener("agendal:sidebar_tabs_changed", handleTabs);
     };
   }, []);
 
@@ -105,7 +119,7 @@ export function Sidebar({
       </button>
 
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
-        {TABS.map((tab) => {
+        {TABS.filter((tab) => enabledTabs[tab.id] !== false).map((tab) => {
           const current = tab.id === active;
           return (
             <li key={tab.id}>
@@ -138,7 +152,7 @@ export function Sidebar({
         })}
       </ul>
 
-      {projects && (
+      {projects && enabledTabs.projects !== false && (
         <section className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
             <h2 className="m-0 text-overline font-semibold uppercase">
