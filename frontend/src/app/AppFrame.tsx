@@ -26,6 +26,7 @@ import {
   Toast,
   useMediaQuery,
   usePushPrompt,
+  applyThemePalette,
   type AccountSettings,
   type Navigate,
   type NoteResult,
@@ -475,6 +476,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
     try {
       localStorage.setItem(THEME_KEY, settings.theme);
+      const palette = localStorage.getItem("agendal.theme_palette");
+      if (palette) applyThemePalette(palette);
     } catch {
       // Private mode: the theme just flashes on the next load
     }

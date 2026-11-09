@@ -320,6 +320,15 @@ export const pending = {
     "Upgrade to personalize your Agendal with more colors and themes.",
   "settings.upgrade": "Upgrade",
   "settings.learn_more": "Learn more",
+  "settings.coming_soon": "Coming soon",
+  "settings.sidebar_show_task_counts": "Show task counts",
+  "settings.sidebar_show_task_counts_desc":
+    "Display the number of tasks next to each view in the navigation sidebar.",
+  "settings.sidebar_preview": "Preview",
+  "settings.delete_account_desc":
+    "Permanently delete your account and all associated tasks, projects, and notes.",
+  "settings.signout_all_desc":
+    "Sign out of your active session on all web browsers and devices.",
   "auth.create_title": "Create account",
   "auth.create_button": "Create account",
   "auth.email": "Email",
