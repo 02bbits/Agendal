@@ -233,7 +233,7 @@ export function AccountScreen({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-2 sm:p-4 md:p-6"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-scrim backdrop-blur-[2px] p-2 sm:p-4 md:p-6 motion-safe:animate-fade-in"
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
