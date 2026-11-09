@@ -13,20 +13,25 @@ import {
   BellIcon,
   CalendarIcon,
   CheckCircleIcon,
+  CheckIcon,
   ChevronRightIcon,
   ClockIcon,
   CloudIcon,
   CreditCardIcon,
+  InboxIcon,
+  LockIcon,
   PaletteIcon,
   PlugIcon,
   PlusIcon,
   SearchIcon,
   SidebarIcon,
   SlidersIcon,
+  SparklesIcon,
   UserIcon,
   XIcon,
 } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
+import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import type { TimeFormat, WeekStart } from "../../domain/types";
 
@@ -105,6 +110,15 @@ export function AccountScreen({
     setDisplayName(name);
   }
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [language, setLanguage] = useState("en");
+  const [homeView, setHomeView] = useState("inbox");
+  const [timeZone, setTimeZone] = useState("Asia/Ho_Chi_Minh");
+  const [dateFormat, setDateFormat] = useState("DD-MM-YYYY");
+  const [nextWeekDay, setNextWeekDay] = useState("mon");
+  const [weekendDay, setWeekendDay] = useState("sat");
+  const [smartDateRecognition, setSmartDateRecognition] = useState(true);
+  const [syncTheme, setSyncTheme] = useState(true);
+  const [activePalette, setActivePalette] = useState("agendal");
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -353,404 +367,594 @@ export function AccountScreen({
           {/* Content Area */}
           <div className="flex-1 overflow-y-auto overscroll-contain px-6 sm:px-8 py-6 space-y-6 text-callout">
             {/* TAB: ACCOUNT */}
-            {tab === "account" && (
-              <div className="space-y-6 max-w-[620px]">
-                {/* Plan */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                    {t("settings.plan_heading")}
-                  </h2>
-                  <div className="flex items-center justify-between py-1">
-                    <span className="text-body font-semibold text-ink">
-                      {t("settings.plan_beginner")}
-                    </span>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="rounded-lg"
-                    >
-                      {t("settings.manage_plan")}
-                    </Button>
-                  </div>
-                </section>
+            <div
+              className={cx(
+                "space-y-6 max-w-[620px]",
+                tab === "account"
+                  ? "opacity-100"
+                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              )}
+            >
+              {/* Plan */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                  {t("settings.plan_heading")}
+                </h2>
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-body font-semibold text-ink">
+                    {t("settings.plan_beginner")}
+                  </span>
+                  <Button variant="secondary" size="sm" className="rounded-lg">
+                    {t("settings.manage_plan")}
+                  </Button>
+                </div>
+              </section>
 
-                {/* Photo */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                    {t("settings.photo_heading")}
-                  </h2>
-                  <div className="flex items-center gap-4">
-                    <span
-                      className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-xl font-bold shadow-xs"
-                      aria-hidden="true"
-                    >
-                      {displayName
-                        ? displayName.slice(0, 1).toUpperCase()
-                        : "T"}
-                    </span>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="rounded-lg"
-                        >
-                          {t("settings.change_photo")}
-                        </Button>
-                        <button
-                          type="button"
-                          className="rounded-lg border border-error/40 px-3 py-1.5 text-footnote font-medium text-error hover:bg-error/10 transition-colors cursor-pointer"
-                        >
-                          {t("settings.remove_photo")}
-                        </button>
-                      </div>
-                      <p className="m-0 text-caption text-ink-tertiary">
-                        {t("settings.photo_max_size")}
-                      </p>
-                      <p className="m-0 text-caption text-ink-tertiary">
-                        {t("settings.photo_public")}
-                      </p>
+              {/* Photo */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
+                  {t("settings.photo_heading")}
+                </h2>
+                <div className="flex items-center gap-4">
+                  <span
+                    className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-xl font-bold shadow-xs"
+                    aria-hidden="true"
+                  >
+                    {displayName ? displayName.slice(0, 1).toUpperCase() : "T"}
+                  </span>
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        className="rounded-lg"
+                      >
+                        {t("settings.change_photo")}
+                      </Button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-error/40 px-3 py-1.5 text-footnote font-medium text-error hover:bg-error/10 transition-colors cursor-pointer"
+                      >
+                        {t("settings.remove_photo")}
+                      </button>
                     </div>
-                  </div>
-                </section>
-
-                {/* Name */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
-                    {t("settings.name_heading")}
-                  </h2>
-                  <input
-                    type="text"
-                    value={displayName}
-                    maxLength={255}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    onBlur={handleNameBlur}
-                    placeholder={t("settings.name_placeholder")}
-                    className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-callout text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
-                  />
-                  <div className="mt-1 text-right text-caption text-ink-tertiary">
-                    {displayName.length}/255
-                  </div>
-                </section>
-
-                {/* Email */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                    {t("settings.email_heading")}
-                  </h2>
-                  <p className="m-0 mb-2.5 text-callout text-ink font-medium">
-                    {email}
-                  </p>
-                  <Button variant="secondary" size="sm" className="rounded-lg">
-                    {t("settings.change_email")}
-                  </Button>
-                </section>
-
-                {/* Password */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
-                    {t("settings.password_heading")}
-                  </h2>
-                  <Button variant="secondary" size="sm" className="rounded-lg">
-                    {t("settings.add_password")}
-                  </Button>
-                </section>
-
-                {/* Two-factor authentication */}
-                <section>
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
-                    {t("settings.two_factor_heading")}
-                  </h2>
-                  <div className="py-1">
-                    <Switch
-                      label={t("settings.two_factor_switch")}
-                      checked={twoFactorEnabled}
-                      onChange={setTwoFactorEnabled}
-                      className="border-b-0 py-1"
-                    />
-                    <p className="m-0 mt-1 text-footnote text-ink-secondary">
-                      {twoFactorEnabled
-                        ? t("settings.two_factor_enabled")
-                        : t("settings.two_factor_disabled")}
+                    <p className="m-0 text-caption text-ink-tertiary">
+                      {t("settings.photo_max_size")}
+                    </p>
+                    <p className="m-0 text-caption text-ink-tertiary">
+                      {t("settings.photo_public")}
                     </p>
                   </div>
-                </section>
+                </div>
+              </section>
 
-                {/* Connected accounts */}
-                <section className="border-t border-separator/40 pt-4">
-                  <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-                    {t("settings.connected_accounts_heading")}
-                  </h2>
-                  <p className="m-0 text-footnote text-ink-secondary mb-2">
-                    {t("settings.connected_accounts_desc")}
-                  </p>
-                  <p className="m-0 text-footnote text-ink-secondary mb-3">
-                    {t("settings.connected_login_as", { email })}
-                  </p>
-                  <p className="m-0 text-caption text-ink-tertiary mb-3">
-                    {t("settings.connected_password_notice")}
-                  </p>
-                  <div className="flex flex-col gap-2 max-w-[320px]">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="rounded-lg w-full justify-center"
-                    >
-                      {t("settings.connect_facebook")}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      className="rounded-lg w-full justify-center"
-                    >
-                      {t("settings.connect_apple")}
-                    </Button>
-                  </div>
-                </section>
+              {/* Name */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+                  {t("settings.name_heading")}
+                </h2>
+                <span className="sr-only">{displayName}</span>
+                <input
+                  type="text"
+                  value={displayName}
+                  maxLength={255}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  onBlur={handleNameBlur}
+                  placeholder={t("settings.name_placeholder")}
+                  className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-callout text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
+                />
+                <div className="mt-1 text-right text-caption text-ink-tertiary">
+                  {displayName.length}/255
+                </div>
+              </section>
 
-                {/* Sign out */}
-                <section className="border-t border-separator/40 pt-4 flex flex-col items-start gap-2.5">
+              {/* Email */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                  {t("settings.email_heading")}
+                </h2>
+                <p className="m-0 mb-2.5 text-callout text-ink font-medium">
+                  {email}
+                </p>
+                <Button variant="secondary" size="sm" className="rounded-lg">
+                  {t("settings.change_email")}
+                </Button>
+              </section>
+
+              {/* Password */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+                  {t("settings.password_heading")}
+                </h2>
+                <Button variant="secondary" size="sm" className="rounded-lg">
+                  {t("settings.add_password")}
+                </Button>
+              </section>
+
+              {/* Two-factor authentication */}
+              <section>
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+                  {t("settings.two_factor_heading")}
+                </h2>
+                <div className="py-1">
+                  <Switch
+                    label={t("settings.two_factor_switch")}
+                    checked={twoFactorEnabled}
+                    onChange={setTwoFactorEnabled}
+                    className="border-b-0 py-1"
+                  />
+                  <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                    {twoFactorEnabled
+                      ? t("settings.two_factor_enabled")
+                      : t("settings.two_factor_disabled")}
+                  </p>
+                </div>
+              </section>
+
+              {/* Connected accounts */}
+              <section className="border-t border-separator/40 pt-4">
+                <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+                  {t("settings.connected_accounts_heading")}
+                </h2>
+                <p className="m-0 text-footnote text-ink-secondary mb-2">
+                  {t("settings.connected_accounts_desc")}
+                </p>
+                <p className="m-0 text-footnote text-ink-secondary mb-3">
+                  {t("settings.connected_login_as", { email })}
+                </p>
+                <p className="m-0 text-caption text-ink-tertiary mb-3">
+                  {t("settings.connected_password_notice")}
+                </p>
+                <div className="flex flex-col gap-2 max-w-[320px]">
                   <Button
-                    variant="destructive"
-                    className="w-full max-w-[280px] h-10 text-callout font-semibold rounded-xl"
-                    onClick={onSignOut}
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-lg w-full justify-center"
                   >
-                    {t("app.sign_out")}
+                    {t("settings.connect_facebook")}
                   </Button>
-                  {onSignOutEverywhere && (
-                    <button
-                      type="button"
-                      className="focus-ring min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-footnote font-semibold text-primary hover:bg-fill"
-                      onClick={onSignOutEverywhere}
-                    >
-                      {t("auth.signout_everywhere")}
-                    </button>
-                  )}
-                </section>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="rounded-lg w-full justify-center"
+                  >
+                    {t("settings.connect_apple")}
+                  </Button>
+                </div>
+              </section>
 
-                {/* Delete account */}
-                <section className="border-t border-separator/40 pt-4 pb-2">
+              {/* Sign out */}
+              <section className="border-t border-separator/40 pt-4 flex flex-col items-start gap-2.5">
+                <Button
+                  variant="destructive"
+                  className="w-full max-w-[280px] h-10 text-callout font-semibold rounded-xl"
+                  onClick={onSignOut}
+                >
+                  {t("app.sign_out")}
+                </Button>
+                {onSignOutEverywhere && (
                   <button
                     type="button"
-                    className="text-callout font-medium text-error hover:underline cursor-pointer"
+                    className="focus-ring min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-footnote font-semibold text-primary hover:bg-fill"
+                    onClick={onSignOutEverywhere}
                   >
-                    {t("settings.delete_account")}
+                    {t("auth.signout_everywhere")}
                   </button>
-                </section>
-              </div>
-            )}
+                )}
+              </section>
+
+              {/* Delete account */}
+              <section className="border-t border-separator/40 pt-4 pb-2">
+                <button
+                  type="button"
+                  className="text-callout font-medium text-error hover:underline cursor-pointer"
+                >
+                  {t("settings.delete_account")}
+                </button>
+              </section>
+            </div>
 
             {/* TAB: GENERAL */}
-            {tab === "general" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("settings.tab_account")}
-                  </h2>
-                  <div className="flex items-center gap-3 py-1">
-                    <span
-                      className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-base font-bold shadow-xs"
-                      aria-hidden="true"
-                    >
-                      {displayName
-                        ? displayName.slice(0, 1).toUpperCase()
-                        : "T"}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="m-0 text-callout font-semibold text-ink truncate">
-                        {displayName || email}
-                      </p>
-                      <p className="m-0 text-footnote text-ink-secondary truncate">
-                        {email}
-                      </p>
-                    </div>
-                  </div>
-                </section>
+            <div
+              className={cx(
+                "space-y-6 max-w-[620px]",
+                tab === "general"
+                  ? "opacity-100"
+                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              )}
+            >
+              {/* Language */}
+              <SelectDropdown
+                label={t("settings.language")}
+                value={language}
+                onChange={setLanguage}
+                options={[
+                  { value: "en", label: "English" },
+                  { value: "vi", label: "Tiếng Việt" },
+                  { value: "fr", label: "Français" },
+                  { value: "de", label: "Deutsch" },
+                  { value: "es", label: "Español" },
+                ]}
+              />
 
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.appearance")}
-                  </h2>
-                  <Segmented
-                    label={t("app.appearance")}
-                    value={settings.theme}
-                    onChange={(theme) => onChange({ theme })}
-                    size="lg"
+              {/* Home view */}
+              <SelectDropdown
+                label={t("settings.home_view")}
+                value={homeView}
+                onChange={setHomeView}
+                options={[
+                  {
+                    value: "inbox",
+                    label: t("nav.inbox"),
+                    icon: <InboxIcon size={16} />,
+                  },
+                  {
+                    value: "upcoming",
+                    label: t("nav.upcoming"),
+                    icon: <CalendarIcon size={16} />,
+                  },
+                  {
+                    value: "projects",
+                    label: t("nav.projects"),
+                    icon: <SidebarIcon size={16} />,
+                  },
+                ]}
+              />
+
+              {/* Date & time section */}
+              <div className="pt-2">
+                <h2 className="text-callout font-bold text-ink mb-3.5">
+                  {t("settings.date_time")}
+                </h2>
+
+                <div className="space-y-4">
+                  {/* Time zone */}
+                  <SelectDropdown
+                    label={t("settings.time_zone")}
+                    value={timeZone}
+                    onChange={setTimeZone}
                     options={[
-                      { value: "system", label: t("app.theme_system") },
-                      { value: "light", label: t("app.theme_light") },
-                      { value: "dark", label: t("app.theme_dark") },
+                      { value: "Asia/Ho_Chi_Minh", label: "Asia/Ho_Chi_Minh" },
+                      { value: "UTC", label: "UTC" },
+                      { value: "America/New_York", label: "America/New_York" },
+                      { value: "Europe/London", label: "Europe/London" },
+                      { value: "Asia/Tokyo", label: "Asia/Tokyo" },
                     ]}
                   />
-                </section>
 
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.page_view")}
-                  </h2>
-                  <Segmented
-                    label={t("app.page_view")}
-                    value={settings.pageView ?? "flat"}
-                    onChange={(pageView) =>
-                      onChange({ pageView: pageView as PageViewMode })
-                    }
-                    size="lg"
-                    options={[
-                      { value: "flat", label: t("app.view_flat") },
-                      { value: "full", label: t("app.view_full") },
-                    ]}
-                  />
-                </section>
-
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.week_start")}
-                  </h2>
-                  <Segmented
-                    label={t("app.week_start")}
-                    value={settings.weekStart}
-                    onChange={(weekStart) => onChange({ weekStart })}
-                    size="lg"
-                    options={[
-                      { value: "mon", label: t("app.week_mon") },
-                      { value: "sun", label: t("app.week_sun") },
-                    ]}
-                  />
-                </section>
-
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.time_format")}
-                  </h2>
-                  <Segmented
+                  {/* Time format (24h vs 12h) */}
+                  <SelectDropdown
                     label={t("app.time_format")}
                     value={settings.timeFormat}
                     onChange={(timeFormat) => onChange({ timeFormat })}
-                    size="lg"
+                    roleMode="radio"
                     options={[
                       { value: "24h", label: t("app.time_24h") },
                       { value: "12h", label: t("app.time_12h") },
                     ]}
                   />
-                </section>
 
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.this_device")}
-                  </h2>
-                  <div className="flex flex-col rounded-2xl border border-separator/40 bg-fill/30 px-4 py-1 divide-y divide-separator/30">
-                    <Switch
-                      label={t("app.remember_device")}
-                      checked={settings.rememberDevice}
-                      onChange={(rememberDevice) =>
-                        onChange({ rememberDevice })
-                      }
-                      className="border-b-0 py-2.5 min-h-12"
-                    />
-                    {remindersStatus && (
-                      <div className="flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink">
-                        <span
-                          className="inline-flex text-ink-secondary"
-                          aria-hidden="true"
-                        >
-                          <BellIcon size={18} />
-                        </span>
-                        <span className="flex-1">{t("app.reminders")}</span>
-                        <span className="text-ink-secondary">
-                          {remindersStatus}
-                        </span>
-                      </div>
-                    )}
-                    {onInstall && (
-                      <button
-                        type="button"
-                        className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-12 w-full items-center gap-3 py-2.5 text-left text-body text-ink"
-                        onClick={onInstall}
-                      >
-                        <span
-                          className="inline-flex text-ink-secondary"
-                          aria-hidden="true"
-                        >
-                          <ArrowUpIcon size={18} />
-                        </span>
-                        <span className="flex-1">{t("app.install_app")}</span>
-                        <ChevronRightIcon
-                          size={18}
-                          className="shrink-0 text-ink-tertiary"
-                        />
-                      </button>
-                    )}
-                  </div>
-                </section>
-
-                <div className="pt-4 flex flex-col items-start gap-3">
-                  <Button
-                    variant="destructive"
-                    className="w-full max-w-[280px] h-11 text-callout font-semibold rounded-xl"
-                    onClick={onSignOut}
-                  >
-                    {t("app.sign_out")}
-                  </Button>
-                  {onSignOutEverywhere && (
-                    <button
-                      type="button"
-                      className="focus-ring min-h-10 cursor-pointer rounded-lg border-0 bg-transparent px-2 py-1 text-footnote font-semibold text-primary hover:bg-fill"
-                      onClick={onSignOutEverywhere}
-                    >
-                      {t("auth.signout_everywhere")}
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* TAB: THEME */}
-            {tab === "theme" && (
-              <div className="space-y-6 max-w-[620px]">
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-2.5 text-ink-secondary">
-                    {t("app.appearance")}
-                  </h2>
-                  <Segmented
-                    label={t("app.appearance")}
-                    value={settings.theme}
-                    onChange={(theme) => onChange({ theme })}
-                    size="lg"
+                  {/* Date format */}
+                  <SelectDropdown
+                    label={t("settings.date_format")}
+                    value={dateFormat}
+                    onChange={setDateFormat}
                     options={[
-                      { value: "system", label: t("app.theme_system") },
-                      { value: "light", label: t("app.theme_light") },
-                      { value: "dark", label: t("app.theme_dark") },
+                      { value: "DD-MM-YYYY", label: "DD-MM-YYYY" },
+                      { value: "MM/DD/YYYY", label: "MM/DD/YYYY" },
+                      { value: "YYYY-MM-DD", label: "YYYY-MM-DD" },
+                      { value: "D MMM YYYY", label: "D MMM YYYY" },
                     ]}
                   />
-                </section>
-                <section>
-                  <h2 className="text-overline font-semibold uppercase tracking-wider mb-3 text-ink-secondary">
-                    {t("settings.palettes_heading")}
-                  </h2>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    {[
-                      { name: "Graphite", bg: "#282828" },
-                      { name: "Classic Red", bg: "#db4c3f" },
-                      { name: "Tangerine", bg: "#ff7043" },
-                      { name: "Dark Night", bg: "#1f1f1f" },
-                    ].map((palette) => (
-                      <div
-                        key={palette.name}
-                        className="flex flex-col items-center gap-2 rounded-xl border border-separator/40 bg-fill/30 p-3 hover:border-primary/50 transition-colors cursor-pointer"
-                      >
-                        <div
-                          className="size-10 rounded-full shadow-xs"
-                          style={{ backgroundColor: palette.bg }}
+
+                  {/* Week start */}
+                  <SelectDropdown
+                    label={t("app.week_start")}
+                    value={settings.weekStart}
+                    onChange={(weekStart) => onChange({ weekStart })}
+                    helperText={t("settings.week_start_help")}
+                    roleMode="radio"
+                    options={[
+                      { value: "mon", label: t("app.week_mon") },
+                      { value: "sun", label: t("app.week_sun") },
+                    ]}
+                  />
+
+                  {/* Next week */}
+                  <SelectDropdown
+                    label={t("settings.next_week")}
+                    value={nextWeekDay}
+                    onChange={setNextWeekDay}
+                    helperText={t("settings.next_week_help")}
+                    options={[
+                      { value: "mon", label: t("app.week_mon") },
+                      { value: "sun", label: t("app.week_sun") },
+                      { value: "sat", label: "Saturday" },
+                    ]}
+                  />
+
+                  {/* Weekend */}
+                  <SelectDropdown
+                    label={t("settings.weekend")}
+                    value={weekendDay}
+                    onChange={setWeekendDay}
+                    helperText={t("settings.weekend_help")}
+                    options={[
+                      { value: "sat", label: "Saturday" },
+                      { value: "sun", label: t("app.week_sun") },
+                    ]}
+                  />
+
+                  {/* Karma notice */}
+                  <p className="m-0 text-caption text-ink-secondary pt-1">
+                    {t("settings.date_time_karma_notice")}{" "}
+                    <button
+                      type="button"
+                      onClick={() => setTab("productivity")}
+                      className="text-primary hover:underline font-medium cursor-pointer"
+                    >
+                      {t("settings.tab_productivity")}
+                    </button>
+                    .
+                  </p>
+
+                  {/* Smart date recognition */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between py-1">
+                      <div>
+                        <span className="block text-callout font-semibold text-ink">
+                          {t("settings.smart_date_recognition")}
+                        </span>
+                        <p className="m-0 text-caption text-ink-tertiary mt-0.5">
+                          {t("settings.smart_date_recognition_help")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          label={t("settings.smart_date_recognition")}
+                          checked={smartDateRecognition}
+                          onChange={setSmartDateRecognition}
+                          className="border-b-0 py-0"
                         />
-                        <span className="text-footnote font-medium text-ink">
-                          {palette.name}
+                        <span className="text-footnote font-medium text-ink w-8">
+                          {smartDateRecognition
+                            ? t("settings.on")
+                            : t("settings.off")}
                         </span>
                       </div>
-                    ))}
+                    </div>
                   </div>
-                </section>
+                </div>
               </div>
-            )}
+
+              {/* Page view setting */}
+              <div className="border-t border-separator/40 pt-4">
+                <SelectDropdown
+                  label={t("app.page_view")}
+                  value={settings.pageView ?? "flat"}
+                  onChange={(pageView) =>
+                    onChange({ pageView: pageView as PageViewMode })
+                  }
+                  roleMode="radio"
+                  options={[
+                    { value: "flat", label: t("app.view_flat") },
+                    { value: "full", label: t("app.view_full") },
+                  ]}
+                />
+              </div>
+
+              {/* Device */}
+              <div className="border-t border-separator/40 pt-4 space-y-2">
+                <div className="flex items-center justify-between py-1">
+                  <span className="text-callout font-semibold text-ink">
+                    {t("app.remember_device")}
+                  </span>
+                  <Switch
+                    label={t("app.remember_device")}
+                    checked={settings.rememberDevice}
+                    onChange={(rememberDevice) => onChange({ rememberDevice })}
+                    className="border-b-0 py-0"
+                  />
+                </div>
+                {onInstall && (
+                  <button
+                    type="button"
+                    className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-10 w-full items-center gap-3 py-1.5 text-left text-callout text-ink hover:bg-fill/40 rounded-lg px-2"
+                    onClick={onInstall}
+                  >
+                    <span
+                      className="inline-flex text-ink-secondary"
+                      aria-hidden="true"
+                    >
+                      <ArrowUpIcon size={18} />
+                    </span>
+                    <span className="flex-1">{t("app.install_app")}</span>
+                    <ChevronRightIcon
+                      size={18}
+                      className="shrink-0 text-ink-tertiary"
+                    />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* TAB: THEME */}
+            <div
+              className={cx(
+                "space-y-6 max-w-[620px]",
+                tab === "theme"
+                  ? "opacity-100"
+                  : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              )}
+            >
+              {/* Description */}
+              <p className="m-0 text-footnote text-ink-secondary">
+                {t("settings.theme_desc")}{" "}
+                <a
+                  href="#"
+                  onClick={(e) => e.preventDefault()}
+                  className="text-primary hover:underline font-medium"
+                >
+                  {t("settings.learn_more")}
+                </a>
+              </p>
+
+              {/* Sync theme toggle */}
+              <div className="flex items-center gap-3">
+                <Switch
+                  label={t("settings.sync_theme")}
+                  checked={syncTheme}
+                  onChange={setSyncTheme}
+                  className="border-b-0 py-0"
+                />
+                <span className="text-callout font-medium text-ink">
+                  {t("settings.sync_theme")}
+                </span>
+              </div>
+
+              {/* Appearance Segmented Pill */}
+              <section className="space-y-2.5">
+                <h2 className="text-callout font-bold text-ink">
+                  {t("app.appearance")}
+                </h2>
+                <Segmented
+                  label={t("app.appearance")}
+                  value={settings.theme}
+                  onChange={(theme) => onChange({ theme })}
+                  size="lg"
+                  className="w-fit rounded-full bg-fill/40 p-1"
+                  options={[
+                    { value: "light", label: t("app.theme_light") },
+                    { value: "dark", label: t("app.theme_dark") },
+                    { value: "system", label: t("app.theme_system") },
+                  ]}
+                />
+              </section>
+
+              {/* Your themes */}
+              <section className="space-y-3">
+                <h2 className="text-callout font-bold text-ink">
+                  {t("settings.your_themes")}
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  {[
+                    { id: "agendal", name: "Agendal", color: "#db4c3f" },
+                    { id: "moonstone", name: "Moonstone", color: "#4a7298" },
+                    { id: "tangerine", name: "Tangerine", color: "#ff7043" },
+                  ].map((item) => {
+                    const isCurrent = activePalette === item.id;
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => setActivePalette(item.id)}
+                        className={cx(
+                          "rounded-xl border p-3 bg-surface/40 hover:border-separator transition-all cursor-pointer space-y-2.5",
+                          isCurrent
+                            ? "border-primary/80 ring-1 ring-primary/40 bg-fill/20"
+                            : "border-separator/50",
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="h-2 w-8 rounded-full"
+                              style={{ backgroundColor: item.color }}
+                            />
+                            <span className="text-footnote font-semibold text-ink">
+                              {item.name}
+                            </span>
+                          </div>
+                          {isCurrent && (
+                            <span className="text-primary" aria-hidden="true">
+                              <CheckIcon size={15} />
+                            </span>
+                          )}
+                        </div>
+                        {/* Mockup task rows */}
+                        <div className="space-y-2 pt-1">
+                          <div className="flex items-center gap-2">
+                            <div className="size-3 rounded-full border border-ink-tertiary" />
+                            <div className="h-1.5 w-24 rounded-full bg-fill-2" />
+                          </div>
+                          <div className="pl-5">
+                            <div className="h-1.5 w-28 rounded-full bg-fill" />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              {/* Pro themes */}
+              <section className="space-y-3.5">
+                <h2 className="text-callout font-bold text-ink">
+                  {t("settings.pro_themes")}
+                </h2>
+                {/* Unlock more themes banner */}
+                <div className="rounded-xl border border-separator/40 bg-fill/20 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15 text-amber-500">
+                      <SparklesIcon size={20} />
+                    </span>
+                    <div>
+                      <div className="text-callout font-bold text-ink">
+                        {t("settings.unlock_more_themes")}
+                      </div>
+                      <div className="text-caption text-ink-secondary">
+                        {t("settings.unlock_more_themes_desc")}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="rounded-lg bg-[#db4c3f] hover:bg-[#db4c3f]/90 text-white font-semibold text-footnote px-4 py-2 cursor-pointer shadow-xs shrink-0"
+                  >
+                    {t("settings.upgrade")}
+                  </button>
+                </div>
+
+                {/* Pro Theme Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                  {[
+                    { id: "kale", name: "Kale", color: "#299764" },
+                    { id: "blueberry", name: "Blueberry", color: "#14aaf5" },
+                    { id: "lavender", name: "Lavender", color: "#8c52ff" },
+                    { id: "raspberry", name: "Raspberry", color: "#e040fb" },
+                  ].map((item) => (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-separator/50 bg-surface/30 p-3 space-y-2.5 opacity-85 hover:opacity-100 transition-opacity cursor-pointer"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className="h-2 w-8 rounded-full"
+                            style={{ backgroundColor: item.color }}
+                          />
+                          <span className="text-footnote font-semibold text-ink">
+                            {item.name}
+                          </span>
+                        </div>
+                        <span className="text-ink-tertiary" aria-hidden="true">
+                          <LockIcon size={14} />
+                        </span>
+                      </div>
+                      {/* Mockup task rows */}
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center gap-2">
+                          <div className="size-3 rounded-full border border-ink-tertiary" />
+                          <div className="h-1.5 w-24 rounded-full bg-fill-2" />
+                        </div>
+                        <div className="pl-5">
+                          <div className="h-1.5 w-28 rounded-full bg-fill" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            </div>
 
             {/* TAB: SUBSCRIPTION */}
             {tab === "subscription" && (
