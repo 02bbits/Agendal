@@ -671,8 +671,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 href={ROUTES.project(p.id)}
                 navigate={navigate}
                 className={cx(
-                  "focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary",
-                  isCurrent && "bg-primary-tint! text-ink!",
+                  "focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary transition-colors",
+                  isCurrent && "bg-primary/15! text-primary! font-medium",
                 )}
                 aria-current={isCurrent ? "page" : undefined}
               >
@@ -686,7 +686,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   <span
                     className={cx(
                       "text-footnote tabular-nums",
-                      isCurrent ? "text-ink" : "text-ink-tertiary",
+                      isCurrent
+                        ? "text-primary font-semibold"
+                        : "text-ink-tertiary",
                     )}
                   >
                     {p.open}

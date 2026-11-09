@@ -346,3 +346,45 @@
     line-height: 20px;
   }
 }
+
+/* Circular Reveal View Transition for Theme switching */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-old(root) {
+  z-index: 1;
+}
+::view-transition-new(root) {
+  z-index: 9999;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+/* Pulse Ripple micro-interaction */
+@keyframes pulse-ripple {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0
+      color-mix(in srgb, var(--color-primary, #db4c3f) 50%, transparent);
+  }
+  60% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 10px transparent;
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+.animate-pulse-ripple {
+  animation: pulse-ripple 450ms cubic-bezier(0.16, 1, 0.3, 1);
+}

@@ -171,6 +171,32 @@ describe("Account settings (AP-3, AP-5)", () => {
     expect(stored.upcoming).toBe(false);
   });
 
+  it("allows reordering sidebar tabs with move buttons and resetting to default", async () => {
+    await openAccount();
+    await userEvent.click(radio("Sidebar"));
+
+    const moveDownInbox = screen.getByRole("button", {
+      name: "Move down: Inbox",
+    });
+    await userEvent.click(moveDownInbox);
+
+    const storedOrder = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_order") || "[]",
+    );
+    expect(storedOrder[0]).not.toBe("inbox");
+    expect(storedOrder[1]).toBe("inbox");
+
+    const resetButton = screen.getByRole("button", {
+      name: "Reset to default",
+    });
+    await userEvent.click(resetButton);
+
+    const resetOrder = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_order") || "[]",
+    );
+    expect(resetOrder).toEqual(["inbox", "upcoming", "projects", "notes"]);
+  });
+
   it("renders backdrop with blur and prevents background scrolling", async () => {
     await openAccount();
 

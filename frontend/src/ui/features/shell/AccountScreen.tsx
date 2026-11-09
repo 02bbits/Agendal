@@ -11,6 +11,7 @@ import { Button } from "../../components/Button";
 import { cx } from "../../components/cx";
 import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
 import {
+  ArrowDownIcon,
   ArrowUpIcon,
   BellIcon,
   CalendarIcon,
@@ -26,6 +27,7 @@ import {
   PaletteIcon,
   PlugIcon,
   PlusIcon,
+  RotateCcwIcon,
   SearchIcon,
   SidebarIcon,
   SlidersIcon,
@@ -37,9 +39,13 @@ import { Segmented } from "../../components/Segmented";
 import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
+import { runThemeTransition } from "../../domain/themeTransition";
 import type { TimeFormat, WeekStart } from "../../domain/types";
 import {
+  DEFAULT_SIDEBAR_TABS_ORDER,
   getStoredSidebarTabs,
+  getStoredSidebarTabsOrder,
+  SIDEBAR_TABS_ORDER_KEY,
   SIDEBAR_TABS_STORAGE_KEY,
   type TabId,
 } from "./routes";
@@ -189,6 +195,9 @@ export function AccountScreen({
     }
   });
   const [sidebarTabs, setSidebarTabs] = useState(getStoredSidebarTabs);
+  const [sidebarOrder, setSidebarOrder] = useState(getStoredSidebarTabsOrder);
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [ripplingId, setRipplingId] = useState<string | null>(null);
 
   const toggleSidebarTab = (tabId: TabId) => {
     const isCurrentlyEnabled = sidebarTabs[tabId] !== false;
@@ -204,6 +213,46 @@ export function AccountScreen({
     try {
       if (typeof localStorage !== "undefined") {
         localStorage.setItem(SIDEBAR_TABS_STORAGE_KEY, JSON.stringify(next));
+      }
+    } catch {}
+    window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
+  };
+
+  const moveSidebarTab = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sidebarOrder.length) return;
+    const nextOrder = [...sidebarOrder];
+    const [moved] = nextOrder.splice(index, 1);
+    nextOrder.splice(targetIndex, 0, moved!);
+    setSidebarOrder(nextOrder);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(SIDEBAR_TABS_ORDER_KEY, JSON.stringify(nextOrder));
+      }
+    } catch {}
+    window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
+  };
+
+  const resetSidebarNavigation = () => {
+    const defaultOrder = [...DEFAULT_SIDEBAR_TABS_ORDER];
+    const defaultEnabled = {
+      inbox: true,
+      upcoming: true,
+      projects: true,
+      notes: true,
+    };
+    setSidebarOrder(defaultOrder);
+    setSidebarTabs(defaultEnabled);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(
+          SIDEBAR_TABS_ORDER_KEY,
+          JSON.stringify(defaultOrder),
+        );
+        localStorage.setItem(
+          SIDEBAR_TABS_STORAGE_KEY,
+          JSON.stringify(defaultEnabled),
+        );
       }
     } catch {}
     window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
@@ -397,7 +446,7 @@ export function AccountScreen({
                       className={cx(
                         "focus-ring group flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-left text-footnote transition-colors",
                         checked
-                          ? "bg-primary/15 font-semibold text-primary"
+                          ? "bg-primary/15! font-semibold text-primary!"
                           : "text-ink-secondary hover:bg-fill/40 hover:text-ink",
                       )}
                     >
@@ -405,7 +454,7 @@ export function AccountScreen({
                         className={cx(
                           "shrink-0 transition-colors",
                           checked
-                            ? "text-primary"
+                            ? "text-primary!"
                             : "text-ink-tertiary group-hover:text-ink",
                         )}
                         aria-hidden="true"
@@ -951,7 +1000,11 @@ export function AccountScreen({
                   <Segmented
                     label={t("app.appearance")}
                     value={settings.theme}
-                    onChange={(theme) => onChange({ theme })}
+                    onChange={(theme, e) => {
+                      runThemeTransition(e, () => {
+                        onChange({ theme });
+                      });
+                    }}
                     size="lg"
                     options={[
                       { value: "light", label: t("app.theme_light") },
@@ -969,18 +1022,28 @@ export function AccountScreen({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
                     {ALL_THEME_PALETTES.map((item) => {
                       const isCurrent = activePalette === item.id;
+                      const isRippling = ripplingId === item.id;
                       return (
                         <div
                           key={item.id}
-                          onClick={() => {
-                            setActivePalette(item.id);
-                            applyThemePalette(item.id);
+                          onClick={(e) => {
+                            setRipplingId(item.id);
+                            setTimeout(() => {
+                              setRipplingId((curr) =>
+                                curr === item.id ? null : curr,
+                              );
+                            }, 500);
+                            runThemeTransition(e, () => {
+                              setActivePalette(item.id);
+                              applyThemePalette(item.id);
+                            });
                           }}
                           className={cx(
                             "rounded-xl border p-3 bg-surface/40 hover:border-separator transition-all cursor-pointer space-y-2.5",
                             isCurrent
                               ? "border-primary/80 ring-1 ring-primary/40 bg-fill/20"
                               : "border-separator/50 hover:bg-fill/10",
+                            isRippling && "animate-pulse-ripple",
                           )}
                         >
                           <div className="flex items-center justify-between">
@@ -1262,128 +1325,208 @@ export function AccountScreen({
                         {t("settings.sidebar_preview")}
                       </span>
                       <div className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs">
-                        {sidebarTabs.inbox !== false && (
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-primary/10 text-primary font-medium text-footnote">
-                            <span className="flex items-center gap-2">
-                              <InboxIcon size={15} />
-                              <span>{t("nav.inbox")}</span>
-                            </span>
-                            {showTaskCounts && (
-                              <span className="text-caption font-semibold text-primary/80 tabular-nums">
-                                5
+                        {sidebarOrder.map((tabId, idx) => {
+                          if (sidebarTabs[tabId] === false) return null;
+                          const meta = {
+                            inbox: {
+                              label: t("nav.inbox"),
+                              icon: <InboxIcon size={15} />,
+                              count: 5,
+                            },
+                            upcoming: {
+                              label: t("nav.upcoming"),
+                              icon: <CalendarIcon size={15} />,
+                              count: 12,
+                            },
+                            notes: {
+                              label: t("nav.notes"),
+                              icon: <NotesIcon size={15} />,
+                              count: 2,
+                            },
+                            projects: {
+                              label: t("nav.projects"),
+                              icon: <FolderIcon size={15} />,
+                              count: 3,
+                            },
+                          }[tabId];
+                          if (!meta) return null;
+                          const isFirstVisible = idx === 0;
+                          return (
+                            <div
+                              key={tabId}
+                              className={cx(
+                                "flex items-center justify-between px-2.5 py-1.5 rounded-md text-footnote transition-colors",
+                                isFirstVisible
+                                  ? "bg-primary/15! text-primary! font-semibold"
+                                  : "text-ink-secondary",
+                              )}
+                            >
+                              <span className="flex items-center gap-2">
+                                {meta.icon}
+                                <span>{meta.label}</span>
                               </span>
-                            )}
-                          </div>
-                        )}
-                        {sidebarTabs.upcoming !== false && (
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                            <span className="flex items-center gap-2">
-                              <CalendarIcon size={15} />
-                              <span>{t("nav.upcoming")}</span>
-                            </span>
-                            {showTaskCounts && (
-                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                                12
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {sidebarTabs.notes !== false && (
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                            <span className="flex items-center gap-2">
-                              <NotesIcon size={15} />
-                              <span>{t("nav.notes")}</span>
-                            </span>
-                            {showTaskCounts && (
-                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                                2
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {sidebarTabs.projects !== false && (
-                          <div className="flex items-center justify-between px-2.5 py-1.5 rounded-md text-ink-secondary text-footnote">
-                            <span className="flex items-center gap-2">
-                              <FolderIcon size={15} />
-                              <span>{t("nav.projects")}</span>
-                            </span>
-                            {showTaskCounts && (
-                              <span className="text-caption font-semibold text-ink-tertiary tabular-nums">
-                                3
-                              </span>
-                            )}
-                          </div>
-                        )}
+                              {showTaskCounts && (
+                                <span
+                                  className={cx(
+                                    "text-caption font-semibold tabular-nums",
+                                    isFirstVisible
+                                      ? "text-primary/90"
+                                      : "text-ink-tertiary",
+                                  )}
+                                >
+                                  {meta.count}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </section>
 
                   <section>
-                    <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                      {t("settings.sidebar_nav_heading")}
-                    </h2>
+                    <div className="flex items-center justify-between mb-2">
+                      <h2 className="text-overline uppercase font-semibold text-ink-secondary">
+                        {t("settings.sidebar_nav_heading")}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={resetSidebarNavigation}
+                        className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-caption font-medium text-ink-secondary hover:text-ink hover:bg-fill/40 transition-colors cursor-pointer"
+                        title={t("settings.reset_default")}
+                      >
+                        <RotateCcwIcon size={13} />
+                        <span>{t("settings.reset_default")}</span>
+                      </button>
+                    </div>
                     <p className="text-footnote text-ink-secondary mb-4">
                       {t("settings.sidebar_nav_desc")}
                     </p>
-                    <div className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-3 py-1">
-                      {[
-                        {
-                          id: "inbox" as TabId,
-                          label: t("nav.inbox"),
-                          icon: <InboxIcon size={18} />,
-                        },
-                        {
-                          id: "upcoming" as TabId,
-                          label: t("nav.upcoming"),
-                          icon: <CalendarIcon size={18} />,
-                        },
-                        {
-                          id: "notes" as TabId,
-                          label: t("nav.notes"),
-                          icon: <NotesIcon size={18} />,
-                        },
-                        {
-                          id: "projects" as TabId,
-                          label: t("nav.projects"),
-                          icon: <FolderIcon size={18} />,
-                        },
-                      ].map((item) => {
-                        const isChecked = sidebarTabs[item.id] !== false;
+                    <div
+                      className="flex flex-col rounded-xl border border-separator/40 bg-fill/30 divide-y divide-separator/30 px-3 py-1"
+                      role="list"
+                      aria-label={t("settings.sidebar_nav_heading")}
+                    >
+                      {sidebarOrder.map((tabId, index) => {
+                        const tabMeta = {
+                          inbox: {
+                            label: t("nav.inbox"),
+                            icon: <InboxIcon size={18} />,
+                          },
+                          upcoming: {
+                            label: t("nav.upcoming"),
+                            icon: <CalendarIcon size={18} />,
+                          },
+                          notes: {
+                            label: t("nav.notes"),
+                            icon: <NotesIcon size={18} />,
+                          },
+                          projects: {
+                            label: t("nav.projects"),
+                            icon: <FolderIcon size={18} />,
+                          },
+                        }[tabId];
+                        if (!tabMeta) return null;
+
+                        const isChecked = sidebarTabs[tabId] !== false;
                         const enabledCount =
                           Object.values(sidebarTabs).filter(Boolean).length;
                         const isLastEnabled = isChecked && enabledCount <= 1;
+                        const isDragging = draggedIndex === index;
 
                         return (
-                          <label
-                            key={item.id}
+                          <div
+                            key={tabId}
+                            role="listitem"
+                            draggable
+                            onDragStart={(e) => {
+                              setDraggedIndex(index);
+                              e.dataTransfer.effectAllowed = "move";
+                            }}
+                            onDragOver={(e) => {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                            }}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              if (
+                                draggedIndex === null ||
+                                draggedIndex === index
+                              )
+                                return;
+                              const nextOrder = [...sidebarOrder];
+                              const [moved] = nextOrder.splice(draggedIndex, 1);
+                              nextOrder.splice(index, 0, moved!);
+                              setSidebarOrder(nextOrder);
+                              setDraggedIndex(null);
+                              try {
+                                if (typeof localStorage !== "undefined") {
+                                  localStorage.setItem(
+                                    SIDEBAR_TABS_ORDER_KEY,
+                                    JSON.stringify(nextOrder),
+                                  );
+                                }
+                              } catch {}
+                              window.dispatchEvent(
+                                new Event("agendal:sidebar_tabs_changed"),
+                              );
+                            }}
+                            onDragEnd={() => setDraggedIndex(null)}
                             className={cx(
-                              "flex items-center justify-between py-3 px-2 rounded-lg cursor-pointer transition-colors select-none",
-                              isLastEnabled
-                                ? "cursor-not-allowed opacity-80"
-                                : "hover:bg-fill/40",
+                              "flex items-center justify-between py-2 px-1 rounded-lg transition-colors select-none",
+                              isDragging && "opacity-40 bg-fill/50",
                             )}
                           >
-                            <div className="flex items-center gap-3">
-                              <GripVerticalIcon
-                                size={15}
-                                className="text-ink-tertiary/40 shrink-0"
-                              />
-                              <span className="text-ink-secondary shrink-0">
-                                {item.icon}
+                            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                              <span
+                                className="cursor-grab active:cursor-grabbing text-ink-tertiary/60 hover:text-ink transition-colors p-1"
+                                title={t("settings.drag_reorder")}
+                                aria-hidden="true"
+                              >
+                                <GripVerticalIcon size={16} />
                               </span>
-                              <span className="text-callout font-medium text-ink">
-                                {item.label}
+
+                              {/* Up / Down Reorder Accessibility Buttons */}
+                              <div className="flex flex-col gap-0.5">
+                                <button
+                                  type="button"
+                                  disabled={index === 0}
+                                  onClick={() => moveSidebarTab(index, "up")}
+                                  className="focus-ring rounded p-0.5 text-ink-tertiary hover:text-ink hover:bg-fill disabled:opacity-20 disabled:cursor-default cursor-pointer transition-colors"
+                                  aria-label={`${t("settings.reorder_up")}: ${tabMeta.label}`}
+                                >
+                                  <ArrowUpIcon size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={index === sidebarOrder.length - 1}
+                                  onClick={() => moveSidebarTab(index, "down")}
+                                  className="focus-ring rounded p-0.5 text-ink-tertiary hover:text-ink hover:bg-fill disabled:opacity-20 disabled:cursor-default cursor-pointer transition-colors"
+                                  aria-label={`${t("settings.reorder_down")}: ${tabMeta.label}`}
+                                >
+                                  <ArrowDownIcon size={12} />
+                                </button>
+                              </div>
+
+                              <span className="text-ink-secondary shrink-0">
+                                {tabMeta.icon}
+                              </span>
+                              <span className="text-callout font-medium text-ink truncate">
+                                {tabMeta.label}
                               </span>
                             </div>
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              disabled={isLastEnabled}
-                              onChange={() => toggleSidebarTab(item.id)}
-                              className="checkbox checkbox-primary size-5 rounded-md focus-ring"
-                              aria-label={item.label}
-                            />
-                          </label>
+
+                            <label className="flex items-center cursor-pointer p-1">
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                disabled={isLastEnabled}
+                                onChange={() => toggleSidebarTab(tabId)}
+                                className="checkbox checkbox-primary size-5 rounded-md focus-ring"
+                                aria-label={tabMeta.label}
+                              />
+                            </label>
+                          </div>
                         );
                       })}
                     </div>

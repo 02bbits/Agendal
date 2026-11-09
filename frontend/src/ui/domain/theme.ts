@@ -35,4 +35,11 @@ export function applyThemePalette(paletteId: string): void {
   try {
     localStorage.setItem("agendal.theme_palette", paletteId);
   } catch {}
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent("agendal:theme_changed", {
+        detail: { palette: paletteId },
+      }),
+    );
+  }
 }
