@@ -44,8 +44,10 @@ export function addDays(date: string, days: number): string {
   return iso(d);
 }
 
+const DAY_MS = 86_400_000;
+
 export function daysBetween(from: string, to: string): number {
-  return Math.round((parse(to).getTime() - parse(from).getTime()) / 86_400_000);
+  return Math.round((parse(to).getTime() - parse(from).getTime()) / DAY_MS);
 }
 
 /** Today, Tomorrow, Yesterday as words; otherwise `Mon 26 Oct`, with the year when it isn't this year (UX-32). */
@@ -98,6 +100,9 @@ export function weekdayOrder(weekStart: WeekStart): number[] {
   return Array.from({ length: 7 }, (_, i) => (first + i) % 7);
 }
 
-/** RV-E2: a note can be undone for 30 days after it was processed (dates as `YYYY-MM-DD`). */
-export const undoExpired = (processed: string, today: string) =>
-  addDays(processed, 30) < today;
+// RV-E2, Q10: the server's NoteUndo::UNDO_DAYS
+const UNDO_DAYS = 30;
+
+/** RV-E2: a note can be undone for 30 days after it was processed; the same instant rule as the API. */
+export const undoExpired = (processedAt: string, now: Date) =>
+  Date.parse(processedAt) + UNDO_DAYS * DAY_MS < now.getTime();

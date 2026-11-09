@@ -13,12 +13,15 @@ import { NOTES_MAX } from "../../../domain/edit";
 export interface NotesFieldProps {
   value: string | null;
   onSave: (notes: string | null) => void;
+  /** Every keystroke, before the blur that saves: a form can tell it was edited (UX-13). */
+  onChange?: (notes: string) => void;
   variant?: "panel" | "screen";
 }
 
 export function NotesField({
   value,
   onSave,
+  onChange,
   variant = "panel",
 }: NotesFieldProps): ReactElement {
   const [notes, setNotes] = useState(value ?? "");
@@ -51,6 +54,7 @@ export function NotesField({
 
   const handleInput = (e: ChangeEvent<HTMLTextAreaElement>) => {
     setNotes(e.target.value);
+    onChange?.(e.target.value);
     resize();
   };
 

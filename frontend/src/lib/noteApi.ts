@@ -15,6 +15,11 @@ export interface NoteSubmitFailure {
 /** What sending a note answers: the result, or why it wasn't made. */
 export type NoteSubmission = Promise<NoteResult | NoteSubmitFailure>;
 
+/** What Edit note answers: also `{conflicts}` when tasks edited by hand need an answer first (RV-E16). */
+export type NoteReplan = Promise<
+  NoteResult | NoteSubmitFailure | { conflicts: number }
+>;
+
 /**
  * `POST /notes` (NC §2.2, NU §7). The same `client_id` on a retry returns the stored result, so a
  * double tap or a lost reply never makes two notes (NC-E10, NC-E11).
@@ -58,6 +63,25 @@ function submitFailure(error: unknown): NoteSubmitFailure {
 export type NoteActionOutcome =
   { result: NoteResult } | { conflicts: number } | { error: CopyKey };
 
+/** A note action's failure as copy: the server's code when it has copy, "needs a connection" offline. */
+function actionError(error: unknown): { error: CopyKey } {
+  if (!(error instanceof ApiRequestError))
+    return { error: "note.needs_connection" };
+  return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+}
+
+/** How many tasks a `409 note.undo_conflicts` names (RV §2.4), or 0 for any other answer. */
+async function conflictCount(response: Response): Promise<number> {
+  if (response.status !== 409) return 0;
+  const data = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  return data?.error?.code === "note.undo_conflicts"
+    ? (data.error.tasks?.length ?? 1)
+    : 0;
+}
+
 /**
  * `POST /notes/{id}/undo` and `/redo` (RV §7). A `409 note.undo_conflicts` isn't a failure: it
  * asks the user first (RV §2.4). A network failure reads as "needs a connection".
@@ -73,21 +97,13 @@ async function noteAction(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
-    if (response.status === 409) {
-      const data = await response
-        .clone()
-        .json()
-        .catch(() => null);
-      if (data?.error?.code === "note.undo_conflicts")
-        return { conflicts: data.error.tasks?.length ?? 1 };
-    }
+    const conflicts = await conflictCount(response);
+    if (conflicts) return { conflicts };
     const result = await handleResponse<NoteResult>(response);
     rememberNote(result);
     return { result };
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    return actionError(error);
   }
 }
 
@@ -107,6 +123,22 @@ export function rememberNote(result: NoteResult) {
 /** The result of a note made in this session, or undefined (a deep link, a reload). */
 export function recallNote(id: string): NoteResult | undefined {
   return recent.get(id);
+}
+
+/** A note was made, changed, deleted or restored: the Notes list and an open note load again. */
+export const NOTE_UPDATED = "agendal:note-updated";
+/** `id` names the note that changed: only its open screen loads again, others keep their review. */
+export const notesChanged = (id?: string) =>
+  window.dispatchEvent(new CustomEvent(NOTE_UPDATED, { detail: { id } }));
+/** Whether a NOTE_UPDATED event concerns the note `id` (an event naming no note concerns every note). */
+export const concernsNote = (event: Event, id: string) => {
+  const changed = (event as CustomEvent<{ id?: string } | null>).detail?.id;
+  return changed === undefined || changed === id;
+};
+
+/** Drops one kept result, e.g. a deleted note. */
+export function forgetNote(id: string) {
+  recent.delete(id);
 }
 
 /** Drops the kept results: sign-out leaves nothing of the account in memory (SC-19). */
@@ -183,16 +215,28 @@ export async function renameNote(
   }
 }
 
-/** IM-46 edits a follow-up in place; editing applied notes remains IM-47. */
-export async function replanFollowup(id: string, text: string): NoteSubmission {
+/**
+ * Edit note (RV-5): `PUT /notes/{id}` re-plans the same note. A `done` note first undoes what it
+ * applied, so tasks edited by hand since answer `{conflicts}` to ask first (RV-E16).
+ */
+export async function replanNote(
+  id: string,
+  text: string,
+  confirmConflicts = false,
+): NoteReplan {
   try {
-    const result = await handleResponse<NoteResult>(
-      await api(`/notes/${encodeURIComponent(id)}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, timezone: timeZone() }),
+    const response = await api(`/notes/${encodeURIComponent(id)}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        text,
+        timezone: timeZone(),
+        confirm_conflicts: confirmConflicts,
       }),
-    );
+    });
+    const conflicts = await conflictCount(response);
+    if (conflicts) return { conflicts };
+    const result = await handleResponse<NoteResult>(response);
     rememberNote(result);
     return result;
   } catch (error) {
@@ -209,33 +253,38 @@ export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
 }
 
 /**
- * Apply changes and Edit note on Check this first: `POST /notes/{id}/apply` · `/cancel` (RV §7). The
+ * Apply changes and Edit note on Check this first: `POST /notes/{id}/apply` (RV §7). The
  * note as it is now, or the copy saying why not. A network failure reads as "needs a connection".
  */
 export async function confirmNote(
-  id: string,
-  action: "apply" | "cancel",
+  note: Pick<NoteResult["note"], "id" | "plan_version">,
   edits: Record<string, TaskPatch> = {},
   exclude: string[] = [],
 ): Promise<NoteResult | { error: CopyKey }> {
   try {
     const result = await handleResponse<NoteResult>(
-      await api(`/notes/${encodeURIComponent(id)}/${action}`, {
+      await api(`/notes/${encodeURIComponent(note.id)}/apply`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          action === "apply"
-            ? { edits, ...(exclude.length ? { exclude } : {}) }
-            : {},
-        ),
+        // `plan_version` names the reviewed plan: one made since answers 409 note.plan_changed, and a
+        // repeat of an apply that already landed answers with the note as it is
+        body: JSON.stringify({
+          edits,
+          plan_version: note.plan_version,
+          ...(exclude.length ? { exclude } : {}),
+        }),
       }),
     );
     rememberNote(result);
     return result;
   } catch (error) {
-    if (!(error instanceof ApiRequestError))
-      return { error: "note.needs_connection" };
-    return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+    // The note isn't the one this screen showed: what this session kept of it is stale too
+    if (
+      error instanceof ApiRequestError &&
+      (error.code === "note.plan_changed" || error.code === "note.wrong_status")
+    )
+      forgetNote(note.id);
+    return actionError(error);
   }
 }
 
@@ -253,7 +302,13 @@ export function previewTaskApi(result: NoteResult) {
       const task = { ...tasks.get(id)!, ...fields };
       tasks.set(id, task);
       const ref = refs.get(id);
-      if (ref) edits[ref] = { ...edits[ref], ...fields };
+      // A new due date goes with the start date shown beside it: the server would otherwise derive
+      // the start from the plan, which can differ from what this screen showed
+      const shown =
+        "due_date" in fields && task.start_date !== null
+          ? { start_date: task.start_date }
+          : {};
+      if (ref) edits[ref] = { ...edits[ref], ...shown, ...fields };
       return task;
     },
     complete: refuse,
@@ -262,4 +317,38 @@ export function previewTaskApi(result: NoteResult) {
     restore: refuse,
   };
   return { api, edits };
+}
+
+/**
+ * `DELETE /notes/{id}`: deletes a note. Undo on the toast brings it back with `restoreNote`.
+ */
+export async function deleteNote(
+  id: string,
+): Promise<true | { error: CopyKey }> {
+  try {
+    const response = await api(`/notes/${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    });
+    // 204 has no body to read; a failure throws with the server's code
+    if (!response.ok) await handleResponse(response);
+    forgetNote(id);
+    return true;
+  } catch (error) {
+    return actionError(error);
+  }
+}
+
+/** `POST /notes/{id}/restore` (RV §7): the Undo of a deleted note; the note as it was. */
+export async function restoreNote(
+  id: string,
+): Promise<NoteResult | { error: CopyKey }> {
+  try {
+    const result = await handleResponse<NoteResult>(
+      await api(`/notes/${encodeURIComponent(id)}/restore`, { method: "POST" }),
+    );
+    rememberNote(result);
+    return result;
+  } catch (error) {
+    return actionError(error);
+  }
 }
