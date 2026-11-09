@@ -213,13 +213,14 @@ function ResultContainer({
     if (mayLeave()) back();
   };
   // An answer that lands after this screen closed (the user moved on) must not navigate from it
+  // Set on every mount too: Strict Mode runs cleanup then setup again on the same instance
   const shown = useRef(true);
-  useEffect(
-    () => () => {
+  useEffect(() => {
+    shown.current = true;
+    return () => {
       shown.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
   const backIfShown = () => {
     if (shown.current) back();
   };
