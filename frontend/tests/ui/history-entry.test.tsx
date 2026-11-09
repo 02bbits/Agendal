@@ -79,27 +79,6 @@ describe("history entries for sheets and dialogs", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("Tab reaches a toast's action while a sheet traps focus, then comes back", async () => {
-    render(
-      <>
-        <Sheet open title="Sheet" closeLabel="Close" onClose={() => {}}>
-          <input aria-label="Name" />
-        </Sheet>
-        <div data-toast-region>
-          <button>Undo</button>
-        </div>
-      </>,
-    );
-    screen.getByRole("textbox", { name: "Name" }).focus();
-
-    await userEvent.tab();
-    expect(document.activeElement).toBe(screen.getByText("Undo"));
-    await userEvent.tab();
-    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
-      true,
-    );
-  });
-
   it("closing with × takes its own entry off, so Back doesn't need an extra press", async () => {
     render(<Screen />);
     const before = window.history.state;

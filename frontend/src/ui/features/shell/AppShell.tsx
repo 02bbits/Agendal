@@ -109,8 +109,7 @@ export function AppShell({
             <TabBar active={tab} navigate={navigate} />
           </div>
         )}
-        {/* Outside [data-shell-navigation]: a modal panel makes that inert, and its Undo must stay usable */}
-        {toast}
+        <div data-shell-navigation>{toast}</div>
       </div>
       {aside && (
         <div className="sticky top-0 hidden h-dvh w-[400px] shrink-0 overflow-y-auto border-l border-separator bg-surface xl:block">

@@ -64,36 +64,22 @@ export function useModalFocus(
       const focusable = Array.from(
         container.querySelectorAll<HTMLElement>(FOCUSABLE),
       );
-      // A toast's action (Undo) stays in reach: the cycle runs through the modal, then the toast
-      const toast = Array.from(
-        document
-          .querySelector("[data-toast-region]")
-          ?.querySelectorAll<HTMLElement>(FOCUSABLE) ?? [],
-      );
       const first = focusable[0];
-      const lastInModal = focusable[focusable.length - 1];
-      const last = toast[toast.length - 1] ?? lastInModal;
-      if (!first || !lastInModal || !last) {
+      const last = focusable[focusable.length - 1];
+      if (!first || !last) {
         event.preventDefault();
         return;
       }
-      const active = document.activeElement as HTMLElement | null;
-      const inCycle =
-        !!active && (container.contains(active) || toast.includes(active));
-      const target = event.shiftKey
-        ? active === first || !inCycle
-          ? last
-          : active === toast[0]
-            ? lastInModal
-            : null
-        : active === last || !inCycle
-          ? first
-          : active === lastInModal
-            ? toast[0]
-            : null;
-      if (target) {
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !container.contains(active))) {
         event.preventDefault();
-        target.focus();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (active === last || !container.contains(active))
+      ) {
+        event.preventDefault();
+        first.focus();
       }
     };
 
