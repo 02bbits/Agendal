@@ -56,7 +56,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). The trash icon is **Delete note** (§2.7).
 - **Where the data comes from:** after Make tasks the note is already in hand and isn't asked for again; opened by link, the note is loaded first. Either way each created and changed task is read by its id, so a task removed since shows `note.gone_since` and the When? chips follow the task's real date. The result takes the editor's place in the history, so Back goes to where the editor was opened ([RV-E12](#rv-e12)).
 - **After undo:**
-  - The overline says `note.needs_look_one` (the note is `pending`).
+  - The overline says `notes.needs` (the note is `pending`).
   - Rows are muted and stop opening.
   - Undo all is hidden.
 - **Editing from here:** edits made in Task details don't change the result rows. The rows show what the note did ([ADR-002](../07-architecture/decisions/ADR-002-undo-change-log.md)).
@@ -74,13 +74,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **Edit note** (secondary) opens the editor with the note's text. Make tasks re-plans the same note (`PUT /notes/{id}`, §2.5).
   - Leaving (Back, ×, the backdrop or Escape) asks `note.discard_review_title` only when a task was edited or a row omitted. Discard drops those edits; with none, it goes back at once.
 - **Re-validation:** Apply re-checks the plan ([NU-E38](NU-note-understanding.md#nu-e38)). If anything changed since, the result screen lists the skipped entries.
-- **No expiry:** a `confirm` note waits indefinitely. Its Notes card shows `note.needs_look_one`.
+- **No expiry:** a `confirm` note waits indefinitely. Its Notes card shows `notes.needs`.
 
 ### 2.3 Follow-up (RV-3)
 
 **IM-46 implementation:** follow-ups use the existing `/notes/{id}` screen, including deep links and reloads. `POST /notes/{id}/make-task` creates through the normal applier and Undo log; retries return the same created task. `PUT /notes/{id}` re-plans a follow-up under the same id and client id, using the edit time and device zone, and exposes `edited_at`. The original `written_at` stays intact. Changed text on an already handled note returns `409 note.wrong_status`; unchanged text returns the stored result. General editing of applied notes remains IM-47. Saved-note edits do not replace the separate unsent new-note draft.
 
-**Responsive implementation:** at 1280px and above, saved Notes stay visible behind a dimmed scrim beside a 400px modal result panel. Background navigation and capture controls are inert while it is open; focus stays inside the panel and closing restores interaction. Nested forms and pickers handle Escape before the parent panel. Below 1280px the selected note fills the content area; below 768px the sidebar is hidden. The same result and preview form remain mounted when resizing, so local edits survive. Pickers reuse the shared popover/sheet breakpoint at 768px. This includes a minimal saved-note list and status filters; pending/offline Notes-tab work remains IM-48.
+**Responsive implementation:** at 1280px and above, saved Notes stay visible behind a dimmed scrim beside a 400px modal result panel. Background navigation and capture controls are inert while it is open; focus stays inside the panel and closing restores interaction. Nested forms and pickers handle Escape before the parent panel. Below 1280px the selected note fills the content area; below 768px the sidebar is hidden. The same result and preview form remain mounted when resizing, so local edits survive. Pickers reuse the shared popover/sheet breakpoint at 768px. This includes a minimal saved-note list and status filters; pending/offline Notes-tab work remains IM-53.
 
 - **Contents:** `note.followup_title`, the note quoted in full, then Edit the note (secondary) and Keep it as task (primary).
 - **Keep it as task:**
@@ -88,7 +88,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - The note becomes `done`, with one created change, so Undo all works. Its name is the task's title ([naming rules](../02-domain/business-rules.md#naming-a-note-nu-6)).
   - Task details then opens for the new task, so the user can add a date.
 - **Edit the note:** opens the note's text in the editor, exactly like [Edit note](#25-edit-note-rv-5), with Make tasks reading `note.replan`. The status stays `followup` until Make tasks plans the new text. Closing the editor without Make tasks leaves the note as it was.
-- **No other way out:** there is no "keep as a note" option. A note the user doesn't act on stays `followup`, and its Notes card shows `note.needs_look_one` until they choose one of the two.
+- **No other way out:** there is no "keep as a note" option. A note the user doesn't act on stays `followup`, and its Notes card shows `notes.needs` until they choose one of the two.
 
 ### 2.4 Undo all (RV-2): answers to Q9 and Q10 (Q20)
 
@@ -137,9 +137,9 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 | Status | Status line |
 |---|---|
-| `done` | `note.made_*` (tasks made), or `note.overline_updated` when the note only changed tasks |
-| `confirm`, `followup`, `pending` (after Undo all) | `note.needs_look_one` |
-| Edited at least once | `note.edited_label` after the status line |
+| `done` | `notes.made` and the number of tasks it made, or changed when it made none: "Accepted · 2". Screen readers hear the full `note.made_*` or `note.overline_updated` |
+| `confirm`, `followup`, `pending` (after Undo all) | `notes.needs` |
+| Edited at least once | `note.edited_label` after the name, on the name's line ("Pay rent · Edited") |
 | Saved offline, not yet sent | `note.waiting` |
 | `422` on replay | `note.couldnt_process` (NU) |
 
@@ -187,7 +187,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 
 ## 5. Copy keys
 
-`note.made_one`, `note.made_other`, `note.overline_updated`, `note.overline_deleted`, `note.badge_created`, `note.badge_updated`, `note.badge_deleted`, `note.was`, `note.from_file`, `note.skipped`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.gone_since`, `note.project_gone`, `note.undo_all`, `note.undone`, `note.undo_expired`, `note.undo_conflict_title`, `note.undo_conflict_body`, `note.confirm_title`, `note.confirm_body_one`, `note.confirm_body_other`, `note.apply`, `note.cancel_keep`, `note.pick_task`, `note.followup_title`, `note.followup_edit`, `note.make_one`, `note.needs_look_one`, `note.needs_look_other`, `note.needs_connection`, `note.list_empty`, `note.waiting`, `note.ask_when`, `note.edit`, `note.replan`, `note.edited_label`, `note.delete`, `note.delete_title`, `note.delete_body`, `note.deleted`, `common.done`, `common.undo`, `error.not_found`, `error.generic`, `error.save_failed`.
+`note.made_one`, `note.made_other`, `note.overline_updated`, `note.overline_deleted`, `note.badge_created`, `note.badge_updated`, `note.badge_deleted`, `note.was`, `note.from_file`, `note.skipped`, `note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`, `note.duplicate_hint`, `note.gone_since`, `note.project_gone`, `note.undo_all`, `note.undone`, `note.undo_expired`, `note.undo_conflict_title`, `note.undo_conflict_body`, `note.confirm_title`, `note.confirm_body_one`, `note.confirm_body_other`, `note.apply`, `note.cancel_keep`, `note.pick_task`, `note.followup_title`, `note.followup_edit`, `note.make_one`, `notes.made`, `notes.needs`, `note.needs_connection`, `note.list_empty`, `note.waiting`, `note.ask_when`, `note.edit`, `note.replan`, `note.edited_label`, `note.delete`, `note.delete_title`, `note.delete_body`, `note.deleted`, `common.done`, `common.undo`, `error.not_found`, `error.generic`, `error.save_failed`.
 
 ## 6. Accessibility
 
