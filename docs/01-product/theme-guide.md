@@ -9,7 +9,8 @@ The reference package (screens, PNGs, icons, `tokens.json`, `tokens.css`, `agend
 ## Colour
 
 Rules:
-- Neutral greys do almost all the work. The accent **is ink**: primary buttons, the active tab, selected chips and the progress ring are `#252525` in light and `#CFCFCF` in dark.
+- Neutral greys do almost all the work. The accent **is ink** by default: primary buttons, selected chips and the progress ring are `#252525` in light and `#CFCFCF` in dark.
+- **Theme Palettes:** The primary accent colour can be customized via 8 theme palettes (`Default` Graphite `#252525`, `Agendal` Red `#dc2626`, `Moonstone` Blue `#3b82f6`, `Tangerine` `#f97316`, `Kale` Green `#16a34a`, `Blueberry` `#2563eb`, `Lavender` `#8b5cf6`, `Raspberry` `#db2777`). Selecting a palette dynamically overrides the CSS variable `--color-primary`, immediately recolouring active navigation highlights (`bg-primary/15! text-primary! font-semibold`), checkboxes, and focus rings.
 - Status colours are muted and appear only with a word or icon: red = overdue / destructive, amber = "needs your OK", green = "Created" badges and success. Project colours appear only as 7–8px dots, thin progress bars and small icon tiles.
 - Links that sit inside text are underlined (the accent is the same colour as body text).
 - Every text colour passes WCAG 4.5:1 in both themes; field borders pass 3:1.
@@ -65,9 +66,13 @@ Rules:
 
 ## Theming
 
-- Light is default. Dark applies via a class/attribute on the root (`.ag.dark` in the reference CSS; `[data-theme="dark"]` in `tokens/tokens.css`) or by system preference.
+- Light is default. Dark applies via a class/attribute on the root (`.ag.dark` in the reference CSS; `[data-theme="dark"]` in `tokens/tokens.css`, `data-theme="agendal-light"` or `data-theme="agendal-dark"` on `<html>`) or by system preference.
 - Every colour in components must come from a token — no hard-coded hex in components (the only exceptions are the desktop sign-in illustration and project colours, which are fixed per theme).
-- Keep the user's "Dark mode" toggle in Account (Light / Dark / System if your app supports it).
+- Keep the user's "Dark mode" toggle in Settings > Theme (Light / Dark / System).
+- **Circular Reveal Transition:** Theme toggle transitions animate using the native View Transitions API (`document.startViewTransition`). The transition animates `::view-transition-new(root)` expanding a `clip-path: circle(...)` from the pointer coordinates `(clientX, clientY)` to the maximum viewport radius (calculated via `Math.hypot`), lasting 450ms with easing `cubic-bezier(0.16, 1, 0.3, 1)`.
+- **Pulse Ripple Feedback:** Selecting a theme palette card triggers an expanding keyframe pulse ripple micro-interaction around the card.
+- **Motion Accessibility:** Automatically respects `@media (prefers-reduced-motion: reduce)` by disabling circular reveal and pulse animations.
+- **Zero-Flash Blocking Script:** `src/app/layout.tsx` uses `<Script src="/theme.js" strategy="beforeInteractive" />` from `next/script` in `<head>` to read stored preferences and set `data-theme` prior to first paint without triggering React 19 client render script errors.
 
 ---
 
@@ -96,7 +101,9 @@ Class names refer to `css/agendal.css` in the canvas package.
 | **Needs-OK box** `.okbox` | 1.5px `warning` border, 14px radius: alert icon + "This needs your OK", consequence line, change rows on `bg`, buttons Cancel (ghost) + "Apply N changes" (red). |
 | **File chip** `.filechip` | 34px tinted file icon, name (600) + "234 KB · 2 pages", remove (×) button. |
 | **Voice sheet** | Bottom sheet over a scrim: "● Listening… 0:04", waveform bars (`accent`), "Live transcript" card, × (discard) and red stop button with a soft ring. |
-| **Sidebar** (desktop) `.side` | Logo + "Agendal", search button with ⌘K, nav (Inbox, Upcoming, Projects, Notes with counts; active = `accent-tint`), "PROJECTS" list with dots and counts, user row (avatar, name, email, settings) pinned bottom. |
+| **Sidebar** (desktop) `.side` | Logo mark (links to Inbox) + "Agendal", search button with ⌘K, dynamic `sortedTabs` with counts (Inbox, Upcoming, Projects, Notes; active = `bg-primary/15! text-primary! font-semibold` matching active Theme Palette), "PROJECTS" list with dots and counts, user row (avatar, name, email, settings) pinned bottom. Custom order, tab toggles and count badges configured in Settings > Sidebar. |
+| **Settings modal** `.settings` | 2-pane Todoist-style dialog (`surface`, `rounded-2xl`, max 960px): left sub-navigation rail with category icons and search filtering, right content pane, custom select dropdowns, backdrop blur (`bg-scrim/60 backdrop-blur-[2px]`), and body scroll lock (`useBackgroundScrollLock`). |
+| **Page View modes** | `Flat view` (default, 800px centred column on wide screens, 1 project per row, task details in a centred popup modal `variant="popup"`) vs `Full width` (fluid multi-column grid, task details in right side panel `variant="panel"`). Configured in Settings > General. |
 | **Notes panel** (desktop) `.panel` | Right column, header "✦ Notes". Body on `bg`: latest note cards (time · "3 tasks made", note name, quoted note, change rows, Undo all / Open note), older notes collapsed to one row. Footer: note editor (text, mic, paperclip, ⌘↵ hint, "Make tasks") and a line "Agendal makes, changes and schedules tasks from your notes. Every change can be undone." The same panel shows Task details or a selected note when those are open. |
 | **Logo** | V1 mark: rounded square in `ink` with a check in `bg` (desktop sign-in: inverted on the dark brand panel). |
 

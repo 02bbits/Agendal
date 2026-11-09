@@ -23,6 +23,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-12"></a>UX-12 | **Shortcuts:** Ctrl/Cmd+Enter submits the note editor and every sheet. Enter in a single-line field submits the form. `/` opens Search on list screens when no field has focus, and Ctrl/Cmd+K opens it anywhere in the signed-in app. |
 | <a id="ux-13"></a>UX-13 | **Unsaved input:** closing the note editor with text asks "Discard this note?" (Discard / Keep editing). Meanwhile a draft is kept on the device, restored if the app closed mid-note. Closing a sheet with changes asks "Discard changes?" (`common.discard`). |
 | <a id="ux-14"></a>UX-14 | Tab order follows the visual order. Every control has a visible 2px focus ring ([NF-2](../05-quality/nfr.md#nf-2)). |
+| <a id="ux-15"></a>UX-15 | **Modal Dialog & Settings Scroll Locking:** Opening a dialog (Settings modal, Search popup, TaskPanel popup) locks background body scrolling (`useBackgroundScrollLock` intercepting touchmove and wheel events without shifting layout) and renders a backdrop with `bg-scrim/60 backdrop-blur-[2px]`. |
 
 ## 3. Viewport
 
@@ -37,6 +38,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-26"></a>UX-26 | Held sideways (a viewport about 320–420px tall), the bottom bars stay visible and the content scrolls above them; no fixed element covers a list row or a field. When the viewport is 480px tall or less, tab bar items shrink from 56px to 48px. A phone at least 768px wide sideways gets the sidebar layout instead ([UX-27](#ux-27)). |
 | <a id="ux-27"></a>UX-27 | From 768px wide (tablet, laptop, a large phone held sideways) the layout follows the Figma desktop frames (03 · Desktop 1440). A 248px sidebar on `surface` replaces the tab bar: the Agendal mark, a Search field, the four tabs with their counts (Notes counts every note; the current one in accent on `primary-tint`), the project list, and the account (avatar, name) at the bottom. The content is one column up to 712px with 40px side margins (`px-gutter-wide`) on `paper`, centred in the space left. The capture bar sticks to the bottom of that column over a paper fade; there is no tab bar. The header leaves Search and the avatar to the sidebar. Sheets open as a centred dialog up to 560px wide; toasts centre on the content column. Signed-out screens (sign in, create account, forgot and reset password) have no sidebar. |
 | <a id="ux-28"></a>UX-28 | From 1280px wide a screen may show a 400px side panel on `surface` as a fixed overlay on the right (task detail); the content column doesn't resize, the panel slides in from the right, the list row shows as selected, the URL carries `?task={id}`, and closing does Back when the panel added the entry, else replace (Escape and × also close it). Below 1280px the same content opens as its own screen. The sidebar and the side panel are as tall as the window and scroll on their own, so the capture bar and the panel never scroll away. |
+| <a id="ux-29"></a>UX-29 | **Page View Modes:** On tablet and desktop, the app supports `Flat view` (default, 800px centred content column, single project per row, task details opened in a centred popup modal) and `Full width` (fluid layout, multi-column grid, task details opened in the 400px right side panel). Configured in Settings > General. |
 
 ## 4. Truncation and formatting
 
@@ -64,6 +66,7 @@ Interaction rules that apply to every screen. Specs reference these instead of r
 | <a id="ux-50"></a>UX-50 | Fades and slides only, 150–200 ms, `ease-out` in and `ease-in` out. Sheets slide up, pushed screens slide from the right. |
 | <a id="ux-51"></a>UX-51 | `prefers-reduced-motion: reduce` turns slides into fades of 100 ms or less, and turns off progress-bar animation. |
 | <a id="ux-52"></a>UX-52 | Nothing moves on its own except "Listening…" and loading skeletons, and both stop under reduced motion. |
+| <a id="ux-53"></a>UX-53 | **Theme Toggle Transition & Pulse Feedback:** Toggling appearance or selecting a theme palette triggers a Circular Reveal animation using the View Transitions API (`document.startViewTransition`) expanding `clip-path: circle(...)` from the pointer coordinates `(clientX, clientY)` over 450ms with easing `cubic-bezier(0.16, 1, 0.3, 1)`. Theme card clicks produce an expanding pulse ripple keyframe micro-interaction. Both animations are disabled under `prefers-reduced-motion: reduce`. |
 
 ## 7. Announcements (NF-3)
 
