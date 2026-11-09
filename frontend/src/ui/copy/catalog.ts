@@ -114,6 +114,8 @@ export const catalog = {
   "note.ask_when": "When?",
   "note.needs_connection": "This needs a connection.",
   "note.list_empty": "Your notes will show here. Write one to get started.",
+  "notes.made": "Accepted",
+  "notes.needs": "Pending",
   "note.confirm_title": "Check this first",
   "note.confirm_body_one":
     "This note will make 1 change. Nothing happens until you apply it.",
