@@ -40,6 +40,7 @@ import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
+import { useUpdateToast } from "./useUpdateToast";
 import {
   forgetNotes,
   listNotes,
@@ -336,6 +337,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  useUpdateToast(showToast);
   const { open, openNewTask, sheetProps } = useNewTask({
     pathname,
     showToast,

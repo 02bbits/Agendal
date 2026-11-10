@@ -9,6 +9,8 @@ x-api: &api
   environment:
     DB_HOST: db
     MAIL_HOST: mail
+    # :3001 is the production build (web-prod) for service worker checks
+    SANCTUM_STATEFUL_DOMAINS: localhost:3000,localhost:3001
 
 services:
   db:
@@ -79,7 +81,29 @@ services:
       api:
         condition: service_healthy
 
+  # Opt-in production build on :3001, where the service worker runs (IM-50):
+  # `docker compose --profile prod up -d web-prod`; restart it for a new build.
+  web-prod:
+    profiles: [prod]
+    image: node:22
+    working_dir: /repo/frontend
+    volumes:
+      - .:/repo
+      # Own packages and build: npm ci here must not wipe the dev server's
+      - web-prod-node-modules:/repo/frontend/node_modules
+      - web-prod-next:/repo/frontend/.next
+    environment:
+      API_URL: http://api:8000
+    command: sh -c "npm ci && npm run build && npx next start -p 3001"
+    ports:
+      - "3001:3001"
+    depends_on:
+      api:
+        condition: service_healthy
+
 volumes:
   db-data:
   web-node-modules:
   web-next:
+  web-prod-node-modules:
+  web-prod-next:

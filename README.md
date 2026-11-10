@@ -6,7 +6,7 @@ Write a note, get organised tasks. A mobile web app (PWA) built for the VNUK *Ad
 |---|---|
 | `backend/` | Laravel 13 API at `/api/v1`, Sanctum cookie sessions ([ADR-007](docs/07-architecture/decisions/ADR-007-session-and-auth.md)) |
 | `frontend/` | Next.js 16, TypeScript strict. Forwards `/api/*` and `/sanctum/*` to the backend, so the browser sees one site |
-| `docker-compose.yml` | The whole stack: PostgreSQL 18, Mailpit, the API, a queue worker and the Next.js dev server |
+| `docker-compose.yml` | The whole stack: PostgreSQL 18, Mailpit, the API, a queue worker, the Next.js dev server and an opt-in production build (`web-prod`) |
 
 ## Run it
 
@@ -17,6 +17,8 @@ docker compose up        # app on http://localhost:3000, API on :8000
 ```
 
 The first start installs Composer and npm packages, creates `backend/.env` with an app key, then migrates and seeds (demo account: example@gmail.com / password). Every start migrates, so pulling new migrations needs no extra step. Code is mounted from the host and reloads on save. After changing `package.json`, restart `web` (`docker compose restart web`).
+
+The service worker runs only in a production build. To check it, start one next to the dev server: `docker compose --profile prod up -d web-prod` serves it on <http://localhost:3001> (the first build takes a minute or two). Restart `web-prod` to get a new build, for example to see the update toast. Its worker and caches belong to :3001 only, so the dev app on :3000 stays uncached; clear the site data in DevTools when you're done.
 
 Run commands inside the containers, for example `docker compose exec api php artisan test` or `docker compose exec web npm test`. The API container runs as UID 1000 by default; if yours differs, `export UID GID` first.
 
