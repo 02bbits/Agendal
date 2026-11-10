@@ -22,6 +22,8 @@ class SecurityHeaders
         // The local API docs page loads its viewer script, so it is left out
         if (! $request->is('docs/*')) {
             $response->headers->set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
+            // NF-19, SEC-51: no browser, proxy or service worker keeps an API response
+            $response->headers->set('Cache-Control', 'no-store, private');
         }
         header_remove('X-Powered-By');
 
