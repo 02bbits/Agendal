@@ -85,6 +85,15 @@ it('NF-16: sends the security headers', function () {
         ->and($response->headers->get('Permissions-Policy'))->toContain('microphone=(self)');
 });
 
+it('SEC-51: API responses are never cacheable', function () {
+    $guest = $this->getJson('/api/v1/me')->assertUnauthorized();
+    $invalid = $this->postJson('/api/v1/_validate')->assertStatus(422);
+    $signedIn = $this->actingAs(User::factory()->create())->getJson('/api/v1/me')->assertOk();
+
+    collect([$guest, $invalid, $signedIn])
+        ->each(fn ($r) => expect($r->headers->get('Cache-Control'))->toContain('no-store'));
+});
+
 it('SC-21: a failed query logs no note or task text', function () {
     $logged = '';
     Event::listen(MessageLogged::class, function (MessageLogged $e) use (&$logged) {

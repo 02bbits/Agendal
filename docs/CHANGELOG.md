@@ -14,6 +14,10 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
   - [AP §2.3](03-modules/AP-app-platform.md#23-themes-and-formats-ap-3-ap-5): Modernized zero-flash blocking script in `src/app/layout.tsx` using `<Script src="/theme.js" strategy="beforeInteractive" />` from `next/script` to prevent React 19 / Next.js client render script warnings while guaranteeing zero theme-flash before first paint.
 - [UX-27](01-product/ux-standards.md#ux-27): the Notes tab in the sidebar counts every note (`total` from `GET /notes`).
 
+## 2026-11-06
+
+- `08-project/tasks.md` IM-50: now also covers [UX-42](01-product/ux-standards.md#ux-42) (the "new version" toast needs a service worker to exist) and lists T-AP-105. The Lighthouse repeat-load check is run by hand and reported in the PR; Lighthouse CI stays with IM-63.
+
 ## 2026-11-05
 
 - **Reminders are sent (Refs #30).** [TK §2.5](03-modules/TK-tasks.md#25-reminders-tk-6-should) and [TK §7](03-modules/TK-tasks.md#7-api-contract): a subscription moves to the signed-in user, sign-out removes it and a device with permission subscribes again on load. Sending needs VAPID keys and the scheduler. `GET /push-subscriptions/key` is new, also in [api.md](07-architecture/api.md).
