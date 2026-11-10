@@ -1,43 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { api } from "../../lib/api";
 import { AccountScreen, t } from "../../ui";
 import { useAppFrame } from "../AppFrame";
-import {
-  checkVapidConfig,
-  ensureSubscribed,
-  pushPermission,
-  pushSupported,
-  sendTestNotification,
-} from "@/lib/push";
 
 /** Account: appearance applies at once. Name and email come from the session check. */
 export default function AccountPage() {
-  const { user, signOut, settings, changeSettings, back } = useAppFrame();
-  const [supported] = useState(() => pushSupported());
-  const [permission, setPermission] = useState<NotificationPermission>(() =>
-    pushPermission(),
-  );
-  const [vapidConfigured, setVapidConfigured] = useState(false);
-
-  useEffect(() => {
-    checkVapidConfig()
-      .then((res) => setVapidConfigured(res.configured))
-      .catch(() => {});
-  }, []);
-
-  const handleEnableNotifications = async () => {
-    const perm = await Notification.requestPermission();
-    setPermission(perm);
-    if (perm === "granted") {
-      await ensureSubscribed();
-    }
-  };
-
-  const handleSendTestNotification = async () => {
-    await sendTestNotification();
-  };
+  const { back, settings, changeSettings, user, signOut } = useAppFrame();
 
   const handleUpdateName = async (newName: string) => {
     try {
@@ -100,11 +69,6 @@ export default function AccountPage() {
         // The unsynced-changes dialog arrives with the offline queue (IM-51); nothing is queued yet
         onSignOut={() => signOut()}
         onSignOutEverywhere={() => signOut(true)}
-        notificationSupported={supported}
-        notificationPermission={permission}
-        vapidConfigured={vapidConfigured}
-        onEnableNotifications={handleEnableNotifications}
-        onSendTestNotification={handleSendTestNotification}
         onUpdateName={handleUpdateName}
       />
     </div>

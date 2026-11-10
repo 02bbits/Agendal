@@ -5,8 +5,6 @@ namespace App\Providers;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
-use App\Services\Reminders\ReminderPush;
-use App\Services\Reminders\WebPushSender;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -22,7 +20,6 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(ClockInterface::class, SystemClock::class);
-        $this->app->singleton(ReminderPush::class, WebPushSender::class);
     }
 
     /**

@@ -18,14 +18,12 @@ import {
   NewTaskSheet,
   NoteEditor,
   ProjectSheet,
-  PushExplainer,
   ROUTES,
   SearchPopup,
   sortProjects,
   t,
   Toast,
   useMediaQuery,
-  usePushPrompt,
   applyThemePalette,
   type AccountSettings,
   type Navigate,
@@ -38,11 +36,6 @@ import {
 import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
-import {
-  ensureSubscribed,
-  pushPermission,
-  removeSubscription,
-} from "@/lib/push";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
@@ -186,17 +179,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
-  const pushPrompt = usePushPrompt(appClock);
-
-  useEffect(() => {
-    const onReminderSet = () => {
-      pushPrompt.onReminderSet();
-    };
-    window.addEventListener("agendal:reminder-set", onReminderSet);
-    return () => {
-      window.removeEventListener("agendal:reminder-set", onReminderSet);
-    };
-  }, [pushPrompt]);
 
   useEffect(() => {
     try {
@@ -247,10 +229,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
           await claimDevice(me.id);
           if (!current) return;
           setUser(me);
-          // Sign-out removed this device; permission stays, so it comes back without a prompt
-          if (pushPermission() === "granted") {
-            ensureSubscribed().catch(() => {});
-          }
           if (settingsEdits.current === editsBefore)
             setSettings(settingsOf(me));
           if (signedOutPage) router.replace(ROUTES.inbox);
@@ -413,10 +391,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(
     async (everywhere = false) => {
-      await Promise.race([
-        removeSubscription(),
-        new Promise((resolve) => setTimeout(resolve, 2000)),
-      ]).catch(() => {});
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
       const response = await api(path, { method: "POST" }).catch(() => null);
       // Offline, this device is still wiped at once; the server session ends when it expires (AA §2.4).
@@ -840,11 +814,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onCreated={handleProjectCreated}
           />
         )}
-        <PushExplainer
-          dialog={pushPrompt.dialog}
-          onAllow={pushPrompt.allow}
-          onNotNow={pushPrompt.notNow}
-        />
       </AppShell>
     </AppFrameContext.Provider>
   );

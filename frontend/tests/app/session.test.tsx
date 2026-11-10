@@ -3,17 +3,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, useAppFrame } from "../../src/app/AppFrame";
 import { api } from "../../src/lib/api";
 
-const ensureSubscribedMock = vi.fn(async () => {});
-const pushPermissionMock = vi.fn(
-  () =>
-    (window.Notification?.permission ?? "default") as NotificationPermission,
-);
-
-vi.mock("@/lib/push", () => ({
-  ensureSubscribed: () => ensureSubscribedMock(),
-  pushPermission: () => pushPermissionMock(),
-}));
-
 // IM-18: a session that ends elsewhere (AA-E6, UX-44) and a different account on this device (AA-E7)
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
@@ -50,8 +39,6 @@ function open() {
 }
 
 beforeEach(() => {
-  ensureSubscribedMock.mockClear();
-  pushPermissionMock.mockClear();
   router.replace.mockClear();
   indexedDBMock.deleteDatabase.mockClear();
   meReply = () => me(1);
@@ -129,21 +116,5 @@ describe("a different account on this device (AA-E7)", () => {
     );
     expect(indexedDBMock.deleteDatabase).not.toHaveBeenCalled();
     expect(localStorage.getItem("draft")).toBe("buy milk");
-  });
-});
-
-describe("AppFrame: when Notification.permission is granted, ensureSubscribed is called once after the user loads; with default it is not", () => {
-  it("when Notification.permission is granted, ensureSubscribed is called once after the user loads", async () => {
-    vi.stubGlobal("Notification", { permission: "granted" });
-    open();
-    await screen.findByText("user1@example.com");
-    await waitFor(() => expect(ensureSubscribedMock).toHaveBeenCalledTimes(1));
-  });
-
-  it("with default it is not", async () => {
-    vi.stubGlobal("Notification", { permission: "default" });
-    open();
-    await screen.findByText("user1@example.com");
-    expect(ensureSubscribedMock).not.toHaveBeenCalled();
   });
 });

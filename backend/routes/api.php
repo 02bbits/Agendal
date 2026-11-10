@@ -11,7 +11,6 @@ use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
-use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,9 +22,6 @@ Route::post('/auth/forgot-password', ForgotPasswordController::class)->middlewar
 Route::post('/auth/reset-password', ResetPasswordController::class)->middleware('throttle:reset-password');
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('push-subscriptions/key', [PushSubscriptionController::class, 'key']);
-    Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
-    Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
     Route::get('me', [MeController::class, 'show']);
     Route::patch('me', [MeController::class, 'update']);
     Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');

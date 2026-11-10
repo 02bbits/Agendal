@@ -284,12 +284,6 @@ function ResultContainer({
     }
     const id = outcome.note.id;
     listsChanged();
-    const hasReminder = outcome.changes.some(
-      (change) => change.task.reminder && change.task.reminder !== "none",
-    );
-    if (hasReminder && typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("agendal:reminder-set"));
-    }
     showToast({
       message: tc("note.made", outcome.changes.length),
       actionLabel: t("common.undo"),

@@ -17,8 +17,6 @@ import {
   type WeekStart,
 } from "../../../domain/types";
 import type { Clock } from "../types";
-import { usePushPrompt } from "../usePushPrompt";
-import { PushExplainer } from "../PushExplainer";
 import { DateTimeFields } from "./DateTimeFields";
 import { ProjectField } from "./ProjectField";
 import { SettingsRow } from "./SettingsRow";
@@ -48,15 +46,10 @@ export function SettingsRows({
   onSave,
   variant = "panel",
 }: SettingsRowsProps): ReactElement {
-  const push = usePushPrompt(clock);
   const isReminderPast = reminderPast(task, clock.now(), clock.timeZone);
 
   const hasDate = Boolean(task.start_date || task.due_date);
-  const reminderHelper = isReminderPast
-    ? t("task.reminder_past")
-    : push.denied && task.reminder !== "none"
-      ? t("task.push_denied")
-      : undefined;
+  const reminderHelper = isReminderPast ? t("task.reminder_past") : undefined;
 
   const repeatDescription = describeRepeat(task);
   const repeatLabel = repeatDescription
@@ -105,12 +98,7 @@ export function SettingsRows({
               value: r,
               label: t(`reminder.${r}` as CopyKey),
             }))}
-            onChange={(reminder) => {
-              if (reminder !== "none") {
-                push.onReminderSet();
-              }
-              onSave({ reminder });
-            }}
+            onChange={(reminder) => onSave({ reminder })}
             variant="row"
           />
         }
@@ -136,11 +124,6 @@ export function SettingsRows({
             variant="row"
           />
         }
-      />
-      <PushExplainer
-        dialog={push.dialog}
-        onAllow={push.allow}
-        onNotNow={push.notNow}
       />
     </div>
   );

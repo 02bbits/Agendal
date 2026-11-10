@@ -19,15 +19,6 @@ const nextConfig: NextConfig = {
   headers() {
     return Promise.resolve([
       {
-        source: "/sw.js",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "no-cache",
-          },
-        ],
-      },
-      {
         source: "/:path*",
         headers: [
           {
