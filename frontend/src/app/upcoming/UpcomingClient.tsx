@@ -8,12 +8,14 @@ import {
   ClockIcon,
   PlusIcon,
   ScreenHeader,
+  TASK_COLUMN_CLASS,
   TaskPanel,
   TaskStoreProvider,
   Toast,
   UpcomingScreen,
   UpcomingViewSwitch,
   addDays,
+  cx,
   entriesOf,
   t,
   useTaskPanel,
@@ -62,7 +64,7 @@ export function UpcomingClient() {
   const [subtitle, setSubtitle] = useState<string>("");
   const [filter, setFilter] = useState<UpcomingFilter>("all");
   const [viewMode, setViewMode] = useState<UpcomingViewMode>("list");
-  const viewRef = useRef<{ anchor: string; day: string } | null>(null);
+  const viewRef = useRef<{ anchor: string; day?: string } | null>(null);
 
   useEffect(() => {
     try {
@@ -77,6 +79,17 @@ export function UpcomingClient() {
       }
     } catch {}
   }, []);
+
+  useEffect(() => {
+    if (viewMode === "board") {
+      document.documentElement.dataset.boardView = "true";
+    } else {
+      delete document.documentElement.dataset.boardView;
+    }
+    return () => {
+      delete document.documentElement.dataset.boardView;
+    };
+  }, [viewMode]);
 
   const date = useSyncExternalStore(
     subscribeHeaderDate,
@@ -199,6 +212,72 @@ export function UpcomingClient() {
     };
   }, []);
 
+  const isFull = settings.pageView === "full" || viewMode === "board";
+
+  const filterChipsMd = (
+    <ChipGroup
+      label={t("list.filter_label")}
+      value={filter}
+      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
+      size="md"
+      options={[
+        { value: "all", label: t("list.filter_all") },
+        {
+          value: "scheduled",
+          label: t("list.filter_scheduled"),
+          icon: <ClockIcon size={16} />,
+        },
+        {
+          value: "due",
+          label: t("list.filter_due"),
+          icon: <CalendarIcon size={16} />,
+        },
+      ]}
+    />
+  );
+
+  const filterChipsSm = (
+    <ChipGroup
+      label={t("list.filter_label")}
+      value={filter}
+      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
+      options={[
+        { value: "all", label: t("list.filter_all") },
+        {
+          value: "scheduled",
+          label: t("list.filter_scheduled"),
+          icon: <ClockIcon size={14} />,
+        },
+        {
+          value: "due",
+          label: t("list.filter_due"),
+          icon: <CalendarIcon size={14} />,
+        },
+      ]}
+    />
+  );
+
+  const headerControls = (
+    <div className="flex items-center gap-3">
+      {isFull && <div className="hidden md:block">{filterChipsMd}</div>}
+      {/* Pinned to the top-right corner of the page, level with the date (the AppShell column is relative) */}
+      <UpcomingViewSwitch
+        viewMode={viewMode}
+        onChange={handleViewModeChange}
+        className="md:absolute md:top-[34px] md:right-10"
+      />
+      <Button
+        variant="primary"
+        pill
+        className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
+        onClick={openNewTask}
+      >
+        <PlusIcon size={16} />
+        {t("task.new")}
+      </Button>
+    </div>
+  );
+
   return (
     <div className="pb-8">
       <ScreenHeader
@@ -206,88 +285,111 @@ export function UpcomingClient() {
         title={t("nav.upcoming")}
         accountInitial={accountInitial}
         navigate={navigate}
-        action={
-          <div className="flex items-center gap-3">
-            <div className="hidden md:block">
-              <ChipGroup
-                label={t("list.filter_label")}
-                value={filter}
-                onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-                size="md"
-                options={[
-                  { value: "all", label: t("list.filter_all") },
-                  {
-                    value: "scheduled",
-                    label: t("list.filter_scheduled"),
-                    icon: <ClockIcon size={16} />,
-                  },
-                  {
-                    value: "due",
-                    label: t("list.filter_due"),
-                    icon: <CalendarIcon size={16} />,
-                  },
-                ]}
-              />
-            </div>
-            <UpcomingViewSwitch
-              viewMode={viewMode}
-              onChange={handleViewModeChange}
-            />
-            <Button
-              variant="primary"
-              pill
-              className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
-              onClick={openNewTask}
-            >
-              <PlusIcon size={16} />
-              {t("task.new")}
-            </Button>
-          </div>
-        }
+        action={isFull ? headerControls : undefined}
       >
         {subtitle && (
           <p className="m-0 mt-1 text-footnote text-ink-secondary">
             {subtitle}
           </p>
         )}
-        <div className="mt-4 md:hidden">
-          <ChipGroup
-            label={t("list.filter_label")}
-            value={filter}
-            onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-            options={[
-              { value: "all", label: t("list.filter_all") },
-              {
-                value: "scheduled",
-                label: t("list.filter_scheduled"),
-                icon: <ClockIcon size={14} />,
-              },
-              {
-                value: "due",
-                label: t("list.filter_due"),
-                icon: <CalendarIcon size={14} />,
-              },
-            ]}
-          />
-        </div>
+        {isFull && <div className="mt-4 md:hidden">{filterChipsSm}</div>}
       </ScreenHeader>
 
-      {status === "loading" && (
-        <div
-          className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-4"
-          data-testid="upcoming-loading"
-        >
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="space-y-2">
-              <div className="h-5 w-28 animate-pulse rounded-full bg-separator/40" />
-              <div className="space-y-3 rounded-2xl border border-separator/40 bg-surface p-4 shadow-xs">
-                <div className="h-5 w-3/4 animate-pulse rounded-full bg-separator/30" />
-                <div className="h-5 w-1/2 animate-pulse rounded-full bg-separator/30" />
-              </div>
-            </div>
-          ))}
+      {!isFull && (
+        <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+          {filterChipsMd}
+          {headerControls}
         </div>
       )}
+
+      {status === "loading" &&
+        (viewMode === "board" ? (
+          <div
+            className="grid grid-cols-1 gap-4 py-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 animate-pulse"
+            data-testid="upcoming-loading"
+          >
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-5 w-28 rounded-full bg-separator/40" />
+                <div className="space-y-3 rounded-2xl border border-separator/40 bg-surface p-4 shadow-xs">
+                  <div className="h-5 w-3/4 rounded-full bg-separator/30" />
+                  <div className="h-5 w-1/2 rounded-full bg-separator/30" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div
+            data-testid="upcoming-loading"
+            className={cx(
+              "flex flex-col gap-6 animate-pulse",
+              TASK_COLUMN_CLASS,
+            )}
+          >
+            {/* Week navigation placeholder */}
+            <div className="border-b border-separator/50 pb-3">
+              <div className="flex items-center justify-between py-2">
+                <div className="h-7 w-32 rounded-lg bg-fill/80" />
+                <div className="h-8 w-44 rounded-full bg-fill/60" />
+              </div>
+              <div className="grid grid-cols-7 gap-1 pt-1">
+                {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+                  <div
+                    key={i}
+                    className="flex flex-col items-center justify-center gap-1 rounded-xl py-2"
+                  >
+                    <div className="h-3 w-6 rounded bg-fill/60" />
+                    <div className="h-6 w-6 rounded-md bg-fill/80" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Day 1 Section */}
+            <div className="space-y-2">
+              <div className="h-4 w-36 rounded-lg bg-fill/70" />
+              <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 border-b border-separator/40 px-4 py-3.5 last:border-b-0"
+                  >
+                    <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <div
+                        className="h-4 rounded-xl bg-fill/80"
+                        style={{ width: i === 1 ? "60%" : "40%" }}
+                      />
+                      <div className="h-3 w-28 rounded-lg bg-fill/60" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Day 2 Section */}
+            <div className="space-y-2">
+              <div className="h-4 w-40 rounded-lg bg-fill/70" />
+              <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
+                {[1, 2].map((i) => (
+                  <div
+                    key={i}
+                    className="flex items-center gap-3 border-b border-separator/40 px-4 py-3.5 last:border-b-0"
+                  >
+                    <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <div
+                        className="h-4 rounded-xl bg-fill/80"
+                        style={{ width: i === 1 ? "50%" : "70%" }}
+                      />
+                      <div className="h-3 w-24 rounded-lg bg-fill/60" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
       {status === "error" && (
         <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
           <p className="text-callout text-ink-secondary">{errorMessage}</p>
@@ -316,7 +418,7 @@ export function UpcomingClient() {
             weekStart={settings.weekStart}
             initialView={() => viewRef.current}
             onViewChange={(view) => {
-              viewRef.current = view;
+              viewRef.current = { anchor: view.anchor, day: undefined };
             }}
             onAddTask={(date) => {
               viewRef.current = { anchor: date, day: date };
@@ -326,6 +428,7 @@ export function UpcomingClient() {
           />
           {isWide && selectedTaskId && (
             <TaskPanel
+              variant={settings.pageView === "full" ? "aside" : "popup"}
               taskId={selectedTaskId}
               onClose={closePanel}
               projects={projectList}

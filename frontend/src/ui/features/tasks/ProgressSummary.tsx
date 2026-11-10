@@ -18,43 +18,45 @@ export function ProgressSummary({
   const { done, total } = progress;
   if (total === 0) return null;
   const left = total - done;
-  const r = 15;
+  const r = 20;
   const circumference = 2 * Math.PI * r;
   const share = total ? done / total : 0;
+  const countText = `${done}/${total}`;
+  const textSizeClass = countText.length > 5 ? "text-[11px]" : "text-[13px]";
 
   return (
-    <section className="mb-6 flex items-center gap-4 rounded-2xl border border-separator/50 bg-surface p-4 shadow-xs">
+    <section className="mb-6 flex items-center gap-4.5 rounded-2xl border border-separator/50 bg-surface p-4.5 shadow-xs">
       <svg
         className="shrink-0"
-        width="44"
-        height="44"
-        viewBox="0 0 40 40"
+        width="56"
+        height="56"
+        viewBox="0 0 52 52"
         aria-hidden="true"
         focusable="false"
       >
         <circle
-          cx="20"
-          cy="20"
+          cx="26"
+          cy="26"
           r={r}
-          className="fill-none stroke-fill-2 stroke-[3]"
+          className="fill-none stroke-fill-2 stroke-[3.5]"
         />
         <circle
-          cx="20"
-          cy="20"
+          cx="26"
+          cy="26"
           r={r}
-          className="fill-none stroke-primary stroke-[3] [stroke-linecap:round] transition-[stroke-dashoffset] duration-300 ease-out motion-reduce:transition-none"
+          className="fill-none stroke-primary stroke-[3.5] [stroke-linecap:round] transition-[stroke-dashoffset] duration-300 ease-out motion-reduce:transition-none"
           strokeDasharray={circumference}
           strokeDashoffset={circumference * (1 - share)}
-          transform="rotate(-90 20 20)"
+          transform="rotate(-90 26 26)"
         />
         <text
-          x="20"
-          y="20"
-          className="fill-ink text-[11px] font-semibold"
+          x="26"
+          y="26"
+          className={`fill-ink ${textSizeClass} font-bold`}
           textAnchor="middle"
           dominantBaseline="central"
         >
-          {`${done}/${total}`}
+          {countText}
         </text>
       </svg>
       <div>

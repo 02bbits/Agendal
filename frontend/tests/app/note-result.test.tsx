@@ -318,14 +318,14 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     expect(screen.getByText("Today · No date")).toBeTruthy();
   });
 
-  it("Done goes back to where the editor was opened", async () => {
+  it("Back goes back to where the editor was opened", async () => {
     serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result));
 
     await open();
 
     await screen.findByText("This week");
 
-    await userEvent.click(screen.getByRole("button", { name: "Done" }));
+    await userEvent.click(screen.getByRole("button", { name: "Back" }));
 
     expect(router.replace).toHaveBeenCalledWith("/notes");
   });

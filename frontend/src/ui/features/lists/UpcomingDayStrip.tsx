@@ -38,14 +38,13 @@ export function UpcomingDayStrip({
             aria-current={ariaCurrent}
             aria-label={t("list.day_with_count", { day: heading, count })}
             className={cx(
-              "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px] md:min-h-0 md:justify-center",
-              isPast || isToday
-                ? "cursor-default"
-                : "cursor-pointer hover:bg-surface-hover/50",
+              "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px]",
+              "[html[data-page-view='full']_&]:md:flex-row [html[data-page-view='full']_&]:md:items-center [html[data-page-view='full']_&]:md:justify-center [html[data-page-view='full']_&]:md:gap-1.5 [html[data-page-view='full']_&]:md:min-h-0 [html[data-page-view='full']_&]:md:py-2",
+              isPast || isToday ? "cursor-default" : "cursor-pointer row-hover",
               isPast && "opacity-50",
             )}
           >
-            <div className="flex flex-col items-center justify-center md:flex-row md:gap-1.5">
+            <div className="flex flex-col items-center justify-center whitespace-nowrap [html[data-page-view='full']_&]:md:flex-row [html[data-page-view='full']_&]:md:gap-1.5">
               <span
                 className={cx(
                   "text-footnote",
@@ -60,15 +59,9 @@ export function UpcomingDayStrip({
               </span>
 
               {isToday ? (
-                <>
-                  <span className="rounded-md bg-fill px-1.5 text-footnote font-semibold text-ink">
-                    {day}
-                  </span>
-                  {/* Tells the reader which day is today */}
-                  <span className="hidden text-footnote font-normal text-ink-tertiary md:inline">
-                    {t("list.strip_today")}
-                  </span>
-                </>
+                <span className="rounded-md bg-fill px-1.5 text-footnote font-semibold text-ink">
+                  {day}
+                </span>
               ) : isActive ? (
                 <span className="rounded-md bg-primary px-1.5 text-footnote font-semibold text-primary-content">
                   {day}
@@ -85,7 +78,7 @@ export function UpcomingDayStrip({
               )}
             </div>
 
-            <div className="mt-1 flex h-1.5 justify-center">
+            <div className="mt-1 flex h-1.5 justify-center [html[data-page-view='full']_&]:md:mt-0 [html[data-page-view='full']_&]:md:order-3">
               {hasTasks && (
                 <span
                   aria-hidden="true"
@@ -98,9 +91,9 @@ export function UpcomingDayStrip({
               )}
             </div>
 
-            {/* On phones under the dot, so all seven dots stay on one line */}
+            {/* Under the dot for phone/flat view; inline on full width desktop */}
             {isToday && (
-              <span className="mt-0.5 text-tab font-medium text-ink-tertiary md:hidden">
+              <span className="mt-0.5 whitespace-nowrap text-tab font-medium text-ink-tertiary [html[data-page-view='full']_&]:md:mt-0 [html[data-page-view='full']_&]:md:text-footnote [html[data-page-view='full']_&]:md:font-normal [html[data-page-view='full']_&]:md:order-2">
                 {t("list.strip_today")}
               </span>
             )}

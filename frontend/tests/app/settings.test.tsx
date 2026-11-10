@@ -152,6 +152,76 @@ describe("Account settings (AP-3, AP-5)", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
     expect(await screen.findByText(/Something went wrong/)).toBeTruthy();
   });
+
+  it("allows enabling and disabling sidebar navigation tabs via checkboxes", async () => {
+    await openAccount();
+    await userEvent.click(radio("Sidebar"));
+
+    const upcomingCheckbox = screen.getByRole("checkbox", {
+      name: "Upcoming",
+    }) as HTMLInputElement;
+    expect(upcomingCheckbox.checked).toBe(true);
+
+    await userEvent.click(upcomingCheckbox);
+    expect(upcomingCheckbox.checked).toBe(false);
+
+    const stored = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_enabled") || "{}",
+    );
+    expect(stored.upcoming).toBe(false);
+  });
+
+  it("allows reordering sidebar tabs with move buttons and resetting to default", async () => {
+    await openAccount();
+    await userEvent.click(radio("Sidebar"));
+
+    const moveDownInbox = screen.getByRole("button", {
+      name: "Move down: Inbox",
+    });
+    await userEvent.click(moveDownInbox);
+
+    const storedOrder = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_order") || "[]",
+    );
+    expect(storedOrder[0]).not.toBe("inbox");
+    expect(storedOrder[1]).toBe("inbox");
+
+    const resetButton = screen.getByRole("button", {
+      name: "Reset to default",
+    });
+    await userEvent.click(resetButton);
+
+    const resetOrder = JSON.parse(
+      localStorage.getItem("agendal.sidebar_tabs_order") || "[]",
+    );
+    expect(resetOrder).toEqual(["inbox", "upcoming", "projects", "notes"]);
+  });
+
+  it("renders backdrop with blur and prevents background scrolling", async () => {
+    await openAccount();
+
+    const backdrop = screen.getByTestId("settings-backdrop");
+    expect(backdrop).toBeTruthy();
+    expect(backdrop.getAttribute("aria-hidden")).toBe("true");
+    expect(backdrop.className).toContain("backdrop-blur-[2px]");
+    expect(backdrop.className).toContain("bg-scrim/60");
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.getAttribute("aria-modal")).toBe("true");
+    expect(dialog.className).toContain("overscroll-contain");
+
+    const preventDefault = vi.fn();
+    backdrop.dispatchEvent(
+      new WheelEvent("wheel", { bubbles: true, cancelable: true }),
+    );
+    const touchEvent = new Event("touchmove", {
+      bubbles: true,
+      cancelable: true,
+    });
+    touchEvent.preventDefault = preventDefault;
+    backdrop.dispatchEvent(touchEvent);
+    expect(preventDefault).toHaveBeenCalled();
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {

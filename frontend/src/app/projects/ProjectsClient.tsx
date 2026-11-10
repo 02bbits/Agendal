@@ -4,7 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import {
   ProjectsScreen,
   ROUTES,
+  ScreenHeader,
   formatLongDate,
+  t,
   type Project,
   type ProjectWithCounts,
 } from "@/ui";
@@ -21,6 +23,7 @@ export function ProjectsClient() {
     open: number;
     done: number;
   }>({ open: 0, done: 0 });
+  const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [editingProject, setEditingProject] =
     useState<ProjectWithCounts | null>(null);
@@ -30,22 +33,25 @@ export function ProjectsClient() {
   const today = useToday(appClock);
 
   const load = useCallback(() => {
-    listProjects()
-      .then((data) => {
-        if (Array.isArray(data)) setProjects(data);
-      })
-      .catch(() => {});
-
-    getProject("none")
-      .then((res) => {
-        if (res && res.progress) {
-          setNoProjectCounts({
-            open: res.progress.total - res.progress.done,
-            done: res.progress.done,
-          });
-        }
-      })
-      .catch(() => {});
+    Promise.all([
+      listProjects()
+        .then((data) => {
+          if (Array.isArray(data)) setProjects(data);
+        })
+        .catch(() => {}),
+      getProject("none")
+        .then((res) => {
+          if (res && res.progress) {
+            setNoProjectCounts({
+              open: res.progress.total - res.progress.done,
+              done: res.progress.done,
+            });
+          }
+        })
+        .catch(() => {}),
+    ]).finally(() => {
+      setLoading(false);
+    });
   }, []);
 
   useEffect(() => {
@@ -87,16 +93,48 @@ export function ProjectsClient() {
 
   return (
     <>
-      <ProjectsScreen
-        projects={projects}
-        noProjectCounts={noProjectCounts}
-        accountInitial={accountInitial}
-        overline={formatLongDate(today)}
-        onNewProject={() => setCreating(true)}
-        onRenameProject={(p) => setEditingProject(p)}
-        onDeleteProject={(p) => setDeletingProject(p)}
-        navigate={navigate}
-      />
+      {loading ? (
+        <div className="pb-8">
+          <ScreenHeader
+            overline={formatLongDate(today)}
+            title={t("nav.projects")}
+            accountInitial={accountInitial}
+            navigate={navigate}
+          />
+          <div
+            data-testid="projects-loading"
+            className="grid grid-cols-1 gap-4 [html[data-page-view='full']_&]:sm:grid-cols-2 [html[data-page-view='full']_&]:lg:grid-cols-3 [html[data-page-view='full']_&]:xl:grid-cols-4 animate-pulse"
+          >
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div
+                key={i}
+                className="flex flex-col gap-3 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
+              >
+                <div className="flex items-center gap-2.5">
+                  <div className="size-3 shrink-0 rounded-full bg-fill/80" />
+                  <div
+                    className="h-5 rounded-xl bg-fill/80"
+                    style={{ width: i % 2 === 0 ? "60%" : "45%" }}
+                  />
+                </div>
+                <div className="mt-2 h-1.5 w-full rounded-full bg-fill/60" />
+                <div className="h-3.5 w-24 rounded-lg bg-fill/50" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <ProjectsScreen
+          projects={projects}
+          noProjectCounts={noProjectCounts}
+          accountInitial={accountInitial}
+          overline={formatLongDate(today)}
+          onNewProject={() => setCreating(true)}
+          onRenameProject={(p) => setEditingProject(p)}
+          onDeleteProject={(p) => setDeletingProject(p)}
+          navigate={navigate}
+        />
+      )}
       <ProjectsModals
         projects={projects}
         setProjects={setProjects}

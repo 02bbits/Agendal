@@ -26,7 +26,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | App open, Inbox tab | Inbox |
 | Upcoming tab, the "See what's coming" link | Upcoming |
-| Search in the sidebar, `/` on a list screen, or Ctrl/Cmd+K | Search popup from 768 px, the Search screen below it; field focused |
+| Search in the sidebar, `/` on a list screen, or Ctrl+K | Search popup from 768 px, the Search screen below it; field focused |
 
 - As a user opening the app between meetings, I see what's due today and what I missed, in one glance.
 - As a user planning my week, I see the next days grouped by day.

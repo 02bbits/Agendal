@@ -79,7 +79,7 @@ export function NotesField({
         placeholder={t("task.notes_add")}
         aria-label={t("task.notes")}
         className={cx(
-          "focus-ring w-full rounded-field border border-control bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-tertiary disabled:opacity-40",
+          "field-ring w-full rounded-field border border-control bg-surface px-4 py-3 text-body text-ink placeholder:text-ink-tertiary disabled:opacity-40",
           !isPanel && "border-0 shadow-xs",
         )}
         onChange={handleInput}

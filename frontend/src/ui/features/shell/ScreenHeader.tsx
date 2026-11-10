@@ -12,13 +12,14 @@ export interface ScreenHeaderProps {
   accountInitial: string;
   action?: ReactNode;
   navigate?: Navigate;
+  onAccount?: () => void;
   children?: ReactNode;
 }
 
 /** Tab-screen header: overline, display title, Search and Account at the top right. */
 export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
   function ScreenHeader(
-    { overline, title, accountInitial, action, navigate, children },
+    { overline, title, accountInitial, action, navigate, onAccount, children },
     ref,
   ) {
     return (
@@ -40,7 +41,13 @@ export const ScreenHeader = forwardRef<HTMLHeadingElement, ScreenHeaderProps>(
             <Link
               href={ROUTES.account}
               navigate={navigate}
-              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-footnote font-semibold text-ink before:absolute before:size-8 before:rounded-full before:bg-fill [&>span]:relative"
+              onClick={(e) => {
+                if (onAccount) {
+                  e.preventDefault();
+                  onAccount();
+                }
+              }}
+              className="focus-ring relative inline-flex size-11 items-center justify-center rounded-full text-footnote font-semibold text-ink before:absolute before:size-8 before:rounded-full before:bg-fill [&>span]:relative cursor-pointer"
               aria-label={t("nav.account")}
             >
               <span aria-hidden="true">

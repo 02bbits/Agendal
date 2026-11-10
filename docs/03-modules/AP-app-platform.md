@@ -76,8 +76,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Setting ([Q20](../08-project/open-questions.md#q20)):** Account → Appearance: System / Light / Dark. That's a three-way choice, because a toggle can't return to "System".
   - Default: System.
   - The choice is stored on the user (`theme`) and in local storage, so every device follows it.
-- **No flash on load:** a tiny blocking `theme.js` in `<head>` sets `data-theme` before first paint. It's an external file, so it stays cacheable by the service worker.
+- **No flash on load:** `src/app/layout.tsx` uses `<Script src="/theme.js" strategy="beforeInteractive" />` from `next/script` in `<head>` to set `data-theme` before first paint without triggering React 19 client render warnings.
 - **Browser chrome:** `<meta name="theme-color">` is updated with the theme.
+- **Circular Reveal Transition:** theme switches animate via native View Transitions API (`document.startViewTransition`) expanding `clip-path: circle(...)` from pointer coordinates `(clientX, clientY)` with 450ms duration and `cubic-bezier(0.16, 1, 0.3, 1)` easing. Respects `@media (prefers-reduced-motion: reduce)`.
+- **Theme Palettes:** 8 color schemes (Default Graphite, Agendal red, Moonstone blue, Tangerine, Kale, Blueberry, Lavender, Raspberry) updating `--color-primary` and accompanied by a keyframe pulse ripple micro-interaction. Active sidebar and project highlights dynamically adopt the theme accent.
 
 **Week start and time format ([AP-5](#ap-5)):**
 
@@ -85,6 +87,29 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Stored** on the user (`week_start`, `time_format`), so every device follows them after the next pull, like the theme.
 - **Week start** sets the first column of date pickers, the meaning of *next week* and *end of the week* in notes ([NU-E10](NU-note-understanding.md#nu-e10)), and where Upcoming's weeks begin.
 - **Time format** changes display only ([UX-32](../01-product/ux-standards.md#ux-32)): `16:00` or `4:00 pm`. Notes accept both ways of writing a time, whatever the setting.
+
+### 2.3.1 Settings Architecture & Implementation Status
+
+The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`).
+
+| Category | Control / Feature | Implementation Status | Persistence |
+|---|---|---|---|
+| **Account** | Name (`displayName`) | Fully Functional | `PATCH /api/v1/me` (`name`) |
+| **Account** | Email display | Fully Functional | `GET /api/v1/me` (`email`) |
+| **Account** | Change password | Fully Functional | `POST /api/v1/password/change` |
+| **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
+| **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
+| **General** | Home view (Inbox, Upcoming, Projects) | Fully Functional | `localStorage` (`agendal.home_view`) |
+| **General** | Page view (Flat view vs Full width) | Fully Functional | `localStorage` (`agendal.page_view`) + `data-page-view` |
+| **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
+| **General** | Timezone, Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
+| **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
+| **Theme** | Appearance & 8 Theme Palettes | Fully Functional | Server sync (`theme`) & `--color-primary` |
+| **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
+| **Sidebar** | Drag & drop + keyboard reordering | Fully Functional | `localStorage` (`agendal.sidebar_tabs_order`) |
+| **Sidebar** | Tab enable/disable checkboxes & Reset default | Fully Functional | `localStorage` (`agendal.sidebar_tabs_enabled`) |
+| **Notifications** | Web Push & VAPID service diagnostics | Fully Functional | Web Push API & VAPID |
+| **Roadmap Tabs** | Subscription, Quick Add, Productivity, Backups, Integrations, Calendars | UI Gap / Roadmap | Planned for future milestones |
 
 ### 2.4 Back navigation (AP-4)
 

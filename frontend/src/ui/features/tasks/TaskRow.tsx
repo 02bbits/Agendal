@@ -10,7 +10,7 @@ import {
 } from "../../components/icons";
 import { taskAccessibleName } from "../../domain/describe";
 import type { EntryKind } from "../../domain/entries";
-import { rowMeta, type MetaTone } from "../../domain/rowMeta";
+import { repeatLabel, rowMeta, type MetaTone } from "../../domain/rowMeta";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -79,15 +79,33 @@ export function TaskRow({
   return (
     <li
       className={cx(
-        "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0",
+        "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 cursor-pointer",
         tone === "due"
-          ? "border-dashed border-due/60 hover:bg-due/10"
-          : "border-separator/60 hover:bg-surface-hover/40",
-        selected && (tone === "due" ? "bg-due/20" : "bg-surface-hover/60"),
+          ? "border-dashed border-due/60 hover:bg-due/10 active:bg-due/20"
+          : "border-separator/60 hover:bg-surface-hover/40 active:bg-surface-hover/60",
+        selected &&
+          (tone === "due"
+            ? "bg-due/20 ring-1 ring-inset ring-due/60"
+            : "bg-surface-hover/60 ring-1 ring-inset ring-primary/40"),
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
       )}
     >
+      {/* Ticked: a tint wipes across left to right, red when overdue, blue for a due entry; the row moves after SETTLE_MS */}
+      {settling && task.done && (
+        <span
+          aria-hidden="true"
+          data-testid="swipe-fill"
+          className={cx(
+            "pointer-events-none absolute inset-0 origin-left motion-safe:animate-swipe-fill",
+            overdue
+              ? "bg-error/15"
+              : tone === "due"
+                ? "bg-due/20"
+                : "bg-ink/10",
+          )}
+        />
+      )}
       <button
         type="button"
         role="checkbox"
@@ -97,7 +115,7 @@ export function TaskRow({
         })}
         aria-disabled={settling || undefined}
         className={cx(
-          "group/check inline-flex size-9 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary",
+          "group/check inline-flex size-11 -m-1 shrink-0 items-center justify-center rounded-full border-0 bg-transparent p-0 text-surface focus-visible:outline-2 focus-visible:outline-primary",
           settling ? "cursor-default" : "cursor-pointer",
         )}
         onClick={() => {
@@ -111,7 +129,9 @@ export function TaskRow({
               ? "border-ink bg-ink text-surface"
               : overdue
                 ? "border-error shadow-[inset_0_0_0_1px_var(--color-error)]"
-                : "border-ink-tertiary group-hover/check:border-ink-secondary",
+                : tone === "due"
+                  ? "border-due-ink group-hover/check:border-due-ink"
+                  : "border-ink-tertiary group-hover/check:border-ink-secondary",
           )}
           aria-hidden="true"
         >
@@ -122,12 +142,15 @@ export function TaskRow({
       <Link
         href={ROUTES.task(task.id)}
         navigate={navigate}
-        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink"
+        className="focus-ring flex min-w-0 flex-1 flex-col gap-0.5 rounded-tile py-0.5 text-ink active:opacity-90"
         aria-label={accessibleName}
         aria-current={selected ? "true" : undefined}
       >
         <span
-          className="line-clamp-2 text-body font-medium transition-colors group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit"
+          className={cx(
+            "line-clamp-2 text-body font-medium transition-colors group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit",
+            tone === "due" && !task.done && "text-due-ink",
+          )}
           data-slot="title"
         >
           {renderTitle ? renderTitle(task.title) : task.title}
@@ -154,9 +177,18 @@ export function TaskRow({
           {task.reminder !== "none" && (
             <BellIcon size={13} className="text-ink-tertiary" />
           )}
-          {task.repeat !== "never" && (
-            <RepeatIcon size={13} className="text-ink-tertiary" />
-          )}
+          {task.repeat !== "never" &&
+            (task.done ? (
+              <RepeatIcon size={13} className="text-ink-tertiary" />
+            ) : (
+              <Fragment>
+                <span>·</span>
+                <span className="inline-flex items-center gap-1 text-due-ink">
+                  <RepeatIcon size={13} />
+                  <span>{repeatLabel(task)}</span>
+                </span>
+              </Fragment>
+            ))}
         </span>
       </Link>
 

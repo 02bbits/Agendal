@@ -28,7 +28,7 @@ export function UpcomingViewSwitch({
         className={`focus-ring inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-0 px-3 text-footnote font-medium transition-colors ${
           viewMode === "list"
             ? "bg-primary text-primary-content"
-            : "bg-transparent text-ink-secondary hover:bg-surface-hover/50 hover:text-ink"
+            : "bg-transparent text-ink-secondary row-hover hover:text-ink"
         }`}
         aria-pressed={viewMode === "list"}
         title={t("list.view_list")}
@@ -43,7 +43,7 @@ export function UpcomingViewSwitch({
         className={`focus-ring inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border-0 px-3 text-footnote font-medium transition-colors ${
           viewMode === "board"
             ? "bg-primary text-primary-content"
-            : "bg-transparent text-ink-secondary hover:bg-surface-hover/50 hover:text-ink"
+            : "bg-transparent text-ink-secondary row-hover hover:text-ink"
         }`}
         aria-pressed={viewMode === "board"}
         title={t("list.view_board")}

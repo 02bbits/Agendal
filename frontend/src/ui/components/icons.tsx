@@ -1,11 +1,39 @@
-import type { ReactNode, SVGProps } from "react";
+import {
+  Children,
+  cloneElement,
+  Fragment,
+  isValidElement,
+  type ReactElement,
+  type ReactNode,
+  type SVGProps,
+} from "react";
 
 // Line icons: rounded caps and joins, drawn in currentColor (theme guide, Icons).
 // Decorative by default; give the control around them an accessible name.
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
+function suppressChildren(node: ReactNode): ReactNode {
+  if (!isValidElement(node)) return node;
+  const element = node as ReactElement<{
+    children?: ReactNode;
+    suppressHydrationWarning?: boolean;
+  }>;
+  const children = element.props?.children;
+  const newChildren = children
+    ? Children.map(children, suppressChildren)
+    : undefined;
+  if (element.type === Fragment) {
+    return cloneElement(element, undefined, newChildren);
+  }
+  return cloneElement(element, {
+    suppressHydrationWarning: true,
+    ...(newChildren ? { children: newChildren } : {}),
+  });
+}
+
 function icon(paths: ReactNode) {
+  const suppressedPaths = Children.map(paths, suppressChildren);
   return function Icon({ size = 20, ...rest }: IconProps) {
     return (
       <svg
@@ -19,13 +47,25 @@ function icon(paths: ReactNode) {
         strokeLinejoin="round"
         focusable="false"
         aria-hidden="true"
+        suppressHydrationWarning
         {...rest}
       >
-        {paths}
+        {suppressedPaths}
       </svg>
     );
   };
 }
+
+export const GripVerticalIcon = icon(
+  <>
+    <circle cx="9" cy="5" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="12" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="9" cy="19" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="5" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="12" r="1.25" fill="currentColor" stroke="none" />
+    <circle cx="15" cy="19" r="1.25" fill="currentColor" stroke="none" />
+  </>,
+);
 
 export const XIcon = icon(<path d="M18 6 6 18M6 6l12 12" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
@@ -96,6 +136,19 @@ export const BellIcon = icon(
     <path d="M10.3 20.5a1.94 1.94 0 0 0 3.4 0" />
   </>,
 );
+export const SlidersIcon = icon(
+  <>
+    <line x1="4" x2="4" y1="21" y2="14" />
+    <line x1="4" x2="4" y1="10" y2="3" />
+    <line x1="12" x2="12" y1="21" y2="12" />
+    <line x1="12" x2="12" y1="8" y2="3" />
+    <line x1="20" x2="20" y1="21" y2="16" />
+    <line x1="20" x2="20" y1="12" y2="3" />
+    <line x1="1" x2="7" y1="14" y2="14" />
+    <line x1="9" x2="15" y1="8" y2="8" />
+    <line x1="17" x2="23" y1="16" y2="16" />
+  </>,
+);
 export const RepeatIcon = icon(
   <>
     <path d="m17 2 4 4-4 4" />
@@ -106,7 +159,10 @@ export const RepeatIcon = icon(
 );
 export const FlagIcon = icon(
   <>
-    <path d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z" />
+    <path
+      d="M5 15s1-1 4-1 5 2 8 2 3-1 3-1V3.5s-1 1-3 1-5-2-8-2-4 1-4 1z"
+      fill="currentColor"
+    />
     <path d="M5 21.5v-7" />
   </>,
 );
@@ -135,6 +191,10 @@ export const PaperclipIcon = icon(
   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 );
 export const ArrowUpIcon = icon(<path d="M12 19V5M5 12l7-7 7 7" />);
+export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
+export const RotateCcwIcon = icon(
+  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5" />,
+);
 export const EyeIcon = icon(
   <>
     <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" />
@@ -145,5 +205,43 @@ export const EyeOffIcon = icon(
   <>
     <path d="M9.9 5.7A9.6 9.6 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a17 17 0 0 1-2.7 3.4M6.6 6.6C3.9 8.3 2.5 12 2.5 12S6 18.5 12 18.5c1.7 0 3.2-.5 4.5-1.2" />
     <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2M3.5 3.5l17 17" />
+  </>,
+);
+export const UserIcon = icon(
+  <>
+    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+    <circle cx="12" cy="7" r="4" />
+  </>,
+);
+export const PaletteIcon = icon(
+  <path d="M12 2C6.48 2 2 6.48 2 12c0 4.41 3.59 8 8 8h1a2 2 0 0 0 2-2c0-.55-.22-1.05-.59-1.41-.36-.36-.59-.86-.59-1.41 0-1.1.9-2 2-2h1.6c3.53 0 6.4-2.87 6.4-6.4C22 5.67 17.52 2 12 2zM6.5 12a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3-4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm3 4a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z" />,
+);
+export const CreditCardIcon = icon(
+  <>
+    <rect width="20" height="14" x="2" y="5" rx="2" />
+    <line x1="2" x2="22" y1="10" y2="10" />
+  </>,
+);
+export const SidebarIcon = icon(
+  <>
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <path d="M9 3v18" />
+  </>,
+);
+export const CloudIcon = icon(
+  <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" />,
+);
+export const PlugIcon = icon(
+  <>
+    <path d="M12 22v-5" />
+    <path d="M9 8V2" />
+    <path d="M15 8V2" />
+    <path d="M18 8v5a6 6 0 0 1-12 0V8c0-.6.4-1 1-1h10c.6 0 1 .4 1 1Z" />
+  </>,
+);
+export const LockIcon = icon(
+  <>
+    <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
   </>,
 );

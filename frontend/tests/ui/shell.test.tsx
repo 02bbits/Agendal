@@ -117,7 +117,9 @@ describe("ScreenHeader", () => {
     expect(
       screen.getByRole("link", { name: "Search" }).getAttribute("href"),
     ).toBe("/search");
-    expect(screen.getByRole("link", { name: "Account" }).textContent).toBe("E");
+    expect(
+      screen.getByRole("link", { name: /Settings|Account/ }).textContent,
+    ).toBe("E");
     await expectAxeCleanInBothThemes();
   });
 });
@@ -133,6 +135,7 @@ describe("AccountScreen", () => {
       weekStart: "mon",
       timeFormat: "24h",
       rememberDevice: true,
+      pageView: "flat",
     });
     return (
       <main>
@@ -170,6 +173,20 @@ describe("AccountScreen", () => {
     );
   });
 
+  it("changes page view between Flat view and Full width", async () => {
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const pageView = screen.getByRole("radiogroup", { name: "Page view" });
+    await userEvent.click(
+      within(pageView).getByRole("radio", { name: "Full width" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ pageView: "full" });
+    await userEvent.click(
+      within(pageView).getByRole("radio", { name: "Flat view" }),
+    );
+    expect(onChange).toHaveBeenLastCalledWith({ pageView: "flat" });
+  });
+
   it("toggles Remember me with a switch", async () => {
     const onChange = vi.fn();
     render(<Harness onChange={onChange} />);
@@ -179,6 +196,43 @@ describe("AccountScreen", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
     await userEvent.click(toggle);
     expect(onChange).toHaveBeenLastCalledWith({ rememberDevice: false });
+  });
+
+  it("switches to Notifications tab and triggers test notification", async () => {
+    const onSendTestNotification = vi.fn();
+    render(
+      <main>
+        <AccountScreen
+          name="Alice"
+          email="alice@example.com"
+          settings={{
+            theme: "system",
+            weekStart: "mon",
+            timeFormat: "24h",
+            rememberDevice: true,
+          }}
+          onChange={() => {}}
+          onBack={() => {}}
+          onSignOut={() => {}}
+          notificationSupported={true}
+          notificationPermission="granted"
+          vapidConfigured={true}
+          onSendTestNotification={onSendTestNotification}
+        />
+      </main>,
+    );
+
+    // Switch to Notifications tab
+    await userEvent.click(screen.getByRole("radio", { name: "Notifications" }));
+    expect(screen.getByTestId("notifications-tab")).toBeTruthy();
+    expect(screen.getByText("Enabled")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
+
+    // Click Send Test Notification
+    await userEvent.click(
+      screen.getByRole("button", { name: /Send Test Notification/i }),
+    );
+    expect(onSendTestNotification).toHaveBeenCalledTimes(1);
   });
 
   it("is axe clean in both themes", async () => {

@@ -1,4 +1,5 @@
 import { useId, useRef, type KeyboardEvent, type ReactNode } from "react";
+import { cx } from "./cx";
 
 export interface SegmentedOption<V extends string> {
   value: V;
@@ -11,7 +12,9 @@ export interface SegmentedProps<V extends string> {
   "aria-labelledby"?: string;
   options: ReadonlyArray<SegmentedOption<V>>;
   value: V;
-  onChange: (value: V) => void;
+  onChange: (value: V, event?: React.MouseEvent<HTMLButtonElement>) => void;
+  size?: "md" | "lg";
+  className?: string;
 }
 
 /** Segmented control as a radio group: arrow keys move and select (roving tabindex). */
@@ -21,6 +24,8 @@ export function Segmented<V extends string>({
   options,
   value,
   onChange,
+  size = "md",
+  className,
 }: SegmentedProps<V>) {
   const autoLabelId = useId();
   const labelId = ariaLabelledBy ?? autoLabelId;
@@ -40,9 +45,16 @@ export function Segmented<V extends string>({
     refs.current[next]?.focus();
   };
 
+  const isLg = size === "lg";
+
   return (
     <div
-      className="flex gap-0.5 rounded-segmented bg-fill p-0.5"
+      className={cx(
+        isLg
+          ? "inline-flex gap-1 rounded-full bg-fill/50 p-1 border border-separator/40"
+          : "flex gap-0.5 rounded-segmented bg-fill p-0.5",
+        className,
+      )}
       role="radiogroup"
       aria-labelledby={labelId}
     >
@@ -63,8 +75,13 @@ export function Segmented<V extends string>({
             role="radio"
             aria-checked={checked}
             tabIndex={checked ? 0 : -1}
-            className="focus-ring relative min-h-8 flex-1 cursor-pointer rounded-tile border-0 bg-transparent text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs"
-            onClick={() => onChange(option.value)}
+            className={cx(
+              "focus-ring relative flex-1 cursor-pointer border-0 bg-transparent transition-all duration-150 select-none whitespace-nowrap",
+              isLg
+                ? "min-h-10 rounded-full py-2 px-5 text-callout font-medium text-ink-secondary hover:text-ink aria-checked:bg-surface-elevated aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs aria-checked:ring-1 aria-checked:ring-separator/40"
+                : "min-h-8 rounded-tile px-2 text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs",
+            )}
+            onClick={(event) => onChange(option.value, event)}
             onKeyDown={(event) => onKeyDown(event, index)}
           >
             <span className="inline-flex items-center justify-center gap-1.5">
