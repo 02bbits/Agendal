@@ -14,18 +14,16 @@ import {
 
 /** Account: appearance applies at once. Name and email come from the session check. */
 export default function AccountPage() {
-  const { user, signOut, settings, changeSettings, back, handleUpdateName } =
-    useAppFrame();
-  const [supported, setSupported] = useState(false);
-  const [permission, setPermission] =
-    useState<NotificationPermission>("default");
+  const { user, signOut, settings, changeSettings, back } = useAppFrame();
+  const [supported] = useState(() => pushSupported());
+  const [permission, setPermission] = useState<NotificationPermission>(() =>
+    pushPermission(),
+  );
   const [vapidConfigured, setVapidConfigured] = useState(false);
 
   useEffect(() => {
-    setSupported(pushSupported());
-    setPermission(pushPermission());
     checkVapidConfig()
-      .then(setVapidConfigured)
+      .then((res) => setVapidConfigured(res.configured))
       .catch(() => {});
   }, []);
 
@@ -39,6 +37,16 @@ export default function AccountPage() {
 
   const handleSendTestNotification = async () => {
     await sendTestNotification();
+  };
+
+  const handleUpdateName = async (newName: string) => {
+    try {
+      await api("/me", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ display_name: newName }),
+      });
+    } catch {}
   };
 
   return (
