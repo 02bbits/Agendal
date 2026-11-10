@@ -72,7 +72,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 4. **Success:**
    - Every other session ends.
    - This device is signed in, and the toast `auth.password_changed` shows.
-   - A notice email "Your password was changed" is sent (ASVS 2.2.3).
+   - A notice email `email.changed_subject` is sent (ASVS 2.2.3). It says what to do if the user didn't make the change.
+5. **Emails:** both use the copy in the [Email section](../01-product/copy-catalog.md#email) and the Graphite mail theme, in light and dark mail clients, with no images.
 
 ### 2.4 Sign out (AA-5)
 
