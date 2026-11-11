@@ -8,6 +8,10 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 - **A repeated redo is not an error (Refs #48, IM-49).** [RV §7](03-modules/RV-review-control.md#7-api-contract): redo on a note already `done` returns `200` with the note as it is, as the Idempotency rule below the table says; `409 note.wrong_status` is for `confirm` and `followup`.
 - **The note draft survives a reload (Refs #48, IM-49).** [NC §2.1 and §8](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5), [NF-19](05-quality/nfr.md#nf-19), [SC-19](07-architecture/security.md#sc-19), [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md) and the [ASVS checklist](06-testing/asvs-checklist.md) (8.2.3): a browser aborts an IndexedDB write as the page unloads, so the draft is also copied to `localStorage` when the page is hidden, and moved back to IndexedDB on the next open. Sign-out wipes `localStorage` too, as it already did in code.
 
+## 2026-11-10
+
+- **Branded emails (Refs #77).** [Copy catalog](01-product/copy-catalog.md#email): a new Email section with the reset and notice email copy. [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): both emails use it and the Graphite mail theme. [SUMMARY §6](SUMMARY.md): the Password reset paragraph says so.
+
 ## 2026-11-09
 
 - **Notes cards say Accepted or Pending (Refs #47, IM-48).** [RV §2.1–§2.3, §2.6](03-modules/RV-review-control.md#26-notes-tab-rv-4) and the [copy catalog](01-product/copy-catalog.md): a `done` card reads `notes.made` with its task count ("Accepted · 2", the full count for screen readers), and Edited follows the name, so the status never wraps on a phone; `confirm`, `followup` and `pending` cards, and the result overline after Undo all, read `notes.needs`. `note.needs_look_*` stays on the back-online toast only. Offline Notes cards are left to IM-53.
