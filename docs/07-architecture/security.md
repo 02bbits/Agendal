@@ -39,7 +39,7 @@ Browser (untrusted) → API (trusted) → database. API → email, Web Push, Goo
 | Sign-in redirect | **S** Open redirect to a phishing page after sign-in | Same-origin return paths only ([AA](../03-modules/AA-account-access.md#9-abuse-cases)) | SEC-24 |
 | Device | **I** Another user's unsynced data syncing into the next account | Device data wiped before a different user's session loads ([AA-E7](../03-modules/AA-account-access.md#aa-e7)) | SEC-52 |
 | Push subscriptions | **S** Registering someone else's endpoint | <a id="sc-18"></a>SC-18 subscription tied to the session user. Endpoints must use HTTPS | SEC-16 |
-| Device | **I** Next user on a shared phone sees data | <a id="sc-19"></a>SC-19 sign-out wipes IndexedDB and caches. No API responses in the HTTP cache ([NF-19](../05-quality/nfr.md#nf-19)) | SEC-50, SEC-51 |
+| Device | **I** Next user on a shared phone sees data | <a id="sc-19"></a>SC-19 sign-out wipes IndexedDB, `localStorage` and caches. No API responses in the HTTP cache ([NF-19](../05-quality/nfr.md#nf-19)) | SEC-50, SEC-51 |
 | OpenRouter (LLM) | **I** Data retained or used for training | <a id="sc-20"></a>SC-20 `data_collection: "deny"` provider routing, and minimum context: low-confidence items only, no identifiers or task notes ([ADR-008](decisions/ADR-008-llm-fallback.md)) | SEC-43 (the request sets `data_collection: "deny"` and holds only allowed fields) |
 | Google Cloud Vision | **I** Photo or scan retained | <a id="sc-25"></a>SC-25 inline requests only (no Cloud Storage), EXIF stripped ([NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) | SEC-35 |
 | Logs | **I** Note text leaks | <a id="sc-21"></a>SC-21 metadata-only logging: counts, durations and IDs, never free text | SEC-44, SEC-61 |
