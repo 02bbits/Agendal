@@ -271,6 +271,25 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     expect(screen.getByRole("link", { name: /Buy printer ink/ })).toBeTruthy();
   });
 
+  it("RV-E3: opened after Undo all, a task brought back without its deleted project says so", async () => {
+    const paint = task({
+      id: "t-paint",
+      title: "Buy paint",
+      project_id: "p-x",
+    });
+    serve({ "t-paint": { ...paint, project_id: null } }, () =>
+      json(200, {
+        ...result,
+        note: { ...result.note, status: "pending" },
+        changes: [{ kind: "deleted", label: "Buy paint", task: paint }],
+      }),
+    );
+
+    await open();
+
+    expect(await screen.findByText(t("note.project_gone"))).toBeTruthy();
+  });
+
   it("a task that can't be checked is shown as the note left it", async () => {
     serve({ "t-ink": ink }, () => json(200, result));
 
@@ -529,6 +548,37 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(
       await screen.findByText(t("note.made_other", { count: 2 })),
     ).toBeTruthy();
+  });
+
+  it("NU-E38: an apply that skipped something stays on the result and lists it", async () => {
+    serveConfirm();
+    const base = fetchMock.getMockImplementation()!;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) =>
+      url === "/api/v1/notes/n1/apply"
+        ? json(200, {
+            ...result,
+            changes: [],
+            skipped: [
+              { ref: "u1", text: "Email group", reason: "already_done" },
+            ],
+          })
+        : base(url, init),
+    );
+    await open();
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: t("note.apply_preview") }),
+    );
+
+    expect(
+      await screen.findByText(
+        t("note.skip_already_done", { title: "Email group" }),
+      ),
+    ).toBeTruthy();
+    expect(router.replace).not.toHaveBeenCalledWith("/notes");
+    expect(
+      screen.queryByRole("button", { name: t("note.apply_preview") }),
+    ).toBeNull();
   });
 
   it("leaving the review without changes goes back without asking", async () => {

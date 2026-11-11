@@ -17,6 +17,7 @@ import { ProjectsModals } from "./ProjectsModals";
 export function ProjectsClient() {
   const { navigate, user, showToast } = useAppFrame();
   const [projects, setProjects] = useState<ProjectWithCounts[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [noProjectCounts, setNoProjectCounts] = useState<{
     open: number;
     done: number;
@@ -34,7 +35,8 @@ export function ProjectsClient() {
       .then((data) => {
         if (Array.isArray(data)) setProjects(data);
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoaded(true));
 
     getProject("none")
       .then((res) => {
@@ -89,6 +91,7 @@ export function ProjectsClient() {
     <>
       <ProjectsScreen
         projects={projects}
+        loading={!loaded}
         noProjectCounts={noProjectCounts}
         accountInitial={accountInitial}
         overline={formatLongDate(today)}

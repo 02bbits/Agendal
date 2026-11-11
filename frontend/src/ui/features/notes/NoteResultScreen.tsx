@@ -89,6 +89,22 @@ const sentence = (word: string) =>
 export const nameOf = (result: NoteResultData) =>
   result.note.name ?? result.note.text.split(/\s+/).slice(0, 6).join(" ");
 
+/** What a note did, as its overline and the Apply toast say it: "1 task made · 2 changed". */
+export function changeSummary(changes: NoteChange[]): string {
+  const count = (kind: NoteChange["kind"]) =>
+    changes.filter((change) => change.kind === kind).length;
+  const created = count("created");
+  const updated = count("updated");
+  const deleted = count("deleted");
+  return [
+    created > 0 && tc("note.made", created),
+    updated > 0 && t("note.overline_updated", { count: updated }),
+    deleted > 0 && t("note.overline_deleted", { count: deleted }),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 const LONG_QUOTE = 160;
 
 /**
@@ -133,16 +149,28 @@ export function NoteResultScreen({
   const [expanded, setExpanded] = useState(false);
   // Renaming: the field's text while open. Enter or leaving the field saves, Escape cancels
   const [naming, setNaming] = useState<string | null>(null);
+  // Enter and Escape close the field from the keyboard: focus goes back to the pencil, which
+  // the field replaced (UX-11). Leaving the field by click keeps focus where the user put it
+  const renameButton = useRef<HTMLButtonElement>(null);
+  const backToRename = useRef(false);
+  useEffect(() => {
+    if (naming !== null || !backToRename.current) return;
+    backToRename.current = false;
+    renameButton.current?.focus();
+  }, [naming]);
   const [deleting, setDeleting] = useState(false);
   const saveName = async () => {
     const name = naming?.trim();
     if (!name || name === nameOf(result)) return setNaming(null);
     if (await onRename!(name)) setNaming(null);
+    else backToRename.current = false;
   };
-  // A11Y-20, UX-61: focus goes to the heading, whose name includes the overline
-  useEffect(() => heading.current?.focus(), []);
-
   const { note, changes, skipped } = result;
+  // A11Y-20, UX-61: focus goes to the heading, whose name includes the overline; again after
+  // Undo all or its redo (A11Y-23), as the button that had focus is gone
+  useEffect(() => {
+    heading.current?.focus();
+  }, [note.status]);
   const Heading = presentation === "panel" ? "h2" : "h1";
   const deleteButton = onDelete && (
     <IconButton
@@ -233,11 +261,6 @@ export function NoteResultScreen({
       </div>
     );
   const written = localDateTime(note.processed_at, timeZone);
-  const count = (kind: NoteChange["kind"]) =>
-    changes.filter((change) => change.kind === kind).length;
-  const created = count("created");
-  const updated = count("updated");
-  const deleted = count("deleted");
   const confirming = note.status === "confirm";
   // Pending (undone) notes applied nothing: no counts, rows stay a record
   const notApplied = note.status === "pending";
@@ -247,14 +270,7 @@ export function NoteResultScreen({
     ? t("note.review_title")
     : [
         `${formatDay(written.date, today)} ${formatTime(written.time, timeFormat)}`,
-        notApplied && t("notes.needs"),
-        !notApplied && created > 0 && tc("note.made", created),
-        !notApplied &&
-          updated > 0 &&
-          t("note.overline_updated", { count: updated }),
-        !notApplied &&
-          deleted > 0 &&
-          t("note.overline_deleted", { count: deleted }),
+        notApplied ? t("notes.needs") : changeSummary(changes),
       ]
         .filter(Boolean)
         .join(" · ");
@@ -291,6 +307,7 @@ export function NoteResultScreen({
           </Heading>
           {onRename && (
             <IconButton
+              ref={renameButton}
               plain
               label={t("note.rename")}
               icon={<PencilIcon size={18} />}
@@ -310,10 +327,12 @@ export function NoteResultScreen({
             if (event.key === "Escape") {
               event.preventDefault();
               event.stopPropagation();
+              backToRename.current = true;
               setNaming(null);
             }
             if (event.key !== "Enter") return;
             event.preventDefault();
+            backToRename.current = true;
             await saveName();
           }}
           onBlur={saveName}
@@ -565,6 +584,12 @@ function ChangeRow({
   // Gone: removed since by hand or by another note (RV-E13). A deleted row never opens
   const gone = current === null && !notApplied;
   const opens = change.kind !== "deleted" && !gone && !notApplied;
+  // RV-E3: Undo all brought the task back without its project, which was deleted since
+  const projectGone =
+    notApplied &&
+    change.kind === "deleted" &&
+    change.task.project_id !== null &&
+    current?.project_id === null;
 
   // Rescheduled on Check this first: the new date and time replace what the note said
   const moved =
@@ -609,8 +634,10 @@ function ChangeRow({
             change.task.due_date === null &&
               task.due_date &&
               formatDay(task.due_date, today),
-            change.label,
+            // A delete's label is the task's title (CommandMatcher): the row already shows it
+            change.label !== task.title && change.label,
             change.was && t("note.was", { value: change.was }),
+            projectGone && t("note.project_gone"),
           ]
             .filter(Boolean)
             .join(" · ");
@@ -652,7 +679,7 @@ function ChangeRow({
         <button
           type="button"
           onClick={() => onOpen(task)}
-          aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
+          aria-label={`${sentence(badgeText)}: ${[task.title, meta].filter(Boolean).join(", ")}`}
           className="focus-ring flex min-h-[52px] w-full cursor-pointer items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink hover:bg-fill"
         >
           {body}
@@ -661,7 +688,7 @@ function ChangeRow({
         <Link
           href={ROUTES.task(task.id)}
           navigate={navigate}
-          aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
+          aria-label={`${sentence(badgeText)}: ${[task.title, meta].filter(Boolean).join(", ")}`}
           className="focus-ring flex min-h-[52px] items-start gap-3 px-3.5 py-3 text-ink no-underline hover:bg-fill"
         >
           {body}

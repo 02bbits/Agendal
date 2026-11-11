@@ -36,13 +36,15 @@ import {
   TaskPanel,
   TaskStoreProvider,
   t,
-  tc,
   useTaskStore,
   type NoteResult,
   type Project,
   type Task,
 } from "../../../ui";
-import { nameOf } from "../../../ui/features/notes/NoteResultScreen";
+import {
+  changeSummary,
+  nameOf,
+} from "../../../ui/features/notes/NoteResultScreen";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
 import { useMediaQuery } from "../../../ui/components/useMediaQuery";
 import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
@@ -71,8 +73,12 @@ interface Loaded {
   projects: Project[];
 }
 
+// Tasks a note deleted are fetched only once Undo all brought them back: a restored one whose
+// project went shows it on reload too (RV-E3)
 const touched = (result: NoteResult) =>
-  result.changes.filter((change) => change.kind !== "deleted");
+  result.note.status === "pending"
+    ? result.changes
+    : result.changes.filter((change) => change.kind !== "deleted");
 
 function OpenedTask({
   id,
@@ -188,6 +194,8 @@ function ResultContainer({
   const offline = useOffline();
   const [result, setResult] = useState(initial);
   const [conflicts, setConflicts] = useState(0);
+  // Tasks Undo all brought back, fetched after it: loaded while deleted, they were gone (RV-E3)
+  const [restored, setRestored] = useState<Task[]>([]);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [excluded, setExcluded] = useState<string[]>([]);
@@ -251,6 +259,7 @@ function ResultContainer({
     const outcome = await redoNote(result.note.id);
     if ("result" in outcome) {
       setResult(outcome.result);
+      setRestored([]);
       listsChanged();
     } else if ("error" in outcome) showToast(t(outcome.error));
   };
@@ -261,6 +270,15 @@ function ResultContainer({
     if (!("result" in outcome)) return;
     setResult(outcome.result);
     listsChanged();
+    // RV-E3: the tasks it brought back, as they are now: one whose project went is in No project
+    const brought = outcome.result.changes.filter(
+      (change) => change.kind === "deleted",
+    );
+    void Promise.all(
+      brought.map((change) => getTask(change.task.id).catch(() => null)),
+    ).then((tasks) =>
+      setRestored(tasks.filter((task): task is Task => task !== null)),
+    );
     showToast({
       message: t("note.undone"),
       actionLabel: t("common.undo"),
@@ -282,8 +300,15 @@ function ResultContainer({
     }
     const id = outcome.note.id;
     listsChanged();
+    // Something changed since the review (NU-E38): the result lists what was skipped, with
+    // Undo all there, instead of a toast that can't say it (RV §2.2)
+    if (outcome.skipped.length > 0) {
+      setExcluded([]);
+      setResult(outcome);
+      return;
+    }
     showToast({
-      message: tc("note.made", outcome.changes.length),
+      message: changeSummary(outcome.changes),
       actionLabel: t("common.undo"),
       onAction: async () => {
         const undone = await undoNote(id, false);
@@ -363,8 +388,9 @@ function ResultContainer({
     () => ({
       ...Object.fromEntries(store.tasks.map((task) => [task.id, task])),
       ...Object.fromEntries([...gone].map((id) => [id, null])),
+      ...Object.fromEntries(restored.map((task) => [task.id, task])),
     }),
-    [store.tasks, gone],
+    [store.tasks, gone, restored],
   );
   return (
     <>

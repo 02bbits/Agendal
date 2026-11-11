@@ -106,6 +106,42 @@ describe("ProjectsScreen (PJ §2.2)", () => {
     expect(screen.getByText("Group tasks by area or goal.")).toBeTruthy();
   });
 
+  it("while the list loads, says neither 0 projects nor the empty state", () => {
+    render(
+      <ProjectsScreen
+        projects={[]}
+        loading
+        accountInitial="E"
+        onNewProject={() => {}}
+      />,
+    );
+    expect(screen.queryByText(t("project.list_empty"))).toBeNull();
+    expect(screen.getByText(/0 projects/).className).toContain("invisible");
+  });
+
+  it("a menu item and Escape leave focus on ⋯, for the dialog to give back (UX-11)", async () => {
+    const list = [{ ...seedProjects[1]!, open: 5, done: 3 }];
+    render(
+      <ProjectsScreen
+        projects={list}
+        accountInitial="E"
+        onNewProject={() => {}}
+        onRenameProject={() => {}}
+        onDeleteProject={() => {}}
+      />,
+    );
+    const menuButton = screen.getByRole("button", { name: t("project.menu") });
+    await userEvent.click(menuButton);
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement).toBe(menuButton);
+
+    await userEvent.click(menuButton);
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: t("project.delete") }),
+    );
+    expect(document.activeElement).toBe(menuButton);
+  });
+
   it("closes project card menu on click outside and on Escape", async () => {
     const list = [{ ...seedProjects[1]!, open: 5, done: 3 }];
     render(

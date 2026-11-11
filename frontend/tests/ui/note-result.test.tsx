@@ -113,6 +113,26 @@ describe("Note result (IM-43, RV-1)", () => {
     expect(screen.getByText("Fri 30 Oct · HCI · was Wed 28 Oct")).toBeTruthy();
   });
 
+  it("renaming: Escape and Enter give focus back to the pencil (UX-11)", async () => {
+    const onRename = vi.fn().mockResolvedValue(true);
+    open(resultOf([sql]), { onRename });
+    const pencil = () => screen.getByRole("button", { name: t("note.rename") });
+    await userEvent.click(pencil());
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement).toBe(pencil());
+
+    await userEvent.click(pencil());
+    await userEvent.keyboard(" week 2{Enter}");
+    expect(onRename).toHaveBeenCalledWith("This week week 2");
+    expect(document.activeElement).toBe(pencil());
+  });
+
+  it("a deleted row shows its title once, and a delete-only note says deleted, not made", () => {
+    open(resultOf([old]));
+    expect(screen.getAllByText("Old reading list")).toHaveLength(1);
+    expect(screen.getByText("Today 08:12 · 1 deleted")).toBeTruthy();
+  });
+
   it("T-RV-03: created and updated rows open their task, a deleted one does not", () => {
     open(resultOf([sql, hci, old]));
     expect(
@@ -302,6 +322,45 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(
         screen.queryByRole("group", { name: t("note.ask_when") }),
       ).toBeNull();
+    });
+
+    it("T-RV-103: a task brought back without its deleted project says so", () => {
+      const inProject: NoteChange = {
+        ...old,
+        task: { ...old.task, project_id: "p-gone" },
+      };
+      open(resultOf([inProject, sql], [], { status: "pending" }), {
+        live: { "t-old": { ...old.task, project_id: null } },
+      });
+      expect(screen.getByText(t("note.project_gone"))).toBeTruthy();
+    });
+
+    it("A11Y-23: after Undo all focus moves to the heading, read with its overline", () => {
+      const { rerender } = render(<main />);
+      const props = {
+        today: TODAY,
+        now: NOW,
+        timeZone: "Asia/Ho_Chi_Minh",
+        timeFormat: "24h" as const,
+        weekStart: "mon" as const,
+        onDone: vi.fn(),
+        onSetDue: vi.fn(),
+        onUndo: vi.fn(),
+      };
+      rerender(<NoteResultScreen result={resultOf([sql])} {...props} />);
+      screen.getByRole("button", { name: t("note.undo_all") }).focus();
+      rerender(
+        <NoteResultScreen
+          result={resultOf([sql], [], { status: "pending" })}
+          {...props}
+        />,
+      );
+      expect(document.activeElement).toBe(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Today 08:12 · Pending This week",
+        }),
+      );
     });
 
     it("RV-E2: after 30 days the note shows note.undo_expired instead of Undo all", () => {

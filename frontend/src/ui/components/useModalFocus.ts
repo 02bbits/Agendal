@@ -1,4 +1,4 @@
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -24,14 +24,28 @@ export function useModalFocus(
     escape.current = onEscape;
   });
 
+  // The opener is read while rendering the open: by the time effects run, a field's autoFocus has
+  // already taken focus, and handing it back there on close would drop focus on the page (UX-11)
+  const [openedFrom, setOpenedFrom] = useState<{
+    open: boolean;
+    opener: HTMLElement | null;
+  }>({ open: false, opener: null });
+  if (openedFrom.open !== open)
+    setOpenedFrom({
+      open,
+      opener:
+        open &&
+        typeof document !== "undefined" &&
+        document.activeElement instanceof HTMLElement
+          ? document.activeElement
+          : null,
+    });
+  const opener = openedFrom.opener;
+
   useEffect(() => {
     if (!open) return;
     const container = containerRef.current;
     if (!container) return;
-    const opener =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null;
 
     const firstField = container.querySelector<HTMLElement>(FIELD);
     const target =
@@ -89,5 +103,5 @@ export function useModalFocus(
       document.removeEventListener("keydown", onKeyDown);
       if (opener && opener.isConnected) opener.focus();
     };
-  }, [open, containerRef, titleRef, initialFocusRef]);
+  }, [open, opener, containerRef, titleRef, initialFocusRef]);
 }

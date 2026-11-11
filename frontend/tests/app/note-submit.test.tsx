@@ -16,6 +16,7 @@ vi.mock("../../src/lib/draft", () => ({
   loadDraft: vi.fn().mockResolvedValue(""),
   saveDraft: vi.fn().mockResolvedValue(undefined),
   clearDraft: vi.fn().mockResolvedValue(undefined),
+  keepDraftOnHide: vi.fn(),
 }));
 
 const fetchMock = vi.fn();

@@ -1,5 +1,6 @@
 import { t, tc } from "../../copy";
 import { Button } from "../../components/Button";
+import { cx } from "../../components/cx";
 import { EmptyState } from "../../components/EmptyState";
 import { PlusIcon } from "../../components/icons";
 import { today } from "../../../lib/clock";
@@ -33,6 +34,8 @@ export interface ProjectsScreenProps {
   onDeleteProject?: (project: ProjectWithCounts) => void;
   navigate?: Navigate;
   overline?: string;
+  /** The first list hasn't arrived: no counts or empty state yet, which would read as "no projects" */
+  loading?: boolean;
 }
 
 /** Projects tab (PJ §2.2): Desktop grid cards, colour, name, progress; No project fixed last; New project. */
@@ -45,6 +48,7 @@ export function ProjectsScreen({
   onDeleteProject,
   navigate,
   overline,
+  loading = false,
 }: ProjectsScreenProps) {
   const sortedProjects: ProjectWithCounts[] = sortProjects(projects);
   const totalOpen =
@@ -75,14 +79,20 @@ export function ProjectsScreen({
         }
         navigate={navigate}
       >
-        <p className="m-0 mt-1 text-footnote text-ink-secondary">
+        {/* Invisible while loading: the line keeps its height, so nothing jumps when counts land */}
+        <p
+          className={cx(
+            "m-0 mt-1 text-footnote text-ink-secondary",
+            loading && "invisible",
+          )}
+        >
           {tc("project.count", sortedProjects.length)}
           {" · "}
           {tc("project.open_count", totalOpen)}
         </p>
       </ScreenHeader>
 
-      {sortedProjects.length === 0 ? (
+      {loading ? null : sortedProjects.length === 0 ? (
         <EmptyState title={t("project.list_empty")} />
       ) : (
         <>
