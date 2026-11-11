@@ -35,7 +35,7 @@ export function SearchPopup({
   return createPortal(
     <div
       data-testid="search-backdrop"
-      className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+      className="fixed inset-0 z-50 bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
@@ -47,7 +47,7 @@ export function SearchPopup({
         role="dialog"
         aria-modal="true"
         aria-label={t("search.dialog")}
-        className="absolute top-1/2 left-1/2 flex max-h-[min(780px,calc(100dvh-64px))] w-[840px] max-w-[calc(100%-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden overscroll-contain rounded-[14px] bg-surface-elevated shadow-2xl"
+        className="absolute top-1/2 left-1/2 flex max-h-[min(780px,calc(100dvh-64px))] w-[840px] max-w-[calc(100%-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden overscroll-contain rounded-[14px] bg-surface-elevated shadow-2xl motion-safe:animate-scale-in"
       >
         <SearchPanel
           {...panelProps}

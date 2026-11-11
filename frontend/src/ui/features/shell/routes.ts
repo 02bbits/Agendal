@@ -20,6 +20,60 @@ export const ROUTES = {
 
 export type TabId = "inbox" | "upcoming" | "projects" | "notes";
 
+export const DEFAULT_SIDEBAR_TABS: Record<TabId, boolean> = {
+  inbox: true,
+  upcoming: true,
+  projects: true,
+  notes: true,
+};
+
+export const DEFAULT_SIDEBAR_TABS_ORDER: TabId[] = [
+  "inbox",
+  "upcoming",
+  "projects",
+  "notes",
+];
+
+export const SIDEBAR_TABS_STORAGE_KEY = "agendal.sidebar_tabs_enabled";
+export const SIDEBAR_TABS_ORDER_KEY = "agendal.sidebar_tabs_order";
+
+export function getStoredSidebarTabs(): Record<TabId, boolean> {
+  if (typeof localStorage === "undefined") return { ...DEFAULT_SIDEBAR_TABS };
+  try {
+    const raw = localStorage.getItem(SIDEBAR_TABS_STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_SIDEBAR_TABS };
+    const parsed = JSON.parse(raw);
+    return {
+      inbox: parsed.inbox !== false,
+      upcoming: parsed.upcoming !== false,
+      projects: parsed.projects !== false,
+      notes: parsed.notes !== false,
+    };
+  } catch {
+    return { ...DEFAULT_SIDEBAR_TABS };
+  }
+}
+
+export function getStoredSidebarTabsOrder(): TabId[] {
+  if (typeof localStorage === "undefined")
+    return [...DEFAULT_SIDEBAR_TABS_ORDER];
+  try {
+    const raw = localStorage.getItem(SIDEBAR_TABS_ORDER_KEY);
+    if (!raw) return [...DEFAULT_SIDEBAR_TABS_ORDER];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [...DEFAULT_SIDEBAR_TABS_ORDER];
+    const valid = parsed.filter((id): id is TabId =>
+      DEFAULT_SIDEBAR_TABS_ORDER.includes(id),
+    );
+    for (const defId of DEFAULT_SIDEBAR_TABS_ORDER) {
+      if (!valid.includes(defId)) valid.push(defId);
+    }
+    return valid;
+  } catch {
+    return [...DEFAULT_SIDEBAR_TABS_ORDER];
+  }
+}
+
 export const TABS: ReadonlyArray<{ id: TabId; href: string; label: CopyKey }> =
   [
     { id: "inbox", href: ROUTES.inbox, label: "nav.inbox" },

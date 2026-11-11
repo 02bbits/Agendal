@@ -106,8 +106,7 @@ export function DateField({
         }}
         className={cx(
           "flex h-11 w-full items-center rounded-field border border-control bg-surface px-3 text-body text-ink tabular-nums",
-          focusedSegment !== null &&
-            "outline-2 outline-primary outline-offset-2",
+          focusedSegment !== null && "border-primary",
         )}
       >
         <div className="flex items-center">

@@ -84,7 +84,7 @@ export function CreateAccountScreen({
         <Link
           href={signInHref}
           navigate={navigate}
-          className="focus-ring -mt-3 self-start text-footnote text-primary hover:underline"
+          className="focus-ring -mt-3 self-start text-footnote text-primary link-swipe"
         >
           {t("auth.sign_in")}
         </Link>
@@ -121,7 +121,7 @@ export function CreateAccountScreen({
         <Link
           href={signInHref}
           navigate={navigate}
-          className="focus-ring text-primary hover:underline"
+          className="focus-ring text-primary link-swipe"
         >
           {t("auth.sign_in")}
         </Link>

@@ -394,6 +394,44 @@ describe("Toast", () => {
       "assertive",
     );
   });
+
+  it("close button is hidden on mobile and shown on desktop", () => {
+    render(<ToastHarness onUndo={() => {}} initial={completed(() => {})} />);
+    const closeBtn = screen.getByRole("button", { name: "Close" });
+    expect(closeBtn.className).toContain("hidden");
+    expect(closeBtn.className).toContain("md:inline-flex");
+  });
+
+  it("touch swipe dismisses toast on mobile, but mouse drag does not", () => {
+    const onDismiss = vi.fn();
+    render(<Toast toast={completed(() => {})} onDismiss={onDismiss} />);
+    const alert = screen.getByRole("status").querySelector(".alert")!;
+
+    // Mouse drag on desktop -> should not dismiss
+    fireEvent.pointerDown(alert, { pointerType: "mouse", clientX: 100 });
+    fireEvent.pointerMove(alert, { clientX: 250 });
+    fireEvent.pointerUp(alert);
+    expect(onDismiss).not.toHaveBeenCalled();
+
+    // Touch swipe on mobile -> dismisses
+    fireEvent.touchStart(alert, { touches: [{ clientX: 100 }] });
+    fireEvent.touchMove(alert, { touches: [{ clientX: 200 }] });
+    fireEvent.touchEnd(alert);
+    expect(onDismiss).toHaveBeenCalledWith(1);
+  });
+
+  it("centers toast on mobile and aligns left on desktop with bottom offset", () => {
+    const { container } = render(
+      <Toast toast={completed(() => {})} onDismiss={() => {}} />,
+    );
+    const toastRegion = container.querySelector(".toast")!;
+    expect(toastRegion.className).toContain("toast-center");
+    // daisyUI's toast-start can't take md:, so the left edge is set directly
+    expect(toastRegion.className).toContain("md:[--toast-x:0px]");
+    expect(toastRegion.className).toContain("md:[inset-inline:1rem_auto]");
+    expect(toastRegion.className).toContain("items-center");
+    expect(toastRegion.className).toContain("md:items-start");
+  });
 });
 
 describe("EmptyState", () => {

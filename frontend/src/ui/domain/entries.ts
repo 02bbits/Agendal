@@ -34,6 +34,13 @@ export function entriesOf(task: Task): DayEntry[] {
 export function matchesEntry(entry: DayEntry, filter: UpcomingFilter): boolean {
   if (filter === "all") return true;
   if (filter === "scheduled") {
+    if (
+      entry.kind === "due" &&
+      !entry.task.start_date &&
+      entry.task.repeat !== "never"
+    ) {
+      return true;
+    }
     return (
       Boolean(entry.task.start_date) &&
       (entry.kind === "start" || entry.task.start_date === entry.task.due_date)

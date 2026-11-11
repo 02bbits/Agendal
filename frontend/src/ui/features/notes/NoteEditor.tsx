@@ -42,7 +42,7 @@ export interface NoteEditorProps {
   /** An earlier unsent note was put back in the editor (`note.draft_restored`). */
   onDraftRestored?: () => void;
   /**
-   * Make tasks, and Ctrl/Cmd+Enter (UX-12): sends the note (NC §2.2) and answers with the result,
+   * Make tasks, and Ctrl+Enter (UX-12): sends the note (NC §2.2) and answers with the result,
    * or why it wasn't made. `clientId` stays the same for a retry, so one note is made at most once.
    * Editing a done note may answer `{conflicts}`: the editor asks first, then sends again with
    * `confirmConflicts` (RV-E16).

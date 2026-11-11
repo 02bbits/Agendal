@@ -19,6 +19,7 @@ import { useModalFocus } from "../../../components/useModalFocus";
 
 export interface TaskPanelProps {
   modal?: boolean;
+  variant?: "aside" | "popup";
   taskId: string;
   onClose: () => void;
   projects?: Project[];
@@ -30,6 +31,7 @@ export interface TaskPanelProps {
 
 export function TaskPanel({
   modal = false,
+  variant = "aside",
   taskId,
   onClose,
   projects,
@@ -112,6 +114,77 @@ export function TaskPanel({
     [onClose],
   );
 
+  const isPopup = variant === "popup";
+
+  const content = task ? (
+    <TaskDetails
+      key={task.id}
+      task={task}
+      onBack={onClose}
+      onClose={onClose}
+      variant="panel"
+      projects={projects}
+      projectsStatus={projectsStatus}
+      onRetryProjects={onRetryProjects}
+      deleteAction={
+        <DeleteTask
+          task={task}
+          onDeleted={onDelete ?? onClose}
+          label={t("common.delete")}
+        />
+      }
+      autoFocusTitle
+      weekStart={weekStart}
+    />
+  ) : loading ? (
+    <div
+      className={cx("flex flex-col", isPopup ? "h-64" : "h-full")}
+      role="status"
+      aria-busy="true"
+    >
+      <PanelHeader onClose={onClose} />
+    </div>
+  ) : (
+    <div className={cx("flex flex-col", isPopup ? "h-64" : "h-full")}>
+      <PanelHeader onClose={onClose} />
+      <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
+        <p className="text-body text-ink-secondary">{t("error.not_found")}</p>
+        <Button variant="secondary" onClick={onClose} className="mt-4">
+          {t("common.close")}
+        </Button>
+      </div>
+    </div>
+  );
+
+  if (isPopup) {
+    return (
+      <>
+        <div
+          data-testid="task-panel-backdrop"
+          aria-hidden="true"
+          onClick={onClose}
+          onWheel={(e) => e.preventDefault()}
+          onTouchMove={(e) => e.preventDefault()}
+          className="fixed inset-0 z-40 bg-scrim/60 backdrop-blur-[2px] motion-safe:animate-fade-in"
+        />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-8 pointer-events-none">
+          <div
+            ref={panelRef as React.RefObject<HTMLDivElement>}
+            data-modal-host="true"
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("task.heading")}
+            tabIndex={-1}
+            onKeyDown={handleKeyDown}
+            className="pointer-events-auto flex flex-col w-full max-w-[760px] max-h-[85vh] rounded-2xl border border-separator/60 bg-surface shadow-2xl overflow-y-auto overscroll-contain outline-none motion-safe:animate-scale-in"
+          >
+            {content}
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       <div
@@ -120,7 +193,7 @@ export function TaskPanel({
         onClick={onClose}
         onWheel={(e) => e.preventDefault()}
         onTouchMove={(e) => e.preventDefault()}
-        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] transition-opacity duration-200"
+        className="fixed inset-0 z-40 bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
       />
       <aside
         ref={panelRef}
@@ -136,43 +209,7 @@ export function TaskPanel({
           !modal && "will-change-transform",
         )}
       >
-        {task ? (
-          <TaskDetails
-            key={task.id}
-            task={task}
-            onBack={onClose}
-            onClose={onClose}
-            variant="panel"
-            projects={projects}
-            projectsStatus={projectsStatus}
-            onRetryProjects={onRetryProjects}
-            deleteAction={
-              <DeleteTask
-                task={task}
-                onDeleted={onDelete ?? onClose}
-                label={t("common.delete")}
-              />
-            }
-            autoFocusTitle
-            weekStart={weekStart}
-          />
-        ) : loading ? (
-          <div className="flex h-full flex-col" role="status" aria-busy="true">
-            <PanelHeader onClose={onClose} />
-          </div>
-        ) : (
-          <div className="flex h-full flex-col">
-            <PanelHeader onClose={onClose} />
-            <div className="flex flex-1 flex-col items-center justify-center p-6 text-center">
-              <p className="text-body text-ink-secondary">
-                {t("error.not_found")}
-              </p>
-              <Button variant="secondary" onClick={onClose} className="mt-4">
-                {t("common.close")}
-              </Button>
-            </div>
-          </div>
-        )}
+        {content}
       </aside>
     </>
   );

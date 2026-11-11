@@ -60,8 +60,22 @@ export function dueDateFor(
       return today;
     case "tomorrow":
       return addDays(today, 1);
-    case "next_week":
+    case "next_week": {
+      let nextDay = "mon";
+      try {
+        if (typeof localStorage !== "undefined") {
+          const stored = localStorage.getItem("agendal.next_week_day");
+          if (stored) nextDay = stored;
+        }
+      } catch {}
+      if (nextDay === "sun") {
+        return startOfWeek(addDays(today, 7), "sun");
+      }
+      if (nextDay === "sat") {
+        return addDays(startOfWeek(addDays(today, 7), "mon"), 5);
+      }
       return startOfWeek(addDays(today, 7), "mon");
+    }
     case "none":
       return null;
     case "pick":

@@ -1105,7 +1105,7 @@ describe("SearchPanel & SearchPopup", () => {
     fireEvent.keyDown(document, { key: "k", ctrlKey: true });
     expect(onOpenSearch).toHaveBeenCalledTimes(1);
 
-    // ⌘K opens search
+    // Meta+K also opens search across platforms
     fireEvent.keyDown(document, { key: "k", metaKey: true });
     expect(onOpenSearch).toHaveBeenCalledTimes(2);
 

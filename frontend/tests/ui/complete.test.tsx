@@ -47,6 +47,7 @@ function TodayList() {
             today={store.today}
             timeFormat={store.timeFormat}
             onToggle={store.toggle}
+            settling={store.isSettling(x.id)}
           />
         ))}
       </ul>
@@ -186,6 +187,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
       // Struck through but still in Today for SETTLE_MS, so it doesn't jump from under the thumb
       const today = screen.getByRole("list", { name: "Today" });
       expect(today.textContent).toContain("Read chapter 4 for SQL");
+      expect(screen.getByTestId("swipe-fill")).toBeTruthy();
       expect(
         screen
           .getByRole("checkbox", { name: "Reopen Read chapter 4 for SQL" })

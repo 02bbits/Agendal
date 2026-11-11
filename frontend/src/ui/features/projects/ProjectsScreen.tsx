@@ -1,6 +1,5 @@
 import { t, tc } from "../../copy";
 import { Button } from "../../components/Button";
-import { cx } from "../../components/cx";
 import { EmptyState } from "../../components/EmptyState";
 import { PlusIcon } from "../../components/icons";
 import { today } from "../../../lib/clock";
@@ -34,8 +33,6 @@ export interface ProjectsScreenProps {
   onDeleteProject?: (project: ProjectWithCounts) => void;
   navigate?: Navigate;
   overline?: string;
-  /** The first list hasn't arrived: no counts or empty state yet, which would read as "no projects" */
-  loading?: boolean;
 }
 
 /** Projects tab (PJ §2.2): Desktop grid cards, colour, name, progress; No project fixed last; New project. */
@@ -48,7 +45,6 @@ export function ProjectsScreen({
   onDeleteProject,
   navigate,
   overline,
-  loading = false,
 }: ProjectsScreenProps) {
   const sortedProjects: ProjectWithCounts[] = sortProjects(projects);
   const totalOpen =
@@ -79,20 +75,14 @@ export function ProjectsScreen({
         }
         navigate={navigate}
       >
-        {/* Invisible while loading: the line keeps its height, so nothing jumps when counts land */}
-        <p
-          className={cx(
-            "m-0 mt-1 text-footnote text-ink-secondary",
-            loading && "invisible",
-          )}
-        >
+        <p className="m-0 mt-1 text-footnote text-ink-secondary">
           {tc("project.count", sortedProjects.length)}
           {" · "}
           {tc("project.open_count", totalOpen)}
         </p>
       </ScreenHeader>
 
-      {loading ? null : sortedProjects.length === 0 ? (
+      {sortedProjects.length === 0 ? (
         <EmptyState title={t("project.list_empty")} />
       ) : (
         <>
@@ -101,7 +91,7 @@ export function ProjectsScreen({
             noProjectCounts={noProjectCounts}
             navigate={navigate}
           />
-          <ul className="m-0 hidden grid-cols-1 gap-4 p-0 md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <ul className="m-0 hidden grid-cols-1 gap-4 p-0 md:grid [html[data-page-view='full']_&]:md:grid-cols-2 [html[data-page-view='full']_&]:lg:grid-cols-3 [html[data-page-view='full']_&]:xl:grid-cols-4">
             {sortedProjects.map((p) => {
               const done = p.done ?? 0;
               const open = p.open ?? 0;

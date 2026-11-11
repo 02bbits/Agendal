@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { t } from "../../copy";
 import {
   CalendarIcon,
@@ -6,12 +6,20 @@ import {
   FolderIcon,
   InboxIcon,
   NotesIcon,
+  ChevronRightIcon,
   PlusIcon,
   SearchIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
-import { ROUTES, TABS, type Navigate, type TabId } from "./routes";
+import {
+  ROUTES,
+  TABS,
+  getStoredSidebarTabs,
+  getStoredSidebarTabsOrder,
+  type Navigate,
+  type TabId,
+} from "./routes";
 
 const ICONS: Record<TabId, ReactNode> = {
   inbox: <InboxIcon size={20} />,
@@ -31,6 +39,8 @@ export interface SidebarProps {
   onNewProject?: () => void;
   /** Callback to open search. */
   onSearch?: () => void;
+  /** Callback to open account / settings popup. */
+  onAccount?: () => void;
   /** The signed-in user's name; the avatar shows its first letter. */
   accountName: string;
 }
@@ -43,15 +53,70 @@ export function Sidebar({
   projects,
   onNewProject,
   onSearch,
+  onAccount,
   accountName,
 }: SidebarProps) {
+  const [projectsOpen, setProjectsOpen] = useState(true);
+  const [showCounts, setShowCounts] = useState(() => {
+    try {
+      return typeof localStorage !== "undefined"
+        ? localStorage.getItem("agendal.sidebar_task_counts") !== "false"
+        : true;
+    } catch {
+      return true;
+    }
+  });
+  const [enabledTabs, setEnabledTabs] = useState(getStoredSidebarTabs);
+  const [tabOrder, setTabOrder] = useState(getStoredSidebarTabsOrder);
+
+  useEffect(() => {
+    const handleCounts = () => {
+      try {
+        setShowCounts(
+          localStorage.getItem("agendal.sidebar_task_counts") !== "false",
+        );
+      } catch {}
+    };
+    const handleTabs = () => {
+      setEnabledTabs(getStoredSidebarTabs());
+      setTabOrder(getStoredSidebarTabsOrder());
+    };
+    window.addEventListener("storage", handleCounts);
+    window.addEventListener("agendal:sidebar_counts_changed", handleCounts);
+    window.addEventListener("storage", handleTabs);
+    window.addEventListener("agendal:sidebar_tabs_changed", handleTabs);
+    return () => {
+      window.removeEventListener("storage", handleCounts);
+      window.removeEventListener(
+        "agendal:sidebar_counts_changed",
+        handleCounts,
+      );
+      window.removeEventListener("storage", handleTabs);
+      window.removeEventListener("agendal:sidebar_tabs_changed", handleTabs);
+    };
+  }, []);
+
+  const sortedTabs = useMemo(() => {
+    const tabMap = new Map<TabId, (typeof TABS)[number]>(
+      TABS.map((t) => [t.id, t]),
+    );
+    return tabOrder
+      .map((id) => tabMap.get(id))
+      .filter((t): t is (typeof TABS)[number] => Boolean(t));
+  }, [tabOrder]);
+
   return (
     // One landmark for the whole sidebar, so the mark, Search and Account are inside it
     <nav
       aria-label={t("nav.sidebar")}
       className="flex h-full flex-col gap-4 pt-5 pr-3 pb-[calc(12px+env(safe-area-inset-bottom))] pl-[calc(12px+env(safe-area-inset-left))]"
     >
-      <p className="m-0 flex items-center gap-2.5 px-2 text-title font-bold text-ink">
+      {/* The mark goes home to Inbox */}
+      <Link
+        href={ROUTES.inbox}
+        navigate={navigate}
+        className="focus-ring mt-1 mb-4 flex items-center gap-2.5 self-start rounded-field px-2 text-title font-bold text-ink no-underline"
+      >
         <span
           className="inline-flex size-8 items-center justify-center rounded-tile bg-neutral text-neutral-content"
           aria-hidden="true"
@@ -59,7 +124,7 @@ export function Sidebar({
           <CheckIcon size={18} strokeWidth={2.25} />
         </span>
         {t("app.name")}
-      </p>
+      </Link>
 
       <button
         type="button"
@@ -70,65 +135,94 @@ export function Sidebar({
         <span className="flex-1 truncate">{t("search.placeholder")}</span>
       </button>
 
-      <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
-        {TABS.map((tab) => {
-          const current = tab.id === active;
-          return (
-            <li key={tab.id}>
-              <Link
-                href={tab.href}
-                navigate={navigate}
-                className={cx(
-                  "focus-ring flex min-h-10 items-center gap-3 rounded-field px-3 text-body text-ink hover:bg-fill",
-                  current && "bg-primary-tint! font-semibold text-primary!",
-                )}
-                aria-current={current ? "page" : undefined}
-              >
-                <span className="inline-flex" aria-hidden="true">
-                  {ICONS[tab.id]}
-                </span>
-                <span className="flex-1">{t(tab.label)}</span>
-                {counts?.[tab.id] !== undefined && (
+      <ul className="m-0 -mt-1.5 flex list-none flex-col gap-0.5 p-0">
+        {sortedTabs
+          .filter((tab: (typeof TABS)[number]) => enabledTabs[tab.id] !== false)
+          .map((tab: (typeof TABS)[number]) => {
+            const current = tab.id === active;
+            return (
+              <li key={tab.id}>
+                <Link
+                  href={tab.href}
+                  navigate={navigate}
+                  className={cx(
+                    "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body transition-colors",
+                    current
+                      ? "bg-primary/15! text-primary! font-semibold"
+                      : "text-ink-secondary hover:bg-fill/60 hover:text-ink",
+                  )}
+                  aria-current={current ? "page" : undefined}
+                >
                   <span
-                    className={cx(
-                      "text-footnote tabular-nums",
-                      current ? "text-primary" : "text-ink-tertiary",
-                    )}
+                    className={cx("inline-flex", current && "text-primary")}
+                    aria-hidden="true"
                   >
-                    {counts[tab.id]}
+                    {ICONS[tab.id]}
                   </span>
-                )}
-              </Link>
-            </li>
-          );
-        })}
+                  <span className="flex-1">{t(tab.label)}</span>
+                  {showCounts && counts?.[tab.id] !== undefined && (
+                    <span
+                      className={cx(
+                        "text-footnote tabular-nums",
+                        current
+                          ? "text-primary font-semibold"
+                          : "text-ink-tertiary",
+                      )}
+                    >
+                      {counts[tab.id]}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
       </ul>
 
-      {projects && (
+      {projects && enabledTabs.projects !== false && (
         <section className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <h2 className="m-0 text-overline font-semibold uppercase text-ink-tertiary">
-              {t("nav.projects")}
+            <h2 className="m-0 text-overline font-semibold uppercase">
+              <button
+                type="button"
+                aria-expanded={projectsOpen}
+                onClick={() => setProjectsOpen(!projectsOpen)}
+                className="focus-ring inline-flex cursor-pointer items-center gap-1 uppercase border-0 bg-transparent p-0 text-ink-tertiary hover:text-ink"
+              >
+                <span className="link-swipe">{t("nav.projects")}</span>
+                <ChevronRightIcon
+                  size={12}
+                  className={cx(
+                    "transition-transform duration-150 motion-reduce:transition-none",
+                    projectsOpen && "rotate-90",
+                  )}
+                />
+              </button>
             </h2>
             {onNewProject && (
               <button
                 type="button"
                 onClick={onNewProject}
-                className="inline-flex size-6 -mr-2 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                className="-mr-[5px] inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
                 aria-label={t("project.new")}
               >
                 <PlusIcon size={14} />
               </button>
             )}
           </div>
-          {projects}
+          {projectsOpen && projects}
         </section>
       )}
 
       <Link
         href={ROUTES.account}
         navigate={navigate}
-        className="focus-ring mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink hover:bg-fill"
+        onClick={(e) => {
+          if (onAccount) {
+            e.preventDefault();
+            onAccount();
+          }
+        }}
+        className="focus-ring row-hover mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink cursor-pointer"
       >
         <span
           className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../../copy";
-import { Button } from "../../components/Button";
+import { TextButton } from "../../components/TextButton";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox } from "../../domain/lists";
@@ -187,9 +187,9 @@ export function InboxScreen({
               <Link
                 href={ROUTES.upcoming}
                 navigate={navigate}
-                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary hover:bg-fill"
+                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
               >
-                {t("list.see_upcoming")}
+                <span className="link-swipe">{t("list.see_upcoming")}</span>
               </Link>
             </section>
           )}
@@ -237,22 +237,20 @@ export function InboxScreen({
                 onToggle={handleToggleCompleted}
                 footer={
                   hasHiddenCompleted ? (
-                    <Button
-                      variant="secondary"
-                      className="mt-3 w-full"
+                    <TextButton
+                      className="mt-1 w-full"
                       onClick={() => setShowAllCompleted(true)}
                     >
                       {t("list.show_all")}
-                    </Button>
+                    </TextButton>
                   ) : showAllCompleted &&
                     INBOX_COMPLETED_PAGE < totalCompleted ? (
-                    <Button
-                      variant="secondary"
-                      className="mt-3 w-full"
+                    <TextButton
+                      className="mt-1 w-full"
                       onClick={() => setShowAllCompleted(false)}
                     >
                       {t("list.show_less")}
-                    </Button>
+                    </TextButton>
                   ) : null
                 }
               >

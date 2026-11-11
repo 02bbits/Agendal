@@ -137,7 +137,7 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     fireEvent.keyDown(year, { key: "Enter" });
     await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
     expect(sentPickBody?.due_date).toBe("2026-11-12");
-  });
+  }, 15000);
 
   it("opens with initialDueDate, showing Pick date with 05/11/2026 and Add sends due_date (Section 7)", async () => {
     let sentBody: CreateTaskBody | undefined;

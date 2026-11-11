@@ -84,7 +84,7 @@ describe("TaskRow (LV-4)", () => {
     });
     const { container } = renderRow(t);
     const meta = container.querySelector('[data-slot="meta"]')!;
-    expect(meta.textContent).toBe("HCI·16:00 – 17:00·Due");
+    expect(meta.textContent).toBe("HCI·Start at 16:00·Due at 17:00·Every week");
     expect(meta.querySelectorAll("svg")).toHaveLength(2);
     expect(
       (container.querySelector('[data-slot="dot"]') as HTMLElement).style
@@ -254,6 +254,50 @@ describe("TaskRow (LV-4)", () => {
     expect(container.querySelector("li")!.className).toContain(
       "bg-surface-hover/60",
     );
+  });
+
+  it("shows open repeating task with blue text-due-ink and done task with plain icon (Part B)", () => {
+    const openTask = task({
+      title: "Open repeating task",
+      repeat: "monthly",
+    });
+    const { container: c1 } = renderRow(openTask);
+    const meta1 = c1.querySelector('[data-slot="meta"]')!;
+    expect(meta1.textContent).toContain("Every month");
+    const repeatSpan = meta1.querySelector(".text-due-ink");
+    expect(repeatSpan).not.toBeNull();
+    expect(repeatSpan?.textContent).toBe("Every month");
+
+    const doneTask = task({
+      title: "Done repeating task",
+      repeat: "monthly",
+      done: true,
+    });
+    const { container: c2 } = renderRow(doneTask);
+    const meta2 = c2.querySelector('[data-slot="meta"]')!;
+    expect(meta2.textContent).not.toContain("Every month");
+    expect(meta2.querySelector(".text-due-ink")).toBeNull();
+    expect(meta2.querySelector("svg.text-ink-tertiary")).not.toBeNull();
+  });
+
+  it("checkbox hit area is 44px (A11Y-40)", () => {
+    const { container } = renderRow(task({ title: "Hit area task" }));
+    const button = container.querySelector('button[role="checkbox"]')!;
+    expect(button.className).toContain("size-11");
+    expect(button.className).toContain("-m-1");
+  });
+
+  it("renders blue border on checkbox circle for due cards (tone === 'due')", () => {
+    const dueTask = task({
+      title: "Due today task",
+      due_date: TODAY,
+      due_time: "10:00",
+    });
+    const { container } = renderRow(dueTask, { tone: "due" });
+    const checkboxSpan = container.querySelector(
+      'button[role="checkbox"] span',
+    )!;
+    expect(checkboxSpan.className).toContain("border-due-ink");
   });
 
   it("is axe clean in both themes, open and done", async () => {

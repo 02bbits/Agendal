@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  AccountScreen,
   AppShell,
   Link,
   NewTaskSheet,
@@ -23,6 +24,7 @@ import {
   t,
   Toast,
   useMediaQuery,
+  applyThemePalette,
   type AccountSettings,
   type Navigate,
   type NoteResult,
@@ -38,6 +40,7 @@ import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
+import { useUpdateToast } from "./useUpdateToast";
 import {
   forgetNotes,
   listNotes,
@@ -101,19 +104,32 @@ const tabRootOf = (path: string): string =>
       root !== ROUTES.inbox && (path === root || path.startsWith(`${root}/`)),
   ) ?? ROUTES.inbox;
 
+const PAGE_VIEW_KEY = "agendal.page_view";
+
 const DEFAULT_SETTINGS: AccountSettings = {
   theme: "system",
   weekStart: "mon",
   timeFormat: "24h",
   rememberDevice: true,
+  pageView: "flat",
 };
 
-const settingsOf = (me: SignedInUser): AccountSettings => ({
-  theme: me.theme ?? DEFAULT_SETTINGS.theme,
-  weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
-  timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
-  rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-});
+const settingsOf = (me: SignedInUser): AccountSettings => {
+  const localPageView =
+    typeof window !== "undefined"
+      ? (localStorage.getItem(PAGE_VIEW_KEY) as AccountSettings["pageView"])
+      : undefined;
+  return {
+    theme: me.theme ?? DEFAULT_SETTINGS.theme,
+    weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
+    timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
+    rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
+    pageView:
+      localPageView === "full" || localPageView === "flat"
+        ? localPageView
+        : DEFAULT_SETTINGS.pageView,
+  };
+};
 
 const DAISY_THEME = { light: "agendal-light", dark: "agendal-dark" } as const;
 
@@ -130,6 +146,10 @@ interface AppFrameValue {
   editFollowupNote: (note: NoteResult["note"]) => void;
   /** Opens the search popup or navigates to search. */
   openSearch: () => void;
+  /** Opens the settings popup. */
+  openSettings: () => void;
+  /** Closes the settings popup. */
+  closeSettings: () => void;
   /** Opens the new task bottom sheet. */
   openNewTask: {
     (opts?: { dueDate?: string }): void;
@@ -160,6 +180,32 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(
+        PAGE_VIEW_KEY,
+      ) as AccountSettings["pageView"];
+      if (saved === "flat" || saved === "full") {
+        queueMicrotask(() => {
+          setSettings((prev) =>
+            prev.pageView === saved ? prev : { ...prev, pageView: saved },
+          );
+        });
+        document.documentElement.setAttribute("data-page-view", saved);
+      } else {
+        document.documentElement.setAttribute("data-page-view", "flat");
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    if (pathname === ROUTES.account) {
+      document.documentElement.setAttribute("data-account-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-account-page");
+    }
+  }, [pathname]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -242,6 +288,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [searching, setSearching] = useState(false);
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const openSettings = useCallback(() => {
+    if (pathname !== ROUTES.account) setSettingsOpen(true);
+  }, [pathname]);
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
   // Closing the editor takes its history entry off with history.back(), which is only done a
@@ -286,6 +337,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       setToast((current) => (current?.id === id ? null : current)),
     [],
   );
+  useUpdateToast(showToast);
   const { open, openNewTask, sheetProps } = useNewTask({
     pathname,
     showToast,
@@ -305,12 +357,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       );
       settingsRef.current = { ...before, ...patch };
       setSettings(settingsRef.current);
+      if (patch.pageView && typeof window !== "undefined") {
+        try {
+          localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
+          document.documentElement.setAttribute(
+            "data-page-view",
+            patch.pageView,
+          );
+        } catch {}
+      }
       const body = Object.fromEntries(
-        Object.entries(patch).map(([key, value]) => [
-          SETTING_FIELDS[key as keyof AccountSettings],
-          value,
-        ]),
+        Object.entries(patch)
+          .map(([key, value]) => [
+            SETTING_FIELDS[key as keyof typeof SETTING_FIELDS],
+            value,
+          ])
+          .filter(([field]) => Boolean(field)),
       );
+      if (Object.keys(body).length === 0) return;
       api("/me", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -388,6 +452,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
     try {
       localStorage.setItem(THEME_KEY, settings.theme);
+      const palette = localStorage.getItem("agendal.theme_palette");
+      if (palette) applyThemePalette(palette);
     } catch {
       // Private mode: the theme just flashes on the next load
     }
@@ -442,6 +508,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       openNoteEditor,
       editFollowupNote,
       openSearch: handleOpenSearch,
+      openSettings,
+      closeSettings,
       openNewTask,
       user,
       signOut,
@@ -455,6 +523,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
       openNoteEditor,
       editFollowupNote,
       handleOpenSearch,
+      openSettings,
+      closeSettings,
       openNewTask,
       user,
       signOut,
@@ -577,8 +647,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 href={ROUTES.project(p.id)}
                 navigate={navigate}
                 className={cx(
-                  "focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill",
-                  isCurrent && "bg-primary-tint! font-semibold text-primary!",
+                  "focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary transition-colors",
+                  isCurrent && "bg-primary/15! text-primary! font-medium",
                 )}
                 aria-current={isCurrent ? "page" : undefined}
               >
@@ -592,7 +662,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   <span
                     className={cx(
                       "text-footnote tabular-nums",
-                      isCurrent ? "text-primary" : "text-ink-tertiary",
+                      isCurrent
+                        ? "text-primary font-semibold"
+                        : "text-ink-tertiary",
                     )}
                   >
                     {p.open}
@@ -606,7 +678,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
           <Link
             href={ROUTES.noProject}
             navigate={navigate}
-            className="focus-ring flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink transition-colors hover:bg-fill"
+            className="focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary"
           >
             <span
               className="inline-block size-2 shrink-0 rounded-full bg-neutral-content/60"
@@ -660,11 +732,40 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
                 onSearch: handleOpenSearch,
+                onAccount: openSettings,
               }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
+        {settingsOpen && pathname !== ROUTES.account && (
+          <AccountScreen
+            portal={true}
+            name={user?.display_name ?? ""}
+            email={user?.email ?? ""}
+            settings={settings}
+            onChange={changeSettings}
+            onBack={closeSettings}
+            onSignOut={() => {
+              closeSettings();
+              signOut();
+            }}
+            onSignOutEverywhere={() => {
+              closeSettings();
+              signOut(true);
+            }}
+            onUpdateName={async (newName: string) => {
+              try {
+                await api("/me", {
+                  method: "PATCH",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ display_name: newName }),
+                });
+                setUser(user ? { ...user, display_name: newName } : null);
+              } catch {}
+            }}
+          />
+        )}
         {editing && (
           <NoteEditor
             note={editingNote ?? undefined}
