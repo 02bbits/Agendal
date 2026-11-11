@@ -3,6 +3,11 @@
     'color' => 'primary',
     'align' => 'center',
 ])
+@if ($color === 'link')
+<p style="margin-top: 20px; margin-bottom: 20px; text-align: left;">
+<a href="{{ $url }}" class="link-action" target="_blank" rel="noopener">{!! $slot !!} &rarr;</a>
+</p>
+@else
 <table class="action" align="{{ $align }}" width="100%" cellpadding="0" cellspacing="0" role="presentation">
 <tr>
 <td align="{{ $align }}">
@@ -22,3 +27,4 @@
 </td>
 </tr>
 </table>
+@endif

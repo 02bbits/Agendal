@@ -54,7 +54,7 @@ export function ResetPasswordScreen({
 
   return (
     <form className="flex flex-col gap-5 pt-12" onSubmit={submit} noValidate>
-      <h1 className="m-0 text-display font-bold text-ink">
+      <h1 className="m-0 text-center text-display font-bold text-ink">
         {t("auth.new_password_title")}
       </h1>
       {expired ? (

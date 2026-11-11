@@ -44,7 +44,7 @@ h1 {
     line-height: 28px;
     letter-spacing: -0.015em;
     margin-top: 0;
-    text-align: start;
+    text-align: center;
 }
 
 h2 {
@@ -248,6 +248,16 @@ p.sub {
     border-left: 22px solid #252525;
     border-right: 22px solid #252525;
     border-top: 12px solid #252525;
+}
+
+.link-action {
+    color: #252525;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 22px;
+    text-decoration: underline;
+    display: inline-block;
+    align-items: left;
 }
 
 /* Panels */

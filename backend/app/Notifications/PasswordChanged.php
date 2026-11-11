@@ -31,6 +31,7 @@ class PasswordChanged extends Notification
             ->salutation('');
 
         $mail->viewData['title'] = __('email.changed_heading');
+        $mail->viewData['actionColor'] = 'link';
 
         return $mail;
     }

@@ -13,7 +13,7 @@
 
 @endforeach
 @isset($actionText)
-<x-mail::button :url="$actionUrl">
+<x-mail::button :url="$actionUrl" :color="$actionColor ?? 'primary'">
 {{ $actionText }}
 </x-mail::button>
 @endisset
@@ -27,9 +27,9 @@
 @endif
 
 {{-- The full link, for when the button is hidden or blocked --}}
-@isset($actionText)
+@if (isset($actionText) && ($actionColor ?? 'primary') !== 'link')
 <x-slot:subcopy>
 {{ __('email.link_fallback') }} <span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
 </x-slot:subcopy>
-@endisset
+@endif
 </x-mail::message>
