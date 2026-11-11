@@ -37,6 +37,28 @@ export const catalog = {
   "auth.signout_everywhere": "Sign out on all devices",
   "auth.offline": "You're offline. Connect to sign in.",
   "auth.locked": "Too many attempts. Try again in {seconds} s.",
+  "email.greeting": "Hi {name},",
+  "email.greeting_plain": "Hi,",
+  "email.reset_subject": "Reset your Agendal password",
+  "email.reset_heading": "Reset your password",
+  "email.reset_intro":
+    "We got a request to reset the password for your Agendal account. Choose a new one with the button below.",
+  "email.reset_action": "Choose a new password",
+  "email.reset_expiry": "This link works for 60 minutes and only once.",
+  "email.reset_ignore":
+    "If you didn't ask for this, you can ignore this email. Your password stays the same.",
+  "email.changed_subject": "Your Agendal password was changed",
+  "email.changed_heading": "Your password was changed",
+  "email.changed_intro":
+    "The password for your Agendal account was just changed, and your other devices were signed out.",
+  "email.changed_ok": "If this was you, there is nothing else to do.",
+  "email.changed_not_you":
+    "If you didn't make this change, reset your password now and make sure your email account is secure.",
+  "email.changed_action": "Reset your password",
+  "email.link_fallback":
+    "If the button doesn't work, copy this link into your browser:",
+  "email.footer":
+    "You got this email because of a change to the security of your Agendal account.",
   "note.placeholder": "Write a note…",
   "note.make_tasks": "Make tasks",
   "note.save_offline": "Save note",

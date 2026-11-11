@@ -46,6 +46,29 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `auth.offline` † | You're offline. Connect to sign in. | Auth screens while offline |
 | `auth.locked` † | Too many attempts. Try again in {seconds} s. | API error code for `429` on sign-in (the banner uses `auth.locked_title` / `auth.locked_body`) |
 
+## Email
+
+The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The backend keeps them in `backend/lang/en/email.php` under the same names without the `email.` prefix, with `:name` in place of `{name}`. They use the Graphite look: the wordmark is HTML text with no image, the button is ink, and dark mail clients get the dark colours.
+
+| Key | Text | Where |
+|---|---|---|
+| `email.greeting` † | Hi {name}, | First line, when the account has a display name |
+| `email.greeting_plain` † | Hi, | First line, without a display name |
+| `email.reset_subject` † | Reset your Agendal password | Reset email subject |
+| `email.reset_heading` † | Reset your password | Reset email heading and page title |
+| `email.reset_intro` † | We got a request to reset the password for your Agendal account. Choose a new one with the button below. | Reset email |
+| `email.reset_action` † | Choose a new password | Reset email button, to the reset link with the token in the fragment |
+| `email.reset_expiry` † | This link works for 60 minutes and only once. | Reset email, under the button. Must match the token lifetime |
+| `email.reset_ignore` † | If you didn't ask for this, you can ignore this email. Your password stays the same. | Reset email |
+| `email.changed_subject` † | Your Agendal password was changed | Notice email subject (ASVS 2.2.3) |
+| `email.changed_heading` † | Your password was changed | Notice email heading and page title |
+| `email.changed_intro` † | The password for your Agendal account was just changed, and your other devices were signed out. | Notice email |
+| `email.changed_ok` † | If this was you, there is nothing else to do. | Notice email |
+| `email.changed_not_you` † | If you didn't make this change, reset your password now and make sure your email account is secure. | Notice email |
+| `email.changed_action` † | Reset your password | Notice email button, to Forgot password |
+| `email.link_fallback` † | If the button doesn't work, copy this link into your browser: | Under the button, followed by the full link |
+| `email.footer` † | You got this email because of a change to the security of your Agendal account. | Footer of both emails |
+
 ## Note capture (NC)
 
 | Key | Text | Where |

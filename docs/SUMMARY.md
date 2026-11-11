@@ -216,7 +216,7 @@ The point of this module is trust: the user can always see what the assistant di
 
 **Sign-in and lockout.** Wrong details show one message whether the email is unknown or the password is wrong. **Three failures lock sign-in for 60 seconds** with a countdown from the server. The lock is keyed by (email, IP), so an attacker cannot lock a victim out from another address; extra limits (30 attempts per IP per 10 minutes, 20 failures per email per hour) show the same message.
 
-**Password reset.** The same confirmation appears whether or not the account exists. The link is single-use, expires in **60 minutes**, carries its token in the URL fragment (so it never reaches logs), and **ends every other session** when used. Resend unlocks after 45 seconds.
+**Password reset.** The same confirmation appears whether or not the account exists. The reset email and the "password changed" notice use the Graphite look, light and dark, with no images. The link is single-use, expires in **60 minutes**, carries its token in the URL fragment (so it never reaches logs), and **ends every other session** when used. Resend unlocks after 45 seconds.
 
 **Sessions.** First-party cookie session (no token in JavaScript). With _Remember me_ (on by default) it lasts 30 days from sign-in; without it, a browser session with a 2-hour idle timeout. **Sign out** wipes the device's offline data and caches; if changes are unsynced it asks first.
 

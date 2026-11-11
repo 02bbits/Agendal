@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
@@ -16,9 +17,22 @@ class PasswordChanged extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
-            ->subject('Your password was changed')
-            ->line('The password for your Agendal account was just changed, and your other devices were signed out.')
-            ->line("If you didn't do this, reset your password now from the Sign in screen.");
+        $greeting = ($notifiable instanceof User && filled($notifiable->display_name))
+            ? __('email.greeting', ['name' => $notifiable->display_name])
+            : __('email.greeting_plain');
+
+        $mail = (new MailMessage)
+            ->subject(__('email.changed_subject'))
+            ->greeting($greeting)
+            ->line(__('email.changed_intro'))
+            ->line(__('email.changed_ok'))
+            ->line(__('email.changed_not_you'))
+            ->action(__('email.changed_action'), config('app.frontend_url').'/forgot-password')
+            ->salutation('');
+
+        $mail->viewData['title'] = __('email.changed_heading');
+        $mail->viewData['actionColor'] = 'link';
+
+        return $mail;
     }
 }

@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-10
+
+- **Branded emails (Refs #77).** [Copy catalog](01-product/copy-catalog.md#email): a new Email section with the reset and notice email copy. [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): both emails use it and the Graphite mail theme. [SUMMARY §6](SUMMARY.md): the Password reset paragraph says so.
+
 ## 2026-11-09
 
 - **Notes cards say Accepted or Pending (Refs #47, IM-48).** [RV §2.1–§2.3, §2.6](03-modules/RV-review-control.md#26-notes-tab-rv-4) and the [copy catalog](01-product/copy-catalog.md): a `done` card reads `notes.made` with its task count ("Accepted · 2", the full count for screen readers), and Edited follows the name, so the status never wraps on a phone; `confirm`, `followup` and `pending` cards, and the result overline after Undo all, read `notes.needs`. `note.needs_look_*` stays on the back-online toast only. Offline Notes cards are left to IM-53.

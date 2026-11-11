@@ -52,7 +52,7 @@ export function ForgotPasswordScreen({
 
   return (
     <div className="flex flex-col gap-5 pt-12">
-      <h1 className="m-0 text-display font-bold text-ink">
+      <h1 className="m-0 text-center text-display font-bold text-ink">
         {t("auth.reset_title")}
       </h1>
       {sentTo ? (
