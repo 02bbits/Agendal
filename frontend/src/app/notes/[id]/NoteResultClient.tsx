@@ -29,6 +29,7 @@ import {
   restoreNote,
   undoNote,
 } from "../../../lib/noteApi";
+import { readNoteResult } from "../../../lib/localStore";
 import { useOffline } from "../../../lib/online";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
@@ -124,13 +125,21 @@ function OpenedTask({
   );
 }
 
+// No answer at all (offline): the note as this device last saw it, if it kept one (IM-51)
+const fromDevice = (id: string) => async (error: unknown) => {
+  const kept =
+    error instanceof ApiRequestError ? undefined : await readNoteResult(id);
+  if (!kept) throw error;
+  return kept;
+};
+
 /**
  * A result just made in this session is already here, so the note isn't asked for again; one known
  * to be stale (a plan changed elsewhere) is dropped from that cache first. Each task is always
  * checked, so a row opened and deleted since shows "Removed since" (RV-E13).
  */
 async function load(id: string): Promise<Loaded> {
-  const result = recallNote(id) ?? (await getNote(id));
+  const result = recallNote(id) ?? (await getNote(id).catch(fromDevice(id)));
   // A `confirm` note's rows are a preview: none of their tasks exist yet, and Task details edits them
   if (result.note.status === "confirm")
     return {

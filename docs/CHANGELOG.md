@@ -5,6 +5,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 ## 2026-11-12
 
 - **Account menu, phone Settings and Change password checks (Refs #149).** [AA §2.7](03-modules/AA-account-access.md#27-change-password-149): the current password is checked on blur with the new `POST /auth/check-password` (also in the [AA API table](03-modules/AA-account-access.md#7-api-contract) and [api.md](07-architecture/api.md)), only wrong tries count toward the limit, and success shows a "Password changed" state. [AP §2.3.1](03-modules/AP-app-platform.md): the sidebar account menu, full-screen Settings on phones, and sidebar tabs that slide while dragged. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.
+- **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
 
 ## 2026-11-11
 

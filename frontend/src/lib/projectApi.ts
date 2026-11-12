@@ -1,5 +1,12 @@
 import { api } from "./api";
 import { handleResponse } from "./apiError";
+import {
+  putProject,
+  putTasks,
+  removeProject,
+  removeTasks,
+  replaceProjects,
+} from "./localStore";
 import type { Project, ProjectColor, Task } from "../ui/domain/types";
 
 export interface ProjectListResponse {
@@ -37,10 +44,18 @@ export interface RestoreProjectBody {
   mode: "move" | "delete";
 }
 
+// Kept on the device too (IM-51); a failed store write never fails the call
+function keep(project: Project): Project {
+  if (project) void putProject(project);
+  return project;
+}
+
 /** `GET /projects` */
 export async function listProjects(): Promise<Project[]> {
   const response = await api("/projects");
-  return handleResponse<Project[]>(response);
+  const list = await handleResponse<Project[]>(response);
+  if (Array.isArray(list)) void replaceProjects(list);
+  return list;
 }
 
 /** `POST /projects` */
@@ -52,7 +67,7 @@ export async function createProject(body: CreateProjectBody): Promise<Project> {
     },
     body: JSON.stringify(body),
   });
-  return handleResponse<Project>(response);
+  return keep(await handleResponse<Project>(response));
 }
 
 /** `GET /projects/{id}` */
@@ -62,7 +77,9 @@ export async function getProject(
 ): Promise<ProjectDetailResponse> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
   const response = await api(`/projects/${encodeURIComponent(id)}${query}`);
-  return handleResponse<ProjectDetailResponse>(response);
+  const detail = await handleResponse<ProjectDetailResponse>(response);
+  void putTasks([...(detail?.open ?? []), ...(detail?.completed ?? [])]);
+  return detail;
 }
 
 /** `PATCH /projects/{id}` */
@@ -77,7 +94,7 @@ export async function updateProject(
     },
     body: JSON.stringify(body),
   });
-  return handleResponse<Project>(response);
+  return keep(await handleResponse<Project>(response));
 }
 
 /** `DELETE /projects/{id}?tasks=move|delete` */
@@ -89,7 +106,11 @@ export async function deleteProject(
   const response = await api(`/projects/${encodeURIComponent(id)}${query}`, {
     method: "DELETE",
   });
-  return handleResponse<DeleteProjectResponse>(response);
+  const result = await handleResponse<DeleteProjectResponse>(response);
+  void removeProject(id);
+  // Moved tasks change project on the server; refetched lists bring the new value
+  if (result?.undo?.mode === "delete") void removeTasks(result.undo.task_ids);
+  return result;
 }
 
 /** `POST /projects/{id}/restore` */
@@ -104,5 +125,5 @@ export async function restoreProject(
     },
     body: JSON.stringify(body),
   });
-  return handleResponse<Project>(response);
+  return keep(await handleResponse<Project>(response));
 }

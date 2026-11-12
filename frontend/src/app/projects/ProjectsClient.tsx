@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ProjectsScreen,
   ROUTES,
@@ -11,6 +11,7 @@ import {
   type ProjectWithCounts,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
+import { readProjects } from "@/lib/localStore";
 import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -31,11 +32,14 @@ export function ProjectsClient() {
     useState<ProjectWithCounts | null>(null);
 
   const today = useToday(appClock);
+  // Set once the network answers; until then the device copy may show (AP-2)
+  const fresh = useRef(false);
 
   const load = useCallback(() => {
     Promise.all([
       listProjects()
         .then((data) => {
+          fresh.current = true;
           if (Array.isArray(data)) setProjects(data);
         })
         .catch(() => {}),
@@ -55,6 +59,12 @@ export function ProjectsClient() {
   }, []);
 
   useEffect(() => {
+    void readProjects().then((cached) => {
+      if (fresh.current || cached.length === 0) return;
+      // The stored rows keep the counts from the last list
+      setProjects(cached as ProjectWithCounts[]);
+      setLoading(false);
+    });
     load();
   }, [load]);
 
