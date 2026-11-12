@@ -4,6 +4,7 @@ use App\Models\User;
 use App\Notifications\PasswordChanged;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -180,4 +181,86 @@ it('allows 5 reset tries per minute per IP', function () {
     }
 
     resetPassword('guess-6')->assertStatus(429)->assertJsonPath('error.code', 'error.rate_limited');
+});
+
+it('T-AA-43: renders the reset email in graphite theme with copy', function () {
+    $notification = new ResetPassword('test-token-123');
+    $user = User::factory()->make(['display_name' => 'Example', 'email' => 'example@gmail.com']);
+    $mail = $notification->toMail($user);
+
+    expect($mail->subject)->toBe('Reset your Agendal password');
+
+    $html = (string) $mail->render();
+    $text = (string) app(Markdown::class)->renderText($mail->markdown, $mail->data());
+
+    expect($html)
+        ->toContain('<title>'.__('email.reset_heading').'</title>')
+        ->toContain('http://localhost:3000/reset-password#token=test-token-123')
+        ->toContain('email=example%40gmail.com')
+        ->toContain('This link works for 60 minutes and only once.')
+        ->toContain('Hi Example,')
+        ->not->toContain('Laravel')
+        ->not->toContain('Regards');
+
+    expect($text)
+        ->toContain('http://localhost:3000/reset-password#token=test-token-123&email=example%40gmail.com')
+        ->toContain('This link works for 60 minutes and only once.')
+        ->toContain('Hi Example,')
+        ->not->toContain('Laravel')
+        ->not->toContain('Regards');
+
+    $userNoName = User::factory()->make(['display_name' => null, 'email' => 'example@gmail.com']);
+    $mailNoName = $notification->toMail($userNoName);
+    $htmlNoName = (string) $mailNoName->render();
+    $textNoName = (string) app(Markdown::class)->renderText($mailNoName->markdown, $mailNoName->data());
+
+    expect($htmlNoName)->toContain('Hi,');
+    expect($textNoName)->toContain('Hi,');
+});
+
+it('T-AA-44: renders the password changed notice email in graphite theme with copy', function () {
+    $notification = new PasswordChanged;
+    $user = User::factory()->make(['display_name' => 'Example', 'email' => 'example@gmail.com']);
+    $mail = $notification->toMail($user);
+
+    expect($mail->subject)->toBe('Your Agendal password was changed');
+    expect($mail->actionUrl)->toEndWith('/forgot-password');
+
+    $html = (string) $mail->render();
+    $text = (string) app(Markdown::class)->renderText($mail->markdown, $mail->data());
+
+    expect($html)
+        ->toContain('<title>'.__('email.changed_heading').'</title>')
+        ->toContain(__('email.changed_not_you'))
+        ->not->toContain('Laravel')
+        ->not->toContain('Regards');
+
+    expect($text)
+        ->toContain(__('email.changed_not_you'))
+        ->not->toContain('Laravel')
+        ->not->toContain('Regards');
+});
+
+it('escapes a display name with <b> in the HTML', function () {
+    $notification = new ResetPassword('test-token-123');
+    $user = User::factory()->make(['display_name' => '<b>Hacker</b>', 'email' => 'example@gmail.com']);
+    $html = (string) $notification->toMail($user)->render();
+
+    expect($html)
+        ->toContain('&lt;b&gt;Hacker&lt;/b&gt;')
+        ->not->toContain('<b>Hacker</b>');
+});
+
+it('matches the 60-minute text to the config value', function () {
+    $expire = config('auth.passwords.users.expire');
+    expect(__('email.reset_expiry'))->toContain("{$expire} minutes");
+});
+
+it('renders HTML email containing no img tags', function () {
+    $user = User::factory()->make(['display_name' => 'Example', 'email' => 'example@gmail.com']);
+    $resetHtml = (string) (new ResetPassword('token'))->toMail($user)->render();
+    $noticeHtml = (string) (new PasswordChanged)->toMail($user)->render();
+
+    expect($resetHtml)->not->toContain('<img');
+    expect($noticeHtml)->not->toContain('<img');
 });

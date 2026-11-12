@@ -8,6 +8,7 @@ use App\Services\Clock\SystemClock;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -66,7 +67,29 @@ class AppServiceProvider extends ServiceProvider
 
         // The reset link opens the app, with the token in the fragment so it never reaches a
         // server log or a Referer (AA §2.3)
-        ResetPassword::createUrlUsing(fn (User $user, string $token) => config('app.frontend_url').'/reset-password#'
-            .http_build_query(['token' => $token, 'email' => $user->email]));
+        $resetUrl = fn (User $user, string $token): string => config('app.frontend_url').'/reset-password#'
+            .http_build_query(['token' => $token, 'email' => $user->email]);
+        ResetPassword::createUrlUsing($resetUrl);
+
+        ResetPassword::toMailUsing(function (User $user, string $token) use ($resetUrl) {
+            $url = $resetUrl($user, $token);
+
+            $greeting = filled($user->display_name)
+                ? __('email.greeting', ['name' => $user->display_name])
+                : __('email.greeting_plain');
+
+            $mail = (new MailMessage)
+                ->subject(__('email.reset_subject'))
+                ->greeting($greeting)
+                ->line(__('email.reset_intro'))
+                ->action(__('email.reset_action'), $url)
+                ->line(__('email.reset_expiry'))
+                ->line(__('email.reset_ignore'))
+                ->salutation('');
+
+            $mail->viewData['title'] = __('email.reset_heading');
+
+            return $mail;
+        });
     }
 }
