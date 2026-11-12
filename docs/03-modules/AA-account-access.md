@@ -48,7 +48,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **On success:**
   - The account and session are created.
   - `display_name` = the email's local part. `timezone` comes from the device ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
-  - Inbox opens with the toast `auth.welcome`. The install banner logic starts (AP).
+  - The setup step opens (`/welcome`, §2.6). Inbox follows with the toast `auth.welcome`. The install banner logic starts (AP).
+- **Desktop layout (from 1024 px, also Sign in):** two columns. Left, the brand panel in `navy`: logo, the decorative illustration, `auth.hero_title` and `auth.hero_body`. Right, the form, centred, at most 360 px wide, with `auth.sign_in_title` / `auth.sign_in_subtitle` on Sign in and `auth.create_title` / `auth.create_subtitle` on Create account. Phones keep one column.
 
 ### 2.2 Sign in (AA-2, AA-3)
 
@@ -89,6 +90,21 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Remember me on:** 30 days from sign-in. **Off:** the browser session, plus a 2-hour idle timeout ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
 - **Expiry while using the app:** [UX-44](../01-product/ux-standards.md#ux-44). The queued data stays, tagged with the user ID, and syncs after the same user signs back in. If a *different* user signs in on that device, the old data is wiped first.
 
+### 2.6 Setup step after sign-up (#149)
+
+- Shown once, straight after Create account, on phone and desktop (desktop: in the right column of the two-column layout). No app chrome.
+- **Week starts on:** Monday / Sunday. **Time format:** 24-hour / 12-hour, with a live example (`setup.time_example`).
+- **Time zone:** taken from the device and shown with its UTC offset. `setup.time_zone_change` picks another zone; after that, `setup.time_zone_auto` goes back to the device's zone.
+- **Continue** saves with one `PATCH /me` and opens Inbox with `auth.welcome`. **Skip for now** opens Inbox and saves nothing.
+
+### 2.7 Change password (#149)
+
+- Settings › Account › **Change password** opens a sub-view with a back arrow: Current password, New password, Confirm new password, each with show/hide. No Forgot password link there.
+- **Live feedback** (polite, linked with `aria-describedby`): a checklist that ticks as each rule passes (`auth.rule_length`, `auth.rule_not_email`, `auth.rule_not_current`), a 4-step strength bar with a word and the hint `auth.strength_hint`, and under Confirm `auth.password_mismatch` or `auth.password_match`. Capitals, numbers or symbols are a hint only, never a rule ([BR-17](../02-domain/business-rules.md#br-17), ASVS 2.1.9).
+- **Save** stays disabled until Current is filled, every rule passes and Confirm matches.
+- **Server order:** the current password first (`auth.current_password_wrong`, nothing else runs), then the sign-up rules, then different from the current one (`auth.password_same_as_current`), then the match (`auth.password_mismatch`), then the breached check. Wrong current password keeps what was typed and focuses that field.
+- **Success:** the toast `auth.password_changed`, every other session ends and this one stays, the notice email is sent (ASVS 2.2.3) and an audit event `password_changed` is written. Limited to 5 tries per 15 minutes per user.
+
 ## 3. State matrix
 
 | Screen | Empty | Busy | Success | Error | Locked | Offline |
@@ -123,7 +139,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 6. Accessibility
 
-- Every field has a visible label and the right `autocomplete` ([UX-22](../01-product/ux-standards.md#ux-22)). Show/hide is a button labelled "Show password", with `aria-pressed`. A11Y-60
+- Every field has a visible label and the right `autocomplete` ([UX-22](../01-product/ux-standards.md#ux-22)). Show/hide is a button labelled "Show password", with `aria-pressed`. It is left out of the Tab order, so Tab goes from one field to the next; from the keyboard, Alt+F8 in the field shows or hides the password (`aria-keyshortcuts`). A11Y-60
 - The lockout banner is announced assertively once. The countdown isn't announced every second, only when Sign in is enabled again. A11Y-61
 - On a failed submit, focus goes to the first invalid field, or to the error summary for `auth.invalid` ([UX-07](../01-product/ux-standards.md#ux-07)). A11Y-62
 
@@ -136,15 +152,16 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `POST /auth/login` | `{email, password, remember}` | `200 {user}` | `422 auth.invalid`, `429 auth.locked {retry_after}` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
 | `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
+| `POST /auth/change-password` | `{current_password, password, password_confirmation}` | `200 {user}`, other sessions ended | `401`, `422` (`auth.current_password_wrong`, field errors), `429` |
 | `POST /auth/logout` | — | `204` | `401` |
 | `POST /auth/logout-everywhere` | — | `204` | `401` |
-| `GET /me`, `PATCH /me` | `{display_name?, theme?, timezone?, week_start?, time_format?}` | `200` | `401`, `422` |
+| `GET /me`, `PATCH /me` | `{display_name?, theme?, timezone?, timezone_auto?, week_start?, time_format?}` | `200` | `401`, `422` |
 
 ## 8. Data, validation and authorization
 
 - `users.email` is unique and lower-case. `password_hash` uses Argon2id. `password_reset_tokens` (Laravel's reset broker) holds one hashed token per email: 32 random bytes, 60 minutes, single use.
 - `audit_events` records: sign-up, sign-in success and failure, lockout, reset requested and used, password changed, sign out everywhere ([NF-20](../05-quality/nfr.md#nf-20)). It stores the email's hash, never the password.
-- `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `timezone` (a valid IANA name), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`).
+- `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `timezone` (a valid IANA name; it also turns `timezone_auto` off), `timezone_auto` (`true` follows the device again), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`).
 
 ## 9. Abuse cases
 

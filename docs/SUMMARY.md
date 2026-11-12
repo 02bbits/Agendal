@@ -212,7 +212,7 @@ The point of this module is trust: the user can always see what the assistant di
 
 ## 6. Account, access and platform
 
-**Accounts.** Email plus a password of at least 8 characters that differs from the email and is not in a known-breached list (a checked minimum of 8, not 12, was a deliberate choice). Create account stays disabled until valid, and success opens Inbox.
+**Accounts.** Email plus a password of at least 8 characters that differs from the email and is not in a known-breached list (a checked minimum of 8, not 12, was a deliberate choice). Create account stays disabled until valid, and success opens a one-time setup step (week start, 12- or 24-hour time, time zone from the device or picked by hand), then Inbox. On desktop, Sign in and Create account have a dark brand panel on the left. Settings › Account › Change password asks for the current password, shows live checks and a strength bar, and signs out other devices.
 
 **Sign-in and lockout.** Wrong details show one message whether the email is unknown or the password is wrong. **Three failures lock sign-in for 60 seconds** with a countdown from the server. The lock is keyed by (email, IP), so an attacker cannot lock a victim out from another address; extra limits (30 attempts per IP per 10 minutes, 20 failures per email per hour) show the same message.
 

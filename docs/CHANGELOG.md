@@ -2,6 +2,11 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-11
+
+- **Sign in, setup step and Change password (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1): the desktop two-column layout, and Create account opens the setup step. New [AA §2.6](03-modules/AA-account-access.md#26-setup-step-after-sign-up-149) setup step and [AA §2.7](03-modules/AA-account-access.md#27-change-password-149) Change password, with `POST /auth/change-password` and `timezone_auto` in the [AA API table](03-modules/AA-account-access.md#7-api-contract) and [api.md](07-architecture/api.md). [ADR-006](07-architecture/decisions/ADR-006-time-zones.md): a picked zone stays until the user goes back to the device's. [AP §2.3.1](03-modules/AP-app-platform.md): the change-password endpoint and the time zone row now match the code. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.
+- **Show password and Tab (Refs #149).** [AA §6](03-modules/AA-account-access.md#6-accessibility): the show/hide button is out of the Tab order, and Alt+F8 in a password field shows or hides it.
+
 ## 2026-11-09
 
 - **Notes cards say Accepted or Pending (Refs #47, IM-48).** [RV §2.1–§2.3, §2.6](03-modules/RV-review-control.md#26-notes-tab-rv-4) and the [copy catalog](01-product/copy-catalog.md): a `done` card reads `notes.made` with its task count ("Accepted · 2", the full count for screen readers), and Edited follows the name, so the status never wraps on a phone; `confirm`, `followup` and `pending` cards, and the result overline after Undo all, read `notes.needs`. `note.needs_look_*` stays on the back-online toast only. Offline Notes cards are left to IM-53.

@@ -96,13 +96,14 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 |---|---|---|---|
 | **Account** | Name (`displayName`) | Fully Functional | `PATCH /api/v1/me` (`name`) |
 | **Account** | Email display | Fully Functional | `GET /api/v1/me` (`email`) |
-| **Account** | Change password | Fully Functional | `POST /api/v1/password/change` |
+| **Account** | Change password | Fully Functional (#149) | `POST /api/v1/auth/change-password` |
 | **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
 | **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
 | **General** | Home view (Inbox, Upcoming, Projects) | Fully Functional | `localStorage` (`agendal.home_view`) |
 | **General** | Page view (Flat view vs Full width) | Fully Functional | `localStorage` (`agendal.page_view`) + `data-page-view` |
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
-| **General** | Timezone, Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
+| **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |
+| **General** | Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
 | **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
 | **Theme** | Appearance & 8 Theme Palettes | Fully Functional | Server sync (`theme`) & `--color-primary` |
 | **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
