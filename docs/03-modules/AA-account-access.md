@@ -101,10 +101,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.7 Change password (#149)
 
 - Settings › Account › **Change password** opens a sub-view with a back arrow: Current password, New password, Confirm new password, each with show/hide. No Forgot password link there.
-- **Live feedback** (polite, linked with `aria-describedby`): a checklist that ticks as each rule passes (`auth.rule_length`, `auth.rule_not_email`, `auth.rule_not_current`), a 4-step strength bar with a word and the hint `auth.strength_hint`, and under Confirm `auth.password_mismatch` or `auth.password_match`. Capitals, numbers or symbols are a hint only, never a rule ([BR-17](../02-domain/business-rules.md#br-17), ASVS 2.1.9).
+- **Live feedback** (polite, linked with `aria-describedby`): a checklist that ticks as each rule passes (`auth.rule_length`, `auth.rule_not_email`, `auth.rule_not_current`; nothing ticks while New password is empty), a 4-step strength bar with a word and the hint `auth.strength_hint`, and under Confirm `auth.password_mismatch` or `auth.password_match`. Capitals, numbers or symbols are a hint only, never a rule ([BR-17](../02-domain/business-rules.md#br-17), ASVS 2.1.9).
+- **Current password on blur:** leaving the field with a value checks it with `POST /auth/check-password`. A wrong one turns the field red with `auth.current_password_wrong`; typing again clears it. Save checks it again either way.
 - **Save** stays disabled until Current is filled, every rule passes and Confirm matches.
 - **Server order:** the current password first (`auth.current_password_wrong`, nothing else runs), then the sign-up rules, then different from the current one (`auth.password_same_as_current`), then the match (`auth.password_mismatch`), then the breached check. Wrong current password keeps what was typed and focuses that field.
-- **Success:** the toast `auth.password_changed`, every other session ends and this one stays, the notice email is sent (ASVS 2.2.3) and an audit event `password_changed` is written. Limited to 5 tries per 15 minutes per user.
+- **Success:** the pane shows `settings.password_changed_title` and `settings.password_changed_body` with a Done button back to Account (announced, focus on the heading). Every other session ends and this one stays, the notice email is sent (ASVS 2.2.3) and an audit event `password_changed` is written.
+- **Limit:** only wrong current passwords count, 5 per 15 minutes per user, shared by the blur check and Save; then `429` with `Retry-After`. A correct one resets the count.
 
 ## 3. State matrix
 
@@ -153,6 +155,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `POST /auth/login` | `{email, password, remember}` | `200 {user}` | `422 auth.invalid`, `429 auth.locked {retry_after}` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
 | `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
+| `POST /auth/check-password` | `{current_password}` | `204` | `401`, `422` (`auth.current_password_wrong`), `429` |
 | `POST /auth/change-password` | `{current_password, password, password_confirmation}` | `200 {user}`, other sessions ended | `401`, `422` (`auth.current_password_wrong`, field errors), `429` |
 | `POST /auth/logout` | — | `204` | `401` |
 | `POST /auth/logout-everywhere` | — | `204` | `401` |

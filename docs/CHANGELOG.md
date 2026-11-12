@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-12
+
+- **Account menu, phone Settings and Change password checks (Refs #149).** [AA §2.7](03-modules/AA-account-access.md#27-change-password-149): the current password is checked on blur with the new `POST /auth/check-password` (also in the [AA API table](03-modules/AA-account-access.md#7-api-contract) and [api.md](07-architecture/api.md)), only wrong tries count toward the limit, and success shows a "Password changed" state. [AP §2.3.1](03-modules/AP-app-platform.md): the sidebar account menu, full-screen Settings on phones, and sidebar tabs that slide while dragged. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.
+
 ## 2026-11-11
 
 - **Sign in, setup step and Change password (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1): the desktop two-column layout, and Create account opens the setup step. New [AA §2.6](03-modules/AA-account-access.md#26-setup-step-after-sign-up-149) setup step and [AA §2.7](03-modules/AA-account-access.md#27-change-password-149) Change password, with `POST /auth/change-password` and `timezone_auto` in the [AA API table](03-modules/AA-account-access.md#7-api-contract) and [api.md](07-architecture/api.md). [ADR-006](07-architecture/decisions/ADR-006-time-zones.md): a picked zone stays until the user goes back to the device's. [AP §2.3.1](03-modules/AP-app-platform.md): the change-password endpoint and the time zone row now match the code. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.

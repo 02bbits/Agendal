@@ -90,7 +90,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3.1 Settings Architecture & Implementation Status
 
-The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`).
+The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`). Below 768 px it is a full-screen page instead: a list of categories, and each opens with a back arrow (back button, Esc and browser Back return to the list) (#149). On desktop the sidebar's account row opens a menu with Account, Settings, a theme switch and Sign out.
 
 | Category | Control / Feature | Implementation Status | Persistence |
 |---|---|---|---|
@@ -107,7 +107,7 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 | **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
 | **Theme** | Appearance & 8 Theme Palettes | Fully Functional | Server sync (`theme`) & `--color-primary` |
 | **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
-| **Sidebar** | Drag & drop + keyboard reordering | Fully Functional | `localStorage` (`agendal.sidebar_tabs_order`) |
+| **Sidebar** | Drag (mouse and touch, the other rows slide to make room) + up/down buttons | Fully Functional (#149) | `localStorage` (`agendal.sidebar_tabs_order`) |
 | **Sidebar** | Tab enable/disable checkboxes & Reset default | Fully Functional | `localStorage` (`agendal.sidebar_tabs_enabled`) |
 | **Notifications** | Web Push & VAPID service diagnostics | Fully Functional | Web Push API & VAPID |
 | **Roadmap Tabs** | Subscription, Quick Add, Productivity, Backups, Integrations, Calendars | UI Gap / Roadmap | Planned for future milestones |
