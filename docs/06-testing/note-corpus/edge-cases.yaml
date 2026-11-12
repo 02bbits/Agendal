@@ -309,3 +309,59 @@
     create:
       -
         title: '<script>alert(1)</script>'
+-
+  id: C-430
+  categories:
+    - edge.NU-E42
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'đi bộ từ thứ 2 đến thứ 6'
+  expect:
+    status: confirm
+    create:
+      -
+        title: 'Đi bộ'
+        start_date: '2026-10-26'
+        due: '2026-10-30'
+-
+  id: C-431
+  categories:
+    - edge.NU-E42
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'study mon to fri'
+  expect:
+    status: confirm
+    create:
+      -
+        title: Study
+        start_date: '2026-10-26'
+        due: '2026-10-30'
+-
+  id: C-432
+  categories:
+    - edge.NU-E6
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'bắt đầu thứ 7 hạn thứ 2 làm báo cáo'
+  expect:
+    status: confirm
+    create:
+      -
+        title: 'Làm báo cáo'
+        start_date: '2026-10-24'
+        due: '2026-10-26'
+-
+  id: C-433
+  categories:
+    - edge.NU-E6
+  now: '2026-10-23T08:12'
+  timezone: Asia/Ho_Chi_Minh
+  note: 'hạn thứ 6 nộp báo cáo'
+  expect:
+    status: confirm
+    create:
+      -
+        title: 'Nộp báo cáo'
+        due: '2026-10-30'
+        priority: high

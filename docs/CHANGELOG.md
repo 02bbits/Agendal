@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-11
+
+- **Start dates read from a range or a start word.** [NU §2.5, NU-E6, NU-E42 and §7](03-modules/NU-note-understanding.md#25-extraction-nu-2), [IM-40](08-project/tasks.md#im-40) and the [note corpus](06-testing/note-corpus/README.md): "Mon to Fri" and "từ thứ 2 đến thứ 6" give a start and a due date, as does a start word with a deadline word ("bắt đầu thứ 7 hạn thứ 2"). A start word alone, and plain dates, still set the due date. A weekday range that wraps past the weekend ends the week after; with a repeat, the range is the repeat's days. IM-40 now covers NU-E42 and T-NU-142, and corpus cases may give `start_date`.
+
 ## 2026-11-10
 
 - **Branded emails (Refs #77).** [Copy catalog](01-product/copy-catalog.md#email): a new Email section with the reset and notice email copy. [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): both emails use it and the Graphite mail theme. [SUMMARY §6](SUMMARY.md): the Password reset paragraph says so.

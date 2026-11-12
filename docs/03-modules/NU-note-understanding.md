@@ -99,7 +99,7 @@ The business-rules table is the phrase list. The precise semantics:
 
 | Field | Rule |
 |---|---|
-| Start date | "from X to Y / từ X đến Y" → start date X, due date Y |
+| Start date | "from X to Y / từ X đến Y", "X to Y", "X - Y" → start date X, due date Y ([NU-E42](#nu-e42)). A date after a start word (*from, starting, từ, bắt đầu*) with another after a deadline word (*by, due, hạn*) → start and due ([NU-E6](#nu-e6)). Plain dates never set the start date |
 | Due date | "by / before / due / hạn / trước X" → due date (time → due time); "on / vào X" and plain dates keep setting the due date. Weekdays (full or 3-letter) mean the next one ahead. Today counts only with *this* ([NU-E2](#nu-e2), [NU-E3](#nu-e3)). *next week* → the first day of next week ([NU-E10](#nu-e10)). *end of the week* → the last day of the week (Sunday, or Saturday when the week starts on Sunday). *end of the month* → its last day ([NU-E9](#nu-e9)). Explicit dates: `26 Oct`, `Oct 26`, `26/10`, `26/10/2026`. Numbers are day/month ([NU-E31](#nu-e31)). A date that has passed follows [NU-E4](#nu-e4). Two dates follow [NU-E6](#nu-e6) |
 | No date | Empty, unless a time or repeat is given: then today, or tomorrow if that time has already passed ([NU-E5](#nu-e5)). Day-bound words (*tonight*, *this evening*) always mean today ([NU-E1](#nu-e1)) |
 | Time | `9am`, `9 am`, `6:30pm`, `6.30pm`, `14:00`, `14h`, `at 14`, `9.30` ([NU-E19](#nu-e19)), and the words in the rules table. Bare hours follow [NU-E7](#nu-e7). A time range on one day ("2–4pm Friday") → start Fri 14:00, due Fri 16:00 ([NU-E30](#nu-e30)) |
@@ -177,7 +177,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e3"></a>NU-E3 | *next \<weekday>* when it isn't today ("next friday" on a Wednesday) | The coming one (in 2 days), never the week after | T-NU-103 |
 | <a id="nu-e4"></a>NU-E4 | Explicit date that has passed ("26 Oct" on 27 Oct) | 30 days ago or less → keep it, and the task is overdue at once. Older → the same date next year | T-NU-104 · C-023, C-024 |
 | <a id="nu-e5"></a>NU-E5 | Time already passed, with no date word ("call mum 9am" at 10:00) | Tomorrow at that time | T-NU-105 · C-022 |
-| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | One date marked as the start (*from, bắt đầu*) and one as the deadline (*by, due, hạn*) → start date and due date. Otherwise the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
+| <a id="nu-e6"></a>NU-E6 | Two dates in one item ("study monday for quiz friday") | One date marked as the start (*from, bắt đầu*) and one as the deadline (*by, due, hạn*) → start date and due date, when the start isn't after the deadline. A start word with no deadline changes nothing: that date is the due date. Otherwise the date after *by / due / on / before* wins, or the later date; the other date phrase stays in the title | T-NU-106 |
 | <a id="nu-e7"></a>NU-E7 | Bare hour without am/pm ("at 2") | 1–6 → pm, 7–11 → am, 12 → 12:00, 13–23 → that hour | T-NU-107 · C-025 |
 | <a id="nu-e8"></a>NU-E8 | "every Monday" with no start date | The next Monday. Today if today is Monday and the time (if any) hasn't passed | T-NU-108 · C-004 |
 | <a id="nu-e9"></a>NU-E9 | "end of the month" on its last day, "end of the week" on the week's last day | Today | T-NU-109 · C-036 |
@@ -213,7 +213,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e39"></a>NU-E39 | HTML or script in the note | Stored as given. Shown as plain text everywhere | T-NU-139, SEC-21 |
 | <a id="nu-e40"></a>NU-E40 | Vietnamese typed without diacritics ("mai hop nhom 9h", "toi can mua sua") | Vietnamese is expected with diacritics, so no Vietnamese phrase matches. Handled like [NU-E28](#nu-e28): the title is kept as written, only numeric dates and times ("9h") are extracted, and the item is low confidence, so the LLM may read it | T-NU-140 · C-050 |
 | <a id="nu-e41"></a>NU-E41 | "rồi" at the end of an item ("bài tập xong rồi") | No split: "rồi" splits only when words follow it. "X xong rồi" is a complete command | T-NU-141 · C-046 |
-| <a id="nu-e42"></a>NU-E42 | Date range ("study Mon to Fri", "từ thứ 2 đến thứ 6") | Sets start date (Mon) and due date (Fri) | T-NU-142 |
+| <a id="nu-e42"></a>NU-E42 | Date range ("study Mon to Fri", "từ thứ 2 đến thứ 6") | Sets start date (Mon) and due date (Fri), and both leave the title. A weekday that comes round before the start is the one after it ("từ thứ 7 đến thứ 2" ends next Monday). A repeat reads the range as its days ("mỗi thứ 2 đến thứ 6"), with no start date | T-NU-142 |
 
 ## 5. Copy keys
 
@@ -286,7 +286,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 
 ```json
 {
-  "create": [{"ref": "c1", "title": "…", "due_date": "2026-10-26", "start_time": "09:00", "end_time": null,
+  "create": [{"ref": "c1", "title": "…", "start_date": null, "due_date": "2026-10-26", "start_time": "09:00", "end_time": null,
               "priority": "high", "project_id": "p_…", "repeat": "never", "reminder": "1d",
               "notes": null, "duplicate_of": null}],
   "update": [{"ref": "u1", "task_id": "t_…", "done": true, "label": "Completed"}],

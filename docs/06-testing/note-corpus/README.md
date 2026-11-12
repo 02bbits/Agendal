@@ -38,7 +38,7 @@ One YAML list per file (`*.yaml`). Each case:
     ambiguous: []                  # tie cases: {candidates: [t4, t5], preselected: t4}
 ```
 
-Omitted fields in `create` mean "empty / default" (no date, no time, no project, repeat never, reminder none, priority by the default rule).
+Omitted fields in `create` mean "empty / default" (no date, no time, no project, repeat never, reminder none, priority by the default rule). `due` is the due date, `start` and `end` are times, and `start_date` is the start date ([NU-E42](../../03-modules/NU-note-understanding.md#nu-e42)); `start_date` is checked only when a case gives it.
 
 ## Coverage quota
 
