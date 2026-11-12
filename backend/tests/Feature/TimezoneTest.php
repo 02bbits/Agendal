@@ -123,3 +123,52 @@ it('uses the injected clock for demo project timestamps', function () {
     $timestamp = DB::table('projects')->value('created_at');
     expect((new DateTimeImmutable($timestamp))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-23T01:12:00Z');
 });
+
+it('keeps manual zone when a later request sends another X-Timezone', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh', 'timezone_auto' => false]);
+    $this->actingAs($user, 'web');
+
+    $this->getJson('/api/v1/test-timezone', ['X-Timezone' => 'America/New_York'])
+        ->assertOk()
+        ->assertJsonPath('timezone', 'Asia/Ho_Chi_Minh');
+
+    expect($user->fresh()->timezone)->toBe('Asia/Ho_Chi_Minh')
+        ->and($user->fresh()->timezone_auto)->toBeFalse();
+});
+
+it('recomputes remind_at on a manual timezone change and sets timezone_auto to false', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh', 'timezone_auto' => true]);
+    $taskId = (string) Str::uuid();
+    DB::table('tasks')->insert([
+        'id' => $taskId, 'user_id' => $user->id, 'title' => 'SQL quiz',
+        'start_date' => '2026-10-26', 'due_date' => '2026-10-26', 'start_time' => '09:00', 'due_time' => '10:00',
+        'reminder' => '15m', 'remind_at' => '2026-10-26T01:45:00Z',
+    ]);
+    $this->actingAs($user, 'web');
+    $this->travelBack();
+
+    $this->patchJson('/api/v1/me', ['timezone' => 'Asia/Tokyo'])
+        ->assertOk()
+        ->assertJsonPath('timezone', 'Asia/Tokyo')
+        ->assertJsonPath('timezone_auto', false);
+
+    expect($user->fresh()->timezone)->toBe('Asia/Tokyo')
+        ->and($user->fresh()->timezone_auto)->toBeFalse();
+
+    $task = DB::table('tasks')->find($taskId);
+    expect((new DateTimeImmutable($task->remind_at))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-25T23:45:00Z');
+});
+
+it('applies the header zone when timezone_auto is set to true', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh', 'timezone_auto' => false]);
+    $this->actingAs($user, 'web');
+    $this->travelBack();
+
+    $this->patchJson('/api/v1/me', ['timezone_auto' => true], ['X-Timezone' => 'Europe/London'])
+        ->assertOk()
+        ->assertJsonPath('timezone', 'Europe/London')
+        ->assertJsonPath('timezone_auto', true);
+
+    expect($user->fresh()->timezone)->toBe('Europe/London')
+        ->and($user->fresh()->timezone_auto)->toBeTrue();
+});

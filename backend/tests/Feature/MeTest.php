@@ -13,7 +13,7 @@ beforeEach(function () {
 it('T-AP-21, T-AP-50: returns the settings with their defaults', function () {
     $this->actingAs($this->user, 'sanctum')->getJson('/api/v1/me')->assertOk()->assertJson([
         'id' => $this->user->id, 'theme' => 'system', 'week_start' => 'mon', 'time_format' => '24h',
-        'remember_device' => true, 'install_prompt_shown' => false,
+        'remember_device' => true, 'install_prompt_shown' => false, 'timezone_auto' => true,
     ])->assertJsonMissing(['password' => $this->user->password])->assertJsonMissingPath('remember_token');
 });
 
@@ -42,6 +42,7 @@ it('rejects values outside the allowed set with 422', function (array $body) {
     'time format' => [['time_format' => '13h']],
     'remember device' => [['remember_device' => 'maybe']],
     'name too long' => [['display_name' => str_repeat('a', 61)]],
+    'invalid timezone' => [['timezone' => 'Invalid/Zone']],
 ]);
 
 it('ignores fields a user must not set', function () {
