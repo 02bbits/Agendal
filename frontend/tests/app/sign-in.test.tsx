@@ -102,9 +102,16 @@ describe("Sign in (AA-2)", () => {
     const { password } = renderPage();
     const toggle = screen.getByRole("button", { name: "Show password" });
 
+    expect(toggle.getAttribute("tabindex")).toBe("-1");
+    expect(password.getAttribute("aria-keyshortcuts")).toBe("Alt+F8");
+
     await user.click(toggle);
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     expect(password.type).toBe("text");
+
+    password.focus();
+    await user.keyboard("{Alt>}{F8}{/Alt}");
+    expect(password.type).toBe("password");
   });
 
   it("T-AA-10, A11Y-62: wrong details show auth.invalid, keep the email, clear and focus the password", async () => {
@@ -132,6 +139,16 @@ describe("Sign in (AA-2)", () => {
     expect(safeReturnPath("javascript:alert(1)")).toBe("/");
     expect(safeReturnPath(null)).toBe("/");
     expect(safeReturnPath("/projects/1?x=2")).toBe("/projects/1?x=2");
+  });
+
+  it("renders Remember me and Forgot password in one row", () => {
+    renderPage();
+    const checkbox = screen.getByRole("checkbox", { name: "Remember me" });
+    const forgotLink = screen.getByRole("link", { name: "Forgot password?" });
+    const row = checkbox.closest("div.flex");
+    expect(row).toBeTruthy();
+    expect(row?.contains(checkbox)).toBe(true);
+    expect(row?.contains(forgotLink)).toBe(true);
   });
 
   it("is axe-clean in both themes", async () => {

@@ -3,8 +3,10 @@ import { now } from "../../../lib/clock";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
+import { MailIcon } from "../../components/icons";
 import { Link } from "../shell/Link";
 import type { Navigate } from "../shell/routes";
+import { AuthLayout } from "./AuthLayout";
 import { isEmail, normalizeEmail } from "./validation";
 import { useSecondsLeft } from "./useSecondsLeft";
 
@@ -51,15 +53,25 @@ export function ForgotPasswordScreen({
   }
 
   return (
-    <div className="flex flex-col gap-5 pt-12">
-      <h1 className="m-0 text-display font-bold text-ink">
-        {t("auth.reset_title")}
-      </h1>
+    <AuthLayout>
+      <div className="text-center lg:text-left mt-6 lg:mt-0">
+        <h1 className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink">
+          {t("auth.reset_title")}
+        </h1>
+        <p className="m-0 mt-1 text-footnote text-ink-secondary">
+          {t("auth.reset_subtitle")}
+        </p>
+      </div>
       {sentTo ? (
-        <>
+        <div className="mt-7 lg:mt-6 flex flex-col gap-3.5">
           <p role="status" className="m-0 text-body text-ink">
             {t("auth.reset_sent", { email: sentTo })}
           </p>
+          {(error || offline) && (
+            <p role="alert" className="m-0 text-footnote text-error">
+              {offline ? t("auth.offline") : error}
+            </p>
+          )}
           <Button
             variant="secondary"
             size="lg"
@@ -85,17 +97,36 @@ export function ForgotPasswordScreen({
           >
             {t("auth.reset_change_email")}
           </Button>
-        </>
+          <Link
+            href={signInHref}
+            navigate={navigate}
+            className="focus-ring self-center inline-flex min-h-11 items-center text-footnote text-primary"
+          >
+            <span className="link-swipe leading-4">
+              {t("auth.back_to_sign_in")}
+            </span>
+          </Link>
+        </div>
       ) : (
-        <form className="flex flex-col gap-5" onSubmit={submit} noValidate>
+        <form
+          className="mt-7 lg:mt-6 flex flex-col gap-3.5"
+          onSubmit={submit}
+          noValidate
+        >
           <TextField
             label={t("auth.email")}
             type="email"
             autoComplete="email"
             autoFocus={changingEmail}
             value={email}
+            leading={<MailIcon size={18} />}
             onChange={(event) => setEmail(event.target.value)}
           />
+          {(error || offline) && (
+            <p role="alert" className="m-0 text-footnote text-error">
+              {offline ? t("auth.offline") : error}
+            </p>
+          )}
           <Button
             type="submit"
             size="lg"
@@ -105,20 +136,17 @@ export function ForgotPasswordScreen({
           >
             {t("auth.reset_send")}
           </Button>
+          <Link
+            href={signInHref}
+            navigate={navigate}
+            className="focus-ring self-center inline-flex min-h-11 items-center text-footnote text-primary"
+          >
+            <span className="link-swipe leading-4">
+              {t("auth.back_to_sign_in")}
+            </span>
+          </Link>
         </form>
       )}
-      {(error || offline) && (
-        <p role="alert" className="m-0 text-footnote text-error">
-          {offline ? t("auth.offline") : error}
-        </p>
-      )}
-      <Link
-        href={signInHref}
-        navigate={navigate}
-        className="focus-ring self-center text-footnote text-primary link-swipe"
-      >
-        {t("auth.back_to_sign_in")}
-      </Link>
-    </div>
+    </AuthLayout>
   );
 }

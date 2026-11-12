@@ -2,7 +2,9 @@ import { useRef, useState, type FormEvent } from "react";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
+import { LockIcon, MailIcon } from "../../components/icons";
 import { Link } from "../shell/Link";
+import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
 import { useSecondsLeft } from "./useSecondsLeft";
 import type { Navigate } from "../shell/routes";
@@ -73,78 +75,93 @@ export function SignInScreen({
       : failure.form;
 
   return (
-    <form className="flex flex-col gap-5 pt-12" onSubmit={submit} noValidate>
-      <h1 className="m-0 text-display font-bold text-ink">
-        {t("auth.sign_in")}
-      </h1>
-      {locked > 0 && (
-        <div className="rounded-field bg-danger-tint p-4 text-callout text-error">
-          {/* Announced once; the countdown below isn't read out every second (A11Y-61) */}
-          <p role="alert" className="m-0 font-semibold">
-            {t("auth.locked_title")}
-          </p>
-          <p className="m-0">{t("auth.locked_body", { seconds: locked })}</p>
-        </div>
-      )}
-      <p role="status" className="sr-only">
-        {lockedUntil && locked === 0 ? t("auth.unlocked") : ""}
-      </p>
-      <TextField
-        label={t("auth.email")}
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-      />
-      <div className="flex flex-col gap-1">
+    <AuthLayout>
+      <div className="text-center lg:text-left mt-6 lg:mt-0">
+        <h1 className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink">
+          {t("auth.sign_in_title")}
+        </h1>
+        <p className="m-0 mt-1 text-footnote text-ink-secondary">
+          {t("auth.sign_in_subtitle")}
+        </p>
+      </div>
+      <form
+        className="mt-7 lg:mt-6 flex flex-col gap-3.5"
+        onSubmit={submit}
+        noValidate
+      >
+        {locked > 0 && (
+          <div className="rounded-field bg-danger-tint p-4 text-callout text-error">
+            {/* Announced once; the countdown below isn't read out every second (A11Y-61) */}
+            <p role="alert" className="m-0 font-semibold">
+              {t("auth.locked_title")}
+            </p>
+            <p className="m-0">{t("auth.locked_body", { seconds: locked })}</p>
+          </div>
+        )}
+        <p role="status" className="sr-only">
+          {lockedUntil && locked === 0 ? t("auth.unlocked") : ""}
+        </p>
+        <TextField
+          label={t("auth.email")}
+          type="email"
+          autoComplete="email"
+          value={email}
+          leading={<MailIcon size={18} />}
+          onChange={(event) => setEmail(event.target.value)}
+        />
         <PasswordField
           ref={passwordRef}
           label={t("auth.password")}
           autoComplete="current-password"
           value={password}
+          leading={<LockIcon size={18} />}
           onChange={(event) => setPassword(event.target.value)}
         />
-        <Link
-          href={forgotPasswordHref}
-          navigate={navigate}
-          className="focus-ring inline-flex min-h-11 items-center self-start px-1 text-footnote text-primary link-swipe"
+        <div className="flex min-h-11 items-center justify-between gap-3">
+          <label className="inline-flex cursor-pointer items-center gap-2 text-footnote text-ink">
+            <input
+              type="checkbox"
+              className="size-[18px] rounded accent-primary focus-ring cursor-pointer"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+            />
+            {t("auth.remember_me")}
+          </label>
+          <Link
+            href={forgotPasswordHref}
+            navigate={navigate}
+            className="focus-ring inline-flex min-h-11 items-center text-footnote text-primary"
+          >
+            <span className="link-swipe leading-4">
+              {t("auth.forgot_password")}
+            </span>
+          </Link>
+        </div>
+        {message && (
+          <p role="alert" className="m-0 text-footnote text-error">
+            {message}
+          </p>
+        )}
+        <Button
+          type="submit"
+          size="lg"
+          fullWidth
+          busy={busy}
+          disabled={!email || !password || offline || locked > 0}
         >
-          {t("auth.forgot_password")}
-        </Link>
-      </div>
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-callout text-ink">
-        <input
-          type="checkbox"
-          className="checkbox checkbox-primary focus-ring"
-          checked={remember}
-          onChange={(event) => setRemember(event.target.checked)}
-        />
-        {t("auth.remember_me")}
-      </label>
-      {message && (
-        <p role="alert" className="m-0 text-footnote text-error">
-          {message}
+          {t("auth.sign_in")}
+        </Button>
+        <p className="m-0 text-center text-footnote text-ink-secondary">
+          {t("auth.no_account")}{" "}
+          <Link
+            href={createAccountHref}
+            navigate={navigate}
+            className="focus-ring text-primary link-swipe"
+          >
+            {t("auth.create_title")}
+          </Link>
         </p>
-      )}
-      <Button
-        type="submit"
-        size="lg"
-        fullWidth
-        busy={busy}
-        disabled={!email || !password || offline || locked > 0}
-      >
-        {t("auth.sign_in")}
-      </Button>
-      <p className="m-0 text-center text-footnote text-ink-secondary">
-        {t("auth.no_account")}{" "}
-        <Link
-          href={createAccountHref}
-          navigate={navigate}
-          className="focus-ring text-primary link-swipe"
-        >
-          {t("auth.create_title")}
-        </Link>
-      </p>
-    </form>
+      </form>
+    </AuthLayout>
   );
 }

@@ -1,1 +1,27 @@
 @import "../ui/theme.css";
+
+/* Sign in, Create account and Setup: a quiet dot grid that fades out, drawn behind the form (#149) */
+.auth-backdrop {
+  background-color: var(--color-paper);
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--color-ink) 24%, transparent) 1px,
+    transparent 1.2px
+  );
+  background-size: 22px 22px;
+}
+.auth-backdrop-fade {
+  mask-image: radial-gradient(
+    ellipse 80% 60% at 50% 0%,
+    #000 0%,
+    transparent 75%
+  );
+}
+@media (min-width: 1024px) {
+  .auth-backdrop-fade {
+    mask-image: radial-gradient(
+      ellipse 70% 70% at 50% 50%,
+      #000 0%,
+      transparent 80%
+    );
+  }
+}
