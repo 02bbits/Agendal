@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-12
+
+- **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
+
 ## 2026-11-10
 
 - **Branded emails (Refs #77).** [Copy catalog](01-product/copy-catalog.md#email): a new Email section with the reset and notice email copy. [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): both emails use it and the Graphite mail theme. [SUMMARY §6](SUMMARY.md): the Password reset paragraph says so.
