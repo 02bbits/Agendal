@@ -186,7 +186,7 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
     return (
       <div
         role="status"
-        className="py-10 flex flex-col items-center text-center gap-3 max-w-[420px]"
+        className="flex w-full flex-col items-center gap-3 py-10 text-center"
       >
         <div
           className="size-14 rounded-full bg-success-tint text-success flex items-center justify-center motion-safe:animate-scale-in"
@@ -197,11 +197,11 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
         <h2
           ref={successHeadingRef}
           tabIndex={-1}
-          className="m-0 text-title-3 font-semibold text-ink outline-none"
+          className="m-0 text-title-3 font-semibold text-ink caret-transparent outline-none"
         >
           {t("settings.password_changed_title")}
         </h2>
-        <p className="m-0 text-footnote text-ink-secondary">
+        <p className="m-0 max-w-[360px] text-footnote text-ink-secondary">
           {t("settings.password_changed_body", { email })}
         </p>
         <Button variant="primary" onClick={onBack}>

@@ -193,6 +193,139 @@ describe("Lockout (AA-3)", () => {
   });
 });
 
+describe("Two-factor authentication (issue #149 C)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  it("shows 2FA challenge on 202, signs in on correct code", async () => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        const body = JSON.parse(init?.body as string);
+        expect(body.code).toBe("123456");
+        return json(200, { user: { id: 1, email: "example@gmail.com" } });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    expect(await screen.findByText("Enter your sign-in code")).toBeTruthy();
+    expect(screen.getByText(/We sent a 6-digit code to/)).toBeTruthy();
+    expect(screen.getByText("e******@gmail.com")).toBeTruthy();
+
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["1", "2", "3", "4", "5", "6"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(router.push).toHaveBeenCalledWith("/");
+  });
+
+  it("wrong code shows error under slots", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        return json(422, {
+          error: {
+            code: "auth.two_factor_wrong",
+            message: "That code isn't right. Try again.",
+          },
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["0", "0", "0", "0", "0", "0"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    expect(
+      await screen.findByText("That code isn't right. Try again."),
+    ).toBeTruthy();
+  });
+
+  it("Use a different account returns to password form", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const backBtn = screen.getByRole("button", {
+      name: "Use a different account",
+    });
+    await user.click(backBtn);
+
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+  });
+
+  it("expired pending session redirects to password form with error", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        return json(422, {
+          error: {
+            code: "auth.two_factor_expired",
+            message: "This sign-in has expired. Sign in again.",
+          },
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["9", "9", "9", "9", "9", "9"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    expect(
+      await screen.findByText("This sign-in has expired. Sign in again."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+  });
+});
+
 it("sends a signed-in visitor to Inbox", async () => {
   session = () => json(200, { id: 1, email: "example@gmail.com" });
   renderPage();

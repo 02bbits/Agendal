@@ -222,6 +222,139 @@ describe("Account settings (AP-3, AP-5)", () => {
     backdrop.dispatchEvent(touchEvent);
     expect(preventDefault).toHaveBeenCalled();
   });
+
+  it("shows 2FA switch; toggle ON calls API and toasts", async () => {
+    let twoFactorCall: unknown = null;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/auth/two-factor" && init?.method === "POST") {
+        twoFactorCall = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({ user: me({ two_factor_enabled: true }) }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (url === "/api/v1/me") {
+        return new Response(JSON.stringify(me({ two_factor_enabled: false })), {
+          status: 200,
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await screen.findByText("ann@example.com");
+
+    const twoFactorSwitch = screen.getByRole("switch", {
+      name: "Ask for a code when I sign in",
+    });
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
+    expect(
+      screen.getByText("Off: signing in needs only your password."),
+    ).toBeTruthy();
+
+    await userEvent.click(twoFactorSwitch);
+
+    expect(twoFactorCall).toEqual({ enabled: true });
+    expect(
+      await screen.findByText("Two-step verification is on."),
+    ).toBeTruthy();
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
+    expect(
+      screen.getByText("On: we email you a code each time you sign in."),
+    ).toBeTruthy();
+  });
+
+  it("toggle OFF opens dialog, wrong password shows error, correct password calls API, closes dialog, toasts", async () => {
+    let twoFactorCall: unknown = null;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/auth/two-factor" && init?.method === "POST") {
+        twoFactorCall = JSON.parse(init.body as string);
+        if (
+          (twoFactorCall as { current_password?: string }).current_password ===
+          "wrong"
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: "auth.current_password_wrong",
+                message: "That's not your current password.",
+              },
+            }),
+            { status: 422, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ user: me({ two_factor_enabled: false }) }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/api/v1/me") {
+        return new Response(JSON.stringify(me({ two_factor_enabled: true })), {
+          status: 200,
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await screen.findByText("ann@example.com");
+
+    const twoFactorSwitch = screen.getByRole("switch", {
+      name: "Ask for a code when I sign in",
+    });
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
+
+    // Click to turn OFF
+    await userEvent.click(twoFactorSwitch);
+
+    // Dialog opens
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Turn off two-step verification?" }),
+    ).toBeTruthy();
+
+    const passwordInput = screen.getByLabelText("Current password");
+    const confirmButton = screen.getByRole("button", { name: "Turn off" });
+
+    // Enter wrong password
+    await userEvent.type(passwordInput, "wrong");
+    await userEvent.click(confirmButton);
+
+    expect(
+      await screen.findByText("That's not your current password."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alertdialog")).not.toBeNull();
+
+    // Enter correct password
+    await userEvent.clear(passwordInput);
+    await userEvent.type(passwordInput, "correct-pass");
+    await userEvent.click(confirmButton);
+
+    expect(twoFactorCall).toEqual({
+      enabled: false,
+      current_password: "correct-pass",
+    });
+
+    // Dialog closes
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+    expect(
+      await screen.findByText("Two-step verification is off."),
+    ).toBeTruthy();
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {

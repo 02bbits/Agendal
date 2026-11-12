@@ -29,6 +29,7 @@ import {
   FolderIcon,
   GripVerticalIcon,
   InboxIcon,
+  LockIcon,
   NotesIcon,
   PaletteIcon,
   PlugIcon,
@@ -44,6 +45,9 @@ import {
 import { Segmented } from "../../components/Segmented";
 import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
+import { Dialog } from "../../components/Dialog";
+import { PasswordField } from "../auth/PasswordField";
+import { api } from "../../../lib/api";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import { runThemeTransition } from "../../domain/themeTransition";
 import type { TimeFormat, WeekStart } from "../../domain/types";
@@ -58,6 +62,7 @@ import {
   type TabId,
 } from "./routes";
 import { useMediaQuery } from "../tasks/useMediaQuery";
+import { useFlipChildren } from "./useFlipChildren";
 import { useSortableList } from "./useSortableList";
 
 export type ThemeSetting = "system" | "light" | "dark";
@@ -109,6 +114,9 @@ export interface AccountScreenProps {
   initialTab?: SettingsTab;
   onUpdateName?: { (name: string): Promise<void> };
   portal?: boolean;
+  showToast?: (message: string) => void;
+  twoFactorEnabled?: boolean;
+  onTwoFactorChange?: (enabled: boolean) => void;
 }
 
 const noSubscribe = () => () => {};
@@ -139,8 +147,109 @@ export function AccountScreen({
   initialTab = "general",
   onUpdateName,
   portal = false,
+  showToast,
+  twoFactorEnabled: propsTwoFactorEnabled,
+  onTwoFactorChange,
 }: AccountScreenProps): ReactElement | null {
   const mounted = useSyncExternalStore(noSubscribe, inBrowser, onServer);
+
+  const [prevPropsTwoFactor, setPrevPropsTwoFactor] = useState(
+    propsTwoFactorEnabled,
+  );
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(
+    propsTwoFactorEnabled ?? false,
+  );
+  if (propsTwoFactorEnabled !== prevPropsTwoFactor) {
+    setPrevPropsTwoFactor(propsTwoFactorEnabled);
+    if (propsTwoFactorEnabled !== undefined) {
+      setTwoFactorEnabled(propsTwoFactorEnabled);
+    }
+  }
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const [twoFactorOffOpen, setTwoFactorOffOpen] = useState(false);
+  const [twoFactorPassword, setTwoFactorPassword] = useState("");
+  const [twoFactorOffError, setTwoFactorOffError] = useState<string | null>(
+    null,
+  );
+  const [twoFactorOffBusy, setTwoFactorOffBusy] = useState(false);
+  const twoFactorPasswordRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    api("/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data && typeof data.two_factor_enabled === "boolean") {
+          setTwoFactorEnabled(data.two_factor_enabled);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleToggleTwoFactor = async (newVal: boolean) => {
+    if (twoFactorBusy) return;
+    if (newVal) {
+      setTwoFactorBusy(true);
+      try {
+        const res = await api("/auth/two-factor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: true }),
+        });
+        if (res.ok) {
+          setTwoFactorEnabled(true);
+          onTwoFactorChange?.(true);
+          showToast?.(t("settings.two_factor_on_toast"));
+        }
+      } catch {
+      } finally {
+        setTwoFactorBusy(false);
+      }
+    } else {
+      setTwoFactorPassword("");
+      setTwoFactorOffError(null);
+      setTwoFactorOffOpen(true);
+    }
+  };
+
+  const handleConfirmTwoFactorOff = async () => {
+    if (twoFactorOffBusy) return;
+    setTwoFactorOffBusy(true);
+    setTwoFactorOffError(null);
+    try {
+      const res = await api("/auth/two-factor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: false,
+          current_password: twoFactorPassword,
+        }),
+      });
+      if (res.ok) {
+        setTwoFactorEnabled(false);
+        onTwoFactorChange?.(false);
+        setTwoFactorOffOpen(false);
+        showToast?.(t("settings.two_factor_off_toast"));
+      } else {
+        const body = await res.json().catch(() => null);
+        const errMsg =
+          body?.error?.fields?.current_password?.[0] ??
+          body?.errors?.current_password?.[0] ??
+          body?.error?.message ??
+          body?.message ??
+          t("auth.current_password_wrong");
+        setTwoFactorOffError(errMsg);
+        twoFactorPasswordRef.current?.focus();
+      }
+    } catch {
+      setTwoFactorOffError(t("error.generic"));
+    } finally {
+      setTwoFactorOffBusy(false);
+    }
+  };
 
   const isDesktop =
     useMediaQuery("(min-width: 768px)") ||
@@ -235,6 +344,13 @@ export function AccountScreen({
     } catch {}
     window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
   });
+
+  // The preview shows only the enabled tabs; they slide when the order or the set changes
+  const previewRef = useRef<HTMLDivElement>(null);
+  const previewTabs = sortableSidebarOrder.filter(
+    (tabId) => sidebarTabs[tabId] !== false,
+  );
+  useFlipChildren(previewRef, previewTabs.join("|"));
 
   const toggleSidebarTab = (tabId: TabId) => {
     const isCurrentlyEnabled = sidebarTabs[tabId] !== false;
@@ -626,6 +742,27 @@ export function AccountScreen({
             >
               {t("settings.change_password")}
             </Button>
+          </section>
+
+          {/* Two-step verification */}
+          <section className="border-t border-separator/40 pt-4">
+            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+              {t("settings.two_factor_heading")}
+            </h2>
+            <Switch
+              icon={<LockIcon size={20} />}
+              label={t("settings.two_factor_label")}
+              description={
+                twoFactorEnabled
+                  ? t("settings.two_factor_help_on")
+                  : t("settings.two_factor_help_off")
+              }
+              checked={twoFactorEnabled}
+              disabled={twoFactorBusy}
+              onChange={handleToggleTwoFactor}
+              divider={false}
+              className="py-0"
+            />
           </section>
 
           {/* Connected accounts */}
@@ -1326,9 +1463,11 @@ export function AccountScreen({
                 <span className="text-caption font-semibold uppercase tracking-wider text-ink-tertiary">
                   {t("settings.sidebar_preview")}
                 </span>
-                <div className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs">
-                  {sortableSidebarOrder.map((tabId, idx) => {
-                    if (sidebarTabs[tabId] === false) return null;
+                <div
+                  ref={previewRef}
+                  className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs"
+                >
+                  {previewTabs.map((tabId, idx) => {
                     const meta = {
                       inbox: {
                         label: t("nav.inbox"),
@@ -1356,6 +1495,7 @@ export function AccountScreen({
                     return (
                       <div
                         key={tabId}
+                        data-flip-key={tabId}
                         className={cx(
                           "flex items-center justify-between px-2.5 py-1.5 rounded-md text-footnote transition-colors",
                           isFirstVisible
@@ -1966,10 +2106,63 @@ export function AccountScreen({
   if (!mounted) return null;
 
   const modal = isDesktop ? desktopModal : phoneModal;
+  const renderedModal =
+    portal && typeof document !== "undefined"
+      ? createPortal(modal, document.body)
+      : modal;
 
-  if (portal && typeof document !== "undefined") {
-    return createPortal(modal, document.body);
-  }
-
-  return modal;
+  return (
+    <>
+      {renderedModal}
+      <Dialog
+        open={twoFactorOffOpen}
+        title={t("settings.two_factor_off_title")}
+        onClose={() => {
+          if (!twoFactorOffBusy) {
+            setTwoFactorOffOpen(false);
+          }
+        }}
+        initialFocusRef={twoFactorPasswordRef}
+        history={false}
+        actions={
+          <>
+            <Button
+              variant="destructive"
+              disabled={twoFactorOffBusy}
+              onClick={handleConfirmTwoFactorOff}
+            >
+              {t("settings.two_factor_off_confirm")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={twoFactorOffBusy}
+              onClick={() => setTwoFactorOffOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+          </>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleConfirmTwoFactorOff();
+          }}
+          className="mt-2"
+        >
+          <PasswordField
+            ref={twoFactorPasswordRef}
+            label={t("settings.current_password")}
+            autoComplete="current-password"
+            value={twoFactorPassword}
+            onChange={(e) => {
+              setTwoFactorPassword(e.target.value);
+              if (twoFactorOffError) setTwoFactorOffError(null);
+            }}
+            error={twoFactorOffError ?? undefined}
+          />
+        </form>
+      </Dialog>
+    </>
+  );
 }
