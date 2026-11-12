@@ -77,7 +77,7 @@ describe("Create account (AA-1)", () => {
     expect((submit as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("T-AA-05: success opens Inbox with the welcome toast", async () => {
+  it("T-AA-05: success opens Welcome without the welcome toast", async () => {
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
@@ -90,10 +90,10 @@ describe("Create account (AA-1)", () => {
       email: "example@gmail.com",
       password: "quiet river 42",
     });
-    expect(router.push).toHaveBeenCalledWith("/");
+    expect(router.push).toHaveBeenCalledWith("/welcome");
     expect(
-      await screen.findByText("Welcome to Agendal. Your account is ready."),
-    ).toBeTruthy();
+      screen.queryByText("Welcome to Agendal. Your account is ready."),
+    ).toBeNull();
   });
 
   it("A11Y-62: shows the server's field error with a Sign in link and focuses the field", async () => {
@@ -135,6 +135,8 @@ describe("Create account (AA-1)", () => {
     const { password } = renderPage();
     const toggle = screen.getByRole("button", { name: "Show password" });
 
+    expect(toggle.getAttribute("tabindex")).toBe("-1");
+    expect(password.getAttribute("aria-keyshortcuts")).toBe("Alt+F8");
     expect(password.getAttribute("type")).toBe("password");
     await user.click(toggle);
     expect(toggle.getAttribute("aria-pressed")).toBe("true");

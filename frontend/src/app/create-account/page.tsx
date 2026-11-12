@@ -8,7 +8,7 @@ import { useAppFrame } from "../AppFrame";
 
 /** Create account (IM-11): POST /auth/register, then Inbox with the welcome toast. */
 export default function CreateAccountPage() {
-  const { navigate, showToast } = useAppFrame();
+  const { navigate } = useAppFrame();
   const offline = useOffline();
 
   async function register(values: {
@@ -27,8 +27,7 @@ export default function CreateAccountPage() {
     }
 
     if (response.ok) {
-      showToast(t("auth.welcome"));
-      navigate(ROUTES.inbox);
+      navigate(ROUTES.welcome);
       return;
     }
     if (response.status === 429) {

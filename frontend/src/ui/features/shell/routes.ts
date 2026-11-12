@@ -11,6 +11,7 @@ export const ROUTES = {
   account: "/account",
   signIn: "/sign-in",
   createAccount: "/create-account",
+  welcome: "/welcome",
   forgotPassword: "/forgot-password",
   resetPassword: "/reset-password",
   note: (id: string) => `/notes/${encodeURIComponent(id)}`,

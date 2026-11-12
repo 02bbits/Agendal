@@ -94,7 +94,7 @@ export function AppShell({
         <main
           className={
             "flex-1 px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
-            "[html:not([data-page-view='full']):not([data-board-view]):not([data-account-page])_&]:mx-auto [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page])_&]:w-full [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none " +
+            "[html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:mx-auto [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:w-full [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none [html[data-auth-page]_&]:p-0 [html[data-auth-page]_&]:max-w-none " +
             (tab ? "pb-[calc(160px+env(safe-area-inset-bottom))]" : "pb-0")
           }
         >

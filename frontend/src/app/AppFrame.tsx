@@ -62,6 +62,8 @@ export interface SignedInUser {
   week_start?: AccountSettings["weekStart"];
   time_format?: AccountSettings["timeFormat"];
   remember_device?: boolean;
+  timezone?: string;
+  timezone_auto?: boolean;
 }
 
 // The settings as `PATCH /me` names them
@@ -70,6 +72,8 @@ const SETTING_FIELDS = {
   weekStart: "week_start",
   timeFormat: "time_format",
   rememberDevice: "remember_device",
+  timezone: "timezone",
+  timezoneAuto: "timezone_auto",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -112,6 +116,8 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timeFormat: "24h",
   rememberDevice: true,
   pageView: "flat",
+  timezone: "UTC",
+  timezoneAuto: true,
 };
 
 const settingsOf = (me: SignedInUser): AccountSettings => {
@@ -128,6 +134,8 @@ const settingsOf = (me: SignedInUser): AccountSettings => {
       localPageView === "full" || localPageView === "flat"
         ? localPageView
         : DEFAULT_SETTINGS.pageView,
+    timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
+    timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
   };
 };
 
@@ -206,6 +214,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
       document.documentElement.removeAttribute("data-account-page");
     }
   }, [pathname]);
+
+  const isAuthPage =
+    PUBLIC_PATHS.includes(pathname) || pathname === ROUTES.welcome;
+  useEffect(() => {
+    if (isAuthPage) {
+      document.documentElement.setAttribute("data-auth-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-auth-page");
+    }
+  }, [isAuthPage]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -355,6 +373,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
           before[key as keyof AccountSettings],
         ]),
       );
+      if (patch.timezone && patch.timezoneAuto === undefined) {
+        patch.timezoneAuto = false;
+      }
       settingsRef.current = { ...before, ...patch };
       setSettings(settingsRef.current);
       if (patch.pageView && typeof window !== "undefined") {
@@ -724,7 +745,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
-          PUBLIC_PATHS.includes(pathname)
+          PUBLIC_PATHS.includes(pathname) || pathname === ROUTES.welcome
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",

@@ -22,6 +22,7 @@ export {
   type CreateAccountScreenProps,
   type SignUpFailure,
 } from "./auth/CreateAccountScreen";
+export { SetupScreen, type SetupScreenProps } from "./auth/SetupScreen";
 export {
   SignInScreen,
   type SignInScreenProps,
