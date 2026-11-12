@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-12
 
+- **Sync (Refs #51, IM-52).** [AP §2.2, §7, §8](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): the first sync downloads in full (`GET /sync?full=1`); writes with no answer queue and stay on the device; `GET /sync` returns notes as Notes-list rows; offline creates replay `POST /tasks` / `POST /projects` before the patch batch (replaces "creates go through the same endpoint"); a project's `deleted` value is `"move"` / `"delete"` / `false`. [PJ §8](03-modules/PJ-projects.md#8-data-validation-and-authorization): the same, and per-field stamps on projects. Proposed copy `task.changed_elsewhere` ("Changed on another device") for the row marker in LV §2 / AP §2.2.
 - **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
 
 ## 2026-11-10
