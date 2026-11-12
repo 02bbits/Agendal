@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { cx } from "../../components/cx";
 import { CheckIcon } from "../../components/icons";
 import { t } from "../../copy";
@@ -7,9 +8,19 @@ import { AuthIllustration } from "./AuthIllustration";
 export interface AuthLayoutProps {
   children: ReactNode;
   framed?: boolean;
+  transitionKey?: string;
+  footerAtBottom?: boolean;
 }
 
-export function AuthLayout({ children, framed = true }: AuthLayoutProps) {
+export function AuthLayout({
+  children,
+  framed = true,
+  transitionKey,
+  footerAtBottom = false,
+}: AuthLayoutProps) {
+  const pathname = usePathname();
+  const key = transitionKey ?? (pathname || undefined);
+
   const brand = (
     <div className="flex items-center justify-center gap-2.5 lg:hidden">
       <span
@@ -66,19 +77,35 @@ export function AuthLayout({ children, framed = true }: AuthLayoutProps) {
         />
 
         <div
+          key={key}
           className={cx(
+            "motion-safe:animate-[auth-rise_260ms_cubic-bezier(.2,.7,.3,1)]",
             "mx-auto flex w-full max-w-[400px] flex-1 flex-col min-h-dvh lg:min-h-0 lg:p-0 lg:flex-initial",
             "pt-[max(3.5rem,calc(env(safe-area-inset-top)+1.5rem))]",
             "pl-[max(1.75rem,env(safe-area-inset-left))]",
             "pr-[max(1.75rem,env(safe-area-inset-right))]",
-            framed ? "pb-[max(1.5rem,env(safe-area-inset-bottom))]" : "pb-0",
+            framed && !footerAtBottom
+              ? "pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+              : "pb-0",
             framed ? "lg:max-w-[400px]" : "lg:max-w-[360px]",
           )}
         >
           {framed ? (
-            <div className="my-auto w-full pb-[min(18vh,140px)] lg:pb-0">
+            <div
+              className={cx(
+                "w-full lg:pb-0",
+                footerAtBottom
+                  ? "flex-1 flex flex-col lg:flex-initial"
+                  : "my-auto pb-[min(18vh,140px)]",
+              )}
+            >
               {brand}
-              <div className="w-full lg:max-w-[400px] lg:rounded-dialog lg:border lg:border-separator lg:bg-surface lg:p-8 lg:shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+              <div
+                className={cx(
+                  "w-full lg:max-w-[400px] lg:rounded-dialog lg:border lg:border-separator lg:bg-surface lg:p-8 lg:shadow-[0_18px_50px_rgba(0,0,0,0.18)]",
+                  footerAtBottom && "flex-1 flex flex-col lg:flex-initial",
+                )}
+              >
                 {children}
               </div>
             </div>
