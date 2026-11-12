@@ -38,10 +38,22 @@ export const DEFAULT_SIDEBAR_TABS_ORDER: TabId[] = [
 export const SIDEBAR_TABS_STORAGE_KEY = "agendal.sidebar_tabs_enabled";
 export const SIDEBAR_TABS_ORDER_KEY = "agendal.sidebar_tabs_order";
 
-export function getStoredSidebarTabs(): Record<TabId, boolean> {
-  if (typeof localStorage === "undefined") return { ...DEFAULT_SIDEBAR_TABS };
+/** Reads a saved setting; null on the server or when storage is blocked. */
+export function readStoredSetting(key: string): string | null {
+  if (typeof localStorage === "undefined") return null;
   try {
-    const raw = localStorage.getItem(SIDEBAR_TABS_STORAGE_KEY);
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+}
+
+export function getStoredSidebarTabs(): Record<TabId, boolean> {
+  return parseSidebarTabs(readStoredSetting(SIDEBAR_TABS_STORAGE_KEY));
+}
+
+export function parseSidebarTabs(raw: string | null): Record<TabId, boolean> {
+  try {
     if (!raw) return { ...DEFAULT_SIDEBAR_TABS };
     const parsed = JSON.parse(raw);
     return {
@@ -56,10 +68,11 @@ export function getStoredSidebarTabs(): Record<TabId, boolean> {
 }
 
 export function getStoredSidebarTabsOrder(): TabId[] {
-  if (typeof localStorage === "undefined")
-    return [...DEFAULT_SIDEBAR_TABS_ORDER];
+  return parseSidebarTabsOrder(readStoredSetting(SIDEBAR_TABS_ORDER_KEY));
+}
+
+export function parseSidebarTabsOrder(raw: string | null): TabId[] {
   try {
-    const raw = localStorage.getItem(SIDEBAR_TABS_ORDER_KEY);
     if (!raw) return [...DEFAULT_SIDEBAR_TABS_ORDER];
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [...DEFAULT_SIDEBAR_TABS_ORDER];

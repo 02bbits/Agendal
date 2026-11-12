@@ -26,6 +26,7 @@ import {
   useMediaQuery,
   applyThemePalette,
   type AccountSettings,
+  type SettingsTab,
   type Navigate,
   type NoteResult,
   type Project,
@@ -307,10 +308,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const openSettings = useCallback(() => {
-    if (pathname !== ROUTES.account) setSettingsOpen(true);
-  }, [pathname]);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | undefined>(
+    undefined,
+  );
+  const openSettings = useCallback(
+    (tab?: SettingsTab) => {
+      if (pathname !== ROUTES.account) {
+        setSettingsTab(tab);
+        setSettingsOpen(true);
+      }
+    },
+    [pathname],
+  );
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    setSettingsTab(undefined);
+  }, []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
   // Closing the editor takes its history entry off with history.back(), which is only done a
@@ -749,6 +762,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
+                email: user?.email ?? "",
+                theme: settings.theme,
+                onThemeChange: (theme) => changeSettings({ theme }),
+                onSignOut: () => signOut(),
                 counts: sidebarCounts,
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
@@ -762,6 +779,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {settingsOpen && pathname !== ROUTES.account && (
           <AccountScreen
             portal={true}
+            initialTab={settingsTab ?? "general"}
             name={user?.display_name ?? ""}
             email={user?.email ?? ""}
             settings={settings}
