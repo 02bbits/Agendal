@@ -43,7 +43,7 @@ final class NoteCorpus
 
     private const DEFAULT_ZONE = 'Asia/Ho_Chi_Minh';
 
-    private const CREATE_FIELDS = ['title', 'due', 'start', 'end', 'priority', 'project', 'repeat', 'reminder', 'notes', 'duplicate_of'];
+    private const CREATE_FIELDS = ['title', 'due', 'start_date', 'start', 'end', 'priority', 'project', 'repeat', 'reminder', 'notes', 'duplicate_of'];
 
     public function __construct(private NoteEngine $engine) {}
 
@@ -249,7 +249,7 @@ final class NoteCorpus
                 }
                 $scores[$metric][] = $actual !== null && ($actual[$metric] ?? null) === $value;
             }
-            foreach (['end' => 'end_time', 'notes' => 'notes', 'duplicate_of' => 'duplicate_of'] as $field => $key) {
+            foreach (['start_date' => 'start_date', 'end' => 'end_time', 'notes' => 'notes', 'duplicate_of' => 'duplicate_of'] as $field => $key) {
                 if (array_key_exists($field, $task)) {
                     $value = $field === 'duplicate_of' && $task[$field] !== null ? $this->id($task[$field]) : $task[$field];
                     $scores['details'][] = $actual !== null && ($actual[$key] ?? null) === $value;

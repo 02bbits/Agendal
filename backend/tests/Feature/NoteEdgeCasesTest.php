@@ -155,3 +155,13 @@ it('keeps a deadline on another day when the start time moves (TK-3)', function 
     $fresh = $task->fresh();
     expect([$fresh->start_time, substr((string) $fresh->due_date, 0, 10), $fresh->due_time])->toBe(['17:00:00', '2026-10-30', '10:00:00']);
 });
+
+it('makes a range a task with a start date and a due date (NU-E42, T-NU-142)', function () {
+    $this->actingAs($this->owner)->postJson('/api/v1/notes', edgeNote('đi bộ từ thứ 2 đến thứ 6 6h'))->assertCreated()
+        ->assertJsonPath('changes.0.task.start_date', '2026-10-26')->assertJsonPath('changes.0.task.due_date', '2026-10-30');
+    $task = Task::firstOrFail();
+    expect($task->title)->toBe('Đi bộ')
+        ->and(substr((string) $task->start_date, 0, 10))->toBe('2026-10-26')
+        ->and(substr((string) $task->due_date, 0, 10))->toBe('2026-10-30')
+        ->and($task->start_time)->toBe('06:00:00');
+});

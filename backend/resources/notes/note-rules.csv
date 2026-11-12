@@ -519,6 +519,14 @@ date_preferred_prefix,on
 date_preferred_prefix,before
 date_preferred_prefix,vào
 date_preferred_prefix,trước
+date_preferred_prefix,hạn
+date_preferred_prefix,hạn chót
+date_start_prefix,from
+date_start_prefix,starting
+date_start_prefix,starting from
+date_start_prefix,từ
+date_start_prefix,bắt đầu
+date_start_prefix,bắt đầu từ
 weekday_this,this
 weekday_this_suffix,này
 weekday_next,next

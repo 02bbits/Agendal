@@ -21,7 +21,7 @@ final class NoteExtractionScenarios
     public const EXTRACTION_ONLY_CATEGORIES = [
         'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
-        'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
+        'date_preferred_prefix', 'date_start_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
     ];
@@ -100,6 +100,7 @@ final class NoteExtractionScenarios
             'file_extension' => [['đọc report_26.10.'.$value.' mai', ['title' => 'Đọc report_26.10.'.$value, 'dueDate' => '2026-10-24'], self::NOW]],
             'span_lead' => [['đọc sách '.$value.' thứ 2', ['title' => 'Đọc sách', 'dueDate' => '2026-10-26'], self::NOW]],
             'date_preferred_prefix' => [['học thứ 2 '.$value.' thứ 7', ['dueDate' => '2026-10-24'], self::NOW]],
+            'date_start_prefix' => [['học '.$value.' thứ 7 hạn thứ 2', ['title' => 'Học', 'startDate' => '2026-10-24', 'dueDate' => '2026-10-26'], self::NOW]],
             'weekday_this' => [['nộp '.$value.' friday', ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_this_suffix' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_next' => [['nộp '.$value.' monday', ['dueDate' => '2026-10-26'], self::NOW]],

@@ -271,9 +271,11 @@ final class NoteRepeatParser
                     $invalid = $invalid || preg_match('~^(?:\s|[,/&-]|and|và|to|through|đến|tới|[2-7])*$~iu', $gap) !== 1;
                 }
                 $spans[] = [$first, $last['offset'] + strlen($last['phrase']) - $first];
-                if (preg_match('~(?:every\s+other|every|mỗi|lặp lại)\s+$~iu', substr($text, 0, $first), $prefix, PREG_OFFSET_CAPTURE) === 1) {
-                    $spans[] = [$prefix[0][1], strlen($prefix[0][0])];
-                    if (str_contains(mb_strtolower($prefix[0][0]), 'other')) {
+                // A part of the day may sit between ("mỗi sáng thứ 2"): it stays for the time parser
+                $dayPart = implode('|', NoteVocabulary::family('time_word'));
+                if (preg_match('~(?<prefix>every\s+other|every|mỗi|lặp lại)\s+(?:(?:'.$dayPart.')\s+)?$~iu', substr($text, 0, $first), $prefix, PREG_OFFSET_CAPTURE) === 1) {
+                    $spans[] = [$prefix['prefix'][1], strlen($prefix['prefix'][0])];
+                    if (str_contains(mb_strtolower($prefix['prefix'][0]), 'other')) {
                         $interval = 2;
                     }
                 }

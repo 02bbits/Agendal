@@ -4,11 +4,15 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+use DateTimeImmutable;
+
 /**
- * Reads an item's due date (NU §2.5). Every candidate keeps its byte offset and length, so the title can drop
- * exactly the words read, however date and time phrases overlap.
+ * Reads an item's due date, and its start date when a date has that role (NU §2.5, NU-E6, NU-E42). Every
+ * candidate keeps its byte offset and length, so the title can drop exactly the words read, however date and
+ * time phrases overlap.
  *
- * @phpstan-type Candidate array{date: ?string, phrase: string, offset: int}
+ * @phpstan-type Candidate array{date: ?string, phrase: string, offset: int, weekday?: bool}
+ * @phpstan-type Read array{date: string, phrase: string, offset: int, weekday?: bool, preferred: bool, start: bool, due: bool}
  */
 final class NoteDateParser
 {
@@ -33,7 +37,7 @@ final class NoteDateParser
             return new ParsedDate(unreadable: true);
         }
         $unreadable = false;
-        $best = null;
+        $read = [];
         foreach ($this->candidates($text, $context, $startTime) as $candidate) {
             $before = substr($text, 0, $candidate['offset']);
             if ($this->endsWith($before, NoteVocabulary::phrases('name_title')) !== null || $candidate['date'] === null) {
@@ -44,12 +48,84 @@ final class NoteDateParser
             }
             // Only by/due/on/before make a date win (NU-E6); a deadline word ("until", "chậm nhất") just leaves the title with it.
             $preferred = $this->endsWith($before, NoteVocabulary::phrases('date_preferred_prefix'));
-            $prefix = $preferred ?? $this->endsWith($before, NoteVocabulary::phrases('deadline_prefix')) ?? '';
-            $candidate = [...$candidate, 'preferred' => $preferred !== null, 'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix)];
+            $deadline = $preferred ?? $this->endsWith($before, NoteVocabulary::phrases('deadline_prefix'));
+            $start = $deadline === null ? $this->endsWith($before, NoteVocabulary::phrases('date_start_prefix')) : null;
+            $prefix = $deadline ?? $start ?? '';
+            $read[] = [
+                ...$candidate, 'preferred' => $preferred !== null, 'due' => $deadline !== null, 'start' => $start !== null,
+                'phrase' => $prefix.$candidate['phrase'], 'offset' => $candidate['offset'] - strlen($prefix),
+            ];
+        }
+        $roles = $this->range($text, $read) ?? $this->marked($read);
+        if ($roles !== null) {
+            [$start, $due, $spans] = $roles;
+
+            return new ParsedDate($due, $spans, $unreadable, $start);
+        }
+        $best = null;
+        foreach ($read as $candidate) {
             $best = $best === null || $this->wins($candidate, $best) ? $candidate : $best;
         }
 
         return new ParsedDate($best['date'] ?? null, $best === null ? [] : [[$best['offset'], strlen($best['phrase'])]], $unreadable);
+    }
+
+    /**
+     * NU-E42: "Mon to Fri", "from 26/10 to 30/10", "từ thứ 2 đến thứ 6": two dates joined by a range word are the
+     * start and the due date. A weekday that comes round before the start means the one after it ("từ thứ 6 đến
+     * thứ 2" ends next Monday).
+     *
+     * @param  list<Read>  $read
+     * @return array{0: string, 1: string, 2: list<array{0: int, 1: int}>}|null start, due, and the one span both cover
+     */
+    private function range(string $text, array $read): ?array
+    {
+        usort($read, fn (array $a, array $b): int => $a['offset'] <=> $b['offset']);
+        $separator = '~^\s*(?:'.NoteVocabulary::phrases('range_separator').')\s*$~iu';
+        foreach ($read as $first) {
+            $firstEnd = $first['offset'] + strlen($first['phrase']);
+            // The next date after this one; overlapping readings of the same words ("thứ 2") don't count
+            $after = array_filter($read, fn (array $candidate): bool => $candidate['offset'] >= $firstEnd);
+            $second = $after === [] ? null : reset($after);
+            if ($second === null || $first['due'] || $second['start']
+                || preg_match($separator, substr($text, $firstEnd, $second['offset'] - $firstEnd)) !== 1) {
+                continue;
+            }
+            $due = $second['date'];
+            if ($due < $first['date'] && ($second['weekday'] ?? false)) {
+                $due = (new DateTimeImmutable($due))->modify('+'.self::DAYS_PER_WEEK.' days')->format('Y-m-d');
+            }
+            if ($due >= $first['date']) {
+                return [$first['date'], $due, [[$first['offset'], $second['offset'] + strlen($second['phrase']) - $first['offset']]]];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * NU-E6: one date after a start word (from, bắt đầu) and one after a deadline word (by, due, hạn) are the start
+     * and the due date, when the start isn't later. A start word alone changes nothing: plain dates stay due dates.
+     *
+     * @param  list<Read>  $read
+     * @return array{0: string, 1: string, 2: list<array{0: int, 1: int}>}|null
+     */
+    private function marked(array $read): ?array
+    {
+        $starts = array_values(array_filter($read, fn (array $candidate): bool => $candidate['start']));
+        $dues = array_values(array_filter($read, fn (array $candidate): bool => $candidate['due']));
+        if (count($starts) !== 1 || $dues === []) {
+            return null;
+        }
+        $due = $dues[0];
+        foreach ($dues as $candidate) {
+            $due = $this->wins($candidate, $due) ? $candidate : $due;
+        }
+        if ($starts[0]['date'] > $due['date']) {
+            return null;
+        }
+
+        return [$starts[0]['date'], $due['date'], [[$starts[0]['offset'], strlen($starts[0]['phrase'])], [$due['offset'], strlen($due['phrase'])]]];
     }
 
     /**
@@ -67,8 +143,8 @@ final class NoteDateParser
     /**
      * NU-E6: a date after by/due/on/before wins, otherwise the later date, otherwise the first one.
      *
-     * @param  array{date: string, phrase: string, offset: int, preferred: bool}  $candidate
-     * @param  array{date: string, phrase: string, offset: int, preferred: bool}  $best
+     * @param  Read  $candidate
+     * @param  Read  $best
      */
     private function wins(array $candidate, array $best): bool
     {
@@ -175,6 +251,7 @@ final class NoteDateParser
                 'date' => $this->daysFromToday($context, $days === 0 && ! $todayAllowed ? self::DAYS_PER_WEEK : $days),
                 'phrase' => $prefix.$phrase.$thisSuffix,
                 'offset' => $offset - strlen($prefix),
+                'weekday' => true,
             ];
         }
 
@@ -195,7 +272,8 @@ final class NoteDateParser
         $patterns = [
             '~(?<![\p{N}])'.$dayWord.'(?<day>\d{1,2})(?:'.$full.')(?<month>\d{1,2})(?:'.$full.')(?<year>\d{4})(?![\p{N}])~iu',
             '~(?<![\p{N}])(?<year>\d{4})(?:'.$full.')(?<month>\d{1,2})(?:'.$full.')(?<day>\d{1,2})(?![\p{N}])~iu',
-            '~(?<![\p{N}])'.$dayWord.'(?<day>\d{1,2})(?:'.$short.')(?<month>\d{1,2})(?![\p{N}])(?!(?:'.$full.')\d)~iu',
+            // Not the day and month of a full date ("26/10/2026"), but one end of a range ("26/11-30/11") is a date.
+            '~(?<![\p{N}])'.$dayWord.'(?<day>\d{1,2})(?:'.$short.')(?<month>\d{1,2})(?![\p{N}])(?!(?:'.$full.')\d{4}(?!\d))~iu',
         ];
         $found = [];
         foreach ($patterns as $pattern) {

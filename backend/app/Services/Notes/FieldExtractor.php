@@ -73,6 +73,9 @@ final class FieldExtractor
                 $date = new ParsedDate(unreadable: true);
             }
         }
+        // A start date read from a range or a start word (NU-E6, NU-E42). ponytail: a repeating task keeps only its
+        // series date; a range with a repeat is read as the repeat, until the spec says how the two combine.
+        $startDate = $repeat['repeat'] === Repeat::Never && ! $repeat['unreadable'] ? $date->start : null;
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
 
         return new ExtractedFields(
@@ -84,11 +87,12 @@ final class FieldExtractor
             priority: $this->priority($readable, $dueDate, $context),
             projectId: $this->project($text, $context),
             repeat: $repeat['repeat'],
-            reminder: $this->reminder($readable, $dueDate, $time->start, $context),
+            reminder: $this->reminder($readable, $startDate ?? $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
                 || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null),
             repeatRule: $repeat['rule'],
             copies: $repeat['copies'] ?? 1,
+            startDate: $startDate,
         );
     }
 
@@ -203,11 +207,14 @@ final class FieldExtractor
         return null;
     }
 
-    /** Exams and quizzes → 1 day before, any time → 15 minutes before; none when that is already past (NU-E25). */
-    private function reminder(string $text, ?string $dueDate, ?string $startTime, NoteContext $context): Reminder
+    /**
+     * Exams and quizzes → 1 day before, any time → 15 minutes before; none when that is already past (NU-E25).
+     * $day is the start date when there is one, as the reminder counts from the start (BR-12).
+     */
+    private function reminder(string $text, ?string $day, ?string $startTime, NoteContext $context): Reminder
     {
         $reminder = match (true) {
-            $dueDate === null => Reminder::None,
+            $day === null => Reminder::None,
             NoteVocabulary::contains('reminder_day_before', $text) => Reminder::OneDay,
             $startTime !== null => Reminder::FifteenMinutes,
             default => Reminder::None,
@@ -215,7 +222,7 @@ final class FieldExtractor
         if ($reminder === Reminder::None) {
             return $reminder;
         }
-        $remindAt = new DateTimeImmutable((string) $this->reminders->compute((string) $dueDate, $startTime, $reminder->value, $context->timezone));
+        $remindAt = new DateTimeImmutable((string) $this->reminders->compute((string) $day, $startTime, $reminder->value, $context->timezone));
 
         return $remindAt < $context->now ? Reminder::None : $reminder;
     }

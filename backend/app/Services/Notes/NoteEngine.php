@@ -200,6 +200,7 @@ final class NoteEngine
             'project_id' => $fields->projectId, 'repeat' => $fields->repeat->value, 'reminder' => $fields->reminder->value,
             'notes' => $fields->notes, 'duplicate_of' => $duplicateOf,
             ...($fields->repeatRule === null ? [] : ['repeat_rule' => $fields->repeatRule]),
+            ...($fields->startDate === null ? [] : ['start_date' => $fields->startDate]),
         ];
     }
 }

@@ -139,12 +139,15 @@ final class NoteTimeParser
         return new ParsedTime($passed ? null : $time, spans: $spans);
     }
 
-    /** A number joined to a date separator and digits belongs to a date ("2.11.2026", "2026-11-02"), not a time. */
+    /**
+     * A number joined to a date separator and digits belongs to a date ("2.11.2026", "2026-11-02"), not a time;
+     * nor does the number of a Vietnamese weekday ("thứ 2 sáng" is Monday morning, not 02:00).
+     */
     private function notInDateBefore(): string
     {
         $separators = array_map(fn (string $separator): string => '(?<!\d'.preg_quote($separator, '~').')', NoteVocabulary::values('full_date_separator'));
 
-        return '(?<![\p{L}\p{N}])'.implode('', $separators);
+        return '(?<![\p{L}\p{N}])(?<!thứ\s)'.implode('', $separators);
     }
 
     private function notInDateAfter(): string
