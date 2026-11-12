@@ -1,4 +1,5 @@
 import { timeZone } from "./clock";
+import { reportFetch } from "./online";
 
 const readXsrf = () => {
   const value = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/)?.[1];
@@ -23,11 +24,19 @@ export async function api(path: string, init: RequestInit = {}) {
     headers.set("X-XSRF-TOKEN", readXsrf() ?? "");
   }
 
-  const response = await fetch(`/api/v1${path}`, {
-    credentials: "same-origin",
-    ...init,
-    headers,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/v1${path}`, {
+      credentials: "same-origin",
+      ...init,
+      headers,
+    });
+  } catch (error) {
+    // No answer at all: the network is down whatever `navigator.onLine` says (AP-E4)
+    if (!init.signal?.aborted) reportFetch(false);
+    throw error;
+  }
+  reportFetch(true);
   // A signed-in call refused: the session ended elsewhere (password changed, expired). Sign-in
   // and sign-out answer 401 as part of their own flow, so they don't count (UX-44)
   if (response.status === 401 && !path.startsWith("/auth/"))

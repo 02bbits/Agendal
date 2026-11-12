@@ -3,6 +3,7 @@ export { TabBar, type TabBarProps } from "./shell/TabBar";
 export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
+export { OfflineBanner } from "./shell/OfflineBanner";
 export {
   AccountScreen,
   type AccountScreenProps,

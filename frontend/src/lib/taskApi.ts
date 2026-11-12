@@ -1,9 +1,17 @@
 import { api } from "./api";
 import { handleResponse } from "./apiError";
+import { putTasks, removeTasks, replaceProjects } from "./localStore";
 import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { SearchFilter } from "../ui/domain/search";
 import type { Project, Task } from "../ui/domain/types";
+
+// Every answer that carries tasks or projects also lands in the device store (IM-51), without
+// waiting for it: the store is a copy, and a failed write mustn't fail the call
+function keep(task: Task): Task {
+  void putTasks([task]);
+  return task;
+}
 
 export interface InboxData {
   overdue: Task[];
@@ -49,12 +57,23 @@ async function postLifecycle<T>(
     body: JSON.stringify({ at }),
   });
 
-  return handleResponse<T>(response);
+  const result = await handleResponse<T & { task: Task; next?: Task }>(
+    response,
+  );
+  void putTasks([result?.task, result?.next]);
+  return result;
 }
 
 export async function inbox(): Promise<InboxData> {
   const response = await api("/tasks?view=inbox");
-  return handleResponse<InboxData>(response);
+  const data = await handleResponse<InboxData>(response);
+  void putTasks([
+    ...(data?.overdue ?? []),
+    ...(data?.today ?? []),
+    ...(data?.no_date ?? []),
+    ...(data?.completed_today ?? []),
+  ]);
+  return data;
 }
 
 export async function upcoming(params?: {
@@ -67,7 +86,9 @@ export async function upcoming(params?: {
   if (params?.days !== undefined) query.set("days", String(params.days));
   if (params?.filter) query.set("filter", params.filter);
   const response = await api(`/tasks?${query.toString()}`);
-  return handleResponse<UpcomingData>(response);
+  const data = await handleResponse<UpcomingData>(response);
+  void putTasks((data?.days ?? []).flatMap((day) => day.tasks));
+  return data;
 }
 
 export async function search(params: {
@@ -84,17 +105,21 @@ export async function search(params: {
   if (params.filter) query.set("filter", params.filter);
   if (params.project_id) query.set("project_id", params.project_id);
   const response = await api(`/tasks/search?${query.toString()}`);
-  return handleResponse<SearchData>(response);
+  const data = await handleResponse<SearchData>(response);
+  void putTasks(data?.items ?? []);
+  return data;
 }
 
 export async function getTask(id: string): Promise<Task> {
   const response = await api(`/tasks/${encodeURIComponent(id)}`);
-  return handleResponse<Task>(response);
+  return keep(await handleResponse<Task>(response));
 }
 
 export async function projects(): Promise<Project[]> {
   const response = await api("/projects");
-  return handleResponse<Project[]>(response);
+  const list = await handleResponse<Project[]>(response);
+  if (Array.isArray(list)) void replaceProjects(list);
+  return list;
 }
 
 export async function patch(
@@ -110,7 +135,7 @@ export async function patch(
     body: JSON.stringify({ ...fields, at }),
   });
 
-  return handleResponse<Task>(response);
+  return keep(await handleResponse<Task>(response));
 }
 
 export async function createTask(body: CreateTaskBody): Promise<Task> {
@@ -122,7 +147,7 @@ export async function createTask(body: CreateTaskBody): Promise<Task> {
     body: JSON.stringify(body),
   });
 
-  return handleResponse<Task>(response);
+  return keep(await handleResponse<Task>(response));
 }
 
 export async function deleteTask(
@@ -133,14 +158,17 @@ export async function deleteTask(
   const response = await api(`/tasks/${encodeURIComponent(id)}${query}`, {
     method: "DELETE",
   });
-  return handleResponse<{ next?: Task } | void>(response);
+  const result = await handleResponse<{ next?: Task } | void>(response);
+  void removeTasks([id]);
+  if (result?.next) void putTasks([result.next]);
+  return result;
 }
 
 export async function restoreTask(id: string): Promise<Task> {
   const response = await api(`/tasks/${encodeURIComponent(id)}/restore`, {
     method: "POST",
   });
-  return handleResponse<Task>(response);
+  return keep(await handleResponse<Task>(response));
 }
 
 export const httpTaskApi: TaskApi = {
