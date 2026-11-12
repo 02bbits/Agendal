@@ -1,5 +1,16 @@
 @import "../ui/theme.css";
 
+@keyframes slide-in-right {
+  from {
+    transform: translateX(24px);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
 /* Sign in, Create account and Setup: a quiet dot grid that fades out, drawn behind the form (#149) */
 .auth-backdrop {
   background-color: var(--color-paper);

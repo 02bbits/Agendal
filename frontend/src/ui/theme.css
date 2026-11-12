@@ -183,6 +183,11 @@
   --text-title: 22px;
   --text-title--line-height: 28px;
   --text-title--letter-spacing: -0.015em;
+  --text-title-2: 22px;
+  --text-title-2--line-height: 28px;
+  --text-title-2--letter-spacing: -0.015em;
+  --text-title-3: 17px;
+  --text-title-3--line-height: 22px;
   --text-dialog: 22px;
   --text-dialog--line-height: 28px;
   --text-dialog--letter-spacing: -0.015em;
