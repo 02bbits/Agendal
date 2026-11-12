@@ -33,6 +33,7 @@ import { ApiRequestError } from "@/lib/apiError";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { headerDate, subscribeHeaderDate } from "../headerDate";
 import { useSyncExternalStore } from "react";
+import { SYNCED } from "@/lib/sync";
 
 const clock: Clock = {
   now,
@@ -221,11 +222,16 @@ export function UpcomingClient() {
     };
 
     window.addEventListener("agendal:task-created", handleTaskCreated);
+
+    // Changes pulled by sync (IM-52)
+
+    window.addEventListener(SYNCED, handleTaskCreated);
     window.addEventListener("agendal:projects-changed", handleProjectsChanged);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("agendal:task-created", handleTaskCreated);
+      window.removeEventListener(SYNCED, handleTaskCreated);
       window.removeEventListener(
         "agendal:projects-changed",
         handleProjectsChanged,

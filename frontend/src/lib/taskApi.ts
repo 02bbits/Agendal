@@ -1,6 +1,7 @@
 import { api } from "./api";
 import { handleResponse } from "./apiError";
 import { putTasks, removeTasks, replaceProjects } from "./localStore";
+import { offlineTask, orQueue } from "./offline";
 import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { SearchFilter } from "../ui/domain/search";
@@ -44,7 +45,16 @@ export interface SearchData {
   next_cursor: string | null;
 }
 
-async function postLifecycle<T>(
+function postLifecycle(id: string, action: "complete" | "reopen", at: string) {
+  const offline = offlineTask.lifecycle(id, action === "complete", at);
+  return orQueue(
+    () => sendLifecycle<{ task: Task; next?: Task }>(id, action, at),
+    offline.entries,
+    offline.local,
+  );
+}
+
+async function sendLifecycle<T>(
   id: string,
   action: "complete" | "reopen",
   at: string,
@@ -122,7 +132,16 @@ export async function projects(): Promise<Project[]> {
   return list;
 }
 
-export async function patch(
+export function patch(id: string, fields: TaskPatch, at: string) {
+  const offline = offlineTask.patch(id, fields, at);
+  return orQueue(
+    () => sendPatch(id, fields, at),
+    offline.entries,
+    offline.local,
+  );
+}
+
+async function sendPatch(
   id: string,
   fields: TaskPatch,
   at: string,
@@ -138,7 +157,12 @@ export async function patch(
   return keep(await handleResponse<Task>(response));
 }
 
-export async function createTask(body: CreateTaskBody): Promise<Task> {
+export function createTask(body: CreateTaskBody) {
+  const offline = offlineTask.create(body);
+  return orQueue(() => sendCreate(body), offline.entries, offline.local);
+}
+
+async function sendCreate(body: CreateTaskBody): Promise<Task> {
   const response = await api("/tasks", {
     method: "POST",
     headers: {
@@ -150,7 +174,16 @@ export async function createTask(body: CreateTaskBody): Promise<Task> {
   return keep(await handleResponse<Task>(response));
 }
 
-export async function deleteTask(
+export function deleteTask(id: string, scope?: DeleteScope) {
+  const offline = offlineTask.remove(id);
+  return orQueue<{ next?: Task } | void>(
+    () => sendDelete(id, scope),
+    offline.entries,
+    offline.local,
+  );
+}
+
+async function sendDelete(
   id: string,
   scope?: DeleteScope,
 ): Promise<{ next?: Task } | void> {
@@ -164,7 +197,12 @@ export async function deleteTask(
   return result;
 }
 
-export async function restoreTask(id: string): Promise<Task> {
+export function restoreTask(id: string) {
+  const offline = offlineTask.restore(id);
+  return orQueue(() => sendRestore(id), offline.entries, offline.local);
+}
+
+async function sendRestore(id: string): Promise<Task> {
   const response = await api(`/tasks/${encodeURIComponent(id)}/restore`, {
     method: "POST",
   });
