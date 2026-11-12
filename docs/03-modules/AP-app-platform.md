@@ -56,6 +56,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - All projects
   - The last 100 notes
   - The edit queue, pending notes and the draft
+  - Until sync ([IM-52](../08-project/tasks.md#im-52)), the device copy fills from list answers and this device's own writes. Lists and the note screen show it first, then the network replaces it. A task deleted on another device stays on this one until the next sync.
 - **Detecting offline:** `navigator.onLine`, plus any failed fetch, because `onLine` can claim a connection that isn't there. The banner `app.offline` shows within 2 s ([UX-40](../01-product/ux-standards.md#ux-40)). An online event or a successful fetch hides it.
 - **Sync ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)):**
   - Runs on open, on reconnect, when the app becomes visible, and every 60 s while visible.
