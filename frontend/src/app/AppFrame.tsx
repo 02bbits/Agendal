@@ -25,6 +25,7 @@ import {
   Toast,
   useMediaQuery,
   applyThemePalette,
+  clearThemePalette,
   type AccountSettings,
   type SettingsTab,
   type Navigate,
@@ -35,7 +36,7 @@ import {
   type ToastData,
 } from "@/ui";
 import { cx } from "@/ui/components/cx";
-import { api, SESSION_EXPIRED } from "@/lib/api";
+import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
@@ -59,12 +60,14 @@ export interface SignedInUser {
   id: number;
   email: string;
   display_name: string | null;
+  email_verified_at?: string | null;
   theme?: AccountSettings["theme"];
   week_start?: AccountSettings["weekStart"];
   time_format?: AccountSettings["timeFormat"];
   remember_device?: boolean;
   timezone?: string;
   timezone_auto?: boolean;
+  two_factor_enabled?: boolean;
 }
 
 // The settings as `PATCH /me` names them
@@ -166,6 +169,8 @@ interface AppFrameValue {
   };
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
+  /** Sets or updates the signed-in user in AppFrame state. */
+  setUser: (user: SignedInUser | null) => void;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
   signOut: (everywhere?: boolean) => Promise<void>;
 }
@@ -201,12 +206,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
             prev.pageView === saved ? prev : { ...prev, pageView: saved },
           );
         });
-        document.documentElement.setAttribute("data-page-view", saved);
-      } else {
-        document.documentElement.setAttribute("data-page-view", "flat");
       }
     } catch {}
   }, []);
+
+  // The page view on <html> follows the settings. Before anything is read, /theme.js has already
+  // set the saved one and the defaults would undo it (sign-out sets "flat" itself)
+  useEffect(() => {
+    if (settings === DEFAULT_SETTINGS) return;
+    document.documentElement.setAttribute(
+      "data-page-view",
+      settings.pageView ?? "flat",
+    );
+  }, [settings]);
 
   useEffect(() => {
     if (pathname === ROUTES.account) {
@@ -217,7 +229,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [pathname]);
 
   const isAuthPage =
-    PUBLIC_PATHS.includes(pathname) || pathname === ROUTES.welcome;
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname === ROUTES.welcome ||
+    pathname === ROUTES.verify;
   useEffect(() => {
     if (isAuthPage) {
       document.documentElement.setAttribute("data-auth-page", "true");
@@ -251,7 +265,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
           setUser(me);
           if (settingsEdits.current === editsBefore)
             setSettings(settingsOf(me));
-          if (signedOutPage) router.replace(ROUTES.inbox);
+          if (me.email_verified_at === null) {
+            if (pathname !== ROUTES.verify) router.replace(ROUTES.verify);
+          } else {
+            if (pathname === ROUTES.verify) router.replace(ROUTES.inbox);
+            else if (signedOutPage) router.replace(ROUTES.inbox);
+          }
         } else if (response.status === 401) {
           setUser(null);
           if (!publicPage)
@@ -265,6 +284,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       current = false;
     };
   }, [pathname, router, setUser]);
+
+  // An unverified account can only stay on /verify. The way out of /verify for a verified user is
+  // the session check above, so a code accepted on /verify can still open Setup, not Inbox
+  useEffect(() => {
+    if (user?.email_verified_at === null && pathname !== ROUTES.verify)
+      router.replace(ROUTES.verify);
+  }, [user, pathname, router]);
+
+  // A 403 with code auth.email_unverified from any API call replaces to /verify
+  useEffect(() => {
+    const unverified = () => {
+      if (pathname !== ROUTES.verify) {
+        router.replace(ROUTES.verify);
+      }
+    };
+    window.addEventListener(EMAIL_UNVERIFIED, unverified);
+    return () => window.removeEventListener(EMAIL_UNVERIFIED, unverified);
+  }, [pathname, router]);
 
   // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
   // that tab's root instead of out of the app (AP §2.4)
@@ -394,10 +431,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
       if (patch.pageView && typeof window !== "undefined") {
         try {
           localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
-          document.documentElement.setAttribute(
-            "data-page-view",
-            patch.pageView,
-          );
         } catch {}
       }
       const body = Object.fromEntries(
@@ -441,6 +474,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
+      clearThemePalette();
+      document.documentElement.setAttribute("data-page-view", "flat");
       forgetNotes();
       clearRecent();
       setUser(null);
@@ -470,6 +505,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // Appearance: System leaves data-theme off so daisyUI follows the device setting. The choice is
   // also kept for /theme.js, which applies it before the next first paint (AP-3)
   useEffect(() => {
+    try {
+      const palette = localStorage.getItem("agendal.theme_palette");
+      if (palette) applyThemePalette(palette);
+      else clearThemePalette();
+    } catch {}
     settingsRef.current = settings;
     // Until /me answers or the user picks one, these are only defaults and would undo what
     // /theme.js applied
@@ -486,8 +526,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
     try {
       localStorage.setItem(THEME_KEY, settings.theme);
-      const palette = localStorage.getItem("agendal.theme_palette");
-      if (palette) applyThemePalette(palette);
     } catch {
       // Private mode: the theme just flashes on the next load
     }
@@ -546,6 +584,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     }),
     [
@@ -561,6 +600,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     ],
   );
@@ -758,7 +798,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
-          PUBLIC_PATHS.includes(pathname) || pathname === ROUTES.welcome
+          PUBLIC_PATHS.includes(pathname) ||
+          pathname === ROUTES.welcome ||
+          pathname === ROUTES.verify
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
@@ -785,6 +827,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
             settings={settings}
             onChange={changeSettings}
             onBack={closeSettings}
+            showToast={showToast}
+            twoFactorEnabled={user?.two_factor_enabled}
+            onTwoFactorChange={(enabled) =>
+              setUser(user ? { ...user, two_factor_enabled: enabled } : null)
+            }
             onSignOut={() => {
               closeSettings();
               signOut();
