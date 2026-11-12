@@ -9,6 +9,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 use App\Support\Audit;
+use App\Support\CurrentPasswordGuard;
 use App\Support\NewPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,11 +40,7 @@ class ChangePasswordController extends Controller
         $password = (string) $request->input('password');
         $passwordConfirmation = (string) $request->input('password_confirmation');
 
-        if (! Hash::check($currentPassword, (string) $user->password)) {
-            throw new ApiError('auth.current_password_wrong', "That's not your current password.", 422, [
-                'current_password' => ["That's not your current password."],
-            ]);
-        }
+        CurrentPasswordGuard::assertCorrect($user, $currentPassword);
 
         $passwordValidator = Validator::make(
             ['password' => $password],
@@ -61,8 +58,8 @@ class ChangePasswordController extends Controller
         }
 
         if ($passwordConfirmation !== $password) {
-            throw new ApiError('auth.password_mismatch', "Passwords don't match.", 422, [
-                'password_confirmation' => ["Passwords don't match."],
+            throw new ApiError('auth.password_mismatch', "New passwords don't match.", 422, [
+                'password_confirmation' => ["New passwords don't match."],
             ]);
         }
 

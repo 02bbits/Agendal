@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Auth\ChangePasswordController;
+use App\Http\Controllers\Auth\CheckPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
@@ -23,7 +24,8 @@ Route::post('/auth/forgot-password', ForgotPasswordController::class)->middlewar
 Route::post('/auth/reset-password', ResetPasswordController::class)->middleware('throttle:reset-password');
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::post('auth/change-password', ChangePasswordController::class)->middleware('throttle:change-password');
+    Route::post('auth/change-password', ChangePasswordController::class);
+    Route::post('auth/check-password', CheckPasswordController::class);
     Route::get('me', [MeController::class, 'show']);
     Route::patch('me', [MeController::class, 'update']);
     Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');

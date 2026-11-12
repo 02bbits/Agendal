@@ -87,7 +87,9 @@ it('validates each password rule and breach check', function () {
         'current_password' => 'old password 1',
         'password' => 'new password 1',
         'password_confirmation' => 'different password 1',
-    ])->assertStatus(422)->assertJsonPath('error.code', 'auth.password_mismatch');
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'auth.password_mismatch')
+        ->assertJsonPath('error.fields.password_confirmation.0', "New passwords don't match.");
 
     // Breached
     $suffix = substr(strtoupper(sha1('breached password 1')), 5);
@@ -125,19 +127,89 @@ it('successfully changes the password, keeps this session, ends other sessions, 
     asDevice($other)->getJson('/api/v1/me')->assertUnauthorized();
 });
 
-it('throttles attempts after 5 per 15 minutes', function () {
+it('returns 401 on check-password when signed out', function () {
+    asDevice()->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertUnauthorized();
+});
+
+it('checks current password returning 204 when correct and 422 when wrong or invalid', function () {
     $device = signInDevice();
-    foreach (range(1, 5) as $i) {
+
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'wrong password',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'auth.current_password_wrong')
+        ->assertJsonPath('error.fields.current_password.0', "That's not your current password.");
+
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => '',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'error.invalid');
+
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertNoContent();
+});
+
+// Replaces the old "throttles attempts after 5 per 15 minutes" test (old "6th attempt is 429" test).
+it('throttles after 5 wrong tries across check and change, then returns 429 even with correct password with Retry-After set', function () {
+    $device = signInDevice();
+
+    // 3 wrong check-password tries
+    foreach (range(1, 3) as $i) {
+        asDevice($device)->postJson('/api/v1/auth/check-password', [
+            'current_password' => 'wrong-pass-'.$i,
+        ])->assertStatus(422);
+    }
+
+    // 2 wrong change-password tries (total 5 wrong tries)
+    foreach (range(4, 5) as $i) {
         asDevice($device)->postJson('/api/v1/auth/change-password', [
-            'current_password' => 'wrong-pass',
+            'current_password' => 'wrong-pass-'.$i,
             'password' => 'new password 42',
             'password_confirmation' => 'new password 42',
         ])->assertStatus(422);
     }
 
-    asDevice($device)->postJson('/api/v1/auth/change-password', [
-        'current_password' => 'wrong-pass',
+    // 6th attempt (even with right password) is 429 with Retry-After header set
+    $response = asDevice($device)->postJson('/api/v1/auth/change-password', [
+        'current_password' => 'old password 1',
         'password' => 'new password 42',
         'password_confirmation' => 'new password 42',
-    ])->assertStatus(429);
+    ])->assertStatus(429)
+        ->assertJsonPath('error.code', 'error.rate_limited')
+        ->assertHeader('Retry-After');
+
+    expect($response->headers->get('Retry-After'))->not->toBeNull();
+
+    // check-password also returns 429
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertStatus(429)
+        ->assertJsonPath('error.code', 'error.rate_limited')
+        ->assertHeader('Retry-After');
+});
+
+it('clears rate limiter on a correct password check', function () {
+    $device = signInDevice();
+
+    // 4 wrong attempts
+    foreach (range(1, 4) as $i) {
+        asDevice($device)->postJson('/api/v1/auth/check-password', [
+            'current_password' => 'wrong-pass-'.$i,
+        ])->assertStatus(422);
+    }
+
+    // A correct check clears the counter
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertNoContent();
+
+    // Now user has 5 fresh wrong tries available without 429
+    foreach (range(1, 4) as $i) {
+        asDevice($device)->postJson('/api/v1/auth/check-password', [
+            'current_password' => 'wrong-pass-again-'.$i,
+        ])->assertStatus(422);
+    }
 });

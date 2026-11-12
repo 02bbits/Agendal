@@ -63,7 +63,6 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('search', fn (Request $request) => Limit::perMinute(60)->by('search:'.$perUser($request)));
         RateLimiter::for('search-notes', fn (Request $request) => Limit::perMinute(60)->by('search-notes:'.$perUser($request)));
         RateLimiter::for('sync', fn (Request $request) => Limit::perMinute(30)->by('sync:'.$perUser($request)));
-        RateLimiter::for('change-password', fn (Request $request) => Limit::perMinutes(15, 5)->by('change-password:'.$perUser($request)));
 
         // The reset link opens the app, with the token in the fragment so it never reaches a
         // server log or a Referer (AA §2.3)
