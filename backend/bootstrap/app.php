@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Middleware\AssignRequestId;
+use App\Http\Middleware\EnsureEmailVerified;
+use App\Http\Middleware\ForgetSessionCookieAfterSignOut;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncTimezone;
 use Illuminate\Auth\AuthenticationException;
@@ -25,10 +27,14 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AssignRequestId::class);
         $middleware->append(SecurityHeaders::class);
+        $middleware->append(ForgetSessionCookieAfterSignOut::class);
         // Sanctum SPA cookie sessions (ADR-007)
         $middleware->statefulApi();
         $middleware->throttleApi(); // NF-13: the 'api' limiter
         $middleware->appendToGroup('api', SyncTimezone::class);
+        $middleware->alias([
+            'verified-email' => EnsureEmailVerified::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // SC-21: the database message repeats the row's values (note and task text), so log the SQL only
