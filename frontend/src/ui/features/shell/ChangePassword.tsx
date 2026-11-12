@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
@@ -13,11 +13,7 @@ export interface ChangePasswordProps {
   showToast?: (message: string) => void;
 }
 
-export function ChangePassword({
-  email,
-  onBack,
-  showToast,
-}: ChangePasswordProps) {
+export function ChangePassword({ email, onBack }: ChangePasswordProps) {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -27,19 +23,33 @@ export function ChangePassword({
   const [confirmError, setConfirmError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const [currentStatus, setCurrentStatus] = useState<
+    "unchecked" | "checking" | "verified"
+  >("unchecked");
+  const checkingRef = useRef(false);
+  const lastCheckedValRef = useRef<string | null>(null);
 
   const currentRef = useRef<HTMLInputElement>(null);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
 
+  useEffect(() => {
+    if (success) {
+      successHeadingRef.current?.focus();
+    }
+  }, [success]);
+
+  const hasNew = newPassword.length > 0;
   const len = [...newPassword].length;
-  const ruleLength = len >= 8 && len <= 128;
+  const ruleLength = hasNew && len >= 8 && len <= 128;
   const ruleNotEmail =
-    newPassword.length > 0 &&
-    newPassword.toLowerCase() !== email.trim().toLowerCase();
+    hasNew && newPassword.toLowerCase() !== email.trim().toLowerCase();
   const hasCurrent = currentPassword.length > 0;
-  const ruleNotCurrent = hasCurrent && newPassword !== currentPassword;
+  const ruleNotCurrent =
+    hasCurrent && hasNew && newPassword !== currentPassword;
 
-  const allRulesPass =
-    ruleLength && ruleNotEmail && (!hasCurrent || ruleNotCurrent);
+  const allRulesPass = ruleLength && ruleNotEmail && ruleNotCurrent;
 
   const confirmHasValue = confirmPassword.length > 0;
   const confirmMatch = confirmHasValue && confirmPassword === newPassword;
@@ -58,6 +68,53 @@ export function ChangePassword({
           : score === 4
             ? t("auth.strength_strong")
             : undefined;
+
+  async function handleCurrentBlur() {
+    const val = currentPassword;
+    if (
+      !val ||
+      checkingRef.current ||
+      (currentStatus === "verified" && lastCheckedValRef.current === val)
+    ) {
+      return;
+    }
+    if (lastCheckedValRef.current === val && currentError) {
+      return;
+    }
+    checkingRef.current = true;
+    setCurrentStatus("checking");
+
+    try {
+      const response = await api("/auth/check-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ current_password: val }),
+      });
+      lastCheckedValRef.current = val;
+
+      if (response.status === 204 || response.ok) {
+        setCurrentStatus("verified");
+        setCurrentError(undefined);
+      } else if (response.status === 422) {
+        setCurrentStatus("unchecked");
+        setCurrentError(t("auth.current_password_wrong"));
+      } else if (response.status === 429) {
+        setCurrentStatus("unchecked");
+        const data = await response.json().catch(() => null);
+        const seconds =
+          data?.error?.retry_after ??
+          response.headers.get("Retry-After") ??
+          "60";
+        setCurrentError(t("error.rate_limited", { seconds: String(seconds) }));
+      } else {
+        setCurrentStatus("unchecked");
+      }
+    } catch {
+      setCurrentStatus("unchecked");
+    } finally {
+      checkingRef.current = false;
+    }
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -89,11 +146,10 @@ export function ChangePassword({
     setBusy(false);
 
     if (response.ok) {
-      showToast?.(t("auth.password_changed"));
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      onBack();
+      setSuccess(true);
       return;
     }
 
@@ -126,6 +182,35 @@ export function ChangePassword({
     );
   }
 
+  if (success) {
+    return (
+      <div
+        role="status"
+        className="py-10 flex flex-col items-center text-center gap-3 max-w-[420px]"
+      >
+        <div
+          className="size-14 rounded-full bg-success-tint text-success flex items-center justify-center motion-safe:animate-scale-in"
+          aria-hidden="true"
+        >
+          <CheckIcon size={28} />
+        </div>
+        <h2
+          ref={successHeadingRef}
+          tabIndex={-1}
+          className="m-0 text-title-3 font-semibold text-ink outline-none"
+        >
+          {t("settings.password_changed_title")}
+        </h2>
+        <p className="m-0 text-footnote text-ink-secondary">
+          {t("settings.password_changed_body", { email })}
+        </p>
+        <Button variant="primary" onClick={onBack}>
+          {t("common.done")}
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <form
       onSubmit={submit}
@@ -146,10 +231,13 @@ export function ChangePassword({
           autoComplete="current-password"
           value={currentPassword}
           error={currentError}
+          onBlur={handleCurrentBlur}
           onChange={(e) => {
             setCurrentPassword(e.target.value);
             setCurrentError(undefined);
             setFormError(undefined);
+            setCurrentStatus("unchecked");
+            lastCheckedValRef.current = null;
           }}
         />
       </div>
@@ -209,24 +297,22 @@ export function ChangePassword({
             </span>
           </li>
 
-          {hasCurrent && (
-            <li className="flex items-center gap-2">
-              <span
-                className={cx(
-                  "size-3.5 inline-flex items-center justify-center rounded-full transition-all motion-safe:duration-150",
-                  ruleNotCurrent
-                    ? "bg-success text-white motion-safe:scale-100 opacity-100"
-                    : "border border-control opacity-70",
-                )}
-                aria-hidden="true"
-              >
-                {ruleNotCurrent && <CheckIcon size={10} strokeWidth={3} />}
-              </span>
-              <span className={cx(ruleNotCurrent && "text-ink font-medium")}>
-                {t("auth.rule_not_current")}
-              </span>
-            </li>
-          )}
+          <li className="flex items-center gap-2">
+            <span
+              className={cx(
+                "size-3.5 inline-flex items-center justify-center rounded-full transition-all motion-safe:duration-150",
+                ruleNotCurrent
+                  ? "bg-success text-white motion-safe:scale-100 opacity-100"
+                  : "border border-control opacity-70",
+              )}
+              aria-hidden="true"
+            >
+              {ruleNotCurrent && <CheckIcon size={10} strokeWidth={3} />}
+            </span>
+            <span className={cx(ruleNotCurrent && "text-ink font-medium")}>
+              {t("auth.rule_not_current")}
+            </span>
+          </li>
         </ul>
 
         {/* Strength bar */}

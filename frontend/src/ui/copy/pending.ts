@@ -416,11 +416,18 @@ export const pending = {
   "auth.strength_strong": "Strong",
   "auth.strength_hint":
     "Longer is stronger. Capitals, numbers or symbols help too.",
-  "auth.password_mismatch": "Passwords don't match.",
-  "auth.password_match": "Passwords match",
+  "auth.password_mismatch": "New passwords don't match.",
+  "auth.password_match": "New passwords match",
   "auth.current_password_wrong": "That's not your current password.",
   "auth.password_same_as_current":
     "Your new password must be different from the current one.",
+  "settings.theme": "Theme",
+  "settings.password_changed_title": "Password changed",
+  "settings.password_changed_body":
+    "Your other devices were signed out. We sent a note to {email}.",
+  "settings.group_preferences": "Preferences",
+  "settings.group_tasks": "Tasks and alerts",
+  "settings.group_data": "Data and apps",
 } as const;
 
 export type PendingKey = keyof typeof pending;
