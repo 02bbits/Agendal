@@ -41,6 +41,8 @@ final class ProjectDeleter
         return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso): array {
             $project->deleted_at = $nowIso;
             $project->updated_at = $now;
+            // `deleted` is a field too (ADR-004): a stale sync patch can't undo this
+            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $nowIso];
             $project->save();
 
             if ($tasks->isEmpty()) {
@@ -95,6 +97,8 @@ final class ProjectDeleter
         return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso): Project {
             $project->deleted_at = null;
             $project->updated_at = $now;
+            // `deleted` is a field too (ADR-004): a stale sync patch can't undo this
+            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $nowIso];
             $project->save();
 
             if ($mode === 'move') {

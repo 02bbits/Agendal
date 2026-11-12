@@ -13,8 +13,10 @@ use App\Models\Project;
 use App\Services\Clock\ClockInterface;
 use App\Services\Projects\ProjectCounts;
 use App\Services\Projects\ProjectDeleter;
+use App\Services\Projects\ProjectPatcher;
 use App\Services\Projects\ProjectTaskLists;
 use Carbon\Carbon;
+use DateTimeZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,6 +29,7 @@ class ProjectController extends Controller
         private readonly ProjectCounts $projectCounts,
         private readonly ProjectTaskLists $projectTaskLists,
         private readonly ProjectDeleter $projectDeleter,
+        private readonly ProjectPatcher $projectPatcher,
     ) {}
 
     public function index(): JsonResponse
@@ -136,6 +139,12 @@ class ProjectController extends Controller
         }
 
         $project->updated_at = Carbon::instance($clock->now());
+        // Per-field stamps, so a sync patch made earlier offline doesn't undo this (ADR-004)
+        $this->projectPatcher->stamp(
+            $project,
+            array_values(array_intersect(['name', 'colour'], array_keys($request->all()))),
+            $clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z'),
+        );
         $project->save();
 
         $this->projectCounts->load(collect([$project]));
@@ -200,19 +209,6 @@ class ProjectController extends Controller
 
     private function ensureNameAvailable(string $name, ?string $ignoreProjectId = null): void
     {
-        $query = Project::query()
-            ->whereNull('deleted_at')
-            ->whereRaw('lower(name) = lower(?)', [$name]);
-
-        if ($ignoreProjectId !== null) {
-            $query->whereKeyNot($ignoreProjectId);
-        }
-
-        $existingWithName = $query->first();
-
-        if ($existingWithName) {
-            $message = "You already have a project called “{$existingWithName->name}”.";
-            throw new ApiError('project.name_taken', $message, 422, ['name' => [$message]]);
-        }
+        ProjectPatcher::ensureNameAvailable($name, $ignoreProjectId);
     }
 }

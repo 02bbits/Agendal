@@ -37,6 +37,18 @@ class Note extends Model
         return $this->exists ? $this->plan_version + 1 : 1;
     }
 
+    /**
+     * The note as the Notes list shows it (`GET /notes` items, `GET /sync` notes).
+     *
+     * @return array<string, mixed>
+     */
+    public function listRow(): array
+    {
+        $kinds = array_count_values(array_column($this->plan['changes'] ?? [], 'kind'));
+
+        return ['id' => $this->id, 'status' => $this->status, 'name' => $this->name, 'excerpt' => mb_substr($this->text, 0, 140), 'written_at' => $this->written_at->format(DATE_ATOM), 'edited_at' => $this->edited_at?->format(DATE_ATOM), 'source_file_name' => $this->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
+    }
+
     public function freshTimestamp(): Carbon
     {
         return Carbon::instance(app(ClockInterface::class)->now());
