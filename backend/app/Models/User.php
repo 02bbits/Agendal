@@ -25,9 +25,11 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'email_verified_at' => 'immutable_datetime',
             'timezone_auto' => 'boolean',
             'remember_device' => 'boolean',
             'install_prompt_shown' => 'boolean',
+            'two_factor_enabled' => 'boolean',
             'password' => 'hashed',
         ];
     }

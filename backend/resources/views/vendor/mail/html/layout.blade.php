@@ -104,6 +104,11 @@ color: #EDEDED !important;
 .panel-content p {
 color: #EDEDED !important;
 }
+
+.code-box {
+background-color: #1A1A1A !important;
+color: #EDEDED !important;
+}
 }
 
 [data-ogsc] body,

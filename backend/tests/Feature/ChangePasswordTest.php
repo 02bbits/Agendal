@@ -21,12 +21,14 @@ beforeEach(function () {
     $this->user = User::factory()->create(['email' => 'example@gmail.com', 'password' => 'old password 1']);
 });
 
-function asDevice(array $cookies = []): TestCase
-{
-    newRequest();
-    (fn () => $this->defaultCookies = $this->unencryptedCookies = [])->call(test()->target);
+if (! function_exists('asDevice')) {
+    function asDevice(array $cookies = []): TestCase
+    {
+        newRequest();
+        (fn () => $this->defaultCookies = $this->unencryptedCookies = [])->call(test()->target);
 
-    return test()->withCookies($cookies);
+        return test()->withCookies($cookies);
+    }
 }
 
 function signInDevice(string $email = 'example@gmail.com', string $password = 'old password 1'): array

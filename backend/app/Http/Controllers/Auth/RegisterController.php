@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\EmailVerification;
 use App\Support\Audit;
 use App\Support\NewPassword;
 use Illuminate\Http\JsonResponse;
@@ -16,7 +17,7 @@ use Illuminate\Support\Str;
 // AA-1: create the account and sign in on this device (AA §2.1)
 class RegisterController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, EmailVerification $emailVerification): JsonResponse
     {
         $input = [
             'email' => Str::lower(trim((string) $request->input('email'))), // AA-E1
@@ -47,6 +48,7 @@ class RegisterController extends Controller
             'timezone' => $input['timezone'],
         ]);
         Auth::guard('web')->login($user, remember: true);
+        $emailVerification->send($user);
         Audit::log($request, 'sign_up', $user->id);
 
         return response()->json(['user' => $user], 201);
