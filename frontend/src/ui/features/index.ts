@@ -24,11 +24,19 @@ export {
   type CreateAccountScreenProps,
   type SignUpFailure,
 } from "./auth/CreateAccountScreen";
+export {
+  VerifyEmailScreen,
+  type VerifyEmailScreenProps,
+  type VerifyResult,
+  type ResendResult,
+} from "./auth/VerifyEmailScreen";
 export { SetupScreen, type SetupScreenProps } from "./auth/SetupScreen";
 export {
   SignInScreen,
   type SignInScreenProps,
   type SignInFailure,
+  type SignInResult,
+  type TwoFactorState,
 } from "./auth/SignInScreen";
 export {
   ForgotPasswordScreen,

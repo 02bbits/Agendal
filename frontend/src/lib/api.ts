@@ -7,6 +7,8 @@ const readXsrf = () => {
 
 /** Fired on `window` when a signed-in call answers 401. */
 export const SESSION_EXPIRED = "agendal:session-expired";
+/** Fired on `window` when an API call answers 403 with auth.email_unverified. */
+export const EMAIL_UNVERIFIED = "agendal:email-unverified";
 
 // Every API call goes through here, so the server always has the device zone (ADR-006),
 // and every write carries the CSRF token from Sanctum's XSRF-TOKEN cookie (ADR-007)
@@ -32,5 +34,16 @@ export async function api(path: string, init: RequestInit = {}) {
   // and sign-out answer 401 as part of their own flow, so they don't count (UX-44)
   if (response.status === 401 && !path.startsWith("/auth/"))
     window.dispatchEvent(new Event(SESSION_EXPIRED));
+  if (response.status === 403) {
+    response
+      .clone()
+      .json()
+      .then((body) => {
+        if (body?.error?.code === "auth.email_unverified") {
+          window.dispatchEvent(new Event(EMAIL_UNVERIFIED));
+        }
+      })
+      .catch(() => {});
+  }
   return response;
 }

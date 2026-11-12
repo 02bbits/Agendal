@@ -27,7 +27,7 @@ export default function CreateAccountPage() {
     }
 
     if (response.ok) {
-      navigate(ROUTES.welcome);
+      navigate(ROUTES.verify);
       return;
     }
     if (response.status === 429) {

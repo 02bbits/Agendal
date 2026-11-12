@@ -90,7 +90,7 @@ describe("Create account (AA-1)", () => {
       email: "example@gmail.com",
       password: "quiet river 42",
     });
-    expect(router.push).toHaveBeenCalledWith("/welcome");
+    expect(router.push).toHaveBeenCalledWith("/verify");
     expect(
       screen.queryByText("Welcome to Agendal. Your account is ready."),
     ).toBeNull();
