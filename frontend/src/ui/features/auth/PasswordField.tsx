@@ -7,7 +7,7 @@ import {
 } from "react";
 import { t } from "../../copy";
 import { IconButton } from "../../components/IconButton";
-import { EyeIcon, EyeOffIcon } from "../../components/icons";
+import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "../../components/icons";
 import { TextField, type TextFieldProps } from "../../components/TextField";
 
 export type PasswordFieldProps = Omit<TextFieldProps, "type" | "trailing">;
@@ -98,9 +98,15 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           <p
             role="status"
             aria-live="polite"
-            className="m-0 mt-1.5 flex items-center gap-1.5 text-footnote text-error"
+            className="m-0 mt-1.5 flex items-start gap-1.5 text-footnote text-ink-secondary"
           >
-            {warningText}
+            {/* A heads-up, not an error: one quiet line, the icon carries the colour */}
+            <AlertCircleIcon
+              size={16}
+              aria-hidden
+              className="mt-px shrink-0 text-error"
+            />
+            <span>{warningText}</span>
           </p>
         )}
       </div>

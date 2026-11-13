@@ -12,29 +12,19 @@ describe("PasswordField - Vietnamese typing and Caps Lock warnings (issue #149)"
 
     // Type ASCII
     await user.type(input, "secret123");
-    expect(
-      screen.queryByText(
-        /Vietnamese typing is on: this password has accented letters/i,
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(/Turn off Vietnamese typing/i)).toBeNull();
 
     // Type Vietnamese accented letters
     await user.clear(input);
     await user.type(input, "mật");
     expect(
-      screen.getByText(
-        "Vietnamese typing is on: this password has accented letters. Turn off Unikey (Ctrl+Shift) or show the password to check.",
-      ),
+      screen.getByText("Turn off Vietnamese typing (Ctrl+Shift)."),
     ).toBeTruthy();
 
     // Clear and type ASCII again
     await user.clear(input);
     await user.type(input, "password");
-    expect(
-      screen.queryByText(
-        /Vietnamese typing is on: this password has accented letters/i,
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(/Turn off Vietnamese typing/i)).toBeNull();
   });
 
   it("shows the Caps Lock warning on keydown when CapsLock modifier is active, and clears on blur", () => {

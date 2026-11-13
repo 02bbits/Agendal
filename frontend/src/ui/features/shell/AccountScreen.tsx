@@ -88,6 +88,7 @@ export interface AccountSettings {
   timeFormat: TimeFormat;
   rememberDevice: boolean;
   pageView?: PageViewMode;
+  palette?: string;
   timezone?: string;
   timezoneAuto?: boolean;
 }
@@ -308,15 +309,6 @@ export function AccountScreen({
   });
   const [smartDateRecognition, setSmartDateRecognition] = useState(true);
   const [syncTheme, setSyncTheme] = useState(true);
-  const [activePalette, setActivePalette] = useState(() => {
-    try {
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.theme_palette") || "default"
-        : "default";
-    } catch {
-      return "default";
-    }
-  });
   const [showTaskCounts, setShowTaskCounts] = useState(() => {
     try {
       return typeof localStorage !== "undefined"
@@ -641,7 +633,9 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "account"
               ? "opacity-100"
-              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              : isDesktop
+                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
+                : "hidden",
           )}
         >
           {/* Plan */}
@@ -671,8 +665,8 @@ export function AccountScreen({
               >
                 {displayName ? displayName.slice(0, 1).toUpperCase() : "T"}
               </span>
-              <div className="flex flex-col gap-1.5">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-2">
                   <Button variant="secondary" size="sm" className="rounded-lg">
                     {t("settings.change_photo")}
                   </Button>
@@ -683,11 +677,8 @@ export function AccountScreen({
                     {t("settings.remove_photo")}
                   </button>
                 </div>
-                <p className="m-0 text-caption text-ink-tertiary">
+                <p className="m-0 text-footnote text-ink-secondary">
                   {t("settings.photo_max_size")}
-                </p>
-                <p className="m-0 text-caption text-ink-tertiary">
-                  {t("settings.photo_public")}
                 </p>
               </div>
             </div>
@@ -706,9 +697,9 @@ export function AccountScreen({
               onChange={(e) => setDisplayName(e.target.value)}
               onBlur={handleNameBlur}
               placeholder={t("settings.name_placeholder")}
-              className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-callout text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
+              className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-body text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
             />
-            <div className="mt-1 text-right text-caption text-ink-tertiary">
+            <div className="mt-1 text-right text-footnote text-ink-secondary">
               {displayName.length}/255
             </div>
           </section>
@@ -718,7 +709,7 @@ export function AccountScreen({
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
               {t("settings.email_heading")}
             </h2>
-            <p className="m-0 mb-2.5 text-callout text-ink font-medium">
+            <p className="m-0 mb-2.5 text-body text-ink font-medium break-words [overflow-wrap:anywhere]">
               {email}
             </p>
             <Button variant="secondary" size="sm" className="rounded-lg">
@@ -752,11 +743,6 @@ export function AccountScreen({
             <Switch
               icon={<LockIcon size={20} />}
               label={t("settings.two_factor_label")}
-              description={
-                twoFactorEnabled
-                  ? t("settings.two_factor_help_on")
-                  : t("settings.two_factor_help_off")
-              }
               checked={twoFactorEnabled}
               disabled={twoFactorBusy}
               onChange={handleToggleTwoFactor}
@@ -767,19 +753,10 @@ export function AccountScreen({
 
           {/* Connected accounts */}
           <section className="border-t border-separator/40 pt-4">
-            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
+            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
               {t("settings.connected_accounts_heading")}
             </h2>
-            <p className="m-0 text-footnote text-ink-secondary mb-2">
-              {t("settings.connected_accounts_desc")}
-            </p>
-            <p className="m-0 text-footnote text-ink-secondary mb-3">
-              {t("settings.connected_login_as", { email })}
-            </p>
-            <p className="m-0 text-caption text-ink-tertiary mb-3">
-              {t("settings.connected_password_notice")}
-            </p>
-            <div className="flex flex-col gap-2 max-w-[320px]">
+            <div className="flex flex-col gap-2 w-full lg:max-w-[320px]">
               <Button
                 variant="secondary"
                 size="sm"
@@ -848,7 +825,9 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "general"
               ? "opacity-100"
-              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              : isDesktop
+                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
+                : "hidden",
           )}
         >
           {/* Language */}
@@ -974,7 +953,6 @@ export function AccountScreen({
                 label={t("app.week_start")}
                 value={settings.weekStart}
                 onChange={(weekStart) => onChange({ weekStart })}
-                helperText={t("settings.week_start_help")}
                 roleMode="radio"
                 options={[
                   { value: "mon", label: t("app.week_mon") },
@@ -1017,19 +995,6 @@ export function AccountScreen({
                 ]}
               />
 
-              {/* Karma notice */}
-              <p className="m-0 text-caption text-ink-secondary pt-1">
-                {t("settings.date_time_karma_notice")}{" "}
-                <button
-                  type="button"
-                  onClick={() => setTab("productivity")}
-                  className="text-primary hover:underline font-medium cursor-pointer"
-                >
-                  {t("settings.tab_productivity")}
-                </button>
-                .
-              </p>
-
               {/* Page view setting */}
               <div className="pt-2">
                 <SelectDropdown
@@ -1048,50 +1013,31 @@ export function AccountScreen({
 
               {/* Smart date recognition */}
               <div className="pt-2">
-                <div className="flex items-center justify-between py-1">
-                  <div>
-                    <span className="block text-callout font-semibold text-ink">
-                      {t("settings.smart_date_recognition")}
-                    </span>
-                    <p className="m-0 text-caption text-ink-tertiary mt-0.5">
-                      {t("settings.smart_date_recognition_help")}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Switch
-                      label={t("settings.smart_date_recognition")}
-                      checked={smartDateRecognition}
-                      onChange={setSmartDateRecognition}
-                      className="border-b-0 py-0"
-                    />
-                    <span className="text-footnote font-medium text-ink w-8">
-                      {smartDateRecognition
-                        ? t("settings.on")
-                        : t("settings.off")}
-                    </span>
-                  </div>
-                </div>
+                <Switch
+                  label={t("settings.smart_date_recognition")}
+                  description={t("settings.smart_date_recognition_help")}
+                  checked={smartDateRecognition}
+                  onChange={setSmartDateRecognition}
+                  divider={false}
+                  className="py-0"
+                />
               </div>
             </div>
           </div>
 
           {/* Device */}
           <div className="border-t border-separator/40 pt-4 space-y-2">
-            <div className="flex items-center justify-between py-1">
-              <span className="text-callout font-semibold text-ink">
-                {t("app.remember_device")}
-              </span>
-              <Switch
-                label={t("app.remember_device")}
-                checked={settings.rememberDevice}
-                onChange={(rememberDevice) => onChange({ rememberDevice })}
-                className="border-b-0 py-0"
-              />
-            </div>
+            <Switch
+              label={t("app.remember_device")}
+              checked={settings.rememberDevice}
+              onChange={(rememberDevice) => onChange({ rememberDevice })}
+              divider={false}
+              className="py-0"
+            />
             {onInstall && (
               <button
                 type="button"
-                className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-10 w-full items-center gap-3 py-1.5 text-left text-callout text-ink hover:bg-fill/40 rounded-lg px-2"
+                className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-11 w-full items-center gap-3 py-1.5 text-left text-body text-ink hover:bg-fill/40 rounded-lg px-2"
                 onClick={onInstall}
               >
                 <span
@@ -1116,7 +1062,9 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "theme"
               ? "opacity-100"
-              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
+              : isDesktop
+                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
+                : "hidden",
           )}
         >
           {/* Description */}
@@ -1132,17 +1080,13 @@ export function AccountScreen({
           </p>
 
           {/* Sync theme toggle */}
-          <div className="flex items-center gap-3">
-            <Switch
-              label={t("settings.sync_theme")}
-              checked={syncTheme}
-              onChange={setSyncTheme}
-              className="border-b-0 py-0"
-            />
-            <span className="text-callout font-medium text-ink">
-              {t("settings.sync_theme")}
-            </span>
-          </div>
+          <Switch
+            label={t("settings.sync_theme")}
+            checked={syncTheme}
+            onChange={setSyncTheme}
+            divider={false}
+            className="py-0"
+          />
 
           {/* Appearance Segmented Pill */}
           <section className="space-y-2.5">
@@ -1173,7 +1117,7 @@ export function AccountScreen({
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
               {ALL_THEME_PALETTES.map((item) => {
-                const isCurrent = activePalette === item.id;
+                const isCurrent = (settings.palette ?? "default") === item.id;
                 const isRippling = ripplingId === item.id;
                 return (
                   <div
@@ -1186,8 +1130,8 @@ export function AccountScreen({
                         );
                       }, 500);
                       runThemeTransition(e, () => {
-                        setActivePalette(item.id);
                         applyThemePalette(item.id);
+                        onChange({ palette: item.id });
                       });
                     }}
                     className={cx(
@@ -1290,8 +1234,8 @@ export function AccountScreen({
 
               {/* Browser permission diagnostic */}
               <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-callout font-medium text-ink">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-body font-normal text-ink lg:text-callout lg:font-medium">
                     {t("app.browser_permission")}
                   </span>
                   <span
@@ -1340,8 +1284,8 @@ export function AccountScreen({
 
               {/* VAPID Server Status */}
               <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                <div className="flex items-center justify-between">
-                  <span className="text-callout font-medium text-ink">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-body font-normal text-ink lg:text-callout lg:font-medium">
                     {t("app.server_push_service")}
                   </span>
                   <span
@@ -1408,11 +1352,11 @@ export function AccountScreen({
               <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
                 {t("settings.reminders_permission_heading")}
               </h2>
-              <div className="flex items-center justify-between rounded-xl border border-separator/40 bg-fill/30 p-4">
-                <span className="text-callout text-ink">
+              <div className="flex items-center justify-between rounded-xl border border-separator/40 bg-fill/30 p-4 min-h-11">
+                <span className="text-body text-ink min-w-0 flex-1">
                   {t("settings.reminders_system_label")}
                 </span>
-                <span className="text-footnote font-semibold text-ink-secondary">
+                <span className="text-footnote font-semibold text-ink-secondary shrink-0">
                   {remindersStatus ?? "Allowed"}
                 </span>
               </div>
@@ -1425,38 +1369,24 @@ export function AccountScreen({
           <div className="space-y-6 max-w-[620px]">
             {/* Task counts setting */}
             <section className="space-y-3">
-              <div className="flex items-center justify-between py-1">
-                <div>
-                  <span className="block text-callout font-semibold text-ink">
-                    {t("settings.sidebar_show_task_counts")}
-                  </span>
-                  <p className="m-0 text-caption text-ink-tertiary mt-0.5">
-                    {t("settings.sidebar_show_task_counts_desc")}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Switch
-                    label={t("settings.sidebar_show_task_counts")}
-                    checked={showTaskCounts}
-                    onChange={(checked) => {
-                      setShowTaskCounts(checked);
-                      try {
-                        localStorage.setItem(
-                          "agendal.sidebar_task_counts",
-                          String(checked),
-                        );
-                        window.dispatchEvent(
-                          new Event("agendal:sidebar_counts_changed"),
-                        );
-                      } catch {}
-                    }}
-                    className="border-b-0 py-0"
-                  />
-                  <span className="text-footnote font-medium text-ink w-8">
-                    {showTaskCounts ? t("settings.on") : t("settings.off")}
-                  </span>
-                </div>
-              </div>
+              <Switch
+                label={t("settings.sidebar_show_task_counts")}
+                checked={showTaskCounts}
+                onChange={(checked) => {
+                  setShowTaskCounts(checked);
+                  try {
+                    localStorage.setItem(
+                      "agendal.sidebar_task_counts",
+                      String(checked),
+                    );
+                    window.dispatchEvent(
+                      new Event("agendal:sidebar_counts_changed"),
+                    );
+                  } catch {}
+                }}
+                divider={false}
+                className="py-0"
+              />
 
               {/* Interactive Example Preview Mockup */}
               <div className="rounded-xl border border-separator/50 bg-fill/20 p-4 space-y-2.5">
@@ -1527,17 +1457,17 @@ export function AccountScreen({
             </section>
 
             <section>
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
                 <h2 className="text-overline uppercase font-semibold text-ink-secondary">
                   {t("settings.sidebar_nav_heading")}
                 </h2>
                 <button
                   type="button"
                   onClick={resetSidebarNavigation}
-                  className="focus-ring inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-caption font-medium text-ink-secondary hover:text-ink hover:bg-fill/40 transition-colors cursor-pointer"
+                  className="focus-ring inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2 py-1 text-footnote font-medium text-ink-secondary hover:text-ink hover:bg-fill/40 transition-colors cursor-pointer"
                   title={t("settings.reset_default")}
                 >
-                  <RotateCcwIcon size={13} />
+                  <RotateCcwIcon size={14} />
                   <span>{t("settings.reset_default")}</span>
                 </button>
               </div>
@@ -1688,16 +1618,20 @@ export function AccountScreen({
               <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
                 {t("settings.backups_heading")}
               </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4 flex items-center justify-between">
+              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div>
-                  <p className="text-callout font-medium text-ink mb-1">
+                  <p className="text-body font-normal text-ink lg:text-callout lg:font-medium mb-1">
                     {t("settings.export_data_title")}
                   </p>
-                  <p className="text-caption text-ink-secondary m-0">
+                  <p className="text-footnote text-ink-secondary lg:text-caption m-0">
                     {t("settings.export_data_desc")}
                   </p>
                 </div>
-                <Button variant="secondary" size="sm" className="rounded-lg">
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="rounded-lg w-full lg:w-auto"
+                >
                   {t("settings.export_json")}
                 </Button>
               </div>
@@ -1955,11 +1889,11 @@ export function AccountScreen({
       role="dialog"
       aria-modal="true"
       aria-label={t("settings.title")}
-      className="fixed inset-0 z-[100] flex flex-col bg-paper"
+      className="fixed inset-0 z-[100] flex flex-col bg-paper h-dvh max-h-dvh"
     >
       {phoneView === "list" ? (
         <>
-          <div className="flex h-14 items-center justify-end px-2 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
+          <div className="flex min-h-14 items-center justify-end px-2 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
             <button
               type="button"
               onClick={handleClose}
@@ -1973,7 +1907,7 @@ export function AccountScreen({
           </div>
           <div
             key="settings-list"
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1rem))]"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]"
           >
             <h1 className="px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
               {t("settings.title")}
@@ -2072,7 +2006,7 @@ export function AccountScreen({
         </>
       ) : (
         <>
-          <div className="relative flex h-14 items-center px-1 bg-paper/90 backdrop-blur border-b border-separator pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
+          <div className="relative flex min-h-14 items-center px-1 bg-paper/90 backdrop-blur border-b border-separator pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
             <button
               type="button"
               onClick={backToList}
@@ -2094,7 +2028,7 @@ export function AccountScreen({
           </div>
           <div
             key={`${activeTabId}-${subView ?? ""}`}
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-[max(2rem,calc(env(safe-area-inset-bottom)+1rem))] motion-safe:animate-[slide-in-right_220ms_ease-out]"
+            className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))] motion-safe:animate-[slide-in-right_220ms_ease-out]"
           >
             {renderTabContent(activeTabId)}
           </div>

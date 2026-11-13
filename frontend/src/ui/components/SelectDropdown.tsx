@@ -87,7 +87,7 @@ export function SelectDropdown<T extends string>({
 
   return (
     <div ref={containerRef} className={cx("relative space-y-1.5", className)}>
-      <label className="block text-callout font-semibold text-ink">
+      <label className="block text-body font-normal text-ink lg:text-callout lg:font-semibold">
         {label}
       </label>
       <div className="relative">
@@ -195,7 +195,9 @@ export function SelectDropdown<T extends string>({
         )}
       </div>
       {helperText && (
-        <p className="m-0 text-caption text-ink-tertiary">{helperText}</p>
+        <p className="m-0 mt-1 text-footnote text-ink-secondary lg:text-caption lg:text-ink-tertiary">
+          {helperText}
+        </p>
       )}
     </div>
   );
