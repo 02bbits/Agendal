@@ -79,17 +79,19 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     await userEvent.click(addButton);
 
     expect(onCreate).toHaveBeenCalledTimes(1);
+    // The chip sets the start date; there is no due date until the user adds one (#154)
     expect(sentBody).toMatchObject({
       title: "Call mum",
-      due_date: TODAY,
+      start_date: TODAY,
       priority: "medium",
     });
+    expect(sentBody?.due_date).toBeUndefined();
     expect(sentBody?.id).toMatch(
       /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
   });
 
-  it("sets correct due_date for each chip and handles date picking (T-NC-51)", async () => {
+  it("sets the start date for each chip and handles date picking (T-NC-51, #154)", async () => {
     const cases: Array<[string, string | undefined]> = [
       ["Today", TODAY],
       ["Tomorrow", "2026-10-24"],
@@ -106,10 +108,11 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
 
       const { sheet } = await renderSheet({ onCreate });
       await userEvent.type(within(sheet).getByLabelText("Title"), "Task");
-      await userEvent.click(radio("Due", chipName));
+      await userEvent.click(radio("Start date", chipName));
       await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
 
-      expect(sentBody?.due_date).toBe(expectedDate);
+      expect(sentBody?.start_date).toBe(expectedDate);
+      expect(sentBody?.due_date).toBeUndefined();
       cleanup();
     }
 
@@ -121,7 +124,7 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     });
     const { sheet } = await renderSheet({ onCreate: onCreatePick });
     await userEvent.type(within(sheet).getByLabelText("Title"), "Dentist");
-    await userEvent.click(radio("Due", "Pick date…"));
+    await userEvent.click(radio("Start date", "Pick date…"));
     const day = within(sheet).getByRole("spinbutton", { name: "Day" });
     const month = within(sheet).getByRole("spinbutton", { name: "Month" });
     const year = within(sheet).getByRole("spinbutton", { name: "Year" });
@@ -136,10 +139,10 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     fireEvent.keyDown(year, { key: "6" });
     fireEvent.keyDown(year, { key: "Enter" });
     await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
-    expect(sentPickBody?.due_date).toBe("2026-11-12");
+    expect(sentPickBody?.start_date).toBe("2026-11-12");
   }, 15000);
 
-  it("opens with initialDueDate, showing Pick date with 05/11/2026 and Add sends due_date (Section 7)", async () => {
+  it("opens with initialStartDate, showing Pick date with 05/11/2026 and Add sends it as the start date (Section 7, #154)", async () => {
     let sentBody: CreateTaskBody | undefined;
     const onCreate = vi.fn(async (body: CreateTaskBody) => {
       sentBody = body;
@@ -147,10 +150,10 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     });
 
     const { sheet } = await renderSheet({
-      initialDueDate: "2026-11-05",
+      initialStartDate: "2026-11-05",
       onCreate,
     });
-    expect(radio("Due", "Pick date…").getAttribute("aria-checked")).toBe(
+    expect(radio("Start date", "Pick date…").getAttribute("aria-checked")).toBe(
       "true",
     );
 
@@ -163,13 +166,14 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
 
     await userEvent.type(within(sheet).getByLabelText("Title"), "Meet friend");
     await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
-    expect(sentBody?.due_date).toBe("2026-11-05");
+    expect(sentBody?.start_date).toBe("2026-11-05");
+    expect(sentBody?.due_date).toBeUndefined();
   });
 
-  it("closing without typing does not confirm discard when initialDueDate is set (Section 7)", async () => {
+  it("closing without typing does not confirm discard when initialStartDate is set (Section 7)", async () => {
     const onClose = vi.fn();
     const { sheet } = await renderSheet({
-      initialDueDate: "2026-11-05",
+      initialStartDate: "2026-11-05",
       onClose,
     });
     await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
@@ -180,29 +184,37 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
   it("cancelling Pick date… keeps the previous chip selected (NC-E16)", async () => {
     const { sheet } = await renderSheet();
     // Default is Today
-    expect(radio("Due", "Today").getAttribute("aria-checked")).toBe("true");
+    expect(radio("Start date", "Today").getAttribute("aria-checked")).toBe(
+      "true",
+    );
 
     // Select Pick date…
-    await userEvent.click(radio("Due", "Pick date…"));
-    expect(radio("Due", "Pick date…").getAttribute("aria-checked")).toBe(
+    await userEvent.click(radio("Start date", "Pick date…"));
+    expect(radio("Start date", "Pick date…").getAttribute("aria-checked")).toBe(
       "true",
     );
     const day = within(sheet).getByRole("spinbutton", { name: "Day" });
 
     // Cancel by blurring without picking a date
     fireEvent.blur(day);
-    expect(radio("Due", "Today").getAttribute("aria-checked")).toBe("true");
+    expect(radio("Start date", "Today").getAttribute("aria-checked")).toBe(
+      "true",
+    );
 
     // Change to Tomorrow, then select Pick date… and cancel via blur
-    await userEvent.click(radio("Due", "Tomorrow"));
-    expect(radio("Due", "Tomorrow").getAttribute("aria-checked")).toBe("true");
-    await userEvent.click(radio("Due", "Pick date…"));
+    await userEvent.click(radio("Start date", "Tomorrow"));
+    expect(radio("Start date", "Tomorrow").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    await userEvent.click(radio("Start date", "Pick date…"));
     const day2 = within(sheet).getByRole("spinbutton", { name: "Day" });
     fireEvent.blur(day2);
-    expect(radio("Due", "Tomorrow").getAttribute("aria-checked")).toBe("true");
+    expect(radio("Start date", "Tomorrow").getAttribute("aria-checked")).toBe(
+      "true",
+    );
   });
 
-  it("priority follows due chip until user explicitly selects a priority", async () => {
+  it("priority follows the start chip until user explicitly selects a priority", async () => {
     await renderSheet({ pathname: "/" });
     // Due Today -> Priority Medium
     expect(radio("Priority", "Medium").getAttribute("aria-checked")).toBe(
@@ -210,11 +222,11 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     );
 
     // Due Tomorrow -> Priority Low
-    await userEvent.click(radio("Due", "Tomorrow"));
+    await userEvent.click(radio("Start date", "Tomorrow"));
     expect(radio("Priority", "Low").getAttribute("aria-checked")).toBe("true");
 
     // Due Today -> Priority Medium
-    await userEvent.click(radio("Due", "Today"));
+    await userEvent.click(radio("Start date", "Today"));
     expect(radio("Priority", "Medium").getAttribute("aria-checked")).toBe(
       "true",
     );
@@ -224,7 +236,7 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(radio("Priority", "High").getAttribute("aria-checked")).toBe("true");
 
     // Changing due to Tomorrow should now leave priority as High
-    await userEvent.click(radio("Due", "Tomorrow"));
+    await userEvent.click(radio("Start date", "Tomorrow"));
     expect(radio("Priority", "High").getAttribute("aria-checked")).toBe("true");
   });
 
@@ -359,16 +371,28 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("due time disabled with the No date chip", async () => {
+  it("start time is disabled with the No date chip", async () => {
     const { sheet } = await renderSheet({ pathname: "/" });
-    await userEvent.click(radio("Due", "No date"));
-    const dueTimePicker = within(sheet).getByRole("button", {
-      name: "Due time",
+    await userEvent.click(radio("Start date", "No date"));
+    const startTimePicker = within(sheet).getByRole("button", {
+      name: "Start time",
     }) as HTMLButtonElement;
-    expect(dueTimePicker.disabled).toBe(true);
+    expect(startTimePicker.disabled).toBe(true);
   });
 
-  it("choosing start date + start time + due time sends start_date, start_time, due_date, due_time in the create body", async () => {
+  it("Upcoming starts tomorrow; Projects start with no date (#154)", async () => {
+    await renderSheet({ pathname: "/upcoming" });
+    expect(radio("Start date", "Tomorrow").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+    cleanup();
+    await renderSheet({ pathname: "/projects/p1" });
+    expect(radio("Start date", "No date").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+  });
+
+  it("start time, an added due date and due time all go in the create body (#154)", async () => {
     let sentBody: CreateTaskBody | undefined;
     const onCreate = vi.fn(async (body: CreateTaskBody) => {
       sentBody = body;
@@ -379,41 +403,33 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     const { sheet } = await renderSheet({ today: currentToday, onCreate });
     await userEvent.type(within(sheet).getByLabelText("Title"), "Timed task");
 
-    // Due time
-    const dueTimePicker = within(sheet).getByRole("button", {
-      name: "Due time",
-    });
-    await userEvent.click(dueTimePicker);
-    await userEvent.click(screen.getByRole("option", { name: "17:00" }));
-
-    // Start date
-    const startDatePicker = within(sheet).getByRole("button", {
-      name: "Start date",
-    });
-    await userEvent.click(startDatePicker);
-    await userEvent.click(screen.getByRole("button", { name: "Today" }));
-
-    // Start time
-    const startTimePicker = within(sheet).getByRole("button", {
-      name: "Start",
-    });
-    await userEvent.click(startTimePicker);
+    // Start: Today (the Inbox default), 09:00
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "Start time" }),
+    );
     await userEvent.click(screen.getByRole("option", { name: "09:00" }));
 
-    // Add task
+    // The due date is shown straight away, empty
+    await userEvent.click(within(sheet).getByRole("button", { name: "Due" }));
+    await userEvent.click(screen.getByRole("button", { name: "Today" }));
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "Due time" }),
+    );
+    await userEvent.click(screen.getByRole("option", { name: "17:00" }));
+
     await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
 
     expect(onCreate).toHaveBeenCalledTimes(1);
     expect(sentBody).toMatchObject({
       title: "Timed task",
-      due_date: currentToday,
-      due_time: "17:00",
       start_date: currentToday,
       start_time: "09:00",
+      due_date: currentToday,
+      due_time: "17:00",
     });
   });
 
-  it("start after due disables Add and shows the error", async () => {
+  it("a due date before the start disables Add and shows the error", async () => {
     const currentToday = getToday();
     const { sheet } = await renderSheet({ today: currentToday });
     const addButton = within(sheet).getByRole("button", {
@@ -422,18 +438,49 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     await userEvent.type(within(sheet).getByLabelText("Title"), "Meeting");
     expect(addButton.disabled).toBe(false);
 
-    // Pick Start date as Tomorrow while Due is Today
-    const startDatePicker = within(sheet).getByRole("button", {
-      name: "Start date",
-    });
-    await userEvent.click(startDatePicker);
-    await userEvent.click(screen.getByRole("button", { name: "Tomorrow" }));
+    // Start tomorrow, due today
+    await userEvent.click(radio("Start date", "Tomorrow"));
+    await userEvent.click(within(sheet).getByRole("button", { name: "Due" }));
+    await userEvent.click(screen.getByRole("button", { name: "Today" }));
 
-    // Error is displayed and Add is disabled
     const errorEl = within(sheet).getByRole("alert");
     expect(errorEl.textContent).toBe("Start can't be after the due date.");
     expect(errorEl.id).toBe("new-task-dates-error");
     expect(addButton.disabled).toBe(true);
+  });
+
+  it("a repeat with No date starts today and is sent; New task has no reminder (#154)", async () => {
+    let sentBody: CreateTaskBody | undefined;
+    const onCreate = vi.fn(async (body: CreateTaskBody) => {
+      sentBody = body;
+      return {} as Task;
+    });
+    const { sheet } = await renderSheet({ pathname: "/projects/p1", onCreate });
+    await userEvent.type(within(sheet).getByLabelText("Title"), "Standup");
+
+    // Reminders are set in task details, not here
+    expect(
+      within(sheet).queryByRole("button", { name: "Reminder" }),
+    ).toBeNull();
+
+    await userEvent.click(
+      within(sheet).getByRole("button", { name: "Repeat" }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: "Every weekday (Mon–Fri)" }),
+    );
+    expect(radio("Start date", "Today").getAttribute("aria-checked")).toBe(
+      "true",
+    );
+
+    await userEvent.click(within(sheet).getByRole("button", { name: "Add" }));
+
+    expect(sentBody).toMatchObject({
+      start_date: TODAY,
+      repeat: "weekly",
+      repeat_rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
+    });
+    expect(sentBody?.reminder).toBeUndefined();
   });
 
   it("is axe clean in both themes", async () => {

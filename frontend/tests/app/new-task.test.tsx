@@ -142,7 +142,9 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
     const sheet1 = screen.getByRole("dialog", { name: "New task" });
-    const dueGroup1 = within(sheet1).getByRole("radiogroup", { name: "Due" });
+    const dueGroup1 = within(sheet1).getByRole("radiogroup", {
+      name: "Start date",
+    });
     const priorityGroup1 = within(sheet1).getByRole("radiogroup", {
       name: "Priority",
     });
@@ -167,7 +169,9 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
     const sheet2 = screen.getByRole("dialog", { name: "New task" });
-    const dueGroup2 = within(sheet2).getByRole("radiogroup", { name: "Due" });
+    const dueGroup2 = within(sheet2).getByRole("radiogroup", {
+      name: "Start date",
+    });
     const priorityGroup2 = within(sheet2).getByRole("radiogroup", {
       name: "Priority",
     });
@@ -186,7 +190,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     ).toBe("true");
   });
 
-  it("pick 'Pick date', type 0,3 / 1,1 / 2,0,2,6, press Enter: form not submitted, focuses Pick date chip, Add creates task with due_date 2026-11-03", async () => {
+  it("pick 'Pick date', type 0,3 / 1,1 / 2,0,2,6, press Enter: form not submitted, focuses Pick date chip, Add creates task with start_date 2026-11-03 (#154)", async () => {
     renderPage("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
@@ -224,8 +228,9 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     await waitFor(() => {
       expect(lastRequestBody).toMatchObject({
         title: "Doctor appointment",
-        due_date: "2026-11-03",
+        start_date: "2026-11-03",
       });
+      expect(lastRequestBody?.due_date).toBeUndefined();
     });
   });
 

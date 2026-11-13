@@ -26,7 +26,8 @@ export function DueChips({
   return (
     <div className="flex flex-col gap-3">
       <ChipGroup<DueChip>
-        label={t("task.due")}
+        // The chips set the start date, the task's main date (#154)
+        label={t("task.start_date")}
         showLabel
         options={options}
         value={value}

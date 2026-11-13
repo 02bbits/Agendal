@@ -12,6 +12,7 @@ import {
 } from "../../../domain/newTask";
 import type { CopyKey } from "../../../copy";
 import { startAfterDue } from "../../../domain/edit";
+import type { RepeatValue } from "../../../domain/repeatPresets";
 import type { Priority } from "../../../domain/types";
 import { saveErrorMessage } from "../saveError";
 import type { NewTaskSheetProps } from "./types";
@@ -19,37 +20,41 @@ import type { NewTaskSheetProps } from "./types";
 export function useNewTaskForm({
   pathname = "/",
   today,
-  initialDueDate,
+  initialStartDate,
   onCreate,
   onAdded,
   onClose,
 }: Pick<
   NewTaskSheetProps,
-  "pathname" | "today" | "initialDueDate" | "onCreate" | "onAdded" | "onClose"
+  "pathname" | "today" | "initialStartDate" | "onCreate" | "onAdded" | "onClose"
 >) {
   const todayDate = today ?? getToday();
   const defaults = defaultsFor(pathname);
-  const initial = initialDueDate
-    ? chipForDate(initialDueDate, todayDate)
+  const initial = initialStartDate
+    ? chipForDate(initialStartDate, todayDate)
     : null;
-  const startingDue = initial ? initial.chip : defaults.chip;
+  // The date chips set the START date: every way of creating a task gives it a start date the
+  // way it used to give it a due date. The due date is optional and added by hand (#154).
+  const startingChip = initial ? initial.chip : defaults.chip;
   const startingPicked = initial ? initial.picked : "";
 
   const [title, setTitle] = useState("");
-  const [due, setDue] = useState<DueChip>(startingDue);
+  const [chip, setChip] = useState<DueChip>(startingChip);
   const [picked, setPicked] = useState(startingPicked);
-  const initialDueDateValue = dueDateFor(
-    startingDue,
-    todayDate,
-    startingPicked,
-  );
   const [priority, setPriority] = useState<Priority>(
-    defaultPriority(initialDueDateValue, todayDate),
+    defaultPriority(
+      dueDateFor(startingChip, todayDate, startingPicked),
+      todayDate,
+    ),
   );
   const [priorityTouched, setPriorityTouched] = useState(false);
-  const [dueTime, setDueTime] = useState("");
-  const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [dueDate, setDueDate] = useState("");
+  const [dueTime, setDueTime] = useState("");
+  const [repeat, setRepeat] = useState<RepeatValue>({
+    repeat: "never",
+    repeat_rule: null,
+  });
   const [projectId, setProjectId] = useState<string | null>(
     defaults.projectId ?? null,
   );
@@ -58,24 +63,27 @@ export function useNewTaskForm({
   const [formError, setFormError] = useState<string | undefined>();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
 
-  const previousDueRef = useRef<DueChip>(startingDue);
+  const previousChipRef = useRef<DueChip>(startingChip);
   const idRef = useRef(uuidv7());
 
   const hasInput =
     title.length > 0 ||
-    due !== startingDue ||
+    chip !== startingChip ||
     priorityTouched ||
     (projectId !== null && projectId !== (defaults.projectId ?? null)) ||
     picked !== startingPicked ||
+    startTime !== "" ||
+    dueDate !== "" ||
     dueTime !== "" ||
-    startDate !== "";
+    repeat.repeat !== "never";
 
-  const dueDate = dueDateFor(due, todayDate, picked);
+  // Pick date with nothing picked yet counts as no date
+  const startDate = dueDateFor(chip, todayDate, picked) || null;
   // A time only counts with its date; start must be before due (TK-3).
   const dates = {
-    start_date: startDate || null,
+    start_date: startDate,
     start_time: (startDate && startTime) || null,
-    due_date: dueDate,
+    due_date: dueDate || null,
     due_time: (dueDate && dueTime) || null,
   };
   const datesError: CopyKey | null = startAfterDue(dates)
@@ -85,32 +93,49 @@ export function useNewTaskForm({
   const trimmedTitle = title.trim();
   const valid =
     trimmedTitle.length > 0 &&
-    (due !== "pick" || picked !== "") &&
+    (chip !== "pick" || picked !== "") &&
     datesError === null;
 
-  const updatePriorityFromDue = (targetDue: DueChip, targetPicked = picked) => {
+  const updatePriorityFromStart = (
+    targetChip: DueChip,
+    targetPicked = picked,
+  ) => {
     if (!priorityTouched) {
-      const nextDate = dueDateFor(targetDue, todayDate, targetPicked);
+      const nextDate = dueDateFor(targetChip, todayDate, targetPicked);
       setPriority(defaultPriority(nextDate, todayDate));
     }
   };
 
-  const handleDueChange = (nextDue: DueChip) => {
-    if (nextDue !== "pick") {
-      previousDueRef.current = nextDue;
+  const handleChipChange = (nextChip: DueChip) => {
+    if (nextChip !== "pick") {
+      previousChipRef.current = nextChip;
     }
-    setDue(nextDue);
-    updatePriorityFromDue(nextDue);
+    setChip(nextChip);
+    if (nextChip === "none") setStartTime("");
+    updatePriorityFromStart(nextChip);
   };
 
   const handlePickedChange = (nextPicked: string) => {
     setPicked(nextPicked);
-    updatePriorityFromDue("pick", nextPicked);
+    updatePriorityFromStart("pick", nextPicked);
   };
 
   const handleCancelPick = () => {
-    setDue(previousDueRef.current);
-    updatePriorityFromDue(previousDueRef.current);
+    setChip(previousChipRef.current);
+    updatePriorityFromStart(previousChipRef.current);
+  };
+
+  const handleDueDateChange = (value: string) => {
+    setDueDate(value);
+    if (!value) setDueTime("");
+  };
+
+  // A repeat needs a date to start from: with none, the task starts today (#154)
+  const handleRepeatChange = (value: RepeatValue) => {
+    setRepeat(value);
+    if (value.repeat !== "never" && !startDate && !dueDate) {
+      handleChipChange("today");
+    }
   };
 
   const handlePriorityChange = (nextPriority: Priority) => {
@@ -144,6 +169,8 @@ export function useNewTaskForm({
       startTime: dates.start_time,
       priority,
       projectId,
+      repeat: repeat.repeat,
+      repeatRule: repeat.repeat_rule,
     });
 
     try {
@@ -176,21 +203,21 @@ export function useNewTaskForm({
   return {
     title,
     setTitle,
-    due,
+    chip,
     picked,
     priority,
     projectId,
     setProjectId,
-    dueDate,
-    dueTime,
-    setDueTime,
     startDate,
-    setStartDate: (value: string) => {
-      setStartDate(value);
-      if (!value) setStartTime("");
-    },
     startTime,
     setStartTime,
+    dueDate,
+    setDueDate: handleDueDateChange,
+    dueTime,
+    setDueTime,
+    repeat,
+    setRepeat: handleRepeatChange,
+    todayDate,
     datesError,
     busy,
     valid,
@@ -199,7 +226,7 @@ export function useNewTaskForm({
     formError,
     confirmDiscard,
     setConfirmDiscard,
-    handleDueChange,
+    handleChipChange,
     handlePickedChange,
     handleCancelPick,
     handlePriorityChange,

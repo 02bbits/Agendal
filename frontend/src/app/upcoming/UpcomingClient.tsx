@@ -450,7 +450,7 @@ export function UpcomingClient() {
             }}
             onAddTask={(date) => {
               viewRef.current = { anchor: date, day: date };
-              openNewTask({ dueDate: date });
+              openNewTask({ startDate: date });
             }}
             onNewTask={() => openNewTask()}
           />

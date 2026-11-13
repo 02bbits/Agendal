@@ -12,7 +12,7 @@ export interface NewTaskSheetProps {
   onClose: () => void;
   pathname?: string;
   today?: string;
-  initialDueDate?: string;
+  initialStartDate?: string;
   projects?: Project[];
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;

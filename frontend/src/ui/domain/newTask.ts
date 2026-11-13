@@ -1,5 +1,5 @@
 import { addDays, startOfWeek } from "./dates";
-import type { Priority } from "./types";
+import type { Priority, Reminder, Repeat } from "./types";
 
 export type DueChip = "today" | "tomorrow" | "next_week" | "none" | "pick";
 
@@ -9,7 +9,7 @@ export interface NewTaskDefaults {
 }
 
 /**
- * Resolves chip and picked date for an initial due date.
+ * Resolves chip and picked date for an initial date (the start date since #154).
  */
 export function chipForDate(
   date: string,
@@ -33,6 +33,9 @@ export interface CreateTaskInput {
   startTime?: string | null;
   priority?: Priority;
   projectId?: string | null;
+  repeat?: Repeat;
+  repeatRule?: string | null;
+  reminder?: Reminder;
 }
 
 export interface CreateTaskBody {
@@ -44,11 +47,14 @@ export interface CreateTaskBody {
   due_time?: string;
   priority?: Priority;
   project_id?: string;
+  repeat?: Repeat;
+  repeat_rule?: string;
+  reminder?: Reminder;
 }
 
 /**
- * Computes the due date string for a selected due chip.
- * NC §2.5, NU-E10.
+ * Computes the date for a date chip. New task uses it for the start date (#154); the date
+ * picker's quick choices use it too. NC §2.5, NU-E10.
  */
 export function dueDateFor(
   chip: DueChip,
@@ -84,8 +90,8 @@ export function dueDateFor(
 }
 
 /**
- * Returns default due chip and project based on where the sheet was opened.
- * NC §2.5 table.
+ * Returns the default date chip (the start date since #154) and project for where the sheet
+ * was opened. NC §2.5 table.
  */
 export function defaultsFor(pathname: string): NewTaskDefaults {
   if (pathname === "/") {
@@ -105,13 +111,14 @@ export function defaultsFor(pathname: string): NewTaskDefaults {
 }
 
 /**
- * Default priority follows the NU rule: "medium" when due today, else "low".
+ * Default priority: "medium" when the task starts today, else "low" (it followed the due date
+ * before #154).
  */
 export function defaultPriority(
-  dueDate: string | null,
+  startDate: string | null,
   today: string,
 ): "medium" | "low" {
-  return dueDate === today ? "medium" : "low";
+  return startDate === today ? "medium" : "low";
 }
 
 /**
@@ -127,6 +134,9 @@ export function createBody({
   startTime,
   priority,
   projectId,
+  repeat,
+  repeatRule,
+  reminder,
 }: CreateTaskInput): CreateTaskBody {
   const body: CreateTaskBody = {
     id,
@@ -145,6 +155,13 @@ export function createBody({
   }
   if (projectId) {
     body.project_id = projectId;
+  }
+  if (repeat && repeat !== "never") {
+    body.repeat = repeat;
+    if (repeatRule) body.repeat_rule = repeatRule;
+  }
+  if (reminder && reminder !== "none") {
+    body.reminder = reminder;
   }
   return body;
 }
