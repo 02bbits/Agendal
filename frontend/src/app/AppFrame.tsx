@@ -134,13 +134,23 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timezoneAuto: true,
 };
 
+// The server's value wins. Only an answer without the field (an older API) falls back to this
+// device's copy, which sign-out and a different account wipe
+const storedPageView = (): AccountSettings["pageView"] => {
+  try {
+    return localStorage.getItem(PAGE_VIEW_KEY) === "full" ? "full" : "flat";
+  } catch {
+    return "flat";
+  }
+};
+
 const settingsOf = (me: SignedInUser): AccountSettings => {
   return {
     theme: me.theme ?? DEFAULT_SETTINGS.theme,
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
     timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-    pageView: me.page_view === "full" ? "full" : "flat",
+    pageView: me.page_view ?? storedPageView(),
     palette: me.theme_palette ?? "default",
     timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
     timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
