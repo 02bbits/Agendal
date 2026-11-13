@@ -46,7 +46,16 @@ export function TaskPanel({
   });
   const triggerRef = useRef<HTMLElement | null>(null);
   const panelRef = useRef<HTMLElement | null>(null);
-  useModalFocus(panelRef, panelRef, modal, onClose);
+
+  const closeSaving = useCallback(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement && panelRef.current?.contains(active)) {
+      active.blur();
+    }
+    onClose();
+  }, [onClose]);
+
+  useModalFocus(panelRef, panelRef, modal, closeSaving);
   const [missingId, setMissingId] = useState<string | null>(null);
   const loadTask = store.api.get;
   const { ensureTask } = store;
@@ -93,7 +102,7 @@ export function TaskPanel({
       if (document.querySelector('[aria-modal="true"]')) return;
       if (e.key === "Escape" && !e.defaultPrevented) {
         e.preventDefault();
-        onClose();
+        closeSaving();
       }
     };
 
@@ -102,16 +111,16 @@ export function TaskPanel({
       delete root.dataset.taskPanel;
       window.removeEventListener("keydown", onWindowKeyDown);
     };
-  }, [onClose]);
+  }, [closeSaving]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {
       if (e.key === "Escape" && !e.defaultPrevented) {
         e.preventDefault();
-        onClose();
+        closeSaving();
       }
     },
-    [onClose],
+    [closeSaving],
   );
 
   const isPopup = variant === "popup";
