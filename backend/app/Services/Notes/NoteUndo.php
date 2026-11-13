@@ -30,6 +30,9 @@ final class NoteUndo
     /** Task columns a redo writes back; ids, owner, source and sync bookkeeping stay as they are. */
     private const SNAPSHOT_SKIP = ['id', 'user_id', 'created_by', 'source_note_id', 'previous_occurrence_id', 'created_at', 'updated_at', 'change_seq', 'field_updated_at', 'end_time'];
 
+    /** Columns whose sync stamp goes by another name in field_updated_at (ADR-004). */
+    private const STAMP_KEY = ['done_at' => 'done', 'deleted_at' => 'deleted'];
+
     public function __construct(
         private ClockInterface $clock,
         private TaskPatcher $patcher,
@@ -120,14 +123,7 @@ final class NoteUndo
                 if ($task === null) {
                     continue;
                 }
-                // The state before the undo, back as it was. ponytail: stamps every field, so an edit made in the 10 s window is lost.
-                $stamp = $this->patcher->afterLastWrite($task);
-                $task->forceFill(Arr::except($change['before'], self::SNAPSHOT_SKIP));
-                if ($task->start_time !== null && $task->start_date === null) {
-                    $task->start_date = $task->due_date;
-                }
-                $task->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp);
-                $task->save();
+                $this->replay($task, $change['before'], $change['after']);
             }
             $note->status = PlanStatus::Done->value;
             $note->undo_log = null;
@@ -140,6 +136,43 @@ final class NoteUndo
         }
 
         return $note;
+    }
+
+    /**
+     * Puts back the state before the undo, field by field, only where a field still holds what the undo left:
+     * an edit made in the 10 s window stays (RV §2.4, as revert does for Undo all).
+     *
+     * @param  array<string, mixed>  $before
+     * @param  array<string, mixed>  $after
+     */
+    private function replay(Task $task, array $before, array $after): void
+    {
+        $current = $task->attributesToArray();
+        $restore = [];
+        foreach (array_keys(Arr::except($before, self::SNAPSHOT_SKIP)) as $field) {
+            if (($before[$field] ?? null) !== ($after[$field] ?? null) && ($current[$field] ?? null) === ($after[$field] ?? null)) {
+                $restore[$field] = $before[$field] ?? null;
+            }
+        }
+        if ($restore === []) {
+            return;
+        }
+        $stamp = $this->patcher->afterLastWrite($task);
+        $stamps = $task->field_updated_at ?? [];
+        $stamped = [...Task::PATCHABLE, 'done', 'deleted'];
+        foreach (array_keys($restore) as $field) {
+            $key = self::STAMP_KEY[$field] ?? $field;
+            if (in_array($key, $stamped, true)) {
+                $stamps[$key] = $stamp;
+            }
+        }
+        $task->forceFill($restore);
+        if ($task->start_time !== null && $task->start_date === null) {
+            $task->start_date = $task->due_date;
+            $stamps['start_date'] = $stamp;
+        }
+        $task->field_updated_at = $stamps;
+        $task->save();
     }
 
     private function lock(Note $note): Note

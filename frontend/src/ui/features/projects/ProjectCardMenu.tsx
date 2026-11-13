@@ -10,6 +10,14 @@ export interface ProjectCardMenuProps {
 export function ProjectCardMenu({ onRename, onDelete }: ProjectCardMenuProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const trigger = useRef<HTMLButtonElement>(null);
+  // The item goes with the menu: focus moves to the trigger first, so a dialog the item opens
+  // gives focus back there when it closes (UX-11)
+  const choose = (action: () => void) => {
+    setMenuOpen(false);
+    trigger.current?.focus();
+    action();
+  };
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -23,6 +31,7 @@ export function ProjectCardMenu({ onRename, onDelete }: ProjectCardMenuProps) {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         setMenuOpen(false);
+        trigger.current?.focus();
       }
     };
 
@@ -41,6 +50,7 @@ export function ProjectCardMenu({ onRename, onDelete }: ProjectCardMenuProps) {
   return (
     <div ref={menuRef} className="relative">
       <button
+        ref={trigger}
         type="button"
         className="inline-flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent p-0 text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
         aria-label={t("project.menu")}
@@ -67,8 +77,7 @@ export function ProjectCardMenu({ onRename, onDelete }: ProjectCardMenuProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setMenuOpen(false);
-                onRename();
+                choose(onRename);
               }}
             >
               <PencilIcon size={15} />
@@ -83,8 +92,7 @@ export function ProjectCardMenu({ onRename, onDelete }: ProjectCardMenuProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                setMenuOpen(false);
-                onDelete();
+                choose(onDelete);
               }}
             >
               <TrashIcon size={15} />
