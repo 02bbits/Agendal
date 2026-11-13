@@ -48,7 +48,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **On success:**
   - The account and session are created.
   - `display_name` = the email's local part. `timezone` comes from the device ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
-  - The setup step opens (`/welcome`, §2.6). Inbox follows with the toast `auth.welcome`. The install banner logic starts (AP).
+  - A 6-digit code is emailed and Verify email opens (`/verify`, §2.8). After the code, the setup step opens (`/welcome`, §2.6). Inbox follows with the toast `auth.welcome`. The install banner logic starts (AP).
 - **Desktop layout (from 1024 px, also Sign in):** two columns. Left, the brand panel in `navy`: logo, the decorative illustration, `auth.hero_title` and `auth.hero_body`. Right, the form, centred, at most 360 px wide, with `auth.sign_in_title` / `auth.sign_in_subtitle` on Sign in and `auth.create_title` / `auth.create_subtitle` on Create account. Phones keep one column.
 
 ### 2.2 Sign in (AA-2, AA-3)
@@ -60,6 +60,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - The remaining seconds come from the server (`retry_after`), so a reload doesn't reset the countdown.
   - The other limits (per IP, per email) show the same banner ([ADR-007](../07-architecture/decisions/ADR-007-session-and-auth.md)).
 - **Success:** the session ID is regenerated. The user goes to the screen they asked for before signing in, if it's a same-origin path, otherwise Inbox.
+- **Two-step verification on (§2.9):** a correct password does not sign in yet. The server answers `202 {two_factor: true, email}` (the email masked, `v********@example.test`) and emails a code; the screen asks for it (`auth.two_factor_title`). The pending sign-in lasts 10 minutes (`auth.two_factor_expired`); **Use a different account** goes back to the password step.
 - **Already signed in:** visiting Sign in redirects to Inbox.
 
 ### 2.3 Reset password (AA-4)
@@ -80,8 +81,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - **Unsynced changes:** if queued edits or pending notes exist, the dialog `auth.signout_unsynced_*` shows, with a red Sign out and Cancel.
 - **Sign out steps:**
-  1. `POST /auth/logout`
-  2. Wipe IndexedDB, the service-worker data caches, the draft and per-device preferences ([NF-19](../05-quality/nfr.md#nf-19))
+  1. `POST /auth/logout`. The response also expires the session cookie (`Max-Age=0`) and the remember cookie, so the browser keeps no session (#149)
+  2. Wipe IndexedDB, the service-worker data caches, the draft and per-device preferences ([NF-19](../05-quality/nfr.md#nf-19)). The colour palette and page view on the page go back to the defaults, so the next account never shows the last one's look
   3. Go to Sign in
 - **Offline:** the device data is still wiped at once. The server session ends when the cookie expires, or on the next request. The dialog warns that unsynced changes will be lost.
 - **Sign out on all devices** (Should): ends every session, including this one.
@@ -93,10 +94,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.6 Setup step after sign-up (#149)
 
-- Shown once, straight after Create account, on phone and desktop (desktop: in the right column of the two-column layout). No app chrome.
-- **Week starts on:** Monday / Sunday. **Time format:** 24-hour / 12-hour, with a live example (`setup.time_example`).
-- **Time zone:** taken from the device and shown with its UTC offset. `setup.time_zone_change` picks another zone; after that, `setup.time_zone_auto` goes back to the device's zone.
-- **Continue** saves with one `PATCH /me` and opens Inbox with `auth.welcome`. **Skip for now** opens Inbox and saves nothing.
+- Shown once, after the email is verified, on phone and desktop (desktop: a 480 px card in the right column of the two-column layout). No app chrome.
+- **Three steps** in a stepper (`stepper.progress`): the current step shows its number and title, done steps a check; a step can only be reached once the ones before it are done. Continue and Back move between them with a slide.
+  1. **Your name** (`setup.name_label`): 1–60 characters, prefilled from the email. Enter goes to the next step.
+  2. **Dates and times.** Week starts on: Monday / Sunday. Time format: 24-hour / 12-hour, with a live example (`setup.time_example`). Time zone: taken from the device and shown with its UTC offset; `setup.time_zone_change` picks another zone, then `setup.time_zone_auto` goes back to the device's.
+  3. **Security:** the two-step verification switch (§2.9), off by default.
+- **Finish** saves with one `PATCH /me` (and `POST /auth/two-factor` when the switch is on) and opens Inbox with `auth.welcome`. **Skip for now** (top right, level with the logo on phones) opens Inbox and saves nothing.
+- **Steady layout:** on desktop the card keeps the height of the tallest step, so it and Continue don't move between steps. On phones the title and the steps sit at a fixed height, the step grows downward, and Back / Continue stay at the bottom.
 
 ### 2.7 Change password (#149)
 
@@ -107,6 +111,29 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Server order:** the current password first (`auth.current_password_wrong`, nothing else runs), then the sign-up rules, then different from the current one (`auth.password_same_as_current`), then the match (`auth.password_mismatch`), then the breached check. Wrong current password keeps what was typed and focuses that field.
 - **Success:** the pane shows `settings.password_changed_title` and `settings.password_changed_body` with a Done button back to Account (announced, focus on the heading). Every other session ends and this one stays, the notice email is sent (ASVS 2.2.3) and an audit event `password_changed` is written.
 - **Limit:** only wrong current passwords count, 5 per 15 minutes per user, shared by the blur check and Save; then `429` with `Retry-After`. A correct one resets the count.
+
+### 2.8 Verify email (#149)
+
+- After Create account the user is signed in but unverified. `/verify` shows `auth.verify_title` and `auth.verify_body` with the email, and six code slots (`auth.verify_label`; paste and the one-time-code autofill both work). The sixth digit submits.
+- **The code:** 6 digits, stored only as an HMAC, valid 10 minutes, 5 tries (`auth.verify_wrong`, then `auth.verify_too_many`; `auth.verify_expired` after 10 minutes). Each new code replaces the last.
+- **Send a new code:** after 45 s (`auth.verify_resend_in` counts down), at most 5 an hour; then `429`. `auth.verify_sent` confirms. **Use a different account** signs out and opens Sign in.
+- **Accepted:** the slots fill and a check draws in, then Setup opens (§2.6). An account verified elsewhere that opens `/verify` goes to Inbox.
+- **Until verified:** every page opens `/verify`, and every API call except `/me`, sign-out and the two verify endpoints answers `403 auth.email_unverified`. Accounts that existed before #149 count as verified.
+- **The email** (`email.verify_*`) puts the code alone in a large monospace box, with room above and below, in light and dark mail clients.
+
+### 2.9 Two-step verification by email (#149)
+
+- **Where:** Settings › Account › Two-step verification (one switch, `settings.two_factor_label`) and the Security step of Setup. Off by default.
+- **Turning on** is immediate (`settings.two_factor_on_toast`). **Turning off** asks for the current password in a dialog (`settings.two_factor_off_title`); a wrong one shows `auth.current_password_wrong` and counts toward the §2.7 limit.
+- **Signing in with it on:** after the right password, a 6-digit code is emailed (`email.signin_*`) and the Sign in screen asks for it in the same six slots (`auth.two_factor_title`, `auth.two_factor_body` with the masked email). Same code rules as §2.8: 10 minutes, 5 tries, a new code after 45 s, 5 sends an hour. Remember me applies once the code is accepted.
+- **Signing in again** during the wait does not send past the 5-an-hour limit or reset the 5 tries: the code already sent stays the one.
+- The pending sign-in is kept in the server session only (user id, remember, expiry), never in the browser.
+
+### 2.10 Password fields (#149)
+
+- Every password field sets `autocapitalize=none`, `autocorrect=off`, `spellcheck=false` and `lang=en`, so phones don't change what is typed.
+- **Caps Lock** on while the field has focus shows `auth.caps_lock_on` under it.
+- **Vietnamese typing (Unikey, EVKey):** a page can't switch off the system's input method, which silently turns keys into accented letters in a hidden password. When the value has a Latin letter with a diacritic, the field shows `auth.password_accented` ("Turn off Vietnamese typing (Ctrl+Shift).") under it. It's a polite one-line hint and never blocks Submit, since such a password is allowed.
 
 ## 3. State matrix
 
@@ -135,6 +162,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="aa-e11"></a>AA-E11 | The return path after sign-in points to another site | Ignored, go to Inbox (no open redirect) | T-AA-111, SEC-24 |
 | <a id="aa-e12"></a>AA-E12 | The password manager autofills both fields | The button enables on `input` events from autofill, not only on keystrokes | T-AA-112 |
 | <a id="aa-e13"></a>AA-E13 | Sign up with an email that already exists | `auth.email_taken` with a Sign in link (accepted enumeration, §9) | T-AA-113 |
+| <a id="aa-e14"></a>AA-E14 | An unverified account opens any page or calls the API | The page opens `/verify`; the API answers `403 auth.email_unverified` (§2.8) | `VerifyEmailTest` |
+| <a id="aa-e15"></a>AA-E15 | With two-step on, the user signs in again and again to get fresh codes | No new code past 5 an hour, and the tries on the code already sent are not reset (§2.9) | `TwoFactorTest` |
+| <a id="aa-e16"></a>AA-E16 | Account A picks a colour and Full width, signs out, account B signs in | The look resets on sign-out and comes from B's `/me`; A gets its look back on its next sign-in, on any device | `MeTest`, `session.test.tsx` |
 
 ## 5. Copy keys
 
@@ -143,6 +173,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ## 6. Accessibility
 
 - Every field has a visible label and the right `autocomplete` ([UX-22](../01-product/ux-standards.md#ux-22)). Show/hide is a button labelled "Show password", with `aria-pressed`. It is left out of the Tab order, so Tab goes from one field to the next; from the keyboard, Alt+F8 in the field shows or hides the password (`aria-keyshortcuts`). A11Y-60
+- The Caps Lock and Vietnamese typing hints (§2.10) are polite status lines, read once when they appear.
+- The code slots are one input (`autocomplete=one-time-code`, `inputmode=numeric`) named `auth.verify_label`; the count of digits entered and "Code accepted" are announced politely. The stepper is an ordered list named `stepper.progress`, the current step with `aria-current="step"`.
 - The lockout banner is announced assertively once. The countdown isn't announced every second, only when Sign in is enabled again. A11Y-61
 - On a failed submit, focus goes to the first invalid field, or to the error summary for `auth.invalid` ([UX-07](../01-product/ux-standards.md#ux-07)). A11Y-62
 
@@ -152,20 +184,26 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|
 | `GET /sanctum/csrf-cookie` | — | `204`, sets `XSRF-TOKEN` | — |
 | `POST /auth/register` | `{email, password, timezone}` | `201 {user}` and a session | `422` (`auth.email_taken`, `auth.password_breached`, field errors), `429` |
-| `POST /auth/login` | `{email, password, remember}` | `200 {user}` | `422 auth.invalid`, `429 auth.locked {retry_after}` |
+| `POST /auth/login` | `{email, password, remember}` | `200 {user}`, or `202 {two_factor: true, email}` when two-step is on (code emailed, §2.9) | `422 auth.invalid`, `429 auth.locked {retry_after}` |
+| `POST /auth/two-factor/challenge` | `{code}` | `200 {user}` and a session | `422` (`auth.two_factor_expired`, `auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`) |
+| `POST /auth/two-factor/resend` | — | `204` | `422 auth.two_factor_expired`, `429` |
+| `POST /auth/verify-email` | `{code}` | `200 {user}` | `401`, `422` (`auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`) |
+| `POST /auth/verify-email/resend` | — | `204` | `401`, `429 {retry_after}` |
+| `POST /auth/two-factor` | `{enabled, current_password?}` (the password only to turn it off) | `200 {user}` | `401`, `403 auth.email_unverified`, `422 auth.current_password_wrong`, `429` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
 | `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
 | `POST /auth/check-password` | `{current_password}` | `204` | `401`, `422` (`auth.current_password_wrong`), `429` |
 | `POST /auth/change-password` | `{current_password, password, password_confirmation}` | `200 {user}`, other sessions ended | `401`, `422` (`auth.current_password_wrong`, field errors), `429` |
 | `POST /auth/logout` | — | `204` | `401` |
 | `POST /auth/logout-everywhere` | — | `204` | `401` |
-| `GET /me`, `PATCH /me` | `{display_name?, theme?, timezone?, timezone_auto?, week_start?, time_format?}` | `200` | `401`, `422` |
+| `GET /me`, `PATCH /me` | `{display_name?, theme?, theme_palette?, page_view?, timezone?, timezone_auto?, week_start?, time_format?}` | `200` (with `email_verified_at`, `two_factor_enabled`) | `401`, `422` |
 
 ## 8. Data, validation and authorization
 
 - `users.email` is unique and lower-case. `password_hash` uses Argon2id. `password_reset_tokens` (Laravel's reset broker) holds one hashed token per email: 32 random bytes, 60 minutes, single use.
 - `audit_events` records: sign-up, sign-in success and failure, lockout, reset requested and used, password changed, sign out everywhere ([NF-20](../05-quality/nfr.md#nf-20)). It stores the email's hash, never the password.
-- `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `timezone` (a valid IANA name; it also turns `timezone_auto` off), `timezone_auto` (`true` follows the device again), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`).
+- `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `theme_palette` (`default`, `agendal`, `moonstone`, `tangerine`, `kale`, `blueberry`, `lavender`, `raspberry`), `page_view` (`flat`, `full`), `timezone` (a valid IANA name; it also turns `timezone_auto` off), `timezone_auto` (`true` follows the device again), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`). The colour palette and page view belong to the account: the server is the source, and the device keeps a copy only so `/theme.js` paints them before the first frame (#149).
+- `users.email_verified_at` (null until §2.8) and `users.two_factor_enabled` (§2.9). `email_verification_codes` holds one code per (user, purpose `verify` / `sign_in`): the HMAC-SHA256 of the code, its expiry, the tries and when it was sent.
 
 ## 9. Abuse cases
 
@@ -178,6 +216,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Reset token theft or reuse | [SC-05](../07-architecture/security.md#sc-05). Token in the fragment, removed from the URL | SEC-09 |
 | Open redirect after sign-in | Same-origin paths only | SEC-24 |
 | Data left on a shared device | [SC-19](../07-architecture/security.md#sc-19) wipe | SEC-50, SEC-52 |
+| Guessing an email or sign-in code | 6 digits, 5 tries per code, 10 minutes, compared in constant time against an HMAC (§2.8, §2.9) | `VerifyEmailTest`, `TwoFactorTest` |
+| Flooding a mailbox with codes | 45 s between sends and 5 an hour per user, also across repeated sign-ins (AA-E15) | `VerifyEmailTest`, `TwoFactorTest` |
+| A session cookie left in the browser after sign-out | The sign-out response expires it (§2.4) | `LogoutTest` |
 
 ## 10. Performance and scaling
 

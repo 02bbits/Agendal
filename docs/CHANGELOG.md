@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-13
+
+- **Verify email, two-step sign-in, stepper Setup and per-account look (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1): Create account emails a code and opens Verify email. New [AA §2.8](03-modules/AA-account-access.md#28-verify-email-149) Verify email, [§2.9](03-modules/AA-account-access.md#29-two-step-verification-by-email-149) two-step verification by email and [§2.10](03-modules/AA-account-access.md#210-password-fields-149) password fields (Caps Lock and Vietnamese typing hints). [AA §2.2](03-modules/AA-account-access.md#22-sign-in-aa-2-aa-3): the code step after the password. [AA §2.4](03-modules/AA-account-access.md#24-sign-out-aa-5): sign-out expires the session cookie and resets the page look. [AA §2.6](03-modules/AA-account-access.md#26-setup-step-after-sign-up-149): three steps (name, dates and times, security) in a steady layout. AA-E14–E16, the [AA API table](03-modules/AA-account-access.md#7-api-contract), §8 and §9; [api.md](07-architecture/api.md), [data-model](07-architecture/data-model.md) (`email_verification_codes`, new `users` columns) and [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md). [AP §2.3.1](03-modules/AP-app-platform.md): colour palette and page view saved per account, two-step row, phone Settings layout and copy rules. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.
+
 ## 2026-11-12
 
 - **Account menu, phone Settings and Change password checks (Refs #149).** [AA §2.7](03-modules/AA-account-access.md#27-change-password-149): the current password is checked on blur with the new `POST /auth/check-password` (also in the [AA API table](03-modules/AA-account-access.md#7-api-contract) and [api.md](07-architecture/api.md)), only wrong tries count toward the limit, and success shows a "Password changed" state. [AP §2.3.1](03-modules/AP-app-platform.md): the sidebar account menu, full-screen Settings on phones, and sidebar tabs that slide while dragged. [SUMMARY §6](SUMMARY.md): the Accounts paragraph.
