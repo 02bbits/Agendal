@@ -136,6 +136,23 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     });
   });
 
+  it("labels its chip groups, and closing gives focus back to + (A11Y-34)", async () => {
+    renderPage("/notes", NotesPage);
+    const plusButton = screen.getByRole("button", { name: "Add a task" });
+    await userEvent.click(plusButton);
+    const sheet = screen.getByRole("dialog", { name: "New task" });
+    expect(within(sheet).getByRole("radiogroup", { name: "Due" })).toBeTruthy();
+    expect(
+      within(sheet).getByRole("radiogroup", { name: "Priority" }),
+    ).toBeTruthy();
+
+    await userEvent.keyboard("{Escape}");
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: "New task" })).toBeNull(),
+    );
+    expect(document.activeElement).toBe(plusButton);
+  });
+
   it("opened from / selects Today chip and Medium priority, from /upcoming selects Tomorrow and Low priority (T-NC-52)", async () => {
     // Opened from /
     renderPage("/", InboxPage);

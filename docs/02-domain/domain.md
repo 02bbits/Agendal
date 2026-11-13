@@ -164,7 +164,7 @@ All three are due within 7 days, so the note is named **"This week"**. 3 changes
 | `new` | Being processed | `done`, `confirm` or `followup` |
 | `done` | Plan applied | `pending` (Undo all), `new` (Edit note) |
 | `confirm` | Plan waits for Apply changes | `done` (Apply), `new` (Edit note) |
-| `followup` | Nothing actionable found | `done` (Keep it as task), `new` (Edit the note) |
+| `followup` | Nothing actionable found | `confirm` (Keep it as task), `new` (Edit the note) |
 
 ```mermaid
 stateDiagram-v2
@@ -175,7 +175,7 @@ stateDiagram-v2
     new --> confirm : any delete or 5+ changes
     new --> followup : nothing actionable
     confirm --> done : Apply changes
-    followup --> done : Keep it as task
+    followup --> confirm : Keep it as task
     done --> pending : Undo all
     pending --> done : redo (toast, 10 s)
     done --> new : Edit note

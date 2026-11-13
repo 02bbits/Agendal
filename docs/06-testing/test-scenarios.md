@@ -43,7 +43,9 @@ These are the narrative end-to-end scenarios. They no longer grow: detailed and 
 - **When** the user submits *"idea: dark mode for the portfolio site"*
 - **Then** "I couldn't find a task in this note." offers Keep it as task / Edit the note, and the note is named "Idea: dark mode for the portfolio" (its first 6 words)
 - **When** they tap Keep it as task
-- **Then** one task exists titled "Idea: dark mode for the portfolio site", and the note is `done`
+- **Then** Check this first shows one planned task titled "Idea: dark mode for the portfolio site", the note is `confirm`, and no task exists yet
+- **When** they tap Apply changes
+- **Then** that task exists, and the note is `done`
 - **When** instead they tap Edit the note
 - **Then** the editor opens with the text, and the note stays `followup` until Make tasks
 - **Tests:** C-013, T-NU-33, T-RV-20, T-RV-22, T-RV-23

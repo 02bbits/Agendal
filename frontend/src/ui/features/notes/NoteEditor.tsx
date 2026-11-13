@@ -7,12 +7,18 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { clearDraft, loadDraft, saveDraft } from "../../../lib/draft";
+import {
+  clearDraft,
+  keepDraftOnHide,
+  loadDraft,
+  saveDraft,
+} from "../../../lib/draft";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t } from "../../copy";
 import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
+import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
@@ -53,6 +59,31 @@ export interface NoteEditorProps {
 /** The reading line shows only when the answer takes longer than this (NC §2.2). */
 const READING_AFTER_MS = 300;
 
+// NF-14: the client mirrors the server's notes.max_length; the counter shows from 4,500 (NC §2.1)
+const NOTE_MAX = 5000;
+const COUNTER_FROM = 4500;
+// "full" is exactly 5,000: announced again, as A11Y-32 asks, but still allowed
+type CounterStage = "hidden" | "near" | "full" | "over";
+const stageOf = (length: number): CounterStage =>
+  length > NOTE_MAX
+    ? "over"
+    : length === NOTE_MAX
+      ? "full"
+      : length >= COUNTER_FROM
+        ? "near"
+        : "hidden";
+// Counted as the server counts (NoteSplitter::normalize, then mb_strlen): NFC, no control or
+// format characters, trimmed, in code points
+const lengthOf = (text: string) =>
+  [
+    ...text
+      .normalize("NFC")
+      .replace(/[^\P{Cc}\t\n]|\p{Cf}/gu, "")
+      .replace(/[^\S\t\n]/gu, " ")
+      .trim(),
+  ].length;
+const formatCount = (count: number) => count.toLocaleString("en-US");
+
 /**
  * Full-screen note editor (NC-1, NC-2): the ruled note card with the cursor in it, three
  * example chips while it is empty, and Make tasks once there is something to read.
@@ -77,6 +108,7 @@ export function NoteEditor({
   // Seconds until a rate-limited note may be sent again (429)
   const [wait, setWait] = useState(0);
   const errorId = useId();
+  const counterId = useId();
   const edit = (next: string, saved = false) => {
     latest.current = next;
     dirty.current = !saved;
@@ -154,15 +186,26 @@ export function NoteEditor({
     return () => clearTimeout(timer);
   }, [text, save]);
   useEffect(() => {
-    const onHide = () => document.visibilityState !== "visible" && save();
-    window.addEventListener("pagehide", save);
-    document.addEventListener("visibilitychange", onHide);
-    return () => {
-      window.removeEventListener("pagehide", save);
-      document.removeEventListener("visibilitychange", onHide);
+    // The page may be going: a copy written at once, then the usual save (NC-E1)
+    const onPageHide = () => {
+      if (!note) keepDraftOnHide(latest.current);
       save();
     };
-  }, [save]);
+    // Back on the page: the text is saved here again, which drops the copy. Left in place, a copy
+    // older than what is typed next would come back after a crash (NC-E1)
+    const onBack = () => {
+      if (!note) saveDraft(latest.current).catch(() => {});
+    };
+    const onVisibility = () =>
+      document.visibilityState === "visible" ? onBack() : onPageHide();
+    window.addEventListener("pagehide", onPageHide);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("visibilitychange", onVisibility);
+      save();
+    };
+  }, [note, save]);
 
   useEffect(() => {
     if (wait <= 0) return;
@@ -170,7 +213,22 @@ export function NoteEditor({
     return () => clearTimeout(timer);
   }, [wait]);
 
-  const canSubmit = VISIBLE.test(text) && wait <= 0;
+  const length = lengthOf(text);
+  const stage = stageOf(length);
+  const counter = t("note.counter", {
+    count: formatCount(length),
+    max: formatCount(NOTE_MAX),
+  });
+  const tooLong = t("note.too_long", { count: formatCount(length) });
+  // A11Y-32: announced once as the note reaches 4,500 and again past 5,000, not on every keystroke
+  const [announced, setAnnounced] = useState({ stage, text: "" });
+  if (announced.stage !== stage)
+    setAnnounced({
+      stage,
+      text: stage === "over" ? tooLong : stage === "hidden" ? "" : counter,
+    });
+
+  const canSubmit = VISIBLE.test(text) && stage !== "over" && wait <= 0;
   const submit = async (confirmConflicts = false) => {
     // The ref, not `busy`: a second tap lands before React has re-rendered
     if (!canSubmit || !onSubmit || sending.current) return;
@@ -261,11 +319,30 @@ export function NoteEditor({
               onKeyDown={onKeyDown}
               readOnly={busy}
               aria-invalid={message ? true : undefined}
-              aria-describedby={message ? errorId : undefined}
+              aria-describedby={
+                [stage !== "hidden" && counterId, message && errorId]
+                  .filter(Boolean)
+                  .join(" ") || undefined
+              }
               placeholder={t("note.placeholder")}
               className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
           </div>
+          {stage !== "hidden" && (
+            <p
+              id={counterId}
+              className={cx(
+                "m-0 text-footnote tabular-nums",
+                stage === "over" ? "text-error" : "text-ink-secondary",
+              )}
+            >
+              {counter}
+              {stage === "over" && <> · {tooLong}</>}
+            </p>
+          )}
+          <p aria-live="polite" className="sr-only">
+            {announced.text}
+          </p>
           <p className="m-0 text-footnote text-ink-secondary">
             {t("note.editor_hint")}
           </p>

@@ -17,7 +17,7 @@
 - **Passwords:** Argon2id. ≥ 8 characters, not equal to the email, and rejected if found in a breached-password list (k-anonymity check). The minimum is pending [Q18](../../08-project/open-questions.md#q18).
 - **Reset tokens:** 32 random bytes, stored hashed, single use, 60 min. The confirmation is the same whether or not the account exists. Resend after 45 s.
 - **Email verification and two-step sign-in (#149).** A new account confirms its email with a 6-digit code before anything else works. Two-step verification, when the user turns it on, emails a code after the right password. Codes: HMAC-stored, 10 min, 5 tries, a new one after 45 s, 5 an hour. A pending two-step sign-in lives only in the server session. Email codes were chosen over an authenticator app to keep set-up to one switch; an authenticator can be added later without changing the session model.
-- **Sign out:** ends the session server-side and **expires the session and remember cookies in the response** (#149), then **wipes IndexedDB and the service-worker data caches** on the device. If changes are still unsynced, it first asks "You have N changes not saved yet. Sign out anyway?".
+- **Sign out:** ends the session server-side and **expires the session and remember cookies in the response** (#149), then **wipes IndexedDB, `localStorage` and the service-worker data caches** on the device. If changes are still unsynced, it first asks "You have N changes not saved yet. Sign out anyway?".
 - **Session expired while offline:** the data stays on the device, tagged with the user ID. The edit queue syncs only after that same user signs in again.
 
 ## Consequences
