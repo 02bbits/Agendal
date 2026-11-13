@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Clock;
 
+use App\Enums\Reminder;
 use InvalidArgumentException;
 
 final class ReminderCalculator
@@ -14,14 +15,8 @@ final class ReminderCalculator
             return null;
         }
 
-        $minutes = match ($reminder) {
-            '5m' => 5,
-            '15m' => 15,
-            '30m' => 30,
-            '1h' => 60,
-            '1d' => 1440,
-            default => throw new InvalidArgumentException("Unknown reminder offset: {$reminder}"),
-        };
+        $offset = Reminder::tryFrom($reminder) ?? throw new InvalidArgumentException("Unknown reminder offset: {$reminder}");
+        $minutes = $offset->minutes();
 
         $dueAt = WallTime::toUtc($dueDate, $startTime ?: '09:00', $timezone);
 

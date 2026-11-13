@@ -36,7 +36,7 @@
     "priority": { "enum": ["low", "medium", "high", null] },
     "repeat": { "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
     "repeat_rule": { "type": ["string", "null"], "maxLength": 300, "pattern": "^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$", "description": "Nullable calendar RRULE. FREQ is first and matches repeat. Supported parts: FREQ, INTERVAL (1-999), BYDAY, BYMONTHDAY, BYMONTH, WKST, COUNT (1-10000) and UNTIL; COUNT and UNTIL are exclusive. Backend validation checks full rule semantics. Null uses legacy enum-only recurrence. Human-readable descriptions are formatted by the frontend, not returned by the API." },
-    "reminder": { "enum": ["none", "5m", "15m", "30m", "1h", "1d"] },
+    "reminder": { "enum": ["none", "0m", "5m", "10m", "15m", "30m", "1h", "2h", "1d", "2d", "1w"] },
     "notes": { "type": ["string", "null"], "maxLength": 5000 }
   }
 }
