@@ -10,7 +10,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   PRIORITIES,
   REMINDERS,
-  REPEATS,
   ProjectScreen,
   TaskDetails,
   TaskPanel,
@@ -22,6 +21,7 @@ import {
 import * as datePickerModule from "../../src/ui/components/DatePicker";
 import { DateTimeFields } from "../../src/ui/features/tasks/details/DateTimeFields";
 import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
+import { repeatPresets } from "../../src/ui/domain/repeatPresets";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
@@ -374,22 +374,80 @@ describe("Task details fields (T-TK-10)", () => {
     );
   });
 
-  it.each(REPEATS)("saves repeat %s", async (repeat) => {
+  // #154: the Repeat row offers presets worked out from the start date (TODAY is a Friday)
+  it.each(repeatPresets(TODAY).filter((preset) => preset.id !== "never"))(
+    "saves repeat preset $id with its rule",
+    async (preset) => {
+      const { patchSpy } = open(
+        task({ title: "Task", start_date: TODAY, repeat: "never" }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: t("task.repeat") }),
+      );
+      await userEvent.click(screen.getByRole("option", { name: preset.label }));
+      await waitFor(() =>
+        expect(patchSpy).toHaveBeenCalledWith(
+          expect.any(String),
+          preset.value.repeat_rule
+            ? {
+                repeat: preset.value.repeat,
+                repeat_rule: preset.value.repeat_rule,
+              }
+            : { repeat: preset.value.repeat },
+          expect.any(String),
+        ),
+      );
+    },
+  );
+
+  it("saves repeat never from a repeating task", async () => {
     const { patchSpy } = open(
-      task({
-        title: "Task",
-        due_date: TODAY,
-        repeat: repeat === "never" ? "daily" : "never",
-      }),
+      task({ title: "Task", start_date: TODAY, repeat: "daily" }),
     );
-    const trigger = screen.getByRole("button", { name: t("task.repeat") });
-    await userEvent.click(trigger);
-    const optionLabel = t(`repeat.${repeat}` as CopyKey);
-    await userEvent.click(screen.getByRole("option", { name: optionLabel }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.repeat") }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: t("repeat_preset.never") }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { repeat },
+        { repeat: "never" },
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("Custom… builds every 2 weeks on Monday and Wednesday, and saves it", async () => {
+    const { patchSpy } = open(
+      task({ title: "Task", start_date: "2026-10-26", repeat: "never" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.repeat") }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: t("repeat_preset.custom") }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("repeat_custom.title"),
+    });
+    const every = within(dialog).getByLabelText(t("repeat_custom.every"), {
+      selector: "input",
+    });
+    await userEvent.clear(every);
+    await userEvent.type(every, "2");
+    await userEvent.click(within(dialog).getByRole("button", { name: "We" }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("repeat_custom.done") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          repeat: "weekly",
+          repeat_rule: "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE",
+        },
         expect.any(String),
       ),
     );

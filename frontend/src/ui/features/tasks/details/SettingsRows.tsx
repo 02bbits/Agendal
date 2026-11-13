@@ -5,18 +5,16 @@ import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import { reminderPast } from "../../../domain/edit";
-import { describeRepeat } from "../../../domain/repeat";
 import {
   REMINDERS,
-  REPEATS,
   type Project,
   type Reminder,
-  type Repeat,
   type Task,
   type TimeFormat,
   type WeekStart,
 } from "../../../domain/types";
 import type { Clock } from "../types";
+import { RepeatPicker } from "../repeat/RepeatPicker";
 import { DateTimeFields } from "./DateTimeFields";
 import { ProjectField } from "./ProjectField";
 import { SettingsRow } from "./SettingsRow";
@@ -40,6 +38,7 @@ export function SettingsRows({
   projects,
   projectsStatus = "ready",
   onRetryProjects,
+  todayDate,
   clock,
   timeFormat,
   weekStart,
@@ -51,11 +50,9 @@ export function SettingsRows({
   const hasDate = Boolean(task.start_date || task.due_date);
   const reminderHelper = isReminderPast ? t("task.reminder_past") : undefined;
 
-  const repeatDescription = describeRepeat(task);
-  const repeatLabel = repeatDescription
-    ? repeatDescription.charAt(0).toLocaleUpperCase() +
-      repeatDescription.slice(1)
-    : undefined;
+  // The series starts on the start date, the task's main date (#154)
+  const repeatAnchor =
+    task.repeat_anchor ?? task.start_date ?? task.due_date ?? todayDate;
 
   const isScreen = variant === "screen";
 
@@ -108,19 +105,18 @@ export function SettingsRows({
         icon={<RepeatIcon size={18} />}
         label={t("task.repeat")}
         control={
-          <Picker<Repeat>
+          <RepeatPicker
             id="task-repeat"
-            label={t("task.repeat")}
-            value={task.repeat}
-            className="max-w-[180px] [&>div]:max-w-full [&>div>button]:max-w-full [&>div>button>span]:truncate"
-            options={REPEATS.map((r) => ({
-              value: r,
-              label:
-                r === task.repeat && repeatLabel
-                  ? repeatLabel
-                  : t(`repeat.${r}` as CopyKey),
-            }))}
-            onChange={(repeat) => onSave({ repeat })}
+            value={{
+              repeat: task.repeat,
+              repeat_rule: task.repeat_rule ?? null,
+            }}
+            anchor={repeatAnchor}
+            weekStart={weekStart}
+            className="max-w-[220px] [&>div]:max-w-full [&>div>button]:max-w-full [&>div>button>span]:truncate"
+            onChange={(next) =>
+              onSave({ repeat: next.repeat, repeat_rule: next.repeat_rule })
+            }
             variant="row"
           />
         }
