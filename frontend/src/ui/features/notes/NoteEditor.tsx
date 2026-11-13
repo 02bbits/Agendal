@@ -191,12 +191,18 @@ export function NoteEditor({
       if (!note) keepDraftOnHide(latest.current);
       save();
     };
-    const onHide = () => document.visibilityState !== "visible" && onPageHide();
+    // Back on the page: the text is saved here again, which drops the copy. Left in place, a copy
+    // older than what is typed next would come back after a crash (NC-E1)
+    const onBack = () => {
+      if (!note) saveDraft(latest.current).catch(() => {});
+    };
+    const onVisibility = () =>
+      document.visibilityState === "visible" ? onBack() : onPageHide();
     window.addEventListener("pagehide", onPageHide);
-    document.addEventListener("visibilitychange", onHide);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       window.removeEventListener("pagehide", onPageHide);
-      document.removeEventListener("visibilitychange", onHide);
+      document.removeEventListener("visibilitychange", onVisibility);
       save();
     };
   }, [note, save]);

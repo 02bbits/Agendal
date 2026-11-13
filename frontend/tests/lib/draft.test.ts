@@ -34,6 +34,13 @@ describe("draft (UX-13)", () => {
     expect(await loadDraft()).toBe("");
   });
 
+  it("hidden, back, typed on: the newer text comes back after a crash, not the copy", async () => {
+    keepDraftOnHide("buy milk"); // the tab is hidden
+    await saveDraft("buy milk"); // back on the page: saved again, the copy goes
+    await saveDraft("buy milk and eggs"); // typed on, then the tab crashes
+    expect(await loadDraft()).toBe("buy milk and eggs");
+  });
+
   it("saving nothing visible removes the draft", async () => {
     await saveDraft("call mum");
     await saveDraft("  \n ");

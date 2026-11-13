@@ -234,6 +234,21 @@ describe("NoteEditor (IM-41)", () => {
     expect(saveDraft).toHaveBeenLastCalledWith("unsent!");
   });
 
+  it("saves again when the page is back, so the copy kept while hidden can't outlive newer text (NC-E1)", async () => {
+    render(<NoteEditor onClose={() => {}} />);
+    await userEvent.type(field(), "buy milk");
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(keepDraftOnHide).toHaveBeenCalledWith("buy milk");
+    vi.mocked(saveDraft).mockClear();
+
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(saveDraft).toHaveBeenCalledWith("buy milk");
+    visibility.mockRestore();
+  });
+
   it("puts an unsent note back with the cursor at the end (T-NC-101)", async () => {
     vi.mocked(loadDraft).mockResolvedValue("call the bank");
     const onDraftRestored = vi.fn();
