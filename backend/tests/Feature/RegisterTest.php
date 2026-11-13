@@ -41,6 +41,16 @@ it('T-AA-02: rejects passwords shorter than 8 or longer than 128 characters', fu
         ->assertJsonPath('error.fields.password.0', 'At least 8 characters, and not your email.');
 })->with(['short' => 'seven77', 'long' => str_repeat('x', 129)]);
 
+it('AA §2.10: rejects a new password with accented letters (Vietnamese typing on)', function (string $password) {
+    register(['password' => $password])->assertStatus(422)
+        ->assertJsonPath('error.fields.password.0', "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.");
+    expect(User::count())->toBe(0);
+})->with([
+    'Telex mật khẩu' => 'mật khẩu 123',
+    'an accented capital' => 'Quiet RÍVER 42',
+    'a decomposed accent' => "quiet rive\u{0301}r 42",
+]);
+
 it('T-AA-03: accepts spaces, emoji and 128 characters in full', function () {
     $password = str_repeat('🙂 ab', 32);
     expect(mb_strlen($password))->toBe(128);

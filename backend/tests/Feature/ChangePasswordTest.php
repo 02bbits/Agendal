@@ -60,6 +60,18 @@ it('fails with 422 on current_password when wrong and leaves password unchanged'
     expect(Hash::check('old password 1', $this->user->fresh()->password))->toBeTrue();
 });
 
+it('AA §2.10: rejects a new password with accented letters and keeps the old one', function () {
+    $device = signInDevice();
+    asDevice($device)->postJson('/api/v1/auth/change-password', [
+        'current_password' => 'old password 1',
+        'password' => 'mật khẩu mới 1',
+        'password_confirmation' => 'mật khẩu mới 1',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.fields.password.0', "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.");
+
+    expect(Hash::check('old password 1', $this->user->fresh()->password))->toBeTrue();
+});
+
 it('validates each password rule and breach check', function () {
     $device = signInDevice();
 
