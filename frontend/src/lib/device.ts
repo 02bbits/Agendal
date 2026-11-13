@@ -39,3 +39,24 @@ export async function claimDevice(userId: number) {
     // As above
   }
 }
+
+const DEVICE_KEY = "agendal.device_id";
+let memoryId: string | undefined;
+
+/**
+ * This device's id, sent with every call (`X-Device-Id`). Two edits to one field in the same
+ * millisecond: the greater device id wins (ADR-004). Sign-out wipes it, so the device gets a new one.
+ */
+export function deviceId(): string {
+  try {
+    let id = localStorage.getItem(DEVICE_KEY);
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem(DEVICE_KEY, id);
+    }
+    return id;
+  } catch {
+    // Storage blocked: one id for this page's life
+    return (memoryId ??= crypto.randomUUID());
+  }
+}

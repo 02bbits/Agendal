@@ -332,3 +332,14 @@ it("retries after 1 s, 5 s, 30 s, then every 60 s, ±20 % (AP §2.2)", () => {
   expect(retryDelay(1, 0)).toBeCloseTo(800);
   expect(retryDelay(1, 1)).toBeCloseTo(1_200);
 });
+
+it("every call carries this device's id, the same each time (ADR-004 tie-break)", async () => {
+  await syncNow();
+  await syncNow();
+  const ids = fetchMock.mock.calls.map(([, init]) =>
+    new Headers((init as RequestInit).headers).get("X-Device-Id"),
+  );
+  expect(ids.length).toBeGreaterThan(1);
+  expect(new Set(ids).size).toBe(1);
+  expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+});
