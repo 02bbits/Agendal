@@ -8,10 +8,10 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
+use App\Support\Stamp;
 use DateTimeImmutable;
 use DateTimeZone;
 use Illuminate\Validation\ValidationException;
-use Throwable;
 
 class TaskPatcher
 {
@@ -97,7 +97,7 @@ class TaskPatcher
 
             if ($this->isLaterThan($fieldEffectiveAt, $storedAtStr)) {
                 $merged[$field] = $value;
-                $fieldUpdatedAt[$field] = $fieldEffectiveAt->format('Y-m-d\TH:i:s\Z');
+                $fieldUpdatedAt[$field] = Stamp::of($fieldEffectiveAt);
                 $appliedFields[$field] = true;
             }
         }
@@ -106,7 +106,7 @@ class TaskPatcher
         // - Clearing due_date clears due_time, and clears reminder if start_date is empty
         $dueDateWasCleared = array_key_exists('due_date', $appliedFields) && $merged['due_date'] === null;
         if ($dueDateWasCleared) {
-            $dueDateEffectiveAtIso = ($effectiveAtMap['due_date'] ?? $this->resolveFieldEffectiveAt('due_date', $atPayload))->format('Y-m-d\TH:i:s\Z');
+            $dueDateEffectiveAtIso = Stamp::of($effectiveAtMap['due_date'] ?? $this->resolveFieldEffectiveAt('due_date', $atPayload));
             $merged['due_time'] = null;
             $fieldUpdatedAt['due_time'] = $dueDateEffectiveAtIso;
             if (empty($merged['start_date'])) {
@@ -118,7 +118,7 @@ class TaskPatcher
         // - Clearing start_date clears start_time, and clears reminder if due_date is empty
         $startDateWasCleared = array_key_exists('start_date', $appliedFields) && $merged['start_date'] === null;
         if ($startDateWasCleared) {
-            $startDateEffectiveAtIso = ($effectiveAtMap['start_date'] ?? $this->resolveFieldEffectiveAt('start_date', $atPayload))->format('Y-m-d\TH:i:s\Z');
+            $startDateEffectiveAtIso = Stamp::of($effectiveAtMap['start_date'] ?? $this->resolveFieldEffectiveAt('start_date', $atPayload));
             $merged['start_time'] = null;
             $fieldUpdatedAt['start_time'] = $startDateEffectiveAtIso;
             if (empty($merged['due_date'])) {
@@ -134,7 +134,7 @@ class TaskPatcher
             (string) $merged['repeat'],
         )) {
             $merged['due_date'] = $this->clock->today($timezone);
-            $fieldUpdatedAt['due_date'] = (array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null))->format('Y-m-d\TH:i:s\Z');
+            $fieldUpdatedAt['due_date'] = Stamp::of(array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null));
         }
 
         // - repeat changes from never → repeat_anchor = active anchor date; repeat becomes never → repeat_anchor = null;
@@ -250,11 +250,10 @@ class TaskPatcher
     {
         $at = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
         foreach ($task->field_updated_at ?? [] as $stamp) {
-            $next = (new DateTimeImmutable((string) $stamp))->setTimezone(new DateTimeZone('UTC'))->modify('+1 second');
-            $at = max($at, $next);
+            $at = max($at, Stamp::time((string) $stamp)->modify('+1 millisecond'));
         }
 
-        return $at->format('Y-m-d\TH:i:s\Z');
+        return Stamp::of($at);
     }
 
     public function resolveFieldEffectiveAt(string $field, mixed $atPayload): DateTimeImmutable
@@ -288,19 +287,10 @@ class TaskPatcher
         return $now;
     }
 
+    /** Last write wins per field: to the millisecond, then by device (`Stamp::wins`). */
     public function isLaterThan(DateTimeImmutable $effectiveAt, ?string $storedAtStr): bool
     {
-        if ($storedAtStr === null || $storedAtStr === '') {
-            return true;
-        }
-
-        try {
-            $storedAt = (new DateTimeImmutable($storedAtStr))->setTimezone(new DateTimeZone('UTC'));
-
-            return $effectiveAt > $storedAt;
-        } catch (Throwable) {
-            return true;
-        }
+        return Stamp::wins(Stamp::of($effectiveAt), $storedAtStr);
     }
 
     public function complete(Task $task, ?string $at): Task
@@ -310,7 +300,7 @@ class TaskPatcher
         }
 
         $effectiveAt = $this->resolveEffectiveAt($at);
-        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s.v\Z');
 
         /** @var array<string, string> $fieldUpdatedAt */
         $fieldUpdatedAt = $task->field_updated_at ?? [];
@@ -319,7 +309,7 @@ class TaskPatcher
         if ($this->isLaterThan($effectiveAt, $storedDoneAt)) {
             $task->done = true;
             $task->done_at = $effectiveAtIso;
-            $fieldUpdatedAt['done'] = $effectiveAtIso;
+            $fieldUpdatedAt['done'] = Stamp::of($effectiveAt);
             $task->field_updated_at = $fieldUpdatedAt;
             $task->save();
         }
@@ -330,7 +320,7 @@ class TaskPatcher
     public function reopen(Task $task, ?string $at): Task
     {
         $effectiveAt = $this->resolveEffectiveAt($at);
-        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s\Z');
+        $effectiveAtIso = $effectiveAt->format('Y-m-d\TH:i:s.v\Z');
 
         /** @var array<string, string> $fieldUpdatedAt */
         $fieldUpdatedAt = $task->field_updated_at ?? [];
@@ -339,7 +329,7 @@ class TaskPatcher
         if ($this->isLaterThan($effectiveAt, $storedDoneAt)) {
             $task->done = false;
             $task->done_at = null;
-            $fieldUpdatedAt['done'] = $effectiveAtIso;
+            $fieldUpdatedAt['done'] = Stamp::of($effectiveAt);
             $task->field_updated_at = $fieldUpdatedAt;
             $task->save();
         }

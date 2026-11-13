@@ -33,6 +33,7 @@ import { useToday } from "@/ui/features/tasks/useToday";
 import { appClock } from "../../appClock";
 import { PageMessage } from "../../PageMessage";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
+import { SYNCED } from "@/lib/sync";
 
 export const SKELETON_DELAY_MS = 300;
 
@@ -129,8 +130,11 @@ export function ProjectClient({ id }: { id: string }) {
       }
     };
     window.addEventListener("agendal:task-created", onTaskCreated);
+    // Changes pulled by sync (IM-52)
+    window.addEventListener(SYNCED, onTaskCreated);
     return () => {
       window.removeEventListener("agendal:task-created", onTaskCreated);
+      window.removeEventListener(SYNCED, onTaskCreated);
     };
   }, [id, isNoProject]);
 

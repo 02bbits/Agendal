@@ -1,4 +1,5 @@
 import { timeZone } from "./clock";
+import { deviceId } from "./device";
 import { reportFetch } from "./online";
 
 const readXsrf = () => {
@@ -11,12 +12,14 @@ export const SESSION_EXPIRED = "agendal:session-expired";
 /** Fired on `window` when an API call answers 403 with auth.email_unverified. */
 export const EMAIL_UNVERIFIED = "agendal:email-unverified";
 
-// Every API call goes through here, so the server always has the device zone (ADR-006),
+// Every API call goes through here, so the server always has the device zone (ADR-006) and the
+// device id that breaks same-millisecond ties (ADR-004),
 // and every write carries the CSRF token from Sanctum's XSRF-TOKEN cookie (ADR-007)
 export async function api(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set("Accept", "application/json");
   headers.set("X-Timezone", timeZone());
+  headers.set("X-Device-Id", deviceId());
 
   const method = (init.method ?? "GET").toUpperCase();
   if (!["GET", "HEAD", "OPTIONS"].includes(method)) {

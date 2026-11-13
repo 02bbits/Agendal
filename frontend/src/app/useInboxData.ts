@@ -4,6 +4,7 @@ import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
 import { buildInbox, t, type Project, type Task } from "@/ui";
+import { SYNCED } from "@/lib/sync";
 
 // Same counts as the server's, from the tasks on the device
 function subtitleOf(tasks: readonly Task[]) {
@@ -104,10 +105,13 @@ export function useInboxData() {
       if (document.visibilityState === "visible") fetchData();
     };
     window.addEventListener("agendal:task-created", refresh);
+    // Changes pulled by sync (IM-52)
+    window.addEventListener(SYNCED, refresh);
     window.addEventListener("agendal:projects-changed", refresh);
     document.addEventListener("visibilitychange", onVis);
     return () => {
       window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener(SYNCED, refresh);
       window.removeEventListener("agendal:projects-changed", refresh);
       document.removeEventListener("visibilitychange", onVis);
     };

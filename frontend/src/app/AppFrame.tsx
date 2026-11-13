@@ -39,7 +39,9 @@ import {
 import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { CONFLICT, forgetConflicts } from "@/lib/conflicts";
 import { readMe, saveMe } from "@/lib/localStore";
+import { startSync } from "@/lib/sync";
 import { useOffline } from "@/lib/online";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
@@ -476,6 +478,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  // Sync while signed in (IM-52, ADR-005); a lost conflict says so (AP-E7). Only the latest toast
+  // shows, since a new one replaces it
+  const signedIn = user !== null;
+  useEffect(() => (signedIn ? startSync() : undefined), [signedIn]);
+  useEffect(() => {
+    const onConflict = (event: Event) =>
+      showToast(
+        t("app.conflict", {
+          title: (event as CustomEvent<{ title: string }>).detail.title,
+        }),
+      );
+    window.addEventListener(CONFLICT, onConflict);
+    return () => window.removeEventListener(CONFLICT, onConflict);
+  }, [showToast]);
+
   const signOut = useCallback(
     async (everywhere = false) => {
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
@@ -495,6 +512,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       clearThemePalette();
       document.documentElement.setAttribute("data-page-view", "flat");
       forgetNotes();
+      forgetConflicts();
       clearRecent();
       setUser(null);
       settingsRef.current = DEFAULT_SETTINGS;

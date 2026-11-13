@@ -23,6 +23,7 @@ import { PanelHeader } from "../../ui/features/tasks/details/PanelHeader";
 import { t } from "../../ui/copy";
 import type { NoteFilter } from "../../ui/domain/types";
 import NoteResultClient from "./[id]/NoteResultClient";
+import { SYNCED } from "../../lib/sync";
 
 // The next page loads once the end of the list is within one screen
 const ONE_SCREEN_AHEAD = "0px 0px 100% 0px";
@@ -85,10 +86,13 @@ function NotesContent({ noteId }: { noteId?: string }) {
     const refresh = () => setRevision((value) => value + 1);
     window.addEventListener(NOTE_UPDATED, refresh);
     window.addEventListener("agendal:task-created", refresh);
+    // Changes pulled by sync (IM-52)
+    window.addEventListener(SYNCED, refresh);
     window.addEventListener("agendal:note-renamed", refresh);
     return () => {
       window.removeEventListener(NOTE_UPDATED, refresh);
       window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener(SYNCED, refresh);
       window.removeEventListener("agendal:note-renamed", refresh);
     };
   }, []);
