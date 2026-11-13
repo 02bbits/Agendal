@@ -35,7 +35,8 @@ class PurgeTombstones extends Command
                 $rows->delete();
             }
             if ($purged > 0) {
-                DB::update('update sync_horizon set purged_seq = greatest(purged_seq, ?)', [$purged]);
+                // One row per purge; the horizon is the largest (`SyncPull::tooOld`)
+                DB::table('sync_horizon')->insert(['purged_seq' => $purged]);
             }
         });
 

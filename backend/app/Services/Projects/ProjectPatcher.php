@@ -8,6 +8,7 @@ use App\Exceptions\ApiError;
 use App\Http\Requests\StoreProjectRequest;
 use App\Models\Project;
 use App\Services\Tasks\TaskPatcher;
+use App\Support\Stamp;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +49,7 @@ final class ProjectPatcher
             $project->setAttribute($field, $value);
         }
 
-        $this->stamp($project, [$field], $effective->format('Y-m-d\TH:i:s\Z'));
+        $this->stamp($project, [$field], Stamp::of($effective));
         $project->save();
 
         return true;

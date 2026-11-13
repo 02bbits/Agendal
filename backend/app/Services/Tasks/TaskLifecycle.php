@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Tasks;
 
 use App\Models\Task;
+use App\Support\Stamp;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -46,7 +47,7 @@ final class TaskLifecycle
                 if ($child !== null && ! $child->done) {
                     if (! $child->trashed()) {
                         $fields = $child->field_updated_at;
-                        $fields['deleted'] = $this->patcher->resolveEffectiveAt($at)->format(DATE_ATOM);
+                        $fields['deleted'] = Stamp::of($this->patcher->resolveEffectiveAt($at));
                         $child->field_updated_at = $fields;
                         $child->delete();
                     }
@@ -98,7 +99,7 @@ final class TaskLifecycle
     private function stamp(Task $task, ?string $at): void
     {
         $fields = $task->field_updated_at ?? [];
-        $fields['deleted'] = $this->patcher->resolveEffectiveAt($at)->format('Y-m-d\TH:i:s\Z');
+        $fields['deleted'] = Stamp::of($this->patcher->resolveEffectiveAt($at));
         $task->field_updated_at = $fields;
     }
 }

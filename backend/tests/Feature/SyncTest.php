@@ -7,13 +7,14 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use Carbon\Carbon;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\Support\FrozenClock;
 
-// IM-52: GET /sync and POST /sync/patches (ADR-004, ADR-005, AP §7-8)
-uses(RefreshDatabase::class);
+// IM-52: GET /sync and POST /sync/patches (ADR-004, ADR-005, AP §7-8). Truncation, not a wrapping
+// transaction: the pull hands out only committed changes, so the tests' writes must commit.
+uses(DatabaseTruncation::class);
 
 beforeEach(function () {
     $this->clock = new FrozenClock('2026-10-23T01:12:00Z');
@@ -185,7 +186,7 @@ describe('POST /sync/patches', function () {
         $id = newTask();
         patches([['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'Forged', 'at' => '2030-01-01T00:00:00Z']]);
 
-        expect(Task::find($id)->field_updated_at['title'])->toBe('2026-10-23T01:17:00Z');
+        expect(Task::find($id)->field_updated_at['title'])->toBe('2026-10-23T01:17:00.000Z');
 
         $this->clock->advance('+10 minutes');
         expect(patches([['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'Real', 'at' => at(0)]]))
@@ -286,4 +287,83 @@ it('stamps sync bookkeeping: change_seq moves on every write', function () {
     patches([['entity' => 'task', 'id' => $id, 'field' => 'notes', 'value' => 'Two litres', 'at' => at(1)]]);
 
     expect(DB::table('tasks')->where('id', $id)->value('change_seq'))->toBeGreaterThan($before);
+});
+
+describe('same timestamp (ADR-004 tie-break)', function () {
+    $deviceA = '00000000-0000-4000-8000-00000000000a';
+    $deviceB = '00000000-0000-4000-8000-00000000000b';
+    $same = '2026-10-23T01:12:30.250Z';
+
+    it('compares to the millisecond: an earlier write in the same second loses', function () {
+        $id = newTask();
+        patches([['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'Late', 'at' => '2026-10-23T01:12:30.900Z']]);
+
+        expect(patches([['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'Early', 'at' => '2026-10-23T01:12:30.100Z']]))
+            ->toBe([['index' => 0, 'status' => 'stale', 'current' => 'Late']]);
+    });
+
+    it('in the same millisecond the greater device id wins, whichever arrives first', function () use ($deviceA, $deviceB, $same) {
+        $first = newTask();
+        $second = newTask();
+        $row = fn (string $id, string $value) => [['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => $value, 'at' => $same]];
+        $send = fn (string $device, array $rows) => $this->withHeader('X-Device-Id', $device)->postJson('/api/v1/sync/patches', $rows)->json('results.0.status');
+
+        // A then B, and B then A: B wins both times
+        expect($send($deviceA, $row($first, 'A')))->toBe('applied')
+            ->and($send($deviceB, $row($first, 'B')))->toBe('applied')
+            ->and($send($deviceB, $row($second, 'B')))->toBe('applied')
+            ->and($send($deviceA, $row($second, 'A')))->toBe('stale')
+            ->and(Task::find($first)->title)->toBe('B')
+            ->and(Task::find($second)->title)->toBe('B');
+    });
+
+    it('the same device in the same millisecond: the later edit wins (its queue is in order)', function () use ($deviceA, $same) {
+        $id = newTask();
+        $this->withHeader('X-Device-Id', $deviceA);
+
+        patches([
+            ['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'First', 'at' => $same],
+            ['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'Second', 'at' => $same],
+        ]);
+
+        expect(Task::find($id)->title)->toBe('Second');
+    });
+
+    it('an edit made in the same millisecond as the create still applies', function () {
+        $id = newTask();
+        $this->patchJson("/api/v1/tasks/{$id}", ['title' => 'Renamed at once'])->assertOk();
+
+        expect(Task::find($id)->title)->toBe('Renamed at once');
+    });
+
+    it('ignores a device id that is not a UUID', function () use ($same) {
+        $id = newTask();
+        $this->withHeader('X-Device-Id', 'zzz~forged');
+        patches([['entity' => 'task', 'id' => $id, 'field' => 'title', 'value' => 'x', 'at' => $same]]);
+
+        expect(Task::find($id)->field_updated_at['title'])->toBe($same);
+    });
+});
+
+it('a pull never passes a change that commits after a later one (ADR-005)', function () {
+    $slow = newTask(['title' => 'Slow']);
+    $fast = newTask(['title' => 'Fast']);
+    $cursor = $this->getJson('/api/v1/sync')->json('next_cursor');
+
+    // Another request writes `slow` first (lower seq) and hasn't committed yet
+    config(['database.connections.other' => config('database.connections.pgsql')]);
+    $other = DB::connection('other');
+    $other->beginTransaction();
+    $other->table('tasks')->where('id', $slow)->update(['title' => 'Slow, renamed']);
+    // Meanwhile `fast` is written and committed (higher seq)
+    $this->clock->advance('+1 minute');
+    $this->patchJson("/api/v1/tasks/{$fast}", ['title' => 'Fast, renamed'])->assertOk();
+
+    $pull = $this->getJson("/api/v1/sync?cursor={$cursor}")->assertOk();
+    expect($pull->json('changes.tasks'))->toBe([])
+        ->and($pull->json('next_cursor'))->toBe($cursor);
+
+    $other->commit();
+    $pull = $this->getJson("/api/v1/sync?cursor={$cursor}");
+    expect(array_column($pull->json('changes.tasks'), 'title'))->toBe(['Slow, renamed', 'Fast, renamed']);
 });

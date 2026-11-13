@@ -7,6 +7,7 @@ namespace App\Services\Projects;
 use App\Models\Project;
 use App\Models\Task;
 use App\Services\Clock\ClockInterface;
+use App\Support\Stamp;
 use Carbon\Carbon;
 use DateTimeZone;
 use Illuminate\Database\Eloquent\Collection;
@@ -37,12 +38,13 @@ final class ProjectDeleter
 
         $now = Carbon::instance($this->clock->now());
         $nowIso = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+        $stamp = Stamp::of($this->clock->now());
 
-        return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso): array {
+        return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso, $stamp): array {
             $project->deleted_at = $nowIso;
             $project->updated_at = $now;
             // `deleted` is a field too (ADR-004): a stale sync patch can't undo this
-            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $nowIso];
+            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $stamp];
             $project->save();
 
             if ($tasks->isEmpty()) {
@@ -56,7 +58,7 @@ final class ProjectDeleter
                 foreach ($tasks as $task) {
                     /** @var array<string, string> $fieldUpdatedAt */
                     $fieldUpdatedAt = $task->field_updated_at ?? [];
-                    $fieldUpdatedAt['project_id'] = $nowIso;
+                    $fieldUpdatedAt['project_id'] = $stamp;
                     $task->field_updated_at = $fieldUpdatedAt;
                     $task->project_id = null;
                     $task->updated_at = $now;
@@ -66,7 +68,7 @@ final class ProjectDeleter
                 foreach ($tasks as $task) {
                     /** @var array<string, string> $fieldUpdatedAt */
                     $fieldUpdatedAt = $task->field_updated_at ?? [];
-                    $fieldUpdatedAt['deleted'] = $nowIso;
+                    $fieldUpdatedAt['deleted'] = $stamp;
                     $task->field_updated_at = $fieldUpdatedAt;
                     $task->deleted_at = $now;
                     $task->updated_at = $now;
@@ -92,20 +94,20 @@ final class ProjectDeleter
         $tasks = $this->resolveAndValidateRestorableTasks($taskIds, $mode, $project);
 
         $now = Carbon::instance($this->clock->now());
-        $nowIso = $this->clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z');
+        $stamp = Stamp::of($this->clock->now());
 
-        return DB::transaction(function () use ($project, $tasks, $mode, $now, $nowIso): Project {
+        return DB::transaction(function () use ($project, $tasks, $mode, $now, $stamp): Project {
             $project->deleted_at = null;
             $project->updated_at = $now;
             // `deleted` is a field too (ADR-004): a stale sync patch can't undo this
-            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $nowIso];
+            $project->field_updated_at = [...($project->field_updated_at ?? []), 'deleted' => $stamp];
             $project->save();
 
             if ($mode === 'move') {
                 foreach ($tasks as $task) {
                     /** @var array<string, string> $fieldUpdatedAt */
                     $fieldUpdatedAt = $task->field_updated_at ?? [];
-                    $fieldUpdatedAt['project_id'] = $nowIso;
+                    $fieldUpdatedAt['project_id'] = $stamp;
                     $task->field_updated_at = $fieldUpdatedAt;
                     $task->project_id = $project->id;
                     $task->updated_at = $now;
@@ -115,7 +117,7 @@ final class ProjectDeleter
                 foreach ($tasks as $task) {
                     /** @var array<string, string> $fieldUpdatedAt */
                     $fieldUpdatedAt = $task->field_updated_at ?? [];
-                    $fieldUpdatedAt['deleted'] = $nowIso;
+                    $fieldUpdatedAt['deleted'] = $stamp;
                     $task->field_updated_at = $fieldUpdatedAt;
                     $task->deleted_at = null;
                     $task->updated_at = $now;

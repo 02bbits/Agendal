@@ -15,8 +15,8 @@ use App\Services\Projects\ProjectCounts;
 use App\Services\Projects\ProjectDeleter;
 use App\Services\Projects\ProjectPatcher;
 use App\Services\Projects\ProjectTaskLists;
+use App\Support\Stamp;
 use Carbon\Carbon;
-use DateTimeZone;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -128,24 +128,31 @@ class ProjectController extends Controller
     ): JsonResponse {
         $this->ensureNotDeleted($project);
 
-        if ($request->has('name')) {
-            $name = (string) $request->input('name');
-            $this->ensureNameAvailable($name, (string) $project->id);
-            $project->name = $name;
-        }
+        // Under a row lock, so a sync patch landing at the same time can't drop these stamps
+        $project = DB::transaction(function () use ($request, $project, $clock): Project {
+            $project = Project::query()->whereKey($project->id)->lockForUpdate()->firstOrFail();
 
-        if ($request->has('colour')) {
-            $project->colour = (string) $request->input('colour');
-        }
+            if ($request->has('name')) {
+                $name = (string) $request->input('name');
+                $this->ensureNameAvailable($name, (string) $project->id);
+                $project->name = $name;
+            }
 
-        $project->updated_at = Carbon::instance($clock->now());
-        // Per-field stamps, so a sync patch made earlier offline doesn't undo this (ADR-004)
-        $this->projectPatcher->stamp(
-            $project,
-            array_values(array_intersect(['name', 'colour'], array_keys($request->all()))),
-            $clock->now()->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s\Z'),
-        );
-        $project->save();
+            if ($request->has('colour')) {
+                $project->colour = (string) $request->input('colour');
+            }
+
+            $project->updated_at = Carbon::instance($clock->now());
+            // Per-field stamps, so a sync patch made earlier offline doesn't undo this (ADR-004)
+            $this->projectPatcher->stamp(
+                $project,
+                array_values(array_intersect(['name', 'colour'], array_keys($request->all()))),
+                Stamp::of($clock->now()),
+            );
+            $project->save();
+
+            return $project;
+        });
 
         $this->projectCounts->load(collect([$project]));
 

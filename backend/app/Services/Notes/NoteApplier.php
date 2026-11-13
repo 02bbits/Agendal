@@ -19,6 +19,7 @@ use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\TaskRecurrence;
+use App\Support\Stamp;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -244,7 +245,7 @@ final class NoteApplier
         if (array_key_exists('end_time', $entry)) {
             $entry['due_time'] = $entry['end_time'];
         }
-        $stamp = $this->clock->now()->format(DATE_ATOM);
+        $stamp = Stamp::of($this->clock->now());
         $task = new Task;
         $task->forceFill(array_intersect_key($entry, array_flip(Task::PATCHABLE)));
         if ($task->start_time !== null && $task->start_date === null) {

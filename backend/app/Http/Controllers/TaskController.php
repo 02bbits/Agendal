@@ -20,9 +20,11 @@ use App\Services\Tasks\SearchQuery;
 use App\Services\Tasks\TaskLifecycle;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\UpcomingQuery;
+use App\Support\Stamp;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
@@ -164,7 +166,7 @@ class TaskController extends Controller
         OpenTaskLimit::ensureRoom();
 
         // 5. Field updated at & create
-        $nowIso = $clock->now()->format('Y-m-d\TH:i:s\Z');
+        $nowIso = Stamp::of($clock->now());
         $fieldUpdatedAt = [];
         foreach ([...Task::PATCHABLE, 'done', 'deleted'] as $field) {
             $fieldUpdatedAt[$field] = $nowIso;
@@ -220,7 +222,13 @@ class TaskController extends Controller
         $timezone = (string) $request->attributes->get('timezone', 'UTC');
         $payload = $request->isJson() ? (array) $request->json()->all() : $request->all();
 
-        $updatedTask = $patcher->patch($task, $payload, $timezone);
+        // Read again under a row lock: two writes at once would each save the stamps they read,
+        // and one field's stamp would be lost (ADR-004)
+        $updatedTask = DB::transaction(fn (): Task => $patcher->patch(
+            Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail(),
+            $payload,
+            $timezone,
+        ));
 
         return new TaskResource($updatedTask);
     }
