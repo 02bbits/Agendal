@@ -7,6 +7,7 @@ import {
   removeTasks,
   replaceProjects,
 } from "./localStore";
+import { offlineProject, orQueue } from "./offline";
 import type { Project, ProjectColor, Task } from "../ui/domain/types";
 
 export interface ProjectListResponse {
@@ -59,7 +60,12 @@ export async function listProjects(): Promise<Project[]> {
 }
 
 /** `POST /projects` */
-export async function createProject(body: CreateProjectBody): Promise<Project> {
+export function createProject(body: CreateProjectBody) {
+  const offline = offlineProject.create(body);
+  return orQueue(() => sendCreate(body), offline.entries, offline.local);
+}
+
+async function sendCreate(body: CreateProjectBody): Promise<Project> {
   const response = await api("/projects", {
     method: "POST",
     headers: {
@@ -83,7 +89,12 @@ export async function getProject(
 }
 
 /** `PATCH /projects/{id}` */
-export async function updateProject(
+export function updateProject(id: string, body: UpdateProjectBody) {
+  const offline = offlineProject.update(id, body);
+  return orQueue(() => sendUpdate(id, body), offline.entries, offline.local);
+}
+
+async function sendUpdate(
   id: string,
   body: UpdateProjectBody,
 ): Promise<Project> {
@@ -98,7 +109,16 @@ export async function updateProject(
 }
 
 /** `DELETE /projects/{id}?tasks=move|delete` */
-export async function deleteProject(
+export function deleteProject(id: string, mode?: "move" | "delete") {
+  const offline = offlineProject.remove(id, mode);
+  return orQueue<DeleteProjectResponse>(
+    () => sendDelete(id, mode),
+    offline.entries,
+    offline.local,
+  );
+}
+
+async function sendDelete(
   id: string,
   mode?: "move" | "delete",
 ): Promise<DeleteProjectResponse> {
@@ -114,7 +134,12 @@ export async function deleteProject(
 }
 
 /** `POST /projects/{id}/restore` */
-export async function restoreProject(
+export function restoreProject(id: string, body: RestoreProjectBody) {
+  const offline = offlineProject.restore(id, body.task_ids, body.mode);
+  return orQueue(() => sendRestore(id, body), offline.entries, offline.local);
+}
+
+async function sendRestore(
   id: string,
   body: RestoreProjectBody,
 ): Promise<Project> {

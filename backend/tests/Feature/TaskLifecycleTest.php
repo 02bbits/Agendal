@@ -125,7 +125,7 @@ it('complete twice → second call leaves done_at unchanged', function () {
     expect($resp2->json('task.done_at'))->toBe($firstDoneAt);
 
     $task = Task::find($taskId);
-    expect($task->field_updated_at['done'])->toBe($t1);
+    expect($task->field_updated_at['done'])->toBe(ms($t1));
 });
 
 it('stale complete: reopen with at=T2, then complete with at=T1 (older) → task stays open', function () {
@@ -160,7 +160,7 @@ it('stale complete: reopen with at=T2, then complete with at=T1 (older) → task
     $task = Task::find($taskId);
     expect($task->done)->toBeFalse()
         ->and($task->done_at)->toBeNull()
-        ->and($task->field_updated_at['done'])->toBe($t2);
+        ->and($task->field_updated_at['done'])->toBe(ms($t2));
 });
 
 it('reopen → done false, done_at null', function () {
@@ -193,7 +193,7 @@ it('reopen → done false, done_at null', function () {
     $task = Task::find($taskId);
     expect($task->done)->toBeFalse()
         ->and($task->done_at)->toBeNull()
-        ->and($task->field_updated_at['done'])->toBe('2026-10-23T01:12:00Z');
+        ->and($task->field_updated_at['done'])->toBe('2026-10-23T01:12:00.000Z');
 });
 
 it('T-TK-41 (API part of delete + Undo): DELETE → 204, GET → 404, row still in DB with deleted_at set; POST restore → 200, GET → 200 again', function () {
@@ -222,7 +222,7 @@ it('T-TK-41 (API part of delete + Undo): DELETE → 204, GET → 404, row still 
     expect($rawRow)->not->toBeNull()
         ->and($rawRow->deleted_at)->not->toBeNull();
     $rawFieldUpdatedAt = json_decode((string) $rawRow->field_updated_at, true);
-    expect($rawFieldUpdatedAt['deleted'])->toBe('2026-10-23T01:12:00Z');
+    expect($rawFieldUpdatedAt['deleted'])->toBe('2026-10-23T01:12:00.000Z');
 
     // 4. POST restore → 200
     $restoreResp = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/restore")
@@ -239,7 +239,7 @@ it('T-TK-41 (API part of delete + Undo): DELETE → 204, GET → 404, row still 
     $restoredTask = Task::find($taskId);
     expect($restoredTask)->not->toBeNull()
         ->and($restoredTask->deleted_at)->toBeNull()
-        ->and($restoredTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00Z');
+        ->and($restoredTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00.000Z');
 });
 
 it('DELETE a repeating task without scope or with scope=future → 422 on scope, task not deleted', function () {
@@ -373,7 +373,7 @@ it('a future at on complete is clamped to now + 5 minutes', function () {
     assertTaskSchema($response->json('task'));
 
     $task = Task::find($taskId);
-    expect($task->field_updated_at['done'])->toBe('2026-10-23T01:17:00Z');
+    expect($task->field_updated_at['done'])->toBe('2026-10-23T01:17:00.000Z');
 });
 
 it('rejects invalid at format on complete and reopen with 422', function (string $invalidAt) {

@@ -2,8 +2,14 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-13
+
+- **Live sync recorded as a gap (Refs #51).** [tasks.md After MVP](08-project/tasks.md#gap-live-sync): open devices see each other's changes within 60 s; a future task adds server push (SSE) that triggers the usual pull. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md) Consequences links to it.
+- **Same-timestamp writes and commit order (Refs #51, IM-52).** [ADR-004](07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md): stamps keep milliseconds and the writing device (`X-Device-Id`); in the same millisecond the greater device id wins, the same device's later edit wins; writes lock the row before comparing stamps. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md): a pull stops before changes whose transaction may still be followed by a lower `change_seq` commit.
+
 ## 2026-11-12
 
+- **Sync (Refs #51, IM-52).** [AP §2.2, §7, §8](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): the first sync downloads in full (`GET /sync?full=1`); writes with no answer queue and stay on the device; `GET /sync` returns notes as Notes-list rows; offline creates replay `POST /tasks` / `POST /projects` before the patch batch (replaces "creates go through the same endpoint"); a project's `deleted` value is `"move"` / `"delete"` / `false`. [PJ §8](03-modules/PJ-projects.md#8-data-validation-and-authorization): the same, and per-field stamps on projects. Proposed copy `task.changed_elsewhere` ("Changed on another device") for the row marker in LV §2 / AP §2.2.
 - **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
 
 ## 2026-11-10

@@ -67,6 +67,7 @@ export const pending = {
   "task.starts_at": "Start at {time}",
   "task.starts_today": "Starts today",
   "task.due_at_time": "Due at {time}",
+  "task.changed_elsewhere": "Changed on another device",
   "nav.tabs": "Main",
   "nav.sidebar": "Menu",
   "app.name": "Agendal",

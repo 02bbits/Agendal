@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import { localTime, now, timeZone } from "../../../lib/clock";
+import { useConflicted } from "../../../lib/conflicts";
 import { t } from "../../copy";
 import { cx } from "../../components/cx";
 import {
@@ -56,12 +57,14 @@ export function TaskRow({
   renderTitle,
 }: TaskRowProps) {
   const nowTime = localTime(timeZone(), now());
-  const accessibleName = taskAccessibleName(task, project, {
-    today,
-    timeFormat,
-    nowTime,
-    entry,
-  });
+  // Lost a sync conflict: marked until the task is opened (AP §2.2, LV §2)
+  const conflicted = useConflicted(task.id);
+  const accessibleName = [
+    taskAccessibleName(task, project, { today, timeFormat, nowTime, entry }),
+    conflicted && t("task.changed_elsewhere"),
+  ]
+    .filter(Boolean)
+    .join(", ");
   const flag =
     task.priority === "high"
       ? "danger"
@@ -189,6 +192,14 @@ export function TaskRow({
                 </span>
               </Fragment>
             ))}
+          {conflicted && (
+            <Fragment>
+              <span>·</span>
+              <span className="font-medium text-ink" data-slot="conflict">
+                {t("task.changed_elsewhere")}
+              </span>
+            </Fragment>
+          )}
         </span>
       </Link>
 

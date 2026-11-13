@@ -12,6 +12,7 @@ import {
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 import { readProjects } from "@/lib/localStore";
+import { SYNCED } from "@/lib/sync";
 import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -73,7 +74,10 @@ export function ProjectsClient() {
       load();
     };
     window.addEventListener("agendal:projects-changed", handleProjectsChanged);
+    // Changes pulled by sync (IM-52)
+    window.addEventListener(SYNCED, handleProjectsChanged);
     return () => {
+      window.removeEventListener(SYNCED, handleProjectsChanged);
       window.removeEventListener(
         "agendal:projects-changed",
         handleProjectsChanged,

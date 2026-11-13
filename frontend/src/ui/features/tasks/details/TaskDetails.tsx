@@ -1,4 +1,5 @@
-import type { ReactElement, ReactNode } from "react";
+import { useEffect, type ReactElement, type ReactNode } from "react";
+import { clearConflict } from "../../../../lib/conflicts";
 import { cx } from "../../../components/cx";
 import type { TaskPatch } from "../../../domain/api";
 import type { Project, Task, WeekStart } from "../../../domain/types";
@@ -48,6 +49,10 @@ export function TaskDetails({
   const store = useTaskStore();
   const currentProjects = projects ?? store.projects;
   const project = currentProjects.find((p) => p.id === task.project_id) ?? null;
+  // Opening the task is seeing the change: its row loses the conflict marker (AP §2.2)
+  useEffect(() => {
+    void clearConflict(task.id);
+  }, [task.id]);
 
   function save(patch: TaskPatch) {
     store.update(task, patch);
