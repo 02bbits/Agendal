@@ -58,7 +58,7 @@ A task entity in API requests and responses exposes the following fields:
 | `due_date` | string \| null | Floating local date `YYYY-MM-DD` for the deadline |
 | `due_time` | string \| null | Floating local time `HH:MM` for the deadline on `due_date` |
 | `priority` | string \| null | `low`, `medium`, or `high` |
-| `reminder` | string | `none`, `5m`, `15m`, `30m`, `1h`, `1d` |
+| `reminder` | string | `none`, `0m` (at the start), `5m`, `10m`, `15m`, `30m`, `1h`, `2h`, `1d`, `2d`, `1w` (#154; notes still use only the first six) |
 | `repeat` | string | `never`, `daily`, `weekly`, `monthly`, `yearly` |
 | `repeat_rule` | string \| null | RRULE string (≤ 300 characters) |
 | `repeat_anchor` | string \| null | Original local date of the series (`start_date` if present, else `due_date`), read-only |

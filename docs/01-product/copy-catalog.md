@@ -191,6 +191,29 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `task.due_at` † | Due {time} | List row meta line and dashed blue card ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 | `task.due_on` † | Due {date} | List row meta line ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
 | `task.started_on` † | Started {date} | List row meta line on the due day ([LV-4](../03-modules/LV-lists-search.md#24-task-row-lv-4)) |
+| `task.start_time` † | Start time | New task: the start time row (#154) |
+| `repeat_preset.never` † | Doesn't repeat | Repeat picker, first choice ([TK-2](../03-modules/TK-tasks.md#22-task-details-and-editing-tk-2-tk-3)) |
+| `repeat_preset.daily` † | Every day | Repeat picker |
+| `repeat_preset.weekdays` † | Every weekday (Mon–Fri) | Repeat picker |
+| `repeat_preset.weekly` † | Every week on {day} | Repeat picker, from the start date |
+| `repeat_preset.biweekly` † | Every 2 weeks on {day} | Repeat picker |
+| `repeat_preset.monthly_day` † | Every month on the {ordinal_day} | Repeat picker, e.g. "the 17th" |
+| `repeat_preset.monthly_weekday` † | Every month on the {nth} {day} | Repeat picker, e.g. "the third Monday", "the last Friday" |
+| `repeat_preset.yearly` † | Every year on {date} | Repeat picker, e.g. "17 Nov" |
+| `repeat_preset.custom` † | Custom… | Opens the Custom repeat dialog |
+| `repeat_custom.title` † | Custom repeat | Dialog title |
+| `repeat_custom.every` † | Every | Number of days, weeks, months or years |
+| `repeat_unit.day` † | Day | Unit choice; also `repeat_unit.week` Week, `repeat_unit.month` Month, `repeat_unit.year` Year |
+| `repeat_custom.on_days` † | On | Weekday choice for a weekly repeat |
+| `repeat_custom.month_day` † | On day {day} | Monthly: the same day number |
+| `repeat_custom.month_weekday` † | On the {nth} {day} | Monthly: the same weekday of the month |
+| `repeat_end.label` † | Ends | With `repeat_end.never` Never, `repeat_end.on` On (a date), `repeat_end.after` After … `repeat_end.times` times |
+| `repeat_custom.done` † | Done | Saves the custom repeat |
+| `reminder.0m` † | At start time | Reminder choice in Task details |
+| `reminder.10m` † | 10 minutes before | Reminder choice |
+| `reminder.2h` † | 2 hours before | Reminder choice |
+| `reminder.2d` † | 2 days before | Reminder choice |
+| `reminder.1w` † | 1 week before | Reminder choice |
 
 ## Lists and search (LV)
 
