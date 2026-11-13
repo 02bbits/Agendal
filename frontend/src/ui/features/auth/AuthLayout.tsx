@@ -10,6 +10,7 @@ export interface AuthLayoutProps {
   framed?: boolean;
   transitionKey?: string;
   footerAtBottom?: boolean;
+  wide?: boolean;
 }
 
 export function AuthLayout({
@@ -17,12 +18,13 @@ export function AuthLayout({
   framed = true,
   transitionKey,
   footerAtBottom = false,
+  wide = false,
 }: AuthLayoutProps) {
   const pathname = usePathname();
   const key = transitionKey ?? (pathname || undefined);
 
   const brand = (
-    <div className="flex items-center justify-center gap-2.5 lg:hidden">
+    <div className="min-h-11 flex items-center justify-center gap-2.5 lg:hidden">
       <span
         aria-hidden="true"
         className="inline-flex size-10 items-center justify-center rounded-[10px] bg-ink text-paper"
@@ -36,7 +38,7 @@ export function AuthLayout({
   );
 
   return (
-    <div className="relative isolate min-h-dvh flex flex-col bg-paper lg:flex-row">
+    <div className="relative isolate min-h-dvh flex flex-col overflow-x-clip bg-paper lg:flex-row">
       <div
         aria-hidden="true"
         className="auth-backdrop auth-backdrop-fade pointer-events-none absolute inset-x-0 top-0 h-[420px] -z-10"
@@ -81,15 +83,23 @@ export function AuthLayout({
           className={cx(
             "motion-safe:animate-[auth-rise_260ms_cubic-bezier(.2,.7,.3,1)]",
             "mx-auto flex w-full max-w-[400px] flex-1 flex-col min-h-dvh lg:min-h-0 lg:p-0 lg:flex-initial",
-            "pt-[max(3.5rem,calc(env(safe-area-inset-top)+1.5rem))]",
+            // The inset is the status bar + Dynamic Island / punch-hole camera when the page draws
+            // edge to edge; it reads 0 in browser tabs and some Android WebViews, so 3.5rem keeps
+            // the logo clear of the top in every case
+            "pt-[max(3.5rem,calc(env(safe-area-inset-top,0px)+1.25rem))]",
             "pl-[max(1.75rem,env(safe-area-inset-left))]",
             "pr-[max(1.75rem,env(safe-area-inset-right))]",
             framed && !footerAtBottom
               ? "pb-[max(1.5rem,env(safe-area-inset-bottom))]"
               : "pb-0",
-            framed ? "lg:max-w-[400px]" : "lg:max-w-[360px]",
+            framed
+              ? wide
+                ? "lg:max-w-[480px]"
+                : "lg:max-w-[400px]"
+              : "lg:max-w-[360px]",
           )}
         >
+          {brand}
           {framed ? (
             <div
               className={cx(
@@ -99,10 +109,10 @@ export function AuthLayout({
                   : "my-auto pb-[min(18vh,140px)]",
               )}
             >
-              {brand}
               <div
                 className={cx(
-                  "w-full lg:max-w-[400px] lg:rounded-dialog lg:border lg:border-separator lg:bg-surface lg:p-8 lg:shadow-[0_18px_50px_rgba(0,0,0,0.18)]",
+                  "w-full lg:rounded-dialog lg:border lg:border-separator lg:bg-surface lg:p-8 lg:shadow-[0_18px_50px_rgba(0,0,0,0.18)]",
+                  wide ? "lg:max-w-[480px]" : "lg:max-w-[400px]",
                   footerAtBottom && "flex-1 flex flex-col lg:flex-initial",
                 )}
               >
@@ -110,10 +120,7 @@ export function AuthLayout({
               </div>
             </div>
           ) : (
-            <>
-              {brand}
-              {children}
-            </>
+            children
           )}
         </div>
       </div>

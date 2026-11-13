@@ -17,6 +17,7 @@ import { TextField } from "../../components/TextField";
 import { Switch } from "../../components/Switch";
 import { Stepper, Step } from "../../components/Stepper";
 import { cx } from "../../components/cx";
+import { useMediaQuery } from "../../components/useMediaQuery";
 import {
   CheckIcon,
   ChevronDownIcon,
@@ -71,6 +72,8 @@ export function SetupScreen({
   const [twoFactor, setTwoFactor] = useState(false);
 
   const [busy, setBusy] = useState(false);
+  // Desktop centres the card: hold its height so the card and Continue don't move between steps
+  const isDesktop = useMediaQuery("(min-width: 1024px)");
   const [error, setError] = useState<string | null>(null);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
@@ -218,23 +221,38 @@ export function SetupScreen({
   }
 
   return (
-    <AuthLayout framed={true} footerAtBottom={true}>
-      <header className="mt-6 text-center lg:mt-0 lg:text-left">
-        <h1
-          ref={headingRef}
-          tabIndex={-1}
-          className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink outline-none"
+    <AuthLayout framed={true} footerAtBottom={true} wide={true}>
+      {/* Phones: a fixed anchor, not centred on the step's height (steps differ, so centring made
+          the title and the steps jump on every Continue); the panes grow downward from it */}
+      <header className="mt-[max(1.5rem,14dvh)] mb-6 text-center lg:mt-0 lg:mb-0 lg:text-left lg:flex lg:items-start lg:justify-between lg:gap-4">
+        <div>
+          <h1
+            ref={headingRef}
+            tabIndex={-1}
+            className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink outline-none"
+          >
+            {t("setup.title")}
+          </h1>
+          <p className="m-0 mt-1 text-footnote text-ink-secondary">
+            {t("setup.subtitle")}
+          </p>
+        </div>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={handleSkip}
+          className="fixed top-[max(3.5rem,calc(env(safe-area-inset-top,0px)+1.25rem))] right-[max(0.75rem,env(safe-area-inset-right))] z-10 lg:static lg:-mt-2 lg:-mr-3 shrink-0 whitespace-nowrap min-h-11 px-3 inline-flex items-center rounded-lg border-0 bg-transparent cursor-pointer text-footnote font-semibold text-ink-secondary hover:text-ink focus-ring disabled:opacity-60 disabled:cursor-not-allowed"
         >
-          {t("setup.title")}
-        </h1>
-        <p className="m-0 mt-1 text-footnote text-ink-secondary">
-          {t("setup.subtitle")}
-        </p>
+          {t("setup.skip")}
+        </button>
       </header>
 
-      <div className="mt-6 flex-1 flex flex-col">
+      {/* Phones: these wrappers step aside (display: contents) so the header, steps, pane and
+          footer share the card's column, and the header's and footer's auto margins centre the form */}
+      <div className="max-lg:contents lg:mt-6 lg:flex lg:flex-1 lg:flex-col">
         <Stepper
-          className="flex-1 flex flex-col"
+          className="max-lg:contents"
+          stableHeight={isDesktop}
           footerClassName="mt-auto pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] lg:mt-6 lg:pt-0 lg:pb-0"
           step={currentStep}
           onStepChange={setCurrentStep}
@@ -250,21 +268,11 @@ export function SetupScreen({
             disabled: busy,
           }}
           footerExtra={
-            <div className="mt-2 flex flex-col gap-2">
-              {error && (
-                <div role="alert" className="text-footnote text-error">
-                  {error}
-                </div>
-              )}
-              <button
-                type="button"
-                disabled={busy}
-                onClick={handleSkip}
-                className="w-full inline-flex items-center justify-center border-0 bg-transparent min-h-11 cursor-pointer text-footnote font-semibold text-ink-secondary hover:text-ink transition-colors focus-ring rounded-lg disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {t("setup.skip")}
-              </button>
-            </div>
+            error ? (
+              <div role="alert" className="mt-2 text-footnote text-error">
+                {error}
+              </div>
+            ) : null
           }
         >
           {/* Step 1: Name */}

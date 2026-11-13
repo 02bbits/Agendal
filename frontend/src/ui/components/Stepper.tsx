@@ -42,6 +42,11 @@ export interface StepperProps {
   footerExtra?: ReactNode;
   className?: string;
   footerClassName?: string;
+  /**
+   * Keeps the panes area as tall as the tallest step, so a centred card and its buttons stay
+   * put while the steps change (the pointer doesn't have to chase Continue).
+   */
+  stableHeight?: boolean;
 }
 
 const SPRING =
@@ -148,6 +153,7 @@ export function Stepper({
   footerExtra,
   className,
   footerClassName,
+  stableHeight = false,
 }: StepperProps) {
   const steps = Children.toArray(children).filter(
     (child): child is ReactElement<StepProps> => isValidElement(child),
@@ -546,7 +552,26 @@ export function Stepper({
       </ol>
 
       {/* Pane viewport */}
-      <div ref={viewportRef} className="stepper__viewport mt-6 flex-1">
+      <div
+        ref={viewportRef}
+        className={cx(
+          "stepper__viewport mt-6 lg:flex-1",
+          stableHeight && "stepper__viewport--stable",
+        )}
+      >
+        {/* Invisible copies of every step share one grid cell with the active pane, so the area
+            takes the tallest step's height. Inert: no focus, no reading, no clicks */}
+        {stableHeight &&
+          steps.map((step, index) => (
+            <div
+              key={`sizer-${index}`}
+              aria-hidden="true"
+              inert
+              className="stepper__sizer"
+            >
+              {step}
+            </div>
+          ))}
         {viewState.previous !== null && (
           <div
             ref={leavingPaneRef}
@@ -571,9 +596,12 @@ export function Stepper({
         </div>
       </div>
 
-      {/* Footer */}
+      {/* Footer. The default gap is a utility, not CSS in globals.css: unlayered CSS would beat
+          the caller's footerClassName (e.g. mt-auto) whatever its specificity */}
       {(showFooter || footerExtra) && (
-        <div className={cx("stepper__footer-container", footerClassName)}>
+        <div
+          className={cx("stepper__footer-container", footerClassName ?? "mt-6")}
+        >
           {showFooter && (
             <div className="stepper__footer">
               <Button

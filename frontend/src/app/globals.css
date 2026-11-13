@@ -63,7 +63,7 @@
 }
 .code-slots__wash {
   position: absolute;
-  inset: 0;
+  inset: -1px;
   z-index: 1;
   display: grid;
   place-items: center;
@@ -86,6 +86,9 @@
   transition: background-color 200ms ease;
   user-select: none;
   -webkit-user-select: none;
+}
+.code-slots__row[data-covered] .code-slots__slot {
+  visibility: hidden;
 }
 .code-slots__fill {
   position: absolute;
@@ -209,9 +212,9 @@
 }
 
 /* Stepper (issue #149) */
+/* No display here: the component sets `flex flex-col` as utilities, and unlayered CSS would
+   beat a caller's `max-lg:contents` */
 .stepper {
-  display: flex;
-  flex-direction: column;
   width: 100%;
 }
 .stepper__track {
@@ -316,7 +319,7 @@
   color: var(--color-ink-secondary);
 }
 .stepper--compact .stepper__step-item {
-  flex: 1 1 0;
+  flex: 0 0 44px;
   min-width: 0;
 }
 .stepper--compact .stepper__step-btn {
@@ -327,18 +330,40 @@
 .stepper--compact .stepper__step-title {
   display: none;
 }
+.stepper--compact .stepper__step-item[data-active="true"] {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.stepper--compact .stepper__step-item[data-active="true"] .stepper__step-btn {
+  justify-content: center;
+  padding: 0 12px;
+}
+.stepper--compact .stepper__step-item[data-active="true"] .stepper__step-title {
+  display: block;
+}
 .stepper__viewport {
   position: relative;
   width: 100%;
+  /* The panes slide ±36 px while changing step: clip that sideways overflow so the page never
+     gets a horizontal scrollbar (clip, not hidden: it makes no scroll container) */
+  overflow-x: clip;
+  overflow-clip-margin: 4px;
+}
+.stepper__viewport--stable {
+  display: grid;
+}
+.stepper__viewport--stable > * {
+  grid-area: 1 / 1;
+}
+.stepper__sizer {
+  visibility: hidden;
+  pointer-events: none;
 }
 .stepper__pane {
   width: 100%;
 }
 .stepper__pane:focus {
   outline: none;
-}
-.stepper__footer-container {
-  margin-top: 24px;
 }
 .stepper__footer {
   display: flex;

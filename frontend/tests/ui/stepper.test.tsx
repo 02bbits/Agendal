@@ -202,4 +202,40 @@ describe("Stepper (issue #149 D)", () => {
     const staticContent = screen.getByTestId("static-content");
     expect(document.activeElement).toBe(staticContent.parentElement);
   });
+
+  it("in compact mode the active step shows its title while others are hidden by compact class", () => {
+    const { container } = render(
+      <Stepper>
+        <Step title="Your name">
+          <div>Step 1</div>
+        </Step>
+        <Step title="Dates and times">
+          <div>Step 2</div>
+        </Step>
+        <Step title="Security">
+          <div>Step 3</div>
+        </Step>
+      </Stepper>,
+    );
+
+    // In jsdom where track clientWidth is 0, compact mode activates
+    const stepper = container.querySelector(".stepper")!;
+    expect(stepper.classList.contains("stepper--compact")).toBe(true);
+
+    const items = container.querySelectorAll<HTMLLIElement>(
+      ".stepper__step-item",
+    );
+    expect(items).toHaveLength(3);
+
+    // Active item has data-active="true" and contains the title span
+    const activeItem = items[0]!;
+    expect(activeItem.getAttribute("data-active")).toBe("true");
+    const activeTitle = activeItem.querySelector(".stepper__step-title");
+    expect(activeTitle).toBeTruthy();
+    expect(activeTitle?.textContent).toBe("Your name");
+
+    // Non-active items do not have data-active="true"
+    expect(items[1]!.getAttribute("data-active")).toBeNull();
+    expect(items[2]!.getAttribute("data-active")).toBeNull();
+  });
 });
