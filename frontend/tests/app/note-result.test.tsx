@@ -337,7 +337,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
     expect(screen.getByText("Today · No date")).toBeTruthy();
   });
 
-  it("Back goes back to where the editor was opened", async () => {
+  it("Back goes back to where the editor was opened, never to the editor (T-RV-112, RV-E12)", async () => {
     serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result));
 
     await open();
@@ -874,9 +874,13 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     expect(
       await screen.findByRole("button", { name: t("common.discard_action") }),
     ).toBeTruthy();
+    // jsdom runs back() asynchronously: wait for its popstate, not a fixed time a busy machine outruns
     await act(async () => {
+      const popped = new Promise((resolve) =>
+        window.addEventListener("popstate", resolve, { once: true }),
+      );
       window.history.back();
-      await new Promise((resolve) => setTimeout(resolve, 20));
+      await popped;
     });
     expect(
       screen.queryByRole("button", { name: t("common.discard_action") }),

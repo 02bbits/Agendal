@@ -87,7 +87,7 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("Make tasks hands over to the result (IM-43)", () => {
-  it("a done note opens its result screen on top of where the editor was opened, closes the editor and keeps the result for it", async () => {
+  it("a done note opens its result screen on top of where the editor was opened, closes the editor and keeps the result for it (T-RV-112)", async () => {
     await makeTasks(result("done"));
 
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/notes/n7"));

@@ -80,7 +80,9 @@ beforeEach(() => {
   vi.stubGlobal(
     "fetch",
 
-    fetchMock.mockImplementation(
+    // mockReset, not only clearAllMocks: responses a test queued with mockImplementationOnce
+    // and never used must not answer the next test's fetches
+    fetchMock.mockReset().mockImplementation(
       async () =>
         new Response(
           JSON.stringify({
