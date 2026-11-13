@@ -783,7 +783,10 @@ describe("Check this first /notes/[id] (IM-45)", () => {
       await screen.findByRole("button", { name: t("note.apply_preview") }),
     );
 
-    expect(await screen.findByText(t("note.needs_connection"))).toBeTruthy();
+    // A failed fetch also counts as offline (AP-E4), so the hint can show twice
+    expect(
+      (await screen.findAllByText(t("note.needs_connection"))).length,
+    ).toBeGreaterThan(0);
 
     expect(router.replace).not.toHaveBeenCalled();
   });

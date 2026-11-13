@@ -1,6 +1,12 @@
 import { api } from "./api";
 import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
+import {
+  putNoteEntries,
+  putNoteResult,
+  readNoteEntries,
+  removeNote,
+} from "./localStore";
 import { isCopyKey, type CopyKey } from "../ui/copy";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { NoteHit } from "../ui/domain/search";
@@ -118,6 +124,8 @@ const recent = new Map<string, NoteResult>();
 
 export function rememberNote(result: NoteResult) {
   recent.set(result.note.id, result);
+  // Kept on the device too, so the note opens offline (IM-51)
+  void putNoteResult(result);
 }
 
 /** The result of a note made in this session, or undefined (a deep link, a reload). */
@@ -148,9 +156,11 @@ export function forgetNotes() {
 
 /** `GET /notes/{id}` (RV §7): `404` for a note that isn't the user's. */
 export async function getNote(id: string): Promise<NoteResult> {
-  return handleResponse<NoteResult>(
+  const result = await handleResponse<NoteResult>(
     await api(`/notes/${encodeURIComponent(id)}`),
   );
+  void putNoteResult(result);
+  return result;
 }
 
 export interface NoteListPage {
@@ -165,7 +175,37 @@ export async function listNotes(
 ): Promise<NoteListPage> {
   const params = new URLSearchParams({ filter });
   if (cursor) params.set("cursor", cursor);
-  return handleResponse<NoteListPage>(await api(`/notes?${params}`));
+  const page = await handleResponse<NoteListPage>(
+    await api(`/notes?${params}`),
+  );
+  void putNoteEntries(page?.items ?? []);
+  return page;
+}
+
+const NEEDS_LOOK: readonly string[] = ["confirm", "followup", "pending"];
+
+/**
+ * The Notes list from the device (IM-51), shaped like `GET /notes`: all of it in one page, or
+ * null when it holds no notes.
+ */
+export async function deviceNotes(
+  filter: NoteFilter,
+): Promise<NoteListPage | null> {
+  const all = await readNoteEntries();
+  if (all.length === 0) return null;
+  const needs = all.filter((note) => NEEDS_LOOK.includes(note.status));
+  const items =
+    filter === "made"
+      ? all.filter((note) => note.status === "done")
+      : filter === "needs"
+        ? needs
+        : all;
+  return {
+    items,
+    next_cursor: null,
+    total: all.length,
+    needs_count: needs.length,
+  };
 }
 
 /** RV-3: explicitly keep a follow-up's whole text as one task. */
@@ -332,6 +372,7 @@ export async function deleteNote(
     // 204 has no body to read; a failure throws with the server's code
     if (!response.ok) await handleResponse(response);
     forgetNote(id);
+    void removeNote(id);
     return true;
   } catch (error) {
     return actionError(error);

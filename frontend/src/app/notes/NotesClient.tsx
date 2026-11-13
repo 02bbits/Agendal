@@ -5,7 +5,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
 import { useToday } from "../../ui/features/tasks/useToday";
-import { listNotes, NOTE_UPDATED, type NoteListPage } from "../../lib/noteApi";
+import { ApiRequestError } from "../../lib/apiError";
+import {
+  deviceNotes,
+  listNotes,
+  NOTE_UPDATED,
+  type NoteListPage,
+} from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
 import { useModalFocus } from "../../ui/components/useModalFocus";
 import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
@@ -52,12 +58,24 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     let current = true;
+    let answered = false;
+    // The device's notes first (IM-51); the server's page replaces them when it answers
+    void deviceNotes(filter).then((page) => {
+      if (current && !answered && page)
+        setLoaded({ key: requestKey, page, error: false });
+    });
     listNotes(filter)
       .then((page) => {
+        answered = true;
         if (current) setLoaded({ key: requestKey, page, error: false });
       })
-      .catch(() => {
-        if (current) setLoaded({ key: requestKey, page: null, error: true });
+      .catch(async (error: unknown) => {
+        answered = true;
+        // Offline: keep showing the device's notes; the banner says why
+        const kept =
+          error instanceof ApiRequestError ? null : await deviceNotes(filter);
+        if (current)
+          setLoaded({ key: requestKey, page: kept, error: kept === null });
       });
     return () => {
       current = false;

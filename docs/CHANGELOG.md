@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-12
+
+- **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
+
 ## 2026-11-11
 
 - **Keep it as task waits for Apply changes (Refs #48, IM-49).** [RV §2.3, §7 and §11](03-modules/RV-review-control.md#23-follow-up-rv-3), [WF-03](04-workflows/WF-03-resolve-unclear-note.md), [TS-06](06-testing/test-scenarios.md#ts-06), [domain](02-domain/domain.md#state-transitions) and the [agent brief](AGENT-BRIEF.md): Keep it as task plans the whole text as one task and opens Check this first (`followup → confirm`), and Apply changes makes it, as [BR-01](02-domain/business-rules.md#br-01) asks of every change. `make-task` answers `200` with the review, not `201 {note, task}`. This is how IM-46 built it.
