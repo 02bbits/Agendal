@@ -141,7 +141,9 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     const plusButton = screen.getByRole("button", { name: "Add a task" });
     await userEvent.click(plusButton);
     const sheet = screen.getByRole("dialog", { name: "New task" });
-    expect(within(sheet).getByRole("radiogroup", { name: "Due" })).toBeTruthy();
+    expect(
+      within(sheet).getByRole("radiogroup", { name: "Start date" }),
+    ).toBeTruthy();
     expect(
       within(sheet).getByRole("radiogroup", { name: "Priority" }),
     ).toBeTruthy();
