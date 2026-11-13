@@ -116,6 +116,29 @@ describe("Create account (AA-1)", () => {
     ).toBe("/sign-in");
   });
 
+  it("AA §2.10: an accented password is caught on Create account, not sent, and cleared on edit", async () => {
+    const user = userEvent.setup();
+    const { email, password, submit } = renderPage();
+
+    await user.type(email, "example@gmail.com");
+    await user.type(password, "mật khẩu 123");
+    // No hint while typing
+    expect(screen.queryByText(/accented letters/)).toBeNull();
+    await user.click(submit);
+
+    expect(
+      screen.getByText(
+        "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.",
+      ),
+    ).toBeTruthy();
+    expect(document.activeElement).toBe(password);
+    expect(registerCalls()).toHaveLength(0);
+
+    await user.clear(password);
+    await user.type(password, "mat khau 123");
+    expect(screen.queryByText(/accented letters/)).toBeNull();
+  });
+
   it("shows the rate limit with the seconds to wait", async () => {
     reply = () => json(429, {}, { "Retry-After": "120" });
     const user = userEvent.setup();

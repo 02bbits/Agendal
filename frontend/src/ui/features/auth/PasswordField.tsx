@@ -1,7 +1,6 @@
 import {
   forwardRef,
   useState,
-  type ChangeEvent,
   type FocusEvent,
   type KeyboardEvent,
 } from "react";
@@ -20,14 +19,6 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   ) {
     const [shown, setShown] = useState(false);
     const [capsLock, setCapsLock] = useState(false);
-    const [uncontrolledValue, setUncontrolledValue] = useState(
-      defaultValue !== undefined ? String(defaultValue) : "",
-    );
-
-    const rawValue = value !== undefined ? String(value) : uncontrolledValue;
-    const accented = /[\u00C0-\u024F\u1E00-\u1EFF]/.test(
-      rawValue.normalize("NFC"),
-    );
 
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.altKey && event.key === "F8") {
@@ -52,18 +43,8 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
       onBlur?.(event);
     };
 
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-      if (value === undefined) {
-        setUncontrolledValue(event.target.value);
-      }
-      onChange?.(event);
-    };
-
-    const warningText = accented
-      ? t("auth.password_accented")
-      : capsLock
-        ? t("auth.caps_lock_on")
-        : null;
+    // Accented letters (Vietnamese typing) are reported when the form is sent, not while typing
+    const warningText = capsLock ? t("auth.caps_lock_on") : null;
 
     return (
       <div className="flex flex-col">
@@ -81,7 +62,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onBlur={handleBlur}
-          onChange={handleChange}
+          onChange={onChange}
           trailing={
             <IconButton
               plain

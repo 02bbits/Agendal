@@ -26,6 +26,13 @@ export function safeReturnPath(next: string | null | undefined): string {
 export const isEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
 
+/**
+ * Latin letters with accents (á, â, ơ, ư, đ…). Vietnamese typing (Unikey, EVKey) turns keys into
+ * these even in a hidden password field, so a new password may not have them (AA §2.10).
+ */
+export const hasAccentedLetters = (value: string) =>
+  /[À-ɏḀ-ỿ]/.test(value.normalize("NFC"));
+
 /** AA §2.1 and BR-17, the same rules the server checks. Length counts characters, not UTF-16 units (AA-E9). */
 export function signUpErrors(email: string, password: string): SignUpErrors {
   const errors: SignUpErrors = {};

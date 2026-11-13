@@ -6,7 +6,7 @@ import { Link } from "../shell/Link";
 import type { Navigate } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
-import { signUpErrors } from "./validation";
+import { hasAccentedLetters, signUpErrors } from "./validation";
 
 export interface ResetFailure {
   /** The link expired or was already used (auth.reset_expired). */
@@ -41,12 +41,21 @@ export function ResetPasswordScreen({
 
   const rule = signUpErrors(email ?? "", password).password;
   const expired = email === null || failure.expired;
+  // Set when the form is sent with accented letters (Vietnamese typing), cleared on edit
+  const [accentError, setAccentError] = useState(false);
   const passwordError =
-    failure.password ?? (touched && rule ? t(rule) : undefined);
+    failure.password ??
+    (accentError ? t("auth.password_accented") : undefined) ??
+    (touched && rule ? t(rule) : undefined);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (rule || busy || offline) return;
+    if (hasAccentedLetters(password)) {
+      setAccentError(true);
+      passwordRef.current?.focus();
+      return;
+    }
     setBusy(true);
     const result = await onSubmit(password);
     setBusy(false);
@@ -106,6 +115,7 @@ export function ResetPasswordScreen({
             onChange={(event) => {
               setPassword(event.target.value);
               setFailure({});
+              setAccentError(false);
             }}
             onBlur={() => setTouched(true)}
           />

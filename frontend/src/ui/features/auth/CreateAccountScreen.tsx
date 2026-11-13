@@ -7,7 +7,7 @@ import { Link } from "../shell/Link";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
 import type { Navigate } from "../shell/routes";
-import { normalizeEmail, signUpErrors } from "./validation";
+import { hasAccentedLetters, normalizeEmail, signUpErrors } from "./validation";
 
 export interface SignUpFailure {
   /** Server messages per field, already in copy-catalog text. */
@@ -47,13 +47,21 @@ export function CreateAccountScreen({
   const emailError =
     server.fields?.email ??
     (touched.email && local.email ? t(local.email) : undefined);
+  // Set when Create account is pressed with accented letters (Vietnamese typing), cleared on edit
+  const [accentError, setAccentError] = useState(false);
   const passwordError =
     server.fields?.password ??
+    (accentError ? t("auth.password_accented") : undefined) ??
     (touched.password && local.password ? t(local.password) : undefined);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!valid || busy || offline) return;
+    if (hasAccentedLetters(password)) {
+      setAccentError(true);
+      passwordRef.current?.focus();
+      return;
+    }
     setBusy(true);
     const failure = await onSubmit({ email: normalizeEmail(email), password });
     setBusy(false);
@@ -113,6 +121,7 @@ export function CreateAccountScreen({
           onChange={(event) => {
             setPassword(event.target.value);
             setServer({});
+            setAccentError(false);
           }}
           onBlur={() =>
             setTouched((current) => ({ ...current, password: true }))

@@ -4,27 +4,13 @@ import { describe, expect, it } from "vitest";
 import { PasswordField } from "../../src/ui/features/auth/PasswordField";
 
 describe("PasswordField - Vietnamese typing and Caps Lock warnings (issue #149)", () => {
-  it("shows the accented warning when typing Vietnamese accented characters (mật) and hides for ASCII", async () => {
+  it("says nothing about accented letters while typing: the form reports them on submit", async () => {
     const user = userEvent.setup();
     render(<PasswordField label="Password" />);
 
-    const input = screen.getByLabelText("Password");
-
-    // Type ASCII
-    await user.type(input, "secret123");
-    expect(screen.queryByText(/Turn off Vietnamese typing/i)).toBeNull();
-
-    // Type Vietnamese accented letters
-    await user.clear(input);
-    await user.type(input, "mật");
-    expect(
-      screen.getByText("Turn off Vietnamese typing (Ctrl+Shift)."),
-    ).toBeTruthy();
-
-    // Clear and type ASCII again
-    await user.clear(input);
-    await user.type(input, "password");
-    expect(screen.queryByText(/Turn off Vietnamese typing/i)).toBeNull();
+    await user.type(screen.getByLabelText("Password"), "mật khẩu");
+    expect(screen.queryByText(/accented|Vietnamese typing/i)).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("shows the Caps Lock warning on keydown when CapsLock modifier is active, and clears on blur", () => {

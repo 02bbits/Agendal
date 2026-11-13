@@ -127,6 +127,22 @@ describe("Sign in (AA-2)", () => {
     expect(document.activeElement).toBe(password);
   });
 
+  it("AA §2.10: a wrong password typed with accents is still sent, and the error adds the Vietnamese typing hint", async () => {
+    reply = () => json(422, { error: { code: "auth.invalid" } });
+    const user = userEvent.setup();
+    const fields = renderPage();
+    await user.type(fields.email, "example@gmail.com");
+    await user.type(fields.password, "mật khẩu 123");
+    await user.click(fields.submit);
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.",
+    );
+    expect(
+      fetchMock.mock.calls.some(([url]) => url === "/api/v1/auth/login"),
+    ).toBe(true);
+  });
+
   it("T-AA-111, SEC-24: goes back to a same-origin return path, never another site", async () => {
     window.history.replaceState(null, "", "/sign-in?next=%2Fupcoming");
     await signIn(userEvent.setup());

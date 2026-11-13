@@ -9,7 +9,7 @@ import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
 import { useSecondsLeft } from "./useSecondsLeft";
 import type { Navigate } from "../shell/routes";
-import { normalizeEmail } from "./validation";
+import { hasAccentedLetters, normalizeEmail } from "./validation";
 import type { ResendResult, VerifyResult } from "./VerifyEmailScreen";
 
 export interface SignInFailure {
@@ -64,6 +64,7 @@ export function SignInScreen({
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(true);
   const [failure, setFailure] = useState<SignInFailure>({});
+  const [invalidWithAccents, setInvalidWithAccents] = useState(false);
   const [busy, setBusy] = useState(false);
 
   // Two-factor state
@@ -100,6 +101,8 @@ export function SignInScreen({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!email || !password || busy || offline || locked > 0) return;
+    // Sent as typed (an older password may have accents); a wrong one then gets the hint (AA §2.10)
+    const typedAccents = hasAccentedLetters(password);
     setBusy(true);
     const result = await onSubmit({
       email: normalizeEmail(email),
@@ -120,6 +123,7 @@ export function SignInScreen({
 
     const fail = (result as SignInFailure) ?? {};
     setFailure(fail);
+    setInvalidWithAccents(Boolean(fail.invalid) && typedAccents);
     if (fail.invalid) {
       // AA §2.2: keep the email, clear and focus the password
       setPassword("");
@@ -214,7 +218,7 @@ export function SignInScreen({
   const message = offline
     ? t("auth.offline")
     : failure.invalid
-      ? t("auth.invalid")
+      ? t(invalidWithAccents ? "auth.invalid_accented" : "auth.invalid")
       : failure.form;
 
   // Split masked body for 2FA

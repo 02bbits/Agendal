@@ -4,6 +4,7 @@ import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { PasswordField } from "../auth/PasswordField";
+import { hasAccentedLetters } from "../auth/validation";
 import { passwordStrength } from "../../domain/passwordStrength";
 import { api } from "../../../lib/api";
 
@@ -125,6 +126,13 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
     setNewError(undefined);
     setConfirmError(undefined);
     setFormError(undefined);
+
+    // Vietnamese typing turns keys into accented letters even in a hidden field (AA §2.10)
+    if (hasAccentedLetters(newPassword)) {
+      setBusy(false);
+      setNewError(t("auth.password_accented"));
+      return;
+    }
 
     let response: Response;
     try {
