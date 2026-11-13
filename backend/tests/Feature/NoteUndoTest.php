@@ -65,6 +65,26 @@ it('reopens a completed task (T-RV-10)', function () {
     expect($task->fresh()->done)->toBeFalse()->and($task->fresh()->done_at)->toBeNull();
 });
 
+it('keeps an edit made between Undo all and its redo (RV §2.4)', function () {
+    $task = seedTask($this->owner, ['title' => 'Email group', 'due_date' => '2026-10-23']);
+    $id = makeNote('done email group')['note']['id'];
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk();
+    $this->clock->advance('+2 seconds');
+    $this->patchJson("/api/v1/tasks/{$task->id}", ['title' => 'Email the whole group', 'at' => '2026-10-23T01:12:02Z'])->assertOk();
+    $this->clock->advance('+2 seconds');
+    $this->postJson("/api/v1/notes/{$id}/redo")->assertOk()->assertJsonPath('note.status', 'done');
+    expect($task->fresh()->done)->toBeTrue()->and($task->fresh()->title)->toBe('Email the whole group');
+});
+
+it('redo deletes again a task the undo brought back', function () {
+    $task = seedTask($this->owner, ['title' => 'Old list']);
+    $id = makeNote('delete old list')['note']['id'];
+    $this->postJson("/api/v1/notes/{$id}/undo")->assertOk();
+    expect($task->fresh()->trashed())->toBeFalse();
+    $this->postJson("/api/v1/notes/{$id}/redo")->assertOk();
+    expect(Task::withTrashed()->findOrFail($task->id)->trashed())->toBeTrue();
+});
+
 it('restores a task the note deleted, from the log (T-RV-10)', function () {
     $task = seedTask($this->owner, ['title' => 'Old reading list']);
     $task->delete();

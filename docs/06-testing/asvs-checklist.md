@@ -80,7 +80,7 @@ The ASVS 4.0.3 Level 2 requirements that apply to Agendal, with how each is met 
 |---|---|---|---|---|
 | 8.1.1 | Sensitive data not cached in server components | No API responses in shared caches. `Cache-Control: no-store` on `/api` | SEC-51 | Planned |
 | 8.2.1 | Anti-caching headers on sensitive data | As above | SEC-51 | Planned |
-| 8.2.3 | Client storage cleared after the session ends | Sign-out wipes IndexedDB and SW caches ([NF-19](../05-quality/nfr.md#nf-19)) | SEC-50 | Planned |
+| 8.2.3 | Client storage cleared after the session ends | Sign-out wipes IndexedDB, `localStorage` and SW caches ([NF-19](../05-quality/nfr.md#nf-19)) | SEC-50 | Planned |
 | 8.3.1 | Sensitive data only in the body or headers, never in the URL | Search uses `GET ?q=`. **Deviation:** the query is personal, so it is excluded from access logs | SEC-44 | Deviation |
 | 8.3.4 | Sensitive data identified and covered by a policy | [Threat model](../07-architecture/security.md) assets, [NF-9](../05-quality/nfr.md#nf-9) | — | Planned |
 | 8.3.8 | Retention policy applied | [Scalability](../05-quality/scalability.md) retention section | T-AP-41 | Planned |

@@ -1,7 +1,12 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearDraft, loadDraft, saveDraft } from "../../src/lib/draft";
+import {
+  clearDraft,
+  keepDraftOnHide,
+  loadDraft,
+  saveDraft,
+} from "../../src/lib/draft";
 import { NoteEditor, t, type NoteResult } from "../../src/ui";
 import done from "../../../docs/07-architecture/contracts/fixtures/note-result-done.json";
 import { expectAxeCleanInBothThemes } from "./axe";
@@ -10,12 +15,14 @@ vi.mock("../../src/lib/draft", () => ({
   loadDraft: vi.fn(),
   saveDraft: vi.fn(),
   clearDraft: vi.fn(),
+  keepDraftOnHide: vi.fn(),
 }));
 
 beforeEach(() => {
   vi.mocked(loadDraft).mockReset().mockResolvedValue("");
   vi.mocked(saveDraft).mockReset().mockResolvedValue();
   vi.mocked(clearDraft).mockReset().mockResolvedValue();
+  vi.mocked(keepDraftOnHide).mockReset();
 });
 
 const made = done as NoteResult;
@@ -80,6 +87,52 @@ describe("NoteEditor (IM-41)", () => {
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(true);
     await userEvent.keyboard("{Control>}{Enter}{/Control}");
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("counts from 4,500, keeps a paste over 5,000 in full and holds Make tasks until trimmed (T-NC-102, A11Y-32)", async () => {
+    render(<NoteEditor onClose={() => {}} onSubmit={vi.fn()} />);
+    const input = field() as HTMLTextAreaElement;
+    const live = () => document.querySelector("[aria-live='polite']");
+    // The counter is what describes the field (A11Y-32)
+    const counter = () => {
+      const id = input.getAttribute("aria-describedby");
+      return id ? document.getElementById(id) : null;
+    };
+    await userEvent.click(input);
+    await userEvent.paste("a".repeat(4499));
+    expect(counter()).toBeNull();
+    expect(input.getAttribute("aria-describedby")).toBeNull();
+
+    await userEvent.type(input, "a");
+    expect(counter()?.textContent).toBe("4,500 / 5,000");
+    expect(live()?.textContent).toBe("4,500 / 5,000");
+    // Announced once: typing on doesn't say it again
+    await userEvent.type(input, "a");
+    expect(live()?.textContent).toBe("4,500 / 5,000");
+
+    // Exactly 5,000 is said again, and is still allowed
+    await userEvent.paste("b".repeat(499));
+    expect(live()?.textContent).toBe("5,000 / 5,000");
+    expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
+
+    await userEvent.paste("b");
+    const tooLong = t("note.too_long", { count: "5,001" });
+    expect(input.value).toHaveLength(5001);
+    expect(counter()?.textContent).toBe(`5,001 / 5,000 · ${tooLong}`);
+    expect(counter()?.className).toContain("text-error");
+    expect(live()?.textContent).toBe(tooLong);
+    expect((makeTasks() as HTMLButtonElement).disabled).toBe(true);
+
+    await userEvent.type(input, "{Backspace}");
+    expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("counts as the server does: spaces around the text don't count (NF-14)", async () => {
+    render(<NoteEditor onClose={() => {}} onSubmit={vi.fn()} />);
+    await userEvent.click(field());
+    await userEvent.paste(`${" ".repeat(4998)}hmm`);
+    expect(screen.queryByText(/ \/ 5,000/)).toBeNull();
+    expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("submits with Ctrl+Enter and Cmd+Enter (UX-12)", async () => {
@@ -173,10 +226,27 @@ describe("NoteEditor (IM-41)", () => {
     const { unmount } = render(<NoteEditor onClose={() => {}} />);
     await userEvent.type(field(), "unsent");
     window.dispatchEvent(new Event("pagehide"));
+    // At once, where an unloading page can still write, then the usual save (NC-E1)
+    expect(keepDraftOnHide).toHaveBeenCalledWith("unsent");
     expect(saveDraft).toHaveBeenCalledWith("unsent");
     await userEvent.type(field(), "!");
     unmount();
     expect(saveDraft).toHaveBeenLastCalledWith("unsent!");
+  });
+
+  it("saves again when the page is back, so the copy kept while hidden can't outlive newer text (NC-E1)", async () => {
+    render(<NoteEditor onClose={() => {}} />);
+    await userEvent.type(field(), "buy milk");
+    const visibility = vi.spyOn(document, "visibilityState", "get");
+    visibility.mockReturnValue("hidden");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(keepDraftOnHide).toHaveBeenCalledWith("buy milk");
+    vi.mocked(saveDraft).mockClear();
+
+    visibility.mockReturnValue("visible");
+    document.dispatchEvent(new Event("visibilitychange"));
+    expect(saveDraft).toHaveBeenCalledWith("buy milk");
+    visibility.mockRestore();
   });
 
   it("puts an unsent note back with the cursor at the end (T-NC-101)", async () => {
@@ -220,7 +290,7 @@ describe("NoteEditor submit (IM-42)", () => {
   beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
   afterEach(() => vi.useRealTimers());
 
-  it("is busy while the note is read, and says so only after 300 ms (busy)", async () => {
+  it("is busy while the note is read, and says so only after 300 ms (busy, T-NC-110)", async () => {
     let answer: (r: NoteResult) => void = () => {};
     const onSubmit = vi.fn(
       () => new Promise<NoteResult>((resolve) => (answer = resolve)),

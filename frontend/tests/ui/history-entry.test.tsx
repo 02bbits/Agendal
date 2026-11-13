@@ -1,7 +1,7 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { useHistoryEntry } from "../../src/ui/components/useHistoryEntry";
 import { Button, Dialog, Sheet } from "../../src/ui";
 
@@ -31,12 +31,39 @@ function Screen({ inner = false }: { inner?: boolean }) {
   );
 }
 
-// jsdom runs history.back() asynchronously
+// jsdom runs history.back() asynchronously. Tests wait for the popstate it fires, not for a fixed
+// time: a busy machine outruns 20 ms, and a late back then lands in the next test.
+const popstate = (within = 2000) =>
+  new Promise<boolean>((resolve) => {
+    const timer = setTimeout(() => resolve(false), within);
+    window.addEventListener(
+      "popstate",
+      () => {
+        clearTimeout(timer);
+        resolve(true);
+      },
+      { once: true },
+    );
+  });
+
 const goBack = () =>
   act(async () => {
+    const popped = popstate();
     window.history.back();
-    await new Promise((resolve) => setTimeout(resolve, 20));
+    await popped;
   });
+
+// × and Escape close first; the sheet takes its entry off a tick later
+const entryRemoved = () =>
+  act(async () => {
+    await popstate();
+  });
+
+// An unmounted sheet still takes its entry off a tick later: let that back land in this test
+afterEach(async () => {
+  cleanup();
+  while (window.history.state?.agendalModal && (await popstate(200)));
+});
 
 describe("history entries for sheets and dialogs", () => {
   it("T-AP-106: Back closes the sheet and leaves the screen in place", async () => {
@@ -56,7 +83,7 @@ describe("history entries for sheets and dialogs", () => {
     render(<Screen />);
     await userEvent.click(screen.getByText("Open sheet"));
     await userEvent.keyboard("{Escape}");
-    await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+    await entryRemoved();
 
     expect(screen.queryByRole("dialog")).toBeNull();
   });
@@ -84,7 +111,7 @@ describe("history entries for sheets and dialogs", () => {
     const before = window.history.state;
     await userEvent.click(screen.getByText("Open sheet"));
     await userEvent.click(screen.getByRole("button", { name: "Close" }));
-    await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+    await entryRemoved();
 
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(window.history.state).toEqual(before);
@@ -117,9 +144,9 @@ describe("history entries for sheets and dialogs", () => {
       useHistoryEntry(true, refuse);
       return <p>Guarded</p>;
     };
-    const before = window.history.length;
     render(<Guarded />);
-    expect(window.history.length).toBe(before + 1);
+    // Its own entry is on top (the length also counts forward entries earlier tests left)
+    expect(window.history.state?.agendalModal).toBeTruthy();
     await goBack();
     expect(refuse).toHaveBeenCalledOnce();
     expect(window.history.state?.agendalModal).toBeTruthy();
