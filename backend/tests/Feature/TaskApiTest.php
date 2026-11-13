@@ -152,7 +152,7 @@ it('all fields: due 2026-10-26, 09:00–10:00, high, reminder 1d, notes, own pro
     expect($remindAt)->toBe('2026-10-25 02:00:00');
 });
 
-it('start_time without any date → 422 on start_date; repeat weekly without due_date → due_date becomes today', function () {
+it('start_time without any date → 422 on start_date; repeat weekly without any date → start_date becomes today (#154)', function () {
     $user = User::factory()->create();
 
     $id1 = (string) Str::uuid();
@@ -172,7 +172,8 @@ it('start_time without any date → 422 on start_date; repeat weekly without due
         'repeat' => 'weekly',
     ])->assertStatus(201);
 
-    expect($response2->json('due_date'))->toBe('2026-10-23');
+    expect($response2->json('start_date'))->toBe('2026-10-23')
+        ->and($response2->json('due_date'))->toBeNull();
     assertTaskSchema($response2->json());
 });
 

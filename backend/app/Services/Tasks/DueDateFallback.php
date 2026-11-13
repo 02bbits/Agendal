@@ -6,7 +6,7 @@ namespace App\Services\Tasks;
 
 class DueDateFallback
 {
-    /** A repeat with neither date starts from today (TK §8). */
+    /** A repeat with neither date starts today: callers set the start date (TK §8, #154). */
     public static function needed(?string $dueDate, ?string $startDate, string $repeat): bool
     {
         return empty($dueDate) && empty($startDate) && $repeat !== 'never';
