@@ -71,6 +71,8 @@ export interface SignedInUser {
   timezone?: string;
   timezone_auto?: boolean;
   two_factor_enabled?: boolean;
+  theme_palette?: string;
+  page_view?: "flat" | "full";
 }
 
 // The settings as `PATCH /me` names them
@@ -81,6 +83,8 @@ const SETTING_FIELDS = {
   rememberDevice: "remember_device",
   timezone: "timezone",
   timezoneAuto: "timezone_auto",
+  pageView: "page_view",
+  palette: "theme_palette",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -123,24 +127,19 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timeFormat: "24h",
   rememberDevice: true,
   pageView: "flat",
+  palette: "default",
   timezone: "UTC",
   timezoneAuto: true,
 };
 
 const settingsOf = (me: SignedInUser): AccountSettings => {
-  const localPageView =
-    typeof window !== "undefined"
-      ? (localStorage.getItem(PAGE_VIEW_KEY) as AccountSettings["pageView"])
-      : undefined;
   return {
     theme: me.theme ?? DEFAULT_SETTINGS.theme,
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
     timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-    pageView:
-      localPageView === "full" || localPageView === "flat"
-        ? localPageView
-        : DEFAULT_SETTINGS.pageView,
+    pageView: me.page_view === "full" ? "full" : "flat",
+    palette: me.theme_palette ?? "default",
     timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
     timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
   };
@@ -221,6 +220,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
       "data-page-view",
       settings.pageView ?? "flat",
     );
+    try {
+      localStorage.setItem(PAGE_VIEW_KEY, settings.pageView ?? "flat");
+    } catch {}
   }, [settings]);
 
   useEffect(() => {
@@ -459,7 +461,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         body: JSON.stringify(body),
       })
         .then((response) => {
-          if (response.ok || response.status === 401) return;
+          if (response.ok || response.status === 401) {
+            if (response.ok && userRef.current) {
+              void saveMe({ ...userRef.current, ...body });
+            }
+            return;
+          }
           settingsRef.current = { ...settingsRef.current, ...revert };
           setSettings(settingsRef.current);
           showToast(t("error.generic", { request_id: "" }));
@@ -516,15 +523,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // Appearance: System leaves data-theme off so daisyUI follows the device setting. The choice is
   // also kept for /theme.js, which applies it before the next first paint (AP-3)
   useEffect(() => {
-    try {
-      const palette = localStorage.getItem("agendal.theme_palette");
-      if (palette) applyThemePalette(palette);
-      else clearThemePalette();
-    } catch {}
     settingsRef.current = settings;
     // Until /me answers or the user picks one, these are only defaults and would undo what
     // /theme.js applied
     if (!user && settingsEdits.current === 0) return;
+    applyThemePalette(settings.palette ?? "default");
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);

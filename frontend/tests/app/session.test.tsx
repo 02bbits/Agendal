@@ -156,6 +156,79 @@ describe("a different account on this device (AA-E7)", () => {
       );
     });
   });
+
+  it("sign-out then a different account whose /me has the defaults results in no inline --color-primary and data-page-view flat", async () => {
+    meReply = () =>
+      json(200, {
+        id: 1,
+        email: "user1@example.com",
+        display_name: "User 1",
+        theme_palette: "lavender",
+        page_view: "full",
+      });
+
+    function SignOutTrigger() {
+      const { signOut } = useAppFrame();
+      return <button onClick={() => void signOut()}>Sign out</button>;
+    }
+
+    const { unmount } = render(
+      <AppFrame>
+        <Who />
+        <SignOutTrigger />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user1@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("#8c52ff");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "full",
+      );
+    });
+
+    const signOutBtn = screen.getByRole("button", { name: "Sign out" });
+    signOutBtn.click();
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+
+    unmount();
+
+    // Now a different account signs in with defaults
+    meReply = () =>
+      json(200, {
+        id: 2,
+        email: "user2@example.com",
+        display_name: "User 2",
+        theme_palette: "default",
+        page_view: "flat",
+      });
+
+    render(
+      <AppFrame>
+        <Who />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user2@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+  });
 });
 
 describe("email verification redirects (issue #149)", () => {

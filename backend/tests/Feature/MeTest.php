@@ -14,17 +14,22 @@ it('T-AP-21, T-AP-50: returns the settings with their defaults', function () {
     $this->actingAs($this->user, 'sanctum')->getJson('/api/v1/me')->assertOk()->assertJson([
         'id' => $this->user->id, 'theme' => 'system', 'week_start' => 'mon', 'time_format' => '24h',
         'remember_device' => true, 'install_prompt_shown' => false, 'timezone_auto' => true,
+        'theme_palette' => 'default', 'page_view' => 'flat',
     ])->assertJsonMissing(['password' => $this->user->password])->assertJsonMissingPath('remember_token');
 });
 
 it('T-AP-21, T-AP-50: saves settings, and the next read on any device sees them', function () {
     $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', [
         'theme' => 'dark', 'week_start' => 'sun', 'time_format' => '12h', 'remember_device' => false, 'install_prompt_shown' => true,
-    ])->assertOk()->assertJson(['theme' => 'dark', 'week_start' => 'sun']);
+        'theme_palette' => 'lavender', 'page_view' => 'full',
+    ])->assertOk()->assertJson([
+        'theme' => 'dark', 'week_start' => 'sun', 'theme_palette' => 'lavender', 'page_view' => 'full',
+    ]);
 
     $this->app['auth']->forgetGuards();
     $this->actingAs(User::find($this->user->id), 'sanctum')->getJson('/api/v1/me')->assertJson([
         'theme' => 'dark', 'week_start' => 'sun', 'time_format' => '12h', 'remember_device' => false, 'install_prompt_shown' => true,
+        'theme_palette' => 'lavender', 'page_view' => 'full',
     ]);
 });
 
@@ -43,6 +48,8 @@ it('rejects values outside the allowed set with 422', function (array $body) {
     'remember device' => [['remember_device' => 'maybe']],
     'name too long' => [['display_name' => str_repeat('a', 61)]],
     'invalid timezone' => [['timezone' => 'Invalid/Zone']],
+    'theme palette' => [['theme_palette' => 'neon']],
+    'page view' => [['page_view' => 'wide']],
 ]);
 
 it('ignores fields a user must not set', function () {

@@ -252,12 +252,9 @@ describe("Account settings (AP-3, AP-5)", () => {
     await screen.findByText("ann@example.com");
 
     const twoFactorSwitch = screen.getByRole("switch", {
-      name: "Ask for a code when I sign in",
+      name: "Email me a code at sign-in",
     });
     expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
-    expect(
-      screen.getByText("Off: signing in needs only your password."),
-    ).toBeTruthy();
 
     await userEvent.click(twoFactorSwitch);
 
@@ -266,9 +263,6 @@ describe("Account settings (AP-3, AP-5)", () => {
       await screen.findByText("Two-step verification is on."),
     ).toBeTruthy();
     expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
-    expect(
-      screen.getByText("On: we email you a code each time you sign in."),
-    ).toBeTruthy();
   });
 
   it("toggle OFF opens dialog, wrong password shows error, correct password calls API, closes dialog, toasts", async () => {
@@ -311,7 +305,7 @@ describe("Account settings (AP-3, AP-5)", () => {
     await screen.findByText("ann@example.com");
 
     const twoFactorSwitch = screen.getByRole("switch", {
-      name: "Ask for a code when I sign in",
+      name: "Email me a code at sign-in",
     });
     expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
 
@@ -355,6 +349,51 @@ describe("Account settings (AP-3, AP-5)", () => {
     ).toBeTruthy();
     expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
   });
+
+  it("/me with theme_palette: lavender, page_view: full sets primary color and page-view and shows in settings", async () => {
+    await openAccount(me({ theme_palette: "lavender", page_view: "full" }));
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("#8c52ff");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "full",
+      );
+    });
+    expect(screen.getByRole("button", { name: /Full width/i })).toBeTruthy();
+  });
+
+  it("picking a palette in Settings sends PATCH /me with theme_palette and picking Full width sends page_view: full", async () => {
+    await openAccount(me({ page_view: "flat", theme_palette: "default" }));
+
+    // Click Lavender palette card
+    const lavenderCard = screen
+      .getByText("Lavender")
+      .closest("div[class*='cursor-pointer']")!;
+    await userEvent.click(lavenderCard);
+
+    expect(patches()).toContainEqual([
+      "/api/v1/me",
+      { theme_palette: "lavender" },
+    ]);
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary"),
+    ).toBe("#8c52ff");
+
+    // Open Page view dropdown and pick Full width
+    const pageViewDropdown = screen.getByRole("button", {
+      name: /Flat view/i,
+    });
+    await userEvent.click(pageViewDropdown);
+    const fullOption = screen.getByRole("radio", { name: "Full width" });
+    await userEvent.click(fullOption);
+
+    expect(patches()).toContainEqual(["/api/v1/me", { page_view: "full" }]);
+    expect(document.documentElement.getAttribute("data-page-view")).toBe(
+      "full",
+    );
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {
@@ -384,6 +423,18 @@ describe("theme.js (T-AP-22)", () => {
     run();
 
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("sets the stored theme palette on html style before anything renders", () => {
+    localStorage.setItem("agendal.theme_palette", "lavender");
+    run();
+
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary"),
+    ).toBe("#8c52ff");
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary-tint"),
+    ).toBe("#8c52ff22");
   });
 
   it("does nothing harmful when storage is blocked", () => {
