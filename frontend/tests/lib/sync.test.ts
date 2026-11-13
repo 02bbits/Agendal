@@ -9,6 +9,7 @@ import {
   readTasks,
   saveSetting,
 } from "../../src/lib/localStore";
+import { api } from "../../src/lib/api";
 import { createTask, patch } from "../../src/lib/taskApi";
 import { retryDelay, startSync, SYNCED, syncNow } from "../../src/lib/sync";
 import { task } from "../ui/fixtures";
@@ -322,6 +323,8 @@ describe("two tabs (AP-E3, OFF-11)", () => {
 
     await expect(synced).resolves.toBeTruthy();
     stop();
+    // A sync the loop started before stop() would otherwise run on into the next test
+    await syncNow();
   });
 });
 
@@ -334,12 +337,15 @@ it("retries after 1 s, 5 s, 30 s, then every 60 s, ±20 % (AP §2.2)", () => {
 });
 
 it("every call carries this device's id, the same each time (ADR-004 tie-break)", async () => {
-  await syncNow();
-  await syncNow();
-  const ids = fetchMock.mock.calls.map(([, init]) =>
-    new Headers((init as RequestInit).headers).get("X-Device-Id"),
-  );
-  expect(ids.length).toBeGreaterThan(1);
-  expect(new Set(ids).size).toBe(1);
+  // Straight through `api()`: no sync loop involved, so nothing else can share these calls
+  await api("/me");
+  await api("/tasks", { method: "POST", body: "{}" });
+  const ids = fetchMock.mock.calls
+    .filter(([url]) => String(url).startsWith("/api/v1/"))
+    .map(([, init]) =>
+      new Headers((init as RequestInit).headers).get("X-Device-Id"),
+    );
+  expect(ids).toHaveLength(2);
   expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
+  expect(ids[1]).toBe(ids[0]);
 });
