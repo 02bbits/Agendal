@@ -133,7 +133,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - Every password field sets `autocapitalize=none`, `autocorrect=off`, `spellcheck=false` and `lang=en`, so phones don't change what is typed.
 - **Caps Lock** on while the field has focus shows `auth.caps_lock_on` under it.
-- **Vietnamese typing (Unikey, EVKey):** a page can't switch off the system's input method, which silently turns keys into accented letters in a hidden password. When the value has a Latin letter with a diacritic, the field shows `auth.password_accented` ("Turn off Vietnamese typing (Ctrl+Shift).") under it. It's a polite one-line hint and never blocks Submit, since such a password is allowed.
+- **Vietnamese typing (Unikey, EVKey):** a page can't switch off the system's input method, which silently turns keys into accented letters in a hidden password. Nothing is shown while typing; the check runs when the form is sent:
+  - **New passwords** (Create account, Reset password, Change password) can't have Latin letters with accents: pressing the button shows `auth.password_accented` ("Passwords can't have accented letters. Turn off Vietnamese typing and type it again.") under the field, focuses it and sends nothing; editing clears it. The server enforces the same rule with that field error (422), combining accents included.
+  - **Sign in** still sends the password as typed, since an older password may have accents. If the server answers `auth.invalid` and the typed password had accented letters, the error reads `auth.invalid_accented` ("Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.").
 
 ## 3. State matrix
 
