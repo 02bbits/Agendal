@@ -105,4 +105,23 @@ describe("CodeSlots component", () => {
     }) as HTMLInputElement;
     expect(input.readOnly).toBe(true);
   });
+
+  it("after status='success' the row gets data-covered, and going back to idle removes it", async () => {
+    const { rerender, container } = render(
+      <CodeSlots status="idle" defaultValue="123456" />,
+    );
+    const row = container.querySelector(".code-slots__row")!;
+    expect(row.hasAttribute("data-covered")).toBe(false);
+
+    rerender(<CodeSlots status="success" defaultValue="123456" />);
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    });
+
+    expect(row.hasAttribute("data-covered")).toBe(true);
+
+    rerender(<CodeSlots status="idle" defaultValue="123456" />);
+    expect(row.hasAttribute("data-covered")).toBe(false);
+  });
 });

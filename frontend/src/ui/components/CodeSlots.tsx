@@ -112,6 +112,7 @@ export default function CodeSlots({
   const [focused, setFocused] = useState<boolean>(false);
   const [prevStatus, setPrevStatus] = useState(status);
   const [veiled, setVeiled] = useState(status === "success");
+  const [covered, setCovered] = useState(status === "success");
 
   if (status !== prevStatus) {
     setPrevStatus(status);
@@ -139,7 +140,6 @@ export default function CodeSlots({
   useLayoutEffect(() => {
     slotsRef.current = slots;
     live.current = { settle, bounce, cascade, reduce };
-    statusRef.current = status;
   });
 
   const [springs, setSprings] = useState(() => ({
@@ -230,7 +230,7 @@ export default function CodeSlots({
   const caretTransform = useTransform(caretX, (x) => `translateX(${x}px)`);
   const washClip = useTransform(
     openMv,
-    (o) => `inset(0 ${(1 - clamp01(o)) * 50}% round ${washRadius}px)`,
+    (o) => `inset(0 ${(1 - clamp01(o)) * 50}% round ${washRadius + 1}px)`,
   );
   const checkTransform = useTransform(
     checkMv,
@@ -386,15 +386,20 @@ export default function CodeSlots({
 
   useEffect(() => {
     const was = statusRef.current;
+    statusRef.current = status;
     const L = live.current;
     if (status === "success") {
       if (L.reduce) {
         openMv.jump(1);
         drops.forEach((d) => d.jump(1));
         checkMv.jump(1);
+        setCovered(true);
         return;
       }
-      animate(openMv, 1, { duration: WASH_IN, ease: EASE_OUT });
+      // Hide the slots only once the wash covers them all, and not if the code was undone meanwhile
+      animate(openMv, 1, { duration: WASH_IN, ease: EASE_OUT }).then(() => {
+        if (statusRef.current === "success") setCovered(true);
+      });
       drops.forEach((d, k) =>
         animate(d, 1, {
           type: "spring",
@@ -412,6 +417,7 @@ export default function CodeSlots({
       return;
     }
     if (was !== "success") return;
+    setCovered(false);
     if (L.reduce) {
       openMv.jump(0);
       checkMv.jump(0);
@@ -498,6 +504,7 @@ export default function CodeSlots({
         data-status={status}
         data-focused={focused ? "" : undefined}
         data-disabled={disabled ? "" : undefined}
+        data-covered={covered ? "" : undefined}
         onMouseDown={onRowMouseDown}
       >
         <input
