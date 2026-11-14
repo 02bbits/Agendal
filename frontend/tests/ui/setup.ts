@@ -41,10 +41,10 @@ if (typeof window !== "undefined") {
     }
   }
 
-  // @ts-expect-error Mock BroadcastChannel in JSDOM test environment
-  globalThis.BroadcastChannel = MockBroadcastChannel;
-  // @ts-expect-error Mock BroadcastChannel in JSDOM test environment
-  window.BroadcastChannel = MockBroadcastChannel;
+  globalThis.BroadcastChannel =
+    MockBroadcastChannel as unknown as typeof BroadcastChannel;
+  window.BroadcastChannel =
+    MockBroadcastChannel as unknown as typeof BroadcastChannel;
 }
 
 afterEach(() => {
