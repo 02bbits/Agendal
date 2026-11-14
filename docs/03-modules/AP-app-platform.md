@@ -56,6 +56,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - All projects
   - The last 100 notes
   - The edit queue, pending notes and the draft
+  - The first sync downloads the device copy in full (`GET /sync?full=1`); later syncs pull changes. List answers and this device's own writes also land in it. Lists and the note screen show it first, then the network replaces it.
+  - A write that gets no answer is queued and applied to the device copy, so the screen keeps it. A server refusal still shows its error. While edits wait, new ones queue behind them.
 - **Detecting offline:** `navigator.onLine`, plus any failed fetch, because `onLine` can claim a connection that isn't there. The banner `app.offline` shows within 2 s ([UX-40](../01-product/ux-standards.md#ux-40)). An online event or a successful fetch hides it.
 - **Sync ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)):**
   - Runs on open, on reconnect, when the app becomes visible, and every 60 s while visible.
@@ -168,7 +170,7 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 
 | Endpoint | Request | Success | Errors |
 |---|---|---|---|
-| `GET /sync?cursor=&limit=500` | — | `200 {changes: {tasks[], projects[], notes[]}, next_cursor, has_more}` (tombstones have `deleted_at`) | `410` cursor too old, `401`, `429` (30/min) |
+| `GET /sync?cursor=&limit=500&full=` | — | `200 {changes: {tasks[], projects[], notes[]}, next_cursor, has_more}` (tombstones have `deleted_at`). Notes come as Notes-list rows (the `GET /notes` item shape). `full=1` (first download, or after `410`): no tombstones, only what the device keeps (§2.2) | `410` cursor too old, `401`, `429` (30/min) |
 | `POST /sync/patches` | `[{entity, id, field, value, at}]`, up to 500 per batch | `200 {results: [{index, status: applied\|stale\|rejected, current?}]}`. `stale` returns the server's current value, for the conflict notice | `401`, `422` (batch shape), `429` |
 | `PATCH /me` | `{theme?, week_start?, time_format?}` | `200` | `422` |
 
@@ -179,7 +181,8 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 - **Patches:**
   - `entity` ∈ {task, project}. The field allow-lists are in [TK §8](TK-tasks.md#8-data-validation-and-authorization) and [PJ §8](PJ-projects.md#8-data-validation-and-authorization).
   - `at` is clamped to server time + 5 min ([SC-17](../07-architecture/security.md#sc-17)).
-  - Creates go through the same endpoint, with a client UUID and every field.
+  - Creates made offline are replayed through `POST /tasks` and `POST /projects` (idempotent by client UUID), oldest first, before the patch batch.
+  - A project's `deleted` value is `"move"` or `"delete"` (what happens to its tasks, as in the delete dialog), or `false` to restore it.
 - **IndexedDB:** keyed by user ID. Wiped on sign-out, and before a different user's data loads ([AA-E7](AA-account-access.md#aa-e7)).
 - **Service worker:** never caches `/api/*`, and serves the API only with `Cache-Control: no-store` responses (SEC-51).
 

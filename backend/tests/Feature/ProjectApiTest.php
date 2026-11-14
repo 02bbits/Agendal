@@ -786,10 +786,10 @@ it('deletes a project with move mode, unlinking tasks and setting project_id upd
     $fresh2 = Task::find($task2->id);
     expect($fresh1->project_id)->toBeNull()
         ->and($fresh1->deleted_at)->toBeNull()
-        ->and($fresh1->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00Z')
+        ->and($fresh1->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00.000Z')
         ->and($fresh2->project_id)->toBeNull()
         ->and($fresh2->deleted_at)->toBeNull()
-        ->and($fresh2->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00Z');
+        ->and($fresh2->field_updated_at['project_id'])->toBe('2026-10-23T01:12:00.000Z');
 });
 
 it('deletes a project with delete mode, soft-deleting tasks and setting deleted update timestamp', function () {
@@ -821,7 +821,7 @@ it('deletes a project with delete mode, soft-deleting tasks and setting deleted 
     $freshTask = Task::withTrashed()->find($task1->id);
     expect($freshTask->trashed())->toBeTrue()
         ->and($freshTask->deleted_at->toIso8601String())->toBe(Carbon::parse($freshProject->deleted_at)->toIso8601String())
-        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00Z');
+        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:12:00.000Z');
 });
 
 it('deletes a project with no tasks returning empty task_ids and move mode', function () {
@@ -920,7 +920,7 @@ it('restores a project and its moved tasks with 200', function () {
 
     $freshTask = Task::find($task1->id);
     expect($freshTask->project_id)->toBe($project->id)
-        ->and($freshTask->field_updated_at['project_id'])->toBe('2026-10-23T01:17:00Z');
+        ->and($freshTask->field_updated_at['project_id'])->toBe('2026-10-23T01:17:00.000Z');
 });
 
 it('restores a project and its deleted tasks with 200', function () {
@@ -965,7 +965,7 @@ it('restores a project and its deleted tasks with 200', function () {
 
     $freshTask = Task::find($task1->id);
     expect($freshTask->trashed())->toBeFalse()
-        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:17:00Z');
+        ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:17:00.000Z');
 });
 
 it('T-PJ-106 (PJ-E6): delete a project with "Delete them too" while it holds a repeating task, undo: the task and its series are back, and completing it still makes the next occurrence', function () {

@@ -1,7 +1,21 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/apiError";
+import { now, timeZone, today } from "@/lib/clock";
+import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
-import { t, type Project, type Task } from "@/ui";
+import { buildInbox, t, type Project, type Task } from "@/ui";
+import { SYNCED } from "@/lib/sync";
+
+// Same counts as the server's, from the tasks on the device
+function subtitleOf(tasks: readonly Task[]) {
+  const view = buildInbox(tasks, today(timeZone(), now()), {
+    completedToday: () => false,
+  });
+  return t("list.inbox_subtitle", {
+    overdue: view.overdue.length,
+    today: view.today.length,
+  });
+}
 
 export function useInboxData() {
   const [status, setStatus] = useState<"loading" | "error" | "ready">(
@@ -14,6 +28,9 @@ export function useInboxData() {
     "ready",
   );
   const [subtitle, setSubtitle] = useState<string>("");
+  const shownFromDevice = useRef(false);
+  // The network answered at least once, so the device copy is no longer needed
+  const fresh = useRef(false);
 
   const handleRetryProjects = () => {
     projects()
@@ -27,6 +44,7 @@ export function useInboxData() {
   const fetchData = () => {
     Promise.all([inbox(), projects()])
       .then(([inboxData, projectsData]) => {
+        fresh.current = true;
         setTasks([
           ...(inboxData?.overdue ?? []),
           ...(inboxData?.today ?? []),
@@ -44,6 +62,9 @@ export function useInboxData() {
         setStatus("ready");
       })
       .catch((err: unknown) => {
+        // Offline with the device copy on screen: keep showing it, the banner says why
+        if (!(err instanceof ApiRequestError) && shownFromDevice.current)
+          return;
         if (err instanceof ApiRequestError) {
           setErrorMessage(
             t("error.generic", {
@@ -63,16 +84,34 @@ export function useInboxData() {
   };
 
   useEffect(() => {
+    // Lists read the device first (AP-2), then the network replaces it
+    void Promise.all([readTasks(), readProjects()]).then(
+      ([cached, cachedProjects]) => {
+        if (
+          fresh.current ||
+          (cached.length === 0 && cachedProjects.length === 0)
+        )
+          return;
+        shownFromDevice.current = true;
+        setTasks(cached);
+        setProjectList(cachedProjects);
+        setSubtitle(subtitleOf(cached));
+        setStatus("ready");
+      },
+    );
     fetchData();
     const refresh = () => fetchData();
     const onVis = () => {
       if (document.visibilityState === "visible") fetchData();
     };
     window.addEventListener("agendal:task-created", refresh);
+    // Changes pulled by sync (IM-52)
+    window.addEventListener(SYNCED, refresh);
     window.addEventListener("agendal:projects-changed", refresh);
     document.addEventListener("visibilitychange", onVis);
     return () => {
       window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener(SYNCED, refresh);
       window.removeEventListener("agendal:projects-changed", refresh);
       document.removeEventListener("visibilitychange", onVis);
     };

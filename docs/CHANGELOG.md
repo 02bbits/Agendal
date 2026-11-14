@@ -2,6 +2,26 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-13
+
+- **Live sync recorded as a gap (Refs #51).** [tasks.md After MVP](08-project/tasks.md#gap-live-sync): open devices see each other's changes within 60 s; a future task adds server push (SSE) that triggers the usual pull. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md) Consequences links to it.
+- **Same-timestamp writes and commit order (Refs #51, IM-52).** [ADR-004](07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md): stamps keep milliseconds and the writing device (`X-Device-Id`); in the same millisecond the greater device id wins, the same device's later edit wins; writes lock the row before comparing stamps. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md): a pull stops before changes whose transaction may still be followed by a lower `change_seq` commit.
+
+## 2026-11-12
+
+- **Sync (Refs #51, IM-52).** [AP §2.2, §7, §8](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): the first sync downloads in full (`GET /sync?full=1`); writes with no answer queue and stay on the device; `GET /sync` returns notes as Notes-list rows; offline creates replay `POST /tasks` / `POST /projects` before the patch batch (replaces "creates go through the same endpoint"); a project's `deleted` value is `"move"` / `"delete"` / `false`. [PJ §8](03-modules/PJ-projects.md#8-data-validation-and-authorization): the same, and per-field stamps on projects. Proposed copy `task.changed_elsewhere` ("Changed on another device") for the row marker in LV §2 / AP §2.2.
+- **Device copy before sync (Refs #50, IM-51).** [AP §2.2](03-modules/AP-app-platform.md#22-offline-and-sync-ap-2-nf-6): until IM-52, the IndexedDB store (tasks, projects, settings, the last 100 notes) fills from list answers and this device's writes; lists and the note screen read it first; a task deleted elsewhere stays until the next sync.
+
+## 2026-11-11
+
+- **Keep it as task waits for Apply changes (Refs #48, IM-49).** [RV §2.3, §7 and §11](03-modules/RV-review-control.md#23-follow-up-rv-3), [WF-03](04-workflows/WF-03-resolve-unclear-note.md), [TS-06](06-testing/test-scenarios.md#ts-06), [domain](02-domain/domain.md#state-transitions) and the [agent brief](AGENT-BRIEF.md): Keep it as task plans the whole text as one task and opens Check this first (`followup → confirm`), and Apply changes makes it, as [BR-01](02-domain/business-rules.md#br-01) asks of every change. `make-task` answers `200` with the review, not `201 {note, task}`. This is how IM-46 built it.
+- **A repeated redo is not an error (Refs #48, IM-49).** [RV §7](03-modules/RV-review-control.md#7-api-contract): redo on a note already `done` returns `200` with the note as it is, as the Idempotency rule below the table says; `409 note.wrong_status` is for `confirm` and `followup`.
+- **The note draft survives a reload (Refs #48, IM-49).** [NC §2.1 and §8](03-modules/NC-note-capture.md#21-editor-nc-1-nc-2-nc-5), [NF-19](05-quality/nfr.md#nf-19), [SC-19](07-architecture/security.md#sc-19), [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md) and the [ASVS checklist](06-testing/asvs-checklist.md) (8.2.3): a browser aborts an IndexedDB write as the page unloads, so the draft is also copied to `localStorage` when the page is hidden, and moved back to IndexedDB on the next open. Sign-out wipes `localStorage` too, as it already did in code.
+
+## 2026-11-10
+
+- **Branded emails (Refs #77).** [Copy catalog](01-product/copy-catalog.md#email): a new Email section with the reset and notice email copy. [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): both emails use it and the Graphite mail theme. [SUMMARY §6](SUMMARY.md): the Password reset paragraph says so.
+
 ## 2026-11-09
 
 - **Notes cards say Accepted or Pending (Refs #47, IM-48).** [RV §2.1–§2.3, §2.6](03-modules/RV-review-control.md#26-notes-tab-rv-4) and the [copy catalog](01-product/copy-catalog.md): a `done` card reads `notes.made` with its task count ("Accepted · 2", the full count for screen readers), and Edited follows the name, so the status never wraps on a phone; `confirm`, `followup` and `pending` cards, and the result overline after Undo all, read `notes.needs`. `note.needs_look_*` stays on the back-online toast only. Offline Notes cards are left to IM-53.

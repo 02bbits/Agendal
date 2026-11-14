@@ -505,7 +505,7 @@ it('T-TK-11: patches each patchable field and updates its field_updated_at times
     }
 
     expect($storedVal)->toBe($resolvedExpectedValue)
-        ->and($task->field_updated_at[$actualField])->toBe($at);
+        ->and($task->field_updated_at[$actualField])->toBe(ms($at));
 })->with([
     'title' => ['title', 'Initial title', 'Updated title', 'Updated title', false, []],
     'start_date' => ['start_date', null, '2026-11-01', '2026-11-01', false, ['due_date' => '2026-11-02']],
@@ -555,7 +555,7 @@ it('stale write: PATCH title with at=T2, then title with at=T1 (older) → secon
 
     $task = Task::find($taskId);
     expect($task->title)->toBe('Title T2')
-        ->and($task->field_updated_at['title'])->toBe($t2);
+        ->and($task->field_updated_at['title'])->toBe(ms($t2));
 
     $t1 = '2026-10-23T01:14:00Z';
     $response = $this->actingAs($user)->patchJson("/api/v1/tasks/{$taskId}", [
@@ -568,7 +568,7 @@ it('stale write: PATCH title with at=T2, then title with at=T1 (older) → secon
 
     $task->refresh();
     expect($task->title)->toBe('Title T2')
-        ->and($task->field_updated_at['title'])->toBe($t2);
+        ->and($task->field_updated_at['title'])->toBe(ms($t2));
 });
 
 it('future at (now + 1 day) → stored timestamp is now + 5 minutes', function () {
@@ -590,7 +590,7 @@ it('future at (now + 1 day) → stored timestamp is now + 5 minutes', function (
     assertTaskSchema($response->json());
 
     $task = Task::find($taskId);
-    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:17:00Z');
+    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:17:00.000Z');
 });
 
 it('missing at → uses the pinned clock now', function () {
@@ -610,7 +610,7 @@ it('missing at → uses the pinned clock now', function () {
     assertTaskSchema($response->json());
 
     $task = Task::find($taskId);
-    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:12:00Z');
+    expect($task->field_updated_at['title'])->toBe('2026-10-23T01:12:00.000Z');
 });
 
 it('unknown keys user_id, created_by, done → 422 with the message, nothing changed', function () {
@@ -989,7 +989,7 @@ it('PATCH with object form at: title at T2 applied, notes at T1 skipped when sto
     $task = Task::find($taskId);
     expect($task->title)->toBe('Updated title')
         ->and($task->notes)->toBe('Initial notes')
-        ->and($task->field_updated_at['title'])->toBe($t2)
+        ->and($task->field_updated_at['title'])->toBe(ms($t2))
         ->and($task->field_updated_at['notes'])->toBe($t1_5);
 });
 
@@ -1025,8 +1025,8 @@ it('PATCH with object form at: field missing from at uses pinned now', function 
     $task = Task::find($taskId);
     expect($task->title)->toBe('Updated title')
         ->and($task->notes)->toBe('Updated notes')
-        ->and($task->field_updated_at['title'])->toBe($tTitle)
-        ->and($task->field_updated_at['notes'])->toBe($pinnedNow);
+        ->and($task->field_updated_at['title'])->toBe(ms($tTitle))
+        ->and($task->field_updated_at['notes'])->toBe(ms($pinnedNow));
 });
 
 it('PATCH rejects invalid object at keys and formats with 422 and nothing saved', function () {
@@ -1121,9 +1121,9 @@ it('clearing due_date with object at sets due_time, reminder field_updated_at to
     expect($task->due_date)->toBeNull()
         ->and($task->due_time)->toBeNull()
         ->and($task->reminder)->toBe('none')
-        ->and($task->field_updated_at['due_date'])->toBe($tClear)
-        ->and($task->field_updated_at['due_time'])->toBe($tClear)
-        ->and($task->field_updated_at['reminder'])->toBe($tClear);
+        ->and($task->field_updated_at['due_date'])->toBe(ms($tClear))
+        ->and($task->field_updated_at['due_time'])->toBe(ms($tClear))
+        ->and($task->field_updated_at['reminder'])->toBe(ms($tClear));
 });
 
 it('T-TK-117: creates a task with start_date, start_time, due_date, and due_time', function () {

@@ -14,6 +14,7 @@ import {
 import {
   AccountScreen,
   AppShell,
+  OfflineBanner,
   Link,
   NewTaskSheet,
   NoteEditor,
@@ -36,6 +37,10 @@ import {
 import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
+import { CONFLICT, forgetConflicts } from "@/lib/conflicts";
+import { readMe, saveMe } from "@/lib/localStore";
+import { startSync } from "@/lib/sync";
+import { useOffline } from "@/lib/online";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
@@ -222,12 +227,20 @@ export function AppFrame({ children }: { children: ReactNode }) {
     const signedOutPage = SIGNED_OUT_PATHS.includes(pathname);
     const publicPage = PUBLIC_PATHS.includes(pathname);
     const editsBefore = settingsEdits.current;
+    // Offline, the account and its settings come from the device until /me answers (AP-2)
+    if (!publicPage)
+      void readMe<SignedInUser>().then((me) => {
+        if (!current || !me || userRef.current) return;
+        setUser(me);
+        if (settingsEdits.current === editsBefore) setSettings(settingsOf(me));
+      });
     api("/me")
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
           const me: SignedInUser = await response.json();
           await claimDevice(me.id);
+          void saveMe(me);
           if (!current) return;
           setUser(me);
           if (settingsEdits.current === editsBefore)
@@ -391,6 +404,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  // Sync while signed in (IM-52, ADR-005); a lost conflict says so (AP-E7). Only the latest toast
+  // shows, since a new one replaces it
+  const signedIn = user !== null;
+  useEffect(() => (signedIn ? startSync() : undefined), [signedIn]);
+  useEffect(() => {
+    const onConflict = (event: Event) =>
+      showToast(
+        t("app.conflict", {
+          title: (event as CustomEvent<{ title: string }>).detail.title,
+        }),
+      );
+    window.addEventListener(CONFLICT, onConflict);
+    return () => window.removeEventListener(CONFLICT, onConflict);
+  }, [showToast]);
+
   const signOut = useCallback(
     async (everywhere = false) => {
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
@@ -408,6 +436,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       }
       await wipeDevice();
       forgetNotes();
+      forgetConflicts();
       clearRecent();
       setUser(null);
       settingsRef.current = DEFAULT_SETTINGS;
@@ -531,6 +560,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
     ],
   );
   const tab = TAB_BY_PATH[pathname];
+  // UX-40: on the four tab screens only
+  const offline = useOffline();
 
   const [inboxCount, setInboxCount] = useState<number | undefined>(undefined);
   const [upcomingCount, setUpcomingCount] = useState<number | undefined>(
@@ -720,6 +751,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <AppFrameContext.Provider value={value}>
       <AppShell
         tab={tab}
+        banner={tab && offline ? <OfflineBanner /> : undefined}
         navigate={navigate}
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}

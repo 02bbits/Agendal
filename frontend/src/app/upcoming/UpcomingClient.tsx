@@ -30,8 +30,10 @@ import { useAppFrame } from "../AppFrame";
 import { httpTaskApi, inbox, projects, upcoming } from "@/lib/taskApi";
 import { now, timeZone, today } from "@/lib/clock";
 import { ApiRequestError } from "@/lib/apiError";
+import { readProjects, readTasks } from "@/lib/localStore";
 import { headerDate, subscribeHeaderDate } from "../headerDate";
 import { useSyncExternalStore } from "react";
+import { SYNCED } from "@/lib/sync";
 
 const clock: Clock = {
   now,
@@ -39,6 +41,20 @@ const clock: Clock = {
     return timeZone();
   },
 };
+
+// "N tasks in the next 7 days": open tasks with a start or due day from tomorrow to a week out
+function subtitleOf(tasks: readonly Task[]) {
+  const todayStr = today(timeZone(), now());
+  const limitDate = addDays(todayStr, 7);
+  const count = tasks.filter(
+    (task) =>
+      !task.done &&
+      entriesOf(task).some((e) => e.date > todayStr && e.date <= limitDate),
+  ).length;
+  return count === 1
+    ? t("list.upcoming_subtitle_one", { count: 1 })
+    : t("list.upcoming_subtitle", { count });
+}
 
 function UpcomingToast() {
   const { toast, dismissToast } = useTaskStore();
@@ -65,6 +81,9 @@ export function UpcomingClient() {
   const [filter, setFilter] = useState<UpcomingFilter>("all");
   const [viewMode, setViewMode] = useState<UpcomingViewMode>("list");
   const viewRef = useRef<{ anchor: string; day?: string } | null>(null);
+  // Set once the network answers; until then the device copy may show (AP-2)
+  const fresh = useRef(false);
+  const shownFromDevice = useRef(false);
 
   useEffect(() => {
     try {
@@ -129,9 +148,9 @@ export function UpcomingClient() {
   };
 
   const fetchData = () => {
-    const todayStr = today(timeZone(), now());
     Promise.all([upcoming({ days: 366 }), inbox(), projects()])
       .then(([upcomingData, inboxData, projectsData]) => {
+        fresh.current = true;
         const flatUpcoming = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
         const overdueTasks = inboxData?.overdue ?? [];
         const seen = new Set<string>();
@@ -145,26 +164,14 @@ export function UpcomingClient() {
         setTasks(combinedTasks);
         setProjectList(projectsData ?? []);
         setProjectsStatus("ready");
-
-        const limitDate = addDays(todayStr, 7);
-        const next7DaysMap = new Map<string, Task>();
-        for (const t of flatUpcoming) {
-          if (t.done) continue;
-          const entries = entriesOf(t);
-          if (entries.some((e) => e.date > todayStr && e.date <= limitDate)) {
-            next7DaysMap.set(t.id, t);
-          }
-        }
-        const count = next7DaysMap.size;
-        setSubtitle(
-          count === 1
-            ? t("list.upcoming_subtitle_one", { count: 1 })
-            : t("list.upcoming_subtitle", { count }),
-        );
+        setSubtitle(subtitleOf(flatUpcoming));
         setLoadSeq((n) => n + 1);
         setStatus("ready");
       })
       .catch((err: unknown) => {
+        // Offline with the device copy on screen: keep it, the banner says why
+        if (!(err instanceof ApiRequestError) && shownFromDevice.current)
+          return;
         if (err instanceof ApiRequestError) {
           setErrorMessage(
             t("error.generic", {
@@ -184,6 +191,22 @@ export function UpcomingClient() {
   };
 
   useEffect(() => {
+    void Promise.all([readTasks(), readProjects()]).then(
+      ([cached, cachedProjects]) => {
+        const dated = cached.filter((task) => task.start_date || task.due_date);
+        if (
+          fresh.current ||
+          (cached.length === 0 && cachedProjects.length === 0)
+        )
+          return;
+        shownFromDevice.current = true;
+        setTasks(dated);
+        setProjectList(cachedProjects);
+        setSubtitle(subtitleOf(dated));
+        setLoadSeq((n) => n + 1);
+        setStatus("ready");
+      },
+    );
     fetchData();
 
     const handleTaskCreated = () => {
@@ -199,11 +222,16 @@ export function UpcomingClient() {
     };
 
     window.addEventListener("agendal:task-created", handleTaskCreated);
+
+    // Changes pulled by sync (IM-52)
+
+    window.addEventListener(SYNCED, handleTaskCreated);
     window.addEventListener("agendal:projects-changed", handleProjectsChanged);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("agendal:task-created", handleTaskCreated);
+      window.removeEventListener(SYNCED, handleTaskCreated);
       window.removeEventListener(
         "agendal:projects-changed",
         handleProjectsChanged,

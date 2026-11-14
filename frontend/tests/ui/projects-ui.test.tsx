@@ -108,6 +108,29 @@ describe("ProjectsScreen (PJ §2.2)", () => {
     expect(screen.getByText("Group tasks by area or goal.")).toBeTruthy();
   });
 
+  it("a menu item and Escape leave focus on ⋯, for the dialog to give back (UX-11)", async () => {
+    const list = [{ ...seedProjects[1]!, open: 5, done: 3 }];
+    render(
+      <ProjectsScreen
+        projects={list}
+        accountInitial="E"
+        onNewProject={() => {}}
+        onRenameProject={() => {}}
+        onDeleteProject={() => {}}
+      />,
+    );
+    const menuButton = screen.getByRole("button", { name: t("project.menu") });
+    await userEvent.click(menuButton);
+    await userEvent.keyboard("{Escape}");
+    expect(document.activeElement).toBe(menuButton);
+
+    await userEvent.click(menuButton);
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: t("project.delete") }),
+    );
+    expect(document.activeElement).toBe(menuButton);
+  });
+
   it("closes project card menu on click outside and on Escape", async () => {
     const list = [{ ...seedProjects[1]!, open: 5, done: 3 }];
     render(

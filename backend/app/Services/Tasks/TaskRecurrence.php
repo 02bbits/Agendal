@@ -9,6 +9,7 @@ use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\ReminderCalculator;
+use App\Support\Stamp;
 use DateTimeImmutable;
 
 final class TaskRecurrence
@@ -98,10 +99,10 @@ final class TaskRecurrence
         $stamp = $this->clock->now();
         if ($existing !== null) {
             foreach ($existing->field_updated_at as $value) {
-                $stamp = max($stamp, (new DateTimeImmutable($value))->modify('+1 second'));
+                $stamp = max($stamp, Stamp::time($value)->modify('+1 millisecond'));
             }
         }
-        $copy->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], $stamp->format(DATE_ATOM));
+        $copy->field_updated_at = array_fill_keys([...Task::PATCHABLE, 'done', 'deleted'], Stamp::of($stamp));
         if ($copy->trashed()) {
             $copy->restore();
         } else {

@@ -125,7 +125,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Constraints:** `UNIQUE (user_id, lower(name)) WHERE deleted_at IS NULL`. `colour` ∈ the 8 tokens. 50 projects per user, checked in the transaction.
 - **Delete:** one transaction. The project gets `deleted_at`. Tasks get `project_id = null` (move) or `deleted_at` (delete). `change_seq` is bumped on all of them.
 - **Restore:** accepts only task IDs that belong to the user and match the delete (moved: `project_id IS NULL`. Deleted: the same `deleted_at`).
-- **Patch field allow-list:** name, colour, deleted.
+- **Patch field allow-list:** name, colour, deleted. `deleted` is `"move"` or `"delete"` (what happens to the tasks), or `false` to restore ([AP §8](AP-app-platform.md#8-data-validation-and-authorization)). Each field has its own last-write-wins stamp (`projects.field_updated_at`).
 - **Ownership:** someone else's project returns `404` ([authorization matrix](../07-architecture/security.md#authorization-matrix)).
 
 ## 9. Abuse cases

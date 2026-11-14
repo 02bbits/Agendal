@@ -57,6 +57,12 @@ function carryCookies(TestResponse $response): array
 |
 */
 
+/** An ISO time as a field stamp stores it: UTC, to the millisecond (App\Support\Stamp). */
+function ms(string $iso): string
+{
+    return (new DateTimeImmutable($iso))->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH:i:s.v\Z');
+}
+
 expect()->extend('toBeOne', function () {
     return $this->toBe(1);
 });

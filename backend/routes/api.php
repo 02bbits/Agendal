@@ -11,6 +11,7 @@ use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
 
@@ -52,4 +53,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('tasks/{task}/reopen', [TaskController::class, 'reopen']);
     Route::delete('tasks/{task}', [TaskController::class, 'destroy']);
     Route::post('tasks/{task}/restore', [TaskController::class, 'restore'])->withTrashed();
+    Route::get('sync', [SyncController::class, 'pull'])->middleware('throttle:sync');
+    Route::post('sync/patches', [SyncController::class, 'patches']);
 });

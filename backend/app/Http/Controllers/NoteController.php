@@ -32,11 +32,7 @@ class NoteController extends Controller
         $counts = Note::query()->selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
 
         return response()->json([
-            'items' => $page->getCollection()->map(function (Note $note): array {
-                $kinds = array_count_values(array_column($note->plan['changes'] ?? [], 'kind'));
-
-                return ['id' => $note->id, 'status' => $note->status, 'name' => $note->name, 'excerpt' => mb_substr($note->text, 0, 140), 'written_at' => $note->written_at->format(DATE_ATOM), 'edited_at' => $note->edited_at?->format(DATE_ATOM), 'source_file_name' => $note->source_file_name, 'counts' => ['created' => $kinds['created'] ?? 0, 'updated' => $kinds['updated'] ?? 0, 'deleted' => $kinds['deleted'] ?? 0]];
-            })->values(),
+            'items' => $page->getCollection()->map(fn (Note $note): array => $note->listRow())->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
             'total' => (int) $counts->sum(),
             'needs_count' => (int) $counts->only(PlanStatus::needsLook())->sum(),

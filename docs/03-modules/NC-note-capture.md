@@ -50,6 +50,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Paste:** the text area is plain text, so formatting is dropped by the platform. A paste that crosses 5,000 characters is kept in full and shows the counter error, so nothing the user pasted is lost silently.
 - **Draft ([UX-13](../01-product/ux-standards.md#ux-13)):**
   - The text is saved to IndexedDB 500 ms after the last keystroke, and on `pagehide` / `visibilitychange`.
+  - A browser aborts an IndexedDB write still running as the page unloads, so on `pagehide` / `visibilitychange` the text is also copied to `localStorage`, which writes at once. The next open moves that copy back to IndexedDB and removes it ([NC-E1](#nc-e1)).
   - Opening the editor restores it with `note.draft_restored`.
   - A successful submit clears it.
   - One draft per user per device. It is wiped on sign-out ([NF-19](../05-quality/nfr.md#nf-19)).
@@ -196,7 +197,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 8. Data, validation and authorization
 
-- **On the device:** drafts and pending notes live in IndexedDB, keyed by user ID. They are wiped on sign-out ([NF-19](../05-quality/nfr.md#nf-19)).
+- **On the device:** drafts and pending notes live in IndexedDB, keyed by user ID. The only exception is the draft's copy in `localStorage`, from when the page is hidden until it next opens (§2.1). All of them are wiped on sign-out ([NF-19](../05-quality/nfr.md#nf-19)).
 - **Files:**
   - Streamed to a temporary file, given to the sandboxed worker, and deleted in a `finally` step ([SC-16](../07-architecture/security.md#sc-16)).
   - Never stored or logged.
