@@ -37,6 +37,12 @@ describe("PasswordField - Vietnamese typing and Caps Lock warnings (issue #149)"
     expect(input.value).toBe("ab!👍");
   });
 
+  it("defaults to maxLength=128 to prevent long string paste lag / ReDoS", () => {
+    render(<PasswordField label="Password" />);
+    const input = screen.getByLabelText("Password") as HTMLInputElement;
+    expect(input.maxLength).toBe(128);
+  });
+
   it("shows the Caps Lock warning on keydown when CapsLock modifier is active, and clears on blur", () => {
     render(<PasswordField label="Password" />);
 

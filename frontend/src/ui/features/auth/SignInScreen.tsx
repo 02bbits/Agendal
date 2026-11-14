@@ -206,6 +206,7 @@ export function SignInScreen({
               label={t("auth.email")}
               type="email"
               autoComplete="email"
+              maxLength={254}
               value={email}
               leading={<MailIcon size={18} />}
               onChange={(event) => setEmail(event.target.value)}

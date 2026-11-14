@@ -97,6 +97,7 @@ export function CreateAccountScreen({
           label={t("auth.email")}
           type="email"
           autoComplete="email"
+          maxLength={254}
           value={email}
           leading={<MailIcon size={18} />}
           error={emailError}

@@ -117,6 +117,7 @@ export function ForgotPasswordScreen({
             label={t("auth.email")}
             type="email"
             autoComplete="email"
+            maxLength={254}
             autoFocus={changingEmail}
             value={email}
             leading={<MailIcon size={18} />}

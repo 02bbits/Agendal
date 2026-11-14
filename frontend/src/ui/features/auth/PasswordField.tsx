@@ -14,7 +14,16 @@ export type PasswordFieldProps = Omit<TextFieldProps, "type" | "trailing">;
 /** Password with an eye button: one fixed label, pressed state in aria-pressed (A11Y-60). */
 export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   function PasswordField(
-    { onKeyDown, onKeyUp, onBlur, onChange, value, defaultValue, ...props },
+    {
+      onKeyDown,
+      onKeyUp,
+      onBlur,
+      onChange,
+      value,
+      defaultValue,
+      maxLength = 128,
+      ...props
+    },
     ref,
   ) {
     const [shown, setShown] = useState(false);
@@ -52,6 +61,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           {...props}
           value={value}
           defaultValue={defaultValue}
+          maxLength={maxLength}
           type={shown ? "text" : "password"}
           aria-keyshortcuts="Alt+F8"
           autoCapitalize="none"
