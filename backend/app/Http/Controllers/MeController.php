@@ -6,6 +6,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\Clock\UserTimezone;
+use App\Support\DisplayName;
 use DateTimeZone;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -26,7 +27,7 @@ class MeController extends Controller
     {
         $user = $this->user($request);
         $data = $request->validate([
-            'display_name' => ['sometimes', 'string', 'max:60'],
+            'display_name' => ['sometimes', 'bail', 'required', ...DisplayName::rules()],
             'theme' => ['sometimes', Rule::in(['system', 'light', 'dark'])],
             'week_start' => ['sometimes', Rule::in(['mon', 'sun'])],
             'time_format' => ['sometimes', Rule::in(['24h', '12h'])],
@@ -37,6 +38,10 @@ class MeController extends Controller
             'theme_palette' => ['sometimes', Rule::in(['default', 'agendal', 'moonstone', 'tangerine', 'kale', 'blueberry', 'lavender', 'raspberry'])],
             'page_view' => ['sometimes', Rule::in(['flat', 'full'])],
         ]);
+
+        if (array_key_exists('display_name', $data)) {
+            $data['display_name'] = trim($data['display_name']);
+        }
 
         if (array_key_exists('timezone_auto', $data) && $data['timezone_auto'] === true) {
             unset($data['timezone']);
