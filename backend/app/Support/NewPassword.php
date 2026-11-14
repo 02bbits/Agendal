@@ -10,9 +10,9 @@ use Illuminate\Support\Str;
 // The rules for a new password at sign-up and reset (AA §2.1, BR-17, SC-02)
 final class NewPassword
 {
-    private const RULE = 'At least 8 characters, and not your email.';
+    private const RULE = "At least 8 characters, and doesn't contain your information.";
 
-    private const ACCENTED = "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.";
+    private const ACCENTED = 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.';
 
     private const BREACHED = 'This password has appeared in a data breach. Choose another one.';
 
@@ -23,14 +23,20 @@ final class NewPassword
      */
     public static function rules(string $email): array
     {
-        return ['required', 'string', 'min:8', 'max:128', function (string $attribute, mixed $value, Closure $fail) use ($email) {
-            if (Str::lower((string) $value) === $email) {
-                $fail("Your password can't be your email."); // T-AA-108
+        // bail: a list or object stops at "string", so the check below only ever sees text
+        return ['bail', 'required', 'string', 'min:8', 'max:128', function (string $attribute, mixed $value, Closure $fail) use ($email) {
+            // Not the email, and not containing its name part (3+ characters): "doesn't contain
+            // your information" (T-AA-108)
+            $lower = Str::lower((string) $value);
+            $name = Str::before($email, '@');
+            if ($lower === $email || (mb_strlen($name) >= 3 && str_contains($lower, $name))) {
+                $fail("Your password can't contain your email.");
             }
+            // Only what an English keyboard types (printable ASCII, space included) and emoji.
             // Vietnamese typing (Unikey, EVKey) turns keys into accented letters even in a hidden
-            // field, so a new password can't have Latin letters with accents (AA §2.10)
-            // (combining marks too, so a decomposed "a" + accent is caught without intl)
-            if (preg_match('/[\x{00C0}-\x{024F}\x{1E00}-\x{1EFF}\x{0300}-\x{036F}]/u', (string) $value) === 1) {
+            // field, so those and any other script are refused (AA §2.10). Emoji keep their
+            // joiners, variation selector, skin tones, flags and keycaps (AA-E9)
+            if (preg_match('/[^\x20-\x7E\p{Extended_Pictographic}\x{FE0F}\x{200D}\x{1F3FB}-\x{1F3FF}\x{1F1E6}-\x{1F1FF}\x{20E3}]/u', (string) $value) === 1) {
                 $fail(self::ACCENTED);
             }
         }];

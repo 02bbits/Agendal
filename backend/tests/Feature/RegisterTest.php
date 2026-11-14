@@ -38,17 +38,27 @@ it('T-AA-101: creates the account with the email trimmed and lower-cased, signs 
 it('T-AA-02: rejects passwords shorter than 8 or longer than 128 characters', function (string $password) {
     register(['password' => $password])->assertStatus(422)
         ->assertJsonPath('error.code', 'error.invalid')
-        ->assertJsonPath('error.fields.password.0', 'At least 8 characters, and not your email.');
+        ->assertJsonPath('error.fields.password.0', "At least 8 characters, and doesn't contain your information.");
 })->with(['short' => 'seven77', 'long' => str_repeat('x', 129)]);
 
-it('AA §2.10: rejects a new password with accented letters (Vietnamese typing on)', function (string $password) {
+it('AA §2.10: rejects a new password with characters an English keyboard does not type', function (string $password) {
     register(['password' => $password])->assertStatus(422)
-        ->assertJsonPath('error.fields.password.0', "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.");
+        ->assertJsonPath('error.fields.password.0', 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.');
     expect(User::count())->toBe(0);
 })->with([
     'Telex mật khẩu' => 'mật khẩu 123',
     'an accented capital' => 'Quiet RÍVER 42',
     'a decomposed accent' => "quiet rive\u{0301}r 42",
+    'Japanese' => 'パスワード 12345',
+    'Cyrillic look-alike' => 'quiet rivеr 42',
+    'a tab' => "quiet\triver 42",
+]);
+
+it('AA §2.10: accepts every English keyboard symbol and emoji with joiners, skin tones and flags', function (string $password) {
+    register(['password' => $password])->assertCreated();
+})->with([
+    'symbols' => '~!@#$%^&*()_+`-={}|[]\\:";\'<>?,./ Aa1',
+    'emoji sequences' => 'river 👍🏽 👩‍💻 🇻🇳 ❤️ 1️⃣',
 ]);
 
 it('T-AA-03: accepts spaces, emoji and 128 characters in full', function () {
@@ -59,10 +69,11 @@ it('T-AA-03: accepts spaces, emoji and 128 characters in full', function () {
     expect(Hash::check($password, User::sole()->password))->toBeTrue();
 });
 
-it('T-AA-108: rejects a password equal to the email in any case', function () {
-    register(['password' => 'EXAMPLE@gmail.com'])->assertStatus(422)
-        ->assertJsonPath('error.fields.password.0', "Your password can't be your email.");
-});
+it('T-AA-108: rejects a password equal to the email, or containing its name part, in any case', function (string $password) {
+    register(['password' => $password])->assertStatus(422)
+        ->assertJsonPath('error.fields.password.0', "Your password can't contain your email.");
+    expect(User::count())->toBe(0);
+})->with(['the email' => 'EXAMPLE@gmail.com', 'the name part' => 'my Example 2026']);
 
 it('T-AA-113: an email already in use returns auth.email_taken', function () {
     User::factory()->create(['email' => 'example@gmail.com']);

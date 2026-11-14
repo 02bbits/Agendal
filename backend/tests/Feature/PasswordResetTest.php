@@ -146,8 +146,8 @@ it('applies the sign-up password rules and the breached check', function () {
     requestReset();
     $token = sentToken($this->user);
 
-    resetPassword($token, 'short')->assertStatus(422)->assertJsonPath('error.fields.password.0', 'At least 8 characters, and not your email.');
-    resetPassword($token, 'EXAMPLE@gmail.com')->assertStatus(422)->assertJsonPath('error.fields.password.0', "Your password can't be your email.");
+    resetPassword($token, 'short')->assertStatus(422)->assertJsonPath('error.fields.password.0', "At least 8 characters, and doesn't contain your information.");
+    resetPassword($token, 'EXAMPLE@gmail.com')->assertStatus(422)->assertJsonPath('error.fields.password.0', "Your password can't contain your email.");
 
     $suffix = substr(strtoupper(sha1('new river 42')), 5);
     $this->breachReply = fn () => Http::response("{$suffix}:9");

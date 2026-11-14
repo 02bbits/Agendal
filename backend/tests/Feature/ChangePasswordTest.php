@@ -67,7 +67,7 @@ it('AA §2.10: rejects a new password with accented letters and keeps the old on
         'password' => 'mật khẩu mới 1',
         'password_confirmation' => 'mật khẩu mới 1',
     ])->assertStatus(422)
-        ->assertJsonPath('error.fields.password.0', "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.");
+        ->assertJsonPath('error.fields.password.0', 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.');
 
     expect(Hash::check('old password 1', $this->user->fresh()->password))->toBeTrue();
 });
@@ -80,14 +80,14 @@ it('validates each password rule and breach check', function () {
         'current_password' => 'old password 1',
         'password' => 'short',
         'password_confirmation' => 'short',
-    ])->assertStatus(422)->assertJsonPath('error.fields.password.0', 'At least 8 characters, and not your email.');
+    ])->assertStatus(422)->assertJsonPath('error.fields.password.0', "At least 8 characters, and doesn't contain your information.");
 
     // Same as email
     asDevice($device)->postJson('/api/v1/auth/change-password', [
         'current_password' => 'old password 1',
         'password' => 'example@gmail.com',
         'password_confirmation' => 'example@gmail.com',
-    ])->assertStatus(422)->assertJsonPath('error.fields.password.0', "Your password can't be your email.");
+    ])->assertStatus(422)->assertJsonPath('error.fields.password.0', "Your password can't contain your email.");
 
     // Same as current
     asDevice($device)->postJson('/api/v1/auth/change-password', [
