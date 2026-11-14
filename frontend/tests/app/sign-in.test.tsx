@@ -127,7 +127,7 @@ describe("Sign in (AA-2)", () => {
     expect(document.activeElement).toBe(password);
   });
 
-  it("AA §2.10: a password typed with Vietnamese letters is sent as its keys, like at sign-up", async () => {
+  it("AA §2.10: a password typed with Vietnamese letters gives an accented hint when sign-in fails", async () => {
     reply = () => json(422, { error: { code: "auth.invalid" } });
     const user = userEvent.setup();
     const fields = renderPage();
@@ -136,14 +136,12 @@ describe("Sign in (AA-2)", () => {
     await user.click(fields.submit);
 
     expect((await screen.findByRole("alert")).textContent).toBe(
-      "Email or password is incorrect.",
+      "Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.",
     );
     const login = fetchMock.mock.calls.find(
       ([url]) => url === "/api/v1/auth/login",
     );
-    expect(JSON.parse(String(login?.[1]?.body)).password).toBe(
-      "maajt khaaru 123",
-    );
+    expect(JSON.parse(String(login?.[1]?.body)).password).toBe("mật khẩu 123");
   });
 
   it("T-AA-111, SEC-24: goes back to a same-origin return path, never another site", async () => {

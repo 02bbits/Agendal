@@ -19,37 +19,22 @@ describe("PasswordField - Vietnamese typing and Caps Lock warnings (issue #149)"
     );
   }
 
-  it("AA §2.10: Vietnamese typing (Unikey) gives the keys pressed: A, A is AA, not Â", () => {
+  it("accepts native typing without mutating or dropping keys on the fly", () => {
     const seen: string[] = [];
     render(<Controlled onValue={(v) => seen.push(v)} />);
     const input = screen.getByLabelText("Password") as HTMLInputElement;
 
-    // What Unikey sends: "A", then Backspace and "Â" a moment later
-    fireEvent.change(input, { target: { value: "A" }, timeStamp: 1000 });
-    fireEvent.change(input, { target: { value: "" }, timeStamp: 1200 });
-    fireEvent.change(input, { target: { value: "Â" }, timeStamp: 1202 });
-
-    expect(input.value).toBe("AA");
-    expect(seen.at(-1)).toBe("AA");
-    expect(screen.queryByRole("status")).toBeNull();
+    fireEvent.change(input, { target: { value: "Secret123!" } });
+    expect(input.value).toBe("Secret123!");
+    expect(seen.at(-1)).toBe("Secret123!");
   });
 
-  it("AA §2.10: other scripts can't be typed, with a short note; emoji stay", async () => {
-    const user = userEvent.setup();
+  it("allows emoji and special characters during typing", () => {
     render(<Controlled />);
     const input = screen.getByLabelText("Password") as HTMLInputElement;
 
-    await user.type(input, "ab");
-    fireEvent.change(input, { target: { value: "abパ" }, timeStamp: 5000 });
-    expect(input.value).toBe("ab");
-    expect(screen.getByRole("status").textContent).toBe(
-      "Only English keyboard letters, numbers, symbols and emoji can be used.",
-    );
-
-    // An emoji keyboard inserts the whole emoji at once
-    fireEvent.change(input, { target: { value: "ab!👍" }, timeStamp: 6000 });
+    fireEvent.change(input, { target: { value: "ab!👍" } });
     expect(input.value).toBe("ab!👍");
-    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("shows the Caps Lock warning on keydown when CapsLock modifier is active, and clears on blur", () => {

@@ -151,19 +151,17 @@ describe("Create account (AA-1)", () => {
     ).toBe("/sign-in");
   });
 
-  it("AA §2.10: Vietnamese letters typed in the password become their keys, and that is what is sent", async () => {
+  it("AA §2.10: passwords with Vietnamese accented letters are blocked on submit with an error", async () => {
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
     await user.type(email, "example@gmail.com");
     await user.type(password, "mật khẩu 123");
-    expect((password as HTMLInputElement).value).toBe("maajt khaaru 123");
+    expect((password as HTMLInputElement).value).toBe("mật khẩu 123");
     await user.click(submit);
 
-    expect(registerCalls()).toHaveLength(1);
-    expect(JSON.parse(String(registerCalls()[0]![1]?.body)).password).toBe(
-      "maajt khaaru 123",
-    );
+    expect(registerCalls()).toHaveLength(0);
+    expect(screen.getByText("Can't contain special characters.")).toBeTruthy();
   });
 
   it("shows the rate limit with the seconds to wait", async () => {

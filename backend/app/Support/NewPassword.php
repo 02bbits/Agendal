@@ -12,7 +12,7 @@ final class NewPassword
 {
     private const RULE = "At least 8 characters, and doesn't contain your information.";
 
-    private const ACCENTED = 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.';
+    private const ACCENTED = "Can't contain special characters.";
 
     private const BREACHED = 'This password has appeared in a data breach. Choose another one.';
 

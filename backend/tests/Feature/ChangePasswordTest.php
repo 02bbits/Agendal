@@ -67,7 +67,7 @@ it('AA §2.10: rejects a new password with accented letters and keeps the old on
         'password' => 'mật khẩu mới 1',
         'password_confirmation' => 'mật khẩu mới 1',
     ])->assertStatus(422)
-        ->assertJsonPath('error.fields.password.0', 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.');
+        ->assertJsonPath('error.fields.password.0', "Can't contain special characters.");
 
     expect(Hash::check('old password 1', $this->user->fresh()->password))->toBeTrue();
 });

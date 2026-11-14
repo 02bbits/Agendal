@@ -1,11 +1,9 @@
 import {
   forwardRef,
   useState,
-  type ChangeEvent,
   type FocusEvent,
   type KeyboardEvent,
 } from "react";
-import { KeyboardOnlyFilter } from "./keyboardOnly";
 import { t } from "../../copy";
 import { IconButton } from "../../components/IconButton";
 import { AlertCircleIcon, EyeIcon, EyeOffIcon } from "../../components/icons";
@@ -21,30 +19,6 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
   ) {
     const [shown, setShown] = useState(false);
     const [capsLock, setCapsLock] = useState(false);
-    // Keys only: Vietnamese typing is undone as it happens, other scripts are dropped (AA §2.10)
-    // A block body, so the NF-12 scan doesn't read the arrow and the type after it as text
-    const [filter] = useState(() => {
-      return new KeyboardOnlyFilter();
-    });
-    const [dropped, setDropped] = useState(false);
-
-    const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-      const input = event.target;
-      const previous = String(value ?? "");
-      const result = filter.change(previous, input.value, event.timeStamp);
-      setDropped(result.dropped);
-      if (input.value !== result.value) {
-        input.value = result.value;
-        // Setting the value leaves the caret at the end. Move it only for an edit in the middle:
-        // moving the selection can scroll the page to the field, which made the form jump
-        if (result.caret < [...result.value].length) {
-          input.setSelectionRange(result.caret, result.caret);
-        }
-      }
-      // Nothing the field may hold changed (only a dropped character): no change to report
-      if (result.value === previous) return;
-      onChange?.(event);
-    };
 
     const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
       if (event.altKey && event.key === "F8") {
@@ -69,11 +43,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
       onBlur?.(event);
     };
 
-    const warningText = dropped
-      ? t("auth.password_keyboard_only")
-      : capsLock
-        ? t("auth.caps_lock_on")
-        : null;
+    const warningText = capsLock ? t("auth.caps_lock_on") : null;
 
     return (
       <div className="flex flex-col">
@@ -91,7 +61,7 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
           onKeyDown={handleKeyDown}
           onKeyUp={handleKeyUp}
           onBlur={handleBlur}
-          onChange={handleChange}
+          onChange={onChange}
           trailing={
             <IconButton
               plain

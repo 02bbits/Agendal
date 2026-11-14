@@ -43,7 +43,7 @@ it('T-AA-02: rejects passwords shorter than 8 or longer than 128 characters', fu
 
 it('AA §2.10: rejects a new password with characters an English keyboard does not type', function (string $password) {
     register(['password' => $password])->assertStatus(422)
-        ->assertJsonPath('error.fields.password.0', 'Use only English keyboard characters, spaces and emoji. Turn off Vietnamese typing and type it again.');
+        ->assertJsonPath('error.fields.password.0', "Can't contain special characters.");
     expect(User::count())->toBe(0);
 })->with([
     'Telex mật khẩu' => 'mật khẩu 123',
