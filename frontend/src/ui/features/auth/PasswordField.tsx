@@ -22,7 +22,10 @@ export const PasswordField = forwardRef<HTMLInputElement, PasswordFieldProps>(
     const [shown, setShown] = useState(false);
     const [capsLock, setCapsLock] = useState(false);
     // Keys only: Vietnamese typing is undone as it happens, other scripts are dropped (AA §2.10)
-    const [filter] = useState(() => new KeyboardOnlyFilter());
+    // A block body, so the NF-12 scan doesn't read the arrow and the type after it as text
+    const [filter] = useState(() => {
+      return new KeyboardOnlyFilter();
+    });
     const [dropped, setDropped] = useState(false);
 
     const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
