@@ -87,7 +87,7 @@ The first row that matches wins. Names longer than 34 characters are cut at a wo
 | <a id="br-14"></a>BR-14 | Deleting a task asks for confirmation, and the toast offers Undo | [TK-5](../03-modules/TK-tasks.md#tk-5) |
 | <a id="br-15"></a>BR-15 | Deleting a project asks whether to move its tasks to No project or delete them too. The toast offers Undo | [PJ-4](../03-modules/PJ-projects.md#pj-4) |
 | <a id="br-16"></a>BR-16 | A project has a name and one of 8 colours | [PJ-1](../03-modules/PJ-projects.md#pj-1) |
-| <a id="br-17"></a>BR-17 | A password is at least 8 characters and differs from the email | [AA-1](../03-modules/AA-account-access.md#aa-1) |
+| <a id="br-17"></a>BR-17 | A password is at least 8 characters and doesn't contain the email (or its name part of 3+ characters). A new password uses only English keyboard characters (printable ASCII, space included) and emoji | [AA-1](../03-modules/AA-account-access.md#aa-1) |
 | <a id="br-18"></a>BR-18 | After 3 failed sign-ins, Sign in is disabled for 60 s with a countdown | [AA-3](../03-modules/AA-account-access.md#aa-3) |
 | <a id="br-19"></a>BR-19 | Password reset shows the same confirmation whether or not the account exists. The link is single-use and expires in 60 minutes. Resend unlocks after 45 s | [AA-4](../03-modules/AA-account-access.md#aa-4), [NF-10](../05-quality/nfr.md#nf-10) |
 | <a id="br-20"></a>BR-20 | Inbox shows Overdue before Today | [LV-1](../03-modules/LV-lists-search.md#lv-1) |

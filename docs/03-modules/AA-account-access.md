@@ -96,7 +96,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - Shown once, after the email is verified, on phone and desktop (desktop: a 480 px card in the right column of the two-column layout). No app chrome.
 - **Three steps** in a stepper (`stepper.progress`): the current step shows its number and title, done steps a check; a step can only be reached once the ones before it are done. Continue and Back move between them with a slide.
-  1. **Your name** (`setup.name_label`): 1–60 characters, prefilled from the email. Enter goes to the next step.
+  1. **Your name** (`setup.name_label`): 3–30 characters once trimmed, with no control, invisible or text-direction characters and no angle brackets (the emoji joiner is allowed), prefilled from the email (its first 30 characters). Errors: `setup.name_required`, `setup.name_too_short`, `setup.name_too_long`, `setup.name_invalid`. Settings › Account › Name follows the same rule: the counter reads n/30, and leaving the field with a name it refuses shows the error and saves nothing. Enter goes to the next step.
   2. **Dates and times.** Week starts on: Monday / Sunday. Time format: 24-hour / 12-hour, with a live example (`setup.time_example`). Time zone: taken from the device and shown with its UTC offset; `setup.time_zone_change` picks another zone, then `setup.time_zone_auto` goes back to the device's.
   3. **Security:** the two-step verification switch (§2.9), off by default.
 - **Finish** saves with one `PATCH /me` (and `POST /auth/two-factor` when the switch is on) and opens Inbox with `auth.welcome`. **Skip for now** (top right, level with the logo on phones) opens Inbox and saves nothing.
@@ -115,8 +115,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.8 Verify email (#149)
 
 - After Create account the user is signed in but unverified. `/verify` shows `auth.verify_title` and `auth.verify_body` with the email, and six code slots (`auth.verify_label`; paste and the one-time-code autofill both work). The sixth digit submits.
-- **The code:** 6 digits, stored only as an HMAC, valid 10 minutes, 5 tries (`auth.verify_wrong`, then `auth.verify_too_many`; `auth.verify_expired` after 10 minutes). Each new code replaces the last.
-- **Send a new code:** after 45 s (`auth.verify_resend_in` counts down), at most 5 an hour; then `429`. `auth.verify_sent` confirms. **Use a different account** signs out and opens Sign in.
+- **The code:** 6 digits, stored only as an HMAC, valid 10 minutes, 5 tries (the 5th wrong answers `auth.verify_too_many`; `auth.verify_expired` after 10 minutes); resend 60 s apart, 10 per 30 minutes, then 30 minutes. Each new code replaces the last.
+- **A used-up code** (here and in §2.9): after 5 wrong tries (`auth.verify_too_many`) or 10 minutes (`auth.verify_expired`), the code is dead, the six slots empty and are disabled, and a red notice shows the reason with a second line (`auth.resend_wait_hint` while the wait runs, then `auth.resend_now_hint`, and Send a new code becomes a button). Sending a new code opens the slots again and shows `auth.verify_sent` with `auth.verify_sent_hint` in a green box shaped like the red one. While a full code is checked the slots are disabled (more typing can't change it), a new code empties them, and the message area keeps its height so the page doesn't move.
+- **Send a new code:** 60 s after the last one (`auth.verify_resend_wait` counts down), at most 10 codes per 30 minutes; after the 10th, the next one waits 30 minutes (`429 error.rate_limited {retry_after}`, `auth.resend_limited`). `auth.verify_sent` confirms. **Use a different account** signs out and opens Sign in.
 - **Accepted:** the slots fill and a check draws in, then Setup opens (§2.6). An account verified elsewhere that opens `/verify` goes to Inbox.
 - **Until verified:** every page opens `/verify`, and every API call except `/me`, sign-out and the two verify endpoints answers `403 auth.email_unverified`. Accounts that existed before #149 count as verified.
 - **The email** (`email.verify_*`) puts the code alone in a large monospace box, with room above and below, in light and dark mail clients.
@@ -125,17 +126,19 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - **Where:** Settings › Account › Two-step verification (one switch, `settings.two_factor_label`) and the Security step of Setup. Off by default.
 - **Turning on** is immediate (`settings.two_factor_on_toast`). **Turning off** asks for the current password in a dialog (`settings.two_factor_off_title`); a wrong one shows `auth.current_password_wrong` and counts toward the §2.7 limit.
-- **Signing in with it on:** after the right password, a 6-digit code is emailed (`email.signin_*`) and the Sign in screen asks for it in the same six slots (`auth.two_factor_title`, `auth.two_factor_body` with the masked email). Same code rules as §2.8: 10 minutes, 5 tries, a new code after 45 s, 5 sends an hour. Remember me applies once the code is accepted.
-- **Signing in again** during the wait does not send past the 5-an-hour limit or reset the 5 tries: the code already sent stays the one.
+- **Signing in with it on:** after the right password, a 6-digit code is emailed (`email.signin_*`) and the Sign in screen asks for it in the same six slots (`auth.two_factor_title`, `auth.two_factor_body` with the masked email). Same code rules as §2.8: 10 minutes, 5 tries, a new code after 60 s, 10 sends per 30 minutes then 30 minutes. Remember me applies once the code is accepted.
+- **Signing in again** during the wait does not send past the 10 per 30 minutes limit or reset the 5 tries: the code already sent stays the one.
 - The pending sign-in is kept in the server session only (user id, remember, expiry), never in the browser.
 
 ### 2.10 Password fields (#149)
 
 - Every password field sets `autocapitalize=none`, `autocorrect=off`, `spellcheck=false` and `lang=en`, so phones don't change what is typed.
 - **Caps Lock** on while the field has focus shows `auth.caps_lock_on` under it.
-- **Vietnamese typing (Unikey, EVKey):** a page can't switch off the system's input method, which silently turns keys into accented letters in a hidden password. Nothing is shown while typing; the check runs when the form is sent:
-  - **New passwords** (Create account, Reset password, Change password) can't have Latin letters with accents: pressing the button shows `auth.password_accented` ("Passwords can't have accented letters. Turn off Vietnamese typing and type it again.") under the field, focuses it and sends nothing; editing clears it. The server enforces the same rule with that field error (422), combining accents included.
-  - **Sign in** still sends the password as typed, since an older password may have accents. If the server answers `auth.invalid` and the typed password had accented letters, the error reads `auth.invalid_accented` ("Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.").
+- **Keys only, in every password field** (Sign in, Create account, Reset password, Change password): a field holds only what an English keyboard types (printable ASCII, space included) and emoji (with their joiners, skin tones, flags and keycaps). A page can't switch off Vietnamese typing (Unikey, EVKey), which deletes the last letters and types an accented one, so the field undoes it and keeps the keys pressed: A then A gives `AA`, not `Â`; a, a, s gives `aas`. The password is then the same with Vietnamese typing on or off. A lone W, which Telex turns into `ư`, stays `w`. Pasted Vietnamese letters become their Telex keys too. Anything else (other scripts, a tab) is not typed, and the field shows `auth.password_keyboard_only` under it.
+  - **Three layers:** the field above; the form, which refuses a new password with any other character on submit (`auth.password_accented`, "Use only English keyboard letters, numbers, symbols and emoji.", for values set without typing); and the server, which refuses it with that field error (422) whatever the client sent.
+  - **Sign in** sends the keys like the other fields, so a password typed with Vietnamese typing on matches the one set with it on.
+
+- **Strength meter:** Create account and Change password show the same four-segment bar with its word (`auth.strength_weak` to `auth.strength_strong`), linked to the field with `aria-describedby`; the word's line keeps its height, so the form doesn't move. Change password adds `auth.strength_hint` under it; Create account puts the shorter `auth.strength_hint_short` after the rule instead ("Longer, mixed passwords are stronger."). It only advises; the rules above decide.
 
 ## 3. State matrix
 
@@ -165,7 +168,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="aa-e12"></a>AA-E12 | The password manager autofills both fields | The button enables on `input` events from autofill, not only on keystrokes | T-AA-112 |
 | <a id="aa-e13"></a>AA-E13 | Sign up with an email that already exists | `auth.email_taken` with a Sign in link (accepted enumeration, §9) | T-AA-113 |
 | <a id="aa-e14"></a>AA-E14 | An unverified account opens any page or calls the API | The page opens `/verify`; the API answers `403 auth.email_unverified` (§2.8) | `VerifyEmailTest` |
-| <a id="aa-e15"></a>AA-E15 | With two-step on, the user signs in again and again to get fresh codes | No new code past 5 an hour, and the tries on the code already sent are not reset (§2.9) | `TwoFactorTest` |
+| <a id="aa-e15"></a>AA-E15 | With two-step on, the user signs in again and again to get fresh codes | No new code past 10 per 30 minutes, and the tries on the code already sent are not reset (§2.9) | `TwoFactorTest` |
 | <a id="aa-e16"></a>AA-E16 | Account A picks a colour and Full width, signs out, account B signs in | The look resets on sign-out and comes from B's `/me`; A gets its look back on its next sign-in, on any device | `MeTest`, `session.test.tsx` |
 
 ## 5. Copy keys
@@ -187,10 +190,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `GET /sanctum/csrf-cookie` | — | `204`, sets `XSRF-TOKEN` | — |
 | `POST /auth/register` | `{email, password, timezone}` | `201 {user}` and a session | `422` (`auth.email_taken`, `auth.password_breached`, field errors), `429` |
 | `POST /auth/login` | `{email, password, remember}` | `200 {user}`, or `202 {two_factor: true, email}` when two-step is on (code emailed, §2.9) | `422 auth.invalid`, `429 auth.locked {retry_after}` |
-| `POST /auth/two-factor/challenge` | `{code}` | `200 {user}` and a session | `422` (`auth.two_factor_expired`, `auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`) |
-| `POST /auth/two-factor/resend` | — | `204` | `422 auth.two_factor_expired`, `429` |
+| `POST /auth/two-factor/challenge` | `{code}` | `200 {user}` and a session | `422` (`auth.two_factor_expired`, `auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`), `429 {retry_after}` |
+| `POST /auth/two-factor/resend` | — | `204` | `422 auth.two_factor_expired`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
 | `POST /auth/verify-email` | `{code}` | `200 {user}` | `401`, `422` (`auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`) |
-| `POST /auth/verify-email/resend` | — | `204` | `401`, `429 {retry_after}` |
+| `POST /auth/verify-email/resend` | — | `204` | `401`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
 | `POST /auth/two-factor` | `{enabled, current_password?}` (the password only to turn it off) | `200 {user}` | `401`, `403 auth.email_unverified`, `422 auth.current_password_wrong`, `429` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
 | `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
@@ -204,8 +207,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - `users.email` is unique and lower-case. `password_hash` uses Argon2id. `password_reset_tokens` (Laravel's reset broker) holds one hashed token per email: 32 random bytes, 60 minutes, single use.
 - `audit_events` records: sign-up, sign-in success and failure, lockout, reset requested and used, password changed, sign out everywhere ([NF-20](../05-quality/nfr.md#nf-20)). It stores the email's hash, never the password.
-- `PATCH /me` allows only `display_name` (1–60 characters), `theme`, `theme_palette` (`default`, `agendal`, `moonstone`, `tangerine`, `kale`, `blueberry`, `lavender`, `raspberry`), `page_view` (`flat`, `full`), `timezone` (a valid IANA name; it also turns `timezone_auto` off), `timezone_auto` (`true` follows the device again), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`). The colour palette and page view belong to the account: the server is the source, and the device keeps a copy only so `/theme.js` paints them before the first frame (#149).
+- `PATCH /me` allows only `display_name` (3–30 characters once trimmed, no control, invisible or text-direction characters, no angle brackets: §2.6), `theme`, `theme_palette` (`default`, `agendal`, `moonstone`, `tangerine`, `kale`, `blueberry`, `lavender`, `raspberry`), `page_view` (`flat`, `full`), `timezone` (a valid IANA name; it also turns `timezone_auto` off), `timezone_auto` (`true` follows the device again), `week_start` (`mon`, `sun`) and `time_format` (`24h`, `12h`). The colour palette and page view belong to the account: the server is the source, and the device keeps a copy only so `/theme.js` paints them before the first frame (#149).
 - `users.email_verified_at` (null until §2.8) and `users.two_factor_enabled` (§2.9). `email_verification_codes` holds one code per (user, purpose `verify` / `sign_in`): the HMAC-SHA256 of the code, its expiry, the tries and when it was sent.
+
+- Every auth endpoint answers a field sent as a list or object with `422`, never a server error, and caps text before hashing it (password and current password 128, email 254, reset token 255).
 
 ## 9. Abuse cases
 
@@ -219,7 +224,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Open redirect after sign-in | Same-origin paths only | SEC-24 |
 | Data left on a shared device | [SC-19](../07-architecture/security.md#sc-19) wipe | SEC-50, SEC-52 |
 | Guessing an email or sign-in code | 6 digits, 5 tries per code, 10 minutes, compared in constant time against an HMAC (§2.8, §2.9) | `VerifyEmailTest`, `TwoFactorTest` |
-| Flooding a mailbox with codes | 45 s between sends and 5 an hour per user, also across repeated sign-ins (AA-E15) | `VerifyEmailTest`, `TwoFactorTest` |
+| Flooding a mailbox with codes | 60 s between sends and 10 per 30 minutes per user, also across repeated sign-ins (AA-E15) | `VerifyEmailTest`, `TwoFactorTest` |
 | A session cookie left in the browser after sign-out | The sign-out response expires it (§2.4) | `LogoutTest` |
 
 ## 10. Performance and scaling

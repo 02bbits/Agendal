@@ -2,6 +2,13 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-14
+
+- **PR #153 review, round 4 (Refs #149).** [AA §2.10](03-modules/AA-account-access.md#210-password-fields-149): a lone W typed with Telex stays W; Create account puts a shorter strength hint after the rule. [AA §2.8](03-modules/AA-account-access.md#28-verify-email-149): New code sent shows in a green box.
+- **PR #153 review, round 3: simpler code rules (Refs #149).** [AA §2.8](03-modules/AA-account-access.md#28-verify-email-149): a code dies after 5 wrong tries and the slots wait for a new one; resend 60 s apart, 10 per 30 minutes then 30 minutes; the doubling entry lock is removed. [NF-13](05-quality/nfr.md#rate-limits-nf-13) updated.
+- **PR #153 review, round 2: password keys, code lock (Refs #149).** [AA §2.10](03-modules/AA-account-access.md#210-password-fields-149): every password field keeps the keys pressed instead of what Vietnamese typing shows (A, A gives AA, not Â) and doesn't take other scripts, with the form and the server checking again. [AA §2.8](03-modules/AA-account-access.md#28-verify-email-149): entering codes too fast locks entry for 60 s, doubling with each lock up to 1 hour, in the server and the browser; the slots empty and disable while locked or checked. [NF-13](05-quality/nfr.md#rate-limits-nf-13) updated.
+- **PR #153 review: password characters, display name, code limits, strength bar (Refs #149).** [AA §2.10](03-modules/AA-account-access.md#210-password-fields-149): a new password uses only English keyboard characters and emoji (was: no accented letters), and Create account gets the Change password strength bar. [AA §2.6](03-modules/AA-account-access.md#26-setup-step-after-sign-up-149) and §8: a display name is 3–30 characters with no hidden characters or angle brackets, in Setup and Settings. Turning two-step on or off is limited to 5 per 2 minutes. AA §7: the code endpoints answer `429 {retry_after}`; §8: list-shaped fields answer 422. [NF-13](05-quality/nfr.md#rate-limits-nf-13): rate limits for the 6-digit codes. [BR-17](02-domain/business-rules.md#br-17) and [SUMMARY](SUMMARY.md) updated to match.
+
 ## 2026-11-13
 
 - **Accented passwords are caught on submit (Refs #149).** [AA §2.10](03-modules/AA-account-access.md#210-password-fields-149): no hint while typing; new passwords with accented letters are refused on the button (and by the server), and a wrong sign-in typed with accents gets a Vietnamese typing hint.
