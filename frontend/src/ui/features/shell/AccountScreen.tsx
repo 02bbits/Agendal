@@ -10,7 +10,7 @@ import {
   type ReactElement,
 } from "react";
 import { createPortal } from "react-dom";
-import { t } from "../../copy";
+import { t, type CopyKey } from "../../copy";
 import { Button } from "../../components/Button";
 import { cx } from "../../components/cx";
 import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
@@ -47,6 +47,7 @@ import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import { Dialog } from "../../components/Dialog";
 import { PasswordField } from "../auth/PasswordField";
+import { displayNameError } from "../auth/validation";
 import { api } from "../../../lib/api";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import { runThemeTransition } from "../../domain/themeTransition";
@@ -265,6 +266,8 @@ export function AccountScreen({
   const [searchQuery, setSearchQuery] = useState("");
   const [prevName, setPrevName] = useState(name);
   const [displayName, setDisplayName] = useState(name);
+  // Shown after leaving the field with a name the server would refuse (3–30 characters)
+  const [nameError, setNameError] = useState<CopyKey>();
   if (name !== prevName) {
     setPrevName(name);
     setDisplayName(name);
@@ -612,8 +615,12 @@ export function AccountScreen({
   };
 
   const handleNameBlur = () => {
-    if (displayName.trim() && displayName !== name && onUpdateName) {
-      onUpdateName(displayName.trim()).catch(() => {});
+    const trimmed = displayName.trim();
+    if (trimmed === name) return;
+    const error = displayNameError(trimmed);
+    setNameError(error);
+    if (!error && onUpdateName) {
+      onUpdateName(trimmed).catch(() => {});
     }
   };
 
@@ -693,14 +700,31 @@ export function AccountScreen({
             <input
               type="text"
               value={displayName}
-              maxLength={255}
-              onChange={(e) => setDisplayName(e.target.value)}
+              maxLength={60}
+              onChange={(e) => {
+                setDisplayName(e.target.value);
+                setNameError(undefined);
+              }}
               onBlur={handleNameBlur}
               placeholder={t("settings.name_placeholder")}
-              className="w-full rounded-lg border border-separator/60 bg-fill/30 px-3 py-2 text-body text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80"
+              aria-invalid={nameError ? true : undefined}
+              aria-describedby={nameError ? "settings-name-error" : undefined}
+              className={cx(
+                "w-full rounded-lg border bg-fill/30 px-3 py-2 text-body text-ink placeholder:text-ink-tertiary focus:outline-none focus:border-primary/80",
+                nameError ? "border-error" : "border-separator/60",
+              )}
             />
-            <div className="mt-1 text-right text-footnote text-ink-secondary">
-              {displayName.length}/255
+            <div className="mt-1 flex items-start justify-between gap-3 text-footnote">
+              <span
+                id="settings-name-error"
+                role={nameError ? "alert" : undefined}
+                className="min-w-0 text-error"
+              >
+                {nameError ? t(nameError) : null}
+              </span>
+              <span className="shrink-0 text-ink-secondary">
+                {[...displayName.trim()].length}/30
+              </span>
             </div>
           </section>
 

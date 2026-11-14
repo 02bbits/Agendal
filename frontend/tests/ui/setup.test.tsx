@@ -25,7 +25,7 @@ describe("SetupScreen (issue #149 D)", () => {
     expect(document.activeElement).toBe(heading);
   });
 
-  it("Step 1: requires a non-empty name <= 60 characters to advance", async () => {
+  it("Step 1: requires a name of 3 to 30 characters without hidden characters to advance", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<SetupScreen initialName="" />);
 
@@ -43,11 +43,25 @@ describe("SetupScreen (issue #149 D)", () => {
     await user.type(nameInput, "Alex Rivers");
     expect(nextBtn.disabled).toBe(false);
 
-    // Too long name (> 60 chars)
+    // Too short (< 3 characters once trimmed)
     await user.clear(nameInput);
-    await user.type(nameInput, "A".repeat(61));
+    await user.type(nameInput, " Al ");
     expect(nextBtn.disabled).toBe(true);
-    expect(screen.getByText("Use 60 characters or fewer.")).toBeTruthy();
+    expect(screen.getByText("Use at least 3 characters.")).toBeTruthy();
+
+    // Too long name (> 30 chars)
+    await user.clear(nameInput);
+    await user.type(nameInput, "A".repeat(31));
+    expect(nextBtn.disabled).toBe(true);
+    expect(screen.getByText("Use 30 characters or fewer.")).toBeTruthy();
+
+    // Angle brackets are refused
+    await user.clear(nameInput);
+    await user.type(nameInput, "<b>Alex");
+    expect(nextBtn.disabled).toBe(true);
+    expect(
+      screen.getByText(/Angle brackets and hidden characters/),
+    ).toBeTruthy();
 
     // Valid name again
     await user.clear(nameInput);

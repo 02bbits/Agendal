@@ -30,6 +30,7 @@ import type { TimeFormat, WeekStart } from "../../domain/types";
 import { ROUTES } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import type { SetupPayload, SetupScreenProps } from "./setupTypes";
+import { displayNameError } from "./validation";
 
 export type { SetupPayload, SetupScreenProps };
 
@@ -85,12 +86,8 @@ export function SetupScreen({
 
   // Validation for Step 1 Name
   const trimmedName = name.trim();
-  let nameError: string | null = null;
-  if (trimmedName.length === 0) {
-    nameError = t("setup.name_required");
-  } else if (trimmedName.length > 60) {
-    nameError = t("setup.name_too_long");
-  }
+  const nameErrorKey = displayNameError(name);
+  const nameError = nameErrorKey ? t(nameErrorKey) : null;
   const isNameValid = nameError === null;
 
   // The device zone and the clock are read in the browser only
@@ -281,6 +278,7 @@ export function SetupScreen({
               <TextField
                 label={t("setup.name_label")}
                 value={name}
+                maxLength={60}
                 onChange={(e) => {
                   setName(e.target.value);
                   setNameTouched(true);

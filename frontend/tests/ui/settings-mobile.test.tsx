@@ -63,6 +63,37 @@ describe("Settings on phones (Part D)", () => {
     expect(detailHeading).toBeTruthy();
   });
 
+  it("PR #153: the name saves only at 3 to 30 characters, and says why otherwise", () => {
+    mockMatchMedia(false);
+    const onUpdateName = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AccountScreen
+        name="Alex River"
+        email="alex@example.com"
+        settings={defaultSettings}
+        onChange={vi.fn()}
+        onBack={vi.fn()}
+        onSignOut={vi.fn()}
+        onUpdateName={onUpdateName}
+      />,
+    );
+    fireEvent.click(screen.getByText("Alex River").closest("button")!);
+    const input = screen.getByDisplayValue("Alex River");
+
+    fireEvent.change(input, { target: { value: "Al" } });
+    fireEvent.blur(input);
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Use at least 3 characters.",
+    );
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(onUpdateName).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "  Alex Rivers  " } });
+    expect(screen.queryByRole("alert")).toBeNull();
+    fireEvent.blur(input);
+    expect(onUpdateName).toHaveBeenCalledWith("Alex Rivers");
+  });
+
   it("the three group labels render with their rows, and Account is not a row in the groups", () => {
     mockMatchMedia(false);
     render(
