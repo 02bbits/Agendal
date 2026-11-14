@@ -45,6 +45,24 @@ it('validates the response against the shared API schema (T-NU-80)', function ()
     expect($result->isValid())->toBeTrue($result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error())));
 });
 
+it('keeps bounded and preserved series within the shared API schema (#120)', function (string $text, ?string $until) {
+    $response = $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertSuccessful();
+    $validator = new Validator;
+    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', base_path('../docs/07-architecture/contracts/schemas/'));
+    $result = $validator->validate(json_decode($response->getContent()), 'https://agendal.app/schemas/note-result.schema.json');
+    expect($result->isValid())->toBeTrue($result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error())));
+    if ($until !== null) {
+        expect(json_encode($response->json()))->toContain(';UNTIL='.$until.'T235959Z');
+    }
+})->with([
+    'duration' => ['lái xe mỗi thứ 3 trong 4 tuần', '20261123'],
+    'period' => ['gym every day this week, buy milk', '20261025'],
+    'through' => ['gym every day through next week', '20261101'],
+    'copies' => ['visit house 3 times every day for 2 weeks', '20261105'],
+    'confirm' => ['gym every day for 2 weeks, buy milk, call mum, read book, pay rent, water plants', '20261105'],
+    'kept for review' => ['gym every day for about 3 weeks', null],
+]);
+
 it('records before values without clearing unchanged task fields', function () {
     $task = new Task;
     $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group', 'start_date' => '2026-10-23', 'due_date' => '2026-10-23', 'start_time' => '09:00', 'due_time' => '10:00'])->save();
