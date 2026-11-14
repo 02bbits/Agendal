@@ -12,7 +12,7 @@ use Illuminate\Support\Str;
 
 uses(RefreshDatabase::class);
 
-it('PERF-05: list performance with 5000 tasks (p95 <= 300ms)', function () {
+it('T-LV-108 (LV-E8, PERF-05): list performance with 5000 tasks (p95 <= 300ms)', function () {
     // OpenTaskLimit is 5000. We create exactly 5000 tasks: 2500 open, 2500 done.
     $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
 

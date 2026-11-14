@@ -126,7 +126,7 @@ it('T-LV-109 (LV-E9): a task due today with its time passed stays in Today, not 
         ->and($overdueIds)->not->toContain($task->id);
 });
 
-it('calculates progress math according to T-LV-01 (including overdue task completed today)', function () {
+it('T-LV-103 (LV-E3): calculates progress math according to T-LV-01 (including overdue task completed today)', function () {
     $user = User::factory()->create();
 
     // 1. Open overdue task (due 2026-10-20) -> in overdue, counted in total
@@ -513,4 +513,20 @@ it('counts a start-today task completed today in progress', function () {
 
     expect($response->json('progress'))->toBe(['done' => 1, 'total' => 1]);
     expect(collect($response->json('completed_today'))->pluck('id')->all())->toContain($startTodayDone->id);
+});
+
+it('T-LV-104 (LV-E4): a task with no date appears in Inbox No date section', function () {
+    $user = User::factory()->create();
+    $task = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Undated Task',
+        'due_date' => null,
+        'start_date' => null,
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->getJson('/api/v1/tasks?view=inbox')->assertOk();
+    $noDateIds = collect($response->json('no_date'))->pluck('id')->all();
+    expect($noDateIds)->toContain($task->id);
 });

@@ -324,7 +324,7 @@ describe("Note result (IM-43, RV-1)", () => {
       ).toBeNull();
     });
 
-    it("T-RV-103: a task brought back without its deleted project says so", () => {
+    it("T-RV-103 / T-PJ-105 (PJ-E5): a task brought back without its deleted project says so", () => {
       const inProject: NoteChange = {
         ...old,
         task: { ...old.task, project_id: "p-gone" },

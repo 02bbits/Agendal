@@ -766,7 +766,7 @@ describe("Field edge cases and accessibility", () => {
     expect(patchSpy).not.toHaveBeenCalled();
   });
 
-  it("sends no patch when title is unchanged (TK-E16)", async () => {
+  it("T-TK-116 (TK-E16): sends no patch when title is unchanged", async () => {
     const { patchSpy } = open(task({ title: "Same Title" }));
     const input = screen.getByLabelText(t("task.title"));
     fireEvent.change(input, { target: { value: "  Same Title  " } });
@@ -785,7 +785,7 @@ describe("Field edge cases and accessibility", () => {
     expect(screen.queryByText(t("task.reminder_needs_date"))).toBeNull();
   });
 
-  it("shows helper when reminder time has already passed (TK-E4)", () => {
+  it("T-TK-104 (TK-E4): shows helper when reminder time has already passed", () => {
     open(
       task({
         title: "Passed Task",

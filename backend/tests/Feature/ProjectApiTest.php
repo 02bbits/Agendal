@@ -968,6 +968,36 @@ it('restores a project and its deleted tasks with 200', function () {
         ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:17:00.000Z');
 });
 
+it('T-PJ-109 (PJ-E9): undo restore after project was edited keeps latest field values (LWW)', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Original Name',
+        'colour' => 'blue',
+        'field_updated_at' => [
+            'name' => '2026-10-23T01:00:00Z',
+            'colour' => '2026-10-23T01:00:00Z',
+        ],
+    ]);
+
+    $del = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}")->assertOk();
+    $undo = $del->json('undo');
+
+    $project->refresh();
+    $project->name = 'Updated Elsewhere';
+    $project->field_updated_at = [
+        ...$project->field_updated_at,
+        'name' => '2026-10-23T01:15:00Z',
+    ];
+    $project->save();
+
+    $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", $undo)->assertOk();
+    $project->refresh();
+    expect($project->deleted_at)->toBeNull()
+        ->and($project->name)->toBe('Updated Elsewhere');
+});
+
 it('T-PJ-106 (PJ-E6): delete a project with "Delete them too" while it holds a repeating task, undo: the task and its series are back, and completing it still makes the next occurrence', function () {
     $clock = new FrozenClock('2026-10-23T01:12:00Z');
     app()->instance(ClockInterface::class, $clock);

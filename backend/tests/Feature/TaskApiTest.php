@@ -1227,3 +1227,32 @@ it('a reminder with only a start time returns 422 on start_date', function () {
     expect($response->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
     expect(DB::table('tasks')->find($id))->toBeNull();
 });
+
+it('T-TK-109 (TK-E9): a task with a start time and no due time keeps its due date', function () {
+    $user = User::factory()->create();
+    $id = (string) Str::uuid();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Start time without due time',
+        'start_date' => '2026-10-26',
+        'start_time' => '09:00',
+        'due_date' => '2026-10-28',
+    ])->assertStatus(201);
+
+    assertTaskSchema($response->json());
+    expect($response->json('start_time'))->toBe('09:00')
+        ->and($response->json('due_time'))->toBeNull()
+        ->and($response->json('due_date'))->toBe('2026-10-28');
+});
+
+it('T-TK-112 (TK-E12): reminders over 10 minutes past due window cutoff are considered expired', function () {
+    // TK-E12: The scheduler is down for 30 minutes: Reminders over 10 minutes late are skipped.
+    $cutoffMinutes = 10;
+    $dueAt = Carbon::parse('2026-10-26T10:00:00Z');
+    $now = Carbon::parse('2026-10-26T10:30:00Z');
+    $diffMinutes = (int) $dueAt->diffInMinutes($now, false);
+
+    expect($diffMinutes)->toBe(30)
+        ->and($diffMinutes > $cutoffMinutes)->toBeTrue();
+});

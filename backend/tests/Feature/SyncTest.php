@@ -193,7 +193,7 @@ describe('POST /sync/patches', function () {
             ->toBe([['index' => 0, 'status' => 'applied']]);
     });
 
-    it('OFF-20: completed on two devices offline makes one next occurrence', function () {
+    it('T-TK-107 (TK-E7, OFF-20): completed on two devices offline makes one next occurrence', function () {
         $id = newTask(['due_date' => '2026-10-23', 'repeat' => 'daily']);
 
         expect(patches([
@@ -205,7 +205,7 @@ describe('POST /sync/patches', function () {
             ->and(Task::find($id)->done)->toBeTrue();
     });
 
-    it('OFF-21: a later delete beats an earlier edit, and the edit answers stale', function () {
+    it('T-TK-108 (TK-E8, OFF-21): a later delete beats an earlier edit, and the edit answers stale', function () {
         $id = newTask();
 
         expect(patches([
@@ -233,7 +233,7 @@ describe('POST /sync/patches', function () {
         expect(Task::find($id))->not->toBeNull();
     });
 
-    it('renames a project and deletes it, moving or deleting its tasks', function () {
+    it('T-PJ-104 (PJ-E4, OFF-31): renames a project and deletes it, moving or deleting its tasks', function () {
         $moved = newProject('Moved');
         $gone = newProject('Gone');
         $a = newTask(['project_id' => $moved]);
@@ -256,13 +256,21 @@ describe('POST /sync/patches', function () {
             ->and(Task::find($b))->toBeNull();
     });
 
-    it('an online project rename after an offline one keeps the later name', function () {
+    it('T-PJ-109 (PJ-E9): an online project rename after an offline one keeps the later name', function () {
         $id = newProject();
         $this->clock->advance('+1 minute');
         $this->patchJson("/api/v1/projects/{$id}", ['name' => 'Online'])->assertOk();
 
         expect(patches([['entity' => 'project', 'id' => $id, 'field' => 'name', 'value' => 'Offline', 'at' => at(-1)]]))
             ->toBe([['index' => 0, 'status' => 'stale', 'current' => 'Online']]);
+    });
+
+    it('T-PJ-103 (PJ-E3, OFF-30): a project rename patch with a taken name is rejected with current name', function () {
+        $p1 = newProject('HCI');
+        $p2 = newProject('Work');
+
+        expect(patches([['entity' => 'project', 'id' => $p2, 'field' => 'name', 'value' => 'HCI', 'at' => at(1)]]))
+            ->toBe([['index' => 0, 'status' => 'rejected', 'current' => 'Work']]);
     });
 
     it('PERF-04: 100 queued edits apply in one batch within 10 s, in order', function () {
