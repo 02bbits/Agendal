@@ -29,6 +29,14 @@ export default function VerifyPage() {
         return { ok: true, user: body?.user };
       }
 
+      if (response.status === 429) {
+        const retryAfter =
+          Number(body?.error?.retry_after) ||
+          Number(response.headers.get("Retry-After")) ||
+          60;
+        return { ok: false, status: 429, retryAfter };
+      }
+
       const errorMessage =
         body?.error?.fields?.code?.[0] ??
         body?.error?.message ??
@@ -37,6 +45,7 @@ export default function VerifyPage() {
       return {
         ok: false,
         status: response.status,
+        code: body?.error?.code,
         message: errorMessage,
       };
     } catch {
@@ -69,8 +78,10 @@ export default function VerifyPage() {
         status: response.status,
         retryAfter,
         message:
-          body?.error?.message ??
-          t("error.rate_limited", { seconds: retryAfter }),
+          response.status === 429
+            ? t("error.rate_limited", { seconds: retryAfter })
+            : (body?.error?.message ??
+              t("error.rate_limited", { seconds: retryAfter })),
       };
     } catch {
       return {

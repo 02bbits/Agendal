@@ -254,7 +254,8 @@ export default function CodeSlots({
 
   const insert = (raw: string, from = active) => {
     const digits = digitsOf(raw);
-    if (!digits) return;
+    // A full code is being checked: more digits never overwrite the last slot
+    if (!digits || isFull(slotsRef.current)) return;
     const next = [...slotsRef.current];
     const crossed: number[] = [];
     const step = reduce ? 0 : cascade;
@@ -464,9 +465,10 @@ export default function CodeSlots({
   }, [status, commit, drive, length, moveActive]);
 
   useEffect(() => () => clearTimeout(drainTimer.current), []);
+  // Focus on mount, and again when the slots are enabled after a check or a lock
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus();
-  }, [autoFocus]);
+    if (autoFocus && !disabled) inputRef.current?.focus();
+  }, [autoFocus, disabled]);
 
   const view =
     slots.length === length

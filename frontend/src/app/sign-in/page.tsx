@@ -109,6 +109,18 @@ export default function SignInPage() {
         }
         return { ok: true, user: body?.user };
       }
+      if (response.status === 429) {
+        const seconds =
+          Number(body?.error?.retry_after) ||
+          Number(response.headers.get("Retry-After")) ||
+          60;
+        return {
+          ok: false,
+          status: 429,
+          code: body?.error?.code,
+          retryAfter: seconds,
+        };
+      }
       return {
         ok: false,
         status: response.status,
@@ -142,8 +154,9 @@ export default function SignInPage() {
         code: body?.error?.code,
         retryAfter,
         message:
-          body?.error?.message ??
-          t("error.rate_limited", { seconds: retryAfter }),
+          response.status === 429
+            ? t("error.rate_limited", { seconds: retryAfter })
+            : (body?.error?.message ?? t("error.generic")),
       };
     } catch {
       return { ok: false, status: 500, message: t("error.generic") };

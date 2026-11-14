@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
-import CodeSlots, { type CodeSlotsStatus } from "../../components/CodeSlots";
+import { useRef, useState, type FormEvent } from "react";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { LockIcon, MailIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { Link } from "../shell/Link";
 import { AuthLayout } from "./AuthLayout";
+import { CodeEntry, type CodeCheckResult } from "./CodeEntry";
 import { PasswordField } from "./PasswordField";
 import { useSecondsLeft } from "./useSecondsLeft";
 import type { Navigate } from "../shell/routes";
@@ -67,36 +67,14 @@ export function SignInScreen({
   const [invalidWithAccents, setInvalidWithAccents] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  // Two-factor state
+  // Two-factor step: the code entry keeps its own state
   const [twoFactorData, setTwoFactorData] = useState<{ email: string } | null>(
     null,
   );
-  const [twoFactorStatus, setTwoFactorStatus] =
-    useState<CodeSlotsStatus>("idle");
-  const [twoFactorError, setTwoFactorError] = useState<string | null>(null);
-  const [secondsLeft, setSecondsLeft] = useState(45);
-  const [resendSuccess, setResendSuccess] = useState(false);
-  const [resending, setResending] = useState(false);
 
   // Live countdown from the server's retry_after (AA-3, T-AA-103)
   const locked = useSecondsLeft(lockedUntil);
   const passwordRef = useRef<HTMLInputElement>(null);
-  const isMounted = useRef(true);
-
-  useEffect(() => {
-    isMounted.current = true;
-    return () => {
-      isMounted.current = false;
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!twoFactorData || secondsLeft <= 0) return;
-    const interval = setInterval(() => {
-      setSecondsLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [twoFactorData, secondsLeft]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -114,10 +92,6 @@ export function SignInScreen({
     if (result && "twoFactor" in result && result.twoFactor) {
       setTwoFactorData({ email: result.email });
       setFailure({});
-      setTwoFactorStatus("idle");
-      setTwoFactorError(null);
-      setSecondsLeft(45);
-      setResendSuccess(false);
       return;
     }
 
@@ -131,87 +105,23 @@ export function SignInScreen({
     }
   }
 
-  const handleTwoFactorComplete = async (code: string) => {
-    setTwoFactorError(null);
-    setResendSuccess(false);
-
-    try {
-      const res = onTwoFactorChallenge
-        ? await onTwoFactorChallenge(code)
-        : { ok: false, status: 500, message: t("error.generic") };
-
-      if (!isMounted.current) return;
-
-      if (res.code === "auth.two_factor_expired") {
-        setTwoFactorData(null);
-        setPassword("");
-        setFailure({ form: res.message ?? t("auth.two_factor_expired") });
-        return;
-      }
-
-      if (res.ok) {
-        setTwoFactorStatus("success");
-        setTimeout(() => {
-          if (!isMounted.current) return;
-          if (onTwoFactorSuccess) {
-            onTwoFactorSuccess(res.user);
-          } else {
-            navigate?.("/");
-          }
-        }, 700);
-      } else if (res.status === 422) {
-        setTwoFactorStatus("error");
-        setTwoFactorError(res.message ?? t("auth.verify_wrong"));
-      } else {
-        setTwoFactorStatus("idle");
-        setTwoFactorError(res.message ?? t("error.generic"));
-      }
-    } catch {
-      if (!isMounted.current) return;
-      setTwoFactorStatus("idle");
-      setTwoFactorError(t("error.generic"));
-    }
+  // The pending sign-in ran out: back to the password with the reason
+  const handleTwoFactorOther = (res: CodeCheckResult) => {
+    if (res.code !== "auth.two_factor_expired") return false;
+    setTwoFactorData(null);
+    setPassword("");
+    setFailure({ form: res.message ?? t("auth.two_factor_expired") });
+    return true;
   };
 
-  const handleTwoFactorChange = (code: string) => {
-    if (twoFactorStatus === "error") setTwoFactorStatus("idle");
-    if (code !== "") setTwoFactorError(null);
-  };
-
-  const handleTwoFactorResend = async () => {
-    if (secondsLeft > 0 || resending) return;
-    setResending(true);
-    setTwoFactorError(null);
-    setResendSuccess(false);
-
-    try {
-      const res = onTwoFactorResend ? await onTwoFactorResend() : { ok: true };
-      if (!isMounted.current) return;
-
-      if (res.ok) {
-        setResendSuccess(true);
-        setSecondsLeft(45);
-      } else if (res.status === 429) {
-        const retryAfter = res.retryAfter ?? 45;
-        setSecondsLeft(retryAfter);
-        if (res.message) setTwoFactorError(res.message);
-      } else if (res.message) {
-        setTwoFactorError(res.message);
-      }
-    } catch {
-      if (!isMounted.current) return;
-      setTwoFactorError(t("error.generic"));
-    } finally {
-      if (isMounted.current) {
-        setResending(false);
-      }
-    }
+  const handleTwoFactorSuccess = (user: unknown) => {
+    if (onTwoFactorSuccess) onTwoFactorSuccess(user);
+    else navigate?.("/");
   };
 
   const handleBackToPassword = () => {
     setTwoFactorData(null);
     setPassword("");
-    setTwoFactorError(null);
     passwordRef.current?.focus();
   };
 
@@ -244,46 +154,12 @@ export function SignInScreen({
             </p>
           </div>
 
-          <div className="mt-7 flex justify-center">
-            <CodeSlots
-              autoFocus
-              slotSize={48}
-              status={twoFactorStatus}
-              onComplete={handleTwoFactorComplete}
-              onChange={handleTwoFactorChange}
-            />
-          </div>
-
-          {twoFactorError ? (
-            <p
-              role="alert"
-              className="mt-3 text-center text-footnote text-error"
-            >
-              {twoFactorError}
-            </p>
-          ) : null}
-
-          <div className="mt-5 flex flex-col items-center">
-            <button
-              type="button"
-              disabled={secondsLeft > 0 || resending}
-              onClick={handleTwoFactorResend}
-              className="focus-ring inline-flex min-h-11 cursor-pointer items-center px-2 text-footnote font-semibold text-primary disabled:cursor-not-allowed disabled:font-normal disabled:text-ink-tertiary"
-            >
-              {secondsLeft > 0
-                ? t("auth.verify_resend_in", { seconds: secondsLeft })
-                : t("auth.verify_resend")}
-            </button>
-            {resendSuccess ? (
-              <p
-                role="status"
-                aria-live="polite"
-                className="mt-2 text-center text-footnote text-ink-secondary"
-              >
-                {t("auth.verify_sent")}
-              </p>
-            ) : null}
-          </div>
+          <CodeEntry
+            onCheck={onTwoFactorChallenge}
+            onResend={onTwoFactorResend}
+            onVerified={handleTwoFactorSuccess}
+            onOther={handleTwoFactorOther}
+          />
 
           <div className="mt-2 flex justify-center">
             <button
@@ -369,6 +245,8 @@ export function SignInScreen({
             )}
             <Button
               type="submit"
+              // Phones: a clear gap between the fields and the main button
+              className="mt-3 lg:mt-0"
               size="lg"
               fullWidth
               busy={busy}
