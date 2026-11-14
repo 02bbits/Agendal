@@ -36,7 +36,7 @@ function renderPage() {
 beforeEach(() => {
   router.push.mockClear();
   router.replace.mockClear();
-  reply = () => json(201, { user: {} });
+  reply = () => json(202, { pending: true, email: "example@gmail.com" });
   fetchMock
     .mockReset()
     .mockImplementation(async (url: string) =>
@@ -49,10 +49,11 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("T-AA-01: client rules", () => {
   it.each([
-    ["example@gmail.com", "quiet river", {}],
-    ["not-an-email", "quiet river", { email: "auth.email_invalid" }],
+    ["example@gmail.com", "Quiet river 42", {}],
+    ["not-an-email", "Quiet river 42", { email: "auth.email_invalid" }],
     ["example@gmail.com", "seven77", { password: "auth.password_rule" }],
     ["example@gmail.com", "x".repeat(129), { password: "auth.password_rule" }],
+    ["example@gmail.com", "quietriver12", { password: "auth.password_weak" }],
     ["example@gmail.com", "🙂 ab".repeat(32), {}],
     [
       " Example@Gmail.com",
@@ -93,7 +94,19 @@ describe("Create account (AA-1)", () => {
     await user.type(email, "example@gmail.com");
     await user.type(password, "short");
     expect((submit as HTMLButtonElement).disabled).toBe(true);
-    await user.type(password, " but fine");
+
+    await user.clear(password);
+    await user.type(password, "quietriver12");
+    expect((submit as HTMLButtonElement).disabled).toBe(true);
+    await user.tab();
+    expect(
+      screen.getByText(
+        "Choose a stronger password: make it longer, or mix in capitals, numbers or symbols.",
+      ),
+    ).toBeTruthy();
+
+    await user.clear(password);
+    await user.type(password, "Quiet river 42");
     expect((submit as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -117,13 +130,13 @@ describe("Create account (AA-1)", () => {
     const { email, password, submit } = renderPage();
 
     await user.type(email, "  Example@Gmail.com");
-    await user.type(password, "quiet river 42");
+    await user.type(password, "Quiet river 42");
     await user.click(submit);
 
     const [[, init]] = registerCalls();
     expect(JSON.parse(init.body)).toMatchObject({
       email: "example@gmail.com",
-      password: "quiet river 42",
+      password: "Quiet river 42",
     });
     expect(router.push).toHaveBeenCalledWith("/verify");
     expect(
@@ -131,24 +144,25 @@ describe("Create account (AA-1)", () => {
     ).toBeNull();
   });
 
-  it("A11Y-62: shows the server's field error with a Sign in link and focuses the field", async () => {
-    const taken = "An account with this email already exists. Sign in instead?";
+  it("A11Y-62: shows the server's field error and focuses the field", async () => {
+    const serverError = "Please use a valid email address.";
     reply = () =>
       json(422, {
-        error: { code: "auth.email_taken", fields: { email: [taken] } },
+        error: { code: "error.invalid", fields: { email: [serverError] } },
       });
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
     await user.type(email, "example@gmail.com");
-    await user.type(password, "quiet river 42");
+    await user.type(password, "Quiet river 42");
     await user.click(submit);
 
-    expect(await screen.findByText(taken)).toBeTruthy();
+    expect(await screen.findByText(serverError)).toBeTruthy();
     expect(document.activeElement).toBe(email);
+    expect(screen.getAllByRole("link", { name: "Sign in" })).toHaveLength(1);
     expect(
-      screen.getAllByRole("link", { name: "Sign in" })[0].getAttribute("href"),
-    ).toBe("/sign-in");
+      screen.getByText(serverError).closest("div")?.querySelector("a"),
+    ).toBeNull();
   });
 
   it("AA §2.10: passwords with Vietnamese accented letters are blocked on submit with an error", async () => {

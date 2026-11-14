@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
 import {
+  ROUTES,
   VerifyEmailScreen,
   t,
   type ResendResult,
@@ -10,11 +12,32 @@ import {
 import { useAppFrame } from "../AppFrame";
 
 export default function VerifyPage() {
-  const { navigate, user, setUser, signOut } = useAppFrame();
+  const { navigate, setUser } = useAppFrame();
+  const [email, setEmail] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    void api("/auth/signup")
+      .then(async (response) => {
+        if (!active) return;
+        if (response.ok) {
+          const data = await response.json();
+          if (active && data?.email) {
+            setEmail(data.email);
+          }
+        } else if (response.status === 404) {
+          navigate(ROUTES.createAccount);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   const handleVerify = async (code: string): Promise<VerifyResult> => {
     try {
-      const response = await api("/auth/verify-email", {
+      const response = await api("/auth/signup/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code }),
@@ -59,7 +82,7 @@ export default function VerifyPage() {
 
   const handleResend = async (): Promise<ResendResult> => {
     try {
-      const response = await api("/auth/verify-email/resend", {
+      const response = await api("/auth/signup/resend", {
         method: "POST",
       });
 
@@ -92,17 +115,30 @@ export default function VerifyPage() {
     }
   };
 
+  const handleOther = (result: VerifyResult): boolean => {
+    if (result.code === "auth.signup_expired") {
+      navigate(ROUTES.createAccount);
+      return true;
+    }
+    return false;
+  };
+
   const handleSwitchAccount = async () => {
-    await signOut();
+    try {
+      await api("/auth/signup", { method: "DELETE" });
+    } catch {
+      // Ignore network errors when cancelling
+    }
   };
 
   return (
     <VerifyEmailScreen
-      email={user?.email ?? ""}
+      email={email}
       onVerify={handleVerify}
       onResend={handleResend}
       onSwitchAccount={handleSwitchAccount}
       navigate={navigate}
+      onOther={handleOther}
     />
   );
 }

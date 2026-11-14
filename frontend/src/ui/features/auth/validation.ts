@@ -1,4 +1,5 @@
 import type { CopyKey } from "../../copy";
+import { passwordStrength } from "../../domain/passwordStrength";
 
 export interface SignUpErrors {
   email?: CopyKey;
@@ -78,5 +79,7 @@ export function signUpErrors(email: string, password: string): SignUpErrors {
   if (length < 8 || length > 128) errors.password = "auth.password_rule";
   else if (containsEmail(password, normalized))
     errors.password = "auth.password_same_as_email";
+  else if (passwordStrength(password) < 3)
+    errors.password = "auth.password_weak";
   return errors;
 }

@@ -5,11 +5,9 @@ declare(strict_types=1);
 namespace Tests\Feature;
 
 use App\Models\User;
-use App\Notifications\VerifyEmailCode;
 use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Notification;
 use Tests\Support\RateLimitedClock;
 
 uses(RefreshDatabase::class);
@@ -21,103 +19,6 @@ beforeEach(function () {
     $this->app->instance(ClockInterface::class, $this->clock);
     Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response('0000000000000000000000000000000000A:3')]);
     $this->withHeader('Referer', 'http://localhost:3000/')->withCredentials();
-});
-
-it('PR #153: a code dies on its 5th wrong try and only a new code works', function () {
-    Notification::fake();
-
-    $this->postJson('/api/v1/auth/register', [
-        'email' => 'die5th@example.com',
-        'password' => 'super secret 123',
-        'timezone' => 'UTC',
-    ])->assertCreated();
-
-    $user = User::where('email', 'die5th@example.com')->firstOrFail();
-
-    $latestCode = '';
-    Notification::assertSentTo($user, VerifyEmailCode::class, function (VerifyEmailCode $notification) use (&$latestCode) {
-        $latestCode = $notification->code;
-
-        return true;
-    });
-    $firstCode = $latestCode;
-
-    foreach (range(1, 4) as $i) {
-        $this->actingAs($user)->postJson('/api/v1/auth/verify-email', ['code' => '000000'])
-            ->assertStatus(422)
-            ->assertJsonPath('error.code', 'auth.verify_wrong');
-    }
-
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email', ['code' => '000000'])
-        ->assertStatus(422)
-        ->assertJsonPath('error.code', 'auth.verify_too_many');
-
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email', ['code' => $firstCode])
-        ->assertStatus(422)
-        ->assertJsonPath('error.code', 'auth.verify_too_many');
-
-    $this->clock->advance('+60 seconds');
-
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
-
-    Notification::assertSentTo($user, VerifyEmailCode::class, function (VerifyEmailCode $notification) use (&$latestCode) {
-        $latestCode = $notification->code;
-
-        return true;
-    });
-    $newCode = $latestCode;
-
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email', ['code' => $newCode])
-        ->assertOk();
-});
-
-it('PR #153: a new code can be sent 60 s after the last one', function () {
-    Notification::fake();
-
-    $this->postJson('/api/v1/auth/register', [
-        'email' => 'cooldown60@example.com',
-        'password' => 'super secret 123',
-        'timezone' => 'UTC',
-    ])->assertCreated();
-
-    $user = User::where('email', 'cooldown60@example.com')->firstOrFail();
-
-    $resend = $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')
-        ->assertStatus(429)
-        ->assertJsonPath('error.code', 'error.rate_limited');
-
-    expect($resend->json('error.retry_after'))->toBeGreaterThanOrEqual(1)->toBeLessThanOrEqual(60);
-
-    $this->clock->advance('+60 seconds');
-
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
-});
-
-it('PR #153: 10 codes in 30 minutes, then a 30-minute wait', function () {
-    Notification::fake();
-
-    $this->postJson('/api/v1/auth/register', [
-        'email' => 'limit10@example.com',
-        'password' => 'super secret 123',
-        'timezone' => 'UTC',
-    ])->assertCreated();
-
-    $user = User::where('email', 'limit10@example.com')->firstOrFail();
-
-    for ($i = 1; $i <= 9; $i++) {
-        $this->clock->advance('+60 seconds');
-        $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
-    }
-
-    $this->clock->advance('+60 seconds');
-    $blocked = $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')
-        ->assertStatus(429)
-        ->assertJsonPath('error.code', 'error.rate_limited');
-
-    expect($blocked->json('error.retry_after'))->toBeGreaterThan(1700);
-
-    $this->clock->advance('+30 minutes');
-    $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
 });
 
 it('PR #153: a new two-factor code can be sent 60 s after the last one', function () {

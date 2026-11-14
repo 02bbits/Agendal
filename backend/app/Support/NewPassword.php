@@ -12,6 +12,8 @@ final class NewPassword
 {
     private const RULE = "At least 8 characters, and doesn't contain your information.";
 
+    public const WEAK = 'Choose a stronger password: make it longer, or mix in capitals, numbers or symbols.';
+
     private const ACCENTED = "Can't contain special characters.";
 
     private const BREACHED = 'This password has appeared in a data breach. Choose another one.';
@@ -40,6 +42,60 @@ final class NewPassword
                 $fail(self::ACCENTED);
             }
         }];
+    }
+
+    /**
+     * Validation rules for `password` on Create account, requiring Good or Strong (score 3 or 4).
+     *
+     * @return array<int, mixed>
+     */
+    public static function signUpRules(string $email): array
+    {
+        $rules = self::rules($email);
+        $rules[] = function (string $attribute, mixed $value, Closure $fail) {
+            if (self::strength((string) $value) < 3) {
+                $fail(self::WEAK);
+            }
+        };
+
+        return $rules;
+    }
+
+    /**
+     * Password strength score from 0 to 4 matching the client's passwordStrength() function.
+     */
+    public static function strength(string $password): int
+    {
+        $length = mb_strlen($password);
+        if ($length < 8) {
+            return 0;
+        }
+        $score = 1;
+        if ($length >= 12) {
+            $score += 1;
+        }
+        if ($length >= 16) {
+            $score += 1;
+        }
+
+        $classes = 0;
+        if (preg_match('/[a-z]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[A-Z]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[0-9]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[^a-zA-Z0-9]/u', $password) === 1) {
+            $classes += 1;
+        }
+        if ($classes >= 3) {
+            $score += 1;
+        }
+
+        return min(max($score, 1), 4);
     }
 
     /** @return array<string, string> */

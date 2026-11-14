@@ -17,6 +17,7 @@ export interface VerifyEmailScreenProps {
   onResend?(): Promise<ResendResult>;
   onSwitchAccount?(): void | Promise<void>;
   navigate?: Navigate;
+  onOther?(result: VerifyResult): boolean;
 }
 
 export function VerifyEmailScreen({
@@ -25,6 +26,7 @@ export function VerifyEmailScreen({
   onResend,
   onSwitchAccount,
   navigate,
+  onOther,
 }: VerifyEmailScreenProps) {
   const handleSwitchAccount = async () => {
     try {
@@ -61,6 +63,7 @@ export function VerifyEmailScreen({
         onCheck={onVerify}
         onResend={onResend}
         onVerified={() => navigate?.(ROUTES.welcome)}
+        onOther={onOther}
       />
 
       <div className="mt-2 flex justify-center">

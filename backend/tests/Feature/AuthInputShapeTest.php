@@ -22,6 +22,7 @@ it('answers 422 to a list where the public auth endpoints expect text', function
     'reset token' => ['/api/v1/auth/reset-password', ['token' => ['abc'], 'email' => 'probe@gmail.com', 'password' => 'quiet river 42']],
     'reset password' => ['/api/v1/auth/reset-password', ['token' => 'abc', 'email' => 'probe@gmail.com', 'password' => ['a']]],
     'two-factor code' => ['/api/v1/auth/two-factor/challenge', ['code' => ['123456']]],
+    'signup code' => ['/api/v1/auth/signup/verify', ['code' => ['123456']]],
 ]);
 
 it('answers 422 to a list where the signed-in auth endpoints expect text', function (string $path, array $body) {
@@ -32,7 +33,6 @@ it('answers 422 to a list where the signed-in auth endpoints expect text', funct
     'change password' => ['/api/v1/auth/change-password', ['current_password' => 'password', 'password' => ['a']]],
     'check password' => ['/api/v1/auth/check-password', ['current_password' => ['a']]],
     'two-factor off' => ['/api/v1/auth/two-factor', ['enabled' => false, 'current_password' => ['a']]],
-    'verify code' => ['/api/v1/auth/verify-email', ['code' => ['123456']]],
 ]);
 
 it('refuses an oversized reset token or current password before hashing it', function (string $path, array $body, bool $signedIn) {

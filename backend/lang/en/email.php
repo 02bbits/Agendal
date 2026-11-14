@@ -27,4 +27,10 @@ return [
     'signin_intro' => 'Enter this code to finish signing in:',
     'signin_expiry' => 'It works for 10 minutes.',
     'signin_ignore' => "If you didn't try to sign in, change your password: someone may know it.",
+    'signup_attempted_subject' => 'Someone tried to create an Agendal account with your email',
+    'signup_attempted_heading' => 'Someone tried to create an account',
+    'signup_attempted_intro' => 'Someone just tried to create an Agendal account with this email. You already have one, so nothing was created.',
+    'signup_attempted_body' => 'If it was you, sign in, or reset your password if you forgot it.',
+    'signup_attempted_action' => 'Sign in',
+    'signup_attempted_ignore' => "If it wasn't you, you can ignore this email: your account is safe.",
 ];

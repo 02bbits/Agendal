@@ -101,6 +101,7 @@ const SIGNED_OUT_PATHS: readonly string[] = [
   ROUTES.signIn,
   ROUTES.createAccount,
   ROUTES.forgotPassword,
+  ROUTES.verify,
 ];
 const PUBLIC_PATHS: readonly string[] = [
   ...SIGNED_OUT_PATHS,

@@ -107,15 +107,6 @@ export function CreateAccountScreen({
           }}
           onBlur={() => setTouched((current) => ({ ...current, email: true }))}
         />
-        {server.fields?.email && (
-          <Link
-            href={signInHref}
-            navigate={navigate}
-            className="focus-ring -mt-1 self-start text-footnote text-primary link-swipe"
-          >
-            {t("auth.sign_in")}
-          </Link>
-        )}
         <PasswordField
           ref={passwordRef}
           label={t("auth.password")}

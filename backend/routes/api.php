@@ -7,13 +7,12 @@ use App\Http\Controllers\Auth\CheckPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\LogoutController;
+use App\Http\Controllers\Auth\PendingSignupController;
 use App\Http\Controllers\Auth\RegisterController;
-use App\Http\Controllers\Auth\ResendVerificationController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\TwoFactorResendController;
-use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteSearchController;
@@ -29,13 +28,15 @@ Route::post('/auth/forgot-password', ForgotPasswordController::class)->middlewar
 Route::post('/auth/reset-password', ResetPasswordController::class)->middleware('throttle:reset-password');
 Route::post('/auth/two-factor/challenge', TwoFactorChallengeController::class);
 Route::post('/auth/two-factor/resend', TwoFactorResendController::class);
+Route::get('/auth/signup', [PendingSignupController::class, 'show']);
+Route::post('/auth/signup/verify', [PendingSignupController::class, 'verify']);
+Route::post('/auth/signup/resend', [PendingSignupController::class, 'resend']);
+Route::delete('/auth/signup', [PendingSignupController::class, 'cancel']);
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('me', [MeController::class, 'show']);
     Route::patch('me', [MeController::class, 'update']);
     Route::post('auth/logout-everywhere', [LogoutController::class, 'everywhere']);
-    Route::post('auth/verify-email', VerifyEmailController::class);
-    Route::post('auth/verify-email/resend', ResendVerificationController::class);
 
     Route::middleware('verified-email')->group(function () {
         Route::post('auth/two-factor', TwoFactorController::class)->middleware('throttle:two-factor-toggle');

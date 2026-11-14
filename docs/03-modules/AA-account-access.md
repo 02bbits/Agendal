@@ -15,7 +15,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| <a id="aa-1"></a>AA-1 | Create an account with email and password | Must | Password is at least 8 characters and differs from the email; Create account stays disabled until valid; success opens Inbox with "Welcome to Agendal. Your account is ready." |
+| <a id="aa-1"></a>AA-1 | Create an account with email and password | Must | Password is Good or Strong (score ≥ 3) and differs from the email; Create account stays disabled until valid; success opens Verify email; once verified, Setup opens, followed by Inbox with "Welcome to Agendal. Your account is ready." |
 | <a id="aa-2"></a>AA-2 | Sign in with email and password | Must | Wrong details show "Email or password is incorrect."; password has show/hide; a Remember me checkbox (on by default) keeps the session on this device |
 | <a id="aa-3"></a>AA-3 | Lock sign-in after repeated failures | Must | After 3 failed attempts, a "Too many attempts" banner shows and Sign in is disabled for 60 s with a countdown |
 | <a id="aa-4"></a>AA-4 | Reset a forgotten password by email | Must | The same confirmation shows whether or not the account exists; the link expires in 60 minutes; Resend unlocks after 45 s |
@@ -43,12 +43,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Fields:**
   - **Email:** `type=email`, `autocomplete=email`. Trimmed and lower-cased before it's sent.
   - **Password:** `autocomplete=new-password`, with show/hide. Helper text `auth.password_rule`.
-- **Create account** stays disabled until the email has a valid format and the password is 8–128 characters and differs from the email (case-insensitive) ([BR-17](../02-domain/business-rules.md#br-17)).
-- **Server checks:** the same rules, the breached-password check (`auth.password_breached`), and an email already in use (`auth.email_taken`). The last one is a known enumeration point, accepted with the 5/hour per IP limit (see §9).
+- **Create account** stays disabled until the email has a valid format, the password is 8–128 characters, has Good or Strong strength (score ≥ 3) and differs from the email (case-insensitive) ([BR-17](../02-domain/business-rules.md#br-17)).
+- **Server checks:** the same rules, and the breached-password check (`auth.password_breached`). An email that already has an account returns the exact same 202 response; its owner receives a notice email (`SignUpAttempted`) once per 30 minutes, and no code will verify it.
 - **On success:**
-  - The account and session are created.
-  - `display_name` = the email's local part. `timezone` comes from the device ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
-  - A 6-digit code is emailed and Verify email opens (`/verify`, §2.8). After the code, the setup step opens (`/welcome`, §2.6). Inbox follows with the toast `auth.welcome`. The install banner logic starts (AP).
+  - A waiting sign-up is started in the cache for 30 minutes, tied to the session (`202 {pending: true, email}`). Nothing is stored in the database until the code is right.
+  - A 6-digit code is emailed and Verify email opens (`/verify`, §2.8). After entering the right code, the account and session are created, the setup step opens (`/welcome`, §2.6), and Inbox follows with the toast `auth.welcome`. The install banner logic starts (AP).
 - **Desktop layout (from 1024 px, also Sign in):** two columns. Left, the brand panel in `navy`: logo, the decorative illustration, `auth.hero_title` and `auth.hero_body`. Right, the form, centred, at most 360 px wide, with `auth.sign_in_title` / `auth.sign_in_subtitle` on Sign in and `auth.create_title` / `auth.create_subtitle` on Create account. Phones keep one column.
 
 ### 2.2 Sign in (AA-2, AA-3)
@@ -114,12 +113,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.8 Verify email (#149)
 
-- After Create account the user is signed in but unverified. `/verify` shows `auth.verify_title` and `auth.verify_body` with the email, and six code slots (`auth.verify_label`; paste and the one-time-code autofill both work). The sixth digit submits.
-- **The code:** 6 digits, stored only as an HMAC, valid 10 minutes, 5 tries (the 5th wrong answers `auth.verify_too_many`; `auth.verify_expired` after 10 minutes); resend 60 s apart, 10 per 30 minutes, then 30 minutes. Each new code replaces the last.
+- After Create account the sign-up waits in the cache for 30 minutes, tied to the session. `/verify` loads the email via `GET /auth/signup` (or navigates to Create account if expired / 404), shows `auth.verify_title` and `auth.verify_body` with the email, and six code slots (`auth.verify_label`; paste and the one-time-code autofill both work). The sixth digit submits.
+- **The code:** 6 digits, stored only as an HMAC in the cache entry, valid 10 minutes, 5 tries (the 5th wrong answers `auth.verify_too_many`; `auth.verify_expired` after 10 minutes); resend 60 s apart, 10 per 30 minutes per email, then 30 minutes. Each new code replaces the last. If the sign-up expires after 30 minutes, `auth.signup_expired` opens Create account.
 - **A used-up code** (here and in §2.9): after 5 wrong tries (`auth.verify_too_many`) or 10 minutes (`auth.verify_expired`), the code is dead, the six slots empty and are disabled, and a red notice shows the reason with a second line (`auth.resend_wait_hint` while the wait runs, then `auth.resend_now_hint`, and Send a new code becomes a button). Sending a new code opens the slots again and shows `auth.verify_sent` with `auth.verify_sent_hint` in a green box shaped like the red one. While a full code is checked the slots are disabled (more typing can't change it), a new code empties them, and the message area keeps its height so the page doesn't move.
-- **Send a new code:** 60 s after the last one (`auth.verify_resend_wait` counts down), at most 10 codes per 30 minutes; after the 10th, the next one waits 30 minutes (`429 error.rate_limited {retry_after}`, `auth.resend_limited`). `auth.verify_sent` confirms. **Use a different account** signs out and opens Sign in.
-- **Accepted:** the slots fill and a check draws in, then Setup opens (§2.6). An account verified elsewhere that opens `/verify` goes to Inbox.
-- **Until verified:** every page opens `/verify`, and every API call except `/me`, sign-out and the two verify endpoints answers `403 auth.email_unverified`. Accounts that existed before #149 count as verified.
+- **Send a new code:** calls `POST /auth/signup/resend` 60 s after the last one (`auth.verify_resend_wait` counts down), at most 10 codes per 30 minutes; after the 10th, the next one waits 30 minutes (`429 error.rate_limited {retry_after}`, `auth.resend_limited`). `auth.verify_sent` confirms. **Use a different account** calls `DELETE /auth/signup` and opens Create account.
+- **Accepted:** calls `POST /auth/signup/verify`; the slots fill and a check draws in, the account is created (already verified), signed in, then Setup opens (§2.6). An account verified elsewhere that opens `/verify` goes to Inbox.
+- **Until verified:** nothing is stored in the database yet. (Any existing unverified account from before is guarded by `403 auth.email_unverified`).
 - **The email** (`email.verify_*`) puts the code alone in a large monospace box, with room above and below, in light and dark mail clients.
 
 ### 2.9 Two-step verification by email (#149)
@@ -166,14 +165,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="aa-e10"></a>AA-E10 | The breached-password service is down | Fail open: the account is created, and the failure is logged and alerted. Blocking sign-ups on a third party is worse | T-AA-110 |
 | <a id="aa-e11"></a>AA-E11 | The return path after sign-in points to another site | Ignored, go to Inbox (no open redirect) | T-AA-111, SEC-24 |
 | <a id="aa-e12"></a>AA-E12 | The password manager autofills both fields | The button enables on `input` events from autofill, not only on keystrokes | T-AA-112 |
-| <a id="aa-e13"></a>AA-E13 | Sign up with an email that already exists | `auth.email_taken` with a Sign in link (accepted enumeration, §9) | T-AA-113 |
+| <a id="aa-e13"></a>AA-E13 | Sign up with an email that already exists | Identical 202 response; owner receives a notice email once per 30 minutes; decoy entry fails all codes | T-AA-113, PendingSignupTest |
 | <a id="aa-e14"></a>AA-E14 | An unverified account opens any page or calls the API | The page opens `/verify`; the API answers `403 auth.email_unverified` (§2.8) | `VerifyEmailTest` |
 | <a id="aa-e15"></a>AA-E15 | With two-step on, the user signs in again and again to get fresh codes | No new code past 10 per 30 minutes, and the tries on the code already sent are not reset (§2.9) | `TwoFactorTest` |
 | <a id="aa-e16"></a>AA-E16 | Account A picks a colour and Full width, signs out, account B signs in | The look resets on sign-out and comes from B's `/me`; A gets its look back on its next sign-in, on any device | `MeTest`, `session.test.tsx` |
 
 ## 5. Copy keys
 
-`auth.welcome`, `auth.password_rule`, `auth.password_same_as_email`, `auth.password_breached`, `auth.email_taken`, `auth.invalid`, `auth.locked_title`, `auth.locked_body`, `auth.remember_me`, `auth.reset_sent`, `auth.reset_resend`, `auth.reset_expired`, `auth.password_changed`, `auth.session_expired`, `auth.signout_unsynced_one`, `auth.signout_unsynced_other`, `auth.signout_everywhere`, `auth.offline`, `error.rate_limited`.
+`auth.welcome`, `auth.password_rule`, `auth.password_same_as_email`, `auth.password_breached`, `auth.password_weak`, `auth.signup_expired`, `auth.invalid`, `auth.locked_title`, `auth.locked_body`, `auth.remember_me`, `auth.reset_sent`, `auth.reset_resend`, `auth.reset_expired`, `auth.password_changed`, `auth.session_expired`, `auth.signout_unsynced_one`, `auth.signout_unsynced_other`, `auth.signout_everywhere`, `auth.offline`, `error.rate_limited`.
 
 ## 6. Accessibility
 
@@ -188,12 +187,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Endpoint | Request | Success | Errors |
 |---|---|---|---|
 | `GET /sanctum/csrf-cookie` | — | `204`, sets `XSRF-TOKEN` | — |
-| `POST /auth/register` | `{email, password, timezone}` | `201 {user}` and a session | `422` (`auth.email_taken`, `auth.password_breached`, field errors), `429` |
+| `POST /auth/register` | `{email, password, timezone}` | `202 {pending: true, email}` | `422` (`auth.password_breached`, `auth.password_weak`, field errors), `429` |
+| `GET /auth/signup` | — | `200 {email}` | `403`, `404 auth.signup_expired` |
+| `POST /auth/signup/verify` | `{code}` | `200 {user}` and a session | `403`, `422` (`auth.signup_expired`, `auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`), `429` |
+| `POST /auth/signup/resend` | — | `204` | `403`, `422 auth.signup_expired`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
+| `DELETE /auth/signup` | — | `204` | `403` |
 | `POST /auth/login` | `{email, password, remember}` | `200 {user}`, or `202 {two_factor: true, email}` when two-step is on (code emailed, §2.9) | `422 auth.invalid`, `429 auth.locked {retry_after}` |
 | `POST /auth/two-factor/challenge` | `{code}` | `200 {user}` and a session | `422` (`auth.two_factor_expired`, `auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`), `429 {retry_after}` |
 | `POST /auth/two-factor/resend` | — | `204` | `422 auth.two_factor_expired`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
-| `POST /auth/verify-email` | `{code}` | `200 {user}` | `401`, `422` (`auth.verify_wrong`, `auth.verify_expired`, `auth.verify_too_many`) |
-| `POST /auth/verify-email/resend` | — | `204` | `401`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
 | `POST /auth/two-factor` | `{enabled, current_password?}` (the password only to turn it off) | `200 {user}` | `401`, `403 auth.email_unverified`, `422 auth.current_password_wrong`, `429` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
 | `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
@@ -219,7 +220,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Credential stuffing, guessing | [SC-01](../07-architecture/security.md#sc-01), [SC-02](../07-architecture/security.md#sc-02) | SEC-05, SEC-06 |
 | Locking a victim out | [SC-03](../07-architecture/security.md#sc-03) keyed by (email, IP) | SEC-07 |
 | Enumeration through sign-in or reset | [SC-04](../07-architecture/security.md#sc-04) same message and timing | SEC-08 |
-| Enumeration through sign-up (`auth.email_taken`) | Accepted residual risk: 5/hour per IP and the audit log. Removing it would need email verification before the account exists, which conflicts with [AA-1](#aa-1)'s "success opens Inbox" | SEC-08b (asserts the limit) |
+| Enumeration through sign-up | Prevented: identical 202 response, same timing, notice emailed to existing user | T-AA-113, PendingSignupTest |
 | Reset token theft or reuse | [SC-05](../07-architecture/security.md#sc-05). Token in the fragment, removed from the URL | SEC-09 |
 | Open redirect after sign-in | Same-origin paths only | SEC-24 |
 | Data left on a shared device | [SC-19](../07-architecture/security.md#sc-19) wipe | SEC-50, SEC-52 |
@@ -249,5 +250,5 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | [AA-5](#aa-5) | Sign out returns to Sign in | T-AA-40, T-AA-41 (device data wiped), SEC-50 |
 | — | A password change or reset sends a notice email (ASVS 2.2.3) | T-AA-42 |
 | — | Sign out on all devices ends every session | T-AA-43 |
-| — | Edge cases [AA-E1](#aa-e1)–[AA-E13](#aa-e13) | T-AA-101–113 |
+| — | Edge cases [AA-E1](#aa-e1)–[AA-E13](#aa-e13) | T-AA-101–113, PendingSignupTest |
 | — | Accessibility | A11Y-60–62 |

@@ -281,6 +281,9 @@ export const pending = {
   "auth.two_factor_body": "We sent a 6-digit code to {email}.",
   "auth.two_factor_back": "Use a different account",
   "auth.two_factor_expired": "This sign-in has expired. Sign in again.",
+  "auth.signup_expired": "This sign-up has expired. Create your account again.",
+  "auth.password_weak":
+    "Choose a stronger password: make it longer, or mix in capitals, numbers or symbols.",
   "auth.password_accented": "Can't contain special characters.",
   "auth.invalid_accented":
     "Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.",
