@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
 import CreateAccountPage from "../../src/app/create-account/page";
-import { signUpErrors } from "../../src/ui";
+import { hasNonKeyboardCharacters, signUpErrors } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "../ui/axe";
 
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
@@ -64,6 +64,26 @@ describe("T-AA-01: client rules", () => {
   });
 });
 
+describe("AA §2.10: a new password uses English keyboard characters and emoji only", () => {
+  it.each([
+    "~!@#$%^&*()_+`-={}|[]\\:\";'<>?,./ Aa1",
+    "river 👍🏽 👩‍💻 🇻🇳 ❤️ 1️⃣",
+    "🙂 ab".repeat(32),
+  ])("accepts %s", (password) => {
+    expect(hasNonKeyboardCharacters(password)).toBe(false);
+  });
+
+  it.each([
+    "mật khẩu 123",
+    "quiet rivér 42",
+    "パスワード 12345",
+    "quiet rivеr 42",
+    "quiet\triver 42",
+  ])("refuses %s", (password) => {
+    expect(hasNonKeyboardCharacters(password)).toBe(true);
+  });
+});
+
 describe("Create account (AA-1)", () => {
   it("T-AA-04: Create account stays disabled until both fields are valid", async () => {
     const user = userEvent.setup();
@@ -75,6 +95,21 @@ describe("Create account (AA-1)", () => {
     expect((submit as HTMLButtonElement).disabled).toBe(true);
     await user.type(password, " but fine");
     expect((submit as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("always shows the strength meter, linked to the field", async () => {
+    const user = userEvent.setup();
+    const { password } = renderPage();
+
+    expect(document.getElementById("create-pw-strength")).toBeTruthy();
+    expect(screen.queryByText("Weak")).toBeNull();
+    await user.type(password, "quietriver");
+    expect(screen.getByText("Weak")).toBeTruthy();
+    await user.type(password, " Lake 2026!");
+    expect(screen.getByText("Strong")).toBeTruthy();
+    expect(password.getAttribute("aria-describedby")).toContain(
+      "create-pw-strength",
+    );
   });
 
   it("T-AA-05: success opens Welcome without the welcome toast", async () => {
@@ -116,27 +151,19 @@ describe("Create account (AA-1)", () => {
     ).toBe("/sign-in");
   });
 
-  it("AA §2.10: an accented password is caught on Create account, not sent, and cleared on edit", async () => {
+  it("AA §2.10: Vietnamese letters typed in the password become their keys, and that is what is sent", async () => {
     const user = userEvent.setup();
     const { email, password, submit } = renderPage();
 
     await user.type(email, "example@gmail.com");
     await user.type(password, "mật khẩu 123");
-    // No hint while typing
-    expect(screen.queryByText(/accented letters/)).toBeNull();
+    expect((password as HTMLInputElement).value).toBe("maajt khaaru 123");
     await user.click(submit);
 
-    expect(
-      screen.getByText(
-        "Passwords can't have accented letters. Turn off Vietnamese typing and type it again.",
-      ),
-    ).toBeTruthy();
-    expect(document.activeElement).toBe(password);
-    expect(registerCalls()).toHaveLength(0);
-
-    await user.clear(password);
-    await user.type(password, "mat khau 123");
-    expect(screen.queryByText(/accented letters/)).toBeNull();
+    expect(registerCalls()).toHaveLength(1);
+    expect(JSON.parse(String(registerCalls()[0]![1]?.body)).password).toBe(
+      "maajt khaaru 123",
+    );
   });
 
   it("shows the rate limit with the seconds to wait", async () => {

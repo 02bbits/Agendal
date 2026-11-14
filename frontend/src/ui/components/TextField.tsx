@@ -32,6 +32,7 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
       type = "text",
       leading,
       trailing,
+      "aria-describedby": extraDescribedBy,
       ...rest
     },
     ref,
@@ -40,8 +41,10 @@ export const TextField = forwardRef<HTMLInputElement, TextFieldProps>(
     const inputId = id ?? `field-${autoId}`;
     const helperId = helper ? `${inputId}-helper` : undefined;
     const errorId = error ? `${inputId}-error` : undefined;
+    // The caller's ids (e.g. a strength meter) add to the error and helper, never replace them
     const describedBy =
-      [errorId, helperId].filter(Boolean).join(" ") || undefined;
+      [errorId, helperId, extraDescribedBy].filter(Boolean).join(" ") ||
+      undefined;
 
     return (
       <div className={cx("flex flex-col gap-1.5", className)}>

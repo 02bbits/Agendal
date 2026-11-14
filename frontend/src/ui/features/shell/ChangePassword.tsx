@@ -4,8 +4,8 @@ import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { PasswordField } from "../auth/PasswordField";
-import { hasAccentedLetters } from "../auth/validation";
-import { passwordStrength } from "../../domain/passwordStrength";
+import { hasNonKeyboardCharacters } from "../auth/validation";
+import { PasswordStrength } from "../auth/PasswordStrength";
 import { api } from "../../../lib/api";
 
 export interface ChangePasswordProps {
@@ -57,18 +57,6 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
   const confirmMismatch = confirmHasValue && confirmPassword !== newPassword;
 
   const canSave = hasCurrent && allRulesPass && confirmMatch && !busy;
-
-  const score = passwordStrength(newPassword);
-  const strengthWord =
-    score === 1
-      ? t("auth.strength_weak")
-      : score === 2
-        ? t("auth.strength_fair")
-        : score === 3
-          ? t("auth.strength_good")
-          : score === 4
-            ? t("auth.strength_strong")
-            : undefined;
 
   async function handleCurrentBlur() {
     const val = currentPassword;
@@ -127,8 +115,8 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
     setConfirmError(undefined);
     setFormError(undefined);
 
-    // Vietnamese typing turns keys into accented letters even in a hidden field (AA §2.10)
-    if (hasAccentedLetters(newPassword)) {
+    // Only English keyboard characters and emoji: Vietnamese typing turns keys into accented letters even in a hidden field (AA §2.10)
+    if (hasNonKeyboardCharacters(newPassword)) {
       setBusy(false);
       setNewError(t("auth.password_accented"));
       return;
@@ -323,43 +311,7 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
           </li>
         </ul>
 
-        {/* Strength bar */}
-        <div
-          id="new-pw-strength"
-          aria-live="polite"
-          className="flex flex-col gap-1 mt-1"
-        >
-          <div className="flex gap-1.5 h-1 w-full" aria-hidden="true">
-            {[1, 2, 3, 4].map((seg) => (
-              <div
-                key={seg}
-                className={cx(
-                  "flex-1 h-full rounded-full transition-colors",
-                  score >= seg
-                    ? score === 1
-                      ? "bg-error"
-                      : score === 2
-                        ? "bg-warning"
-                        : score === 3
-                          ? "bg-info"
-                          : "bg-success"
-                    : "bg-fill-2",
-                )}
-              />
-            ))}
-          </div>
-
-          <div className="flex items-start gap-3 text-caption">
-            {strengthWord && (
-              <span className="shrink-0 whitespace-nowrap font-semibold text-ink">
-                {strengthWord}
-              </span>
-            )}
-            <span className="min-w-0 flex-1 text-ink-tertiary">
-              {t("auth.strength_hint")}
-            </span>
-          </div>
-        </div>
+        <PasswordStrength id="new-pw-strength" password={newPassword} />
       </div>
 
       {/* Confirm password */}
