@@ -54,6 +54,7 @@ export {
   isEmail,
   normalizeEmail,
   safeReturnPath,
+  hasNonKeyboardCharacters,
   type SignUpErrors,
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";

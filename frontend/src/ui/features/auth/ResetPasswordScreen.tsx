@@ -6,7 +6,7 @@ import { Link } from "../shell/Link";
 import type { Navigate } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
-import { hasAccentedLetters, signUpErrors } from "./validation";
+import { hasNonKeyboardCharacters, signUpErrors } from "./validation";
 
 export interface ResetFailure {
   /** The link expired or was already used (auth.reset_expired). */
@@ -41,7 +41,7 @@ export function ResetPasswordScreen({
 
   const rule = signUpErrors(email ?? "", password).password;
   const expired = email === null || failure.expired;
-  // Set when the form is sent with accented letters (Vietnamese typing), cleared on edit
+  // Set when the form is sent with characters an English keyboard does not type (Vietnamese typing), cleared on edit
   const [accentError, setAccentError] = useState(false);
   const passwordError =
     failure.password ??
@@ -51,7 +51,7 @@ export function ResetPasswordScreen({
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (rule || busy || offline) return;
-    if (hasAccentedLetters(password)) {
+    if (hasNonKeyboardCharacters(password)) {
       setAccentError(true);
       passwordRef.current?.focus();
       return;
@@ -126,6 +126,8 @@ export function ResetPasswordScreen({
           )}
           <Button
             type="submit"
+            // Phones: a clear gap between the fields and the main button
+            className="mt-3 lg:mt-0"
             size="lg"
             fullWidth
             busy={busy}
