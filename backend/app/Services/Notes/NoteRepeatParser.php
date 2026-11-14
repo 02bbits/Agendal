@@ -11,7 +11,12 @@ final class NoteRepeatParser
 {
     private const DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
 
-    private const FREQUENCY_UNITS = ['day' => 'daily', 'days' => 'daily', 'ngày' => 'daily', 'week' => 'weekly', 'weeks' => 'weekly', 'tuần' => 'weekly', 'month' => 'monthly', 'months' => 'monthly', 'tháng' => 'monthly', 'year' => 'yearly', 'years' => 'yearly', 'năm' => 'yearly'];
+    private const FREQUENCY_UNITS = ['day' => 'daily', 'days' => 'daily', 'ngày' => 'daily', 'week' => 'weekly', 'weeks' => 'weekly', 'tuần' => 'weekly', 'month' => 'monthly', 'months' => 'monthly', 'tháng' => 'monthly', 'year' => 'yearly', 'years' => 'yearly', 'năm' => 'yearly', 'wk' => 'weekly', 'wks' => 'weekly', 'mo' => 'monthly', 'mos' => 'monthly', 'yr' => 'yearly', 'yrs' => 'yearly'];
+
+    /** The calendar unit a duration bound ("for 3 months") adds, by the frequency its unit word names. */
+    private const BOUND_UNITS = ['daily' => 'day', 'weekly' => 'week', 'monthly' => 'month', 'yearly' => 'year'];
+
+    private const WEEKS_PER_FORTNIGHT = 2;
 
     private const ORDINALS = ['first' => 1, 'second' => 2, 'third' => 3, 'fourth' => 4, 'fifth' => 5, 'last' => -1, '1st' => 1, '2nd' => 2, '3rd' => 3, '4th' => 4, '5th' => 5];
 
@@ -44,13 +49,17 @@ final class NoteRepeatParser
             $hasPrefix = preg_match('~(?:'.$prefix.')\s+(?:(?:'.$link.')\s+)*$~iu', $before) === 1;
             $hasSuffix = preg_match('~^\s+(?:(?:of|của|trong)\s+)?(?:(?:the|every|each)\s+month|'.$frequency.')(?!\p{L})~iu', $after) === 1;
             // "Wednesday report" is another task; "Wednesday at 8am" still describes this schedule.
-            $tail = (preg_split('~(?:'.NoteVocabulary::phrases('comma').'|'.NoteVocabulary::phrases('separator').')~u', $after, 2) ?: [''])[0];
+            $comma = NoteVocabulary::phrases('comma');
+            $tail = (preg_split('~(?<!\d)(?:'.$comma.')|(?:'.$comma.')(?!\d)|(?:'.NoteVocabulary::phrases('separator').')~u', $after, 2) ?: [''])[0];
+            $fullTail = $tail;
             $tail = (string) preg_replace('~(?<!\d)\d{1,4}(?:'.NoteVocabulary::phrases('full_date_separator').')\d{1,2}(?:'.NoteVocabulary::phrases('full_date_separator').')\d{1,4}(?!\d)~u', '', $tail);
             $tail = (string) preg_replace('~^\s*(?:of\s+(?:the\s+)?month)(?!\p{L})~iu', '', $tail);
             $tail = (string) preg_replace('~^\s*(?:(?:'.NoteVocabulary::phrases('span_lead').'|'.NoteVocabulary::phrases('time_prefix').')\s+)+~iu', '', $tail);
             $tail = (string) preg_replace('~(?:for|after|trong|sau)\s+\d+\s+(?:times?|occurrences?|lần)(?!\p{L})~iu', '', $tail);
-            $qualifier = self::startsQualifier($tail) || preg_match('~^\s*(?:never ends|không kết thúc|vô thời hạn)(?!\p{L})~iu', $tail) === 1;
-            if (($hasPrefix || $hasSuffix) && ($qualifier || NoteVocabulary::onlyModifiers($tail))) {
+            // "at least 3 weeks" keeps its "at": the tail is checked as written too. A tail that says how long in any
+            // way keeps the list whole, so the schedule is read (or kept for review) in full rather than cut to one day.
+            $qualifier = self::startsQualifier($tail) || self::onlyDurationAndModifiers($tail) || self::hasDurationShape($fullTail);
+            if (($hasPrefix || $hasSuffix) && $qualifier) {
                 $spans[] = [$offset, strlen($list)];
             }
         }
@@ -71,13 +80,215 @@ final class NoteRepeatParser
 
         $interval = '(?:every|mỗi)\s+(?:other|'.NoteVocabulary::integerPattern().')\s+(?:'.implode('|', array_keys(self::FREQUENCY_UNITS)).')';
 
-        return '(?<![\p{L}\p{N}])(?:'.$interval.'|(?:(?:'.$prefix.')\s+)?(?:'.$count.'|once|twice))(?![\p{L}\p{N}])';
+        return '(?<![\p{L}\p{N}])(?:'.$interval.'|(?:(?:'.$prefix.')\s+)?(?:'.$count.'|once|twice))(?![\p{L}\p{N}])'
+            .'|'.self::rollingBoundExpression(false).'|'.self::periodBoundExpression(false);
     }
 
+    /** Units a duration bound counts in: the frequency units and "fortnight". */
+    private static function boundUnits(): string
+    {
+        return implode('|', array_keys(self::FREQUENCY_UNITS)).'|'.NoteVocabulary::phrases('bound_fortnight');
+    }
+
+    /**
+     * Any written amount, whole or not: "3", "4" in "4tuần", "1.5", "three", "half a". Only a whole number makes a
+     * bound; the rest is read so that it is refused rather than left behind.
+     */
+    private static function amountExpression(): string
+    {
+        return '(?:\d+(?:[.,]\d+)?|'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')'
+            .'(?:\s+(?:'.NoteVocabulary::phrases('duration_fraction_suffix').'))?';
+    }
+
+    /** Words that end a series through the end of a period: "through next week", "đến hết tuần". */
+    private static function endLeads(): string
+    {
+        return NoteVocabulary::phrases('bound_through_lead').'|'.NoteVocabulary::phrases('bound_until_lead');
+    }
+
+    /**
+     * Whether an end word ("until", "through", "đến hết") was left out of every phrase read: "through next week until
+     * Friday" reads one end, and the other must not be taken for a start.
+     *
+     * @param  list<array{int, int}>  $spans
+     */
+    private static function hasUnreadEnd(string $text, array $spans): bool
+    {
+        preg_match_all('~(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('bound_end_word').')(?![\p{L}\p{N}])~iu', $text, $matches, PREG_OFFSET_CAPTURE);
+        foreach ($matches[0] as [$_, $at]) {
+            $read = false;
+            foreach ($spans as [$offset, $length]) {
+                $read = $read || ($offset <= $at && $at < $offset + $length);
+            }
+            if (! $read) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** Words before an end date: "until Friday", "till 20/12", "through 2026-12-31", "đến ngày 15", "kết thúc vào". */
+    private static function endDateLeads(): string
+    {
+        return 'ends? on|kết thúc(?: vào)?|'.self::endLeads();
+    }
+
+    /**
+     * How long a series runs, read loosely: "for 3 months", "trong 4tuần liền", "for 3 more weeks", "for the next
+     * week", and also "for about 3 weeks", "for several weeks", "trong 3 ngày rưỡi", which bounds() refuses. "in 4 weeks"
+     * and "4 tuần nữa" move the start instead, so a following duration suffix rules the phrase out.
+     */
+    private static function rollingBoundExpression(bool $named): string
+    {
+        $group = fn (string $name): string => $named ? '(?<'.$name.'>' : '(?:';
+
+        return '(?<![\p{L}\p{N}])(?:'.$group('next').NoteVocabulary::phrases('bound_lead_next').')|'.$group('lead').NoteVocabulary::phrases('bound_lead').'))'
+            .'(?:\s+'.$group('approx').NoteVocabulary::phrases('bound_approximate').'))?'
+            .'(?:\s+'.$group('amount').self::amountExpression().'))?(?:\s+(?:'.NoteVocabulary::phrases('bound_more').'))?'
+            .'\s*(?<![\p{L}])'.$group('unit').self::boundUnits().')(?![\p{L}\p{N}])'
+            .'(?:\s+'.$group('fraction').NoteVocabulary::phrases('duration_fraction_suffix').')(?![\p{L}\p{N}]))?'
+            .'(?:\s*(?:'.NoteVocabulary::phrases('comma').'|\s(?:'.NoteVocabulary::phrases('list_joiner').'))?\s+'.$group('extra').'(?:'.self::amountExpression().')\s*(?<![\p{L}])'
+            .'(?:'.self::boundUnits().'|'.implode('|', NoteVocabulary::family('duration_unit')).'))(?![\p{L}\p{N}]))?'
+            .'(?:\s+(?:'.NoteVocabulary::phrases('bound_trail').')(?![\p{L}\p{N}]))?'
+            .'(?:(?:\s+|-)'.$group('roughly').NoteVocabulary::phrases('bound_approximate_suffix').')(?![\p{L}\p{N}]))?'
+            .'(?:\s+'.$group('start').NoteVocabulary::phrases('duration_suffix').')(?!\p{L}))?';
+    }
+
+    /** A calendar period the series runs in: "this week", "trong tháng này", "through next week", "đến hết tuần". */
+    private static function periodBoundExpression(bool $named): string
+    {
+        $group = fn (string $name): string => $named ? '(?<'.$name.'>' : '(?:';
+        $leads = NoteVocabulary::phrases('bound_lead').'|'.self::endLeads();
+
+        return '(?<![\p{L}\p{N}])(?:'.$group('lead').$leads.')\s+)?'.$group('period').implode('|', NoteVocabulary::family('bound_period')).')(?![\p{L}\p{N}])';
+    }
+
+    /**
+     * Every duration bound in $text with its byte offset and length: ['amount' => 6, 'unit' => 'week'] for "for 3
+     * fortnights", ['period' => 'week', 'offset' => 1, 'through' => false] for "next week" (true for "through next
+     * week": from now to its end), null for one that cannot be read exactly
+     * ("for about 3 weeks", "for 1.5 months", "trong 3 ngày rưỡi").
+     *
+     * @return list<array{0: array{amount: int, unit: string}|array{period: string, offset: int, through: bool}|null, 1: int, 2: int}>
+     */
+    private static function bounds(string $text): array
+    {
+        $bounds = [];
+        preg_match_all('~'.self::rollingBoundExpression(true).'~iu', $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        foreach ($matches as $m) {
+            // "trong 2 tuần nữa" moves the start (the date parser reads it); "for 3 months from now" says both.
+            $lead = mb_strtolower($m['lead'][0] ?? '');
+            $startSuffix = ($m['start'][0] ?? '') !== '';
+            if ($startSuffix && preg_match('~^(?:'.NoteVocabulary::phrases('duration_prefix').')$~iu', $lead) === 1) {
+                continue;
+            }
+            $amountText = mb_strtolower($m['amount'][0] ?? '');
+            $loose = ($m['approx'][0] ?? '') !== '' || ($m['fraction'][0] ?? '') !== '' || ($m['roughly'][0] ?? '') !== '' || ($m['extra'][0] ?? '') !== '';
+            // "mỗi ngày trong tuần", "for tuần sau": a lead and a unit with no amount say nothing about how long.
+            if ($amountText === '' && ! $loose && ($m['next'][0] ?? '') === '') {
+                continue;
+            }
+            // Not an exact whole amount of one unit: kept for review ("3 days and 12 hours", "for 3 months from now").
+            $approximate = $loose || $startSuffix;
+            $amount = $amountText === '' ? 1 : NoteVocabulary::integer($amountText);
+            $unitText = mb_strtolower($m['unit'][0]);
+            $bound = match (true) {
+                $approximate || $amount === null || ($amountText === '' && ($m['next'][0] ?? '') === '') => null,
+                isset(self::FREQUENCY_UNITS[$unitText]) => ['amount' => $amount, 'unit' => self::BOUND_UNITS[self::FREQUENCY_UNITS[$unitText]]],
+                default => ['amount' => $amount * self::WEEKS_PER_FORTNIGHT, 'unit' => self::BOUND_UNITS['weekly']],
+            };
+            $bounds[] = [$bound, $m[0][1], strlen($m[0][0])];
+        }
+        preg_match_all('~'.self::periodBoundExpression(true).'~iu', $text, $matches, PREG_SET_ORDER | PREG_OFFSET_CAPTURE);
+        $rolling = $bounds;
+        foreach ($matches as $m) {
+            // "next week" inside "for the next week" or "tuần tới" inside "trong 2 tuần tới" is part of that bound.
+            foreach ($rolling as [$_, $offset, $length]) {
+                if ($m[0][1] < $offset + $length && $offset < $m[0][1] + strlen($m[0][0])) {
+                    continue 2;
+                }
+            }
+            foreach (NoteVocabulary::family('bound_period') as $key => $phrases) {
+                if (preg_match('~^(?:'.$phrases.')$~iu', $m['period'][0]) !== 1) {
+                    continue;
+                }
+                [$period, $offset] = explode(':', $key);
+                $lead = $m['lead'][0] ?? '';
+                $through = $lead !== '' && preg_match('~^(?:'.NoteVocabulary::phrases('bound_through_lead').')$~iu', $lead) === 1;
+                $untilLead = $lead !== '' && preg_match('~^(?:'.NoteVocabulary::phrases('bound_until_lead').')$~iu', $lead) === 1;
+                $startLead = preg_match('~(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('bound_start_lead').')\s+$~iu', substr($text, 0, $m[0][1])) === 1;
+                // "from next week" only starts the series; "until next week" is an end date, read with the other end dates.
+                if (! $startLead && ! ($untilLead && $offset !== '0')) {
+                    $bounds[] = [['period' => $period, 'offset' => (int) $offset, 'through' => $through], $m[0][1], strlen($m[0][0])];
+                }
+                break;
+            }
+        }
+
+        return $bounds;
+    }
+
+    /**
+     * An amount of a unit, however written, with what may follow it: "3 weeks", "4tuần", "2,5 tuần", "3 ngày rưỡi",
+     * "3 weeks or so". Not a date ("15 tháng 11", "năm 2027").
+     */
+    private static function amountShapeExpression(): string
+    {
+        $tail = '(?:\s+(?:'.NoteVocabulary::phrases('duration_fraction_suffix').'|'.NoteVocabulary::phrases('bound_trail').')(?![\p{L}\p{N}]))*'
+            .'(?:(?:\s+|-)(?:'.NoteVocabulary::phrases('bound_approximate_suffix').')(?![\p{L}\p{N}]))?';
+
+        return '(?<![\p{L}\p{N}])(?:(?:'.NoteVocabulary::phrases('bound_approximate').')\s+)?(?:'.self::amountExpression().')\s*(?<![\p{L}])'
+            .'(?:'.self::boundUnits().')(?![\p{L}\p{N}])(?!\s*\d)'.$tail;
+    }
+
+    /**
+     * Text shaped like an amount of time or a calendar period: an amount of a unit, a lead or an approximation before
+     * a unit ("for several weeks", "trong vài tuần"), or a period ("next month").
+     */
+    private static function durationShapeExpression(): string
+    {
+        $leads = NoteVocabulary::phrases('bound_lead').'|'.NoteVocabulary::phrases('bound_lead_next').'|'.self::endLeads().'|'.NoteVocabulary::phrases('bound_approximate');
+
+        return '(?:(?<![\p{L}\p{N}])(?:'.$leads.')\s+)?'.self::amountShapeExpression()
+            .'|(?<![\p{L}\p{N}])(?:'.$leads.')\s+(?:\S+\s+){0,3}?(?:'.self::boundUnits().')(?![\p{L}\p{N}])'
+            .'|(?<![\p{L}\p{N}])(?:'.implode('|', NoteVocabulary::family('bound_period')).')(?![\p{L}\p{N}])';
+    }
+
+    /**
+     * Whether $text holds an amount of time or a period. A recurring item whose unread words still hold one has lost
+     * part of its schedule, whatever the wording, so it is kept for review (#120).
+     */
+    public static function hasDurationShape(string $text): bool
+    {
+        return preg_match('~'.self::durationShapeExpression().'~iu', $text) === 1;
+    }
+
+    /**
+     * A fragment that only qualifies the schedule before it: an exclusion, an end ("until Friday"), or how long it runs
+     * ("for several weeks", "1.5 weeks"), so a comma before it does not cut the schedule short.
+     */
     public static function startsQualifier(string $text): bool
     {
-        return NoteVocabulary::startsWith($text, 'repeat_exclusion')
-            || preg_match('~^\s*(?:kết thúc|ends? (?:after|on)|until)(?!\p{L})~iu', $text) === 1;
+        $text = ltrim($text);
+        if (NoteVocabulary::startsWith($text, 'repeat_exclusion')
+            || preg_match('~^(?:kết thúc|ends? (?:after|on)|'.self::endLeads().')(?!\p{L})~iu', $text) === 1) {
+            return true;
+        }
+
+        return preg_match('~^(?:'.self::durationShapeExpression().')~iu', $text) === 1 && self::onlyDurationAndModifiers($text);
+    }
+
+    /**
+     * Nothing but amounts of time, periods, ends, date and repeat words, and joiners: "for 2 weeks and 3 days",
+     * "for 2 weeks never ends". Whatever this lets through, the extractor reads or keeps for review.
+     */
+    private static function onlyDurationAndModifiers(string $text): bool
+    {
+        $rest = (string) preg_replace('~'.self::durationShapeExpression().'~iu', ' ', $text);
+        $rest = trim((string) preg_replace('~(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('list_joiner').'|never ends|không kết thúc|vô thời hạn)(?![\p{L}\p{N}])~iu', ' ', $rest));
+
+        return $rest === '' || NoteVocabulary::onlyModifiers($rest) || self::startsQualifier($rest);
     }
 
     /** @return array{string, int}|null */
@@ -99,7 +310,7 @@ final class NoteRepeatParser
         return null;
     }
 
-    /** @return array{repeat: Repeat, spans: list<array{int, int}>, unreadable: bool, rule: ?string, copies: int} */
+    /** @return array{repeat: Repeat, spans: list<array{int, int}>, unreadable: bool, rule: ?string, copies: int, bound?: array{amount: int, unit: string}|array{period: string, offset: int, through: bool}|null, boundSpans?: list<array{int, int}>} */
     public function parse(string $text, NoteContext $context): array
     {
         $amounts = NoteVocabulary::integerPattern();
@@ -139,14 +350,20 @@ final class NoteRepeatParser
         return [...$result, 'copies' => $copies];
     }
 
-    /** @return array{repeat: Repeat, spans: list<array{int, int}>, unreadable: bool, rule: ?string} */
+    /**
+     * $bound is how long the series runs from its first date ("for 3 months") or the calendar period it runs in
+     * ("this week"); FieldExtractor turns it into UNTIL once the first date is known. $boundSpans are its words, which
+     * hold no time ("cả tháng sau" is no "3 tháng sau").
+     *
+     * @return array{repeat: Repeat, spans: list<array{int, int}>, unreadable: bool, rule: ?string, bound?: array{amount: int, unit: string}|array{period: string, offset: int, through: bool}|null, boundSpans?: list<array{int, int}>}
+     */
     private function read(string $text, NoteContext $context, bool $hasMultiplicity = false): array
     {
         $spans = [];
         // A weekday in an explicit end condition is an end date, not another selected weekday.
         // Vietnamese "đến thứ sáu" remains a weekday range; "đến ngày ..." marks an end.
         $scheduleText = $text;
-        if (preg_match('~(?:until|ends? on|kết thúc(?: vào)?|(?:đến|tới)\s+(?=ngày|\d))(?:\s+ngày)?\s+.+$~iu', $text, $end, PREG_OFFSET_CAPTURE) === 1) {
+        if (preg_match('~(?:(?!(?:đến|tới)\s)(?:'.self::endDateLeads().')|(?:đến|tới)\s+(?=ngày|\d))(?:\s+ngày)?\s+.+$~iu', $text, $end, PREG_OFFSET_CAPTURE) === 1) {
             $scheduleText = substr_replace($scheduleText, str_repeat(' ', strlen($end[0][0])), $end[0][1], strlen($end[0][0]));
         }
         $named = NoteVocabulary::findAll('repeat', $text);
@@ -154,6 +371,8 @@ final class NoteRepeatParser
         $repeat = count($frequencies) === 1 ? Repeat::from($frequencies[0]) : Repeat::Never;
         $invalid = count($frequencies) > 1;
         $interval = 1;
+        $bound = null;
+        $boundSpans = [];
         /** @var array<string, string> $parts */
         $parts = [];
         foreach ($named as $match) {
@@ -257,6 +476,8 @@ final class NoteRepeatParser
                 $numbersText = substr_replace($numbersText, str_repeat(' ', $length), $offset, $length);
             }
             $numbersText = (string) preg_replace_callback('~(?:for|after|trong|sau)\s+\d+\s+(?:times?|occurrences?|lần)~iu', fn (array $m): string => str_repeat(' ', strlen($m[0])), $numbersText);
+            // "mỗi thứ 3 2,5 tuần": the numbers of an amount of time are no weekdays.
+            $numbersText = (string) preg_replace_callback('~'.self::amountShapeExpression().'~iu', fn (array $m): string => str_repeat(' ', strlen($m[0])), $numbersText);
             $isRange = false;
             $days = NoteVocabulary::findAll('weekday', $scheduleText);
             if (($hasPrefix || $repeat === Repeat::Weekly) && $days !== []) {
@@ -319,15 +540,28 @@ final class NoteRepeatParser
                 $parts['COUNT'] = (string) (NoteVocabulary::integer($m[1][0]) ?? 0);
                 $spans[] = [$m[0][1], strlen($m[0][0])];
             }
-            if (preg_match('~(?:until|ends? on|đến|tới|kết thúc(?: vào)?)(?:\s+ngày)?\s+(.+)$~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
-                // A weekday range is part of BYDAY, not an end date.
+            // How long the series runs ("for 3 months", "this week"), not when it starts ("in 4 weeks", "4 tuần nữa").
+            $bounds = self::bounds($text);
+            if ($bounds !== []) {
+                $bound = $bounds[0][0];
+                $amount = $bound['amount'] ?? 1;
+                $invalid = $invalid || $bound === null || count($bounds) > 1 || $amount < 1 || $amount > 999 || isset($parts['COUNT']);
+                foreach ($bounds as [$_, $offset, $length]) {
+                    $spans[] = [$offset, $length];
+                    $boundSpans[] = [$offset, $length];
+                }
+            }
+            if (preg_match('~(?:'.self::endDateLeads().')(?:\s+ngày)?\s+(.+)$~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
+                // A weekday range is part of BYDAY and "through next week" a bound, not an end date.
                 $covered = false;
                 foreach ($spans as [$offset, $length]) {
-                    $covered = $covered || ($offset <= $m[0][1] && $offset + $length >= $m[0][1] + strlen($m[0][0]));
+                    $covered = $covered || ($offset <= $m[0][1] && $m[0][1] < $offset + $length);
                 }
                 if (! $covered) {
                     $until = $this->dates->parse($m[1][0], $context, null);
-                    $invalid = $invalid || $until->date === null || $until->unreadable || isset($parts['COUNT']);
+                    // "until Friday until Sunday": one end date only.
+                    $invalid = $invalid || $until->date === null || $until->unreadable || isset($parts['COUNT']) || $bound !== null
+                        || preg_match('~(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('bound_end_word').')(?![\p{L}\p{N}])~iu', $m[1][0]) === 1;
                     if ($until->date !== null) {
                         $parts['UNTIL'] = str_replace('-', '', $until->date).'T235959Z';
                     }
@@ -336,7 +570,7 @@ final class NoteRepeatParser
             }
         }
         if (preg_match('~(?:never ends|không kết thúc|vô thời hạn)~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
-            $invalid = $invalid || isset($parts['COUNT']) || isset($parts['UNTIL']);
+            $invalid = $invalid || isset($parts['COUNT']) || isset($parts['UNTIL']) || $bound !== null;
             $spans[] = [$m[0][1], strlen($m[0][0])];
         }
         if (preg_match('~(?<!\p{L})(?:lặp lại|repeat)\s+~iu', $text, $m, PREG_OFFSET_CAPTURE) === 1) {
@@ -347,6 +581,7 @@ final class NoteRepeatParser
             $remaining = substr_replace($remaining, str_repeat(' ', $length), $offset, $length);
         }
         $invalid = $invalid || $repeat === Repeat::Never || $interval < 1 || $interval > 999
+            || self::hasUnreadEnd($text, $spans)
             || NoteVocabulary::contains('repeat_prefix', $remaining)
             || NoteVocabulary::contains('repeat_unsupported', $remaining)
             || preg_match('~\d[\d.,/+-]*\s+(?:times?|lần)(?!\p{L})~iu', $remaining) === 1
@@ -362,6 +597,6 @@ final class NoteRepeatParser
             $rule .= ';'.$key.'='.$value;
         }
 
-        return ['repeat' => $repeat, 'spans' => $spans, 'unreadable' => false, 'rule' => $rule];
+        return ['repeat' => $repeat, 'spans' => $spans, 'unreadable' => false, 'rule' => $rule, 'bound' => $bound, 'boundSpans' => $boundSpans];
     }
 }

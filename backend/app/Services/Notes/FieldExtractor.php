@@ -18,6 +18,8 @@ final class FieldExtractor
     /** Unaccented Vietnamese needs at least this many known syllables, so "call me" stays English. */
     private const MIN_VIETNAMESE_SYLLABLES = 2;
 
+    private const MONTHS_PER_YEAR = 12;
+
     public function __construct(
         private NoteDateParser $dates,
         private NoteTimeParser $times,
@@ -39,7 +41,11 @@ final class FieldExtractor
         $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
         $repeat = $this->repeats->parse($readable, $context);
         // An unsupported recurrence must not become a one-off date from a weekday inside it.
-        $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($readable, $context);
+        $timeText = $readable;
+        foreach ($repeat['boundSpans'] ?? [] as [$offset, $length]) {
+            $timeText = substr_replace($timeText, str_repeat(' ', $length), $offset, $length);
+        }
+        $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($timeText, $context);
         if (($repeat['rule'] !== null && $time->unreadable) || ($repeat['copies'] > 1 && $time->start !== null)) {
             // One supplied time does not tell us when the other copies happen. Preserve the whole request.
             $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
@@ -58,7 +64,12 @@ final class FieldExtractor
         }
         $dueDate = $repeat['unreadable'] ? null : ($date->date ?? $time->date ?? $this->impliedDate($time, $repeat['repeat'], $context));
         if ($repeat['rule'] !== null) {
-            $anchor = $dueDate ?? $context->today()->format('Y-m-d');
+            $bound = $repeat['bound'] ?? null;
+            // "next week" runs in that week; "through next week" runs from now to its end.
+            $period = isset($bound['period']) ? $this->periodRange($bound['period'], $bound['offset'], $bound['through'], $context) : null;
+            $stated = $date->date ?? $time->date;
+            // A series in a later period starts on that period's first day.
+            $anchor = max($dueDate ?? $context->today()->format('Y-m-d'), $period[0] ?? '');
             try {
                 // The first matching day starts the series; the interval counts from that first occurrence.
                 $firstRule = (string) preg_replace('/;INTERVAL=\d+/', ';INTERVAL=1', $repeat['rule']);
@@ -66,7 +77,22 @@ final class FieldExtractor
             } catch (InvalidArgumentException) {
                 $dueDate = null;
             }
-            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date)) {
+            if ($dueDate !== null && $bound !== null) {
+                [$start, $end] = isset($bound['amount'])
+                    ? [$stated ?? $dueDate, $this->boundEnd($dueDate, $bound['amount'], $bound['unit'])]
+                    : $this->periodRange($bound['period'], $bound['offset'], $bound['through'], $context);
+                // A stated date outside the period, or no occurrence left in it ("every Monday this week" on a Tuesday).
+                $outside = $stated !== null && ($stated < $start || $stated > $end);
+                $dueDate = $outside || $dueDate > $end ? null : $dueDate;
+                $repeat['rule'] .= ';UNTIL='.str_replace('-', '', $end).'T235959Z';
+            }
+            // #120: words no reader took that still say how long ("for about 3 weeks", "vài tuần") mean part of the
+            // schedule was lost, however it was worded; keep the whole item for review instead of an unbounded series.
+            $unread = $readable;
+            foreach ([...$date->spans, ...$time->spans, ...$repeat['spans']] as [$offset, $length]) {
+                $unread = substr_replace($unread, str_repeat(' ', $length), $offset, $length);
+            }
+            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date) || NoteRepeatParser::hasDurationShape($unread)) {
                 $dueDate = null;
                 $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
                 $time = new ParsedTime;
@@ -147,6 +173,40 @@ final class FieldExtractor
     private function hasAccentedLetters(string $text): bool
     {
         return preg_match('/[^\P{L}\x00-\x7F]/u', $text) === 1;
+    }
+
+    /**
+     * The last day of a series that runs for an amount of time from its first date: "every day for 3 days" from
+     * 2 Nov runs 2, 3 and 4 Nov. A year is twelve calendar months.
+     */
+    private function boundEnd(string $first, int $amount, string $unit): string
+    {
+        return $this->addUnits(new DateTimeImmutable($first), $amount, $unit)->modify('-1 day')->format('Y-m-d');
+    }
+
+    /** NoteDurations::add, with a year as twelve calendar months. */
+    private function addUnits(DateTimeImmutable $at, int $amount, string $unit): DateTimeImmutable
+    {
+        return $unit === 'year' ? NoteDurations::add($at, $amount * self::MONTHS_PER_YEAR, 'month') : NoteDurations::add($at, $amount, $unit);
+    }
+
+    /**
+     * First and last day of this ($offset 0) or the next ($offset 1) week, month or year, or today and that last day
+     * when $fromNow; a week starts on the user's week start (AP-5).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function periodRange(string $period, int $offset, bool $fromNow, NoteContext $context): array
+    {
+        $today = $context->today();
+        $start = match ($period) {
+            'week' => $today->modify(sprintf('-%d days', ((int) $today->format('w') - $context->weekStart->firstDay() + 7) % 7)),
+            'month' => $today->modify('first day of this month'),
+            default => $today->setDate((int) $today->format('Y'), 1, 1),
+        };
+        $first = $this->addUnits($start, $offset, $period)->format('Y-m-d');
+
+        return [$fromNow ? $today->format('Y-m-d') : $first, $this->boundEnd($first, 1, $period)];
     }
 
     /** NU-E5: no date but a time or repeat → today, or tomorrow when that time has passed. */

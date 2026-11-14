@@ -1090,3 +1090,137 @@ repeat_exclusion,không vào
 repeat_exclusion,không tính
 duration_unit:hour,giờ
 duration_fraction_suffix,rưỡi
+duration_suffix,from now
+bound_lead,for
+bound_lead,over
+bound_lead,during
+bound_lead,lasting
+bound_lead,trong
+bound_lead,trong vòng
+bound_lead,trong suốt
+bound_lead,suốt
+bound_lead,kéo dài
+bound_lead,liên tục
+bound_lead,within
+bound_lead_next,for the next
+bound_lead_next,for the coming
+bound_lead_next,over the next
+bound_lead_next,over the coming
+bound_lead_next,during the next
+bound_lead_next,in the next
+bound_lead_next,within the next
+bound_more,more
+bound_trail,straight
+bound_trail,in a row
+bound_trail,consecutive
+bound_trail,sắp tới
+bound_trail,tới
+bound_trail,liền
+bound_trail,liên tiếp
+bound_trail,liên tục
+bound_fortnight,fortnight
+bound_fortnight,fortnights
+bound_start_lead,from
+bound_start_lead,starting
+bound_start_lead,starting from
+bound_start_lead,beginning
+bound_start_lead,từ
+bound_start_lead,bắt đầu
+bound_start_lead,bắt đầu từ
+bound_period:week:0,this week
+bound_period:week:0,the rest of the week
+bound_period:week:0,the rest of this week
+bound_period:week:0,rest of the week
+bound_period:week:0,tuần này
+bound_period:week:0,hết tuần này
+bound_period:week:0,hết tuần
+bound_period:week:0,cả tuần này
+bound_period:week:1,next week
+bound_period:week:1,tuần sau
+bound_period:week:1,tuần tới
+bound_period:week:1,cả tuần sau
+bound_period:month:0,this month
+bound_period:month:0,the rest of the month
+bound_period:month:0,the rest of this month
+bound_period:month:0,rest of the month
+bound_period:month:0,tháng này
+bound_period:month:0,hết tháng này
+bound_period:month:0,hết tháng
+bound_period:month:0,cả tháng này
+bound_period:month:1,next month
+bound_period:month:1,tháng sau
+bound_period:month:1,tháng tới
+bound_period:month:1,cả tháng sau
+bound_period:year:0,this year
+bound_period:year:0,the rest of the year
+bound_period:year:0,the rest of this year
+bound_period:year:0,rest of the year
+bound_period:year:0,năm nay
+bound_period:year:0,hết năm nay
+bound_period:year:0,hết năm
+bound_period:year:0,cả năm nay
+bound_period:year:1,next year
+bound_period:year:1,năm sau
+bound_period:year:1,năm tới
+bound_period:year:1,cả năm sau
+bound_until_lead,until
+bound_until_lead,till
+bound_until_lead,đến
+bound_until_lead,tới
+duration_fraction_suffix,and a half
+bound_through_lead,through
+bound_through_lead,throughout
+bound_through_lead,đến hết
+bound_through_lead,tới hết
+bound_through_lead,cho đến hết
+bound_approximate,about
+bound_approximate,around
+bound_approximate,roughly
+bound_approximate,approximately
+bound_approximate,nearly
+bound_approximate,almost
+bound_approximate,at least
+bound_approximate,at most
+bound_approximate,up to
+bound_approximate,several
+bound_approximate,a few
+bound_approximate,few
+bound_approximate,a couple of
+bound_approximate,a couple
+bound_approximate,couple of
+bound_approximate,some
+bound_approximate,many
+bound_approximate,khoảng
+bound_approximate,tầm
+bound_approximate,chừng
+bound_approximate,gần
+bound_approximate,hơn
+bound_approximate,ít nhất
+bound_approximate,tối đa
+bound_approximate,vài
+bound_approximate,một vài
+bound_approximate,mấy
+bound_approximate,dăm
+bound_approximate,nhiều
+bound_approximate_suffix,or so
+bound_approximate_suffix,or more
+bound_approximate_suffix,or less
+bound_approximate_suffix,or longer
+bound_approximate_suffix,give or take
+bound_approximate_suffix,ish
+bound_approximate_suffix,hoặc hơn
+bound_approximate_suffix,trở lên
+bound_approximate_suffix,trở xuống
+bound_approximate_suffix,gì đó
+bound_approximate_suffix,hay sao đó
+bound_end_word,until
+bound_end_word,till
+bound_end_word,through
+bound_end_word,throughout
+bound_end_word,ends on
+bound_end_word,ending on
+bound_end_word,đến hết
+bound_end_word,tới hết
+bound_end_word,cho đến hết
+bound_end_word,cho tới khi
+bound_end_word,kết thúc
