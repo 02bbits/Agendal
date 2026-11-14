@@ -74,7 +74,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **List:** normal entries of a day share one card and due entries share one dashed block below it, split by a dashed line. **Board:** one card per entry, normal ones first.
 - **Filters** (chips, remembered per device):
   - **All:** every upcoming entry, start days and due days.
-  - **Scheduled:** start-day entries of tasks with a start date, plus repeating tasks when IM-31 lands. Every entry here is a normal card, also for a task that starts and is due the same day.
+  - **Scheduled:** start-day entries of tasks with a start date, plus repeating tasks with no start date on their due day (`17:00 · Every week`, without the word Due). Only the real next occurrence shows, never a projection. Every entry here is a normal card, also for a task that starts and is due the same day.
   - **Due only:** due-day entries of tasks with a due date.
 - **Sort within a day:** same as Today (timed first by start time, then priority (High → Low), then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
@@ -129,7 +129,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
     - Overdue rows: red
     - Start-only passed: `Planned {date} · HH:MM` in tertiary ink
     - In Overdue, Search and No date, the meta line starts with the due date (`Wed 21 Oct`)
-    - Project dot and name · reminder icon · repeat icon
+    - Project dot and name · reminder icon · repeat icon. An open repeating task shows the icon with its text in blue (`Every week`, or the calendar rule's description). A completed one keeps the plain icon.
   - Priority flag for High (danger) and Medium (warning). Low gets no flag
 - **Interaction:** tapping the row opens details. Tapping the checkbox completes it (TK). There are no swipe gestures, which avoids conflicts with the browser's back gesture.
 - **A row with a sync conflict** shows a small "Changed on another device" marker until opened (AP).

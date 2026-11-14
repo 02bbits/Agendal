@@ -224,6 +224,52 @@ describe("Complete a task (TK-1, WF-06)", () => {
     expect(screen.getByText("0 of 3 done")).toBeTruthy();
   });
 
+  it("T-TK-106: toast Undo after completing a repeating task removes the generated row", async () => {
+    const rep = task({
+      id: "t-rep",
+      title: "Daily standup",
+      due_date: TODAY,
+      repeat: "daily",
+    });
+    const nextTask = task({
+      id: "t-next",
+      title: "Daily standup next",
+      due_date: TODAY,
+      repeat: "daily",
+      previous_occurrence_id: "t-rep",
+    });
+
+    const { wrap, memory } = setup([rep]);
+    vi.spyOn(memory.api, "complete").mockResolvedValueOnce({
+      task: { ...rep, done: true, done_at: "2026-10-23T01:12:00Z" },
+      next: nextTask,
+    });
+    vi.spyOn(memory.api, "reopen").mockResolvedValueOnce({
+      task: { ...rep, done: false, done_at: null },
+      next: nextTask,
+    });
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Complete Daily standup" }),
+    );
+
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "Complete Daily standup next",
+      }),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() =>
+      expect(screen.queryByText("Daily standup next")).toBeNull(),
+    );
+    expect(
+      screen.getByRole("checkbox", { name: "Complete Daily standup" }),
+    ).toBeTruthy();
+  });
+
   it("reverts the row and offers Retry when the server rejects it (UX-01)", async () => {
     const { wrap, memory } = setup(seed());
     render(wrap(<TodayList />));
@@ -514,7 +560,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
       });
     });
 
-    expect(screen.getByText("Recurring next instance")).toBeTruthy();
+    expect(await screen.findByText("Recurring next instance")).toBeTruthy();
   });
 
   it("bug 3: a field changed while complete is in flight survives its failure (Refs #21)", async () => {

@@ -75,19 +75,58 @@ final class TaskLifecycle
         return true;
     }
 
+    /**
+     * Delete with repeating task scope ('one' or 'future').
+     * When scope is 'one' on an uncompleted repeating task, creates the next occurrence.
+     *
+     * @return array{deleted: bool, next: Task|null}
+     */
+    public function deleteScope(Task $task, ?string $scope = null, ?string $at = null): array
+    {
+        return DB::transaction(function () use ($task, $scope, $at): array {
+            $locked = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            $next = null;
+            if ($scope === 'one' && ! $locked->done) {
+                $next = $this->recurrence->next($locked, restoreDeleted: true);
+                if ($next?->trashed()) {
+                    $next = null;
+                }
+            }
+
+            $deleted = $this->delete($locked, $at);
+
+            return ['deleted' => $deleted, 'next' => $next];
+        });
+    }
+
     /** Undoes a delete. False when a later `deleted` stamp already won. */
     public function restore(Task $task, ?string $at = null): bool
     {
-        if (! $task->trashed() || ! $this->wins($task, $at)) {
-            return false;
-        }
-        if (! $task->done) {
-            OpenTaskLimit::ensureRoom();
-        }
-        $this->stamp($task, $at);
-        $task->restore();
+        return DB::transaction(function () use ($task, $at): bool {
+            $locked = Task::withTrashed()->whereKey($task->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->trashed() || ! $this->wins($locked, $at)) {
+                return false;
+            }
+            if (! $locked->done) {
+                $child = Task::withTrashed()
+                    ->where('previous_occurrence_id', $locked->id)
+                    ->lockForUpdate()
+                    ->first();
+                if ($child !== null && ! $child->done && ! $child->trashed()) {
+                    $fields = $child->field_updated_at ?? [];
+                    $fields['deleted'] = Stamp::of($this->patcher->resolveEffectiveAt($at));
+                    $child->field_updated_at = $fields;
+                    $child->save();
+                    $child->delete();
+                }
+                OpenTaskLimit::ensureRoom();
+            }
+            $this->stamp($locked, $at);
+            $locked->save();
+            $locked->restore();
 
-        return true;
+            return true;
+        });
     }
 
     private function wins(Task $task, ?string $at): bool

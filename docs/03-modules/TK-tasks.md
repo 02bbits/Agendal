@@ -72,14 +72,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - **Next occurrence ([Q20](../08-project/open-questions.md#q20)):**
   - Shifting: the next occurrence shifts start date and due date together by the period, keeping the gap between them and both times (`start_time`, `due_time`).
-  - It comes from the **due date** (or start date if start only), not the completion date. It is the first date in the series **after the current date and on or after today**. Missed occurrences are skipped, so they never pile up as overdue.
+  - It comes from the **start date** (or the due date if the task has no start date), not the completion date. The due date then keeps the same number of days after the start, so at month ends it can land on a different day of the month. It is the first date in the series **after the current date** whose due date is **on or after today**. Missed occurrences are skipped, so they never pile up as overdue. A start date may still be in the past: the task then shows as in progress.
+  - A gap longer than the repeat period is allowed: the next occurrence overlaps the old dates.
   - Daily progress on a long task = Repeat daily until the due date (existing UNTIL support).
 - **Anchor:** each series keeps `repeat_anchor`, its first start date when there is one, else the due date.
   - Enum-only monthly schedules use the anchor's day, capped at the month's last day: 31 Jan → 28 Feb → 31 Mar.
   - Enum-only yearly schedules on 29 Feb use 28 Feb in non-leap years.
 - **What the next occurrence copies:** title, project, priority, shifted start date, shifted due date, start time, due time, reminder offset, repeat frequency/rule, notes, anchor and `created_by`. It sets `previous_occurrence_id` (used by RV undo).
 - **Delete** asks `task.repeat_scope_title`:
-  - **This task only:** deletes this occurrence and creates the next one, so the series continues.
+  - **This task only:** deletes this occurrence and creates the next one, so the series continues. Undo brings it back and removes that next one. A completed occurrence already has its next one, so nothing new is made.
   - **This and all future:** deletes this occurrence. No future ones exist yet, so the series ends.
   - Past completed occurrences are never touched.
 - **Edit scope:** an edit applies to this occurrence and is carried into every later one, because each copies the previous one. There is no "edit all" dialog, since only one open occurrence ever exists.
@@ -105,6 +106,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Skips done or deleted tasks, and reminders more than 10 minutes late (after downtime, a burst of stale reminders helps nobody).
 - **Notification:** the title is the task title. The body is `Mon 09:00 · SQL Course`. Tapping it opens Task details.
 - **Dead subscriptions:** a push service answering `404`/`410` deletes that subscription.
+- **Devices:** a subscription belongs to the signed-in user, and an endpoint signing in to another account moves to it. Sign-out removes this device's subscription. A signed-in device that already has permission subscribes again when the app loads, with no prompt.
+- **Setup:** sending needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` on the server, and the scheduler running (`reminders:send` every minute). Without the keys the job claims nothing, so no reminder is lost. The public key reaches the browser from `GET /push-subscriptions/key`.
 - **Recomputing `remind_at`:** whenever the due date, start time, reminder or the user's time zone changes, and for each new occurrence.
 
 ## 3. State matrix
@@ -128,7 +131,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e6"></a>TK-E6 | Toast Undo after completing a repeating task | Reopens it and deletes the generated occurrence | T-TK-106 |
 | <a id="tk-e7"></a>TK-E7 | Completed on two devices offline | Per-field LWW on `done`. Only one next occurrence: it is created by the server when `done` first becomes true, and is unique on `previous_occurrence_id` | T-TK-107, OFF-20 |
 | <a id="tk-e8"></a>TK-E8 | Edited on device A, deleted on device B | `deleted` is a field ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)). The later write wins. If the delete wins, A's edit is dropped and A shows `app.conflict` | T-TK-108, OFF-21 |
-| <a id="tk-e9"></a>TK-E9 | Due time cleared while the start time remains | Allowed (the task keeps its due date, with no deadline time) | T-TK-109 |
+| <a id="tk-e9"></a>TK-E9 | A task with a start time and no due time | Allowed: the due time is always optional, and the task keeps its due date | T-TK-109 |
 | <a id="tk-e10"></a>TK-E10 | The start or due date moves to a day where the start time or due time would fall in a DST gap | [ADR-006](../07-architecture/decisions/ADR-006-time-zones.md) shifts to the next valid minute. Floating time is shown as entered | T-TK-110 |
 | <a id="tk-e11"></a>TK-E11 | Time zone changes (travel) | Floating times unchanged. `remind_at` recomputed in the new zone | T-TK-111 |
 | <a id="tk-e12"></a>TK-E12 | The scheduler is down for 30 minutes | Reminders over 10 minutes late are skipped. The others are sent once | T-TK-112, PERF-03 |
@@ -143,7 +146,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`.
+`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`, `task.starts_at`, `task.starts_today`, `task.due_at_time`.
 
 ## 6. Accessibility
 
@@ -161,12 +164,10 @@ Task IDs are **UUID v7, generated by the client**, so tasks can be created offli
 | `POST /tasks` | `{id, title, start_date?, due_date?, start_time?, due_time?, priority?, project_id?, reminder?, repeat?, repeat_rule?, notes?}` | `201` task. A replay of a known `id` → `200` | `422` field errors, `task.start_after_due`, `task.limit`. `404` for someone else's `project_id` |
 | `GET /tasks/{id}` | — | `200` | `404` |
 | `PATCH /tasks/{id}` | Changed fields (including `start_date`, `due_time`), plus `at` per field ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)) | `200` task | `422` field errors, `task.start_after_due`, `404` |
-| `DELETE /tasks/{id}?scope=one\|future` | — | `204` | `404`. `422` if `scope` is missing on a repeating task |
+| `DELETE /tasks/{id}?scope=one\|future` | — | `204`, or `200 {next}` when `scope=one` made the next occurrence | `404`. `422` if `scope` is missing on a repeating task |
 | `POST /tasks/{id}/complete` | `{at}` | `200 {task, next?}`; add/merge the generated `next` by id | `404`, `422` field errors |
 | `POST /tasks/{id}/reopen` | `{at}` | `200 {task, next?}`; remove the withdrawn `next` by id | `404`, `422` field errors or `task.limit` |
 | `POST /tasks/{id}/restore` | — | `200` (toast Undo for a delete) | `404`. `409 task.purged` |
-| `POST /push-subscriptions` | `{endpoint, keys}` | `201` | `422` (not HTTPS) |
-| `DELETE /push-subscriptions` | `{endpoint}` | `204` | — |
 
 Offline edits use `POST /sync/patches` ([ADR-004](../07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md)/005) with the same field rules.
 

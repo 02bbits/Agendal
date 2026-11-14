@@ -395,6 +395,32 @@ describe("Toast", () => {
     );
   });
 
+  it("dismisses on horizontal swipe / drag past threshold", () => {
+    const onDismiss = vi.fn();
+    const { container } = render(
+      <Toast
+        toast={{
+          id: "toast-swipe",
+          message: "Swipeable toast message",
+        }}
+        onDismiss={onDismiss}
+      />,
+    );
+    const alert = container.querySelector(".alert")!;
+    expect(alert).toBeTruthy();
+
+    // Swipe right past 70px threshold via touch
+    fireEvent.touchStart(alert, {
+      touches: [{ clientX: 100 }],
+    });
+    fireEvent.touchMove(alert, {
+      touches: [{ clientX: 200 }],
+    });
+    fireEvent.touchEnd(alert);
+
+    expect(onDismiss).toHaveBeenCalledWith("toast-swipe");
+  });
+
   it("close button is hidden on mobile and shown on desktop", () => {
     render(<ToastHarness onUndo={() => {}} initial={completed(() => {})} />);
     const closeBtn = screen.getByRole("button", { name: "Close" });
@@ -419,7 +445,6 @@ describe("Toast", () => {
     fireEvent.touchEnd(alert);
     expect(onDismiss).toHaveBeenCalledWith(1);
   });
-
   it("centers toast on mobile and aligns left on desktop with bottom offset", () => {
     const { container } = render(
       <Toast toast={completed(() => {})} onDismiss={() => {}} />,

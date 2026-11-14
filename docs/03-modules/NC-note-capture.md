@@ -115,8 +115,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Fields:**
   - Title (required, 1–200 characters, trimmed). Helper text `task.title_only`.
   - Due chips: Today, Tomorrow, Next week (Monday of next week, as [NU-E10](NU-note-understanding.md#nu-e10)), No date, Pick date… (native `<input type="date">`).
+  - Repeat: Never (default), Daily, Weekly, Monthly, Yearly, under Start date. Choosing one with No date moves the due chip to Today. Choosing No date with a repeat on and no start date sets it back to Never.
   - Priority chips: Low, Medium, High.
-  - Project picker: No project, the user's projects, New project….
+  - Project picker: No project, the user's projects, New project…. New project opens over the sheet and comes back with the project selected.
 - **Defaults depend on where the sheet opened ([Q20](../08-project/open-questions.md#q20)):**
 
 | Opened from | Due | Project |

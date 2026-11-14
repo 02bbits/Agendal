@@ -97,7 +97,7 @@ it('does not resurrect a deliberately deleted next occurrence on a completion re
     $created = $this->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'gym every Monday', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertCreated();
     $id = $created->json('changes.0.task.id');
     $child = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->json('next.id');
-    $this->deleteJson("/api/v1/tasks/$child?scope=one")->assertNoContent();
+    $this->deleteJson("/api/v1/tasks/$child?scope=one")->assertOk();
     $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-01T15:11:01Z'])->assertOk()->assertJsonMissingPath('next');
     expect(Task::withTrashed()->findOrFail($child)->trashed())->toBeTrue();
 });

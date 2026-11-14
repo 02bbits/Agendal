@@ -92,6 +92,8 @@ export function NewTaskSheet({
             onStartDateChange={form.setStartDate}
             startTime={form.startTime}
             onStartTimeChange={form.setStartTime}
+            repeat={form.repeat}
+            onRepeatChange={form.handleRepeatChange}
             error={form.datesError}
             timeFormat={timeFormat}
             weekStart={weekStart}

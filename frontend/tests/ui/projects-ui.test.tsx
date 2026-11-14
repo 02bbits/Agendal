@@ -11,6 +11,8 @@ import {
   type Project,
   type Task,
 } from "../../src/ui";
+import { ProjectProgressBar } from "../../src/ui/features/projects/ProjectProgressBar";
+import { ProjectCard } from "../../src/ui/features/projects/ProjectCard";
 import { projects as seedProjects, task } from "./fixtures";
 import { expectAxeCleanInBothThemes } from "./axe";
 
@@ -536,5 +538,70 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
     const deleteBtn = screen.getByRole("button", { name: "Delete" });
     await userEvent.click(deleteBtn);
     expect(chosenAction).toBe("delete");
+  });
+
+  it("focuses the Cancel button initially (A11Y-82)", () => {
+    render(
+      <DeleteProjectDialog
+        open
+        project={seedProjects[2]!}
+        taskCount={0}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const cancelBtn = screen.getByRole("button", { name: "Cancel" });
+    expect(document.activeElement).toBe(cancelBtn);
+  });
+});
+
+describe("Project progress accessibility (A11Y-81)", () => {
+  it("ProjectProgressBar has progressbar role and single reading", () => {
+    const { container } = render(
+      <ProjectProgressBar colour="blue" done={3} total={5} />,
+    );
+    const pb = screen.getByRole("progressbar");
+    expect(pb.getAttribute("aria-valuenow")).toBe("3");
+    expect(pb.getAttribute("aria-valuemin")).toBe("0");
+    expect(pb.getAttribute("aria-valuemax")).toBe("5");
+    expect(pb.getAttribute("aria-valuetext")).toBe("3 of 5 tasks completed");
+    expect(container.querySelector("p")?.getAttribute("aria-hidden")).toBe(
+      "true",
+    );
+  });
+
+  it("A11Y-81: ProjectCard has progressbar role and single reading", () => {
+    render(
+      <ProjectCard
+        name={seedProjects[0]!.name}
+        colour={seedProjects[0]!.colour}
+        progress={{ done: 2, total: 4 }}
+      />,
+    );
+    const pb = screen.getByRole("progressbar");
+    expect(pb.getAttribute("aria-valuenow")).toBe("2");
+    expect(pb.getAttribute("aria-valuemin")).toBe("0");
+    expect(pb.getAttribute("aria-valuemax")).toBe("4");
+    expect(pb.getAttribute("aria-valuetext")).toBe("2 of 4 tasks completed");
+  });
+
+  it("A11Y-80: colour swatches are a radio group with colour names", () => {
+    render(
+      <ProjectSheet
+        open
+        projects={[]}
+        onClose={() => {}}
+        onCreate={(p) =>
+          Promise.resolve({ ...p, created_at: "", updated_at: "" })
+        }
+      />,
+    );
+    const group = screen.getByRole("group", { name: t("project.colour") });
+    expect(group).toBeTruthy();
+    const radios = within(group).getAllByRole("radio");
+    expect(radios.length).toBeGreaterThan(0);
+    for (const radio of radios) {
+      expect(radio.getAttribute("aria-label")).toBeTruthy();
+    }
   });
 });
