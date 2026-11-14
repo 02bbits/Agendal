@@ -26,7 +26,9 @@ import {
   Toast,
   useMediaQuery,
   applyThemePalette,
+  clearThemePalette,
   type AccountSettings,
+  type SettingsTab,
   type Navigate,
   type NoteResult,
   type Project,
@@ -35,7 +37,7 @@ import {
   type ToastData,
 } from "@/ui";
 import { cx } from "@/ui/components/cx";
-import { api, SESSION_EXPIRED } from "@/lib/api";
+import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { CONFLICT, forgetConflicts } from "@/lib/conflicts";
 import { readMe, saveMe } from "@/lib/localStore";
@@ -63,10 +65,16 @@ export interface SignedInUser {
   id: number;
   email: string;
   display_name: string | null;
+  email_verified_at?: string | null;
   theme?: AccountSettings["theme"];
   week_start?: AccountSettings["weekStart"];
   time_format?: AccountSettings["timeFormat"];
   remember_device?: boolean;
+  timezone?: string;
+  timezone_auto?: boolean;
+  two_factor_enabled?: boolean;
+  theme_palette?: string;
+  page_view?: "flat" | "full";
 }
 
 // The settings as `PATCH /me` names them
@@ -75,6 +83,10 @@ const SETTING_FIELDS = {
   weekStart: "week_start",
   timeFormat: "time_format",
   rememberDevice: "remember_device",
+  timezone: "timezone",
+  timezoneAuto: "timezone_auto",
+  pageView: "page_view",
+  palette: "theme_palette",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -117,22 +129,31 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timeFormat: "24h",
   rememberDevice: true,
   pageView: "flat",
+  palette: "default",
+  timezone: "UTC",
+  timezoneAuto: true,
+};
+
+// The server's value wins. Only an answer without the field (an older API) falls back to this
+// device's copy, which sign-out and a different account wipe
+const storedPageView = (): AccountSettings["pageView"] => {
+  try {
+    return localStorage.getItem(PAGE_VIEW_KEY) === "full" ? "full" : "flat";
+  } catch {
+    return "flat";
+  }
 };
 
 const settingsOf = (me: SignedInUser): AccountSettings => {
-  const localPageView =
-    typeof window !== "undefined"
-      ? (localStorage.getItem(PAGE_VIEW_KEY) as AccountSettings["pageView"])
-      : undefined;
   return {
     theme: me.theme ?? DEFAULT_SETTINGS.theme,
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
     timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-    pageView:
-      localPageView === "full" || localPageView === "flat"
-        ? localPageView
-        : DEFAULT_SETTINGS.pageView,
+    pageView: me.page_view ?? storedPageView(),
+    palette: me.theme_palette ?? "default",
+    timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
+    timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
   };
 };
 
@@ -162,6 +183,8 @@ interface AppFrameValue {
   };
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
+  /** Sets or updates the signed-in user in AppFrame state. */
+  setUser: (user: SignedInUser | null) => void;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
   signOut: (everywhere?: boolean) => Promise<void>;
 }
@@ -197,12 +220,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
             prev.pageView === saved ? prev : { ...prev, pageView: saved },
           );
         });
-        document.documentElement.setAttribute("data-page-view", saved);
-      } else {
-        document.documentElement.setAttribute("data-page-view", "flat");
       }
     } catch {}
   }, []);
+
+  // The page view on <html> follows the settings. Before anything is read, /theme.js has already
+  // set the saved one and the defaults would undo it (sign-out sets "flat" itself)
+  useEffect(() => {
+    if (settings === DEFAULT_SETTINGS) return;
+    document.documentElement.setAttribute(
+      "data-page-view",
+      settings.pageView ?? "flat",
+    );
+    try {
+      localStorage.setItem(PAGE_VIEW_KEY, settings.pageView ?? "flat");
+    } catch {}
+  }, [settings]);
 
   useEffect(() => {
     if (pathname === ROUTES.account) {
@@ -211,6 +244,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
       document.documentElement.removeAttribute("data-account-page");
     }
   }, [pathname]);
+
+  const isAuthPage =
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname === ROUTES.welcome ||
+    pathname === ROUTES.verify;
+  useEffect(() => {
+    if (isAuthPage) {
+      document.documentElement.setAttribute("data-auth-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-auth-page");
+    }
+  }, [isAuthPage]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -245,7 +290,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
           setUser(me);
           if (settingsEdits.current === editsBefore)
             setSettings(settingsOf(me));
-          if (signedOutPage) router.replace(ROUTES.inbox);
+          if (me.email_verified_at === null) {
+            if (pathname !== ROUTES.verify) router.replace(ROUTES.verify);
+          } else {
+            if (pathname === ROUTES.verify) router.replace(ROUTES.inbox);
+            else if (signedOutPage) router.replace(ROUTES.inbox);
+          }
         } else if (response.status === 401) {
           setUser(null);
           if (!publicPage)
@@ -259,6 +309,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       current = false;
     };
   }, [pathname, router, setUser]);
+
+  // An unverified account can only stay on /verify. The way out of /verify for a verified user is
+  // the session check above, so a code accepted on /verify can still open Setup, not Inbox
+  useEffect(() => {
+    if (user?.email_verified_at === null && pathname !== ROUTES.verify)
+      router.replace(ROUTES.verify);
+  }, [user, pathname, router]);
+
+  // A 403 with code auth.email_unverified from any API call replaces to /verify
+  useEffect(() => {
+    const unverified = () => {
+      if (pathname !== ROUTES.verify) {
+        router.replace(ROUTES.verify);
+      }
+    };
+    window.addEventListener(EMAIL_UNVERIFIED, unverified);
+    return () => window.removeEventListener(EMAIL_UNVERIFIED, unverified);
+  }, [pathname, router]);
 
   // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
   // that tab's root instead of out of the app (AP §2.4)
@@ -302,10 +370,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const openSettings = useCallback(() => {
-    if (pathname !== ROUTES.account) setSettingsOpen(true);
-  }, [pathname]);
-  const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | undefined>(
+    undefined,
+  );
+  const openSettings = useCallback(
+    (tab?: SettingsTab) => {
+      if (pathname !== ROUTES.account) {
+        setSettingsTab(tab);
+        setSettingsOpen(true);
+      }
+    },
+    [pathname],
+  );
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    setSettingsTab(undefined);
+  }, []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
   // Closing the editor takes its history entry off with history.back(), which is only done a
@@ -368,15 +448,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
           before[key as keyof AccountSettings],
         ]),
       );
+      if (patch.timezone && patch.timezoneAuto === undefined) {
+        patch.timezoneAuto = false;
+      }
       settingsRef.current = { ...before, ...patch };
       setSettings(settingsRef.current);
       if (patch.pageView && typeof window !== "undefined") {
         try {
           localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
-          document.documentElement.setAttribute(
-            "data-page-view",
-            patch.pageView,
-          );
         } catch {}
       }
       const body = Object.fromEntries(
@@ -394,7 +473,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         body: JSON.stringify(body),
       })
         .then((response) => {
-          if (response.ok || response.status === 401) return;
+          if (response.ok || response.status === 401) {
+            if (response.ok && userRef.current) {
+              void saveMe({ ...userRef.current, ...body });
+            }
+            return;
+          }
           settingsRef.current = { ...settingsRef.current, ...revert };
           setSettings(settingsRef.current);
           showToast(t("error.generic", { request_id: "" }));
@@ -435,6 +519,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
+      clearThemePalette();
+      document.documentElement.setAttribute("data-page-view", "flat");
       forgetNotes();
       forgetConflicts();
       clearRecent();
@@ -469,6 +555,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     // Until /me answers or the user picks one, these are only defaults and would undo what
     // /theme.js applied
     if (!user && settingsEdits.current === 0) return;
+    applyThemePalette(settings.palette ?? "default");
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
@@ -481,8 +568,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
     try {
       localStorage.setItem(THEME_KEY, settings.theme);
-      const palette = localStorage.getItem("agendal.theme_palette");
-      if (palette) applyThemePalette(palette);
     } catch {
       // Private mode: the theme just flashes on the next load
     }
@@ -541,6 +626,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     }),
     [
@@ -556,6 +642,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     ],
   );
@@ -756,10 +843,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
-          PUBLIC_PATHS.includes(pathname)
+          PUBLIC_PATHS.includes(pathname) ||
+          pathname === ROUTES.welcome ||
+          pathname === ROUTES.verify
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
+                email: user?.email ?? "",
+                theme: settings.theme,
+                onThemeChange: (theme) => changeSettings({ theme }),
+                onSignOut: () => signOut(),
                 counts: sidebarCounts,
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
@@ -773,11 +866,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {settingsOpen && pathname !== ROUTES.account && (
           <AccountScreen
             portal={true}
+            initialTab={settingsTab ?? "general"}
             name={user?.display_name ?? ""}
             email={user?.email ?? ""}
             settings={settings}
             onChange={changeSettings}
             onBack={closeSettings}
+            showToast={showToast}
+            twoFactorEnabled={user?.two_factor_enabled}
+            onTwoFactorChange={(enabled) =>
+              setUser(user ? { ...user, two_factor_enabled: enabled } : null)
+            }
             onSignOut={() => {
               closeSettings();
               signOut();

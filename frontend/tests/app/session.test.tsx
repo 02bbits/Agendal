@@ -4,9 +4,10 @@ import { AppFrame, useAppFrame } from "../../src/app/AppFrame";
 import { api } from "../../src/lib/api";
 
 // IM-18: a session that ends elsewhere (AA-E6, UX-44) and a different account on this device (AA-E7)
+let currentPathname = "/upcoming";
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/upcoming",
+  usePathname: () => currentPathname,
   useRouter: () => router,
 }));
 
@@ -39,6 +40,7 @@ function open() {
 }
 
 beforeEach(() => {
+  currentPathname = "/upcoming";
   router.replace.mockClear();
   indexedDBMock.deleteDatabase.mockClear();
   meReply = () => me(1);
@@ -116,5 +118,168 @@ describe("a different account on this device (AA-E7)", () => {
     );
     expect(indexedDBMock.deleteDatabase).not.toHaveBeenCalled();
     expect(localStorage.getItem("draft")).toBe("buy milk");
+  });
+
+  it("after signOut, --color-primary is empty and data-page-view is flat (issue #149)", async () => {
+    document.documentElement.style.setProperty("--color-primary", "#db4c3f");
+    document.documentElement.style.setProperty(
+      "--color-primary-tint",
+      "#db4c3f22",
+    );
+    document.documentElement.setAttribute("data-page-view", "full");
+    localStorage.setItem("agendal.theme_palette", "agendal");
+    localStorage.setItem("agendal.page_view", "full");
+
+    function SignOutTrigger() {
+      const { signOut } = useAppFrame();
+      return <button onClick={() => void signOut()}>Sign out</button>;
+    }
+
+    render(
+      <AppFrame>
+        <Who />
+        <SignOutTrigger />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user1@example.com");
+
+    const signOutBtn = screen.getByRole("button", { name: "Sign out" });
+    signOutBtn.click();
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+  });
+
+  it("sign-out then a different account whose /me has the defaults results in no inline --color-primary and data-page-view flat", async () => {
+    meReply = () =>
+      json(200, {
+        id: 1,
+        email: "user1@example.com",
+        display_name: "User 1",
+        theme_palette: "lavender",
+        page_view: "full",
+      });
+
+    function SignOutTrigger() {
+      const { signOut } = useAppFrame();
+      return <button onClick={() => void signOut()}>Sign out</button>;
+    }
+
+    const { unmount } = render(
+      <AppFrame>
+        <Who />
+        <SignOutTrigger />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user1@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("#8c52ff");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "full",
+      );
+    });
+
+    const signOutBtn = screen.getByRole("button", { name: "Sign out" });
+    signOutBtn.click();
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+
+    unmount();
+
+    // Now a different account signs in with defaults
+    meReply = () =>
+      json(200, {
+        id: 2,
+        email: "user2@example.com",
+        display_name: "User 2",
+        theme_palette: "default",
+        page_view: "flat",
+      });
+
+    render(
+      <AppFrame>
+        <Who />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user2@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+  });
+});
+
+describe("email verification redirects (issue #149)", () => {
+  it("when a signed-in user has email_verified_at null, any page except /verify replaces to /verify", async () => {
+    meReply = () =>
+      json(200, {
+        id: 1,
+        email: "user1@example.com",
+        display_name: "User 1",
+        email_verified_at: null,
+      });
+    open();
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/verify");
+    });
+  });
+
+  it("a 403 with code auth.email_unverified from any API call replaces to /verify", async () => {
+    open();
+    await screen.findByText("user1@example.com");
+
+    otherReply = () =>
+      json(403, {
+        error: {
+          code: "auth.email_unverified",
+          message: "Verify your email to continue.",
+        },
+      });
+
+    await api("/tasks", { method: "POST" });
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/verify");
+    });
+  });
+
+  it("a verified user opening /verify goes to Inbox", async () => {
+    currentPathname = "/verify";
+
+    meReply = () =>
+      json(200, {
+        id: 1,
+        email: "user1@example.com",
+        display_name: "User 1",
+        email_verified_at: "2026-11-12T10:00:00Z",
+      });
+    open();
+
+    await waitFor(() => {
+      expect(router.replace).toHaveBeenCalledWith("/");
+    });
   });
 });

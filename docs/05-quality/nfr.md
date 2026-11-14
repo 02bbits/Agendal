@@ -43,6 +43,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 | Create account | 5 / hour per IP | IP |
 | Password reset request | 3 / hour per email, 10 / hour per IP. Resend after 45 s | email, IP |
 | Setting the new password (reset link) | 5 / min and 20 / hour per IP | IP |
+| 6-digit codes ([AA §2.8](../03-modules/AA-account-access.md#28-verify-email-149), [§2.9](../03-modules/AA-account-access.md#29-two-step-verification-by-email-149)) | Entering: 5 tries per code, then a new code is needed. Sending: 60 s apart, 10 per 30 minutes per account, then 30 minutes. The sign-in code also 30 tries per 10 minutes per IP. Turning two-step on or off 5 per 2 minutes | user, IP |
 | `POST /notes` | 30 / min and 300 / day per user | user |
 | LLM fallback | 20 notes / day per user (beyond that, rules only, with no error to the user) | user |
 | `POST /files/extract` | 10 / hour and 30 / day per user | user |

@@ -9,7 +9,7 @@ import {
   SignInScreen,
   safeReturnPath,
   t,
-  type SignInFailure,
+  type SignInResult,
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 
@@ -37,7 +37,7 @@ const noSubscribe = () => () => {};
 
 /** Sign in (IM-12): POST /auth/login, then the requested screen or Inbox. */
 export default function SignInPage() {
-  const { navigate } = useAppFrame();
+  const { navigate, setUser } = useAppFrame();
   const offline = useOffline();
   const storedLock = useSyncExternalStore(noSubscribe, readLock, () => null);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
@@ -46,7 +46,7 @@ export default function SignInPage() {
     email: string;
     password: string;
     remember: boolean;
-  }): Promise<SignInFailure | void> {
+  }): Promise<SignInResult> {
     let response: Response;
     try {
       response = await api("/auth/login", {
@@ -58,7 +58,22 @@ export default function SignInPage() {
       return { form: t("auth.offline") };
     }
 
+    if (response.status === 202) {
+      const data = await response.json().catch(() => null);
+      if (data?.two_factor) {
+        return { twoFactor: true, email: data.email ?? "" };
+      }
+    }
+
     if (response.ok) {
+      const data = await response.json().catch(() => null);
+      if (data?.user) {
+        setUser(data.user);
+      }
+      if (data?.user?.email_verified_at === null) {
+        navigate(ROUTES.verify);
+        return;
+      }
       const next = new URLSearchParams(window.location.search).get("next");
       navigate(safeReturnPath(next));
       return;
@@ -80,9 +95,90 @@ export default function SignInPage() {
     };
   }
 
+  async function challengeTwoFactor(code: string) {
+    try {
+      const response = await api("/auth/two-factor/challenge", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+      });
+      const body = await response.json().catch(() => null);
+      if (response.ok) {
+        if (body?.user) {
+          setUser(body.user);
+        }
+        return { ok: true, user: body?.user };
+      }
+      if (response.status === 429) {
+        const seconds =
+          Number(body?.error?.retry_after) ||
+          Number(response.headers.get("Retry-After")) ||
+          60;
+        return {
+          ok: false,
+          status: 429,
+          code: body?.error?.code,
+          retryAfter: seconds,
+        };
+      }
+      return {
+        ok: false,
+        status: response.status,
+        code: body?.error?.code,
+        message:
+          body?.error?.fields?.code?.[0] ??
+          body?.error?.message ??
+          t("auth.verify_wrong"),
+      };
+    } catch {
+      return { ok: false, status: 500, message: t("error.generic") };
+    }
+  }
+
+  async function resendTwoFactor() {
+    try {
+      const response = await api("/auth/two-factor/resend", {
+        method: "POST",
+      });
+      if (response.ok) {
+        return { ok: true };
+      }
+      const body = await response.json().catch(() => null);
+      const retryAfter =
+        Number(body?.error?.retry_after) ||
+        Number(response.headers.get("Retry-After")) ||
+        45;
+      return {
+        ok: false,
+        status: response.status,
+        code: body?.error?.code,
+        retryAfter,
+        message:
+          response.status === 429
+            ? t("error.rate_limited", { seconds: retryAfter })
+            : (body?.error?.message ?? t("error.generic")),
+      };
+    } catch {
+      return { ok: false, status: 500, message: t("error.generic") };
+    }
+  }
+
+  function handleTwoFactorSuccess(user: unknown) {
+    const userObj = user as { email_verified_at?: string | null } | null;
+    if (userObj?.email_verified_at === null) {
+      navigate(ROUTES.verify);
+      return;
+    }
+    const next = new URLSearchParams(window.location.search).get("next");
+    navigate(safeReturnPath(next));
+  }
+
   return (
     <SignInScreen
       onSubmit={signIn}
+      onTwoFactorChallenge={challengeTwoFactor}
+      onTwoFactorResend={resendTwoFactor}
+      onTwoFactorSuccess={handleTwoFactorSuccess}
       lockedUntil={lockedUntil ?? storedLock}
       forgotPasswordHref={ROUTES.forgotPassword}
       createAccountHref={ROUTES.createAccount}

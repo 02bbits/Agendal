@@ -6,7 +6,7 @@
 "Today", "tonight", overdue, the Inbox, reminders at 09:00 and repeating tasks all depend on the user's local time. The V2 data model has no time zone. Users travel, phones change zones, and DST shifts clocks.
 
 ## Decision
-- **Store the zone.** `users.timezone` holds an IANA name (e.g. `Asia/Ho_Chi_Minh`). It is set at sign-up from `Intl.DateTimeFormat().resolvedOptions().timeZone`. The client sends `X-Timezone` on every request, and the server updates the stored zone when it changes.
+- **Store the zone.** `users.timezone` holds an IANA name (e.g. `Asia/Ho_Chi_Minh`). It is set at sign-up from `Intl.DateTimeFormat().resolvedOptions().timeZone`. The client sends `X-Timezone` on every request, and the server updates the stored zone when it changes. A user can instead pick a zone (setup step or Settings, #149): `users.timezone_auto` turns false, the header is ignored and the chosen zone stays until they pick "Use this device's time zone". Reminder times are recomputed either way.
 - **Floating task times.** `due_date`, `start_time` and `end_time` are stored as **local wall-clock values with no zone**. "Quiz Mon 09:00" stays 09:00 wherever the user is.
 - **Absolute reminders.** `remind_at` is stored in UTC. It is recomputed from the floating time and the current zone whenever the task or the zone changes. The scheduler queries `remind_at` only.
 - **"Now" for a note** is the time the note was **written**, in the zone it was written in. The client sends `written_at` and `timezone` with each note, so an offline "tonight" means the night it was written ([ADR-003](ADR-003-offline-note-queue-and-idempotency.md)).

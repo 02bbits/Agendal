@@ -2,10 +2,17 @@ import { useRef, useState, type FormEvent } from "react";
 import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
+import { LockIcon, MailIcon } from "../../components/icons";
 import { Link } from "../shell/Link";
+import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
+import { PasswordStrength } from "./PasswordStrength";
 import type { Navigate } from "../shell/routes";
-import { normalizeEmail, signUpErrors } from "./validation";
+import {
+  hasNonKeyboardCharacters,
+  normalizeEmail,
+  signUpErrors,
+} from "./validation";
 
 export interface SignUpFailure {
   /** Server messages per field, already in copy-catalog text. */
@@ -45,13 +52,21 @@ export function CreateAccountScreen({
   const emailError =
     server.fields?.email ??
     (touched.email && local.email ? t(local.email) : undefined);
+  // Set when Create account is pressed with characters an English keyboard does not type (Vietnamese typing), cleared on edit
+  const [accentError, setAccentError] = useState(false);
   const passwordError =
     server.fields?.password ??
+    (accentError ? t("auth.password_accented") : undefined) ??
     (touched.password && local.password ? t(local.password) : undefined);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (!valid || busy || offline) return;
+    if (hasNonKeyboardCharacters(password)) {
+      setAccentError(true);
+      passwordRef.current?.focus();
+      return;
+    }
     setBusy(true);
     const failure = await onSubmit({ email: normalizeEmail(email), password });
     setBusy(false);
@@ -63,69 +78,100 @@ export function CreateAccountScreen({
   }
 
   return (
-    <form className="flex flex-col gap-5 pt-12" onSubmit={submit} noValidate>
-      <h1 className="m-0 text-display font-bold text-ink">
-        {t("auth.create_title")}
-      </h1>
-      <TextField
-        ref={emailRef}
-        label={t("auth.email")}
-        type="email"
-        autoComplete="email"
-        value={email}
-        error={emailError}
-        onChange={(event) => {
-          setEmail(event.target.value);
-          setServer({});
-        }}
-        onBlur={() => setTouched((current) => ({ ...current, email: true }))}
-      />
-      {server.fields?.email && (
-        <Link
-          href={signInHref}
-          navigate={navigate}
-          className="focus-ring -mt-3 self-start text-footnote text-primary link-swipe"
-        >
-          {t("auth.sign_in")}
-        </Link>
-      )}
-      <PasswordField
-        ref={passwordRef}
-        label={t("auth.password")}
-        autoComplete="new-password"
-        value={password}
-        helper={passwordError ? undefined : t("auth.password_rule")}
-        error={passwordError}
-        onChange={(event) => {
-          setPassword(event.target.value);
-          setServer({});
-        }}
-        onBlur={() => setTouched((current) => ({ ...current, password: true }))}
-      />
-      {(server.form || offline) && (
-        <p role="alert" className="m-0 text-footnote text-error">
-          {offline ? t("auth.offline") : server.form}
+    <AuthLayout>
+      <div className="text-center lg:text-left mt-6 lg:mt-0">
+        <h1 className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink">
+          {t("auth.create_title")}
+        </h1>
+        <p className="m-0 mt-1 text-footnote text-ink-secondary">
+          {t("auth.create_subtitle")}
         </p>
-      )}
-      <Button
-        type="submit"
-        size="lg"
-        fullWidth
-        busy={busy}
-        disabled={!valid || offline}
+      </div>
+      <form
+        className="mt-7 lg:mt-6 flex flex-col gap-3.5"
+        onSubmit={submit}
+        noValidate
       >
-        {t("auth.create_button")}
-      </Button>
-      <p className="m-0 text-center text-footnote text-ink-secondary">
-        {t("auth.have_account")}{" "}
-        <Link
-          href={signInHref}
-          navigate={navigate}
-          className="focus-ring text-primary link-swipe"
+        <TextField
+          ref={emailRef}
+          label={t("auth.email")}
+          type="email"
+          autoComplete="email"
+          maxLength={254}
+          value={email}
+          leading={<MailIcon size={18} />}
+          error={emailError}
+          onChange={(event) => {
+            setEmail(event.target.value);
+            setServer({});
+          }}
+          onBlur={() => setTouched((current) => ({ ...current, email: true }))}
+        />
+        {server.fields?.email && (
+          <Link
+            href={signInHref}
+            navigate={navigate}
+            className="focus-ring -mt-1 self-start text-footnote text-primary link-swipe"
+          >
+            {t("auth.sign_in")}
+          </Link>
+        )}
+        <PasswordField
+          ref={passwordRef}
+          label={t("auth.password")}
+          autoComplete="new-password"
+          value={password}
+          leading={<LockIcon size={18} />}
+          // The rule and how to make it stronger, together under the field
+          helper={
+            passwordError
+              ? undefined
+              : `${t("auth.password_rule")} ${t("auth.strength_hint_short")}`
+          }
+          error={passwordError}
+          onChange={(event) => {
+            setPassword(event.target.value);
+            setServer({});
+            setAccentError(false);
+          }}
+          aria-describedby="create-pw-strength"
+          onBlur={() =>
+            setTouched((current) => ({ ...current, password: true }))
+          }
+        />
+        {/* Strength meter, the same one as Change password (PR #153 review) */}
+        <PasswordStrength
+          id="create-pw-strength"
+          password={password}
+          hint={false}
+        />
+        {(server.form || offline) && (
+          <p role="alert" className="m-0 text-footnote text-error">
+            {offline ? t("auth.offline") : server.form}
+          </p>
+        )}
+        <Button
+          type="submit"
+          // Phones: a clear gap between the fields and the main button
+          className="mt-3 lg:mt-0"
+          size="lg"
+          fullWidth
+          busy={busy}
+          disabled={!valid || offline}
         >
-          {t("auth.sign_in")}
-        </Link>
-      </p>
-    </form>
+          {t("auth.create_button")}
+        </Button>
+        <p className="m-0 text-center text-footnote text-ink-secondary">
+          {t("auth.have_account")}{" "}
+          <Link
+            href={signInHref}
+            navigate={navigate}
+            className="focus-ring text-primary link-swipe"
+          >
+            {t("auth.sign_in")}
+          </Link>
+        </p>
+      </form>
+    </AuthLayout>
   );
 }

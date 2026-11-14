@@ -6,7 +6,8 @@ import { useAppFrame } from "../AppFrame";
 
 /** Account: appearance applies at once. Name and email come from the session check. */
 export default function AccountPage() {
-  const { back, settings, changeSettings, user, signOut } = useAppFrame();
+  const { back, settings, changeSettings, user, setUser, signOut, showToast } =
+    useAppFrame();
 
   const handleUpdateName = async (newName: string) => {
     try {
@@ -66,6 +67,11 @@ export default function AccountPage() {
         settings={settings}
         onChange={changeSettings}
         onBack={back}
+        showToast={showToast}
+        twoFactorEnabled={user?.two_factor_enabled}
+        onTwoFactorChange={(enabled) =>
+          setUser(user ? { ...user, two_factor_enabled: enabled } : null)
+        }
         // The unsynced-changes dialog arrives with the offline queue (IM-51); nothing is queued yet
         onSignOut={() => signOut()}
         onSignOutEverywhere={() => signOut(true)}

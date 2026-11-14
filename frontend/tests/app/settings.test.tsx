@@ -222,6 +222,178 @@ describe("Account settings (AP-3, AP-5)", () => {
     backdrop.dispatchEvent(touchEvent);
     expect(preventDefault).toHaveBeenCalled();
   });
+
+  it("shows 2FA switch; toggle ON calls API and toasts", async () => {
+    let twoFactorCall: unknown = null;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/auth/two-factor" && init?.method === "POST") {
+        twoFactorCall = JSON.parse(init.body as string);
+        return new Response(
+          JSON.stringify({ user: me({ two_factor_enabled: true }) }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          },
+        );
+      }
+      if (url === "/api/v1/me") {
+        return new Response(JSON.stringify(me({ two_factor_enabled: false })), {
+          status: 200,
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await screen.findByText("ann@example.com");
+
+    const twoFactorSwitch = screen.getByRole("switch", {
+      name: "Email me a code at sign-in",
+    });
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
+
+    await userEvent.click(twoFactorSwitch);
+
+    expect(twoFactorCall).toEqual({ enabled: true });
+    expect(
+      await screen.findByText("Two-step verification is on."),
+    ).toBeTruthy();
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("toggle OFF opens dialog, wrong password shows error, correct password calls API, closes dialog, toasts", async () => {
+    let twoFactorCall: unknown = null;
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/auth/two-factor" && init?.method === "POST") {
+        twoFactorCall = JSON.parse(init.body as string);
+        if (
+          (twoFactorCall as { current_password?: string }).current_password ===
+          "wrong"
+        ) {
+          return new Response(
+            JSON.stringify({
+              error: {
+                code: "auth.current_password_wrong",
+                message: "That's not your current password.",
+              },
+            }),
+            { status: 422, headers: { "Content-Type": "application/json" } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ user: me({ two_factor_enabled: false }) }),
+          { status: 200, headers: { "Content-Type": "application/json" } },
+        );
+      }
+      if (url === "/api/v1/me") {
+        return new Response(JSON.stringify(me({ two_factor_enabled: true })), {
+          status: 200,
+        });
+      }
+      return new Response(null, { status: 204 });
+    });
+
+    render(
+      <AppFrame>
+        <AccountPage />
+      </AppFrame>,
+    );
+    await screen.findByText("ann@example.com");
+
+    const twoFactorSwitch = screen.getByRole("switch", {
+      name: "Email me a code at sign-in",
+    });
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("true");
+
+    // Click to turn OFF
+    await userEvent.click(twoFactorSwitch);
+
+    // Dialog opens
+    const dialog = screen.getByRole("alertdialog");
+    expect(dialog).toBeTruthy();
+    expect(
+      screen.getByRole("heading", { name: "Turn off two-step verification?" }),
+    ).toBeTruthy();
+
+    const passwordInput = screen.getByLabelText("Current password");
+    const confirmButton = screen.getByRole("button", { name: "Turn off" });
+
+    // Enter wrong password
+    await userEvent.type(passwordInput, "wrong");
+    await userEvent.click(confirmButton);
+
+    expect(
+      await screen.findByText("That's not your current password."),
+    ).toBeTruthy();
+    expect(screen.queryByRole("alertdialog")).not.toBeNull();
+
+    // Enter correct password
+    await userEvent.clear(passwordInput);
+    await userEvent.type(passwordInput, "correct-pass");
+    await userEvent.click(confirmButton);
+
+    expect(twoFactorCall).toEqual({
+      enabled: false,
+      current_password: "correct-pass",
+    });
+
+    // Dialog closes
+    await waitFor(() => expect(screen.queryByRole("alertdialog")).toBeNull());
+
+    expect(
+      await screen.findByText("Two-step verification is off."),
+    ).toBeTruthy();
+    expect(twoFactorSwitch.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("/me with theme_palette: lavender, page_view: full sets primary color and page-view and shows in settings", async () => {
+    await openAccount(me({ theme_palette: "lavender", page_view: "full" }));
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("#8c52ff");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "full",
+      );
+    });
+    expect(screen.getByRole("button", { name: /Full width/i })).toBeTruthy();
+  });
+
+  it("picking a palette in Settings sends PATCH /me with theme_palette and picking Full width sends page_view: full", async () => {
+    await openAccount(me({ page_view: "flat", theme_palette: "default" }));
+
+    // Click Lavender palette card
+    const lavenderCard = screen
+      .getByText("Lavender")
+      .closest("div[class*='cursor-pointer']")!;
+    await userEvent.click(lavenderCard);
+
+    expect(patches()).toContainEqual([
+      "/api/v1/me",
+      { theme_palette: "lavender" },
+    ]);
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary"),
+    ).toBe("#8c52ff");
+
+    // Open Page view dropdown and pick Full width
+    const pageViewDropdown = screen.getByRole("button", {
+      name: /Flat view/i,
+    });
+    await userEvent.click(pageViewDropdown);
+    const fullOption = screen.getByRole("radio", { name: "Full width" });
+    await userEvent.click(fullOption);
+
+    expect(patches()).toContainEqual(["/api/v1/me", { page_view: "full" }]);
+    expect(document.documentElement.getAttribute("data-page-view")).toBe(
+      "full",
+    );
+  });
 });
 
 describe("theme.js (T-AP-22)", () => {
@@ -251,6 +423,18 @@ describe("theme.js (T-AP-22)", () => {
     run();
 
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
+  });
+
+  it("sets the stored theme palette on html style before anything renders", () => {
+    localStorage.setItem("agendal.theme_palette", "lavender");
+    run();
+
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary"),
+    ).toBe("#8c52ff");
+    expect(
+      document.documentElement.style.getPropertyValue("--color-primary-tint"),
+    ).toBe("#8c52ff22");
   });
 
   it("does nothing harmful when storage is blocked", () => {

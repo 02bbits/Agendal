@@ -1051,4 +1051,71 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     await expectAxeCleanInBothThemes();
   });
+
+  it("TaskPanel: typing a new title and pressing Escape saves title and calls onClose", async () => {
+    const t1 = task({ id: "t-esc-title", title: "Original Title" });
+    const ctx = setup([t1]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+    const onClose = vi.fn();
+
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={onClose} />));
+
+    const titleInput = screen.getByLabelText(t("task.title"));
+    titleInput.focus();
+    fireEvent.change(titleInput, { target: { value: "New Title via Esc" } });
+    fireEvent.keyDown(titleInput, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { title: "New Title via Esc" },
+        expect.any(String),
+      );
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("TaskPanel: typing a new description and pressing Escape saves notes and calls onClose", async () => {
+    const t1 = task({
+      id: "t-esc-notes",
+      title: "Task 1",
+      notes: "Original Notes",
+    });
+    const ctx = setup([t1]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+    const onClose = vi.fn();
+
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={onClose} />));
+
+    const notesInput = screen.getByLabelText(t("task.notes"));
+    notesInput.focus();
+    fireEvent.change(notesInput, { target: { value: "New Notes via Esc" } });
+    fireEvent.keyDown(notesInput, { key: "Escape" });
+
+    await waitFor(() => {
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        { notes: "New Notes via Esc" },
+        expect.any(String),
+      );
+    });
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("TaskPanel: clearing title and pressing Escape restores old title without saving and calls onClose", async () => {
+    const t1 = task({ id: "t-esc-empty", title: "Original Title" });
+    const ctx = setup([t1]);
+    const patchSpy = vi.spyOn(ctx.memory.api, "patch");
+    const onClose = vi.fn();
+
+    render(ctx.wrap(<TaskPanel taskId={t1.id} onClose={onClose} />));
+
+    const titleInput = screen.getByLabelText(t("task.title"));
+    titleInput.focus();
+    fireEvent.change(titleInput, { target: { value: "   " } });
+    fireEvent.keyDown(titleInput, { key: "Escape" });
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(patchSpy).not.toHaveBeenCalled();
+  });
 });

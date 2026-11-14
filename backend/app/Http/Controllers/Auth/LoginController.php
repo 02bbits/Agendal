@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\EmailVerification;
+use App\Services\Clock\ClockInterface;
 use App\Support\Audit;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,11 @@ use Illuminate\Support\Str;
 // get the same answer in the same time (Auth::attempt pads its timing, SC-04).
 class LoginController extends Controller
 {
+    public function __construct(
+        private readonly EmailVerification $emailVerification,
+        private readonly ClockInterface $clock,
+    ) {}
+
     public function __invoke(Request $request): JsonResponse
     {
         // Sessions exist only for requests from the app's own origin (Sanctum stateful domains, ADR-007)
@@ -26,7 +33,7 @@ class LoginController extends Controller
             'password' => ['required', 'string', 'max:128'],
             'remember' => ['boolean'],
         ]);
-        $email = Str::lower(trim($request->string('email'))); // AA-E1
+        $email = Str::lower(trim($request->string('email')->value())); // AA-E1
         $ip = (string) $request->ip();
 
         // A failure counter per scope: [key, failures allowed, window in seconds, lock in seconds]
@@ -45,8 +52,14 @@ class LoginController extends Controller
         }
         RateLimiter::hit($perIp, 600);
 
-        if (! Auth::guard('web')->attempt(['email' => $email, 'password' => $request->string('password')->value()], $request->boolean('remember'))) {
-            $userId = User::query()->where('email', $email)->value('id');
+        // validate() keeps the guard's timebox (SC-04) without signing in yet: two-step
+        // verification may still need a code first
+        $guard = Auth::guard('web');
+        $valid = $guard->validate(['email' => $email, 'password' => $request->string('password')->value()]);
+        $user = $guard->getLastAttempted();
+
+        if (! $valid || ! $user instanceof User) {
+            $userId = $user instanceof User ? $user->id : null;
             Audit::log($request, 'sign_in_failed', $userId);
             $lockedNow = max($this->fail($pair), $this->fail($perEmail));
             if ($lockedNow > 0) {
@@ -56,13 +69,41 @@ class LoginController extends Controller
             throw new ApiError('auth.invalid', 'Email or password is incorrect.');
         }
 
-        $request->session()->regenerate(); // SEC-04
         RateLimiter::clear($pair[0]);
-        /** @var User $user */
-        $user = Auth::guard('web')->user();
+
+        if ($user->two_factor_enabled) {
+            $now = $this->clock->now();
+            $request->session()->put('two_factor.user_id', $user->id);
+            $request->session()->put('two_factor.remember', $request->boolean('remember'));
+            $request->session()->put('two_factor.expires_at', $now->modify('+10 minutes')->getTimestamp());
+
+            // Signing in again must not become a way round the send limit (10 per 30 minutes) or a way
+            // to reset the code's 5 tries: past the limit, the code already sent stays the one
+            if ($this->emailVerification->secondsBeforeSend($user, 'sign_in') === 0) {
+                $this->emailVerification->send($user, 'sign_in');
+            }
+
+            return response()->json([
+                'two_factor' => true,
+                'email' => static::maskEmail($user->email),
+            ], 202);
+        }
+
+        Auth::guard('web')->login($user, $request->boolean('remember'));
+        $request->session()->regenerate(); // SEC-04
         Audit::log($request, 'sign_in', $user->id);
 
         return response()->json(['user' => $user]);
+    }
+
+    public static function maskEmail(string $email): string
+    {
+        $parts = explode('@', $email, 2);
+        $local = $parts[0];
+        $domain = $parts[1] ?? '';
+        $stars = str_repeat('*', max(1, strlen($local) - 1));
+
+        return substr($local, 0, 1).$stars.'@'.$domain;
     }
 
     private function lockedFor(string $key): int

@@ -25,8 +25,12 @@ class DatabaseSeeder extends Seeder
             [
                 'display_name' => 'example',
                 'password' => 'password',
+                'email_verified_at' => $clock->now(),
             ]
         );
+        if ($user->email_verified_at === null) {
+            $user->forceFill(['email_verified_at' => $clock->now()])->save();
+        }
 
         // Colours from the theme guide's project examples
         $projectDefs = [

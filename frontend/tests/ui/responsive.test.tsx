@@ -342,7 +342,7 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(onNewProject).toHaveBeenCalled();
   });
 
-  it("links Search and the account from the sidebar", () => {
+  it("links Search and opens the account menu from the sidebar", () => {
     renderWide();
     const sidebar = screen
       .getByRole("navigation", { name: "Menu" })
@@ -350,7 +350,8 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(sidebar.querySelector("button")!.textContent).toContain(
       "Search tasks",
     );
-    const account = sidebar.querySelector('a[href="/account"]')!;
+    // The account row opens the account menu (#149)
+    const account = sidebar.querySelector('button[aria-haspopup="menu"]')!;
     expect(account.textContent).toContain("example");
     expect(account.textContent).toContain("E");
   });

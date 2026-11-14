@@ -102,9 +102,16 @@ describe("Sign in (AA-2)", () => {
     const { password } = renderPage();
     const toggle = screen.getByRole("button", { name: "Show password" });
 
+    expect(toggle.getAttribute("tabindex")).toBe("-1");
+    expect(password.getAttribute("aria-keyshortcuts")).toBe("Alt+F8");
+
     await user.click(toggle);
     expect(toggle.getAttribute("aria-pressed")).toBe("true");
     expect(password.type).toBe("text");
+
+    password.focus();
+    await user.keyboard("{Alt>}{F8}{/Alt}");
+    expect(password.type).toBe("password");
   });
 
   it("T-AA-10, A11Y-62: wrong details show auth.invalid, keep the email, clear and focus the password", async () => {
@@ -120,6 +127,23 @@ describe("Sign in (AA-2)", () => {
     expect(document.activeElement).toBe(password);
   });
 
+  it("AA §2.10: a password typed with Vietnamese letters gives an accented hint when sign-in fails", async () => {
+    reply = () => json(422, { error: { code: "auth.invalid" } });
+    const user = userEvent.setup();
+    const fields = renderPage();
+    await user.type(fields.email, "example@gmail.com");
+    await user.type(fields.password, "mật khẩu 123");
+    await user.click(fields.submit);
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "Email or password is incorrect. Your password has accented letters: check that Vietnamese typing is off.",
+    );
+    const login = fetchMock.mock.calls.find(
+      ([url]) => url === "/api/v1/auth/login",
+    );
+    expect(JSON.parse(String(login?.[1]?.body)).password).toBe("mật khẩu 123");
+  });
+
   it("T-AA-111, SEC-24: goes back to a same-origin return path, never another site", async () => {
     window.history.replaceState(null, "", "/sign-in?next=%2Fupcoming");
     await signIn(userEvent.setup());
@@ -132,6 +156,16 @@ describe("Sign in (AA-2)", () => {
     expect(safeReturnPath("javascript:alert(1)")).toBe("/");
     expect(safeReturnPath(null)).toBe("/");
     expect(safeReturnPath("/projects/1?x=2")).toBe("/projects/1?x=2");
+  });
+
+  it("renders Remember me and Forgot password in one row", () => {
+    renderPage();
+    const checkbox = screen.getByRole("checkbox", { name: "Remember me" });
+    const forgotLink = screen.getByRole("link", { name: "Forgot password?" });
+    const row = checkbox.closest("div.flex");
+    expect(row).toBeTruthy();
+    expect(row?.contains(checkbox)).toBe(true);
+    expect(row?.contains(forgotLink)).toBe(true);
   });
 
   it("is axe-clean in both themes", async () => {
@@ -173,6 +207,139 @@ describe("Lockout (AA-3)", () => {
     renderPage();
 
     expect(screen.getByText("Try again in 42 s.")).toBeTruthy();
+  });
+});
+
+describe("Two-factor authentication (issue #149 C)", () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+  });
+
+  it("shows 2FA challenge on 202, signs in on correct code", async () => {
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        const body = JSON.parse(init?.body as string);
+        expect(body.code).toBe("123456");
+        return json(200, { user: { id: 1, email: "example@gmail.com" } });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    expect(await screen.findByText("Enter your sign-in code")).toBeTruthy();
+    expect(screen.getByText(/We sent a 6-digit code to/)).toBeTruthy();
+    expect(screen.getByText("e******@gmail.com")).toBeTruthy();
+
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["1", "2", "3", "4", "5", "6"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    await act(() => vi.advanceTimersByTimeAsync(800));
+    expect(router.push).toHaveBeenCalledWith("/");
+  });
+
+  it("wrong code shows error under slots", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        return json(422, {
+          error: {
+            code: "auth.two_factor_wrong",
+            message: "That code isn't right. Try again.",
+          },
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["0", "0", "0", "0", "0", "0"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    expect(
+      await screen.findByText("That code isn't right. Try again."),
+    ).toBeTruthy();
+  });
+
+  it("Use a different account returns to password form", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const backBtn = screen.getByRole("button", {
+      name: "Use a different account",
+    });
+    await user.click(backBtn);
+
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
+    expect(screen.getByLabelText("Email")).toBeTruthy();
+  });
+
+  it("expired pending session redirects to password form with error", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me") return session();
+      if (url === "/api/v1/auth/login") {
+        return json(202, {
+          two_factor: true,
+          email: "e******@gmail.com",
+        });
+      }
+      if (url === "/api/v1/auth/two-factor/challenge") {
+        return json(422, {
+          error: {
+            code: "auth.two_factor_expired",
+            message: "This sign-in has expired. Sign in again.",
+          },
+        });
+      }
+      return reply();
+    });
+
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    await signIn(user);
+
+    await screen.findByText("Enter your sign-in code");
+    const input = screen.getByRole("textbox", { name: "Verification code" });
+    for (const d of ["9", "9", "9", "9", "9", "9"]) {
+      fireEvent.keyDown(input, { key: d });
+    }
+
+    expect(
+      await screen.findByText("This sign-in has expired. Sign in again."),
+    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sign in" })).toBeTruthy();
   });
 });
 

@@ -5,7 +5,9 @@ namespace App\Http\Controllers\Auth;
 use App\Exceptions\ApiError;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\Auth\EmailVerification;
 use App\Support\Audit;
+use App\Support\EmailInput;
 use App\Support\NewPassword;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,17 +18,17 @@ use Illuminate\Support\Str;
 // AA-1: create the account and sign in on this device (AA §2.1)
 class RegisterController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request, EmailVerification $emailVerification): JsonResponse
     {
         $input = [
-            'email' => Str::lower(trim((string) $request->input('email'))), // AA-E1
+            'email' => EmailInput::from($request), // AA-E1
             'password' => $request->input('password'),
             'timezone' => $request->input('timezone', $request->attributes->get('timezone')),
         ];
 
         $validator = Validator::make($input, [
             'email' => ['required', 'email', 'max:254', 'unique:users,email'],
-            'password' => NewPassword::rules($input['email']),
+            'password' => NewPassword::rules(is_string($input['email']) ? $input['email'] : ''),
             'timezone' => ['required', 'timezone:all_with_bc'],
         ], [
             'email.unique' => 'An account with this email already exists. Sign in instead?',
@@ -43,10 +45,11 @@ class RegisterController extends Controller
         $user = User::create([
             'email' => $input['email'],
             'password' => $input['password'],
-            'display_name' => Str::limit(Str::before($input['email'], '@'), 60, ''),
+            'display_name' => Str::limit(Str::before($input['email'], '@'), 30, ''),
             'timezone' => $input['timezone'],
         ]);
         Auth::guard('web')->login($user, remember: true);
+        $emailVerification->send($user);
         Audit::log($request, 'sign_up', $user->id);
 
         return response()->json(['user' => $user], 201);

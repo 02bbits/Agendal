@@ -27,8 +27,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | Key | Text | Where |
 |---|---|---|
 | `auth.welcome` | Welcome to Agendal. Your account is ready. | Toast after sign-up ([AA-1](../03-modules/AA-account-access.md#aa-1)) |
-| `auth.password_rule` | At least 8 characters, and not your email. | Helper under the password field |
-| `auth.password_same_as_email` † | Your password can't be your email. | Field error |
+| `auth.password_rule` | At least 8 characters, and doesn't contain your information. | Helper under the password field |
+| `auth.password_same_as_email` † | Your password can't contain your email. | Field error |
 | `auth.password_breached` † | This password has appeared in a data breach. Choose another one. | Field error (SEC-06) |
 | `auth.email_taken` † | An account with this email already exists. Sign in instead? | Field error, links to Sign in |
 | `auth.invalid` | Email or password is incorrect. | Sign-in error ([AA-2](../03-modules/AA-account-access.md#aa-2)) |

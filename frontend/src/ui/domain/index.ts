@@ -14,3 +14,4 @@ export * from "./newTask";
 export * from "./theme";
 export * from "./entries";
 export * from "./rowMeta";
+export * from "./passwordStrength";

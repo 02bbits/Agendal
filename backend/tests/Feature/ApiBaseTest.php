@@ -61,7 +61,9 @@ it('SC-10: someone else\'s task is a 404, your own is found', function () {
 });
 
 it('SEC-12: every API route needs a session unless it is public', function () {
-    $public = ['api/v1/health', 'api/v1/auth/register', 'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/forgot-password', 'api/v1/auth/reset-password', 'api/v1/_boom', 'api/v1/_validate'];
+    // The two-step code is entered before there is a signed-in session: its routes read the
+    // pending sign-in from the session cookie instead, and refuse without one (AA §2.9)
+    $public = ['api/v1/health', 'api/v1/auth/register', 'api/v1/auth/login', 'api/v1/auth/logout', 'api/v1/auth/forgot-password', 'api/v1/auth/reset-password', 'api/v1/auth/two-factor/challenge', 'api/v1/auth/two-factor/resend', 'api/v1/_boom', 'api/v1/_validate'];
 
     $routes = collect(Route::getRoutes()->getRoutes())
         ->filter(fn ($r) => str_starts_with($r->uri(), 'api/v1/') && ! in_array($r->uri(), $public));

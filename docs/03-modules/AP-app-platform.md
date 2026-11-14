@@ -92,23 +92,27 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3.1 Settings Architecture & Implementation Status
 
-The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`).
+The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`). Below 768 px it is a full-screen page instead: a list of categories, and each opens with a back arrow (back button, Esc and browser Back return to the list) (#149). On desktop the sidebar's account row opens a menu with Account, Settings, a theme switch and Sign out.
+
+**Phone layout and copy (#149).** Below `lg` every category is one column: text shares a row only with a compact control (a switch, a short value), wider controls sit under their label at full width, and help text sits under the control. One type scale: overline headings, 15 px labels, 13 px secondary help. Help text is kept only where the label alone isn't clear, at most one short line, and never repeats the switch's state; the end of every category scrolls clear of the home indicator.
 
 | Category | Control / Feature | Implementation Status | Persistence |
 |---|---|---|---|
 | **Account** | Name (`displayName`) | Fully Functional | `PATCH /api/v1/me` (`name`) |
 | **Account** | Email display | Fully Functional | `GET /api/v1/me` (`email`) |
-| **Account** | Change password | Fully Functional | `POST /api/v1/password/change` |
+| **Account** | Change password | Fully Functional (#149) | `POST /api/v1/auth/change-password` |
+| **Account** | Two-step verification by email (one switch; turning off asks for the password) | Fully Functional (#149) | `POST /api/v1/auth/two-factor` |
 | **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
 | **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
 | **General** | Home view (Inbox, Upcoming, Projects) | Fully Functional | `localStorage` (`agendal.home_view`) |
-| **General** | Page view (Flat view vs Full width) | Fully Functional | `localStorage` (`agendal.page_view`) + `data-page-view` |
+| **General** | Page view (Flat view vs Full width) | Fully Functional (per account, #149) | `PATCH /api/v1/me` (`page_view`); `agendal.page_view` is only the copy `/theme.js` paints before the first frame |
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
-| **General** | Timezone, Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
+| **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |
+| **General** | Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
 | **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
-| **Theme** | Appearance & 8 Theme Palettes | Fully Functional | Server sync (`theme`) & `--color-primary` |
+| **Theme** | Appearance & 8 Theme Palettes | Fully Functional (palette per account, #149) | `PATCH /api/v1/me` (`theme`, `theme_palette`) → `--color-primary`; `agendal.theme_palette` is the pre-paint copy |
 | **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
-| **Sidebar** | Drag & drop + keyboard reordering | Fully Functional | `localStorage` (`agendal.sidebar_tabs_order`) |
+| **Sidebar** | Drag (mouse and touch, the other rows slide to make room) + up/down buttons | Fully Functional (#149) | `localStorage` (`agendal.sidebar_tabs_order`) |
 | **Sidebar** | Tab enable/disable checkboxes & Reset default | Fully Functional | `localStorage` (`agendal.sidebar_tabs_enabled`) |
 | **Notifications** | Web Push & VAPID service diagnostics | Fully Functional | Web Push API & VAPID |
 | **Roadmap Tabs** | Subscription, Quick Add, Productivity, Backups, Integrations, Calendars | UI Gap / Roadmap | Planned for future milestones |
