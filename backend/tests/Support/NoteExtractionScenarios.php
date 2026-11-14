@@ -24,6 +24,8 @@ final class NoteExtractionScenarios
         'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
+        'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
+        'bound_through_lead', 'bound_approximate', 'bound_approximate_suffix', 'bound_end_word',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -116,8 +118,40 @@ final class NoteExtractionScenarios
             'date_separator' => [['đọc sách 26'.$value.'10', ['dueDate' => '2026-10-26'], self::NOW]],
             'date_day_word' => [['đọc sách '.$value.' 26/10', ['dueDate' => '2026-10-26', 'title' => 'Đọc sách'], self::NOW]],
             'month_word' => [['đọc sách 26 '.$value.' 10', ['dueDate' => '2026-10-26'], self::NOW]],
+            'bound_lead' => [['tập gym mỗi ngày '.$value.' 2 tuần', self::daily('2026-10-23', '20261105'), self::NOW]],
+            'bound_lead_next' => [['tập gym mỗi ngày '.$value.' week', self::daily('2026-10-23', '20261029'), self::NOW]],
+            'bound_more' => [['tập gym mỗi ngày for 2 '.$value.' weeks', self::daily('2026-10-23', '20261105'), self::NOW]],
+            'bound_trail' => [['tập gym mỗi ngày trong 2 tuần '.$value, self::daily('2026-10-23', '20261105'), self::NOW]],
+            'bound_fortnight' => [['tập gym mỗi ngày for a '.$value, self::daily('2026-10-23', '20261105'), self::NOW]],
+            'bound_start_lead' => [['tập gym mỗi ngày '.$value.' tuần sau', self::daily('2026-10-26', null), self::NOW]],
+            'bound_until_lead' => [['tập gym mỗi ngày '.$value.' hết tuần', self::daily('2026-10-23', '20261025'), self::NOW]],
+            'bound_through_lead' => [['tập gym mỗi ngày '.$value.' next week', self::daily('2026-10-23', '20261101'), self::NOW]],
+            'bound_approximate' => [['tập gym mỗi ngày for '.$value.' 3 weeks', ['repeat' => 'never', 'dueDate' => null, 'lowConfidence' => true], self::NOW]],
+            'bound_approximate_suffix' => [['tập gym mỗi ngày for 3 weeks '.$value, ['repeat' => 'never', 'dueDate' => null, 'lowConfidence' => true], self::NOW]],
+            // Two ends: one is read, the other must not become a start.
+            'bound_end_word' => [['tập gym every day for 2 weeks '.$value.' Friday', ['repeat' => 'never', 'dueDate' => null, 'lowConfidence' => true], self::NOW]],
+            'bound_period' => [['tập gym mỗi ngày '.$value, match ($key) {
+                'week:0' => self::daily('2026-10-23', '20261025'),
+                'week:1' => self::daily('2026-10-26', '20261101'),
+                'month:0' => self::daily('2026-10-23', '20261031'),
+                'month:1' => self::daily('2026-11-01', '20261130'),
+                'year:0' => self::daily('2026-10-23', '20261231'),
+                default => self::daily('2027-01-01', '20271231'),
+            }, self::NOW]],
             default => [],
         };
+    }
+
+    /**
+     * A daily "Tập gym" series from $first, ending on $until (Ymd) or never.
+     *
+     * @return array<string, mixed>
+     */
+    private static function daily(string $first, ?string $until): array
+    {
+        $rule = 'FREQ=DAILY;INTERVAL=1;WKST=MO'.($until === null ? '' : ';UNTIL='.$until.'T235959Z');
+
+        return ['title' => 'Tập gym', 'dueDate' => $first, 'repeatRule' => $rule, 'lowConfidence' => false];
     }
 
     /**

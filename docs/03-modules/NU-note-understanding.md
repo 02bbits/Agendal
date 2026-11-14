@@ -140,6 +140,25 @@ English and Vietnamese repeat phrases can specify a frequency/interval, selected
 | `birthday every year on February 29` | February 29 in leap years |
 | `gym every 3 days for 5 occurrences` | Five occurrences, including the first |
 | `tập gym mỗi 2 ngày đến 15/11/2026` | Every two days through the named date |
+| `lái xe mỗi thứ 3 trong 4 tuần` | Tuesdays for four weeks from the first Tuesday, last day included (until 30 Nov when written on Mon 2 Nov) |
+| `call mum every day for 3 months` | Daily for three months from the first date |
+| `gym every day this week` | From the next free day to the last day of the week |
+| `gym every day through next week` | From today to the last day of next week |
+
+**How long a series runs (#120).** A duration ends the series on its last day, counted from the series' first date with that day included: `every day for 3 days` from 2 Nov runs 2, 3 and 4 Nov.
+- A duration has a lead (`for`, `over`, `during`, `within`, `for the next`, `trong`, `trong vòng`, `suốt`, `kéo dài`, `liên tục`), a whole amount in digits or words, with or without a space (`4tuần`), and a unit (day, week, month, year, their short forms, fortnight). A year is 12 calendar months. Trailing `straight`, `in a row`, `tới`, `liền` or `liên tiếp` belongs to it.
+- A calendar period (`this week`, `next month`, `the rest of the year`, `tuần này`, `tháng sau`, `năm nay`, `đến hết tuần`) runs from the next free day to the period's last day, with weeks on the user's week start. A time that has already passed today starts the series tomorrow. `next week` starts on that week's first day; `through next week` starts today. `from next week` only sets the start.
+- A start keeps its meaning: `in 2 weeks`, `2 weeks later`, `2 weeks from now`, `sau 2 tuần`, `2 tuần nữa`, `trong 2 tuần nữa`.
+- Per-day copies each get the same end.
+
+Anything without one exact reading keeps the whole item as low confidence for the fallback, so a bounded schedule never becomes an unbounded one:
+- an approximate amount (`about 3 weeks`, `several weeks`, `vài tuần`, `3 weeks or so`);
+- a fraction or decimal (`1.5 months`, `3 ngày rưỡi`, `a week and a half`);
+- a compound amount (`3 days and 12 hours`);
+- two ends of any kind (`for 2 weeks until Friday`, `through next week until Friday`, a duration with an occurrence count or `never ends`);
+- a duration lead with a start suffix (`for 3 months from now`);
+- a period with no occurrence left in it (`every Monday this week` written on a Tuesday);
+- any amount of time or period left unread in a recurring item.
 
 **Multiple tasks per scheduled day.** `visit house 3 times every day`, `visit house three times a day` and `đi gym mỗi ngày 3 lần` create three independent daily series, labelled `Visit house (1/3)`, `(2/3)` and `(3/3)`, without inventing times. A series-end count is separate: `every day for 3 occurrences` creates one series ending after three dates; `3 times every day for 2 occurrences` creates three series, each ending after two dates. The expanded creates count toward the 30-item limit and the usual confirmation threshold. Conflicting counts or incomplete time allocations keep the original text as low confidence.
 

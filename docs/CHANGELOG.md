@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-14
+
+- **How long a series runs (Refs #120).** [NU §2.5](03-modules/NU-note-understanding.md#calendar-recurrence): a duration (`for 3 months`, `trong 4 tuần`) or period (`this week`, `through next week`) ends the series with UNTIL on its last day, counted from the first date with that day included; approximate, fractional, compound or conflicting ends stay low confidence. [API recurrence contract](07-architecture/api.md#task-recurrence-contract-im-37): how such an end is stored. [SUMMARY](SUMMARY.md) note fields and §13, [HANDOVER §6](HANDOVER.md): #120 leaves the open list; the counting rule waits for the team.
+
 ## 2026-11-13
 
 - **Live sync recorded as a gap (Refs #51).** [tasks.md After MVP](08-project/tasks.md#gap-live-sync): open devices see each other's changes within 60 s; a future task adds server push (SSE) that triggers the usual pull. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md) Consequences links to it.

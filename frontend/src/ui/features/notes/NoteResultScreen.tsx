@@ -15,6 +15,7 @@ import {
   undoExpired,
 } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
+import { repeatLabel } from "../../domain/rowMeta";
 import type {
   NoteChange,
   NoteResult as NoteResultData,
@@ -594,7 +595,8 @@ function ChangeRow({
             .join(", "),
         t(`priority.${task.priority ?? "low"}`),
         task.reminder !== "none" && t(`reminder.${task.reminder}`),
-        task.repeat !== "never" && t(`repeat.${task.repeat}`),
+        // The whole schedule, its end included ("Every week on Tue · until 30 Nov"), as on the task row
+        repeatLabel(task),
       ]
         .filter(Boolean)
         .join(" · ")
@@ -613,6 +615,7 @@ function ChangeRow({
               formatDay(task.due_date, today),
             // A delete's label is the task's title (CommandMatcher): the row already shows it
             change.label !== task.title && change.label,
+            change.kind === "created" && repeatLabel(task),
             change.was && t("note.was", { value: change.was }),
             projectGone && t("note.project_gone"),
           ]
