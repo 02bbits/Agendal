@@ -77,9 +77,9 @@ class LoginController extends Controller
             $request->session()->put('two_factor.remember', $request->boolean('remember'));
             $request->session()->put('two_factor.expires_at', $now->modify('+10 minutes')->getTimestamp());
 
-            // Signing in again must not become a way round the send limit (5 an hour) or a way
+            // Signing in again must not become a way round the send limit (10 per 30 minutes) or a way
             // to reset the code's 5 tries: past the limit, the code already sent stays the one
-            if (! RateLimiter::tooManyAttempts('two-factor-send:'.$user->id, 5)) {
+            if ($this->emailVerification->secondsBeforeSend($user, 'sign_in') === 0) {
                 $this->emailVerification->send($user, 'sign_in');
             }
 

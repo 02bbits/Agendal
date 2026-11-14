@@ -17,9 +17,28 @@ use Illuminate\Support\Facades\RateLimiter;
 
 class EmailVerification
 {
+    // Codes can be resent at most once every 60 s, and up to 10 times in a
+    // 30-minute rolling window before triggering a 30-minute lockout.
+    public const RESEND_AFTER = 60;
+
+    public const SENDS = 10;
+
+    public const SENDS_WINDOW = 1800;
+
+    public const SENDS_WAIT = 1800;
+
     public function __construct(
         private readonly ClockInterface $clock,
     ) {}
+
+    public function secondsBeforeSend(User $user, string $purpose): int
+    {
+        $key = $purpose === 'verify' ? 'verify-email-send:'.$user->id : 'two-factor-send:'.$user->id;
+
+        return RateLimiter::tooManyAttempts($key.':wait', 1)
+            ? RateLimiter::availableIn($key.':wait')
+            : 0;
+    }
 
     public function send(User $user, string $purpose = 'verify'): void
     {
@@ -42,7 +61,11 @@ class EmailVerification
         ], ['user_id', 'purpose'], ['code_hash', 'expires_at', 'attempts', 'sent_at']);
 
         $key = $purpose === 'verify' ? 'verify-email-send:'.$user->id : 'two-factor-send:'.$user->id;
-        RateLimiter::hit($key, 3600);
+        RateLimiter::hit($key, self::SENDS_WINDOW);
+        if (RateLimiter::attempts($key) >= self::SENDS) {
+            RateLimiter::clear($key);
+            RateLimiter::hit($key.':wait', self::SENDS_WAIT);
+        }
 
         if ($purpose === 'verify') {
             $user->notify(new VerifyEmailCode($code));
@@ -88,6 +111,12 @@ class EmailVerification
                 ->where('purpose', $purpose)
                 ->increment('attempts');
 
+            if ($record->attempts + 1 >= 5) {
+                throw new ApiError('auth.verify_too_many', 'Too many tries. Send a new code.', 422, [
+                    'code' => ['Too many tries. Send a new code.'],
+                ]);
+            }
+
             throw new ApiError('auth.verify_wrong', "That code isn't right. Try again.", 422, [
                 'code' => ["That code isn't right. Try again."],
             ]);
@@ -122,8 +151,8 @@ class EmailVerification
         if ($record && $record->sent_at !== null) {
             $sentAt = new DateTimeImmutable((string) $record->sent_at);
             $elapsed = $this->clock->now()->getTimestamp() - $sentAt->getTimestamp();
-            if ($elapsed < 45) {
-                $seconds = 45 - $elapsed;
+            if ($elapsed < self::RESEND_AFTER) {
+                $seconds = self::RESEND_AFTER - $elapsed;
                 throw new ApiError(
                     'error.rate_limited',
                     "Too many requests. Try again in {$seconds} s.",
@@ -134,9 +163,8 @@ class EmailVerification
             }
         }
 
-        $key = $purpose === 'verify' ? 'verify-email-send:'.$user->id : 'two-factor-send:'.$user->id;
-        if (RateLimiter::tooManyAttempts($key, 5)) {
-            $seconds = max(1, RateLimiter::availableIn($key));
+        $seconds = $this->secondsBeforeSend($user, $purpose);
+        if ($seconds > 0) {
             throw new ApiError(
                 'error.rate_limited',
                 "Too many requests. Try again in {$seconds} s.",

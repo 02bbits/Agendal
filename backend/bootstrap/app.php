@@ -70,6 +70,13 @@ return Application::configure(basePath: dirname(__DIR__))
             if ($e instanceof ValidationException) {
                 $error['fields'] = $e->errors();
             }
+            if ($status === 429) {
+                $headers = $e instanceof HttpExceptionInterface ? $e->getHeaders() : [];
+                $retryAfter = $headers['Retry-After'] ?? $headers['retry-after'] ?? null;
+                if ($retryAfter !== null) {
+                    $error['retry_after'] = (int) $retryAfter;
+                }
+            }
 
             return response()->json(
                 ['error' => $error],

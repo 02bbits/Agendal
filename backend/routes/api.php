@@ -38,7 +38,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('auth/verify-email/resend', ResendVerificationController::class);
 
     Route::middleware('verified-email')->group(function () {
-        Route::post('auth/two-factor', TwoFactorController::class);
+        Route::post('auth/two-factor', TwoFactorController::class)->middleware('throttle:two-factor-toggle');
         Route::post('auth/change-password', ChangePasswordController::class);
         Route::post('auth/check-password', CheckPasswordController::class);
         Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');

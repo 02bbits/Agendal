@@ -13,12 +13,12 @@ use Illuminate\Mail\Markdown;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use Tests\Support\FrozenClock;
+use Tests\Support\RateLimitedClock;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
-    $this->clock = new FrozenClock('2026-11-12T10:00:00+00:00');
+    $this->clock = new RateLimitedClock('2026-11-12T10:00:00+00:00');
     $this->app->instance(ClockInterface::class, $this->clock);
     Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response('0000000000000000000000000000000000A:3')]);
 });
@@ -148,17 +148,24 @@ it('locks out with auth.verify_too_many after 5 wrong attempts even with right c
         return true;
     });
 
-    for ($i = 1; $i <= 5; $i++) {
+    for ($i = 1; $i <= 4; $i++) {
         $this->actingAs($user)->postJson('/api/v1/auth/verify-email', [
             'code' => '999999',
         ])->assertStatus(422)
             ->assertJsonPath('error.code', 'auth.verify_wrong');
     }
 
+    // 5th attempt fails with auth.verify_too_many
+    $this->actingAs($user)->postJson('/api/v1/auth/verify-email', [
+        'code' => '999999',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'auth.verify_too_many')
+        ->assertJsonPath('error.fields.code.0', 'Too many tries. Send a new code.');
+
     $row = DB::table('email_verification_codes')->where('user_id', $user->id)->first();
     expect($row->attempts)->toBe(5);
 
-    // 6th attempt with right code now fails with auth.verify_too_many
+    // Later attempt with right code now fails with auth.verify_too_many
     $this->actingAs($user)->postJson('/api/v1/auth/verify-email', [
         'code' => $code,
     ])->assertStatus(422)
@@ -194,7 +201,7 @@ it('returns 422 auth.verify_expired when the code has expired', function () {
         ->assertJsonPath('error.fields.code.0', 'This code has expired. Send a new one.');
 });
 
-it('rate limits resend within 45s with 429 and Retry-After header', function () {
+it('rate limits resend within 60s with 429 and Retry-After header', function () {
     Notification::fake();
 
     $this->postJson('/api/v1/auth/register', [
@@ -205,17 +212,17 @@ it('rate limits resend within 45s with 429 and Retry-After header', function () 
 
     $user = User::where('email', 'eve@example.com')->firstOrFail();
 
-    // Immediate resend within 45s
+    // Immediate resend within 60s
     $resendResponse = $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')
         ->assertStatus(429)
         ->assertJsonPath('error.code', 'error.rate_limited');
 
     expect($resendResponse->headers->has('Retry-After'))->toBeTrue();
     $retryAfter = (int) $resendResponse->headers->get('Retry-After');
-    expect($retryAfter)->toBeGreaterThanOrEqual(1)->toBeLessThanOrEqual(45);
+    expect($retryAfter)->toBeGreaterThanOrEqual(1)->toBeLessThanOrEqual(60);
 });
 
-it('resend after 45s sends a new code and resets attempts', function () {
+it('resend after 60s sends a new code and resets attempts', function () {
     Notification::fake();
 
     $this->postJson('/api/v1/auth/register', [
@@ -231,8 +238,8 @@ it('resend after 45s sends a new code and resets attempts', function () {
     $this->actingAs($user)->postJson('/api/v1/auth/verify-email', ['code' => '000000']);
     expect(DB::table('email_verification_codes')->where('user_id', $user->id)->value('attempts'))->toBe(2);
 
-    // Advance clock by 46 seconds
-    $this->clock->advance('+46 seconds');
+    // Advance clock by 60 seconds
+    $this->clock->advance('+60 seconds');
 
     $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
 
@@ -240,7 +247,7 @@ it('resend after 45s sends a new code and resets attempts', function () {
     expect($row->attempts)->toBe(0);
 });
 
-it('rate limits with 429 on the 6th send in an hour', function () {
+it('rate limits with 429 on the 11th send in 30 minutes', function () {
     Notification::fake();
 
     $this->postJson('/api/v1/auth/register', [
@@ -251,14 +258,14 @@ it('rate limits with 429 on the 6th send in an hour', function () {
 
     $user = User::where('email', 'grace@example.com')->firstOrFail();
 
-    // Send 1 was on register. Send 2..5 succeed after 46s cooldown each
-    for ($i = 2; $i <= 5; $i++) {
-        $this->clock->advance('+46 seconds');
+    // Send 1 was on register. Send 2..10 succeed after 60s cooldown each
+    for ($i = 2; $i <= 10; $i++) {
+        $this->clock->advance('+60 seconds');
         $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')->assertNoContent();
     }
 
-    // 6th send attempt within the same hour
-    $this->clock->advance('+46 seconds');
+    // 11th send attempt within 30 minutes
+    $this->clock->advance('+60 seconds');
     $this->actingAs($user)->postJson('/api/v1/auth/verify-email/resend')
         ->assertStatus(429)
         ->assertHeader('Retry-After')

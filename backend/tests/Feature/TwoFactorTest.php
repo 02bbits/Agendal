@@ -12,14 +12,14 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Notification;
-use Tests\Support\FrozenClock;
+use Tests\Support\RateLimitedClock;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config(['session.driver' => 'database']);
     newRequest();
-    $this->clock = new FrozenClock('2026-11-12T10:00:00+00:00');
+    $this->clock = new RateLimitedClock('2026-11-12T10:00:00+00:00');
     $this->app->instance(ClockInterface::class, $this->clock);
     Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response('0000000000000000000000000000000000A:3')]);
     $this->withHeader('Referer', 'http://localhost:3000/')->withCredentials();
@@ -188,7 +188,7 @@ it('wrong code 422 and 5 tries before lockout', function () {
 
     $sessionCookies = carryCookies($loginResponse) + $cookies;
 
-    for ($i = 1; $i <= 5; $i++) {
+    for ($i = 1; $i <= 4; $i++) {
         $this->withCookies($sessionCookies)->postJson('/api/v1/auth/two-factor/challenge', [
             'code' => '000000',
         ])->assertStatus(422)
@@ -196,7 +196,14 @@ it('wrong code 422 and 5 tries before lockout', function () {
             ->assertJsonPath('error.fields.code.0', "That code isn't right. Try again.");
     }
 
-    // 6th try with correct code fails with auth.verify_too_many
+    // 5th wrong try fails with auth.verify_too_many
+    $this->withCookies($sessionCookies)->postJson('/api/v1/auth/two-factor/challenge', [
+        'code' => '000000',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.code', 'auth.verify_too_many')
+        ->assertJsonPath('error.fields.code.0', 'Too many tries. Send a new code.');
+
+    // Next try with correct code still fails with auth.verify_too_many
     $this->withCookies($sessionCookies)->postJson('/api/v1/auth/two-factor/challenge', [
         'code' => $code,
     ])->assertStatus(422)
@@ -267,15 +274,15 @@ it('resend gap 429', function () {
 
     $sessionCookies = carryCookies($loginResponse) + $cookies;
 
-    // Immediate resend within 45s
+    // Immediate resend within 60s
     $resendResponse = $this->withCookies($sessionCookies)->postJson('/api/v1/auth/two-factor/resend')
         ->assertStatus(429)
         ->assertJsonPath('error.code', 'error.rate_limited');
 
     expect($resendResponse->headers->has('Retry-After'))->toBeTrue();
 
-    // Advance 46 seconds
-    $this->clock->advance('+46 seconds');
+    // Advance 60 seconds
+    $this->clock->advance('+60 seconds');
 
     $this->withCookies($sessionCookies)->postJson('/api/v1/auth/two-factor/resend')
         ->assertNoContent();

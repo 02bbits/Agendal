@@ -5,13 +5,13 @@ namespace App\Providers;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
+use App\Support\EmailInput;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -30,14 +30,19 @@ class AppServiceProvider extends ServiceProvider
     {
         // NF-13 rate limits
         RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)->by($request->ip()));
+
+        // Two-factor toggle: 5 per 2 minutes per user
+        RateLimiter::for('two-factor-toggle', fn (Request $request) => Limit::perMinutes(2, 5)->by('two-factor-toggle:'.$request->user()?->id));
+
         RateLimiter::for('forgot-password', fn (Request $request) => [
-            Limit::perHour(3)->by('email:'.Str::lower(trim((string) $request->input('email')))),
+            Limit::perHour(3)->by('email:'.EmailInput::key($request)),
             Limit::perHour(10)->by('ip:'.$request->ip()),
         ]);
         // Each try checks a hashed token, so cap them; a person fixing a weak password needs only a few
         RateLimiter::for('reset-password', fn (Request $request) => [
-            Limit::perMinute(5)->by('ip:'.$request->ip()),
-            Limit::perHour(20)->by('ip:'.$request->ip()),
+            // Each limit its own key, so the minute and hour counters never share one
+            Limit::perMinute(5)->by('ip-min:'.$request->ip()),
+            Limit::perHour(20)->by('ip-hour:'.$request->ip()),
         ]);
 
         // Everything else: 300/min plus a 20/s burst cap, per user, or per IP for guests
