@@ -11,8 +11,9 @@ export const catalog = {
   "common.keep_editing": "Keep editing",
   "common.back": "Back",
   "auth.welcome": "Welcome to Agendal. Your account is ready.",
-  "auth.password_rule": "At least 8 characters, and not your email.",
-  "auth.password_same_as_email": "Your password can't be your email.",
+  "auth.password_rule":
+    "At least 8 characters, and doesn't contain your information.",
+  "auth.password_same_as_email": "Your password can't contain your email.",
   "auth.password_breached":
     "This password has appeared in a data breach. Choose another one.",
   "auth.email_taken":

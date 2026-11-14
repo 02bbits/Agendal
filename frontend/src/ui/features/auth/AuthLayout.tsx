@@ -62,7 +62,7 @@ export function AuthLayout({
           <AuthIllustration />
         </div>
 
-        <div className="flex flex-col gap-3.5 max-w-[460px]">
+        <div className="mb-10 xl:mb-14 flex flex-col gap-3.5 max-w-[460px]">
           <h2 className="m-0 text-[28px] leading-[34px] xl:text-[32px] xl:leading-[40px] font-bold tracking-[-0.02em]">
             {t("auth.hero_title")}
           </h2>

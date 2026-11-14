@@ -129,6 +129,8 @@ export function ForgotPasswordScreen({
           )}
           <Button
             type="submit"
+            // Phones: a clear gap between the fields and the main button
+            className="mt-3 lg:mt-0"
             size="lg"
             fullWidth
             busy={busy}
