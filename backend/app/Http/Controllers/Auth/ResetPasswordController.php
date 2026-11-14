@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Notifications\PasswordChanged;
 use App\Support\Audit;
+use App\Support\EmailInput;
 use App\Support\NewPassword;
 use Illuminate\Auth\Passwords\PasswordBroker;
 use Illuminate\Http\JsonResponse;
@@ -25,11 +26,11 @@ class ResetPasswordController extends Controller
         abort_unless($request->hasSession(), 403);
         $input = [
             'token' => $request->input('token'),
-            'email' => Str::lower(trim((string) $request->input('email'))),
+            'email' => EmailInput::from($request),
             'password' => $request->input('password'),
         ];
 
-        $request->validate(['token' => ['required', 'string'], 'email' => ['required', 'string', 'max:254']]);
+        $request->validate(['token' => ['required', 'string', 'max:255'], 'email' => ['required', 'string', 'max:254']]);
 
         // The token first: without a valid link, nothing else runs (no password rules, no call to the
         // breach service)
@@ -40,7 +41,7 @@ class ResetPasswordController extends Controller
             throw $this->expired();
         }
 
-        $validator = Validator::make($input, ['password' => NewPassword::rules($input['email'])], NewPassword::messages());
+        $validator = Validator::make($input, ['password' => NewPassword::rules((string) $input['email'])], NewPassword::messages());
         if ($validator->fails()) {
             throw new ApiError('error.invalid', 'Check the highlighted fields.', 422, $validator->errors()->toArray());
         }
