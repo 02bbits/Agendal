@@ -69,17 +69,32 @@ function containsEmail(password: string, email: string): boolean {
   return lower === email || (name.length >= 3 && lower.includes(name));
 }
 
+/** Basic password rules: 8–128 characters and not containing the email (AA §2.1, BR-17). */
+export function passwordRuleError(
+  password: string,
+  email = "",
+): CopyKey | undefined {
+  const length = [...password].length;
+  if (length < 8 || length > 128) return "auth.password_rule";
+  const normalized = normalizeEmail(email);
+  if (normalized && containsEmail(password, normalized))
+    return "auth.password_same_as_email";
+  return undefined;
+}
+
 /** AA §2.1 and BR-17, the same rules the server checks. Length counts characters, not UTF-16 units (AA-E9). */
-export function signUpErrors(email: string, password: string): SignUpErrors {
+export function signUpErrors(
+  email: string,
+  password: string,
+  requireStrength = true,
+): SignUpErrors {
   const errors: SignUpErrors = {};
   const normalized = normalizeEmail(email);
   if (!isEmail(normalized)) errors.email = "auth.email_invalid";
 
-  const length = [...password].length;
-  if (length < 8 || length > 128) errors.password = "auth.password_rule";
-  else if (containsEmail(password, normalized))
-    errors.password = "auth.password_same_as_email";
-  else if (passwordStrength(password) < 3)
+  const basic = passwordRuleError(password, normalized);
+  if (basic) errors.password = basic;
+  else if (requireStrength && passwordStrength(password) < 3)
     errors.password = "auth.password_weak";
   return errors;
 }

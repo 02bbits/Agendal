@@ -6,7 +6,7 @@ import { Link } from "../shell/Link";
 import type { Navigate } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
-import { hasNonKeyboardCharacters, signUpErrors } from "./validation";
+import { hasNonKeyboardCharacters, passwordRuleError } from "./validation";
 
 export interface ResetFailure {
   /** The link expired or was already used (auth.reset_expired). */
@@ -39,7 +39,7 @@ export function ResetPasswordScreen({
   const [busy, setBusy] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
 
-  const rule = signUpErrors(email ?? "", password).password;
+  const rule = passwordRuleError(password, email ?? "");
   const expired = email === null || failure.expired;
   // Set when the form is sent with characters an English keyboard does not type (Vietnamese typing), cleared on edit
   const [accentError, setAccentError] = useState(false);

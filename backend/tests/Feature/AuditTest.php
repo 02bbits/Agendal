@@ -26,10 +26,10 @@ it('SEC-60: sign-in, failure, lockout and sign-up are logged with user, IP and u
     foreach (range(1, 3) as $_) {
         $post('login', $wrong);
     }
-    $post('register', ['email' => 'new@example.com', 'password' => 'a long fresh phrase 7', 'timezone' => 'UTC'])->assertCreated();
+    $post('register', ['email' => 'new@example.com', 'password' => 'a long fresh phrase 7', 'timezone' => 'UTC'])->assertStatus(202);
 
     $events = DB::table('audit_events')->orderBy('id')->get();
-    expect($events->pluck('event')->all())->toBe(['sign_in_failed', 'sign_in_failed', 'sign_in_failed', 'lockout', 'sign_up'])
+    expect($events->pluck('event')->all())->toBe(['sign_in_failed', 'sign_in_failed', 'sign_in_failed', 'lockout', 'sign_up_started'])
         ->and($events->every(fn ($e) => $e->ip === '10.0.0.9' && $e->user_agent === 'AuditTest/1'))->toBeTrue()
         ->and($events->first()->user_id)->toBe($this->user->id);
 });
