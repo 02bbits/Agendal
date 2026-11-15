@@ -30,16 +30,11 @@ class SignUpAttempted extends Notification
             : __('email.greeting_plain');
 
         $timeStr = $this->time ?? now()->utc()->format('M j, Y, g:i A \U\T\C');
-        $ipStr = $this->ip ?? '—';
+        $ipStr = $this->ip ? ' &bull; IP <span style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">'.e($this->ip).'</span>' : '';
 
-        $activityHtml = '<table class="activity-box" width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin: 20px 0; border: 1px solid #E1E1E1; border-radius: 8px; background-color: #FAFAFA;">'
-            .'<tr><td style="padding: 14px 16px;">'
-            .'<p style="margin: 0 0 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: #545454;">'.e(__('email.signup_attempted_activity')).'</p>'
-            .'<table cellpadding="0" cellspacing="0" border="0" style="font-size: 13px; line-height: 22px; color: #252525;">'
-            .'<tr><td class="meta-label" style="padding-right: 14px; color: #545454; font-weight: 500;">'.e(__('email.signup_attempted_time')).':</td><td>'.e($timeStr).'</td></tr>'
-            .'<tr><td class="meta-label" style="padding-right: 14px; color: #545454; font-weight: 500;">'.e(__('email.signup_attempted_ip')).':</td><td style="font-family: ui-monospace, SFMono-Regular, Menlo, monospace;">'.e($ipStr).'</td></tr>'
-            .'</table>'
-            .'</td></tr></table>';
+        $metaHtml = '<p class="meta-line" style="margin: 10px 0 16px; font-size: 13px; color: #545454;">'
+            .e($timeStr).$ipStr
+            .'</p>';
 
         $signInUrl = (string) config('app.frontend_url').'/sign-in';
         $resetUrl = (string) config('app.frontend_url').'/forgot-password';
@@ -48,15 +43,14 @@ class SignUpAttempted extends Notification
             ->subject(__('email.signup_attempted_subject'))
             ->greeting($greeting)
             ->line(__('email.signup_attempted_intro'))
-            ->line(new HtmlString($activityHtml))
-            ->line(__('email.signup_attempted_was_you'))
-            ->line(__('email.signup_attempted_yes', [
+            ->line(new HtmlString($metaHtml))
+            ->line(__('email.signup_attempted_if_you', [
                 'sign_in_text' => __('email.signup_attempted_sign_in'),
                 'sign_in_url' => $signInUrl,
                 'reset_text' => __('email.signup_attempted_reset_password'),
                 'reset_url' => $resetUrl,
             ]))
-            ->line(__('email.signup_attempted_no'))
+            ->line(__('email.signup_attempted_if_not'))
             ->salutation('');
 
         $mail->viewData['title'] = __('email.signup_attempted_heading');

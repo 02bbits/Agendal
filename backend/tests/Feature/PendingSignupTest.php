@@ -421,10 +421,8 @@ it('10. renders the account creation attempt notice email properly in HTML and t
     expect($html)
         ->toContain('Account creation attempt')
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('Activity details')
         ->toContain('192.168.1.100')
         ->toContain('Nov 15, 2026, 10:30 AM +07')
-        ->toContain('Was this you?')
         ->toContain('sign in')
         ->toContain('reset your password')
         ->not->toContain('<table class="action"')
@@ -434,8 +432,6 @@ it('10. renders the account creation attempt notice email properly in HTML and t
     expect($text)
         ->toContain('Account creation attempt')
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('Activity details')
         ->toContain('192.168.1.100')
-        ->toContain('Was this you?')
         ->not->toContain('If the button doesn\'t work');
 });
