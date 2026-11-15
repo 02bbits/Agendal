@@ -3,9 +3,11 @@ import { ApiRequestError, handleResponse } from "./apiError";
 import { now } from "./clock";
 import { markConflict } from "./conflicts";
 import {
+  addFailedNote,
   clearData,
   dropQueue,
   putNoteEntries,
+  putNoteResult,
   putProject,
   putTasks,
   readQueue,
@@ -19,13 +21,26 @@ import {
 } from "./localStore";
 import { SYNC_REQUEST } from "./offline";
 import { getTask } from "./taskApi";
-import type { NoteListEntry, Project, Task } from "../ui/domain/types";
+import type {
+  NoteListEntry,
+  NoteResult,
+  Project,
+  Task,
+} from "../ui/domain/types";
 
 // Sync (ADR-005, AP §2.2): push the queued edits, then pull what changed elsewhere. One tab at a
 // time (Web Locks); the others hear about it on a BroadcastChannel (AP-E3).
 
 /** Fired on `window` after a sync brought or sent changes: lists load again. */
 export const SYNCED = "agendal:synced";
+/** Fired with a `Replayed` detail after pending notes were sent: the app says "Back online…". */
+export const NOTES_REPLAYED = "agendal:notes-replayed";
+export interface Replayed {
+  notes: number;
+  tasks: number;
+  /** Notes that ended in confirm or follow-up. */
+  needs: number;
+}
 const CHANNEL = "agendal-sync";
 const CURSOR = "cursor";
 const BATCH = 500;
@@ -141,7 +156,52 @@ async function push(): Promise<boolean> {
     }
     await dropQueue(batch.map(({ key }) => key));
   }
+  await replayNotes(queue);
   return true;
+}
+
+/**
+ * Pending notes, oldest first, after the edits before them (ADR-003). The same `client_id` makes
+ * a repeat harmless. Rate limit, server error or no answer: the rest stay queued, in order.
+ */
+async function replayNotes(queue: Awaited<ReturnType<typeof readQueue>>) {
+  const replayed: Replayed = { notes: 0, tasks: 0, needs: 0 };
+  try {
+    for (const { key, entry } of queue) {
+      if (entry.kind !== "note") continue;
+      try {
+        const result = await handleResponse<NoteResult>(
+          await api("/notes", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(entry.body),
+          }),
+        );
+        await putNoteResult(result);
+        replayed.notes++;
+        // The tasks a note plans, applied or not: most notes wait for Apply (confirm)
+        replayed.tasks += result.changes.filter(
+          (change) => change.kind === "created",
+        ).length;
+        if (result.note.status !== "done") replayed.needs++;
+      } catch (error) {
+        if (
+          !(error instanceof ApiRequestError) ||
+          error.status >= 500 ||
+          error.status === 429
+        )
+          throw error;
+        // Refused (e.g. too long): it can never land. Its text stays on a card (NU §3)
+        await addFailedNote(entry.body);
+      }
+      await dropQueue([key]);
+    }
+  } finally {
+    if (replayed.notes > 0)
+      window.dispatchEvent(
+        new CustomEvent(NOTES_REPLAYED, { detail: replayed }),
+      );
+  }
 }
 
 /** A later edit elsewhere won (AP-E7, TK-E8): take the server's value and say so. */

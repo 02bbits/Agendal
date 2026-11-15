@@ -424,6 +424,17 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(screen.getByText(t("note.needs_connection"))).toBeTruthy();
     });
 
+    it("offline, an accepted note's task rows are disabled and don't link to the task page", async () => {
+      open(resultOf([sql]), { offline: true });
+      expect(screen.queryByRole("link", { name: /SQL quiz/ })).toBeNull();
+      const row = screen.getByRole("button", {
+        name: new RegExp("SQL quiz"),
+      }) as HTMLButtonElement;
+      expect(row.disabled).toBe(true);
+      expect(screen.queryByText(t("note.result_hint"))).toBeNull();
+      await expectAxeCleanInBothThemes();
+    });
+
     it("conflicts open the dialog: Undo all confirms, Cancel closes", async () => {
       const { onUndo, onCancelUndo } = open(resultOf([sql]), { conflicts: 2 });
       const dialog = screen.getByRole("alertdialog");
@@ -520,6 +531,18 @@ describe("Check this first (IM-45, NU-5)", () => {
       expect(
         (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
       ).toBe(true);
+  });
+
+  it("offline: a planned task can't be opened to edit, since Apply can't save it", async () => {
+    const onOpenTask = vi.fn();
+    open(confirm([sql]), { offline: true, onOpenTask });
+    const row = screen.getByRole("button", {
+      name: new RegExp("SQL quiz"),
+    }) as HTMLButtonElement;
+    expect(row.disabled).toBe(true);
+    await userEvent.click(row);
+    expect(onOpenTask).not.toHaveBeenCalled();
+    await expectAxeCleanInBothThemes();
   });
 
   it("is axe clean in both themes", async () => {

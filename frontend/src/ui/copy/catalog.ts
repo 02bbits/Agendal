@@ -93,9 +93,10 @@ export const catalog = {
   "note.too_many_items":
     "That's more than 30 things in one note. Split it into smaller notes.",
   "note.waiting": "Waiting for connection",
-  "note.back_online_one": "Back online. 1 note turned into {tasks} tasks.",
-  "note.back_online_other":
-    "Back online. {count} notes turned into {tasks} tasks.",
+  "note.back_online_one": "Back online. 1 note turned into {tasks}.",
+  "note.back_online_other": "Back online. {count} notes turned into {tasks}.",
+  "note.task_count_one": "1 task",
+  "note.task_count_other": "{count} tasks",
   "note.needs_look_one": "1 needs a look.",
   "note.needs_look_other": "{count} need a look.",
   "note.couldnt_process": "Couldn't turn this note into tasks. Tap to edit it.",

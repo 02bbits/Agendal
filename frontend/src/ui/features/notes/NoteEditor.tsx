@@ -14,7 +14,7 @@ import {
   saveDraft,
 } from "../../../lib/draft";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
-import { t } from "../../copy";
+import { t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
@@ -54,6 +54,10 @@ export interface NoteEditorProps {
   ) => NoteReplan;
   /** The note was made. The draft is already cleared; the editor stays until this closes it. */
   onSubmitted?: (result: NoteResult) => void;
+  /** Offline, the button reads Save note (NC-6). */
+  offline?: boolean;
+  /** The note was kept on the device to be sent later (NC-6): the toast to show. The draft is cleared. */
+  onQueued?: (toast: CopyKey) => void;
 }
 
 /** The reading line shows only when the answer takes longer than this (NC §2.2). */
@@ -94,6 +98,8 @@ export function NoteEditor({
   onDraftRestored,
   onSubmit,
   onSubmitted,
+  offline,
+  onQueued,
 }: NoteEditorProps) {
   const [text, setText] = useState(note?.text ?? "");
   const latest = useRef(text);
@@ -254,7 +260,8 @@ export function NoteEditor({
     // Same order as discard(): without dirty = false the unmount would save the text again
     dirty.current = false;
     if (!note) clearDraft().catch(() => {});
-    onSubmitted?.(result);
+    if ("queued" in result) onQueued?.(result.queued);
+    else onSubmitted?.(result);
   };
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
@@ -391,7 +398,13 @@ export function NoteEditor({
               onClick={() => submit()}
             >
               <SparklesIcon size={18} />
-              {t(note ? "note.replan" : "note.make_tasks")}
+              {t(
+                note
+                  ? "note.replan"
+                  : offline
+                    ? "note.save_offline"
+                    : "note.make_tasks",
+              )}
             </Button>
           </div>
         </div>

@@ -209,7 +209,17 @@ export type QueueEntry =
       value: unknown;
       at: string;
     }
-  | { kind: "create"; entity: "task" | "project"; body: object };
+  | { kind: "create"; entity: "task" | "project"; body: object }
+  // A note written offline (NC-6), sent through `POST /notes` after the edits before it
+  | { kind: "note"; body: NoteBody };
+
+/** What `POST /notes` takes; `written_at` and `timezone` are from writing time (NC-E14). */
+export interface NoteBody {
+  client_id: string;
+  text: string;
+  written_at: string;
+  timezone: string;
+}
 
 /** Adds edits to the queue. False when the device can't store them (storage blocked). */
 export const enqueue = async (entries: readonly QueueEntry[]) =>
@@ -242,6 +252,21 @@ export async function readQueue(): Promise<
   );
   return entries.map((entry, i) => ({ key: keys[i] as number, entry }));
 }
+
+const FAILED = "failedNotes";
+
+/** Pending notes the server refused (NU §3): kept, so the text isn't lost, and not sent again. */
+export const readFailedNotes = async () =>
+  (await readSetting<NoteBody[]>(FAILED)) ?? [];
+
+export const addFailedNote = async (body: NoteBody) =>
+  saveSetting(FAILED, [...(await readFailedNotes()), body]);
+
+export const removeFailedNote = async (clientId: string) =>
+  saveSetting(
+    FAILED,
+    (await readFailedNotes()).filter((body) => body.client_id !== clientId),
+  );
 
 export const queueSize = () =>
   run<number>(QUEUE, "readonly", (s) => s.count(), 0);
