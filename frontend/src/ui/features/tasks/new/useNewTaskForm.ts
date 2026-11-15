@@ -12,7 +12,7 @@ import {
 } from "../../../domain/newTask";
 import type { CopyKey } from "../../../copy";
 import { startAfterDue } from "../../../domain/edit";
-import type { Priority } from "../../../domain/types";
+import type { Priority, Repeat } from "../../../domain/types";
 import { saveErrorMessage } from "../saveError";
 import type { NewTaskSheetProps } from "./types";
 
@@ -53,6 +53,7 @@ export function useNewTaskForm({
   const [projectId, setProjectId] = useState<string | null>(
     defaults.projectId ?? null,
   );
+  const [repeat, setRepeat] = useState<Repeat>("never");
   const [busy, setBusy] = useState(false);
   const [fieldError, setFieldError] = useState<string | undefined>();
   const [formError, setFormError] = useState<string | undefined>();
@@ -68,7 +69,8 @@ export function useNewTaskForm({
     (projectId !== null && projectId !== (defaults.projectId ?? null)) ||
     picked !== startingPicked ||
     dueTime !== "" ||
-    startDate !== "";
+    startDate !== "" ||
+    repeat !== "never";
 
   const dueDate = dueDateFor(due, todayDate, picked);
   // A time only counts with its date; start must be before due (TK-3).
@@ -101,6 +103,16 @@ export function useNewTaskForm({
     }
     setDue(nextDue);
     updatePriorityFromDue(nextDue);
+    if (nextDue === "none" && repeat !== "never" && !startDate) {
+      setRepeat("never");
+    }
+  };
+
+  const handleRepeatChange = (nextRepeat: Repeat) => {
+    setRepeat(nextRepeat);
+    if (nextRepeat !== "never" && due === "none" && !startDate) {
+      handleDueChange("today");
+    }
   };
 
   const handlePickedChange = (nextPicked: string) => {
@@ -144,6 +156,7 @@ export function useNewTaskForm({
       startTime: dates.start_time,
       priority,
       projectId,
+      repeat,
     });
 
     try {
@@ -199,6 +212,9 @@ export function useNewTaskForm({
     formError,
     confirmDiscard,
     setConfirmDiscard,
+    repeat,
+    setRepeat,
+    handleRepeatChange,
     handleDueChange,
     handlePickedChange,
     handleCancelPick,

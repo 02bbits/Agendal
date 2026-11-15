@@ -665,6 +665,43 @@ it('rejects patch with name taken by another non-deleted project with 422 but al
     expect($responseSelf->json('name'))->toBe('Mobile App');
 });
 
+it('T-PJ-107 (PJ-E7): a project renamed to a keyword (for example tomorrow): rename is allowed, and a note naming it picks the project literally', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Initial Name',
+        'colour' => 'blue',
+    ]);
+
+    $patchRes = $this->actingAs($user)->patchJson("/api/v1/projects/{$project->id}", [
+        'name' => 'tomorrow',
+    ])->assertStatus(200);
+
+    expect($patchRes->json('name'))->toBe('tomorrow');
+
+    config([
+        'notes.engine_budget_ms' => 60_000,
+        'notes.changes_to_confirm' => 5,
+    ]);
+
+    $noteRes = $this->actingAs($user)->postJson('/api/v1/notes', [
+        'client_id' => (string) Str::uuid(),
+        'text' => 'tomorrow buy groceries',
+        'written_at' => '2026-10-23T08:12:00+07:00',
+        'timezone' => 'Asia/Ho_Chi_Minh',
+    ])->assertCreated();
+
+    if ($noteRes->json('note.status') === 'confirm') {
+        $this->actingAs($user)->postJson("/api/v1/notes/{$noteRes->json('note.id')}/apply")
+            ->assertOk();
+    }
+
+    $task = Task::where('user_id', $user->id)->first();
+    expect($task)->not->toBeNull()
+        ->and($task->project_id)->toBe($project->id);
+});
+
 it('rejects patch with unknown keys with 422', function () {
     $user = User::factory()->create();
     $project = Project::forceCreate([
@@ -929,6 +966,81 @@ it('restores a project and its deleted tasks with 200', function () {
     $freshTask = Task::find($task1->id);
     expect($freshTask->trashed())->toBeFalse()
         ->and($freshTask->field_updated_at['deleted'])->toBe('2026-10-23T01:17:00.000Z');
+});
+
+it('T-PJ-109 (PJ-E9): undo restore after project was edited keeps latest field values (LWW)', function () {
+    $user = User::factory()->create();
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Original Name',
+        'colour' => 'blue',
+        'field_updated_at' => [
+            'name' => '2026-10-23T01:00:00Z',
+            'colour' => '2026-10-23T01:00:00Z',
+        ],
+    ]);
+
+    $del = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}")->assertOk();
+    $undo = $del->json('undo');
+
+    $project->refresh();
+    $project->name = 'Updated Elsewhere';
+    $project->field_updated_at = [
+        ...$project->field_updated_at,
+        'name' => '2026-10-23T01:15:00Z',
+    ];
+    $project->save();
+
+    $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", $undo)->assertOk();
+    $project->refresh();
+    expect($project->deleted_at)->toBeNull()
+        ->and($project->name)->toBe('Updated Elsewhere');
+});
+
+it('T-PJ-106 (PJ-E6): delete a project with "Delete them too" while it holds a repeating task, undo: the task and its series are back, and completing it still makes the next occurrence', function () {
+    $clock = new FrozenClock('2026-10-23T01:12:00Z');
+    app()->instance(ClockInterface::class, $clock);
+
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    $project = Project::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'name' => 'Sprint Project',
+        'colour' => 'blue',
+    ]);
+
+    $task = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'project_id' => $project->id,
+        'title' => 'Daily standup',
+        'due_date' => '2026-10-23',
+        'repeat' => 'daily',
+        'done' => false,
+    ]);
+
+    $delRes = $this->actingAs($user)->deleteJson("/api/v1/projects/{$project->id}?tasks=delete")
+        ->assertStatus(200);
+    $undo = $delRes->json('undo');
+
+    expect(Project::withoutGlobalScope('owner')->find($project->id)->deleted_at)->not->toBeNull()
+        ->and(Task::find($task->id))->toBeNull();
+
+    $clock->advance('+1 minute');
+    $restoreRes = $this->actingAs($user)->postJson("/api/v1/projects/{$project->id}/restore", $undo)
+        ->assertStatus(200);
+
+    expect(Project::withoutGlobalScope('owner')->find($project->id)->deleted_at)->toBeNull()
+        ->and(Task::find($task->id))->not->toBeNull();
+
+    $completeRes = $this->actingAs($user)->postJson("/api/v1/tasks/{$task->id}/complete")
+        ->assertStatus(200);
+
+    expect($completeRes->json('task.done'))->toBeTrue()
+        ->and($completeRes->json('next.due_date'))->toBe('2026-10-24');
+    $nextId = $completeRes->json('next.id');
+    expect(Task::find($nextId))->not->toBeNull();
 });
 
 it('returns 200 no-op if the restored project is not deleted', function () {

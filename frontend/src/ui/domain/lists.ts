@@ -26,6 +26,59 @@ export function sortWithinDay(tasks: readonly Task[]): Task[] {
   });
 }
 
+/**
+ * Priority order for groups in Today:
+ * 0. Due today (deadline today)
+ * 1. Starts today (starts today, due later or start-only)
+ * 2. In progress (started in past, due in future)
+ * 3. Planned {date} (start-only passed)
+ */
+export function todayGroupRank(task: Task, today: string): number {
+  if (task.due_date === today) return 0;
+  if (task.start_date === today) return 1;
+  if (
+    task.start_date &&
+    task.start_date < today &&
+    task.due_date &&
+    task.due_date > today
+  ) {
+    return 2;
+  }
+  if (task.start_date && task.start_date < today && !task.due_date) {
+    return 3;
+  }
+  return 4;
+}
+
+/**
+ * Sorts tasks in Today: first by group (Due today -> Starts today -> In progress -> Planned),
+ * then within each group timed first, then priority, then creation time.
+ */
+export function sortTodayTasks(tasks: readonly Task[], today: string): Task[] {
+  return [...tasks].sort((a, b) => {
+    const rankDiff = todayGroupRank(a, today) - todayGroupRank(b, today);
+    if (rankDiff !== 0) return rankDiff;
+
+    const aTime =
+      a.start_date === today ? a.start_time : (a.due_time ?? a.start_time);
+    const bTime =
+      b.start_date === today ? b.start_time : (b.due_time ?? b.start_time);
+
+    if (aTime && bTime) {
+      return (
+        aTime.localeCompare(bTime) || a.created_at.localeCompare(b.created_at)
+      );
+    }
+    if (aTime) return -1;
+    if (bTime) return 1;
+
+    return (
+      priorityRank(a.priority) - priorityRank(b.priority) ||
+      a.created_at.localeCompare(b.created_at)
+    );
+  });
+}
+
 export interface InboxView {
   overdue: Task[];
   today: Task[];
@@ -86,7 +139,7 @@ export function buildInbox(
         a.due_date!.localeCompare(b.due_date!) ||
         a.created_at.localeCompare(b.created_at),
     ),
-    today: sortWithinDay(todayTasks),
+    today: sortTodayTasks(todayTasks, today),
     noDate: [...noDate].sort(
       (a, b) =>
         priorityRank(a.priority) - priorityRank(b.priority) ||
@@ -108,9 +161,13 @@ export interface UpcomingPage {
   nextFrom: string | null;
 }
 
-/** Scheduled: has a start date. Due only: has a due date. */
+/** Scheduled: has a start date, or repeats on a due date. Due only: has a due date. */
 export function matchesFilter(task: Task, filter: UpcomingFilter): boolean {
-  if (filter === "scheduled") return !!task.start_date;
+  if (filter === "scheduled")
+    return (
+      !!task.start_date ||
+      (!task.start_date && task.repeat !== "never" && !!task.due_date)
+    );
   if (filter === "due") return !!task.due_date;
   return true;
 }

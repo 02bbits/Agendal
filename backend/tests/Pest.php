@@ -18,7 +18,7 @@ use Tests\TestCase;
 
 pest()->extend(TestCase::class)
  // ->use(RefreshDatabase::class)
-    ->in('Feature');
+    ->in('Feature', 'Performance');
 
 /*
 | Browser-like sessions (IM-10). Feature tests that keep a session across requests use the

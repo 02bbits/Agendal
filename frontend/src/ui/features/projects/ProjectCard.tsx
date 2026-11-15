@@ -73,8 +73,19 @@ export function ProjectCard({
           </span>
         </div>
         <div
+          role="progressbar"
+          aria-label={t("project.progress", {
+            done: progress.done,
+            total: progress.total,
+          })}
+          aria-valuenow={progress.done}
+          aria-valuemin={0}
+          aria-valuemax={progress.total}
+          aria-valuetext={t("project.progress", {
+            done: progress.done,
+            total: progress.total,
+          })}
           className="block h-1.5 overflow-hidden rounded-full bg-fill"
-          aria-hidden="true"
         >
           <div
             className="h-full rounded-full transition-all duration-300"
