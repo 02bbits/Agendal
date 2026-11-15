@@ -166,4 +166,62 @@ describe("Delete a task (TK-5)", () => {
     expect(removeSpy).toHaveBeenCalledWith(t0.id, "one");
     await waitFor(() => expect(memory.db.tasks).toHaveLength(0));
   });
+
+  it("A11Y-42: the repeat scope dialog is an alertdialog with focus on Cancel", async () => {
+    const t0 = task({
+      title: "Plan the week",
+      due_date: "2026-10-25",
+      repeat: "weekly",
+    });
+    const { wrap } = setup([t0]);
+    render(wrap(<Screen id={t0.id} />));
+    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
+
+    const dialog = screen.getByRole("alertdialog", {
+      name: "Delete a repeating task",
+    });
+    expect(dialog).toBeTruthy();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Cancel" }),
+    );
+  });
+
+  it('T-TK-105: delete with "This task only" inserts the returned next row, and Undo removes it and brings the old row back', async () => {
+    const t0 = task({
+      id: "t-0",
+      title: "Weekly standup",
+      due_date: "2026-10-25",
+      repeat: "weekly",
+    });
+    const nextTask = task({
+      id: "t-next",
+      title: "Weekly standup next",
+      due_date: "2026-11-01",
+      repeat: "weekly",
+    });
+    const { wrap, memory } = setup([t0]);
+
+    vi.spyOn(memory.api, "remove").mockResolvedValueOnce({ next: nextTask });
+    vi.spyOn(memory.api, "restore").mockResolvedValueOnce(t0);
+
+    render(wrap(<Screen id={t0.id} />));
+    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "This task only" }),
+    );
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "List: Weekly standup next",
+      }),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(
+      await screen.findByRole("heading", {
+        name: "List: Weekly standup",
+      }),
+    ).toBeTruthy();
+  });
 });

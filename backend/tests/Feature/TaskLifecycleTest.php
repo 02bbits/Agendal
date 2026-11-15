@@ -269,16 +269,155 @@ it('DELETE a repeating task without scope or with scope=future → 422 on scope,
     $respInvalidScope = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=all")
         ->assertStatus(422);
     expect($respInvalidScope->json('error.fields.scope'))->toContain('Choose This task only or This and all future.');
+});
 
-    // 2. With scope=future → 422 on scope, message: "This and all future isn't available yet.", task still exists
-    $respScopeFuture = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=future")
-        ->assertStatus(422);
-    expect($respScopeFuture->json('error.code'))->toBe('error.invalid')
-        ->and($respScopeFuture->json('error.fields.scope'))->toContain("This and all future isn't available yet.");
+it('DELETE repeating task with scope=one returns next with shifted dates and deletes the old row', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
 
-    $taskAfter = Task::find($taskId);
-    expect($taskAfter)->not->toBeNull()
-        ->and($taskAfter->deleted_at)->toBeNull();
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(200);
+
+    expect($response->json('next.start_date'))->toBe('2026-11-02')
+        ->and($response->json('next.due_date'))->toBe('2026-11-04')
+        ->and(Task::find($taskId))->toBeNull()
+        ->and(Task::withTrashed()->find($taskId)->trashed())->toBeTrue();
+    assertTaskSchema($response->json('next'));
+});
+
+it('DELETE repeating task with scope=future is 204 and no new row', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=future")
+        ->assertStatus(204);
+
+    expect(Task::find($taskId))->toBeNull()
+        ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
+});
+
+it('deleting one then restore removes the next and brings back the old', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    $resDelete = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(200);
+    $nextId = $resDelete->json('next.id');
+    expect(Task::find($nextId))->not->toBeNull()
+        ->and(Task::find($taskId))->toBeNull();
+
+    $resRestore = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/restore")
+        ->assertStatus(200);
+
+    expect($resRestore->json('id'))->toBe($taskId)
+        ->and(Task::find($taskId))->not->toBeNull()
+        ->and(Task::find($nextId))->toBeNull()
+        ->and(Task::withTrashed()->find($nextId)->trashed())->toBeTrue();
+});
+
+it('delete one, restore, delete one again works (unique previous_occurrence_id)', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    $res1 = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(200);
+    $nextId1 = $res1->json('next.id');
+
+    $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/restore")
+        ->assertStatus(200);
+
+    $res2 = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(200);
+    $nextId2 = $res2->json('next.id');
+
+    expect($nextId2)->toBe($nextId1)
+        ->and(Task::find($nextId2))->not->toBeNull()
+        ->and(Task::find($taskId))->toBeNull();
+});
+
+it('done repeating task with one creates nothing', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => true,
+        'done_at' => Carbon::parse('2026-10-23 01:10:00'),
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
+
+    expect(Task::find($taskId))->toBeNull()
+        ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
+});
+
+it('a series whose rule ended returns 204', function () {
+    $user = User::factory()->create();
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Repeat until past',
+        'start_date' => '2026-10-20',
+        'due_date' => '2026-10-20',
+        'repeat' => 'daily',
+        'repeat_rule' => 'FREQ=DAILY;COUNT=1',
+        'repeat_anchor' => '2026-10-20',
+        'done' => false,
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
+
+    expect(Task::find($taskId))->toBeNull()
+        ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
 });
 
 it('restore of a task that is not deleted → 200, nothing changes', function () {
@@ -596,4 +735,138 @@ it('completing a weekly task with start and due dates shifts both together', fun
         ->and($response->json('next.due_time'))->toBe('17:00');
     assertTaskSchema($response->json('task'));
     assertTaskSchema($response->json('next'));
+});
+
+it('T-TK-101 (TK-E1): monthly on the 31st: completing moves 31 Jan → 28 Feb → 31 Mar', function () {
+    $clock = new FrozenClock('2026-01-31T10:00:00Z');
+    app()->instance(ClockInterface::class, $clock);
+
+    $user = User::factory()->create(['timezone' => 'UTC']);
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Monthly bill',
+        'due_date' => '2026-01-31',
+        'repeat' => 'monthly',
+        'repeat_anchor' => '2026-01-31',
+        'done' => false,
+    ]);
+
+    $res1 = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+    expect($res1->json('next.due_date'))->toBe('2026-02-28');
+    $nextId = $res1->json('next.id');
+
+    $clock->setTime('2026-02-28T10:00:00Z');
+    $res2 = $this->actingAs($user)->postJson("/api/v1/tasks/{$nextId}/complete")
+        ->assertStatus(200);
+    expect($res2->json('next.due_date'))->toBe('2026-03-31');
+});
+
+it('T-TK-102 (TK-E2): daily task completed 3 days late through /complete: next occurrence is today', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Daily workout',
+        'due_date' => '2026-10-20',
+        'repeat' => 'daily',
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+
+    expect($response->json('next.due_date'))->toBe('2026-10-23');
+});
+
+it('T-TK-103 (TK-E3): weekly task completed early: next comes from the due date, not the completion date', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Weekly report',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => false,
+    ]);
+
+    $response = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+
+    expect($response->json('next.due_date'))->toBe('2026-11-04');
+});
+
+it('T-TK-106 (TK-E6): complete a repeating task then /reopen: the generated occurrence is gone', function () {
+    $user = User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']);
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Repeating meeting',
+        'due_date' => '2026-10-23',
+        'repeat' => 'daily',
+        'done' => false,
+    ]);
+
+    $completeResp = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+    $nextId = $completeResp->json('next.id');
+    expect(Task::find($nextId))->not->toBeNull();
+
+    /** @var FrozenClock $clock */
+    $clock = app(ClockInterface::class);
+    $clock->advance('+1 second');
+
+    $reopenResp = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/reopen")
+        ->assertStatus(200);
+
+    expect($reopenResp->json('task.done'))->toBeFalse()
+        ->and(Task::find($nextId))->toBeNull()
+        ->and(Task::withTrashed()->find($nextId)->trashed())->toBeTrue();
+});
+
+it('T-TK-115 (TK-E15): yearly anchored on 29 Feb: 28 Feb in non-leap years, back to 29 Feb in a leap year', function () {
+    $clock = new FrozenClock('2024-02-29T10:00:00Z');
+    app()->instance(ClockInterface::class, $clock);
+
+    $user = User::factory()->create(['timezone' => 'UTC']);
+    $taskId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $taskId,
+        'user_id' => $user->id,
+        'title' => 'Leap year checkup',
+        'due_date' => '2024-02-29',
+        'repeat' => 'yearly',
+        'repeat_anchor' => '2024-02-29',
+        'done' => false,
+    ]);
+
+    $res1 = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/complete")
+        ->assertStatus(200);
+    expect($res1->json('next.due_date'))->toBe('2025-02-28');
+
+    $clock->setTime('2027-02-28T10:00:00Z');
+    $taskId2027 = (string) Str::uuid();
+    Task::forceCreate([
+        'id' => $taskId2027,
+        'user_id' => $user->id,
+        'title' => 'Leap year checkup 2027',
+        'due_date' => '2027-02-28',
+        'repeat' => 'yearly',
+        'repeat_anchor' => '2024-02-29',
+        'done' => false,
+    ]);
+
+    $res2 = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId2027}/complete")
+        ->assertStatus(200);
+    expect($res2->json('next.due_date'))->toBe('2028-02-29');
 });

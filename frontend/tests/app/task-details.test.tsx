@@ -76,7 +76,7 @@ describe("Task details page /tasks/[id]", () => {
     expect(screen.getByLabelText(t("task.priority"))).toBeTruthy();
   });
 
-  it("shows error.not_found with Back on 404 (TK-E13)", async () => {
+  it("T-TK-113 (TK-E13): shows error.not_found with Back on 404", async () => {
     fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/v1/me")
         return json(200, { id: 1, email: "u@test.com" });

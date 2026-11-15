@@ -1119,4 +1119,36 @@ describe("SearchPanel & SearchPopup", () => {
     fireEvent.keyDown(document, { key: "/" });
     expect(onOpenSearch).toHaveBeenCalledTimes(3);
   });
+
+  it("A11Y-52: the search count sits in a polite live region", () => {
+    const searchTasksMock = vi.fn().mockResolvedValue({
+      items: corpus(),
+      counts: { all: corpus().length, open: 5, completed: 1 },
+      next_cursor: null,
+    });
+    const searchNotesMock = vi.fn().mockResolvedValue({ items: [] });
+
+    render(
+      <SearchPanel
+        variant="popup"
+        projects={mockProjects}
+        today="2026-10-23"
+        timeFormat="24h"
+        searchTasks={searchTasksMock}
+        searchNotes={searchNotesMock}
+        onOpenTask={() => {}}
+        onOpenProject={() => {}}
+        onOpenNote={() => {}}
+      />,
+    );
+
+    const input = screen.getByRole("combobox");
+    fireEvent.change(input, { target: { value: "SQL" } });
+
+    const status = screen
+      .getAllByRole("status")
+      .find((el) => el.getAttribute("aria-live") === "polite");
+    expect(status).toBeTruthy();
+    expect(status?.getAttribute("aria-live")).toBe("polite");
+  });
 });

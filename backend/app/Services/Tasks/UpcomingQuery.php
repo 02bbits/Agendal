@@ -56,7 +56,14 @@ final class UpcomingQuery
         $query = Task::query()->where('done', false);
 
         if ($filter === 'scheduled') {
-            $query->where('start_date', '>=', $startDate);
+            $query->where(function (Builder $q) use ($startDate): void {
+                $q->where('start_date', '>=', $startDate)
+                    ->orWhere(function (Builder $q2) use ($startDate): void {
+                        $q2->whereNull('start_date')
+                            ->where('repeat', '<>', 'never')
+                            ->where('due_date', '>=', $startDate);
+                    });
+            });
         } elseif ($filter === 'due') {
             $query->where('due_date', '>=', $startDate);
         } else {
@@ -90,6 +97,8 @@ final class UpcomingQuery
             if ($filter === 'scheduled') {
                 if ($task->start_date !== null) {
                     $dates[] = substr((string) $task->start_date, 0, 10);
+                } elseif ($task->repeat !== 'never' && $task->due_date !== null) {
+                    $dates[] = substr((string) $task->due_date, 0, 10);
                 }
             } elseif ($filter === 'due') {
                 if ($task->due_date !== null) {
