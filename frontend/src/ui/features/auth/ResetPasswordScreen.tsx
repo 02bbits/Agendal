@@ -137,7 +137,7 @@ export function ResetPasswordScreen({
           <PasswordStrength id="reset-password-strength" password={password} />
           <PasswordField
             ref={confirmPasswordRef}
-            label={t("auth.confirm_password")}
+            label={t("settings.confirm_password")}
             autoComplete="new-password"
             value={confirmPassword}
             leading={<LockIcon size={18} />}

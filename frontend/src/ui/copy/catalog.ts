@@ -16,8 +16,6 @@ export const catalog = {
   "auth.password_same_as_email": "Your password can't contain your email.",
   "auth.password_breached":
     "This password has appeared in a data breach. Choose another one.",
-  "auth.confirm_password": "Confirm new password",
-  "auth.password_mismatch": "New passwords don't match.",
   "auth.email_taken":
     "An account with this email already exists. Sign in instead?",
   "auth.invalid": "Email or password is incorrect.",
