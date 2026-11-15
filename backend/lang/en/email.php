@@ -30,7 +30,7 @@ return [
     'signup_attempted_subject' => '[Agendal] Security notice: Account creation attempt',
     'signup_attempted_heading' => 'Account creation attempt',
     'signup_attempted_intro' => 'Someone tried to create an Agendal account with your email. You already have one, so nothing was created.',
-    'signup_attempted_if_you' => "If it was you, [:sign_in_text](:sign_in_url) or [:reset_text](:reset_url).",
+    'signup_attempted_if_you' => 'If it was you, [:sign_in_text](:sign_in_url) or [:reset_text](:reset_url).',
     'signup_attempted_if_not' => 'If not, you can safely ignore this email — your account is safe.',
     'signup_attempted_sign_in' => 'sign in',
     'signup_attempted_reset_password' => 'reset your password',
