@@ -35,8 +35,6 @@ class MeController extends Controller
             'install_prompt_shown' => ['sometimes', 'boolean'],
             'timezone' => ['sometimes', 'string', Rule::in(DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC))],
             'timezone_auto' => ['sometimes', 'boolean'],
-            'theme_palette' => ['sometimes', Rule::in(['default', 'agendal', 'moonstone', 'tangerine', 'kale', 'blueberry', 'lavender', 'raspberry'])],
-            'page_view' => ['sometimes', Rule::in(['flat', 'full'])],
         ]);
 
         if (array_key_exists('display_name', $data)) {

@@ -1,5 +1,4 @@
 import {
-  cloneElement,
   useCallback,
   useEffect,
   useMemo,
@@ -22,12 +21,10 @@ import {
   CalendarIcon,
   CheckCircleIcon,
   CheckIcon,
-  ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
   CloudIcon,
   FolderIcon,
-  GripVerticalIcon,
   InboxIcon,
   LockIcon,
   NotesIcon,
@@ -62,9 +59,6 @@ import {
   SIDEBAR_TABS_STORAGE_KEY,
   type TabId,
 } from "./routes";
-import { useMediaQuery } from "../tasks/useMediaQuery";
-import { useFlipChildren } from "./useFlipChildren";
-import { useSortableList } from "./useSortableList";
 
 export type ThemeSetting = "system" | "light" | "dark";
 export type PageViewMode = "flat" | "full";
@@ -253,15 +247,9 @@ export function AccountScreen({
     }
   };
 
-  const isDesktop =
-    useMediaQuery("(min-width: 768px)") ||
-    (typeof window !== "undefined" && !window.matchMedia);
-
   const [tab, setTab] = useState<SettingsTab>(
     initialTab === "subscription" ? "general" : initialTab,
   );
-  const [phoneView, setPhoneView] = useState<"list" | SettingsTab>("list");
-  const detailHistoryPushed = useRef(false);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [prevName, setPrevName] = useState(name);
@@ -325,27 +313,10 @@ export function AccountScreen({
   const [sidebarOrder, setSidebarOrder] = useState(getStoredSidebarTabsOrder);
   const [ripplingId, setRipplingId] = useState<string | null>(null);
 
-  const {
-    displayOrder: sortableSidebarOrder,
-    getItemProps,
-    getHandleProps,
-    move: moveSortableSidebarTab,
-  } = useSortableList(sidebarOrder, (nextOrder) => {
-    setSidebarOrder(nextOrder);
-    try {
-      if (typeof localStorage !== "undefined") {
-        localStorage.setItem(SIDEBAR_TABS_ORDER_KEY, JSON.stringify(nextOrder));
-      }
-    } catch {}
-    window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
-  });
-
-  // The preview shows only the enabled tabs; they slide when the order or the set changes
   const previewRef = useRef<HTMLDivElement>(null);
-  const previewTabs = sortableSidebarOrder.filter(
+  const previewTabs = sidebarOrder.filter(
     (tabId) => sidebarTabs[tabId] !== false,
   );
-  useFlipChildren(previewRef, previewTabs.join("|"));
 
   const toggleSidebarTab = (tabId: TabId) => {
     const isCurrentlyEnabled = sidebarTabs[tabId] !== false;
@@ -367,7 +338,18 @@ export function AccountScreen({
   };
 
   const moveSidebarTab = (index: number, direction: "up" | "down") => {
-    moveSortableSidebarTab(index, direction === "up" ? index - 1 : index + 1);
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= sidebarOrder.length) return;
+    const next = [...sidebarOrder];
+    const [moved] = next.splice(index, 1);
+    next.splice(targetIndex, 0, moved);
+    setSidebarOrder(next);
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(SIDEBAR_TABS_ORDER_KEY, JSON.stringify(next));
+      }
+    } catch {}
+    window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
   };
 
   const resetSidebarNavigation = () => {
@@ -395,84 +377,9 @@ export function AccountScreen({
     window.dispatchEvent(new Event("agendal:sidebar_tabs_changed"));
   };
 
-  const openDetail = (tabId: SettingsTab) => {
-    setTab(tabId);
-    setSubView(null);
-    setPhoneView(tabId);
-    if (typeof window !== "undefined") {
-      try {
-        window.history.pushState(
-          { ...window.history.state, settingsDetail: true },
-          "",
-        );
-        detailHistoryPushed.current = true;
-      } catch {}
-    }
-  };
-
-  const backToList = useCallback(() => {
-    if (subView === "change_password") {
-      setSubView(null);
-      return;
-    }
-    if (detailHistoryPushed.current) {
-      detailHistoryPushed.current = false;
-      if (
-        typeof window !== "undefined" &&
-        window.history.state?.settingsDetail
-      ) {
-        try {
-          window.history.back();
-        } catch {}
-      }
-    }
-    setPhoneView("list");
-  }, [subView]);
-
   const handleClose = useCallback(() => {
-    if (detailHistoryPushed.current) {
-      detailHistoryPushed.current = false;
-      if (
-        typeof window !== "undefined" &&
-        window.history.state?.settingsDetail
-      ) {
-        try {
-          window.history.back();
-        } catch {}
-      }
-    }
     onBack();
   }, [onBack]);
-
-  useEffect(() => {
-    const onPopState = () => {
-      if (phoneView !== "list") {
-        detailHistoryPushed.current = false;
-        if (subView === "change_password") {
-          setSubView(null);
-        }
-        setPhoneView("list");
-      }
-    };
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
-  }, [phoneView, subView]);
-
-  useEffect(() => {
-    return () => {
-      if (detailHistoryPushed.current) {
-        detailHistoryPushed.current = false;
-        if (
-          typeof window !== "undefined" &&
-          window.history.state?.settingsDetail
-        ) {
-          try {
-            window.history.back();
-          } catch {}
-        }
-      }
-    };
-  }, []);
 
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -482,9 +389,7 @@ export function AccountScreen({
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!isDesktop && phoneView !== "list") {
-          backToList();
-        } else if (subView === "change_password") {
+        if (subView === "change_password") {
           setSubView(null);
         } else {
           handleClose();
@@ -493,7 +398,7 @@ export function AccountScreen({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isDesktop, phoneView, subView, handleClose, backToList]);
+  }, [subView, handleClose]);
 
   const deviceZone = getDeviceTimeZone();
   const timeZoneOptions = useMemo(() => {
@@ -624,7 +529,7 @@ export function AccountScreen({
     }
   };
 
-  const activeTabId = !isDesktop && phoneView !== "list" ? phoneView : tab;
+  const activeTabId = tab;
   const currentTabObj = allTabs.find(function isCurrent(tItem) {
     return tItem.id === activeTabId;
   });
@@ -640,9 +545,7 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "account"
               ? "opacity-100"
-              : isDesktop
-                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
-                : "hidden",
+              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
           )}
         >
           {/* Plan */}
@@ -849,9 +752,7 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "general"
               ? "opacity-100"
-              : isDesktop
-                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
-                : "hidden",
+              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
           )}
         >
           {/* Language */}
@@ -1086,9 +987,7 @@ export function AccountScreen({
             "space-y-6 max-w-[620px]",
             activeTab === "theme"
               ? "opacity-100"
-              : isDesktop
-                ? "opacity-0 pointer-events-none absolute h-0 overflow-hidden"
-                : "hidden",
+              : "opacity-0 pointer-events-none absolute h-0 overflow-hidden",
           )}
         >
           {/* Description */}
@@ -1503,7 +1402,7 @@ export function AccountScreen({
                 role="list"
                 aria-label={t("settings.sidebar_nav_heading")}
               >
-                {sortableSidebarOrder.map((tabId, index) => {
+                {sidebarOrder.map((tabId, index) => {
                   const tabMeta = {
                     inbox: {
                       label: t("nav.inbox"),
@@ -1528,33 +1427,14 @@ export function AccountScreen({
                   const enabledCount =
                     Object.values(sidebarTabs).filter(Boolean).length;
                   const isLastEnabled = isChecked && enabledCount <= 1;
-                  const itemProps = getItemProps(tabId);
-                  const handleProps = getHandleProps(tabId);
 
                   return (
                     <div
                       key={tabId}
                       role="listitem"
-                      ref={itemProps.ref}
-                      style={itemProps.style}
-                      data-sortable-id={itemProps["data-sortable-id"]}
-                      className={cx(
-                        "flex items-center justify-between py-2 px-1 rounded-lg transition-colors select-none",
-                        itemProps.className,
-                      )}
+                      className="flex items-center justify-between py-2 px-1 rounded-lg transition-colors select-none"
                     >
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-                        <span
-                          {...handleProps}
-                          className={cx(
-                            "cursor-grab active:cursor-grabbing text-ink-tertiary/60 hover:text-ink transition-colors p-1",
-                            handleProps.className,
-                          )}
-                          title={t("settings.drag_reorder")}
-                        >
-                          <GripVerticalIcon size={16} />
-                        </span>
-
                         {/* Up / Down Reorder Accessibility Buttons */}
                         <div className="flex flex-col gap-0.5">
                           <button
@@ -1568,7 +1448,7 @@ export function AccountScreen({
                           </button>
                           <button
                             type="button"
-                            disabled={index === sortableSidebarOrder.length - 1}
+                            disabled={index === sidebarOrder.length - 1}
                             onClick={() => moveSidebarTab(index, "down")}
                             className="focus-ring rounded p-0.5 text-ink-tertiary hover:text-ink hover:bg-fill disabled:opacity-20 disabled:cursor-default cursor-pointer transition-colors"
                             aria-label={`${t("settings.reorder_down")}: ${tabMeta.label}`}
@@ -1839,231 +1719,9 @@ export function AccountScreen({
     </>
   );
 
-  const preferencesTabIds = new Set([
-    "general",
-    "theme",
-    "sidebar",
-    "quick_add",
-  ]);
-  const tasksTabIds = new Set(["productivity", "reminders", "notifications"]);
-  const knownGroupTabIds = new Set([
-    "account",
-    "general",
-    "theme",
-    "sidebar",
-    "quick_add",
-    "productivity",
-    "reminders",
-    "notifications",
-    "backups",
-    "integrations",
-    "calendars",
-  ]);
-
-  const preferencesTabs = allTabs.filter(function isPref(tItem) {
-    return preferencesTabIds.has(tItem.id);
-  });
-  const tasksTabs = allTabs.filter(function isTask(tItem) {
-    return tasksTabIds.has(tItem.id);
-  });
-  const dataTabs = allTabs.filter(function isData(tItem) {
-    return (
-      tItem.id === "backups" ||
-      tItem.id === "integrations" ||
-      tItem.id === "calendars" ||
-      !knownGroupTabIds.has(tItem.id)
-    );
-  });
-
-  function renderPhoneSettingsRow(
-    item: { id: SettingsTab; label: string; icon: ReactElement },
-    index: number,
-  ) {
-    return (
-      <button
-        key={item.id}
-        type="button"
-        onClick={() => openDetail(item.id)}
-        className="focus-ring flex min-h-[52px] w-full items-center gap-3 pl-4 pr-3 text-left active:bg-fill hover:bg-fill/60 cursor-pointer"
-      >
-        <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-fill text-ink">
-          {cloneElement(item.icon as ReactElement<{ size?: number }>, {
-            size: 18,
-          })}
-        </span>
-        <span
-          className={cx(
-            "flex flex-1 min-w-0 items-center gap-3 self-stretch",
-            index > 0 && "border-t border-separator",
-          )}
-        >
-          <span className="flex-1 truncate text-body text-ink">
-            {item.label}
-          </span>
-          <ChevronRightIcon size={18} className="text-ink-tertiary shrink-0" />
-        </span>
-      </button>
-    );
-  }
-
-  const phoneModal = (
-    <div
-      ref={modalRef}
-      data-modal-host="true"
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("settings.title")}
-      className="fixed inset-0 z-[100] flex flex-col bg-paper h-dvh max-h-dvh"
-    >
-      {phoneView === "list" ? (
-        <>
-          <div className="flex min-h-14 items-center justify-end px-2 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
-            <button
-              type="button"
-              onClick={handleClose}
-              aria-label={t("common.close")}
-              className="focus-ring flex size-11 items-center justify-center cursor-pointer"
-            >
-              <span className="flex size-8 items-center justify-center rounded-full bg-fill text-ink-secondary">
-                <XIcon size={18} />
-              </span>
-            </button>
-          </div>
-          <div
-            key="settings-list"
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]"
-          >
-            <h1 className="px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
-              {t("settings.title")}
-            </h1>
-            <div className="mt-3 flex h-10 items-center gap-2 rounded-field bg-fill px-3">
-              <span className="pointer-events-none text-ink-tertiary shrink-0">
-                <SearchIcon size={16} />
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={t("settings.search_placeholder")}
-                aria-label={t("settings.search_label")}
-                className="w-full bg-transparent border-0 text-body text-ink placeholder:text-ink-tertiary outline-none focus:outline-none"
-              />
-            </div>
-            {searchQuery.trim().length > 0 ? (
-              <div className="mt-4 overflow-hidden rounded-box border border-separator bg-surface">
-                {visibleTabs.map(function renderSearchItem(item, index) {
-                  return renderPhoneSettingsRow(item, index);
-                })}
-                {visibleTabs.length === 0 && (
-                  <p className="px-4 py-8 text-center text-footnote text-ink-tertiary">
-                    {t("settings.none_found")}
-                  </p>
-                )}
-              </div>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => openDetail("account")}
-                  className="focus-ring mt-5 flex w-full items-center gap-3 rounded-box border border-separator bg-surface px-4 py-3 text-left active:bg-fill hover:bg-fill/60 cursor-pointer"
-                >
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-fill text-title-3 font-semibold text-ink">
-                    {(displayName || name || email || "?")
-                      .charAt(0)
-                      .toUpperCase()}
-                  </span>
-                  <span className="flex flex-1 min-w-0 flex-col">
-                    <span className="text-body font-semibold text-ink truncate">
-                      {displayName || name}
-                    </span>
-                    <span className="text-footnote text-ink-secondary truncate">
-                      {email}
-                    </span>
-                  </span>
-                  <ChevronRightIcon
-                    size={18}
-                    className="text-ink-tertiary shrink-0"
-                  />
-                </button>
-                {[
-                  {
-                    key: "preferences",
-                    label: t("settings.group_preferences"),
-                    tabs: preferencesTabs,
-                  },
-                  {
-                    key: "tasks",
-                    label: t("settings.group_tasks"),
-                    tabs: tasksTabs,
-                  },
-                  {
-                    key: "data",
-                    label: t("settings.group_data"),
-                    tabs: dataTabs,
-                  },
-                ].map(function renderPhoneGroup(group) {
-                  return (
-                    <div key={group.key}>
-                      <div className="mt-6 mb-2 px-1 text-overline uppercase font-semibold tracking-[0.03em] text-ink-secondary">
-                        {group.label}
-                      </div>
-                      <div className="overflow-hidden rounded-box border border-separator bg-surface">
-                        {group.tabs.map(function renderGroupTab(item, index) {
-                          return renderPhoneSettingsRow(item, index);
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="mt-6 overflow-hidden rounded-box border border-separator bg-surface">
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    className="focus-ring flex min-h-[52px] w-full items-center justify-center text-body font-semibold text-error active:bg-fill hover:bg-fill/60 cursor-pointer"
-                  >
-                    {t("app.sign_out")}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <div className="relative flex min-h-14 items-center px-1 bg-paper/90 backdrop-blur border-b border-separator pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
-            <button
-              type="button"
-              onClick={backToList}
-              aria-label={t("common.back")}
-              className="focus-ring inline-flex h-11 items-center gap-1 rounded-field pl-1 pr-3 text-body text-ink cursor-pointer z-10"
-            >
-              <ChevronLeftIcon size={22} className="shrink-0" />
-              <span>
-                {subView === "change_password"
-                  ? t("settings.tab_account")
-                  : t("settings.title")}
-              </span>
-            </button>
-            <h2 className="pointer-events-none absolute inset-x-24 text-center text-body font-semibold text-ink truncate">
-              {subView === "change_password"
-                ? t("settings.change_password")
-                : (currentTabObj?.label ?? t("settings.title"))}
-            </h2>
-          </div>
-          <div
-            key={`${activeTabId}-${subView ?? ""}`}
-            className="relative flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pt-4 pb-[calc(2rem+env(safe-area-inset-bottom))] motion-safe:animate-[slide-in-right_220ms_ease-out]"
-          >
-            {renderTabContent(activeTabId)}
-          </div>
-        </>
-      )}
-    </div>
-  );
-
   if (!mounted) return null;
 
-  const modal = isDesktop ? desktopModal : phoneModal;
+  const modal = desktopModal;
   const renderedModal =
     portal && typeof document !== "undefined"
       ? createPortal(modal, document.body)

@@ -25,10 +25,7 @@ import {
   t,
   Toast,
   useMediaQuery,
-  applyThemePalette,
-  clearThemePalette,
   type AccountSettings,
-  type SettingsTab,
   type Navigate,
   type NoteResult,
   type Project,
@@ -73,8 +70,6 @@ export interface SignedInUser {
   timezone?: string;
   timezone_auto?: boolean;
   two_factor_enabled?: boolean;
-  theme_palette?: string;
-  page_view?: "flat" | "full";
 }
 
 // The settings as `PATCH /me` names them
@@ -85,8 +80,6 @@ const SETTING_FIELDS = {
   rememberDevice: "remember_device",
   timezone: "timezone",
   timezoneAuto: "timezone_auto",
-  pageView: "page_view",
-  palette: "theme_palette",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -130,7 +123,6 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timeFormat: "24h",
   rememberDevice: true,
   pageView: "flat",
-  palette: "default",
   timezone: "UTC",
   timezoneAuto: true,
 };
@@ -151,8 +143,7 @@ const settingsOf = (me: SignedInUser): AccountSettings => {
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
     timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-    pageView: me.page_view ?? storedPageView(),
-    palette: me.theme_palette ?? "default",
+    pageView: storedPageView(),
     timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
     timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
   };
@@ -371,21 +362,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab | undefined>(
-    undefined,
-  );
-  const openSettings = useCallback(
-    (tab?: SettingsTab) => {
-      if (pathname !== ROUTES.account) {
-        setSettingsTab(tab);
-        setSettingsOpen(true);
-      }
-    },
-    [pathname],
-  );
+  const openSettings = useCallback(() => {
+    if (pathname === ROUTES.account) {
+      router.replace(ROUTES.inbox);
+    } else {
+      setSettingsOpen(true);
+    }
+  }, [pathname, router]);
   const closeSettings = useCallback(() => {
     setSettingsOpen(false);
-    setSettingsTab(undefined);
   }, []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
@@ -520,8 +505,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
-      clearThemePalette();
-      document.documentElement.setAttribute("data-page-view", "flat");
       forgetNotes();
       forgetConflicts();
       clearRecent();
@@ -556,7 +539,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
     // Until /me answers or the user picks one, these are only defaults and would undo what
     // /theme.js applied
     if (!user && settingsEdits.current === 0) return;
-    applyThemePalette(settings.palette ?? "default");
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
@@ -850,10 +832,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
-                email: user?.email ?? "",
-                theme: settings.theme,
-                onThemeChange: (theme) => changeSettings({ theme }),
-                onSignOut: () => signOut(),
                 counts: sidebarCounts,
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
@@ -867,7 +845,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
         {settingsOpen && pathname !== ROUTES.account && (
           <AccountScreen
             portal={true}
-            initialTab={settingsTab ?? "general"}
             name={user?.display_name ?? ""}
             email={user?.email ?? ""}
             settings={settings}

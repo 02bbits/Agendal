@@ -1,5 +1,4 @@
 export { AppShell, type AppShellProps } from "./shell/AppShell";
-export { AccountMenu, type AccountMenuProps } from "./shell/AccountMenu";
 export { TabBar, type TabBarProps } from "./shell/TabBar";
 export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
