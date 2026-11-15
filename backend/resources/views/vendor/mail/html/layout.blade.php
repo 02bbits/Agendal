@@ -109,6 +109,21 @@ color: #EDEDED !important;
 background-color: #1A1A1A !important;
 color: #EDEDED !important;
 }
+
+.activity-box {
+background-color: #1F1F1F !important;
+border-color: #363636 !important;
+}
+
+.activity-box td,
+.activity-box p,
+.activity-box span {
+color: #EDEDED !important;
+}
+
+.activity-box .meta-label {
+color: #A6A6A6 !important;
+}
 }
 
 [data-ogsc] body,
@@ -184,6 +199,21 @@ color: #EDEDED !important;
 
 [data-ogsc] .panel-content p {
 color: #EDEDED !important;
+}
+
+[data-ogsc] .activity-box {
+background-color: #1F1F1F !important;
+border-color: #363636 !important;
+}
+
+[data-ogsc] .activity-box td,
+[data-ogsc] .activity-box p,
+[data-ogsc] .activity-box span {
+color: #EDEDED !important;
+}
+
+[data-ogsc] .activity-box .meta-label {
+color: #A6A6A6 !important;
 }
 </style>
 {!! $head ?? '' !!}

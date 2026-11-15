@@ -10,6 +10,7 @@ use App\Notifications\VerifyEmailCode;
 use App\Services\Clock\ClockInterface;
 use App\Support\NewPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -400,4 +401,41 @@ it('9. DELETE /auth/signup cancels and then GET /auth/signup answers 404', funct
 
     newRequest();
     $this->withCookies($cookies)->getJson('/api/v1/auth/signup')->assertStatus(404);
+});
+
+it('10. renders the account creation attempt notice email properly in HTML and text without buttons or subcopy', function () {
+    $user = User::factory()->create([
+        'email' => 'tuanno@example.com',
+        'display_name' => 'Tuấn Hồ',
+        'timezone' => 'Asia/Ho_Chi_Minh',
+    ]);
+
+    $notification = new SignUpAttempted(ip: '192.168.1.100', time: 'Nov 15, 2026, 10:30 AM +07');
+    $mail = $notification->toMail($user);
+
+    expect($mail->subject)->toBe('[Agendal] Security notice: Account creation attempt');
+
+    $html = (string) $mail->render();
+    $text = (string) app(Markdown::class)->renderText($mail->markdown, $mail->data());
+
+    expect($html)
+        ->toContain('Account creation attempt')
+        ->toContain('Hi Tuấn Hồ,')
+        ->toContain('Activity details')
+        ->toContain('192.168.1.100')
+        ->toContain('Nov 15, 2026, 10:30 AM +07')
+        ->toContain('Was this you?')
+        ->toContain('sign in')
+        ->toContain('reset your password')
+        ->not->toContain('<table class="action"')
+        ->not->toContain('If the button doesn\'t work')
+        ->not->toContain('class="button');
+
+    expect($text)
+        ->toContain('Account creation attempt')
+        ->toContain('Hi Tuấn Hồ,')
+        ->toContain('Activity details')
+        ->toContain('192.168.1.100')
+        ->toContain('Was this you?')
+        ->not->toContain('If the button doesn\'t work');
 });

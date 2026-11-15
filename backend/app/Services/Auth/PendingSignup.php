@@ -77,7 +77,14 @@ final class PendingSignup
             $noticeKey = 'signup-notice:'.hash('sha256', $email);
             if (! RateLimiter::tooManyAttempts($noticeKey, 1)) {
                 RateLimiter::hit($noticeKey, 1800);
-                defer(fn () => $user->notify(new SignUpAttempted));
+                $ip = $request->ip();
+                try {
+                    $tz = filled($user->timezone) ? new \DateTimeZone($user->timezone) : new \DateTimeZone('UTC');
+                    $time = now()->setTimezone($tz)->format('M j, Y, g:i A T');
+                } catch (\Throwable) {
+                    $time = now()->utc()->format('M j, Y, g:i A \U\T\C');
+                }
+                defer(fn () => $user->notify(new SignUpAttempted(ip: $ip, time: $time)));
             }
         } else {
             $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
