@@ -2,8 +2,13 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-15
+
+- **Result screen offline (Refs #52, IM-53).** [RV §2.4](03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20): the task rows of a result are disabled while offline, so a planned task can't be edited without Apply and an accepted note can't open a task page that isn't loaded.
+
 ## 2026-11-13
 
+- **Offline notes (Refs #52, IM-53).** [NC §2.2](03-modules/NC-note-capture.md#22-submit): a failed or offline send keeps the note as `pending` (`note.processing_failed` / `note.saved_offline`), the card is not a link, the replay sends edits first then notes oldest first, a refused note stays as a `note.couldnt_process` card whose tap reopens the editor with its text, M in the toast counts planned tasks (most notes wait for Apply); the interim "queues nothing" rule is gone. [copy-catalog](01-product/copy-catalog.md): `note.back_online_*` now end with `{tasks}.` and `note.task_count_one/_other` fill it, so 1 task is not "1 tasks".
 - **Live sync recorded as a gap (Refs #51).** [tasks.md After MVP](08-project/tasks.md#gap-live-sync): open devices see each other's changes within 60 s; a future task adds server push (SSE) that triggers the usual pull. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md) Consequences links to it.
 - **Same-timestamp writes and commit order (Refs #51, IM-52).** [ADR-004](07-architecture/decisions/ADR-004-offline-sync-field-level-lww.md): stamps keep milliseconds and the writing device (`X-Device-Id`); in the same millisecond the greater device id wins, the same device's later edit wins; writes lock the row before comparing stamps. [ADR-005](07-architecture/decisions/ADR-005-sync-protocol.md): a pull stops before changes whose transaction may still be followed by a lower `change_seq` commit.
 
