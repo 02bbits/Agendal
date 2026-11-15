@@ -119,6 +119,20 @@ describe("matchesEntry", () => {
     ).toBe(true);
   });
 
+  it("scheduled filter matches repeating due-only tasks (Part B)", () => {
+    const repeatingDueOnlyTask = task({
+      title: "Repeating due only",
+      due_date: "2026-10-27",
+      repeat: "weekly",
+    });
+    expect(
+      matchesEntry(
+        { task: repeatingDueOnlyTask, kind: "due", date: "2026-10-27" },
+        "scheduled",
+      ),
+    ).toBe(true);
+  });
+
   it("due filter matches due entries only", () => {
     expect(
       matchesEntry(

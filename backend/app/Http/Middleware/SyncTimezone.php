@@ -56,15 +56,20 @@ class SyncTimezone
                 ->where('user_id', $user->id)
                 ->whereNull('deleted_at')
                 ->where('done', false)
-                ->whereNotNull('due_date')
+                ->where(function ($query): void {
+                    $query->whereNotNull('start_date')
+                        ->orWhereNotNull('due_date');
+                })
                 ->where('reminder', '!=', 'none')
                 ->lockForUpdate()
-                ->get(['id', 'due_date', 'start_time', 'reminder']);
+                ->get(['id', 'start_date', 'start_time', 'due_date', 'due_time', 'reminder']);
 
             foreach ($tasks as $task) {
-                $remindAt = $this->reminders->compute(
-                    (string) $task->due_date,
+                $remindAt = $this->reminders->forDates(
+                    $task->start_date === null ? null : (string) $task->start_date,
                     $task->start_time === null ? null : substr((string) $task->start_time, 0, 5),
+                    $task->due_date === null ? null : (string) $task->due_date,
+                    $task->due_time === null ? null : substr((string) $task->due_time, 0, 5),
                     (string) $task->reminder,
                     $timezone,
                 );

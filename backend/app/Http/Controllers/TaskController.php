@@ -261,23 +261,21 @@ class TaskController extends Controller
         Request $request,
         Task $task,
         TaskLifecycle $lifecycle,
-    ): Response {
+    ): Response|JsonResponse {
         if ($task->repeat !== 'never') {
             $scope = $request->input('scope');
-            if ($scope === 'future') {
-                throw ValidationException::withMessages([
-                    'scope' => ["This and all future isn't available yet."],
-                ]);
-            }
-
-            if ($scope !== 'one') {
+            if ($scope !== 'one' && $scope !== 'future') {
                 throw ValidationException::withMessages([
                     'scope' => ['Choose This task only or This and all future.'],
                 ]);
             }
         }
 
-        $lifecycle->delete($task);
+        $result = $lifecycle->deleteScope($task, $request->input('scope'));
+
+        if ($result['next'] !== null) {
+            return response()->json(['next' => new TaskResource($result['next'])], 200);
+        }
 
         return response()->noContent();
     }
@@ -285,6 +283,7 @@ class TaskController extends Controller
     public function restore(Task $task, TaskLifecycle $lifecycle): TaskResource
     {
         $lifecycle->restore($task);
+        $task->refresh();
 
         return new TaskResource($task);
     }

@@ -111,7 +111,12 @@ export function useNewTaskForm({
       previousChipRef.current = nextChip;
     }
     setChip(nextChip);
-    if (nextChip === "none") setStartTime("");
+    if (nextChip === "none") {
+      setStartTime("");
+      if (repeat.repeat !== "never" && !dueDate) {
+        setRepeat({ repeat: "never", repeat_rule: null });
+      }
+    }
     updatePriorityFromStart(nextChip);
   };
 

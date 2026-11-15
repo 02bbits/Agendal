@@ -118,7 +118,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Due date (optional) with a due time, empty by default. It must be on or after the start, date and time ([BR-11](../02-domain/business-rules.md#br-11)).
   - Repeat: the presets and Custom… of [TK §2.2](TK-tasks.md#22-task-details-and-editing-tk-2-tk-3). Choosing a repeat with No date sets the start date to Today. Reminders are set in task details, not here.
   - Priority chips: Low, Medium, High.
-  - Project picker: No project, the user's projects, New project….
+  - Project picker: No project, the user's projects, New project…. New project opens over the sheet and comes back with the project selected.
 - **Defaults depend on where the sheet opened ([Q20](../08-project/open-questions.md#q20)):**
 
 | Opened from | Start date | Project |

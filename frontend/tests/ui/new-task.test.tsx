@@ -14,7 +14,7 @@ import { ApiRequestError } from "../../src/lib/apiError";
 import { today as getToday } from "../../src/lib/clock";
 import type { Task } from "../../src/ui/domain/types";
 import type { CreateTaskBody } from "../../src/ui/domain/newTask";
-import { NewTaskSheet, type NewTaskSheetProps } from "../../src/ui";
+import { NewTaskSheet, t, type NewTaskSheetProps } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { TODAY, projects } from "./fixtures";
 
@@ -481,6 +481,54 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
       repeat_rule: "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR",
     });
     expect(sentBody?.reminder).toBeUndefined();
+  });
+
+  it("choosing repeat with No date chip moves chip to Today; choosing No date with repeat sets repeat to Never (#154, Part C)", async () => {
+    const currentToday = getToday();
+    // Start with No date (e.g. from /projects/none or pathname "/projects/p-1")
+    const { sheet } = await renderSheet({
+      today: currentToday,
+      pathname: "/projects/none",
+    });
+
+    const noDateRadio = radio("Start date", "No date");
+    expect(noDateRadio.getAttribute("aria-checked")).toBe("true");
+
+    // Choose repeat Every day while start date is No date -> moves start date to Today
+    const repeatPicker = within(sheet).getByRole("button", {
+      name: t("task.repeat"),
+    });
+    await userEvent.click(repeatPicker);
+    await userEvent.click(screen.getByRole("option", { name: "Every day" }));
+
+    const todayRadio = radio("Start date", "Today");
+    expect(todayRadio.getAttribute("aria-checked")).toBe("true");
+    expect(repeatPicker.textContent).toContain("Every day");
+
+    // Now click "No date" chip while repeat is Every day and no due date -> sets repeat to Doesn't repeat
+    await userEvent.click(radio("Start date", "No date"));
+    expect(
+      within(sheet).getByRole("button", { name: t("task.repeat") }).textContent,
+    ).toContain("Doesn't repeat");
+  });
+
+  it("changing repeat triggers discard dialog on close", async () => {
+    const { sheet } = await renderSheet({ pathname: "/" });
+
+    // Choose repeat Every day
+    const repeatPicker = within(sheet).getByRole("button", {
+      name: t("task.repeat"),
+    });
+    await userEvent.click(repeatPicker);
+    await userEvent.click(screen.getByRole("option", { name: "Every day" }));
+
+    // Click Close
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }));
+
+    // Discard dialog appears
+    expect(
+      screen.getByRole("alertdialog", { name: "Discard changes?" }),
+    ).toBeTruthy();
   });
 
   it("is axe clean in both themes", async () => {

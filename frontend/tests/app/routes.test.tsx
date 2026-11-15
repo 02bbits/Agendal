@@ -156,7 +156,8 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     ).toBeTruthy();
     await vi.waitFor(() =>
       expect(
-        within(header).getByRole("link", { name: "Account" }).textContent,
+        within(header).getByRole("link", { name: /Settings|Account/ })
+          .textContent,
       ).toBe("M"),
     );
   });
@@ -184,7 +185,7 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     await userEvent.click(within(header).getByRole("link", { name: "Search" }));
     expect(router.push).toHaveBeenLastCalledWith("/search");
     await userEvent.click(
-      within(header).getByRole("link", { name: "Account" }),
+      within(header).getByRole("link", { name: /Settings|Account/ }),
     );
     expect(router.push).toHaveBeenLastCalledWith("/account");
   });
