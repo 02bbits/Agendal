@@ -48,7 +48,6 @@ export function SelectDropdown<T extends string>({
   roleMode = "option",
   searchable = false,
   searchPlaceholder,
-  indicatorStyle = "pop",
 }: SelectDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -131,7 +130,7 @@ export function SelectDropdown<T extends string>({
       return;
     }
     onChange(optVal);
-    const holdMs = indicatorStyle === "draw" ? 250 : 150;
+    const holdMs = 200;
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     holdTimerRef.current = setTimeout(() => {
       setIsOpen(false);
@@ -404,6 +403,7 @@ export function SelectDropdown<T extends string>({
             role={roleMode === "radio" ? "radiogroup" : "listbox"}
             aria-label={label}
             variants={listVariants}
+            onMouseLeave={() => setHoveredValue(null)}
             className="space-y-0.5"
           >
             {filteredOptions.length === 0 ? (
@@ -442,38 +442,16 @@ export function SelectDropdown<T extends string>({
                     }}
                     onKeyDown={(e) => onOptionKeyDown(e, idx)}
                     className={cx(
-                      "relative flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left outline-none z-0",
+                      "relative flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left outline-none transition-colors duration-150 z-0",
                       isDisabled
                         ? "opacity-40 cursor-not-allowed select-none"
                         : isSelected
-                          ? "font-semibold text-primary cursor-pointer"
-                          : "text-ink cursor-pointer",
+                          ? "font-semibold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer"
+                          : isHovered
+                            ? "text-ink bg-fill/50 cursor-pointer"
+                            : "text-ink hover:bg-fill/50 active:bg-fill/70 cursor-pointer",
                     )}
                   >
-                    {isHovered && (
-                      <motion.div
-                        layoutId={
-                          prefersReducedMotion
-                            ? undefined
-                            : `select-highlight-${label}`
-                        }
-                        className="absolute inset-0 rounded-lg bg-fill/60 -z-10 pointer-events-none"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={
-                          prefersReducedMotion
-                            ? { duration: 0.15 }
-                            : {
-                                opacity: { duration: 0.2, ease: "easeOut" },
-                                layout: {
-                                  type: "spring",
-                                  stiffness: 500,
-                                  damping: 40,
-                                },
-                              }
-                        }
-                      />
-                    )}
                     <span className="flex items-center gap-2.5 truncate relative z-10">
                       {option.icon && (
                         <span
@@ -491,79 +469,44 @@ export function SelectDropdown<T extends string>({
                           {option.badge}
                         </span>
                       )}
-                      {indicatorStyle === "pop" ? (
-                        isSelected && (
+                      <AnimatePresence>
+                        {isSelected && (
                           <motion.span
-                            layoutId={
-                              prefersReducedMotion
-                                ? undefined
-                                : `select-indicator-${label}`
-                            }
+                            key="check-icon"
                             initial={
                               prefersReducedMotion
                                 ? { opacity: 0 }
                                 : {
-                                    scale: 0.5,
-                                    filter: "blur(2px)",
                                     opacity: 0,
+                                    scale: 0.6,
+                                    filter: "blur(2px)",
                                   }
                             }
                             animate={
                               prefersReducedMotion
                                 ? { opacity: 1 }
-                                : {
-                                    scale: 1,
-                                    filter: "blur(0px)",
-                                    opacity: 1,
-                                  }
+                                : { opacity: 1, scale: 1, filter: "blur(0px)" }
                             }
-                            transition={
+                            exit={
                               prefersReducedMotion
-                                ? { duration: 0.15 }
+                                ? { opacity: 0 }
                                 : {
-                                    type: "spring",
-                                    stiffness: 500,
-                                    damping: 40,
+                                    opacity: 0,
+                                    scale: 0.6,
+                                    filter: "blur(2px)",
                                   }
                             }
+                            transition={{
+                              duration: prefersReducedMotion ? 0.15 : 0.25,
+                              ease: EASE_SOFT_OUT,
+                            }}
                             className="text-primary shrink-0 flex items-center"
                             aria-hidden="true"
                           >
                             <CheckIcon size={16} />
                           </motion.span>
-                        )
-                      ) : (
-                        <span
-                          className="text-primary shrink-0 flex items-center justify-center w-4 h-4"
-                          aria-hidden="true"
-                        >
-                          <svg
-                            width={16}
-                            height={16}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            className="w-4 h-4"
-                          >
-                            <motion.path
-                              d="M20 6L9 17L4 12"
-                              initial={false}
-                              animate={
-                                isSelected
-                                  ? { pathLength: 1, opacity: 1 }
-                                  : { pathLength: 0, opacity: 0 }
-                              }
-                              transition={{
-                                duration: prefersReducedMotion ? 0.15 : 0.3,
-                                ease: EASE_SOFT_OUT,
-                              }}
-                            />
-                          </svg>
-                        </span>
-                      )}
+                        )}
+                      </AnimatePresence>
                     </span>
                   </motion.button>
                 );

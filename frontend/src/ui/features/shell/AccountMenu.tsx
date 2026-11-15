@@ -30,7 +30,7 @@ export interface AccountMenuProps {
 const EASE_SOFT_OUT = [0.215, 0.61, 0.355, 1] as const;
 
 const ITEM =
-  "relative flex h-10 min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border-0 bg-transparent px-2.5 text-left text-callout outline-none transition-colors z-0";
+  "flex h-10 min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border-0 bg-transparent px-2.5 text-left text-callout outline-none transition-colors data-[active=true]:bg-fill";
 
 export function AccountMenu({
   accountName,
@@ -164,6 +164,7 @@ export function AccountMenu({
       aria-label={t("nav.account")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
+      onMouseLeave={() => activate(-1)}
       initial="closed"
       animate="open"
       variants={containerVariants}
@@ -212,37 +213,13 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
-        {active === 0 && (
-          <motion.div
-            layoutId={
-              prefersReducedMotion ? undefined : "account-menu-highlight"
-            }
-            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.15 }
-                : {
-                    opacity: { duration: 0.2, ease: "easeOut" },
-                    layout: {
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 40,
-                    },
-                  }
-            }
-          />
-        )}
         <span
-          className="inline-flex shrink-0 text-ink-secondary relative z-10"
+          className="inline-flex shrink-0 text-ink-secondary"
           aria-hidden="true"
         >
           <UserIcon size={18} />
         </span>
-        <span className="flex-1 truncate relative z-10">
-          {t("nav.account")}
-        </span>
+        <span className="flex-1 truncate">{t("nav.account")}</span>
       </motion.button>
 
       <motion.button
@@ -260,43 +237,20 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
-        {active === 1 && (
-          <motion.div
-            layoutId={
-              prefersReducedMotion ? undefined : "account-menu-highlight"
-            }
-            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.15 }
-                : {
-                    opacity: { duration: 0.2, ease: "easeOut" },
-                    layout: {
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 40,
-                    },
-                  }
-            }
-          />
-        )}
         <span
-          className="inline-flex shrink-0 text-ink-secondary relative z-10"
+          className="inline-flex shrink-0 text-ink-secondary"
           aria-hidden="true"
         >
           <SlidersIcon size={18} />
         </span>
-        <span className="flex-1 truncate relative z-10">
-          {t("settings.title")}
-        </span>
+        <span className="flex-1 truncate">{t("settings.title")}</span>
       </motion.button>
 
       {/* Theme row: the menu stays open while the theme changes */}
       <motion.div
         variants={itemVariants}
         className="px-2.5 py-1.5 flex flex-col gap-1.5"
+        onMouseEnter={() => activate(-1)}
       >
         <span className="text-footnote font-medium text-ink-secondary">
           {t("settings.tab_theme")}
@@ -335,31 +289,7 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-error`}
       >
-        {active === 2 && (
-          <motion.div
-            layoutId={
-              prefersReducedMotion ? undefined : "account-menu-highlight"
-            }
-            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={
-              prefersReducedMotion
-                ? { duration: 0.15 }
-                : {
-                    opacity: { duration: 0.2, ease: "easeOut" },
-                    layout: {
-                      type: "spring",
-                      stiffness: 500,
-                      damping: 40,
-                    },
-                  }
-            }
-          />
-        )}
-        <span className="flex-1 truncate relative z-10">
-          {t("app.sign_out")}
-        </span>
+        <span className="flex-1 truncate">{t("app.sign_out")}</span>
       </motion.button>
     </motion.div>
   );
