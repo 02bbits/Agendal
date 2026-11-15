@@ -15,8 +15,6 @@ return [
     'changed_ok' => 'If this was you, there is nothing else to do.',
     'changed_not_you' => "If you didn't make this change, reset your password now and make sure your email account is secure.",
     'changed_action' => 'Reset your password',
-    'link_fallback' => "If the button doesn't work, copy this link into your browser:",
-    'footer' => 'You got this email because of a change to the security of your Agendal account.',
     'verify_subject' => 'Your Agendal verification code',
     'verify_heading' => 'Verify your email',
     'verify_intro' => 'Enter this code to finish creating your Agendal account:',

@@ -152,7 +152,7 @@ describe("SetupScreen (issue #149 D)", () => {
     });
   });
 
-  it("submits manual timezone when chosen in step 2", async () => {
+  it("auto-picks timezone from device and displays it read-only in step 2", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onContinue = vi.fn().mockResolvedValue(undefined);
 
@@ -161,12 +161,9 @@ describe("SetupScreen (issue #149 D)", () => {
     // Advance to step 2
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    // Open zone change
-    await user.click(screen.getByRole("button", { name: "Change" }));
-
-    // Select London
-    const londonOption = screen.getByRole("option", { name: "Europe/London" });
-    await user.click(londonOption);
+    // Time zone row is present but has no "Change" button
+    expect(screen.getByText("Time zone")).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 
     // Advance to step 3
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -178,7 +175,7 @@ describe("SetupScreen (issue #149 D)", () => {
       display_name: "Sam",
       week_start: "mon",
       time_format: "24h",
-      timezone: "Europe/London",
+      timezone_auto: true,
       two_factor_enabled: false,
     });
   });

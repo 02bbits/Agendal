@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 
 class VerifyEmailCode extends Notification
 {
@@ -23,8 +24,17 @@ class VerifyEmailCode extends Notification
 
     public function toMail(object $notifiable): MailMessage
     {
-        $greeting = ($notifiable instanceof User && filled($notifiable->display_name))
-            ? __('email.greeting', ['name' => $notifiable->display_name])
+        $name = null;
+        if ($notifiable instanceof User && filled($notifiable->display_name)) {
+            $name = $notifiable->display_name;
+        } elseif ($notifiable instanceof User && filled($notifiable->email)) {
+            $name = Str::before($notifiable->email, '@');
+        } elseif (isset($notifiable->routes['mail']) && filled($notifiable->routes['mail'])) {
+            $name = Str::before((string) $notifiable->routes['mail'], '@');
+        }
+
+        $greeting = filled($name)
+            ? __('email.greeting', ['name' => $name])
             : __('email.greeting_plain');
 
         $mail = (new MailMessage)

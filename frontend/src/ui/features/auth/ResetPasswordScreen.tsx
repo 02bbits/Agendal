@@ -6,6 +6,7 @@ import { Link } from "../shell/Link";
 import type { Navigate } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import { PasswordField } from "./PasswordField";
+import { PasswordStrength } from "./PasswordStrength";
 import { hasNonKeyboardCharacters, passwordRuleError } from "./validation";
 
 export interface ResetFailure {
@@ -34,10 +35,13 @@ export function ResetPasswordScreen({
   offline = false,
 }: ResetPasswordScreenProps) {
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [touched, setTouched] = useState(false);
+  const [confirmTouched, setConfirmTouched] = useState(false);
   const [failure, setFailure] = useState<ResetFailure>({});
   const [busy, setBusy] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
+  const confirmPasswordRef = useRef<HTMLInputElement>(null);
 
   const rule = passwordRuleError(password, email ?? "");
   const expired = email === null || failure.expired;
@@ -48,9 +52,20 @@ export function ResetPasswordScreen({
     (accentError ? t("auth.password_accented") : undefined) ??
     (touched && rule ? t(rule) : undefined);
 
+  const confirmMismatch =
+    confirmTouched && confirmPassword !== "" && password !== confirmPassword;
+  const confirmError = confirmMismatch
+    ? t("auth.password_mismatch")
+    : undefined;
+
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (rule || busy || offline) return;
+    if (password !== confirmPassword) {
+      setConfirmTouched(true);
+      confirmPasswordRef.current?.focus();
+      return;
+    }
     if (hasNonKeyboardCharacters(password)) {
       setAccentError(true);
       passwordRef.current?.focus();
@@ -119,6 +134,24 @@ export function ResetPasswordScreen({
             }}
             onBlur={() => setTouched(true)}
           />
+          <PasswordStrength
+            id="reset-password-strength"
+            password={password}
+            className="mt-1"
+          />
+          <PasswordField
+            ref={confirmPasswordRef}
+            label={t("auth.confirm_password")}
+            autoComplete="new-password"
+            value={confirmPassword}
+            leading={<LockIcon size={18} />}
+            error={confirmError}
+            onChange={(event) => {
+              setConfirmPassword(event.target.value);
+              setFailure({});
+            }}
+            onBlur={() => setConfirmTouched(true)}
+          />
           {(failure.form || offline) && (
             <p role="alert" className="m-0 text-footnote text-error">
               {offline ? t("auth.offline") : failure.form}
@@ -131,7 +164,13 @@ export function ResetPasswordScreen({
             size="lg"
             fullWidth
             busy={busy}
-            disabled={Boolean(rule) || offline}
+            disabled={
+              Boolean(rule) ||
+              !password ||
+              !confirmPassword ||
+              password !== confirmPassword ||
+              offline
+            }
           >
             {t("auth.new_password_save")}
           </Button>

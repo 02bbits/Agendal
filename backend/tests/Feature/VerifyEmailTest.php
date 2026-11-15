@@ -49,11 +49,11 @@ it('renders the verification code email properly in HTML and plain text', functi
         ->not->toContain('Laravel')
         ->not->toContain('Regards');
 
-    // Section 2.4: greeting for an anonymous notifiable falls back to plain greeting
+    // Greeting for an anonymous notifiable uses username from email
     $anon = Notification::route('mail', 'anonymous@example.com');
     $anonMail = $notification->toMail($anon);
     expect((string) $anonMail->render())
-        ->toContain('Hi,')
+        ->toContain('Hi anonymous,')
         ->not->toContain('Hi Alex,');
 });
 

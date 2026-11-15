@@ -16,6 +16,8 @@ export const catalog = {
   "auth.password_same_as_email": "Your password can't contain your email.",
   "auth.password_breached":
     "This password has appeared in a data breach. Choose another one.",
+  "auth.confirm_password": "Confirm new password",
+  "auth.password_mismatch": "New passwords don't match.",
   "auth.email_taken":
     "An account with this email already exists. Sign in instead?",
   "auth.invalid": "Email or password is incorrect.",
@@ -23,7 +25,7 @@ export const catalog = {
   "auth.locked_body": "Try again in {seconds} s.",
   "auth.remember_me": "Remember me",
   "auth.reset_sent":
-    "If an account exists for {email}, we've sent a link to reset your password. It works for 60 minutes.",
+    "We've sent a link to {email}. Follow the link to continue resetting your password.",
   "auth.reset_resend": "Resend link",
   "auth.reset_expired":
     "This link has expired or was already used. Request a new one.",

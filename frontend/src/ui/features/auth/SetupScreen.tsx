@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
@@ -16,13 +15,9 @@ import { Segmented } from "../../components/Segmented";
 import { TextField } from "../../components/TextField";
 import { Switch } from "../../components/Switch";
 import { Stepper, Step } from "../../components/Stepper";
-import { cx } from "../../components/cx";
 import { useMediaQuery } from "../../components/useMediaQuery";
 import {
-  CheckIcon,
-  ChevronDownIcon,
   LockIcon,
-  SearchIcon,
 } from "../../components/icons";
 import { t } from "../../copy";
 import { formatTime } from "../../domain/dates";
@@ -52,7 +47,6 @@ export function SetupScreen({
   initialName = "",
   initialWeekStart = "mon",
   initialTimeFormat = "24h",
-  initialTimeZone,
   onContinue,
   onSkip,
   navigate,
@@ -65,11 +59,6 @@ export function SetupScreen({
 
   const [weekStart, setWeekStart] = useState<WeekStart>(initialWeekStart);
   const [timeFormat, setTimeFormat] = useState<TimeFormat>(initialTimeFormat);
-  const [manualZone, setManualZone] = useState<string | null>(
-    initialTimeZone ?? null,
-  );
-  const [isChangingZone, setIsChangingZone] = useState(false);
-  const [zoneFilter, setZoneFilter] = useState("");
   const [twoFactor, setTwoFactor] = useState(false);
 
   const [busy, setBusy] = useState(false);
@@ -78,7 +67,6 @@ export function SetupScreen({
   const [error, setError] = useState<string | null>(null);
 
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const changeZoneButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     headingRef.current?.focus();
@@ -96,32 +84,9 @@ export function SetupScreen({
     () => true,
     () => false,
   );
-  const deviceZone = mounted ? getDeviceTimeZone() : "UTC";
-  const currentZone = manualZone ?? deviceZone;
+  const currentZone = mounted ? getDeviceTimeZone() : "UTC";
   const offset = mounted ? getUtcOffset(currentZone) : "";
   const displayZoneText = offset ? `${currentZone} · ${offset}` : currentZone;
-
-  const supportedZones = useMemo(() => {
-    if (
-      typeof Intl !== "undefined" &&
-      typeof Intl.supportedValuesOf === "function"
-    ) {
-      return Intl.supportedValuesOf("timeZone");
-    }
-    return [
-      "UTC",
-      "Asia/Ho_Chi_Minh",
-      "America/New_York",
-      "Europe/London",
-      "Asia/Tokyo",
-    ];
-  }, []);
-
-  const filteredZones = useMemo(() => {
-    const q = zoneFilter.trim().toLowerCase();
-    if (!q) return supportedZones;
-    return supportedZones.filter((z) => z.toLowerCase().includes(q));
-  }, [supportedZones, zoneFilter]);
 
   const formattedExample = mounted
     ? formatTime(localTime(currentZone, now()), timeFormat)
@@ -136,12 +101,8 @@ export function SetupScreen({
       week_start: weekStart,
       time_format: timeFormat,
       two_factor_enabled: twoFactor,
+      timezone_auto: true,
     };
-    if (manualZone !== null) {
-      payload.timezone = manualZone;
-    } else {
-      payload.timezone_auto = true;
-    }
 
     try {
       if (onContinue) {
@@ -155,12 +116,8 @@ export function SetupScreen({
         display_name: payload.display_name,
         week_start: payload.week_start,
         time_format: payload.time_format,
+        timezone_auto: true,
       };
-      if (payload.timezone) {
-        mePayload.timezone = payload.timezone;
-      } else {
-        mePayload.timezone_auto = true;
-      }
 
       const res = await api("/me", {
         method: "PATCH",
@@ -193,10 +150,7 @@ export function SetupScreen({
       changeSettings?.({
         weekStart: payload.week_start,
         timeFormat: payload.time_format,
-        ...(payload.timezone
-          ? { timezone: payload.timezone, timezoneAuto: false }
-          : {}),
-        ...(payload.timezone_auto ? { timezoneAuto: true } : {}),
+        timezoneAuto: true,
       });
 
       showToast?.(t("auth.welcome"));
@@ -356,102 +310,8 @@ export function SetupScreen({
                       {displayZoneText}
                     </span>
                   </div>
-                  <button
-                    ref={changeZoneButtonRef}
-                    type="button"
-                    aria-expanded={isChangingZone}
-                    aria-controls="setup-tz-panel"
-                    onClick={() => setIsChangingZone((prev) => !prev)}
-                    className="focus-ring inline-flex min-h-11 cursor-pointer items-center gap-1.5 rounded-lg border-0 bg-transparent px-2 text-footnote font-medium text-ink hover:bg-fill"
-                  >
-                    <span>{t("setup.time_zone_change")}</span>
-                    <ChevronDownIcon
-                      size={16}
-                      className={cx(
-                        "shrink-0 text-ink-secondary transition-transform duration-200",
-                        isChangingZone && "rotate-180",
-                      )}
-                    />
-                  </button>
                 </div>
-
-                {/* Extra row when open */}
-                {isChangingZone && (
-                  <div
-                    id="setup-tz-panel"
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        setIsChangingZone(false);
-                        changeZoneButtonRef.current?.focus();
-                      }
-                    }}
-                    className="flex flex-col gap-3 p-4 bg-surface"
-                  >
-                    <TextField
-                      label={t("setup.time_zone_search")}
-                      value={zoneFilter}
-                      onChange={(e) => setZoneFilter(e.target.value)}
-                      leading={<SearchIcon size={18} />}
-                      autoFocus
-                    />
-                    <div
-                      role="listbox"
-                      aria-label={t("setup.time_zone")}
-                      className="max-h-64 overflow-y-auto divide-y divide-separator/20 overscroll-contain"
-                    >
-                      {filteredZones.map((z) => {
-                        const isCurrent = z === currentZone;
-                        return (
-                          <button
-                            key={z}
-                            type="button"
-                            role="option"
-                            aria-selected={isCurrent}
-                            onClick={() => {
-                              setManualZone(z);
-                              setIsChangingZone(false);
-                              setZoneFilter("");
-                              changeZoneButtonRef.current?.focus();
-                            }}
-                            className="flex min-h-11 h-11 w-full items-center justify-between px-3 text-left text-body text-ink hover:bg-fill cursor-pointer rounded-lg transition-colors"
-                          >
-                            <span className="truncate">{z}</span>
-                            {isCurrent && (
-                              <CheckIcon
-                                size={18}
-                                className="shrink-0 text-primary"
-                              />
-                            )}
-                          </button>
-                        );
-                      })}
-                      {filteredZones.length === 0 && (
-                        <p className="px-3 py-4 text-center text-footnote text-ink-tertiary">
-                          {t("settings.none_found")}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
-
-              {/* Use device's time zone link when picked by hand */}
-              {manualZone !== null && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setManualZone(null);
-                    setIsChangingZone(false);
-                  }}
-                  className="focus-ring mt-1 inline-flex min-h-11 cursor-pointer items-center self-start border-0 bg-transparent px-1 text-footnote text-primary"
-                >
-                  <span className="link-swipe leading-4">
-                    {t("setup.time_zone_auto")}
-                  </span>
-                </button>
-              )}
             </div>
           </Step>
 

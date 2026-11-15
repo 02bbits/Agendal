@@ -19,10 +19,4 @@ Agendal
 </x-slot:subcopy>
 @endisset
 
-{{-- Footer --}}
-<x-slot:footer>
-<x-mail::footer>
-{{ __('email.footer') }}
-</x-mail::footer>
-</x-slot:footer>
 </x-mail::layout>
