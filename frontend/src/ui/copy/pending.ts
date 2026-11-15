@@ -385,6 +385,17 @@ export const pending = {
   "auth.new_password_for": "For {email}",
   "auth.new_password_save": "Save password",
   "auth.reset_request_new": "Request a new link",
+  "setup.name_label": "What should we call you?",
+  "setup.name_required": "Enter a name.",
+  "setup.name_too_short": "Use at least 3 characters.",
+  "setup.name_too_long": "Use 30 characters or fewer.",
+  "setup.name_invalid":
+    "Use letters, numbers, spaces and emoji. Angle brackets and hidden characters aren't allowed.",
+  "settings.time_zone_auto": "Automatic ({zone})",
+  "settings.theme": "Theme",
+  "settings.group_preferences": "Preferences",
+  "settings.group_tasks": "Tasks and alerts",
+  "settings.group_data": "Data and apps",
 } as const;
 
 export type PendingKey = keyof typeof pending;

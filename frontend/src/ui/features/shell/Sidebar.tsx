@@ -1,25 +1,55 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+} from "react";
 import { t } from "../../copy";
 import {
   CalendarIcon,
   CheckIcon,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
   FolderIcon,
   InboxIcon,
   NotesIcon,
-  ChevronRightIcon,
   PlusIcon,
   SearchIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
+import { AccountMenu } from "./AccountMenu";
+import type { SettingsTab, ThemeSetting } from "./AccountScreen";
 import {
   ROUTES,
+  SIDEBAR_TABS_ORDER_KEY,
+  SIDEBAR_TABS_STORAGE_KEY,
   TABS,
-  getStoredSidebarTabs,
-  getStoredSidebarTabsOrder,
+  parseSidebarTabs,
+  parseSidebarTabsOrder,
+  readStoredSetting,
   type Navigate,
   type TabId,
 } from "./routes";
+
+const SIDEBAR_COUNTS_KEY = "agendal.sidebar_task_counts";
+
+const noStoredSetting = () => null;
+
+// Same-tab changes come as these events, other tabs as "storage"
+function subscribeSidebarSettings(onChange: () => void) {
+  const events = [
+    "storage",
+    "agendal:sidebar_counts_changed",
+    "agendal:sidebar_tabs_changed",
+  ];
+  for (const name of events) window.addEventListener(name, onChange);
+  return () => {
+    for (const name of events) window.removeEventListener(name, onChange);
+  };
+}
 
 const ICONS: Record<TabId, ReactNode> = {
   inbox: <InboxIcon size={20} />,
@@ -40,9 +70,17 @@ export interface SidebarProps {
   /** Callback to open search. */
   onSearch?: () => void;
   /** Callback to open account / settings popup. */
-  onAccount?: () => void;
+  onAccount?: (tab?: SettingsTab) => void;
   /** The signed-in user's name; the avatar shows its first letter. */
   accountName: string;
+  /** The signed-in user's email. */
+  email?: string;
+  /** Current theme setting. */
+  theme?: ThemeSetting;
+  /** Setter for theme setting. */
+  onThemeChange?: (theme: ThemeSetting) => void;
+  /** Callback to sign out. */
+  onSignOut?: () => void;
 }
 
 /** Sidebar from 768px wide, in place of the tab bar (UX-27). */
@@ -55,46 +93,35 @@ export function Sidebar({
   onSearch,
   onAccount,
   accountName,
+  email,
+  theme,
+  onThemeChange,
+  onSignOut,
 }: SidebarProps) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [menuFromKeyboard, setMenuFromKeyboard] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const [projectsOpen, setProjectsOpen] = useState(true);
-  const [showCounts, setShowCounts] = useState(() => {
-    try {
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.sidebar_task_counts") !== "false"
-        : true;
-    } catch {
-      return true;
-    }
-  });
-  const [enabledTabs, setEnabledTabs] = useState(getStoredSidebarTabs);
-  const [tabOrder, setTabOrder] = useState(getStoredSidebarTabsOrder);
-
-  useEffect(() => {
-    const handleCounts = () => {
-      try {
-        setShowCounts(
-          localStorage.getItem("agendal.sidebar_task_counts") !== "false",
-        );
-      } catch {}
-    };
-    const handleTabs = () => {
-      setEnabledTabs(getStoredSidebarTabs());
-      setTabOrder(getStoredSidebarTabsOrder());
-    };
-    window.addEventListener("storage", handleCounts);
-    window.addEventListener("agendal:sidebar_counts_changed", handleCounts);
-    window.addEventListener("storage", handleTabs);
-    window.addEventListener("agendal:sidebar_tabs_changed", handleTabs);
-    return () => {
-      window.removeEventListener("storage", handleCounts);
-      window.removeEventListener(
-        "agendal:sidebar_counts_changed",
-        handleCounts,
-      );
-      window.removeEventListener("storage", handleTabs);
-      window.removeEventListener("agendal:sidebar_tabs_changed", handleTabs);
-    };
-  }, []);
+  // Saved settings are read in the browser only: the server renders the defaults, so the first
+  // render matches and the saved values show right after (no hydration mismatch)
+  const countsRaw = useSyncExternalStore(
+    subscribeSidebarSettings,
+    () => readStoredSetting(SIDEBAR_COUNTS_KEY),
+    noStoredSetting,
+  );
+  const tabsRaw = useSyncExternalStore(
+    subscribeSidebarSettings,
+    () => readStoredSetting(SIDEBAR_TABS_STORAGE_KEY),
+    noStoredSetting,
+  );
+  const orderRaw = useSyncExternalStore(
+    subscribeSidebarSettings,
+    () => readStoredSetting(SIDEBAR_TABS_ORDER_KEY),
+    noStoredSetting,
+  );
+  const showCounts = countsRaw !== "false";
+  const enabledTabs = useMemo(() => parseSidebarTabs(tabsRaw), [tabsRaw]);
+  const tabOrder = useMemo(() => parseSidebarTabsOrder(orderRaw), [orderRaw]);
 
   const sortedTabs = useMemo(() => {
     const tabMap = new Map<TabId, (typeof TABS)[number]>(
@@ -213,32 +240,71 @@ export function Sidebar({
         </section>
       )}
 
-      <Link
-        href={ROUTES.account}
-        navigate={navigate}
-        onClick={(e) => {
-          if (onAccount) {
-            e.preventDefault();
-            onAccount();
-          }
-        }}
-        className="focus-ring row-hover mt-auto flex min-h-14 items-center gap-3 rounded-field px-2 text-ink cursor-pointer"
-      >
-        <span
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"
-          aria-hidden="true"
+      <div className="relative mt-auto">
+        {menuOpen && (
+          <AccountMenu
+            accountName={accountName}
+            email={email ?? ""}
+            theme={theme ?? "system"}
+            onThemeChange={(newTheme) => onThemeChange?.(newTheme)}
+            onOpenSettings={(tab) => {
+              setMenuOpen(false);
+              onAccount?.(tab);
+            }}
+            onSignOut={() => {
+              setMenuOpen(false);
+              onSignOut?.();
+            }}
+            onClose={() => {
+              setMenuOpen(false);
+              triggerRef.current?.focus();
+            }}
+            triggerRef={triggerRef}
+            focusFirst={menuFromKeyboard}
+          />
+        )}
+        <button
+          ref={triggerRef}
+          type="button"
+          aria-haspopup="menu"
+          aria-expanded={menuOpen}
+          onClick={(e) => {
+            // detail 0: Enter or Space, so the menu starts on its first item
+            setMenuFromKeyboard(e.detail === 0);
+            setMenuOpen((open) => !open);
+          }}
+          onKeyDown={(e) => {
+            if (!menuOpen && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
+              e.preventDefault();
+              setMenuFromKeyboard(true);
+              setMenuOpen(true);
+            }
+          }}
+          className="focus-ring row-hover flex min-h-14 w-full items-center gap-3 rounded-field px-2 text-ink text-left cursor-pointer border-0 bg-transparent"
         >
-          {accountName.slice(0, 1).toUpperCase()}
-        </span>
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-callout font-semibold">
-            {accountName}
+          <span
+            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"
+            aria-hidden="true"
+          >
+            {accountName.slice(0, 1).toUpperCase()}
           </span>
-          <span className="text-footnote text-ink-secondary">
-            {t("nav.account")}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="truncate text-callout font-semibold">
+              {accountName}
+            </span>
+            <span className="text-footnote text-ink-secondary">
+              {t("nav.account")}
+            </span>
           </span>
-        </span>
-      </Link>
+          <span className="text-ink-tertiary shrink-0" aria-hidden="true">
+            {menuOpen ? (
+              <ChevronUpIcon size={16} />
+            ) : (
+              <ChevronDownIcon size={16} />
+            )}
+          </span>
+        </button>
+      </div>
     </nav>
   );
 }

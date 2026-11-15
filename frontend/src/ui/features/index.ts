@@ -1,4 +1,5 @@
 export { AppShell, type AppShellProps } from "./shell/AppShell";
+export { AccountMenu, type AccountMenuProps } from "./shell/AccountMenu";
 export { TabBar, type TabBarProps } from "./shell/TabBar";
 export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
@@ -9,6 +10,7 @@ export {
   type AccountScreenProps,
   type AccountSettings,
   type ThemeSetting,
+  type SettingsTab,
 } from "./shell/AccountScreen";
 export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
@@ -43,6 +45,7 @@ export {
   isEmail,
   normalizeEmail,
   safeReturnPath,
+  displayNameError,
   type SignUpErrors,
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";

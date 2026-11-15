@@ -26,6 +26,23 @@ export function safeReturnPath(next: string | null | undefined): string {
 export const isEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizeEmail(email));
 
+/**
+ * A display name (Setup, Settings): 3 to 30 characters once trimmed, with no control, invisible
+ * or text-direction characters and no angle brackets. The server checks the same (MeController).
+ * The emoji joiner (U+200D) stays allowed.
+ */
+export function displayNameError(name: string): CopyKey | undefined {
+  const trimmed = name.trim();
+  const length = [...trimmed].length;
+  if (length === 0) return "setup.name_required";
+  if (length < 3) return "setup.name_too_short";
+  if (length > 30) return "setup.name_too_long";
+  if (/[\p{Cc}\p{Zl}\p{Zp}<>]|(?!‍)\p{Cf}/u.test(trimmed)) {
+    return "setup.name_invalid";
+  }
+  return undefined;
+}
+
 /** AA §2.1 and BR-17, the same rules the server checks. Length counts characters, not UTF-16 units (AA-E9). */
 export function signUpErrors(email: string, password: string): SignUpErrors {
   const errors: SignUpErrors = {};
