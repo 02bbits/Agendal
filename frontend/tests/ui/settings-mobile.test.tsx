@@ -94,7 +94,7 @@ describe("Settings on phones (Part D)", () => {
     expect(onUpdateName).toHaveBeenCalledWith("Alex Rivers");
   });
 
-  it("the three group labels render with their rows, and Account is not a row in the groups", () => {
+  it("the group labels render with their rows, and Account is not a row in the groups", () => {
     mockMatchMedia(false);
     render(
       <AccountScreen
@@ -107,10 +107,10 @@ describe("Settings on phones (Part D)", () => {
       />,
     );
 
-    // Three group labels render
+    // Group labels render (Data group is omitted when backups/integrations/calendars are removed)
     expect(screen.getByText(t("settings.group_preferences"))).toBeTruthy();
     expect(screen.getByText(t("settings.group_tasks"))).toBeTruthy();
-    expect(screen.getByText(t("settings.group_data"))).toBeTruthy();
+    expect(screen.queryByText(t("settings.group_data"))).toBeNull();
 
     // Preferences rows
     expect(
@@ -128,18 +128,8 @@ describe("Settings on phones (Part D)", () => {
         name: new RegExp(t("settings.tab_sidebar"), "i"),
       }),
     ).toBeTruthy();
-    expect(
-      screen.getByRole("button", {
-        name: new RegExp(t("settings.tab_quick_add"), "i"),
-      }),
-    ).toBeTruthy();
 
     // Tasks rows
-    expect(
-      screen.getByRole("button", {
-        name: new RegExp(t("settings.tab_productivity"), "i"),
-      }),
-    ).toBeTruthy();
     expect(
       screen.getByRole("button", {
         name: new RegExp(t("settings.tab_reminders"), "i"),
@@ -151,22 +141,32 @@ describe("Settings on phones (Part D)", () => {
       }),
     ).toBeTruthy();
 
-    // Data rows
+    // Removed tabs are not present
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
+        name: new RegExp(t("settings.tab_quick_add"), "i"),
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: new RegExp(t("settings.tab_productivity"), "i"),
+      }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("button", {
         name: new RegExp(t("settings.tab_backups"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: new RegExp(t("settings.tab_integrations"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: new RegExp(t("settings.tab_calendars"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
 
     // Account is not repeated as a row in the groups
     const accountRowButtons = screen

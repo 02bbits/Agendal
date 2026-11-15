@@ -19,19 +19,15 @@ import {
   ArrowUpIcon,
   BellIcon,
   CalendarIcon,
-  CheckCircleIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
-  CloudIcon,
   FolderIcon,
   GripVerticalIcon,
   InboxIcon,
   NotesIcon,
   PaletteIcon,
-  PlugIcon,
-  PlusIcon,
   RotateCcwIcon,
   SearchIcon,
   SidebarIcon,
@@ -41,7 +37,10 @@ import {
   XIcon,
 } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
-import { SelectDropdown } from "../../components/SelectDropdown";
+import {
+  SelectDropdown,
+  type SelectOption,
+} from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import { displayNameError } from "../auth/validation";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
@@ -64,18 +63,9 @@ export type ThemeSetting = "system" | "light" | "dark";
 export type PageViewMode = "flat" | "full";
 
 export type SettingsTab =
-  | "account"
-  | "general"
-  | "subscription"
-  | "theme"
-  | "sidebar"
-  | "quick_add"
-  | "productivity"
-  | "reminders"
-  | "notifications"
-  | "backups"
-  | "integrations"
-  | "calendars";
+  "account" | "general" | "theme" | "sidebar" | "reminders" | "notifications";
+
+type TzOption = SelectOption<string>;
 
 export interface AccountSettings {
   theme: ThemeSetting;
@@ -87,6 +77,43 @@ export interface AccountSettings {
   timezone?: string;
   timezoneAuto?: boolean;
 }
+
+const POPULAR_TIMEZONES = [
+  { value: "UTC", label: "UTC (Coordinated Universal Time)" },
+  // Asia & Pacific
+  { value: "Asia/Ho_Chi_Minh", label: "Ho Chi Minh (UTC+07:00)" },
+  { value: "Asia/Bangkok", label: "Bangkok (UTC+07:00)" },
+  { value: "Asia/Singapore", label: "Singapore (UTC+08:00)" },
+  { value: "Asia/Hong_Kong", label: "Hong Kong (UTC+08:00)" },
+  { value: "Asia/Tokyo", label: "Tokyo (UTC+09:00)" },
+  { value: "Asia/Seoul", label: "Seoul (UTC+09:00)" },
+  { value: "Asia/Shanghai", label: "Shanghai / Beijing (UTC+08:00)" },
+  { value: "Asia/Taipei", label: "Taipei (UTC+08:00)" },
+  { value: "Asia/Jakarta", label: "Jakarta (UTC+07:00)" },
+  { value: "Asia/Kolkata", label: "Kolkata / Mumbai (UTC+05:30)" },
+  { value: "Asia/Dubai", label: "Dubai (UTC+04:00)" },
+  // Europe
+  { value: "Europe/London", label: "London (UTC+00:00 / BST)" },
+  { value: "Europe/Paris", label: "Paris (UTC+01:00 / CEST)" },
+  { value: "Europe/Berlin", label: "Berlin (UTC+01:00 / CEST)" },
+  { value: "Europe/Rome", label: "Rome (UTC+01:00 / CEST)" },
+  { value: "Europe/Madrid", label: "Madrid (UTC+01:00 / CEST)" },
+  { value: "Europe/Amsterdam", label: "Amsterdam (UTC+01:00 / CEST)" },
+  { value: "Europe/Zurich", label: "Zurich (UTC+01:00 / CEST)" },
+  // Americas
+  { value: "America/New_York", label: "New York (Eastern Time)" },
+  { value: "America/Chicago", label: "Chicago (Central Time)" },
+  { value: "America/Denver", label: "Denver (Mountain Time)" },
+  { value: "America/Los_Angeles", label: "Los Angeles (Pacific Time)" },
+  { value: "America/Toronto", label: "Toronto (Eastern Time)" },
+  { value: "America/Vancouver", label: "Vancouver (Pacific Time)" },
+  { value: "America/Sao_Paulo", label: "São Paulo (BRT)" },
+  { value: "America/Mexico_City", label: "Mexico City (CST)" },
+  // Oceania
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+  { value: "Australia/Melbourne", label: "Melbourne (AEST)" },
+  { value: "Pacific/Auckland", label: "Auckland (NZST)" },
+] as const;
 
 export interface AccountScreenProps {
   name: string;
@@ -148,9 +175,7 @@ export function AccountScreen({
     useMediaQuery("(min-width: 768px)") ||
     (typeof window !== "undefined" && !window.matchMedia);
 
-  const [tab, setTab] = useState<SettingsTab>(
-    initialTab === "subscription" ? "general" : initialTab,
-  );
+  const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [phoneView, setPhoneView] = useState<"list" | SettingsTab>("list");
   const detailHistoryPushed = useRef(false);
 
@@ -377,25 +402,60 @@ export function AccountScreen({
 
   const deviceZone = getDeviceTimeZone();
   const timeZoneOptions = useMemo(() => {
-    const supported =
-      typeof Intl !== "undefined" &&
-      typeof Intl.supportedValuesOf === "function"
-        ? Intl.supportedValuesOf("timeZone")
-        : [
-            "UTC",
-            "Asia/Ho_Chi_Minh",
-            "America/New_York",
-            "Europe/London",
-            "Asia/Tokyo",
-          ];
-    return [
+    const popularList: string[] = POPULAR_TIMEZONES.map((p) => p.value);
+    const popularSet = new Set(popularList);
+
+    const activeOptions: TzOption[] = [
       {
         value: "auto",
         label: t("settings.time_zone_auto", { zone: deviceZone }),
       },
-      ...supported.map((z) => ({ value: z, label: z })),
     ];
-  }, [deviceZone]);
+
+    if (deviceZone && !popularSet.has(deviceZone) && deviceZone !== "auto") {
+      activeOptions.push({
+        value: deviceZone,
+        label: `${deviceZone.replace(/_/g, " ")} (Device)`,
+      });
+      popularSet.add(deviceZone);
+    }
+
+    if (
+      settings.timezone &&
+      !popularSet.has(settings.timezone) &&
+      settings.timezone !== "auto"
+    ) {
+      activeOptions.push({
+        value: settings.timezone,
+        label: settings.timezone.replace(/_/g, " "),
+      });
+      popularSet.add(settings.timezone);
+    }
+
+    POPULAR_TIMEZONES.forEach((tz) => {
+      activeOptions.push({
+        value: tz.value,
+        label: tz.label,
+      });
+    });
+
+    const allSupported =
+      typeof Intl !== "undefined" &&
+      typeof Intl.supportedValuesOf === "function"
+        ? Intl.supportedValuesOf("timeZone")
+        : [];
+
+    const otherOptions = allSupported
+      .filter((z) => !popularSet.has(z))
+      .map((z) => ({
+        value: z,
+        label: z.replace(/_/g, " "),
+        disabled: true,
+        badge: t("settings.coming_soon"),
+      }));
+
+    return [...activeOptions, ...otherOptions];
+  }, [deviceZone, settings.timezone]);
 
   const allTabs: Array<{
     id: SettingsTab;
@@ -428,18 +488,6 @@ export function AccountScreen({
       keywords: "sidebar navigation projects tabs counts",
     },
     {
-      id: "quick_add",
-      label: t("settings.tab_quick_add"),
-      icon: <PlusIcon size={17} />,
-      keywords: "quick add task shortcut default project",
-    },
-    {
-      id: "productivity",
-      label: t("settings.tab_productivity"),
-      icon: <CheckCircleIcon size={17} />,
-      keywords: "productivity streak karma goal completed",
-    },
-    {
       id: "reminders",
       label: t("settings.tab_reminders"),
       icon: <ClockIcon size={17} />,
@@ -450,24 +498,6 @@ export function AccountScreen({
       label: t("app.tab_notifications"),
       icon: <BellIcon size={17} />,
       keywords: "notifications push browser permission vapid alert",
-    },
-    {
-      id: "backups",
-      label: t("settings.tab_backups"),
-      icon: <CloudIcon size={17} />,
-      keywords: "backups export import json csv cloud sync",
-    },
-    {
-      id: "integrations",
-      label: t("settings.tab_integrations"),
-      icon: <PlugIcon size={17} />,
-      keywords: "integrations api webhooks calendar sync zapier",
-    },
-    {
-      id: "calendars",
-      label: t("settings.tab_calendars"),
-      icon: <CalendarIcon size={17} />,
-      keywords: "calendars google outlook feed ical sync",
     },
   ];
 
@@ -781,6 +811,8 @@ export function AccountScreen({
               {/* Time zone */}
               <SelectDropdown
                 label={t("settings.time_zone")}
+                searchable
+                searchPlaceholder={t("settings.search_placeholder")}
                 value={
                   settings.timezoneAuto !== false
                     ? "auto"
@@ -790,7 +822,7 @@ export function AccountScreen({
                   if (tz === "auto") {
                     onChange({ timezoneAuto: true });
                   } else {
-                    onChange({ timezone: tz });
+                    onChange({ timezone: tz, timezoneAuto: false });
                   }
                 }}
                 options={timeZoneOptions}
@@ -1065,31 +1097,6 @@ export function AccountScreen({
             </div>
           </section>
         </div>
-
-        {/* TAB: SUBSCRIPTION */}
-        {activeTab === "subscription" && (
-          <div className="space-y-6 max-w-[620px]">
-            <div className="rounded-2xl border border-separator/50 bg-fill/20 p-5">
-              <span className="text-caption font-semibold uppercase tracking-wider text-primary">
-                {t("settings.current_plan_heading")}
-              </span>
-              <h3 className="mt-1 text-heading font-bold text-ink">
-                {t("settings.beginner_plan_title")}
-              </h3>
-              <p className="mt-1 text-footnote text-ink-secondary">
-                {t("settings.beginner_plan_desc")}
-              </p>
-              <div className="mt-4 flex gap-3">
-                <Button variant="primary" size="sm" className="rounded-lg">
-                  {t("settings.upgrade_pro")}
-                </Button>
-                <Button variant="secondary" size="sm" className="rounded-lg">
-                  {t("settings.compare_plans")}
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* TAB: NOTIFICATIONS */}
         {activeTab === "notifications" && (
@@ -1456,98 +1463,6 @@ export function AccountScreen({
             </section>
           </div>
         )}
-
-        {/* TAB: QUICK ADD */}
-        {activeTab === "quick_add" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.quick_add_heading")}
-              </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                <p className="text-footnote text-ink-secondary mb-0">
-                  {t("settings.quick_add_desc")}
-                </p>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* TAB: PRODUCTIVITY */}
-        {activeTab === "productivity" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.productivity_heading")}
-              </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                <p className="text-footnote text-ink-secondary mb-0">
-                  {t("settings.productivity_desc")}
-                </p>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* TAB: BACKUPS */}
-        {activeTab === "backups" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.backups_heading")}
-              </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-                <div>
-                  <p className="text-body font-normal text-ink lg:text-callout lg:font-medium mb-1">
-                    {t("settings.export_data_title")}
-                  </p>
-                  <p className="text-footnote text-ink-secondary lg:text-caption m-0">
-                    {t("settings.export_data_desc")}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="rounded-lg w-full lg:w-auto"
-                >
-                  {t("settings.export_json")}
-                </Button>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* TAB: INTEGRATIONS */}
-        {activeTab === "integrations" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.integrations_heading")}
-              </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                <p className="text-footnote text-ink-secondary m-0">
-                  {t("settings.integrations_desc")}
-                </p>
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* TAB: CALENDARS */}
-        {activeTab === "calendars" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.calendars_heading")}
-              </h2>
-              <div className="rounded-xl border border-separator/40 bg-fill/30 p-4">
-                <p className="text-footnote text-ink-secondary m-0">
-                  {t("settings.calendars_desc")}
-                </p>
-              </div>
-            </section>
-          </div>
-        )}
       </>
     );
   };
@@ -1676,25 +1591,15 @@ export function AccountScreen({
     </>
   );
 
-  const preferencesTabIds = new Set([
-    "general",
-    "theme",
-    "sidebar",
-    "quick_add",
-  ]);
-  const tasksTabIds = new Set(["productivity", "reminders", "notifications"]);
+  const preferencesTabIds = new Set(["general", "theme", "sidebar"]);
+  const tasksTabIds = new Set(["reminders", "notifications"]);
   const knownGroupTabIds = new Set([
     "account",
     "general",
     "theme",
     "sidebar",
-    "quick_add",
-    "productivity",
     "reminders",
     "notifications",
-    "backups",
-    "integrations",
-    "calendars",
   ]);
 
   const preferencesTabs = allTabs.filter(function isPref(tItem) {
@@ -1704,12 +1609,7 @@ export function AccountScreen({
     return tasksTabIds.has(tItem.id);
   });
   const dataTabs = allTabs.filter(function isData(tItem) {
-    return (
-      tItem.id === "backups" ||
-      tItem.id === "integrations" ||
-      tItem.id === "calendars" ||
-      !knownGroupTabIds.has(tItem.id)
-    );
+    return !knownGroupTabIds.has(tItem.id);
   });
 
   function renderPhoneSettingsRow(
@@ -1838,20 +1738,22 @@ export function AccountScreen({
                     label: t("settings.group_data"),
                     tabs: dataTabs,
                   },
-                ].map(function renderPhoneGroup(group) {
-                  return (
-                    <div key={group.key}>
-                      <div className="mt-6 mb-2 px-1 text-overline uppercase font-semibold tracking-[0.03em] text-ink-secondary">
-                        {group.label}
+                ]
+                  .filter((group) => group.tabs.length > 0)
+                  .map(function renderPhoneGroup(group) {
+                    return (
+                      <div key={group.key}>
+                        <div className="mt-6 mb-2 px-1 text-overline uppercase font-semibold tracking-[0.03em] text-ink-secondary">
+                          {group.label}
+                        </div>
+                        <div className="overflow-hidden rounded-box border border-separator bg-surface">
+                          {group.tabs.map(function renderGroupTab(item, index) {
+                            return renderPhoneSettingsRow(item, index);
+                          })}
+                        </div>
                       </div>
-                      <div className="overflow-hidden rounded-box border border-separator bg-surface">
-                        {group.tabs.map(function renderGroupTab(item, index) {
-                          return renderPhoneSettingsRow(item, index);
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
                 <div className="mt-6 overflow-hidden rounded-box border border-separator bg-surface">
                   <button
                     type="button"

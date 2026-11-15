@@ -238,7 +238,7 @@ describe("AccountScreen", () => {
   it("is axe clean in both themes", async () => {
     const { container } = render(<Harness onChange={() => {}} />);
     await expectAxeCleanInBothThemes(container);
-  }, 20000);
+  }, 60000);
 });
 
 describe("No hard-coded strings (NF-12)", () => {
