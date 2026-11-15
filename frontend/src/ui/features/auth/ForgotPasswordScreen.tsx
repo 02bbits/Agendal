@@ -67,6 +67,9 @@ export function ForgotPasswordScreen({
           <p role="status" className="m-0 text-body text-ink">
             {t("auth.reset_sent", { email: sentTo })}
           </p>
+          <p className="m-0 text-footnote text-ink-secondary">
+            {t("auth.reset_sent_hint")}
+          </p>
           {(error || offline) && (
             <p role="alert" className="m-0 text-footnote text-error">
               {offline ? t("auth.offline") : error}

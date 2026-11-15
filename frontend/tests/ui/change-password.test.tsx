@@ -168,8 +168,14 @@ describe("ChangePassword (issue #149 B4)", () => {
       }
       return jsonResponse(
         429,
-        { error: { message: "Too many attempts", retry_after: 900 } },
-        { "Retry-After": "900" },
+        {
+          error: {
+            code: "auth.current_password_locked",
+            message: "Too many wrong passwords",
+            retry_after: 80,
+          },
+        },
+        { "Retry-After": "80" },
       );
     });
 
@@ -182,7 +188,10 @@ describe("ChangePassword (issue #149 B4)", () => {
     await user.click(screen.getByRole("button", { name: "Save" }));
 
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("alert").textContent).toContain("900");
+    // AA §2.7: its own words and minutes:seconds, not "You're going a bit fast ... 826 s"
+    expect(screen.getByRole("alert").textContent).toBe(
+      "Too many wrong passwords. Try again in 1:20.",
+    );
   });
 
   it("Tab from Current password lands on New password; Alt+F8 on a field flips its type between password and text", async () => {

@@ -22,6 +22,8 @@ export interface ResetPasswordScreenProps {
   email: string | null;
   onSubmit(password: string): Promise<ResetFailure | void>;
   forgotPasswordHref: string;
+  /** Where Sign in goes once the password is saved: a reset signs nobody in (AA §2.3). */
+  signInHref: string;
   navigate?: Navigate;
   offline?: boolean;
 }
@@ -31,9 +33,11 @@ export function ResetPasswordScreen({
   email,
   onSubmit,
   forgotPasswordHref,
+  signInHref,
   navigate,
   offline = false,
 }: ResetPasswordScreenProps) {
+  const [done, setDone] = useState(false);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [touched, setTouched] = useState(false);
@@ -75,6 +79,7 @@ export function ResetPasswordScreen({
     const result = await onSubmit(password);
     setBusy(false);
     setFailure(result ?? {});
+    if (!result) setDone(true);
     if (result?.password) passwordRef.current?.focus();
   }
 
@@ -82,15 +87,29 @@ export function ResetPasswordScreen({
     <AuthLayout>
       <div className="text-center lg:text-left mt-6 lg:mt-0">
         <h1 className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink">
-          {t("auth.new_password_title")}
+          {done ? t("auth.reset_done_title") : t("auth.new_password_title")}
         </h1>
-        {!expired && email && (
+        {!done && !expired && email && (
           <p className="m-0 mt-1 text-footnote text-ink-secondary">
             {t("auth.new_password_for", { email })}
           </p>
         )}
       </div>
-      {expired ? (
+      {done ? (
+        <div className="mt-7 lg:mt-6 flex flex-col gap-3.5">
+          <p role="status" className="m-0 text-body text-ink">
+            {t("auth.reset_done_body")}
+          </p>
+          <Button
+            size="lg"
+            fullWidth
+            autoFocus
+            onClick={() => navigate?.(signInHref)}
+          >
+            {t("auth.sign_in")}
+          </Button>
+        </div>
+      ) : expired ? (
         <div className="mt-7 lg:mt-6 flex flex-col gap-3.5">
           <p role="alert" className="m-0 text-body text-ink">
             {t("auth.reset_expired")}

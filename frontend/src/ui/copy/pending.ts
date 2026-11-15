@@ -394,6 +394,10 @@ export const pending = {
   "auth.new_password_for": "For {email}",
   "auth.new_password_save": "Save password",
   "auth.reset_request_new": "Request a new link",
+  "auth.reset_sent_hint": "After you set a new password, sign in with it.",
+  "auth.reset_done_title": "Password changed",
+  "auth.reset_done_body":
+    "Every device has been signed out. Sign in with your new password.",
   "auth.hero_label": "About Agendal",
   "auth.hero_title": "Join the world of the most productive people",
   "auth.hero_body":
@@ -442,6 +446,8 @@ export const pending = {
   "auth.password_mismatch": "New passwords don't match.",
   "auth.password_match": "New passwords match",
   "auth.current_password_wrong": "That's not your current password.",
+  "auth.current_password_locked":
+    "Too many wrong passwords. Try again in {time}.",
   "auth.password_same_as_current":
     "Your new password must be different from the current one.",
   "settings.theme": "Theme",

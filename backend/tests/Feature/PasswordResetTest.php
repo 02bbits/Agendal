@@ -69,28 +69,28 @@ it('puts the token in the link fragment, never the path or query (AA §2.3)', fu
     expect(sentToken($this->user))->toHaveLength(64);
 });
 
-it('sets the new password, signs this device in and sends the notice email (T-AA-42)', function () {
+it('sets the new password, signs nobody in and sends the notice email (T-AA-42)', function () {
     requestReset();
 
-    resetPassword(sentToken($this->user))->assertOk()->assertJsonPath('user.email', 'example@gmail.com');
+    resetPassword(sentToken($this->user))->assertNoContent();
 
     expect(Hash::check('new river 42', $this->user->fresh()->password))->toBeTrue()
         ->and(DB::table('audit_events')->where('user_id', $this->user->id)->orderBy('id')->pluck('event')->all())->toBe(['reset_requested', 'reset_used']);
-    $this->assertAuthenticatedAs($this->user->fresh(), 'web');
+    $this->assertGuest('web');
     Notification::assertSentTo($this->user, PasswordChanged::class);
 });
 
 it('T-AA-101: the reset request and the reset itself read the email trimmed and lower-cased', function () {
     requestReset('  EXAMPLE@Gmail.com ')->assertStatus(202);
 
-    resetPassword(sentToken($this->user))->assertOk(); // sent as "Example@gmail.com"
+    resetPassword(sentToken($this->user))->assertNoContent(); // sent as "Example@gmail.com"
 });
 
 it('T-AA-104, SEC-09: the link works once', function () {
     requestReset();
     $token = sentToken($this->user);
 
-    resetPassword($token)->assertOk();
+    resetPassword($token)->assertNoContent();
     resetPassword($token, 'another river 7')->assertStatus(422)->assertJsonPath('error.code', 'auth.reset_expired');
 });
 
@@ -111,7 +111,7 @@ it('T-AA-104: a new request replaces the old link', function () {
     $second = sentToken($this->user);
 
     resetPassword($first)->assertStatus(422);
-    resetPassword($second)->assertOk();
+    resetPassword($second)->assertNoContent();
 });
 
 it('T-AA-104: sends nothing for a resend within 45 s, but still answers 202', function () {
@@ -122,7 +122,7 @@ it('T-AA-104: sends nothing for a resend within 45 s, but still answers 202', fu
     Notification::assertNothingSent();
 });
 
-it('T-AA-105, SC-05: the link works on another device, which is signed in while every other session ends', function () {
+it('T-AA-105, SC-05: the link works on another device, which stays signed out while every session ends', function () {
     // Another device, signed in with Remember me
     $other = carryCookies($this->get('/sanctum/csrf-cookie'));
     newRequest();
@@ -134,12 +134,37 @@ it('T-AA-105, SC-05: the link works on another device, which is signed in while 
     $this->defaultCookies = [];
     $this->unencryptedCookies = [];
     requestReset();
-    $thisDevice = resetPassword(sentToken($this->user))->assertOk();
-    expect(carryCookies($thisDevice)[SESSION_COOKIE])->not->toBe($other[SESSION_COOKIE]);
+    resetPassword(sentToken($this->user))->assertNoContent();
+    $this->assertGuest('web');
 
     newRequest();
     $this->withCookies($other)->getJson('/api/v1/me')->assertUnauthorized();
     expect($this->user->fresh()->getRememberToken())->not->toBe($rememberToken);
+});
+
+it('T-AA-105: a device that was signed in as the account is signed out by its own reset', function () {
+    $device = carryCookies($this->get('/sanctum/csrf-cookie'));
+    newRequest();
+    $login = $this->withCookies($device)->postJson('/api/v1/auth/login', ['email' => 'example@gmail.com', 'password' => 'old password 1'])->assertOk();
+    $device = carryCookies($login) + $device;
+    requestReset();
+    $token = sentToken($this->user);
+
+    newRequest();
+    $this->withCookies($device)->postJson('/api/v1/auth/reset-password', ['token' => $token, 'email' => 'example@gmail.com', 'password' => 'new river 42'])->assertNoContent();
+
+    newRequest();
+    $this->withCookies($device)->getJson('/api/v1/me')->assertUnauthorized();
+});
+
+it('signing in with the new password works, and the old one no longer does', function () {
+    requestReset();
+    resetPassword(sentToken($this->user))->assertNoContent();
+
+    newRequest();
+    $this->postJson('/api/v1/auth/login', ['email' => 'example@gmail.com', 'password' => 'old password 1'])->assertStatus(422)->assertJsonPath('error.code', 'auth.invalid');
+    newRequest();
+    $this->postJson('/api/v1/auth/login', ['email' => 'example@gmail.com', 'password' => 'new river 42'])->assertOk();
 });
 
 it('applies the sign-up password rules and the breached check', function () {

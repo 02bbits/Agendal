@@ -10,6 +10,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { t, type CopyKey } from "../../copy";
+import { formatWait } from "../auth/CodeEntry";
 import { Button } from "../../components/Button";
 import { cx } from "../../components/cx";
 import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
@@ -232,11 +233,15 @@ export function AccountScreen({
       } else {
         const body = await res.json().catch(() => null);
         const errMsg =
-          body?.error?.fields?.current_password?.[0] ??
-          body?.errors?.current_password?.[0] ??
-          body?.error?.message ??
-          body?.message ??
-          t("auth.current_password_wrong");
+          res.status === 429
+            ? t("auth.current_password_locked", {
+                time: formatWait(Number(body?.error?.retry_after) || 60),
+              })
+            : (body?.error?.fields?.current_password?.[0] ??
+              body?.errors?.current_password?.[0] ??
+              body?.error?.message ??
+              body?.message ??
+              t("auth.current_password_wrong"));
         setTwoFactorOffError(errMsg);
         twoFactorPasswordRef.current?.focus();
       }

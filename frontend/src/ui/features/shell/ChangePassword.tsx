@@ -3,6 +3,7 @@ import { t } from "../../copy";
 import { Button } from "../../components/Button";
 import { CheckIcon } from "../../components/icons";
 import { cx } from "../../components/cx";
+import { formatWait } from "../auth/CodeEntry";
 import { PasswordField } from "../auth/PasswordField";
 import { hasNonKeyboardCharacters } from "../auth/validation";
 import { PasswordStrength } from "../auth/PasswordStrength";
@@ -94,7 +95,11 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
           data?.error?.retry_after ??
           response.headers.get("Retry-After") ??
           "60";
-        setCurrentError(t("error.rate_limited", { seconds: String(seconds) }));
+        setCurrentError(
+          t("auth.current_password_locked", {
+            time: formatWait(Number(seconds) || 60),
+          }),
+        );
       } else {
         setCurrentStatus("unchecked");
       }
@@ -154,7 +159,11 @@ export function ChangePassword({ email, onBack }: ChangePasswordProps) {
     if (response.status === 429) {
       const seconds =
         data?.error?.retry_after ?? response.headers.get("Retry-After") ?? "60";
-      setFormError(t("error.rate_limited", { seconds: String(seconds) }));
+      setFormError(
+        t("auth.current_password_locked", {
+          time: formatWait(Number(seconds) || 60),
+        }),
+      );
       return;
     }
 

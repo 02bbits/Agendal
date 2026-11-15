@@ -10,8 +10,8 @@ use App\Support\Audit;
 use App\Support\EmailInput;
 use App\Support\NewPassword;
 use Illuminate\Auth\Passwords\PasswordBroker;
-use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
@@ -21,7 +21,7 @@ use Illuminate\Support\Str;
 // AA-4: set a new password from the emailed link. The token is single use and lasts 60 min (SC-05).
 class ResetPasswordController extends Controller
 {
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(Request $request): Response
     {
         abort_unless($request->hasSession(), 403);
         $input = [
@@ -59,14 +59,19 @@ class ResetPasswordController extends Controller
 
         /** @var User $user */
         $user = User::query()->where('email', $input['email'])->firstOrFail();
-        // Every other session ends; this device is signed in (AA §2.3, SC-05)
+        // Every session ends and nobody is signed in: the link proves the inbox, and sign-in still
+        // asks for the password and the two-step code (AA §2.3, SC-05)
         DB::table('sessions')->where('user_id', $user->id)->delete();
-        Auth::guard('web')->login($user, remember: true);
-        $request->session()->regenerate();
+        if (Auth::guard('web')->id() === $user->id) {
+            // This device was signed in as the account: saving its session again would bring it back
+            $request->attributes->set('signed_out', true);
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+        }
         $user->notify(new PasswordChanged);
         Audit::log($request, 'reset_used', $user->id);
 
-        return response()->json(['user' => $user]);
+        return response()->noContent();
     }
 
     private function expired(): ApiError

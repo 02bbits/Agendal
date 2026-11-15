@@ -69,6 +69,10 @@ describe("Reset request (AA-4)", () => {
       /We've sent a link to someone@gmail\.com/,
     );
     expect(sent.getAttribute("role")).toBe("status");
+    // This screen never learns the link was used: it says what to do next (AA §2.3)
+    expect(
+      screen.getByText("After you set a new password, sign in with it."),
+    ).toBeTruthy();
     const resend = screen.getByRole("button", {
       name: "Resend link in 45 s",
     }) as HTMLButtonElement;
@@ -138,8 +142,8 @@ describe("Set new password (AA §2.3)", () => {
     return renderAt("/reset-password", ResetPasswordPage);
   }
 
-  it("reads the token, removes it from the address bar, and saves the new password", async () => {
-    reply = () => json(200, { user: {} });
+  it("reads the token, removes it from the address bar, and saves the new password, signing nobody in (AA §2.3, T-AA-105)", async () => {
+    reply = () => new Response(null, { status: 204 });
     const user = userEvent.setup();
     openLink();
 
@@ -163,12 +167,40 @@ describe("Set new password (AA §2.3)", () => {
       email: "example@gmail.com",
       password: "new river 42",
     });
-    expect(router.push).toHaveBeenCalledWith("/");
+    // A done state, not Inbox and not a toast: the user signs in with the new password
     expect(
-      await screen.findByText(
-        "Password changed. Other devices have been signed out.",
-      ),
+      (await screen.findByRole("heading", { name: "Password changed" }))
+        .textContent,
+    ).toBe("Password changed");
+    expect(
+      screen.getByText(
+        "Every device has been signed out. Sign in with your new password.",
+      ).textContent,
     ).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(router.push).toHaveBeenCalledWith("/sign-in");
+  });
+
+  it("the done state is axe-clean in both themes", async () => {
+    reply = () => new Response(null, { status: 204 });
+    const user = userEvent.setup();
+    const { container } = openLink();
+
+    await user.type(
+      await screen.findByLabelText("New password"),
+      "new river 42",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "new river 42",
+    );
+    await user.click(screen.getByRole("button", { name: "Save password" }));
+    await screen.findByRole("heading", { name: "Password changed" });
+    await expectAxeCleanInBothThemes(container);
   });
 
   it("applies the sign-up rules, including not the email", async () => {

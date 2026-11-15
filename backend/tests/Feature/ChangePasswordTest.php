@@ -192,7 +192,8 @@ it('throttles after 5 wrong tries across check and change, then returns 429 even
         'password' => 'new password 42',
         'password_confirmation' => 'new password 42',
     ])->assertStatus(429)
-        ->assertJsonPath('error.code', 'error.rate_limited')
+        ->assertJsonPath('error.code', 'auth.current_password_locked')
+        ->assertJsonPath('error.retry_after', 60) // five typos cost a minute, not 15 (AA §2.7)
         ->assertHeader('Retry-After');
 
     expect($response->headers->get('Retry-After'))->not->toBeNull();
@@ -201,8 +202,33 @@ it('throttles after 5 wrong tries across check and change, then returns 429 even
     asDevice($device)->postJson('/api/v1/auth/check-password', [
         'current_password' => 'old password 1',
     ])->assertStatus(429)
-        ->assertJsonPath('error.code', 'error.rate_limited')
+        ->assertJsonPath('error.code', 'auth.current_password_locked')
         ->assertHeader('Retry-After');
+
+    // The minute passes and the right password works again, with five fresh tries
+    $this->travel(61)->seconds();
+    asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertNoContent();
+});
+
+it('AA §2.7: 20 wrong tries in an hour lock for 15 minutes, even across the minute locks', function () {
+    $device = signInDevice();
+
+    // Four runs of five wrong tries, each followed by its minute lock
+    foreach (range(1, 4) as $run) {
+        foreach (range(1, 5) as $i) {
+            asDevice($device)->postJson('/api/v1/auth/check-password', [
+                'current_password' => "wrong-{$run}-{$i}",
+            ])->assertStatus(422);
+        }
+        $this->travel(61)->seconds();
+    }
+
+    $response = asDevice($device)->postJson('/api/v1/auth/check-password', [
+        'current_password' => 'old password 1',
+    ])->assertStatus(429)->assertJsonPath('error.code', 'auth.current_password_locked');
+    expect($response->json('error.retry_after'))->toBeGreaterThan(60)->toBeLessThanOrEqual(900);
 });
 
 it('clears rate limiter on a correct password check', function () {
