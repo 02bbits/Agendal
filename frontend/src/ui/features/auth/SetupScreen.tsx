@@ -16,9 +16,7 @@ import { TextField } from "../../components/TextField";
 import { Switch } from "../../components/Switch";
 import { Stepper, Step } from "../../components/Stepper";
 import { useMediaQuery } from "../../components/useMediaQuery";
-import {
-  LockIcon,
-} from "../../components/icons";
+import { LockIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { formatTime } from "../../domain/dates";
 import type { TimeFormat, WeekStart } from "../../domain/types";

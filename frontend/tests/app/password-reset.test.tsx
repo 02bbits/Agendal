@@ -152,7 +152,10 @@ describe("Set new password (AA §2.3)", () => {
         ?.getAttribute("value"),
     ).toBe("example@gmail.com");
     await user.type(field, "new river 42");
-    await user.type(screen.getByLabelText("Confirm new password"), "new river 42");
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "new river 42",
+    );
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
     expect(JSON.parse(callsTo("/auth/reset-password")[0][1].body)).toEqual({
@@ -188,7 +191,9 @@ describe("Set new password (AA §2.3)", () => {
 
     const newField = await screen.findByLabelText("New password");
     const confirmField = screen.getByLabelText("Confirm new password");
-    const saveButton = screen.getByRole("button", { name: "Save password" }) as HTMLButtonElement;
+    const saveButton = screen.getByRole("button", {
+      name: "Save password",
+    }) as HTMLButtonElement;
 
     // Type new password
     await user.type(newField, "strongSecret99!");
@@ -225,7 +230,10 @@ describe("Set new password (AA §2.3)", () => {
 
     const field = await screen.findByLabelText("New password");
     await user.type(field, "password123");
-    await user.type(screen.getByLabelText("Confirm new password"), "password123");
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "password123",
+    );
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
     expect(await screen.findByText(breached)).toBeTruthy();
@@ -241,7 +249,10 @@ describe("Set new password (AA §2.3)", () => {
       await screen.findByLabelText("New password"),
       "new river 42",
     );
-    await user.type(screen.getByLabelText("Confirm new password"), "new river 42");
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "new river 42",
+    );
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe(

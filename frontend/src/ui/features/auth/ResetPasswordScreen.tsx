@@ -137,7 +137,6 @@ export function ResetPasswordScreen({
           <PasswordStrength
             id="reset-password-strength"
             password={password}
-            className="mt-1"
           />
           <PasswordField
             ref={confirmPasswordRef}
