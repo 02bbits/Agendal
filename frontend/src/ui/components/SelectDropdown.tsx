@@ -53,7 +53,6 @@ export function SelectDropdown<T extends string>({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredValue, setHoveredValue] = useState<T | null>(null);
-  const [hasSelectedBefore, setHasSelectedBefore] = useState(false);
   const isFiltering = searchQuery.trim().length > 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -132,7 +131,6 @@ export function SelectDropdown<T extends string>({
       return;
     }
     onChange(optVal);
-    setHasSelectedBefore(true);
     const holdMs = indicatorStyle === "draw" ? 250 : 150;
     if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
     holdTimerRef.current = setTimeout(() => {
@@ -406,6 +404,7 @@ export function SelectDropdown<T extends string>({
             role={roleMode === "radio" ? "radiogroup" : "listbox"}
             aria-label={label}
             variants={listVariants}
+            onMouseLeave={() => setHoveredValue(null)}
             className="space-y-0.5"
           >
             {filteredOptions.length === 0 ? (
@@ -452,30 +451,34 @@ export function SelectDropdown<T extends string>({
                           : "text-ink hover:bg-fill/50 active:bg-fill/70 cursor-pointer",
                     )}
                   >
-                    {isHovered && (
-                      <motion.div
-                        layoutId={
-                          prefersReducedMotion
-                            ? undefined
-                            : `select-highlight-${label}`
-                        }
-                        className="absolute inset-0 rounded-lg bg-fill/50 -z-10 pointer-events-none"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        transition={
-                          prefersReducedMotion
-                            ? { duration: 0.15 }
-                            : {
-                                opacity: { duration: 0.2 },
-                                layout: {
-                                  type: "spring",
-                                  stiffness: 500,
-                                  damping: 40,
-                                },
-                              }
-                        }
-                      />
-                    )}
+                    <AnimatePresence>
+                      {isHovered && (
+                        <motion.div
+                          key="dropdown-highlight"
+                          layoutId={
+                            prefersReducedMotion
+                              ? undefined
+                              : `select-highlight-${label}`
+                          }
+                          className="absolute inset-0 rounded-lg bg-fill/50 -z-10 pointer-events-none"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          transition={
+                            prefersReducedMotion
+                              ? { duration: 0.15 }
+                              : {
+                                  opacity: { duration: 0.2 },
+                                  layout: {
+                                    type: "spring",
+                                    stiffness: 500,
+                                    damping: 40,
+                                  },
+                                }
+                          }
+                        />
+                      )}
+                    </AnimatePresence>
                     <span className="flex items-center gap-2.5 truncate relative z-10">
                       {option.icon && (
                         <span
@@ -487,89 +490,50 @@ export function SelectDropdown<T extends string>({
                       )}
                       <span>{option.label}</span>
                     </span>
-                    <span className="flex items-center gap-2 shrink-0 relative z-10">
+                    <span className="flex items-center gap-2 shrink-0 relative z-10 min-w-4 justify-end">
                       {option.badge && (
                         <span className="text-caption font-normal text-ink-tertiary">
                           {option.badge}
                         </span>
                       )}
-                      {isSelected &&
-                        (indicatorStyle === "draw" ? (
-                          <span
-                            className="text-primary shrink-0 flex items-center"
-                            aria-hidden="true"
-                          >
-                            <svg
-                              width={16}
-                              height={16}
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth={2.5}
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            >
-                              <motion.path
-                                d="M20 6L9 17L4 12"
-                                initial={
-                                  prefersReducedMotion
-                                    ? { opacity: 0 }
-                                    : { pathLength: 0, opacity: 0 }
-                                }
-                                animate={
-                                  prefersReducedMotion
-                                    ? { opacity: 1 }
-                                    : { pathLength: 1, opacity: 1 }
-                                }
-                                transition={{
-                                  duration: prefersReducedMotion ? 0.15 : 0.3,
-                                  ease: EASE_SOFT_OUT,
-                                }}
-                              />
-                            </svg>
-                          </span>
-                        ) : (
+                      <AnimatePresence>
+                        {isSelected && (
                           <motion.span
-                            layoutId={
-                              prefersReducedMotion
-                                ? undefined
-                                : `select-indicator-${label}`
-                            }
+                            key="check-icon"
                             initial={
                               prefersReducedMotion
                                 ? { opacity: 0 }
                                 : {
-                                    scale: 0.5,
-                                    filter: "blur(2px)",
                                     opacity: 0,
+                                    scale: 0.6,
+                                    filter: "blur(2px)",
                                   }
                             }
                             animate={
                               prefersReducedMotion
                                 ? { opacity: 1 }
-                                : { scale: 1, filter: "blur(0px)", opacity: 1 }
+                                : { opacity: 1, scale: 1, filter: "blur(0px)" }
                             }
-                            transition={
+                            exit={
                               prefersReducedMotion
-                                ? { duration: 0.15 }
-                                : hasSelectedBefore
-                                  ? {
-                                      type: "spring",
-                                      stiffness: 500,
-                                      damping: 40,
-                                    }
-                                  : {
-                                      type: "spring",
-                                      stiffness: 500,
-                                      damping: 24,
-                                    }
+                                ? { opacity: 0 }
+                                : {
+                                    opacity: 0,
+                                    scale: 0.6,
+                                    filter: "blur(2px)",
+                                  }
                             }
+                            transition={{
+                              duration: prefersReducedMotion ? 0.15 : 0.25,
+                              ease: EASE_SOFT_OUT,
+                            }}
                             className="text-primary shrink-0 flex items-center"
                             aria-hidden="true"
                           >
                             <CheckIcon size={16} />
                           </motion.span>
-                        ))}
+                        )}
+                      </AnimatePresence>
                     </span>
                   </motion.button>
                 );
