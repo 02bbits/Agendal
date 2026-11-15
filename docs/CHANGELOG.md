@@ -2,6 +2,11 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-15
+
+- **Current-password limit softened (Refs #149).** [AA §2.7](03-modules/AA-account-access.md#27-change-password-149): wrong current passwords (blur check, Save, two-step off) now lock 60 s after 5 in 15 minutes, and 15 minutes after 20 in an hour (was 15 minutes after 5). The 429 is `auth.current_password_locked` with a `1:00`-style wait. New copy `auth.current_password_locked` in `pending.ts`.
+- **Reset password no longer signs in (Refs #149).** [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4), §3 state matrix, [AA-E5](03-modules/AA-account-access.md#aa-e5), §7: a reset ends every session, including the device that opens the link, and answers `204`; the page shows a done state with Sign in, so two-step still applies. The "link sent" screen gains `auth.reset_sent_hint`. New copy `auth.reset_sent_hint`, `auth.reset_done_title`, `auth.reset_done_body` sit in `pending.ts` until the catalog owner adds them.
+
 ## 2026-11-14
 
 - **Sign-up waits until the email is verified (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1), [§2.8](03-modules/AA-account-access.md#28-verify-email-149): Create account starts a 30-minute waiting sign-up in the cache, requiring a Good or Strong password; the user row is created only once the code is right. Existing emails return the same response, sending a notice email to the owner. [AA §7](03-modules/AA-account-access.md#7-api-contract), [NF-13](05-quality/nfr.md#rate-limits-nf-13), [BR-17](02-domain/business-rules.md#br-17) and [SUMMARY](SUMMARY.md) updated.

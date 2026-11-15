@@ -64,15 +64,16 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3 Reset password (AA-4)
 
-1. **Request:** enter an email, then always see `auth.reset_sent`. Resend unlocks after 45 s, with a countdown.
+1. **Request:** enter an email, then always see `auth.reset_sent` with the hint `auth.reset_sent_hint` ("After you set a new password, sign in with it.") and a link back to Sign in. Resend unlocks after 45 s, with a countdown. This screen never learns that the link was used, on this or any other device.
 2. **Email:** the link is `https://…/reset#token=…` (the token is in the fragment, so it never reaches server logs or a `Referer`). It expires in 60 minutes and works once.
 3. **Set new password:**
    - The page reads the token, then removes it from the address bar with `history.replaceState`.
    - It shows the new-password field with show/hide and the same rules as sign-up, including the breached check.
    - An expired or used token shows `auth.reset_expired`, with a link to request a new one.
 4. **Success:**
-   - Every other session ends.
-   - This device is signed in, and the toast `auth.password_changed` shows.
+   - Every session of the account ends, including this device's if it was signed in. The remember-me token changes too.
+   - Nobody is signed in by a reset, whatever the account's two-step setting: the link proves the inbox, and sign-in still asks for the password and, with two-step on, the code (§2.9).
+   - The page stays on a done state: `auth.reset_done_title`, `auth.reset_done_body` and a **Sign in** button. No toast, no Inbox.
    - A notice email `email.changed_subject` is sent (ASVS 2.2.3). It says what to do if the user didn't make the change.
 5. **Emails:** both use the copy in the [Email section](../01-product/copy-catalog.md#email) and the Graphite mail theme, in light and dark mail clients, with no images.
 
@@ -109,7 +110,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Save** stays disabled until Current is filled, every rule passes and Confirm matches.
 - **Server order:** the current password first (`auth.current_password_wrong`, nothing else runs), then the sign-up rules, then different from the current one (`auth.password_same_as_current`), then the match (`auth.password_mismatch`), then the breached check. Wrong current password keeps what was typed and focuses that field.
 - **Success:** the pane shows `settings.password_changed_title` and `settings.password_changed_body` with a Done button back to Account (announced, focus on the heading). Every other session ends and this one stays, the notice email is sent (ASVS 2.2.3) and an audit event `password_changed` is written.
-- **Limit:** only wrong current passwords count, 5 per 15 minutes per user, shared by the blur check and Save; then `429` with `Retry-After`. A correct one resets the count.
+- **Limit:** only wrong current passwords count, shared by the blur check, Save and the two-step off dialog (§2.9), per user, in two tiers like sign-in: 5 wrong in 15 minutes lock for 60 s, and 20 wrong in an hour lock for 15 minutes. The try that starts a lock still answers `auth.current_password_wrong`; the next answers `429 auth.current_password_locked {retry_after}`, shown as `auth.current_password_locked` with the wait as `1:00`. A correct password ends the 5-try run (not the hour's count). This limit is separate from the 6-digit code limits (§2.8).
 
 ### 2.8 Verify email (#149)
 
@@ -146,7 +147,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Create account | Button disabled | Busy button | Inbox with welcome toast | Field errors. `429` → `error.rate_limited` | — | Button disabled, `auth.offline` |
 | Sign in | Button disabled until both fields are filled | Busy button | Return path, or Inbox | `auth.invalid` | Banner with countdown, button disabled | `auth.offline` |
 | Reset request | Button disabled | Busy | `auth.reset_sent` and the Resend countdown | `429` | — | `auth.offline` |
-| Set new password | — | Busy | Signed in, toast | Field errors. `auth.reset_expired` | — | `auth.offline` |
+| Set new password | — | Busy | Done state with Sign in (not signed in) | Field errors. `auth.reset_expired` | — | `auth.offline` |
 | Sign out | — | Busy | Sign in | Server unreachable → data wiped anyway | — | Wiped. Dialog warns about unsynced changes |
 
 ## 4. Edge cases
@@ -157,7 +158,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="aa-e2"></a>AA-E2 | Locked on this IP | Another IP (the victim's phone on mobile data) can still sign in ([SC-03](../07-architecture/security.md#sc-03)) | T-AA-102, SEC-07 |
 | <a id="aa-e3"></a>AA-E3 | Reloading during the lockout | The countdown continues from the server's `retry_after` | T-AA-103 |
 | <a id="aa-e4"></a>AA-E4 | Reset requested twice | The new request replaces the old link, so only the newest link works, once. Requests within 45 s send nothing ([Laravel's reset broker](../07-architecture/data-model.md)) | T-AA-104 |
-| <a id="aa-e5"></a>AA-E5 | Reset link opened on another device | Works. The other device's sessions end, and the new device is signed in | T-AA-105 |
+| <a id="aa-e5"></a>AA-E5 | Reset link opened on another device | Works. Every session ends, including the device that opens the link; no device is signed in, so each signs in again | T-AA-105 |
 | <a id="aa-e6"></a>AA-E6 | Password changed while another device is offline | That device gets `401` on next sync → [UX-44](../01-product/ux-standards.md#ux-44). Its queue is kept for the same user | T-AA-106 |
 | <a id="aa-e7"></a>AA-E7 | A different user signs in on a device holding another user's unsynced data | That data is wiped before the new session loads. It can't sync into the wrong account | T-AA-107, SEC-52 |
 | <a id="aa-e8"></a>AA-E8 | Password equal to the email with different case | Rejected (case-insensitive compare) | T-AA-108 |
@@ -197,7 +198,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `POST /auth/two-factor/resend` | — | `204` | `422 auth.two_factor_expired`, `429 {retry_after}` (60 s, or 30 minutes after 10 codes) |
 | `POST /auth/two-factor` | `{enabled, current_password?}` (the password only to turn it off) | `200 {user}` | `401`, `403 auth.email_unverified`, `422 auth.current_password_wrong`, `429` |
 | `POST /auth/forgot-password` | `{email}` | `202` always | `429` |
-| `POST /auth/reset-password` | `{token, email, password}` | `200 {user}` and a session | `422 auth.reset_expired`, field errors |
+| `POST /auth/reset-password` | `{token, email, password}` | `204`, no session | `422 auth.reset_expired`, field errors |
 | `POST /auth/check-password` | `{current_password}` | `204` | `401`, `422` (`auth.current_password_wrong`), `429` |
 | `POST /auth/change-password` | `{current_password, password, password_confirmation}` | `200 {user}`, other sessions ended | `401`, `422` (`auth.current_password_wrong`, field errors), `429` |
 | `POST /auth/logout` | — | `204` | `401` |
