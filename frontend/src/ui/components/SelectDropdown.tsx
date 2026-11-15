@@ -6,7 +6,12 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import {
+  AnimatePresence,
+  motion,
+  useReducedMotion,
+  type Variants,
+} from "motion/react";
 import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "./icons";
 import { cx } from "./cx";
 
@@ -28,6 +33,7 @@ export interface SelectDropdownProps<T extends string> {
   roleMode?: "radio" | "option";
   searchable?: boolean;
   searchPlaceholder?: string;
+  indicatorStyle?: "draw" | "pop";
 }
 
 const EASE_SOFT_OUT = [0.215, 0.61, 0.355, 1] as const;
@@ -42,15 +48,19 @@ export function SelectDropdown<T extends string>({
   roleMode = "option",
   searchable = false,
   searchPlaceholder,
+  indicatorStyle = "pop",
 }: SelectDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [hoveredValue, setHoveredValue] = useState<T | null>(null);
+  const [hasSelectedBefore, setHasSelectedBefore] = useState(false);
   const isFiltering = searchQuery.trim().length > 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prefersReducedMotion = Boolean(useReducedMotion());
 
@@ -70,11 +80,22 @@ export function SelectDropdown<T extends string>({
   }, [options, searchable, searchQuery]);
 
   useEffect(() => {
+    return () => {
+      if (holdTimerRef.current) {
+        clearTimeout(holdTimerRef.current);
+      }
+    };
+  }, []);
+
+  useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
+        if (holdTimerRef.current) {
+          clearTimeout(holdTimerRef.current);
+        }
         setIsOpen(false);
       }
     };
@@ -97,20 +118,39 @@ export function SelectDropdown<T extends string>({
     setIsOpen((prev) => {
       if (!prev) {
         setSearchQuery("");
+        setHoveredValue(value);
         return true;
       }
       return false;
     });
   };
 
+  const handleSelectOption = (optVal: T) => {
+    if (optVal === value) {
+      setIsOpen(false);
+      triggerRef.current?.focus();
+      return;
+    }
+    onChange(optVal);
+    setHasSelectedBefore(true);
+    const holdMs = indicatorStyle === "draw" ? 250 : 150;
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+    holdTimerRef.current = setTimeout(() => {
+      setIsOpen(false);
+      triggerRef.current?.focus();
+    }, holdMs);
+  };
+
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") {
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       setIsOpen(false);
       triggerRef.current?.focus();
     } else if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
       if (!isOpen) {
         e.preventDefault();
         setSearchQuery("");
+        setHoveredValue(value);
         setIsOpen(true);
       } else if (!searchable) {
         e.preventDefault();
@@ -118,13 +158,16 @@ export function SelectDropdown<T extends string>({
           (opt) => opt.value === value,
         );
         const next = (currentIndex + 1) % filteredOptions.length;
-        onChange(filteredOptions[next]!.value);
+        const nextOption = filteredOptions[next]!;
+        onChange(nextOption.value);
+        setHoveredValue(nextOption.value);
         optionRefs.current[next]?.focus();
       }
     } else if (e.key === "ArrowUp") {
       if (!isOpen) {
         e.preventDefault();
         setSearchQuery("");
+        setHoveredValue(value);
         setIsOpen(true);
       } else if (!searchable) {
         e.preventDefault();
@@ -133,7 +176,9 @@ export function SelectDropdown<T extends string>({
         );
         const prev =
           (currentIndex - 1 + filteredOptions.length) % filteredOptions.length;
-        onChange(filteredOptions[prev]!.value);
+        const prevOption = filteredOptions[prev]!;
+        onChange(prevOption.value);
+        setHoveredValue(prevOption.value);
         optionRefs.current[prev]?.focus();
       }
     }
@@ -142,11 +187,13 @@ export function SelectDropdown<T extends string>({
   const onOptionKeyDown = (e: KeyboardEvent, idx: number) => {
     if (e.key === "Escape") {
       e.preventDefault();
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       setIsOpen(false);
       triggerRef.current?.focus();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
       const next = (idx + 1) % filteredOptions.length;
+      setHoveredValue(filteredOptions[next]!.value);
       optionRefs.current[next]?.focus();
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
@@ -155,6 +202,7 @@ export function SelectDropdown<T extends string>({
       } else {
         const prev =
           (idx - 1 + filteredOptions.length) % filteredOptions.length;
+        setHoveredValue(filteredOptions[prev]!.value);
         optionRefs.current[prev]?.focus();
       }
     }
@@ -163,6 +211,7 @@ export function SelectDropdown<T extends string>({
   const onSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Escape") {
       e.preventDefault();
+      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
       setIsOpen(false);
       triggerRef.current?.focus();
     } else if (e.key === "ArrowDown") {
@@ -171,15 +220,14 @@ export function SelectDropdown<T extends string>({
         (opt) => !opt.disabled,
       );
       if (firstEnabledIndex !== -1) {
+        setHoveredValue(filteredOptions[firstEnabledIndex]!.value);
         optionRefs.current[firstEnabledIndex]?.focus();
       }
     } else if (e.key === "Enter") {
       e.preventDefault();
       const firstEnabled = filteredOptions.find((opt) => !opt.disabled);
       if (firstEnabled) {
-        onChange(firstEnabled.value);
-        setIsOpen(false);
-        triggerRef.current?.focus();
+        handleSelectOption(firstEnabled.value);
       }
     }
   };
@@ -266,7 +314,35 @@ export function SelectDropdown<T extends string>({
                 {selectedOption.icon}
               </span>
             )}
-            <span className="truncate">{selectedOption?.label}</span>
+            <span className="relative inline-block overflow-hidden h-5">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={selectedOption?.value ?? value}
+                  initial={
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : { y: 6, filter: "blur(4px)", opacity: 0 }
+                  }
+                  animate={
+                    prefersReducedMotion
+                      ? { opacity: 1 }
+                      : { y: 0, filter: "blur(0px)", opacity: 1 }
+                  }
+                  exit={
+                    prefersReducedMotion
+                      ? { opacity: 0 }
+                      : { y: -6, filter: "blur(4px)", opacity: 0 }
+                  }
+                  transition={{
+                    duration: prefersReducedMotion ? 0.2 : 0.4,
+                    ease: EASE_SOFT_OUT,
+                  }}
+                  className="block truncate"
+                >
+                  {selectedOption?.label}
+                </motion.span>
+              </AnimatePresence>
+            </span>
           </span>
           <span
             className={cx(
@@ -340,6 +416,7 @@ export function SelectDropdown<T extends string>({
               filteredOptions.map((option, idx) => {
                 const isSelected = option.value === value;
                 const isDisabled = Boolean(option.disabled);
+                const isHovered = hoveredValue === option.value && !isDisabled;
                 return (
                   <motion.button
                     key={option.value}
@@ -356,15 +433,18 @@ export function SelectDropdown<T extends string>({
                     aria-disabled={isDisabled ? true : undefined}
                     tabIndex={isOpen && !isDisabled ? 0 : -1}
                     variants={itemVariants}
+                    onMouseMove={() => {
+                      if (!isDisabled && hoveredValue !== option.value) {
+                        setHoveredValue(option.value);
+                      }
+                    }}
                     onClick={() => {
                       if (isDisabled) return;
-                      onChange(option.value);
-                      setIsOpen(false);
-                      triggerRef.current?.focus();
+                      handleSelectOption(option.value);
                     }}
                     onKeyDown={(e) => onOptionKeyDown(e, idx)}
                     className={cx(
-                      "flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left transition-colors duration-150",
+                      "relative flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left transition-colors duration-150 z-0",
                       isDisabled
                         ? "opacity-40 cursor-not-allowed select-none"
                         : isSelected
@@ -372,7 +452,31 @@ export function SelectDropdown<T extends string>({
                           : "text-ink hover:bg-fill/50 active:bg-fill/70 cursor-pointer",
                     )}
                   >
-                    <span className="flex items-center gap-2.5 truncate">
+                    {isHovered && (
+                      <motion.div
+                        layoutId={
+                          prefersReducedMotion
+                            ? undefined
+                            : `select-highlight-${label}`
+                        }
+                        className="absolute inset-0 rounded-lg bg-fill/50 -z-10 pointer-events-none"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={
+                          prefersReducedMotion
+                            ? { duration: 0.15 }
+                            : {
+                                opacity: { duration: 0.2 },
+                                layout: {
+                                  type: "spring",
+                                  stiffness: 500,
+                                  damping: 40,
+                                },
+                              }
+                        }
+                      />
+                    )}
+                    <span className="flex items-center gap-2.5 truncate relative z-10">
                       {option.icon && (
                         <span
                           className="shrink-0 text-ink-secondary"
@@ -383,17 +487,89 @@ export function SelectDropdown<T extends string>({
                       )}
                       <span>{option.label}</span>
                     </span>
-                    <span className="flex items-center gap-2 shrink-0">
+                    <span className="flex items-center gap-2 shrink-0 relative z-10">
                       {option.badge && (
                         <span className="text-caption font-normal text-ink-tertiary">
                           {option.badge}
                         </span>
                       )}
-                      {isSelected && (
-                        <span className="text-primary" aria-hidden="true">
-                          <CheckIcon size={16} />
-                        </span>
-                      )}
+                      {isSelected &&
+                        (indicatorStyle === "draw" ? (
+                          <span
+                            className="text-primary shrink-0 flex items-center"
+                            aria-hidden="true"
+                          >
+                            <svg
+                              width={16}
+                              height={16}
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <motion.path
+                                d="M20 6L9 17L4 12"
+                                initial={
+                                  prefersReducedMotion
+                                    ? { opacity: 0 }
+                                    : { pathLength: 0, opacity: 0 }
+                                }
+                                animate={
+                                  prefersReducedMotion
+                                    ? { opacity: 1 }
+                                    : { pathLength: 1, opacity: 1 }
+                                }
+                                transition={{
+                                  duration: prefersReducedMotion ? 0.15 : 0.3,
+                                  ease: EASE_SOFT_OUT,
+                                }}
+                              />
+                            </svg>
+                          </span>
+                        ) : (
+                          <motion.span
+                            layoutId={
+                              prefersReducedMotion
+                                ? undefined
+                                : `select-indicator-${label}`
+                            }
+                            initial={
+                              prefersReducedMotion
+                                ? { opacity: 0 }
+                                : {
+                                    scale: 0.5,
+                                    filter: "blur(2px)",
+                                    opacity: 0,
+                                  }
+                            }
+                            animate={
+                              prefersReducedMotion
+                                ? { opacity: 1 }
+                                : { scale: 1, filter: "blur(0px)", opacity: 1 }
+                            }
+                            transition={
+                              prefersReducedMotion
+                                ? { duration: 0.15 }
+                                : hasSelectedBefore
+                                  ? {
+                                      type: "spring",
+                                      stiffness: 500,
+                                      damping: 40,
+                                    }
+                                  : {
+                                      type: "spring",
+                                      stiffness: 500,
+                                      damping: 24,
+                                    }
+                            }
+                            className="text-primary shrink-0 flex items-center"
+                            aria-hidden="true"
+                          >
+                            <CheckIcon size={16} />
+                          </motion.span>
+                        ))}
                     </span>
                   </motion.button>
                 );

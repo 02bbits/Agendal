@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
@@ -56,7 +56,9 @@ describe("SelectDropdown (Base UI / Animate UI motion popup)", () => {
     await user.click(optionTwo);
 
     expect(onChange).toHaveBeenCalledWith("opt2");
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await waitFor(() =>
+      expect(trigger.getAttribute("aria-expanded")).toBe("false"),
+    );
   });
 
   it("does not select disabled options and renders their badge", async () => {
@@ -136,7 +138,9 @@ describe("SelectDropdown (Base UI / Animate UI motion popup)", () => {
     // Pressing Enter in search input picks the first matching enabled option
     fireEvent.keyDown(searchInput, { key: "Enter" });
     expect(onChange).toHaveBeenCalledWith("opt2");
-    expect(trigger.getAttribute("aria-expanded")).toBe("false");
+    await waitFor(() =>
+      expect(trigger.getAttribute("aria-expanded")).toBe("false"),
+    );
   });
 
   it("shows no matches text when search has no results", async () => {

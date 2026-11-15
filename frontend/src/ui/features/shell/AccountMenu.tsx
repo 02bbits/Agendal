@@ -6,6 +6,7 @@ import {
   type MouseEvent,
   type RefObject,
 } from "react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { t } from "../../copy";
 import { UserIcon, SlidersIcon } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
@@ -26,8 +27,10 @@ export interface AccountMenuProps {
   focusFirst?: boolean;
 }
 
+const EASE_SOFT_OUT = [0.215, 0.61, 0.355, 1] as const;
+
 const ITEM =
-  "flex h-10 min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border-0 bg-transparent px-2.5 text-left text-callout outline-none transition-colors data-[active=true]:bg-fill";
+  "relative flex h-10 min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border-0 bg-transparent px-2.5 text-left text-callout outline-none transition-colors z-0";
 
 export function AccountMenu({
   accountName,
@@ -43,6 +46,8 @@ export function AccountMenu({
   const menuRef = useRef<HTMLDivElement>(null);
   // One highlight for the mouse and the arrow keys, so two rows never light up at once
   const [active, setActive] = useState(focusFirst ? 0 : -1);
+
+  const prefersReducedMotion = Boolean(useReducedMotion());
 
   const itemAt = (index: number) => {
     const items =
@@ -114,18 +119,62 @@ export function AccountMenu({
     });
   };
 
+  const containerVariants: Variants = {
+    closed: {
+      opacity: 0,
+      scale: prefersReducedMotion ? 1 : 0.9,
+      transition: {
+        duration: 0.22,
+        ease: EASE_SOFT_OUT,
+      },
+    },
+    open: {
+      opacity: 1,
+      scale: 1,
+      transition: {
+        duration: 0.22,
+        ease: EASE_SOFT_OUT,
+        staggerChildren: prefersReducedMotion ? 0 : 0.033,
+      },
+    },
+  };
+
+  const itemVariants: Variants = {
+    closed: {
+      opacity: 0,
+      x: prefersReducedMotion ? 0 : 8,
+      filter: prefersReducedMotion ? "none" : "blur(4px)",
+      transition: { duration: 0.1 },
+    },
+    open: {
+      opacity: 1,
+      x: 0,
+      filter: "blur(0px)",
+      transition: {
+        duration: prefersReducedMotion ? 0 : 0.3,
+        ease: EASE_SOFT_OUT,
+      },
+    },
+  };
+
   return (
-    <div
+    <motion.div
       ref={menuRef}
       role="menu"
       aria-label={t("nav.account")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      onMouseLeave={() => activate(-1)}
-      className="absolute bottom-[calc(100%+6px)] left-0 right-0 rounded-box border border-separator bg-surface-elevated shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-1.5 motion-safe:animate-scale-in origin-bottom z-50 flex flex-col gap-0.5 outline-none"
+      initial="closed"
+      animate="open"
+      variants={containerVariants}
+      style={{ transformOrigin: "bottom" }}
+      className="absolute bottom-[calc(100%+6px)] left-0 right-0 rounded-box border border-separator bg-surface-elevated shadow-[0_18px_50px_rgba(0,0,0,0.18)] p-1.5 origin-bottom z-50 flex flex-col gap-0.5 outline-none"
     >
       {/* Header (not focusable) */}
-      <div className="flex items-center gap-2.5 px-2.5 py-2">
+      <motion.div
+        variants={itemVariants}
+        className="flex items-center gap-2.5 px-2.5 py-2"
+      >
         <span
           className="inline-flex size-8 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold text-ink"
           aria-hidden="true"
@@ -140,15 +189,20 @@ export function AccountMenu({
             {email}
           </span>
         </div>
-      </div>
+      </motion.div>
 
-      <div className="my-1 h-px bg-separator -mx-1.5" role="separator" />
+      <motion.div
+        variants={itemVariants}
+        className="my-1 h-px bg-separator -mx-1.5"
+        role="separator"
+      />
 
-      <button
+      <motion.button
         type="button"
         role="menuitem"
         tabIndex={active === 0 ? 0 : -1}
         data-active={active === 0}
+        variants={itemVariants}
         onMouseMove={() => {
           if (active !== 0) activate(0);
         }}
@@ -158,20 +212,45 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
+        {active === 0 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2 },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
         <span
-          className="inline-flex shrink-0 text-ink-secondary"
+          className="inline-flex shrink-0 text-ink-secondary relative z-10"
           aria-hidden="true"
         >
           <UserIcon size={18} />
         </span>
-        <span className="flex-1 truncate">{t("nav.account")}</span>
-      </button>
+        <span className="flex-1 truncate relative z-10">
+          {t("nav.account")}
+        </span>
+      </motion.button>
 
-      <button
+      <motion.button
         type="button"
         role="menuitem"
         tabIndex={active === 1 ? 0 : -1}
         data-active={active === 1}
+        variants={itemVariants}
         onMouseMove={() => {
           if (active !== 1) activate(1);
         }}
@@ -181,19 +260,44 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
+        {active === 1 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2 },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
         <span
-          className="inline-flex shrink-0 text-ink-secondary"
+          className="inline-flex shrink-0 text-ink-secondary relative z-10"
           aria-hidden="true"
         >
           <SlidersIcon size={18} />
         </span>
-        <span className="flex-1 truncate">{t("settings.title")}</span>
-      </button>
+        <span className="flex-1 truncate relative z-10">
+          {t("settings.title")}
+        </span>
+      </motion.button>
 
       {/* Theme row: the menu stays open while the theme changes */}
-      <div
+      <motion.div
+        variants={itemVariants}
         className="px-2.5 py-1.5 flex flex-col gap-1.5"
-        onMouseEnter={() => activate(-1)}
+        onMouseEnter={() => {}}
       >
         <span className="text-footnote font-medium text-ink-secondary">
           {t("settings.tab_theme")}
@@ -209,15 +313,20 @@ export function AccountMenu({
             { value: "system", label: t("app.theme_system") },
           ]}
         />
-      </div>
+      </motion.div>
 
-      <div className="my-1 h-px bg-separator -mx-1.5" role="separator" />
+      <motion.div
+        variants={itemVariants}
+        className="my-1 h-px bg-separator -mx-1.5"
+        role="separator"
+      />
 
-      <button
+      <motion.button
         type="button"
         role="menuitem"
         tabIndex={active === 2 ? 0 : -1}
         data-active={active === 2}
+        variants={itemVariants}
         onMouseMove={() => {
           if (active !== 2) activate(2);
         }}
@@ -227,8 +336,32 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-error`}
       >
-        <span className="flex-1 truncate">{t("app.sign_out")}</span>
-      </button>
-    </div>
+        {active === 2 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2 },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
+        <span className="flex-1 truncate relative z-10">
+          {t("app.sign_out")}
+        </span>
+      </motion.button>
+    </motion.div>
   );
 }

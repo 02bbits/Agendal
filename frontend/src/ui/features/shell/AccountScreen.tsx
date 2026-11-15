@@ -115,6 +115,20 @@ const POPULAR_TIMEZONES = [
   { value: "Pacific/Auckland", label: "Auckland (NZST)" },
 ] as const;
 
+const COMING_SOON_TIMEZONES = [
+  { value: "Pacific/Honolulu", label: "Honolulu (HST)" },
+  { value: "America/Anchorage", label: "Anchorage (AKST)" },
+  { value: "America/Buenos_Aires", label: "Buenos Aires (ART)" },
+  { value: "America/Santiago", label: "Santiago (CLT)" },
+  { value: "Atlantic/Reykjavik", label: "Reykjavik (GMT)" },
+  { value: "Europe/Athens", label: "Athens (EET)" },
+  { value: "Africa/Cairo", label: "Cairo (EEST)" },
+  { value: "Africa/Johannesburg", label: "Johannesburg (SAST)" },
+  { value: "Africa/Nairobi", label: "Nairobi (EAT)" },
+  { value: "Asia/Tehran", label: "Tehran (IRST)" },
+  { value: "Pacific/Fiji", label: "Fiji (FJT)" },
+] as const;
+
 export interface AccountScreenProps {
   name: string;
   email: string;
@@ -439,20 +453,14 @@ export function AccountScreen({
       });
     });
 
-    const allSupported =
-      typeof Intl !== "undefined" &&
-      typeof Intl.supportedValuesOf === "function"
-        ? Intl.supportedValuesOf("timeZone")
-        : [];
-
-    const otherOptions = allSupported
-      .filter((z) => !popularSet.has(z))
-      .map((z) => ({
-        value: z,
-        label: z.replace(/_/g, " "),
-        disabled: true,
-        badge: t("settings.coming_soon"),
-      }));
+    const otherOptions: TzOption[] = COMING_SOON_TIMEZONES.filter(
+      (tz) => !popularSet.has(tz.value),
+    ).map((tz) => ({
+      value: tz.value,
+      label: tz.label,
+      disabled: true,
+      badge: t("settings.coming_soon"),
+    }));
 
     return [...activeOptions, ...otherOptions];
   }, [deviceZone, settings.timezone]);

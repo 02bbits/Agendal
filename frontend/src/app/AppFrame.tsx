@@ -59,6 +59,7 @@ import {
   submitNote,
 } from "@/lib/noteApi";
 import { clearRecent } from "@/ui/domain/recentSearches";
+import { setTimeZone } from "@/lib/clock";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -71,6 +72,7 @@ export interface SignedInUser {
   remember_device?: boolean;
   theme_palette?: string;
   page_view?: "flat" | "full";
+  timezone?: string;
 }
 
 // The settings as `PATCH /me` names them
@@ -81,6 +83,7 @@ const SETTING_FIELDS = {
   rememberDevice: "remember_device",
   pageView: "page_view",
   palette: "theme_palette",
+  timezone: "timezone",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -116,6 +119,8 @@ const tabRootOf = (path: string): string =>
   ) ?? ROUTES.inbox;
 
 const PAGE_VIEW_KEY = "agendal.page_view";
+const TIMEZONE_KEY = "agendal.timezone";
+const TIMEZONE_AUTO_KEY = "agendal.timezone_auto";
 
 const DEFAULT_SETTINGS: AccountSettings = {
   theme: "system",
@@ -124,6 +129,8 @@ const DEFAULT_SETTINGS: AccountSettings = {
   rememberDevice: true,
   pageView: "flat",
   palette: "default",
+  timezone: undefined,
+  timezoneAuto: true,
 };
 
 const storedPageView = (): AccountSettings["pageView"] => {
@@ -134,7 +141,28 @@ const storedPageView = (): AccountSettings["pageView"] => {
   }
 };
 
+const storedTimezone = (): string | undefined => {
+  try {
+    return localStorage.getItem(TIMEZONE_KEY) || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const storedTimezoneAuto = (): boolean => {
+  try {
+    const val = localStorage.getItem(TIMEZONE_AUTO_KEY);
+    return val === null ? true : val === "true";
+  } catch {
+    return true;
+  }
+};
+
 const settingsOf = (me: SignedInUser): AccountSettings => {
+  const isAuto = storedTimezoneAuto();
+  const effectiveTz = isAuto ? undefined : (storedTimezone() ?? me.timezone);
+  setTimeZone(effectiveTz);
+
   return {
     theme: me.theme ?? DEFAULT_SETTINGS.theme,
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
@@ -142,6 +170,8 @@ const settingsOf = (me: SignedInUser): AccountSettings => {
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
     pageView: me.page_view ?? storedPageView(),
     palette: me.theme_palette ?? "default",
+    timezone: effectiveTz,
+    timezoneAuto: isAuto,
   };
 };
 
@@ -394,6 +424,29 @@ export function AppFrame({ children }: { children: ReactNode }) {
             patch.pageView,
           );
         } catch {}
+      }
+      if (typeof window !== "undefined") {
+        if (patch.timezone !== undefined) {
+          try {
+            localStorage.setItem(TIMEZONE_KEY, patch.timezone);
+          } catch {}
+        }
+        if (patch.timezoneAuto !== undefined) {
+          try {
+            localStorage.setItem(TIMEZONE_AUTO_KEY, String(patch.timezoneAuto));
+          } catch {}
+        }
+        if (patch.timezone !== undefined || patch.timezoneAuto !== undefined) {
+          const isAuto =
+            patch.timezoneAuto !== undefined
+              ? patch.timezoneAuto
+              : settingsRef.current.timezoneAuto;
+          const zone = isAuto
+            ? undefined
+            : (patch.timezone ?? settingsRef.current.timezone);
+          setTimeZone(zone);
+          window.dispatchEvent(new Event("agendal.sync"));
+        }
       }
       const body = Object.fromEntries(
         Object.entries(patch)

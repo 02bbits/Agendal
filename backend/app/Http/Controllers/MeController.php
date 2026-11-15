@@ -28,6 +28,7 @@ class MeController extends Controller
             'install_prompt_shown' => ['sometimes', 'boolean'],
             'theme_palette' => ['sometimes', Rule::in(['default', 'agendal', 'moonstone', 'tangerine', 'kale', 'blueberry', 'lavender', 'raspberry'])],
             'page_view' => ['sometimes', Rule::in(['flat', 'full'])],
+            'timezone' => ['sometimes', 'string', 'timezone:all_with_bc'],
         ]));
 
         return $user;

@@ -49,7 +49,16 @@ it('rejects values outside the allowed set with 422', function (array $body) {
     'name too long' => [['display_name' => str_repeat('a', 61)]],
     'theme palette' => [['theme_palette' => 'neon']],
     'page view' => [['page_view' => 'wide']],
+    'timezone' => [['timezone' => 'Invalid/Timezone']],
 ]);
+
+it('saves timezone, and the next read sees it', function () {
+    $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', [
+        'timezone' => 'Asia/Tokyo',
+    ])->assertOk()->assertJson(['timezone' => 'Asia/Tokyo']);
+
+    expect($this->user->fresh()->timezone)->toBe('Asia/Tokyo');
+});
 
 it('ignores fields a user must not set', function () {
     $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', ['email' => 'x@example.com', 'password' => 'hacked hacked 1'])->assertOk();
