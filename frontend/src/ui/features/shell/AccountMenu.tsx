@@ -6,12 +6,7 @@ import {
   type MouseEvent,
   type RefObject,
 } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type Variants,
-} from "motion/react";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 import { t } from "../../copy";
 import { UserIcon, SlidersIcon } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
@@ -169,7 +164,6 @@ export function AccountMenu({
       aria-label={t("nav.account")}
       tabIndex={-1}
       onKeyDown={handleKeyDown}
-      onMouseLeave={() => activate(-1)}
       initial="closed"
       animate="open"
       variants={containerVariants}
@@ -218,32 +212,28 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
-        <AnimatePresence>
-          {active === 0 && (
-            <motion.div
-              key="highlight-0"
-              layoutId={
-                prefersReducedMotion ? undefined : "account-menu-highlight"
-              }
-              className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={
-                prefersReducedMotion
-                  ? { duration: 0.15 }
-                  : {
-                      opacity: { duration: 0.2 },
-                      layout: {
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 40,
-                      },
-                    }
-              }
-            />
-          )}
-        </AnimatePresence>
+        {active === 0 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2, ease: "easeOut" },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
         <span
           className="inline-flex shrink-0 text-ink-secondary relative z-10"
           aria-hidden="true"
@@ -270,32 +260,28 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-ink`}
       >
-        <AnimatePresence>
-          {active === 1 && (
-            <motion.div
-              key="highlight-1"
-              layoutId={
-                prefersReducedMotion ? undefined : "account-menu-highlight"
-              }
-              className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={
-                prefersReducedMotion
-                  ? { duration: 0.15 }
-                  : {
-                      opacity: { duration: 0.2 },
-                      layout: {
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 40,
-                      },
-                    }
-              }
-            />
-          )}
-        </AnimatePresence>
+        {active === 1 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2, ease: "easeOut" },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
         <span
           className="inline-flex shrink-0 text-ink-secondary relative z-10"
           aria-hidden="true"
@@ -311,7 +297,6 @@ export function AccountMenu({
       <motion.div
         variants={itemVariants}
         className="px-2.5 py-1.5 flex flex-col gap-1.5"
-        onMouseEnter={() => activate(-1)}
       >
         <span className="text-footnote font-medium text-ink-secondary">
           {t("settings.tab_theme")}
@@ -350,32 +335,28 @@ export function AccountMenu({
         }}
         className={`${ITEM} text-error`}
       >
-        <AnimatePresence>
-          {active === 2 && (
-            <motion.div
-              key="highlight-2"
-              layoutId={
-                prefersReducedMotion ? undefined : "account-menu-highlight"
-              }
-              className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={
-                prefersReducedMotion
-                  ? { duration: 0.15 }
-                  : {
-                      opacity: { duration: 0.2 },
-                      layout: {
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 40,
-                      },
-                    }
-              }
-            />
-          )}
-        </AnimatePresence>
+        {active === 2 && (
+          <motion.div
+            layoutId={
+              prefersReducedMotion ? undefined : "account-menu-highlight"
+            }
+            className="absolute inset-0 rounded-field bg-fill -z-10 pointer-events-none"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={
+              prefersReducedMotion
+                ? { duration: 0.15 }
+                : {
+                    opacity: { duration: 0.2, ease: "easeOut" },
+                    layout: {
+                      type: "spring",
+                      stiffness: 500,
+                      damping: 40,
+                    },
+                  }
+            }
+          />
+        )}
         <span className="flex-1 truncate relative z-10">
           {t("app.sign_out")}
         </span>
