@@ -134,10 +134,7 @@ export function ResetPasswordScreen({
             }}
             onBlur={() => setTouched(true)}
           />
-          <PasswordStrength
-            id="reset-password-strength"
-            password={password}
-          />
+          <PasswordStrength id="reset-password-strength" password={password} />
           <PasswordField
             ref={confirmPasswordRef}
             label={t("auth.confirm_password")}
