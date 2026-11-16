@@ -38,7 +38,6 @@ class SignUpAttempted extends Notification
                 'reset_text' => __('email.signup_attempted_reset'),
                 'reset_url' => $frontend.'/forgot-password',
             ]))
-            ->line(__('email.signup_attempted_not_you'))
             ->salutation('');
 
         $mail->viewData['title'] = __('email.signup_attempted_heading');

@@ -506,7 +506,7 @@ it('10. renders the account exists notice email in HTML and text: a "log in" lin
         ->toContain("If you've forgotten your password, you can")
         ->toContain('http://localhost:3000/forgot-password')
         ->toContain('>reset it</a> at any time.')
-        ->toContain("If this wasn't you, you can ignore this email. Your account is safe.")
+        ->not->toContain("If this wasn't you")
         ->not->toContain('Agendal team')
         ->not->toContain('IP')
         ->not->toContain('&bull;')
@@ -516,6 +516,6 @@ it('10. renders the account exists notice email in HTML and text: a "log in" lin
         ->toContain('Hi Tuấn Hồ,')
         ->toContain('An account creation attempt has been made using this email address.')
         ->toContain('http://localhost:3000/sign-in')
-        ->toContain("If this wasn't you, you can ignore this email.")
+        ->not->toContain("If this wasn't you")
         ->not->toContain('IP');
 });

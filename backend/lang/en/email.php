@@ -32,5 +32,4 @@ return [
     'signup_attempted_login' => 'log in',
     'signup_attempted_forgot' => "If you've forgotten your password, you can [:reset_text](:reset_url) at any time.",
     'signup_attempted_reset' => 'reset it',
-    'signup_attempted_not_you' => "If this wasn't you, you can ignore this email. Your account is safe.",
 ];
