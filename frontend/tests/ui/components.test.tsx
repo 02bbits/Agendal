@@ -111,6 +111,41 @@ describe("TextField", () => {
     await userEvent.type(input, "example@gmail.com");
     expect((input as HTMLInputElement).value).toBe("example@gmail.com");
   });
+
+  it("renders leading and the trailing button outside the input element inside the wrapper", () => {
+    render(
+      <TextField
+        label="Password"
+        leading={<span data-testid="leading-icon">icon</span>}
+        trailing={<button type="button">Show</button>}
+      />,
+    );
+    const input = screen.getByLabelText("Password");
+    const leading = screen.getByTestId("leading-icon");
+    const button = screen.getByRole("button", { name: "Show" });
+    const wrapper = input.closest(".field-box")!;
+
+    expect(wrapper).toBeTruthy();
+    expect(wrapper.contains(leading)).toBe(true);
+    expect(wrapper.contains(input)).toBe(true);
+    expect(wrapper.contains(button)).toBe(true);
+    expect(input.contains(button)).toBe(false);
+  });
+
+  it("moves the error border to the wrapper when error is present", () => {
+    const { rerender } = render(<TextField label="Email" />);
+    const input = screen.getByLabelText("Email");
+    const wrapper = input.closest(".field-box")!;
+    expect(input.className).not.toContain("border-error");
+    expect(wrapper.className).toContain(
+      "has-[[aria-invalid=true]]:border-error",
+    );
+
+    rerender(<TextField label="Email" error="Invalid email address" />);
+    expect(input.getAttribute("aria-invalid")).toBe("true");
+    expect(input.className).not.toContain("border-error");
+    expect(wrapper.className).toContain("border-error");
+  });
 });
 
 describe("Chip", () => {

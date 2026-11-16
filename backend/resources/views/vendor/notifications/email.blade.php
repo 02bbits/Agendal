@@ -25,11 +25,4 @@
 @if (! empty($salutation))
 {{ $salutation }}
 @endif
-
-{{-- The full link, for when the button is hidden or blocked --}}
-@if (isset($actionText) && ($actionColor ?? 'primary') !== 'link')
-<x-slot:subcopy>
-{{ __('email.link_fallback') }} <span class="break-all">[{{ $displayableActionUrl }}]({{ $actionUrl }})</span>
-</x-slot:subcopy>
-@endif
 </x-mail::message>
