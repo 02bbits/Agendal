@@ -33,6 +33,10 @@ final class PendingSignup
 
     public const SENDS_WAIT = 1800;   // ...then wait 30 minutes
 
+    public const EMAILS_PER_IP = 5;   // different emails tried per IP...
+
+    public const EMAILS_WINDOW = 3600; // ...per hour
+
     public const SESSION_KEY = 'pending_signup.email';
 
     public function __construct(
@@ -56,12 +60,28 @@ final class PendingSignup
         }
 
         $now = $this->clock->now()->getTimestamp();
+
+        // The same email pressed again while its sign-up waits: no new code and no count, just the
+        // newest password. Hashed either way, so a known email still answers in the same time.
+        $waiting = $this->current($request);
+        if ($waiting !== null && $waiting['email'] === $email && $now - $waiting['sent_at'] < self::RESEND_AFTER) {
+            $waiting['password'] = Hash::make($password);
+            $waiting['timezone'] = $timezone;
+            $this->saveEntry($waiting);
+
+            return;
+        }
+
+        $this->countAccountTried($email, $request);
+
         $user = User::query()->where('email', $email)->first();
 
         if ($user !== null) {
             $entry = [
                 'email' => $email,
-                'password' => '',
+                // Hashed like a real sign-up (never used: a decoy fails every code), so a known email
+                // doesn't answer ~200 ms faster than a new one
+                'password' => Hash::make($password),
                 'timezone' => $timezone,
                 'decoy' => true,
                 'code_hash' => hash_hmac('sha256', Str::random(40), (string) config('app.key')),
@@ -77,14 +97,7 @@ final class PendingSignup
             $noticeKey = 'signup-notice:'.hash('sha256', $email);
             if (! RateLimiter::tooManyAttempts($noticeKey, 1)) {
                 RateLimiter::hit($noticeKey, 1800);
-                $ip = $request->ip();
-                try {
-                    $tz = filled($user->timezone) ? new \DateTimeZone($user->timezone) : new \DateTimeZone('UTC');
-                    $time = now()->setTimezone($tz)->format('M j, Y, g:i A T');
-                } catch (\Throwable) {
-                    $time = now()->utc()->format('M j, Y, g:i A \U\T\C');
-                }
-                defer(fn () => $user->notify(new SignUpAttempted(ip: $ip, time: $time)));
+                defer(fn () => $user->notify(new SignUpAttempted));
             }
         } else {
             $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -276,6 +289,36 @@ final class PendingSignup
         $key = 'pending-signup:'.hash('sha256', $email);
         Cache::forget($key);
         $request->session()->forget(self::SESSION_KEY);
+    }
+
+    /**
+     * Create account allows 5 different emails per IP per hour (NF-13): it counts accounts tried, not
+     * button presses, so trying the same email again costs nothing here (the per-email send limit
+     * and the per-minute request limit still apply). A known and a new email count the same.
+     */
+    private function countAccountTried(string $email, Request $request): void
+    {
+        $key = 'signup-emails:'.hash('sha256', (string) $request->ip());
+        $mine = hash('sha256', $email);
+
+        // The lock keeps parallel requests from each seeing room for one more
+        Cache::lock($key.':lock', 5)->block(3, function () use ($key, $mine): void {
+            $now = $this->clock->now()->getTimestamp();
+            $slot = Cache::get($key);
+            if (! is_array($slot) || $now >= $slot['until']) {
+                $slot = ['until' => $now + self::EMAILS_WINDOW, 'emails' => []];
+            }
+            if (in_array($mine, $slot['emails'], true)) {
+                return;
+            }
+            if (count($slot['emails']) >= self::EMAILS_PER_IP) {
+                $wait = $slot['until'] - $now;
+
+                throw new ApiError('auth.signup_limited', "Too many accounts tried. Try again in {$wait} s.", 429, [], ['retry_after' => $wait]);
+            }
+            $slot['emails'][] = $mine;
+            Cache::put($key, $slot, max(1, $slot['until'] - $now));
+        });
     }
 
     private function recordSend(string $email): void

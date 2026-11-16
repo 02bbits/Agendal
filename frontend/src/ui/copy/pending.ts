@@ -448,6 +448,8 @@ export const pending = {
   "auth.current_password_wrong": "That's not your current password.",
   "auth.current_password_locked":
     "Too many wrong passwords. Try again in {time}.",
+  "auth.signup_limited":
+    "You've tried 5 different accounts. Try again in {time}.",
   "auth.password_same_as_current":
     "Your new password must be different from the current one.",
   "settings.theme": "Theme",

@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Markdown;
 use Illuminate\Notifications\AnonymousNotifiable;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
@@ -244,7 +245,7 @@ it('5. after 30 minutes signup expires (404 and 422), creating no user', functio
     expect(User::count())->toBe(0);
 });
 
-it('6. registering again with the same email replaces the waiting signup', function () {
+it('6. registering again with the same email, once the 60 s have passed, replaces the waiting signup', function () {
     Notification::fake();
 
     $csrf = $this->get('/sanctum/csrf-cookie');
@@ -264,7 +265,7 @@ it('6. registering again with the same email replaces the waiting signup', funct
         return true;
     });
 
-    $this->clock->advance('+10 seconds');
+    $this->clock->advance('+61 seconds');
 
     newRequest();
     $reg2 = $this->withCookies($cookies)->postJson('/api/v1/auth/register', [
@@ -403,15 +404,85 @@ it('9. DELETE /auth/signup cancels and then GET /auth/signup answers 404', funct
     $this->withCookies($cookies)->getJson('/api/v1/auth/signup')->assertStatus(404);
 });
 
-it('10. renders the account creation attempt notice email properly in HTML and text without buttons or subcopy', function () {
+it('12. pressing Create account again within 60 s sends no second code and keeps the newest password; after 60 s a new code goes out', function () {
+    Notification::fake();
+    $cookies = carryCookies($this->get('/sanctum/csrf-cookie'));
+    $body = fn (string $password) => ['email' => 'twice@example.com', 'password' => $password, 'timezone' => 'UTC'];
+
+    $first = $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body('First river 42'))->assertStatus(202);
+    $cookies = carryCookies($first) + $cookies;
+
+    $this->clock->advance('+20 seconds');
+    newRequest();
+    $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body('Newest river 77'))
+        ->assertStatus(202)->assertExactJson(['pending' => true, 'email' => 'twice@example.com']);
+
+    Notification::assertSentOnDemandTimes(VerifyEmailCode::class, 1);
+
+    $code = '';
+    Notification::assertSentOnDemand(VerifyEmailCode::class, function (VerifyEmailCode $n) use (&$code) {
+        $code = $n->code;
+
+        return true;
+    });
+    newRequest();
+    $this->withCookies($cookies)->postJson('/api/v1/auth/signup/verify', ['code' => $code])->assertOk();
+    expect(Hash::check('Newest river 77', User::sole()->password))->toBeTrue();
+});
+
+it('12b. after 60 s the same email gets a new code', function () {
+    Notification::fake();
+    $cookies = carryCookies($this->get('/sanctum/csrf-cookie'));
+    $body = ['email' => 'later@example.com', 'password' => 'Quiet river 42', 'timezone' => 'UTC'];
+
+    $first = $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body)->assertStatus(202);
+    $cookies = carryCookies($first) + $cookies;
+
+    $this->clock->advance('+61 seconds');
+    newRequest();
+    $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body)->assertStatus(202);
+
+    Notification::assertSentOnDemandTimes(VerifyEmailCode::class, 2);
+});
+
+it('12c. a known email pressed twice answers 202 both times and sends one notice', function () {
+    Notification::fake();
+    $owner = User::factory()->create(['email' => 'taken@example.com']);
+    $cookies = carryCookies($this->get('/sanctum/csrf-cookie'));
+    $body = ['email' => 'taken@example.com', 'password' => 'Quiet river 42', 'timezone' => 'UTC'];
+
+    $first = $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body)->assertStatus(202);
+    $cookies = carryCookies($first) + $cookies;
+    newRequest();
+    $this->withCookies($cookies)->postJson('/api/v1/auth/register', $body)->assertStatus(202);
+
+    Notification::assertSentToTimes($owner, SignUpAttempted::class, 1);
+});
+
+it('11. a known email is hashed like a new one, so the answer is not faster (SC-04)', function () {
+    Notification::fake();
+    User::factory()->create(['email' => 'taken@example.com']);
+
+    $cookies = carryCookies($this->get('/sanctum/csrf-cookie'));
+    $this->withCookies($cookies)->postJson('/api/v1/auth/register', [
+        'email' => 'taken@example.com',
+        'password' => 'Quiet river 42',
+        'timezone' => 'UTC',
+    ])->assertStatus(202);
+
+    $entry = Cache::get('pending-signup:'.hash('sha256', 'taken@example.com'));
+    expect($entry['decoy'])->toBeTrue()
+        ->and(Hash::check('Quiet river 42', $entry['password']))->toBeTrue();
+});
+
+it('10. renders the account exists notice email in HTML and text: a "log in" link, no button, no IP and no time', function () {
     $user = User::factory()->create([
         'email' => 'tuanno@example.com',
         'display_name' => 'Tuấn Hồ',
         'timezone' => 'Asia/Ho_Chi_Minh',
     ]);
 
-    $notification = new SignUpAttempted(ip: '192.168.1.100', time: 'Nov 15, 2026, 10:30 AM +07');
-    $mail = $notification->toMail($user);
+    $mail = (new SignUpAttempted)->toMail($user);
 
     expect($mail->subject)->toBe('[Agendal] Security notice: Account creation attempt');
 
@@ -421,17 +492,20 @@ it('10. renders the account creation attempt notice email properly in HTML and t
     expect($html)
         ->toContain('Account creation attempt')
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('192.168.1.100')
-        ->toContain('Nov 15, 2026, 10:30 AM +07')
-        ->toContain('sign in')
-        ->toContain('reset your password')
+        ->toContain('An account with this email address already exists.')
+        ->toContain('<a href="http://localhost:3000/sign-in"')
+        ->toContain('>log in</a> to your existing account to continue.')
         ->not->toContain('<table class="action"')
-        ->not->toContain('If the button doesn\'t work')
-        ->not->toContain('class="button');
+        ->not->toContain('class="button')
+        ->toContain("If you've forgotten your password, you can")
+        ->toContain('http://localhost:3000/forgot-password')
+        ->not->toContain('IP')
+        ->not->toContain('&bull;')
+        ->not->toContain('Someone tried');
 
     expect($text)
-        ->toContain('Account creation attempt')
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('192.168.1.100')
-        ->not->toContain('If the button doesn\'t work');
+        ->toContain('An account with this email address already exists.')
+        ->toContain('http://localhost:3000/sign-in')
+        ->not->toContain('IP');
 });

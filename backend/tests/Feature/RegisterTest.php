@@ -96,11 +96,50 @@ it('T-AA-110: starts the sign-up when the breach service is down', function () {
     register()->assertStatus(202);
 });
 
-it('SEC-08b: allows 5 sign-ups per hour per IP', function () {
+it('SEC-08b: allows 5 different emails per hour per IP, not 5 button presses', function () {
     foreach (range(1, 5) as $i) {
         register(['email' => "user{$i}@gmail.com"])->assertStatus(202);
     }
 
-    register(['email' => 'user6@gmail.com'])->assertStatus(429)
-        ->assertHeader('Retry-After')->assertJsonPath('error.code', 'error.rate_limited');
+    $blocked = register(['email' => 'user6@gmail.com'])->assertStatus(429)
+        ->assertHeader('Retry-After')->assertJsonPath('error.code', 'auth.signup_limited');
+    expect($blocked->json('error.retry_after'))->toBeGreaterThan(3500)->toBeLessThanOrEqual(3600);
+
+    // An email already tried this hour still answers, and costs nothing more
+    register(['email' => 'user1@gmail.com'])->assertStatus(202);
+});
+
+it('SEC-08b: pressing Create account many times for 2 emails never reaches the hourly limit', function () {
+    // One browser (one session) per email, each pressing the button 12 times
+    foreach (['one@gmail.com', 'two@gmail.com'] as $email) {
+        $cookies = carryCookies(test()->get('/sanctum/csrf-cookie'));
+        foreach (range(1, 12) as $press) {
+            newRequest();
+            $response = test()->withCookies($cookies)->postJson('/api/v1/auth/register', [
+                'email' => $email, 'password' => 'quiet river 42', 'timezone' => 'Asia/Ho_Chi_Minh',
+            ])->assertStatus(202);
+            $cookies = carryCookies($response) + $cookies;
+        }
+    }
+    // Still room for three more different emails
+    foreach (range(3, 5) as $i) {
+        register(['email' => "user{$i}@gmail.com"])->assertStatus(202);
+    }
+});
+
+it('SEC-08b: a refused sign-up (weak or breached password) does not use up one of the 5', function () {
+    foreach (range(1, 8) as $i) {
+        register(['email' => "weak{$i}@gmail.com", 'password' => 'short'])->assertStatus(422);
+    }
+    foreach (range(1, 5) as $i) {
+        register(['email' => "user{$i}@gmail.com"])->assertStatus(202);
+    }
+});
+
+it('SEC-08b: the press limit is 30 per 10 minutes per IP, the usual sign-in range', function () {
+    foreach (range(1, 30) as $i) {
+        register(['email' => 'one@gmail.com'])->assertStatus(202);
+    }
+
+    register(['email' => 'one@gmail.com'])->assertStatus(429)->assertHeader('Retry-After');
 });

@@ -24,7 +24,8 @@ function limitsOf(string $name, ?User $user = null): array
 it('SEC-10: every NF-13 limit is defined', function (string $name, array $expected) {
     expect(limitsOf($name, User::factory()->create()))->toBe($expected);
 })->with([
-    'register' => ['register', [[5, 3600]]],
+    // 30 presses per 10 minutes; the 5-different-emails-an-hour rule is PendingSignup's (RegisterTest)
+    'register' => ['register', [[30, 600]]],
     'POST /notes' => ['notes', [[30, 60], [300, 86400]]],
     'POST /files/extract' => ['files', [[10, 3600], [30, 86400]]],
     'search' => ['search', [[60, 60]]],

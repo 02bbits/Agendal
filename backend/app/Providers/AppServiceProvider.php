@@ -29,7 +29,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // NF-13 rate limits
-        RateLimiter::for('register', fn (Request $request) => Limit::perHour(5)->by($request->ip()));
+        // Create account: 30 presses per 10 minutes per IP, like sign-in's per-IP cap. "5 different
+        // emails per hour" counts accounts, not presses (PendingSignup::countAccountTried)
+        RateLimiter::for('register', fn (Request $request) => Limit::perMinutes(10, 30)->by($request->ip()));
 
         // Two-factor toggle: 5 per 2 minutes per user
         RateLimiter::for('two-factor-toggle', fn (Request $request) => Limit::perMinutes(2, 5)->by('two-factor-toggle:'.$request->user()?->id));

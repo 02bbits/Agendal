@@ -192,6 +192,25 @@ describe("Create account (AA-1)", () => {
     );
   });
 
+  it("shows the 5-accounts-an-hour limit in its own words, as minutes and seconds", async () => {
+    reply = () =>
+      json(
+        429,
+        { error: { code: "auth.signup_limited", retry_after: 2985 } },
+        { "Retry-After": "2985" },
+      );
+    const user = userEvent.setup();
+    const { email, password, submit } = renderPage();
+
+    await user.type(email, "example@gmail.com");
+    await user.type(password, "quiet river 42");
+    await user.click(submit);
+
+    expect((await screen.findByRole("alert")).textContent).toBe(
+      "You've tried 5 different accounts. Try again in 49:45.",
+    );
+  });
+
   it("A11Y-60: show/hide is a pressed toggle", async () => {
     const user = userEvent.setup();
     const { password } = renderPage();
