@@ -489,7 +489,7 @@ it('10. renders the account exists notice email in HTML and text: a "log in" lin
 
     $mail = (new SignUpAttempted)->toMail($user);
 
-    expect($mail->subject)->toBe('[Agendal] Security notice: Account creation attempt');
+    expect($mail->subject)->toBe('Account creation attempt');
 
     $html = (string) $mail->render();
     $text = (string) app(Markdown::class)->renderText($mail->markdown, $mail->data());
@@ -497,20 +497,25 @@ it('10. renders the account exists notice email in HTML and text: a "log in" lin
     expect($html)
         ->toContain('Account creation attempt')
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('An account with this email address already exists.')
+        ->toContain('An account creation attempt has been made using this email address.')
+        ->toContain('However, this email address has already been used for an Agendal account.')
         ->toContain('<a href="http://localhost:3000/sign-in"')
         ->toContain('>log in</a> to your existing account to continue.')
         ->not->toContain('<table class="action"')
         ->not->toContain('class="button')
         ->toContain("If you've forgotten your password, you can")
         ->toContain('http://localhost:3000/forgot-password')
+        ->toContain('>reset it</a> at any time.')
+        ->toContain("If this wasn't you, you can ignore this email. Your account is safe.")
+        ->not->toContain('Agendal team')
         ->not->toContain('IP')
         ->not->toContain('&bull;')
         ->not->toContain('Someone tried');
 
     expect($text)
         ->toContain('Hi Tuấn Hồ,')
-        ->toContain('An account with this email address already exists.')
+        ->toContain('An account creation attempt has been made using this email address.')
         ->toContain('http://localhost:3000/sign-in')
+        ->toContain("If this wasn't you, you can ignore this email.")
         ->not->toContain('IP');
 });
