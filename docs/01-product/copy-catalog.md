@@ -160,6 +160,7 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.skip_already_done` † | Already done: “{title}” | Skipped reason ([NU-E12](../03-modules/NU-note-understanding.md#nu-e12)) |
 | `note.skip_not_found` † | Couldn't find a task matching “{text}” | Skipped reason ([NU-E29](../03-modules/NU-note-understanding.md#nu-e29)) |
 | `note.skip_no_change` † | Already set: “{title}” | Skipped reason: the move changes nothing ([NU §2.4](../03-modules/NU-note-understanding.md#24-command-matching-nu-3)) |
+| `note.skip_unclear` † | Not clear enough to make a task: “{text}”. Edit the note to add it | Skipped reason: the language model found no single reading; the rest of the note still shows ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) |
 | `note.duplicate_hint` † | You already have a task like this | Row hint ([NU-E13](../03-modules/NU-note-understanding.md#nu-e13)) |
 | `note.processing_failed` † | I couldn't read this note just now. It's saved, and I'll try again. | Server error, note kept as pending |
 | `task.created_by_assistant` | Created by the assistant | Task details ([NU-7](../03-modules/NU-note-understanding.md#nu-7)) |

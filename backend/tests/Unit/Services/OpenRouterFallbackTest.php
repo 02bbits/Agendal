@@ -450,13 +450,13 @@ it('keeps unresolved references in followup even if the model invents a specific
         ->and($result->plan['skipped'][0])->toMatchArray(['text' => $text, 'reason' => 'unclear']);
 });
 
-it('accepts an explicit unclear proposal for unsupported input and holds the whole note', function () {
+it('lists an unclear sentence and keeps the rest of the note for review', function () {
     $text = 'blargh 9h; call dad tomorrow';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'unclear', 'title' => null]]))]);
     $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
 
-    expect($result->status)->toBe(PlanStatus::Followup)->and($result->plan['create'])->toHaveCount(1)
+    expect($result->status)->toBe(PlanStatus::Confirm)->and($result->plan['create'])->toHaveCount(1)
         ->and($result->plan['skipped'][0]['reason'])->toBe('unclear');
 });
 
