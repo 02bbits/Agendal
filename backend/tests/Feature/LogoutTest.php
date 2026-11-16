@@ -15,18 +15,20 @@ beforeEach(function () {
     $this->user = User::factory()->create(['email' => 'example@gmail.com', 'password' => 'password 1']);
 });
 
-/** A request from a browser holding only these cookies. */
-function asDevice(array $cookies = []): TestCase
-{
-    newRequest();
-    // The cookie jar is protected and the test client has no way to empty it
-    (fn () => $this->defaultCookies = $this->unencryptedCookies = [])->call(test()->target);
+if (! function_exists('asDevice')) {
+    /** A request from a browser holding only these cookies. */
+    function asDevice(array $cookies = []): TestCase
+    {
+        newRequest();
+        // The cookie jar is protected and the test client has no way to empty it
+        (fn () => $this->defaultCookies = $this->unencryptedCookies = [])->call(test()->target);
 
-    return test()->withCookies($cookies);
+        return test()->withCookies($cookies);
+    }
 }
 
 /** Signs in a fresh browser with Remember me and returns its cookies. */
-function signInDevice(): array
+function logoutSignInDevice(): array
 {
     $cookies = carryCookies(asDevice()->get('/sanctum/csrf-cookie'));
     $login = asDevice($cookies)->postJson('/api/v1/auth/login', ['email' => 'example@gmail.com', 'password' => 'password 1', 'remember' => true])->assertOk();
@@ -35,8 +37,11 @@ function signInDevice(): array
 }
 
 it('T-AA-40, SEC-50: ends this session and forgets Remember me', function () {
-    $device = signInDevice();
+    $device = logoutSignInDevice();
     $response = asDevice($device)->postJson('/api/v1/auth/logout')->assertNoContent();
+
+    $sessionCookie = collect($response->headers->getCookies())->first(fn ($c) => $c->getName() === SESSION_COOKIE);
+    expect($sessionCookie?->getExpiresTime())->toBeLessThan(time());
 
     $recaller = collect($response->headers->getCookies())->first(fn ($c) => str_starts_with($c->getName(), 'remember_web_'));
     expect($recaller?->getExpiresTime())->toBeLessThan(time())
@@ -45,9 +50,9 @@ it('T-AA-40, SEC-50: ends this session and forgets Remember me', function () {
 });
 
 it('leaves other devices signed in, Remember me included', function () {
-    $other = signInDevice();
+    $other = logoutSignInDevice();
     $token = $this->user->fresh()->getRememberToken();
-    asDevice(signInDevice())->postJson('/api/v1/auth/logout')->assertNoContent();
+    asDevice(logoutSignInDevice())->postJson('/api/v1/auth/logout')->assertNoContent();
 
     asDevice($other)->getJson('/api/v1/me')->assertOk();
     expect($this->user->fresh()->getRememberToken())->toBe($token);
@@ -59,9 +64,9 @@ it('answers 204 when the session already ended, so the client can finish', funct
 });
 
 it('T-AA-43: sign out on all devices ends every session and is audited', function () {
-    $other = signInDevice();
+    $other = logoutSignInDevice();
     $token = $this->user->fresh()->getRememberToken();
-    asDevice(signInDevice())->postJson('/api/v1/auth/logout-everywhere')->assertNoContent();
+    asDevice(logoutSignInDevice())->postJson('/api/v1/auth/logout-everywhere')->assertNoContent();
 
     asDevice($other)->getJson('/api/v1/me')->assertUnauthorized();
     expect($this->user->fresh()->getRememberToken())->not->toBe($token)
