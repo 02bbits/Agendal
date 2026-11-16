@@ -305,19 +305,21 @@ final class PendingSignup
         Cache::lock($key.':lock', 5)->block(3, function () use ($key, $mine): void {
             $now = $this->clock->now()->getTimestamp();
             $slot = Cache::get($key);
-            if (! is_array($slot) || $now >= $slot['until']) {
-                $slot = ['until' => $now + self::EMAILS_WINDOW, 'emails' => []];
+            $until = is_array($slot) ? (int) $slot['until'] : 0;
+            $emails = is_array($slot) && $now < $until ? array_values((array) $slot['emails']) : [];
+            if ($now >= $until) {
+                $until = $now + self::EMAILS_WINDOW;
             }
-            if (in_array($mine, $slot['emails'], true)) {
+            if (in_array($mine, $emails, true)) {
                 return;
             }
-            if (count($slot['emails']) >= self::EMAILS_PER_IP) {
-                $wait = $slot['until'] - $now;
+            if (count($emails) >= self::EMAILS_PER_IP) {
+                $wait = $until - $now;
 
                 throw new ApiError('auth.signup_limited', "Too many accounts tried. Try again in {$wait} s.", 429, [], ['retry_after' => $wait]);
             }
-            $slot['emails'][] = $mine;
-            Cache::put($key, $slot, max(1, $slot['until'] - $now));
+            $emails[] = $mine;
+            Cache::put($key, ['until' => $until, 'emails' => $emails], max(1, $until - $now));
         });
     }
 
