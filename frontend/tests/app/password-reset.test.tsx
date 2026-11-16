@@ -65,14 +65,20 @@ describe("Reset request (AA-4)", () => {
       email: "someone@gmail.com",
     });
     // Announced politely (the toast region is another status, so find it by text)
-    const sent = await screen.findByText(
-      /We've sent a link to someone@gmail\.com/,
+    const address = await screen.findByText("someone@gmail.com");
+    // The address is bold inside the sentence, which is the polite status
+    expect(address.tagName).toBe("STRONG");
+    const sent = address.closest("[role=status]");
+    expect(sent?.textContent).toBe(
+      "We've sent a link to someone@gmail.com. Follow the link to continue resetting your password.",
     );
-    expect(sent.getAttribute("role")).toBe("status");
-    // This screen never learns the link was used: it says what to do next (AA §2.3)
+    // The sent screen drops the subtitle and has no extra hint line (AA §2.3)
     expect(
-      screen.getByText("After you set a new password, sign in with it."),
-    ).toBeTruthy();
+      screen.queryByText("We'll email you a link to set a new password."),
+    ).toBeNull();
+    expect(
+      screen.queryByText("After you set a new password, sign in with it."),
+    ).toBeNull();
     const resend = screen.getByRole("button", {
       name: "Resend link in 45 s",
     }) as HTMLButtonElement;
@@ -109,8 +115,9 @@ describe("Reset request (AA-4)", () => {
       ),
     ).toEqual(["exmaple@gmail.com", "example@gmail.com"]);
     expect(
-      await screen.findByText(/We've sent a link to example@gmail\.com/),
-    ).toBeTruthy();
+      (await screen.findByText("example@gmail.com")).closest("[role=status]")
+        ?.textContent,
+    ).toContain("We've sent a link to example@gmail.com.");
   });
 
   it("shows the rate limit with the seconds to wait", async () => {

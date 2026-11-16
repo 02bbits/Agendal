@@ -394,7 +394,6 @@ export const pending = {
   "auth.new_password_for": "For {email}",
   "auth.new_password_save": "Save password",
   "auth.reset_request_new": "Request a new link",
-  "auth.reset_sent_hint": "After you set a new password, sign in with it.",
   "auth.reset_done_title": "Password changed",
   "auth.reset_done_body":
     "Every device has been signed out. Sign in with your new password.",
@@ -435,7 +434,7 @@ export const pending = {
   "settings.new_password": "New password",
   "settings.confirm_password": "Confirm new password",
   "auth.rule_length": "At least 8 characters",
-  "auth.rule_not_email": "Not your email",
+  "auth.rule_not_email": "Does not contain your email",
   "auth.rule_not_current": "Different from your current password",
   "auth.strength_weak": "Weak",
   "auth.strength_fair": "Fair",

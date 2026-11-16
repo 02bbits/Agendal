@@ -52,23 +52,28 @@ export function ForgotPasswordScreen({
     if (isEmail(email) && !busy && !offline) void send(normalizeEmail(email));
   }
 
+  // The address is set in bold inside the sentence: split the copy around a marker
+  const marker = "\u0000";
+  const sentParts = t("auth.reset_sent", { email: marker }).split(marker);
+
   return (
     <AuthLayout>
       <div className="text-center lg:text-left mt-6 lg:mt-0">
         <h1 className="m-0 text-[22px] leading-[28px] font-bold tracking-[-0.015em] text-ink">
           {t("auth.reset_title")}
         </h1>
-        <p className="m-0 mt-1 text-footnote text-ink-secondary">
-          {t("auth.reset_subtitle")}
-        </p>
+        {!sentTo && (
+          <p className="m-0 mt-1 text-footnote text-ink-secondary">
+            {t("auth.reset_subtitle")}
+          </p>
+        )}
       </div>
       {sentTo ? (
         <div className="mt-7 lg:mt-6 flex flex-col gap-3.5">
           <p role="status" className="m-0 text-body text-ink">
-            {t("auth.reset_sent", { email: sentTo })}
-          </p>
-          <p className="m-0 text-footnote text-ink-secondary">
-            {t("auth.reset_sent_hint")}
+            {sentParts[0]}
+            <strong className="font-semibold">{sentTo}</strong>
+            {sentParts[1]}
           </p>
           {(error || offline) && (
             <p role="alert" className="m-0 text-footnote text-error">
