@@ -2,8 +2,13 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-16
+
+- **Create account counts accounts, not presses (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1), [NF-13](05-quality/nfr.md#rate-limits-nf-13): the limit was 5 requests an hour per IP, so a few presses of the button locked sign-up for an hour. It is now 5 different emails an hour per IP (`auth.signup_limited`, new copy in `pending.ts`) plus 30 presses per 10 minutes per IP. Pressing again for the email already waiting, within 60 s, sends no new code and keeps the newest password.
+
 ## 2026-11-15
 
+- **Existing-email notice simplified, same timing (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1): a sign-up with an existing email now hashes the password like a new one, so both answer in the same time. The notice email (`SignUpAttempted`) says the account already exists, with "log in" and "reset it" as links in the text (no button), and no longer shows the IP or time.
 - **Current-password limit softened (Refs #149).** [AA §2.7](03-modules/AA-account-access.md#27-change-password-149): wrong current passwords (blur check, Save, two-step off) now lock 60 s after 5 in 15 minutes, and 15 minutes after 20 in an hour (was 15 minutes after 5). The 429 is `auth.current_password_locked` with a `1:00`-style wait. New copy `auth.current_password_locked` in `pending.ts`.
 - **Reset password no longer signs in (Refs #149).** [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4), §3 state matrix, [AA-E5](03-modules/AA-account-access.md#aa-e5), §7: a reset ends every session, including the device that opens the link, and answers `204`; the page shows a done state with Sign in, so two-step still applies. The "link sent" screen gains `auth.reset_sent_hint`. New copy `auth.reset_sent_hint`, `auth.reset_done_title`, `auth.reset_done_body` sit in `pending.ts` until the catalog owner adds them.
 

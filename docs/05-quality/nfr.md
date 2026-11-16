@@ -40,7 +40,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 | Scope | Limit | Key |
 |---|---|---|
 | Sign-in | 3 failures → 60 s lock ([AA-3](../03-modules/AA-account-access.md#aa-3)). 30 attempts / 10 min per IP. 20 failures / hour per email → 15 min lock | (email, IP), IP, email |
-| Create account | 5 / hour per IP | IP |
+| Create account | 5 different emails / hour per IP (a repeat of an email already tried that hour is free; a known and a new email count the same), and 30 presses / 10 min per IP. Codes: see the 6-digit codes row | IP |
 | Password reset request | 3 / hour per email, 10 / hour per IP. Resend after 45 s | email, IP |
 | Setting the new password (reset link) | 5 / min and 20 / hour per IP | IP |
 | 6-digit codes ([AA §2.8](../03-modules/AA-account-access.md#28-verify-email-149), [§2.9](../03-modules/AA-account-access.md#29-two-step-verification-by-email-149)) | Entering: 5 tries per code, then a new code is needed. Sending: 60 s apart, 10 per 30 minutes per account (or email for sign-up), then 30 minutes. The sign-in code also 30 tries per 10 minutes per IP. Turning two-step on or off 5 per 2 minutes | user, email, IP |
