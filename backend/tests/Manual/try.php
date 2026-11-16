@@ -18,10 +18,18 @@ use App\Services\Tasks\RepeatSchedule;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Tests\Manual\NoteLlmPreview;
 
 require __DIR__.'/../../vendor/autoload.php';
 $app = require __DIR__.'/../../bootstrap/app.php';
 $app->make(Kernel::class)->bootstrap();
+
+session_name('agendal_note_preview');
+session_set_cookie_params(['httponly' => true, 'samesite' => 'Strict']);
+session_start();
+$_SESSION['csrf'] ??= bin2hex(random_bytes(32));
+$preview = NoteLlmPreview::fromEnvironment();
+$profiles = $preview->profiles();
 
 $form = [
     'note' => (string) ($_POST['note'] ?? "sql quiz monday 9am, done call mum\npush email the group back 1 hour\ndelete old list"),
@@ -29,6 +37,10 @@ $form = [
     'now' => (string) ($_POST['now'] ?? (new DateTimeImmutable('now', new DateTimeZone('Asia/Ho_Chi_Minh')))->format('Y-m-d\TH:i')),
     'timezone' => (string) ($_POST['timezone'] ?? 'Asia/Ho_Chi_Minh'),
     'week' => (string) ($_POST['week'] ?? 'mon'),
+    'mode' => (string) ($_POST['mode'] ?? ($_SERVER['REQUEST_METHOD'] === 'GET' ? 'llm' : 'rules')),
+    'profile' => (string) ($_POST['profile'] ?? ($profiles['nvidia_super']['configured'] ? 'nvidia_super' : 'openrouter')),
+    'custom_model' => (string) ($_POST['custom_model'] ?? ''),
+    'timeout' => max(1, min(30, (float) ($_POST['timeout'] ?? 20))),
 ];
 $e = fn (mixed $value): string => htmlspecialchars(is_string($value) ? $value : (string) json_encode($value, JSON_UNESCAPED_UNICODE), ENT_QUOTES);
 
@@ -36,6 +48,9 @@ $result = null;
 $error = null;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
+        if (! is_string($_POST['csrf'] ?? null) || ! hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
+            throw new InvalidArgumentException('This form expired. Reload the page and try again.');
+        }
         [$open, $done] = [[], []];
         foreach (preg_split('~\R~', $form['tasks']) ?: [] as $line) {
             if (preg_match('~^\s*(task|done):\s*(.+)$~', $line, $m) !== 1) {
@@ -53,8 +68,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // the real budget, past which POST /notes makes the rest of the items plain tasks (SEC-23).
         $started = hrtime(true);
         $build = app(NoteEngine::class)->build($text, $context, $open, $done, budgetMs: 60_000.0);
+        $rules = $build;
+        $rulesMs = (hrtime(true) - $started) / 1e6;
+        $llm = null;
+        if ($form['mode'] === 'llm') {
+            $llm = $preview->run($rules, $text, $context, $open, $form['profile'], $form['custom_model'], $form['timeout']);
+            $build = $llm['build'];
+        }
         $result = [
             'build' => $build,
+            'rules' => $rules,
+            'rules_ms' => $rulesMs,
+            'llm' => $llm,
             'ms' => (hrtime(true) - $started) / 1e6,
             'items' => app(NoteSplitter::class)->split($text),
             'titles' => array_column([...$open, ...$done], 'title', 'id'),
@@ -62,12 +87,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Throwable $exception) {
         $error = $exception instanceof ValidationException
             ? implode(', ', array_merge(...array_values($exception->errors())))
-            : $exception::class.': '.$exception->getMessage();
+            : ($exception instanceof InvalidArgumentException ? $exception->getMessage() : 'Preview failed. Check the server logs; no database changes were made.');
     }
 }
 
 /** Every plan entry with the note item it came from. */
 $rows = [];
+$ruleRows = [];
 if ($result !== null) {
     foreach (['create', 'update', 'delete', 'skipped', 'ambiguous'] as $kind) {
         foreach ($result['build']->plan[$kind] as $entry) {
@@ -75,6 +101,15 @@ if ($result !== null) {
             $rows[] = ['kind' => $kind, 'item' => $result['items'][$index ?? -1] ?? '', 'entry' => $entry];
         }
     }
+    foreach (['create', 'update', 'delete', 'skipped', 'ambiguous'] as $kind) {
+        foreach ($result['rules']->plan[$kind] as $entry) {
+            $index = NoteEngine::itemIndex((string) $entry['ref']);
+            $ruleRows[] = ['kind' => $kind, 'item' => $result['items'][$index ?? -1] ?? '', 'entry' => $entry];
+        }
+    }
+    $byRef = fn (array $a, array $b): int => strnatcmp($a['entry']['ref'], $b['entry']['ref']);
+    usort($rows, $byRef);
+    usort($ruleRows, $byRef);
 }
 $repeatLabel = function (array $entry): string {
     if ($entry['repeat'] === 'never') {
@@ -106,6 +141,22 @@ $describe = function (string $kind, array $entry) use ($result, $repeatLabel): s
         'ambiguous' => 'Which task did you mean? '.implode(' / ', array_map($title, $entry['candidates'])).' (preselected "'.$title($entry['preselected']).'")',
     };
 };
+$outcomeOf = function (string $ref) use ($result): array {
+    $outcomes = $result['build']->itemOutcomes;
+    if (isset($outcomes[$ref])) {
+        return $outcomes[$ref];
+    }
+    $root = explode('-', $ref)[0];
+    $knownCommand = in_array($ref, array_column([...$result['rules']->plan['update'], ...$result['rules']->plan['delete']], 'ref'), true);
+    if (! $knownCommand && isset($outcomes[$root])) {
+        return $outcomes[$root];
+    }
+    if (isset($result['rules']->lowConfidence[$ref]) || (! $knownCommand && isset($result['rules']->lowConfidence[$root]))) {
+        return ['source' => 'rules preview', 'status' => 'provisional', 'reason' => 'LLM not run'];
+    }
+
+    return ['source' => 'rules', 'status' => 'accepted', 'reason' => 'rules_confident'];
+};
 ?>
 <!doctype html>
 <html lang="en">
@@ -129,14 +180,24 @@ $describe = function (string $kind, array $entry) use ($result, $repeatLabel): s
   table { width: 100%; border-collapse: collapse; background: #fff; }
   th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid #eee; vertical-align: top; font-size: 14px; }
   th { font-size: 12px; color: #666; }
-  .kind { font: 600 12px ui-monospace, monospace; text-transform: uppercase; }
+  .kind { font: 600 12px ui-monospace, monospace; text-transform: uppercase; white-space: nowrap; }
   .error { background: #fde2e2; padding: 10px; border-radius: 6px; margin-top: 16px; }
+  .notice { background: #e3e3f7; padding: 10px; border-radius: 6px; }
+  fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 12px; }
+  legend { font-weight: 600; }
+  select { max-width: 100%; }
+  td { overflow-wrap: anywhere; }
+  pre { white-space: pre-wrap; overflow-wrap: anywhere; background: #eee; padding: 12px; border-radius: 6px; }
+  details { margin: 16px 0; }
+  h2 { font-size: 17px; margin-top: 24px; }
   @media (max-width: 700px) { form { grid-template-columns: 1fr; } }
 </style>
 </head>
 <body>
 <h1>Try notes</h1>
+<p class="hint">Preview only. No tasks or notes are saved. LLM mode sends low-confidence text and relevant candidate task titles to the selected provider; provider quotas still apply. Keys stay on the server.</p>
 <form method="post">
+  <input type="hidden" name="csrf" value="<?= $e($_SESSION['csrf']) ?>">
   <label>Note<textarea name="note" autofocus><?= $e($form['note']) ?></textarea></label>
   <label>Existing tasks<textarea name="tasks"><?= $e($form['tasks']) ?></textarea></label>
   <p class="hint">Tasks: one per line, <code>task: Title | 2026-10-26 | 09:00-10:00</code> for an open task (date and times optional), <code>done: Title</code> for a done one.</p>
@@ -144,7 +205,19 @@ $describe = function (string $kind, array $entry) use ($result, $repeatLabel): s
     <label>Written at<input type="datetime-local" name="now" value="<?= $e($form['now']) ?>"></label>
     <label>Time zone<input name="timezone" value="<?= $e($form['timezone']) ?>"></label>
     <label>Week starts<select name="week"><option value="mon"<?= $form['week'] === 'mon' ? ' selected' : '' ?>>Monday</option><option value="sun"<?= $form['week'] === 'sun' ? ' selected' : '' ?>>Sunday</option></select></label>
-    <button type="submit">Make tasks</button>
+  </div>
+  <fieldset class="row">
+    <legend>Fallback settings</legend>
+    <label>Mode<select name="mode"><option value="rules"<?= $form['mode'] === 'rules' ? ' selected' : '' ?>>Rules only</option><option value="llm"<?= $form['mode'] === 'llm' ? ' selected' : '' ?>>Rules + LLM (low confidence only)</option></select></label>
+    <label>Provider / model<select name="profile" id="model-profile">
+      <?php foreach ($profiles as $id => $profile) { ?><option value="<?= $e($id) ?>"<?= $form['profile'] === $id ? ' selected' : '' ?><?= ! $profile['configured'] ? ' disabled' : '' ?>><?= $e($profile['label'].(! $profile['configured'] ? ' — key missing' : '')) ?></option><?php } ?>
+    </select></label>
+    <label>Timeout (seconds)<input type="number" name="timeout" min="1" max="30" step="1" value="<?= $e($form['timeout']) ?>"></label>
+    <label id="custom-model-label">Custom OpenRouter model<input name="custom_model" value="<?= $e($form['custom_model']) ?>" placeholder="vendor/model:free" maxlength="200"></label>
+    <p class="hint">Prompt: note-plan-v6 · Reasoning off · Timeout is for this preview only. Confident items do not call the model.</p>
+  </fieldset>
+  <div class="row">
+    <button type="submit" id="run-preview">Run preview</button>
   </div>
 </form>
 
@@ -153,19 +226,55 @@ $describe = function (string $kind, array $entry) use ($result, $repeatLabel): s
 <?php } elseif ($result !== null) { ?>
   <div class="summary">
     <span class="pill <?= $e($result['build']->status->value) ?>"><?= $e($result['build']->status->value) ?></span>
+    <span class="pill"><?= $e($result['build']->engine->value) ?></span>
     <strong><?= $e($result['build']->name) ?></strong>
-    <span>· <?= $e(sprintf('%.0f ms (budget %d ms)', $result['ms'], (int) config('notes.engine_budget_ms'))) ?></span>
+    <span>· <?= $e(sprintf('%.0f ms total · %.0f ms rules (budget %d ms)', $result['ms'], $result['rules_ms'], (int) config('notes.engine_budget_ms'))) ?></span>
     <?php if ($result['build']->plan['dropped'] > 0) { ?><span>· <?= $e((string) $result['build']->plan['dropped']) ?> dropped by validation</span><?php } ?>
     <?php if ($result['build']->plan['needs_confirm']) { ?><span>· needs confirm</span><?php } ?>
     <?php if ($result['build']->lowConfidence !== []) { ?><span>· low confidence: <?= $e(implode(' / ', $result['build']->lowConfidence)) ?></span><?php } ?>
   </div>
-  <?php if ($result['build']->lowConfidence !== []) { ?><p class="error">Rules preview only: these items need fallback processing. Their dates and recurrence are not confirmed.</p><?php } ?>
+  <?php if ($result['llm'] === null && $result['rules']->lowConfidence !== []) { ?><p class="error">Rules preview only: these items need fallback processing. Their dates and recurrence are not confirmed. Select Rules + LLM to try fallback.</p>
+  <?php } elseif ($result['llm'] !== null && $result['rules']->lowConfidence === []) { ?><p class="notice">No low-confidence items: no model request was sent.</p>
+  <?php } elseif ($result['build']->engine->value === 'rules_fallback') { ?><p class="error">Fallback did not produce an accepted proposal. Unresolved writes are held, not replaced with provisional rules actions. Check each row's outcome and the HTTP details below. The original rules preview is shown separately for comparison.</p>
+  <?php } elseif ($result['llm'] !== null) { ?><p class="notice">LLM proposals were merged after server validation. Review the meaning and dates; accepted JSON alone does not prove a correct interpretation. A followup/unclear result needs the user to clarify the note.</p><?php } ?>
+  <?php if ($result['llm'] !== null) { ?>
+    <p><strong><?= $e($result['llm']['provider']) ?></strong> · <?= $e($result['llm']['model']) ?> · <?= count($result['llm']['http']) ?> request(s)</p>
+  <?php } ?>
+  <?php if ($result['rules']->lowConfidence !== []) { ?>
+    <h2>Low-confidence input</h2>
+    <ul><?php foreach ($result['rules']->lowConfidence as $ref => $item) { ?><li><code><?= $e($ref) ?></code>: <?= $e($item) ?></li><?php } ?></ul>
+  <?php } ?>
+  <h2><?= $result['llm'] === null && $result['rules']->lowConfidence !== [] ? 'Rules preview (not actionable)' : 'Final preview' ?></h2>
   <table>
-    <tr><th>Item</th><th>Kind</th><th>Result</th></tr>
+    <tr><th>Item</th><th>Source</th><th>Outcome</th><th>Kind</th><th>Result</th></tr>
     <?php foreach ($rows as $row) { ?>
-      <tr><td><?= $e($row['item']) ?></td><td class="kind"><?= $e($row['kind']) ?></td><td><?= $e($describe($row['kind'], $row['entry'])) ?></td></tr>
+      <?php $outcome = $outcomeOf($row['entry']['ref']); ?>
+      <tr><td><code><?= $e($row['entry']['ref']) ?></code> <?= $e($row['item']) ?></td><td><?= $e($outcome['source']) ?>
+        <?php if (isset($outcome['field_sources'])) { ?><details class="field-sources"><summary>Fields</summary><ul><?php foreach ($outcome['field_sources'] as $field => $source) { ?><li><?= $e($field) ?>: <?= $e($source) ?></li><?php } ?></ul></details><?php } ?>
+      </td><td><?= $e($outcome['status']) ?><br><small><?= $e($outcome['reason']) ?></small></td><td class="kind"><?= $e($row['kind']) ?></td><td><?= $e($describe($row['kind'], $row['entry'])) ?></td></tr>
     <?php } ?>
   </table>
+  <?php if ($result['llm'] !== null) { ?>
+    <details open><summary>Before fallback: rules preview</summary>
+      <table><tr><th>Item</th><th>Kind</th><th>Result</th></tr>
+      <?php foreach ($ruleRows as $row) { ?><tr><td><?= $e($row['item']) ?></td><td class="kind"><?= $e($row['kind']) ?></td><td><?= $e($describe($row['kind'], $row['entry'])) ?></td></tr><?php } ?>
+      </table>
+    </details>
+    <details><summary>HTTP status, latency, tokens and raw model output (no credentials)</summary><pre><?= $e(json_encode($result['llm']['http'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
+  <?php } ?>
+  <details><summary>Final plan JSON</summary><pre><?= $e(json_encode(['status' => $result['build']->status->value, 'engine' => $result['build']->engine->value, 'processing' => $result['build']->itemOutcomes, 'plan' => $result['build']->plan], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
 <?php } ?>
+<script>
+const profile = document.getElementById('model-profile');
+const custom = document.getElementById('custom-model-label');
+const showCustom = () => { custom.hidden = profile.value !== 'openrouter_custom'; };
+profile.addEventListener('change', showCustom);
+showCustom();
+document.querySelector('form').addEventListener('submit', () => {
+  const button = document.getElementById('run-preview');
+  button.disabled = true;
+  button.textContent = 'Running…';
+});
+</script>
 </body>
 </html>

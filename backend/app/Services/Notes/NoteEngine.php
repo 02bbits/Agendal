@@ -70,7 +70,7 @@ final class NoteEngine
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
             if ($planned['low']) {
-                $lowConfidence[$ref] = $item;
+                $lowConfidence = [...$lowConfidence, ...($planned['uncertain'] ?? [$ref => $item])];
             }
         }
         $tasksById = array_column($openTasks, null, 'id');
@@ -82,7 +82,7 @@ final class NoteEngine
     /**
      * @param  list<TaskRow>  $openTasks
      * @param  list<TaskRow>  $doneTasks
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool, uncertain?: array<string, string>}
      */
     private function planItem(string $ref, string $item, NoteContext $context, array $openTasks, array $doneTasks): array
     {
@@ -100,21 +100,27 @@ final class NoteEngine
      * others add "-2", "-3", so every entry has its own.
      *
      * @param  list<CommandMatch>  $matches
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool, uncertain: array<string, string>}
      */
     private function commands(string $ref, string $item, array $matches): array
     {
         $plan = self::EMPTY_PLAN;
         $low = false;
+        $uncertain = [];
         foreach ($matches as $index => $match) {
-            $planned = $this->command($index === 0 ? $ref : $ref.'-'.($index + 1), $item, $match);
+            $targetRef = $index === 0 ? $ref : $ref.'-'.($index + 1);
+            $source = $match->sourceText ?? $item;
+            $planned = $this->command($targetRef, $source, $match);
+            if ($planned['low']) {
+                $uncertain[$targetRef] = $source;
+            }
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
             $low = $low || $planned['low'];
         }
 
-        return ['plan' => $plan, 'low' => $low];
+        return ['plan' => $plan, 'low' => $low, 'uncertain' => $uncertain];
     }
 
     /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
@@ -146,21 +152,8 @@ final class NoteEngine
         if ($fields->title === '') {
             return $this->skipped($ref, $item, SkipReason::Skip);
         }
-        $entries = [];
-        $duplicate = $this->duplicateOf($fields, $openTasks, $context);
-        for ($copy = 1; $copy <= $fields->copies; $copy++) {
-            $entry = $this->createEntry($copy === 1 ? $ref : $ref.'-'.$copy, $fields, $duplicate);
-            if ($fields->copies > 1) {
-                $suffix = ' ('.$copy.'/'.$fields->copies.')';
-                $limit = (int) config('notes.title_limit') - mb_strlen($suffix);
-                $entry['title'] = mb_substr($fields->title, 0, $limit).$suffix;
-                $overflow = mb_substr($fields->title, $limit);
-                if ($overflow !== '') {
-                    $entry['notes'] = trim($overflow.' '.($fields->notes ?? ''));
-                }
-            }
-            $entries[] = $entry;
-        }
+        $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
+        $entries = NoteCopies::expand($entry, $fields->copies);
 
         return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'low' => $fields->lowConfidence];
     }

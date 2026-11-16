@@ -7,6 +7,7 @@ use App\Services\Clock\ClockInterface;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
 use Opis\JsonSchema\Errors\ErrorFormatter;
 use Opis\JsonSchema\Validator;
@@ -139,3 +140,24 @@ it('limits note submission and includes Retry-After (T-NU-84)', function () {
     }
     $this->postJson('/api/v1/notes', notePayload())->assertStatus(429)->assertHeader('Retry-After');
 });
+
+it('validates notes the language model read, accepted or unclear, against the shared API schema (ADR-008)', function (string $action, string $text, string $status, string $outcome) {
+    config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model']);
+    Http::preventStrayRequests();
+    $response = json_decode((string) file_get_contents(base_path('tests/Fixtures/note-llm-response.json')), true, flags: JSON_THROW_ON_ERROR);
+    $items = json_decode($response['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR);
+    $items['items'][0] = [...$items['items'][0], 'action' => $action, 'title' => $action === 'create' ? 'Mua sữa' : null];
+    $response['choices'][0]['message']['content'] = json_encode($items, JSON_THROW_ON_ERROR);
+    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+
+    $result = $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()
+        ->assertJsonPath('note.engine', 'rules_llm')->assertJsonPath('note.status', $status)
+        ->assertJsonPath('processing.0.status', $outcome);
+    $validator = new Validator;
+    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', base_path('../docs/07-architecture/contracts/schemas/'));
+    $check = $validator->validate(json_decode($result->getContent()), 'https://agendal.app/schemas/note-result.schema.json');
+    expect($check->isValid())->toBeTrue($check->isValid() ? '' : json_encode((new ErrorFormatter)->format($check->error())));
+})->with([
+    'accepted' => ['create', 'toi can mua sua', 'done', 'accepted'],
+    'unclear' => ['unclear', 'do that thing whenever', 'followup', 'unclear'],
+]);

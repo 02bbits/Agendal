@@ -10,6 +10,17 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
+it('keeps only explicitly read calendar fields as trusted for the model', function () {
+    $fields = extractFields('Mai tao phải đi chơi 7 giờ', [], '2026-11-03T10:00:00+07:00');
+    expect($fields->trustedFields)
+        ->toMatchArray(['due_date' => '2026-11-04', 'start_time' => '07:00'])
+        ->not->toHaveKeys(['title', 'priority', 'reminder', 'end_time']);
+    expect(extractFields('toi can mua sua 9am', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('gặp chị Mai', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('doi call mum sang thu tu', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('toi muon di cho 7h chieu', [])->trustedFields)->not->toHaveKey('start_time');
+});
+
 /** Friday 23 Oct 2026, 08:12 in Ho Chi Minh City, as in the note corpus. */
 const EXTRACTOR_NOW = '2026-10-23T08:12:00+07:00';
 

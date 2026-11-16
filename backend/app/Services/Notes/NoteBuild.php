@@ -17,6 +17,7 @@ final readonly class NoteBuild
     /**
      * @param  ValidatedPlan  $plan
      * @param  array<string, string>  $lowConfidence  item ref => item text, for the LLM fallback (ADR-008)
+     * @param  array<string, array{source: string, status: string, reason: string, field_sources?: array<string, string>}>  $itemOutcomes
      */
     public function __construct(
         public array $plan,
@@ -24,5 +25,8 @@ final readonly class NoteBuild
         public string $name,
         public NoteEngineKind $engine,
         public array $lowConfidence,
+        public ?string $promptVersion = null,
+        public array $itemOutcomes = [],
     ) {}
+
 }

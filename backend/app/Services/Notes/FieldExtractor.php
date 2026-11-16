@@ -74,6 +74,7 @@ final class FieldExtractor
             }
         }
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
+        $project = $this->project($text, $context);
 
         return new ExtractedFields(
             title: $title,
@@ -82,14 +83,103 @@ final class FieldExtractor
             startTime: $time->start,
             endTime: $time->end,
             priority: $this->priority($readable, $dueDate, $context),
-            projectId: $this->project($text, $context),
+            projectId: $project,
             repeat: $repeat['repeat'],
             reminder: $this->reminder($readable, $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
-                || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null),
+                || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null)
+                || $this->hasUnresolvedReference($title, $context),
             repeatRule: $repeat['rule'],
             copies: $repeat['copies'] ?? 1,
+            trustedFields: $this->trusted($text, $readable, $date, $time, $repeat, $dueDate, $project, $context),
         );
+    }
+
+    /**
+     * Fields the rules read exactly, which the language model must keep for a low-confidence item (ADR-008).
+     *
+     * @param  array{repeat: Repeat, rule: ?string, unreadable: bool, spans: list<array{0: int, 1: int}>, copies?: int}  $repeat
+     * @return array<string, mixed>
+     */
+    private function trusted(string $text, string $readable, ParsedDate $date, ParsedTime $time, array $repeat, ?string $dueDate, ?string $project, NoteContext $context): array
+    {
+        $trusted = [];
+        if (! $repeat['unreadable']) {
+            if (! $date->unreadable && (($date->date !== null && $this->reliableDateSpans($date->spans, $readable)) || $time->date !== null)) {
+                $trusted['due_date'] = $dueDate;
+            }
+            if (! $time->unreadable && $time->start !== null && $this->reliableTime($time, $readable, $text)) {
+                $trusted['start_time'] = $time->start;
+                if ($time->end !== null) {
+                    $trusted['end_time'] = $time->end;
+                }
+            }
+            if ($repeat['spans'] !== [] && $repeat['repeat'] !== Repeat::Never) {
+                $trusted['repeat'] = $repeat['repeat']->value;
+                $trusted['repeat_rule'] = $repeat['rule'];
+            }
+            if (($repeat['copies'] ?? 1) > 1) {
+                $trusted['copies'] = $repeat['copies'];
+            }
+        }
+        if (NoteVocabulary::contains('priority_high', $readable) || NoteVocabulary::contains('priority_high_content', $readable) || NoteVocabulary::contains('priority_low', $readable)) {
+            $trusted['priority'] = $this->priority($readable, $dueDate, $context)->value;
+        }
+        if ($project !== null) {
+            $trusted['project'] = $context->projects[$project];
+        }
+
+        return $trusted;
+    }
+
+    /**
+     * A bare English weekday alias that is also a Vietnamese syllable ("thu") is not reliable evidence.
+     *
+     * @param  list<array{0: int, 1: int}>  $spans
+     */
+    private function reliableDateSpans(array $spans, string $text): bool
+    {
+        $weekdays = implode('|', NoteVocabulary::family('weekday'));
+        $syllables = array_map(mb_strtolower(...), NoteVocabulary::values('vietnamese_unaccented_syllable'));
+        foreach ($spans as [$offset, $length]) {
+            $phrase = mb_strtolower(trim(substr($text, $offset, $length)));
+            if (in_array($phrase, $syllables, true) && preg_match('~^(?:'.$weekdays.')$~iu', $phrase) === 1) {
+                return false;
+            }
+        }
+
+        return $spans !== [];
+    }
+
+    /** In unaccented Vietnamese, a morning-looking hour without a read am/pm word may be an evening one ("7h chieu"). */
+    private function reliableTime(ParsedTime $time, string $readable, string $original): bool
+    {
+        if (! $this->unaccentedVietnamese($original) || (int) substr((string) $time->start, 0, 2) >= 13) {
+            return true;
+        }
+        foreach ($time->spans as [$offset, $length]) {
+            $phrase = substr($readable, $offset, $length);
+            if (NoteVocabulary::contains('period_am', $phrase) || NoteVocabulary::contains('period_pm', $phrase)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /** @return array{priority: string, reminder: string} Defaults that depend on the final merged schedule. */
+    public function scheduleDefaults(string $text, ?string $date, ?string $start, NoteContext $context): array
+    {
+        $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
+
+        return ['priority' => $this->priority($readable, $date, $context)->value,
+            'reminder' => $this->reminder($readable, $date, $start, $context)->value];
+    }
+
+    /** A vague pointer ("cái đó", "that thing") the rules can't resolve to a task. */
+    public function hasUnresolvedReference(string $text, NoteContext $context): bool
+    {
+        return NoteVocabulary::contains('unresolved_reference', NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
     }
 
     /** The text as a task title with nothing else read, for items left when the rules budget is spent (SEC-23). */
@@ -124,6 +214,7 @@ final class FieldExtractor
             lowConfidence: $fields->lowConfidence || $at->lowConfidence,
             repeatRule: $fields->repeatRule,
             copies: $fields->copies,
+            trustedFields: [...$fields->trustedFields, ...array_intersect_key($at->trustedFields, array_flip(['due_date', 'start_time', 'end_time']))],
         );
     }
 
@@ -243,11 +334,17 @@ final class FieldExtractor
         $title = NoteVocabulary::outsideLiterals($title, array_values($context->projects), fn (string $part): string => (string) preg_replace($pureWords, ' ', $part));
         $title = $this->tidy((string) preg_replace('/\s+/u', ' ', $title));
         $title = (string) preg_replace('~^(?:(?:'.NoteVocabulary::phrases('lead_in').')(?:\s+|$))+~iu', '', $title);
-        $title = $this->withKnownCasing($this->tidy($title), $context);
-        // A title that starts with a URL, email or file name keeps it as written.
-        $title = (NoteVocabulary::literals($title)[0][0] ?? null) === 0 ? $title : mb_strtoupper(mb_substr($title, 0, 1)).mb_substr($title, 1);
 
-        return $this->cut($title);
+        return $this->cut($this->cased($this->tidy($title), $context));
+    }
+
+    /** NU §2.3 title casing, for rules titles and model titles alike: first letter up, acronyms and project names as known. */
+    public function cased(string $title, NoteContext $context): string
+    {
+        $title = $this->withKnownCasing($title, $context);
+
+        // A title that starts with a URL, email or file name keeps it as written.
+        return (NoteVocabulary::literals($title)[0][0] ?? null) === 0 ? $title : mb_strtoupper(mb_substr($title, 0, 1)).mb_substr($title, 1);
     }
 
     /** Spaces, dashes, colons, commas, semicolons, full stops and joiners ("8am and 8pm" read) left at either end. */
