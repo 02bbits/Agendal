@@ -1246,7 +1246,6 @@ export function AccountScreen({
           </section>
         </div>
 
-
         {/* TAB: NOTIFICATIONS */}
         {activeTab === "notifications" && (
           <div
@@ -1612,7 +1611,6 @@ export function AccountScreen({
             </section>
           </div>
         )}
-
       </>
     );
   };
