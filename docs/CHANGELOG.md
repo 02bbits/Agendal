@@ -2,6 +2,11 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-16
+
+- **Priority words (Refs #120).** [NU §2.3](03-modules/NU-note-understanding.md) Priority row, [business-rules](02-domain/business-rules.md) Priority and Reminder rows, [SUMMARY](SUMMARY.md) note fields: a negated High word gives Low; medium words give Medium; "nộp" sets High only in submission phrases; compounds such as *thi công*, *kiểm tra email* don't set High or the exam reminder.
+- **Unclear series ends (Refs #120).** [NU §2.5](03-modules/NU-note-understanding.md#calendar-recurrence): a duration without a lead (`lái xe 4 tuần` = every day for 4 weeks), `/` in weekday lists, a weekday after a start word sets the first date. Negative, ranged, either-or and half-written durations, and two counts, stay low confidence. Copies apply only to a daily repeat.
+
 ## 2026-11-14
 
 - **How long a series runs (Refs #120).** [NU §2.5](03-modules/NU-note-understanding.md#calendar-recurrence): a duration (`for 3 months`, `trong 4 tuần`) or period (`this week`, `through next week`) ends the series with UNTIL on its last day, counted from the first date with that day included; approximate, fractional, compound or conflicting ends stay low confidence. [API recurrence contract](07-architecture/api.md#task-recurrence-contract-im-37): how such an end is stored. [SUMMARY](SUMMARY.md) note fields and §13, [HANDOVER §6](HANDOVER.md): #120 leaves the open list; the counting rule waits for the team.
