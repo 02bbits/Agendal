@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-16
 
+- **Existing-email notice reworded (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1): the `SignUpAttempted` email's subject is now "Account creation attempt"; the body says an account creation attempt was made with this email and that it already has an Agendal account, keeps the "log in" and "reset it" links, and adds "If this wasn't you, you can ignore this email. Your account is safe." It has no sign-off.
 - **Setup: no time zone row, 30-character name; sign-up is not remembered (Refs #149).** [AA §2.6](03-modules/AA-account-access.md#26-setup-step-after-sign-up-149): Setup no longer shows a time zone (the account keeps the device's zone, automatic; Settings picks another) and no longer sends `timezone_auto`; the name field, here and in Settings, takes at most 30 characters (a longer paste is cut). The unused `setup.time_zone*` copy is removed from `pending.ts`. [AA §2.8](03-modules/AA-account-access.md#28-verify-email-149): a verified sign-up signs in for the session only, with no remember cookie.
 
 - **Reset request screen trimmed (Refs #149).** [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): once the link is sent, the screen drops the subtitle and the `auth.reset_sent_hint` line (the key is removed from `pending.ts`) and sets the email address in bold inside `auth.reset_sent`.
