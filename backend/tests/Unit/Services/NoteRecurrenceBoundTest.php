@@ -262,9 +262,120 @@ it('preserves a period with no occurrence left in it', function (string $now, st
     'time passed on the last day of the year' => ['2026-12-31T22:00:00+07:00', 'gym every day at 9pm this year'],
 ]);
 
-it('leaves a one-off task and a session length alone', function () {
-    expect(boundTask('call mum for 3 months')['repeat'])->toBe('never')
-        ->and(boundTask('đi chợ trong 3 ngày nữa')['due_date'])->toBe('2026-11-05')
+it('reads a duration a marker makes one, with no lead', function (string $text, string $until) {
+    // Mon 2 Nov 2026: "the next 2 weeks" ends Sun 15 Nov; "tuần tới" inside "2 tuần tới" is no "next week".
+    $task = boundTask($text);
+    expect($task['title'], $text)->toBe(str_starts_with($text, 'tập') ? 'Tập gym' : 'Gym');
+    expectUntil($task, $text, '2026-11-02', $until);
+})->with([
+    ['tập gym mỗi ngày 2 tuần tới', '2026-11-15'],
+    ['tập gym mỗi ngày 2 tuần sắp tới', '2026-11-15'],
+    ['tập gym mỗi ngày 3 ngày liên tiếp', '2026-11-04'],
+    ['gym every day next 2 weeks', '2026-11-15'],
+    ['gym every day the coming 2 weeks', '2026-11-15'],
+    ['gym every day 2 weeks straight', '2026-11-15'],
+    ['gym every day 10 days in a row', '2026-11-11'],
+    // A bare amount that closes a recurring item says how long it runs.
+    ['tập gym mỗi ngày 2 tuần', '2026-11-15'],
+    ['gym every day 2 weeks', '2026-11-15'],
+]);
+
+it('reads a bare amount after a weekly schedule as how long it runs', function (string $text, string $first, string $until, string $days) {
+    $task = boundTask($text);
+    expectUntil($task, $text, $first, $until);
+    expect($task['repeat_rule'], $text)->toContain('BYDAY='.$days);
+})->with([
+    ['lái xe mỗi thứ 3 2 tuần', '2026-11-03', '2026-11-16', 'TU'],
+    ['lái xe mỗi thứ 3,5 4 tuần', '2026-11-03', '2026-11-30', 'TU,TH'],
+    ['lái xe mỗi thứ 3 và thứ 5 4 tuần lúc 7h', '2026-11-03', '2026-11-30', 'TU,TH'],
+    ['drive every tuesday and thursday 4 weeks', '2026-11-03', '2026-11-30', 'TU,TH'],
+]);
+
+it('keeps a bare or inexact amount without a lead for review, and a start stays a start', function () {
+    foreach (['tập gym mỗi ngày khoảng 2 tuần tới', 'gym every day next 1.5 weeks', 'lái xe mỗi ngày 4 tuần 2 ngày', 'lái xe mỗi thứ 3 4 tuần nữa', 'lái xe 2 tuần 1 lần'] as $note) {
+        expectPreserved($note);
+    }
+    expect(boundTask('tập gym mỗi ngày 2 tuần nữa')['due_date'])->toBe('2026-11-16')
+        ->and(boundTask('gym every day next week')['due_date'])->toBe('2026-11-09');
+});
+
+it('reads "repeat N times" as a series count, and copies only on a daily series', function () {
+    foreach (['lái xe mỗi thứ 3 lặp lại 4 lần', 'lái xe mỗi thứ 3 lặp 4 lần', 'drive every tuesday repeat 4 times', 'drive every tuesday repeated 4 times'] as $note) {
+        $task = boundTask($note);
+        expect($task['due_date'], $note)->toBe('2026-11-03')->and($task['repeat_rule'], $note)->toEndWith('BYDAY=TU;COUNT=4');
+    }
+    // Copies on a weekday, a week or a month may mean copies or a count of dates (#121).
+    foreach (['lái xe 4 lần mỗi thứ 3', 'drive 4 times every tuesday', 'gym twice a week', 'gym 3 times every month'] as $note) {
+        expectPreserved($note);
+    }
+    $build = app(NoteEngine::class)->build('đi gym mỗi ngày 3 lần', boundContext(), budgetMs: 60000);
+    expect(array_column($build->plan['create'], 'title'))->toBe(['Đi gym (1/3)', 'Đi gym (2/3)', 'Đi gym (3/3)']);
+});
+
+it('runs a one-off task that says how long every day for that long', function (string $text, string $title, string $first, string $until) {
+    // "lái xe 4 tuần" is "lái xe mỗi ngày trong 4 tuần".
+    $task = boundTask($text);
+    expect($task['title'], $text)->toBe($title)->and($task['repeat_rule'], $text)->toStartWith('FREQ=DAILY;');
+    expectUntil($task, $text, $first, $until);
+})->with([
+    ['lái xe 4 tuần', 'Lái xe', '2026-11-02', '2026-11-29'],
+    ['call mum for 3 months', 'Call mum', '2026-11-02', '2027-02-01'],
+    ['học tiếng anh 3 tháng', 'Học tiếng anh', '2026-11-02', '2027-02-01'],
+    ['tập gym 2 tuần tới', 'Tập gym', '2026-11-02', '2026-11-15'],
+    ['uống thuốc 10 ngày', 'Uống thuốc', '2026-11-02', '2026-11-11'],
+    ['lái xe suốt 4 tuần', 'Lái xe', '2026-11-02', '2026-11-29'],
+    ['lái xe từ mai 4 tuần', 'Lái xe', '2026-11-03', '2026-11-30'],
+    ['lái xe từ thứ 4 4 tuần', 'Lái xe', '2026-11-04', '2026-12-01'],
+]);
+
+it('keeps a one-off duration it cannot place for review, and leaves starts and a session length alone', function () {
+    // A deadline lead or word, a weekday that may be the schedule, an amount inside the title, a period, a compound.
+    foreach (['nộp báo cáo trong 2 ngày', 'finish report within 2 days', 'lái xe trong 4 tuần', 'deadline báo cáo 2 tuần', 'nộp báo cáo trước 2 tuần',
+        'lái xe thứ 3 4 tuần', 'trả 2 tháng lương', '30 day challenge', 'tập gym tuần này', 'lái xe khoảng 4 tuần', 'lái xe 4 tuần rưỡi',
+        'call mum in one month and two days'] as $note) {
+        expectPreserved($note);
+    }
+    expect(boundTask('đi chợ trong 3 ngày nữa')['due_date'])->toBe('2026-11-05')
+        ->and(boundTask('đi chợ sau 3 ngày')['due_date'])->toBe('2026-11-05')
+        ->and(boundTask('call mum in 2 weeks')['due_date'])->toBe('2026-11-16')
         ->and(boundTask('call mum 2 weeks from now')['due_date'])->toBe('2026-11-16')
+        ->and(boundTask('call mum next week')['due_date'])->toBe('2026-11-09')
+        ->and(boundTask('nộp bài 26 tháng 9 năm 2027')['due_date'])->toBe('2027-09-26')
+        ->and(boundTask('đọc sách 30 phút')['repeat'])->toBe('never')
         ->and(boundTask('gym every day for 1 hour')['repeat_rule'])->not->toContain('UNTIL=');
+});
+
+it('keeps a qualifier after a comma with its schedule, and a conflicting end or count for review', function () {
+    // Alternatives or two ends say no single schedule; a split would have made a stray task.
+    foreach (['gym every day for 2 weeks, never ends', 'gym every day, for between 2 and 3 weeks', 'gym every day until Friday or Saturday',
+        'gym every day until Friday and Saturday', 'gym every day for 3 occurrences for 5 occurrences'] as $note) {
+        expectPreserved($note);
+    }
+    expectUntil(boundTask('gym every day, never ends'), 'gym every day, never ends', '2026-11-02', null);
+    expectUntil(boundTask('tập gym mỗi ngày, vô thời hạn'), 'tập gym mỗi ngày, vô thời hạn', '2026-11-02', null);
+});
+
+it('reads a weekday after a start word as when the series starts', function (string $text, string $first, ?string $until) {
+    expectUntil(boundTask($text), $text, $first, $until);
+})->with([
+    ['gym every day from Friday for 2 weeks', '2026-11-06', '2026-11-19'],
+    ['gym every day starting Friday', '2026-11-06', null],
+    ['tập gym mỗi ngày từ thứ 6 trong 2 tuần', '2026-11-06', '2026-11-19'],
+]);
+
+it('reads a weekday list joined by a slash', function () {
+    $task = boundTask('lái xe mỗi thứ 3 / thứ 5 trong 4 tuần');
+    expectUntil($task, 'lái xe mỗi thứ 3 / thứ 5 trong 4 tuần', '2026-11-03', '2026-11-30');
+    expect($task['repeat_rule'])->toContain(';BYDAY=TU,TH;');
+});
+
+it('keeps a half-written, vague or two-choice duration for review, and splits a new task as before', function () {
+    foreach (['gym every day for 2', 'lái xe mỗi thứ 3 trong 4', 'lái xe mỗi thứ 3 trong 4 tuan',
+        'gym every day for the next weeks', 'gym every day for 2 weeks or 3'] as $note) {
+        expectPreserved($note);
+    }
+    expectUntil(boundTask('gym every day for the next week'), 'gym every day for the next week', '2026-11-02', '2026-11-08');
+    expect(boundTask('book a table for 2 tomorrow')['title'])->toBe('Book a table for 2');
+    $build = app(NoteEngine::class)->build(app(NoteSplitter::class)->normalize("gym every day\nbuy milk"), boundContext(), budgetMs: 60000);
+    expect(array_column($build->plan['create'], 'title'))->toBe(['Gym', 'Buy milk']);
 });

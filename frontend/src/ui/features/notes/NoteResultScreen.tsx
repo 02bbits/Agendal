@@ -593,7 +593,10 @@ function ChangeRow({
           ]
             .filter(Boolean)
             .join(", "),
-        t(`priority.${task.priority ?? "low"}`),
+        // As on the task row: only a raised priority is worth saying
+        task.priority &&
+          task.priority !== "low" &&
+          t(`priority.${task.priority}`),
         task.reminder !== "none" && t(`reminder.${task.reminder}`),
         // The whole schedule, its end included ("Every week on Tue · until 30 Nov"), as on the task row
         repeatLabel(task),

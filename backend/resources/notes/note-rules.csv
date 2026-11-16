@@ -616,6 +616,16 @@ priority_high,khẩn
 priority_high,khẩn cấp
 priority_high,quan trọng
 priority_high,ưu tiên
+priority_high,top priority
+priority_high,very important
+priority_high,very urgent
+priority_high,super urgent
+priority_high,ưu tiên cao
+priority_high,khẩn trương
+priority_high,gấp lắm
+priority_high,rất gấp
+priority_high,cực gấp
+priority_high,rất quan trọng
 priority_high_content,deadline
 priority_high_content,exam
 priority_high_content,quiz
@@ -623,17 +633,61 @@ priority_high_content,submit
 priority_high_content,hạn chót
 priority_high_content,thi
 priority_high_content,kiểm tra
-priority_high_content,nộp
+priority_high_content,nộp bài
+priority_high_content,nộp báo cáo
+priority_high_content,nộp đồ án
+priority_high_content,nộp luận văn
+priority_high_content,nộp hồ sơ
 priority_low,low priority
 priority_low,whenever
 priority_low,someday
 priority_low,maybe
 priority_low,không gấp
 priority_low,khi nào rảnh
+priority_low,ưu tiên thấp
+priority_low,no rush
+priority_low,not a priority
+priority_low,không vội
+priority_medium,medium priority
+priority_medium,normal priority
+priority_medium,ưu tiên trung bình
+priority_medium,ưu tiên vừa
+priority_negation,not
+priority_negation,not that
+priority_negation,not so
+priority_negation,isn't
+priority_negation,is not
+priority_negation,it's not
+priority_negation,it's not that
+priority_negation,is not that
+priority_negation,isn't that
+priority_negation,không
+priority_negation,chưa
+priority_negation,ko
+priority_negation,k
+priority_negation,chẳng
+priority_negation,không cần
+priority_negation,chưa cần
+priority_negation,không quá
+priority_negation,không cần phải
 reminder_day_before,exam
 reminder_day_before,quiz
 reminder_day_before,thi
 reminder_day_before,kiểm tra
+content_word_exempt,thi công
+content_word_exempt,thi hành
+content_word_exempt,thực thi
+content_word_exempt,thi thoảng
+content_word_exempt,thi thố
+content_word_exempt,thi đua
+content_word_exempt,kiểm tra email
+content_word_exempt,kiểm tra mail
+content_word_exempt,kiểm tra tin nhắn
+content_word_exempt,kiểm tra lại
+content_word_exempt,kiểm tra xe
+content_word_exempt,kiểm tra sức khỏe
+content_word_exempt,kiểm tra hàng
+content_word_exempt,kiểm tra đơn
 acronym,SQL
 acronym,HCI
 acronym,CV
@@ -1109,6 +1163,41 @@ bound_lead_next,over the coming
 bound_lead_next,during the next
 bound_lead_next,in the next
 bound_lead_next,within the next
+bound_next_marker,next
+bound_next_marker,the next
+bound_next_marker,coming
+bound_next_marker,the coming
+bound_next_marker,upcoming
+bound_next_marker,the upcoming
+copy_unit,time
+copy_unit,times
+copy_unit,lần
+count_unit,occurrence
+count_unit,occurrences
+count_lead,for
+count_lead,after
+count_lead,end after
+count_lead,ends after
+count_lead,trong
+count_lead,sau
+count_lead,kết thúc sau
+count_lead,repeat
+count_lead,repeats
+count_lead,repeated
+count_lead,lặp lại
+count_lead,lặp
+count_lead,lặp đi lặp lại
+deadline_word,deadline
+deadline_word,due
+deadline_word,hạn
+deadline_word,hạn chót
+deadline_word,hạn nộp
+deadline_word,thời hạn
+repeat_endless,never ends
+repeat_endless,never ending
+repeat_endless,no end date
+repeat_endless,không kết thúc
+repeat_endless,vô thời hạn
 bound_more,more
 bound_trail,straight
 bound_trail,in a row
@@ -1224,3 +1313,7 @@ bound_end_word,tới hết
 bound_end_word,cho đến hết
 bound_end_word,cho tới khi
 bound_end_word,kết thúc
+weekday_list_separator,","
+weekday_list_separator,&
+weekday_list_separator,-
+weekday_list_separator,/

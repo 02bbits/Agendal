@@ -88,16 +88,21 @@ final class FieldExtractor
             }
             // #120: words no reader took that still say how long ("for about 3 weeks", "vài tuần") mean part of the
             // schedule was lost, however it was worded; keep the whole item for review instead of an unbounded series.
-            $unread = $readable;
-            foreach ([...$date->spans, ...$time->spans, ...$repeat['spans']] as [$offset, $length]) {
-                $unread = substr_replace($unread, str_repeat(' ', $length), $offset, $length);
-            }
-            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date) || NoteRepeatParser::hasDurationShape($unread)) {
+            $unread = $this->unread($readable, $date, $time, $repeat['spans']);
+            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date) || NoteRepeatParser::hasDurationShape($unread) || NoteRepeatParser::hasDanglingAmount($unread)) {
                 $dueDate = null;
                 $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
                 $time = new ParsedTime;
                 $date = new ParsedDate(unreadable: true);
             }
+        }
+        // A one-off item that says how long or which period ("lái xe 4 tuần", "tập gym tuần này", "tập gym 2 tuần tới")
+        // has a schedule the rules can't place; a date read from part of it would be wrong. Kept whole for the fallback.
+        if ($repeat['rule'] === null && ! $repeat['unreadable']
+            && (NoteRepeatParser::hasDuration($readable) || NoteRepeatParser::hasDurationShape($this->unread($readable, $date, $time, $repeat['spans'])))) {
+            $dueDate = null;
+            $time = new ParsedTime;
+            $date = new ParsedDate(unreadable: true);
         }
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
 
@@ -154,17 +159,22 @@ final class FieldExtractor
     }
 
     /**
-     * NU-E40: Vietnamese words that need no accents ("mai", "t2") only count in accented Vietnamese.
-     * They are blanked out with spaces so phrase offsets stay the same.
+     * NU-E40: Vietnamese words that need no accents ("mai", "t2") only count in accented Vietnamese. Vietnamese typed
+     * without accents keeps only numeric dates and times: its syllables are read as nothing, so "goi me thu 6" is no
+     * English "Thu". They are blanked out with spaces so phrase offsets stay the same.
      */
     private function withoutUnaccentedVietnamese(string $text): string
     {
         if ($this->hasAccentedLetters($text)) {
             return $text;
         }
+        $words = NoteVocabulary::phrases('vietnamese_ascii_word');
+        if ($this->unaccentedVietnamese($text)) {
+            $words .= '|'.NoteVocabulary::phrases('vietnamese_unaccented_syllable');
+        }
 
         return (string) preg_replace_callback(
-            NoteVocabulary::pattern(NoteVocabulary::phrases('vietnamese_ascii_word')),
+            NoteVocabulary::pattern($words),
             fn (array $word): string => str_repeat(' ', strlen($word[0])),
             $text,
         );
@@ -173,6 +183,20 @@ final class FieldExtractor
     private function hasAccentedLetters(string $text): bool
     {
         return preg_match('/[^\P{L}\x00-\x7F]/u', $text) === 1;
+    }
+
+    /**
+     * The words no reader took: $readable with the date, time and repeat phrases blanked.
+     *
+     * @param  list<array{int, int}>  $repeatSpans
+     */
+    private function unread(string $readable, ParsedDate $date, ParsedTime $time, array $repeatSpans): string
+    {
+        foreach ([...$date->spans, ...$time->spans, ...$repeatSpans] as [$offset, $length]) {
+            $readable = substr_replace($readable, str_repeat(' ', $length), $offset, $length);
+        }
+
+        return $readable;
     }
 
     /**
@@ -220,15 +244,22 @@ final class FieldExtractor
         return $context->today()->modify($passed ? '+1 day' : '+0 days')->format('Y-m-d');
     }
 
-    /** High words win over Low words (NU-E24); otherwise Medium when due today, else Low. */
+    /**
+     * High words win over Low words (NU-E24); a negated High word ("not urgent") is a Low word. Then a Medium word
+     * ("ưu tiên trung bình"), otherwise Medium when due today, else Low.
+     */
     private function priority(string $text, ?string $dueDate, NoteContext $context): Priority
     {
-        $withoutLow = (string) preg_replace(NoteVocabulary::pattern(NoteVocabulary::phrases('priority_low')), ' ', $text);
-        if (NoteVocabulary::contains('priority_high', $withoutLow) || NoteVocabulary::contains('priority_high_content', $withoutLow)) {
+        $low = NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low');
+        $plain = (string) preg_replace(NoteVocabulary::pattern($low.'|'.NoteVocabulary::phrases('priority_medium')), ' ', NoteVocabulary::withoutContentExempt($text));
+        if (NoteVocabulary::contains('priority_high', $plain) || NoteVocabulary::contains('priority_high_content', $plain)) {
             return Priority::High;
         }
-        if (NoteVocabulary::contains('priority_low', $text)) {
+        if (preg_match(NoteVocabulary::pattern($low), $text) === 1) {
             return Priority::Low;
+        }
+        if (NoteVocabulary::contains('priority_medium', $text)) {
+            return Priority::Medium;
         }
 
         return $dueDate === $context->today()->format('Y-m-d') ? Priority::Medium : Priority::Low;
@@ -268,7 +299,7 @@ final class FieldExtractor
     {
         $reminder = match (true) {
             $dueDate === null => Reminder::None,
-            NoteVocabulary::contains('reminder_day_before', $text) => Reminder::OneDay,
+            NoteVocabulary::contains('reminder_day_before', NoteVocabulary::withoutContentExempt($text)) => Reminder::OneDay,
             $startTime !== null => Reminder::FifteenMinutes,
             default => Reminder::None,
         };
@@ -299,7 +330,8 @@ final class FieldExtractor
             }
             $title = substr_replace($title, str_repeat(' ', $length), $offset, $length);
         }
-        $pureWords = NoteVocabulary::pattern(NoteVocabulary::phrases('priority_high').'|'.NoteVocabulary::phrases('priority_low'));
+        // Low and Medium first: "ưu tiên thấp" goes whole, not as High "ưu tiên" and a stray "thấp".
+        $pureWords = NoteVocabulary::pattern(NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low').'|'.NoteVocabulary::phrases('priority_medium').'|'.NoteVocabulary::phrases('priority_high'));
         $title = NoteVocabulary::outsideLiterals($title, array_values($context->projects), fn (string $part): string => (string) preg_replace($pureWords, ' ', $part));
         $title = $this->tidy((string) preg_replace('/\s+/u', ' ', $title));
         $title = (string) preg_replace('~^(?:(?:'.NoteVocabulary::phrases('lead_in').')(?:\s+|$))+~iu', '', $title);

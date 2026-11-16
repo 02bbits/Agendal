@@ -165,7 +165,19 @@ final class NoteVocabulary
     }
 
     /** Date, time, priority and repeat words: they describe a task rather than name one (NU §2.2). */
-    public const MODIFIER_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_low'];
+    public const MODIFIER_CATEGORIES = ['signal', 'week_next', 'week_end', 'weekend', 'month_end', 'repeat_unsupported', 'priority_high', 'priority_low', 'priority_medium'];
+
+    /** $text without words that hold a content word but mean something else: "thi" in "thi công", "thực thi". */
+    public static function withoutContentExempt(string $text): string
+    {
+        return (string) preg_replace(self::pattern(self::phrases('content_word_exempt')), ' ', $text);
+    }
+
+    /** A priority word said not to apply ("not urgent", "chưa cần gấp"): it reads as a low priority word. */
+    public static function negatedPriority(): string
+    {
+        return '(?:'.self::phrases('priority_negation').')\s+(?:'.self::phrases('priority_high').')';
+    }
 
     public const MODIFIER_FAMILIES = ['date_offset', 'weekday', 'month', 'repeat', 'time_word'];
 
@@ -185,6 +197,7 @@ final class NoteVocabulary
             return self::$modifierExpression;
         }
         $atom = NoteDurations::expression().'|'.NoteRepeatParser::modifierExpression()
+            .'|(?<![\p{L}\p{N}_])(?:'.self::negatedPriority().')(?![\p{L}\p{N}_])'
             .'|(?<![\p{L}\p{N}_])(?:\d{1,2}\s+)?(?:'.self::modifiers().')(?![\p{L}\p{N}_])'
             .'|\d+(?:(?:'.self::phrases('time_separator').'|'.self::phrases('full_date_separator').')\d+)+'
             .'|\d+\s*(?:'.self::phrases('time_unit').')(?![\p{L}_])'

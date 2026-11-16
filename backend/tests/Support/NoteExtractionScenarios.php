@@ -26,6 +26,7 @@ final class NoteExtractionScenarios
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
         'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
         'bound_through_lead', 'bound_approximate', 'bound_approximate_suffix', 'bound_end_word',
+        'bound_next_marker', 'copy_unit', 'count_unit', 'count_lead', 'deadline_word', 'repeat_endless', 'priority_negation', 'content_word_exempt', 'weekday_list_separator',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -85,7 +86,12 @@ final class NoteExtractionScenarios
             'repeat_unsupported' => [['tập gym '.$value, ['repeat' => 'never', 'lowConfidence' => true], self::NOW]],
             'priority_high' => [['đọc sách '.$value, ['priority' => 'high', 'title' => 'Đọc sách'], self::NOW]],
             'priority_high_content' => [['đọc sách '.$value, ['priority' => 'high'], self::NOW]],
+            // "thi công" holds "thi" but is no exam: no High, no day-before reminder.
+            'content_word_exempt' => [['đi '.$value.' ngày mai', ['priority' => 'low', 'reminder' => 'none'], self::NOW]],
             'priority_low' => [['đọc sách '.$value, ['priority' => 'low', 'title' => 'Đọc sách'], self::NOW]],
+            'priority_medium' => [['đọc sách '.$value, ['priority' => 'medium', 'title' => 'Đọc sách'], self::NOW]],
+            // "không gấp", "not urgent": a negated High word is a Low one, and leaves the title whole.
+            'priority_negation' => [['đọc sách '.$value.' gấp', ['priority' => 'low', 'title' => 'Đọc sách'], self::NOW], ['đọc sách '.$value.' urgent', ['priority' => 'low', 'title' => 'Đọc sách'], self::NOW]],
             'reminder_day_before' => [['đọc sách '.$value.' ngày mai', ['reminder' => '1d'], self::NOW]],
             'acronym' => [['đọc '.mb_strtolower($value), ['title' => 'Đọc '.$value], self::NOW]],
             'name_title' => [['gặp '.$value.' mai', ['dueDate' => null, 'lowConfidence' => true], self::NOW]],
@@ -121,7 +127,24 @@ final class NoteExtractionScenarios
             'bound_lead' => [['tập gym mỗi ngày '.$value.' 2 tuần', self::daily('2026-10-23', '20261105'), self::NOW]],
             'bound_lead_next' => [['tập gym mỗi ngày '.$value.' week', self::daily('2026-10-23', '20261029'), self::NOW]],
             'bound_more' => [['tập gym mỗi ngày for 2 '.$value.' weeks', self::daily('2026-10-23', '20261105'), self::NOW]],
-            'bound_trail' => [['tập gym mỗi ngày trong 2 tuần '.$value, self::daily('2026-10-23', '20261105'), self::NOW]],
+            // A trail or a "next" marker makes a bare amount a duration ("2 tuần tới", "next 2 weeks").
+            'bound_trail' => [
+                ['tập gym mỗi ngày trong 2 tuần '.$value, self::daily('2026-10-23', '20261105'), self::NOW],
+                ['tập gym mỗi ngày 2 tuần '.$value, self::daily('2026-10-23', '20261105'), self::NOW],
+            ],
+            'bound_next_marker' => [['tập gym mỗi ngày '.$value.' 2 weeks', self::daily('2026-10-23', '20261105'), self::NOW]],
+            // Tasks on each day of a daily series; a series-end count after a lead ("lặp lại 3 lần", "for 3 occurrences").
+            'copy_unit' => [['tập gym mỗi ngày 2 '.$value, ['title' => 'Tập gym', 'copies' => 2, 'lowConfidence' => false], self::NOW]],
+            'count_unit' => [['tập gym mỗi ngày for 3 '.$value, ['title' => 'Tập gym', 'repeatRule' => 'FREQ=DAILY;INTERVAL=1;WKST=MO;COUNT=3', 'lowConfidence' => false], self::NOW]],
+            // A one-off "lái xe 2 tuần" runs daily; a deadline word keeps it for review.
+            'deadline_word' => [['tập gym '.$value.' 2 tuần', ['dueDate' => null, 'repeatRule' => null, 'lowConfidence' => true], self::NOW]],
+            // "never ends" is no end; with a bound as well it contradicts itself.
+            'weekday_list_separator' => [['tập gym mỗi thứ 3 '.$value.' thứ 5', ['title' => 'Tập gym', 'repeatRule' => 'FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=TU,TH', 'lowConfidence' => false], self::NOW]],
+            'repeat_endless' => [
+                ['tập gym mỗi ngày, '.$value, self::daily('2026-10-23', null), self::NOW],
+                ['tập gym mỗi ngày trong 2 tuần, '.$value, ['dueDate' => null, 'repeatRule' => null, 'lowConfidence' => true], self::NOW],
+            ],
+            'count_lead' => [['tập gym mỗi ngày '.$value.' 3 lần', ['title' => 'Tập gym', 'repeatRule' => 'FREQ=DAILY;INTERVAL=1;WKST=MO;COUNT=3', 'copies' => 1, 'lowConfidence' => false], self::NOW]],
             'bound_fortnight' => [['tập gym mỗi ngày for a '.$value, self::daily('2026-10-23', '20261105'), self::NOW]],
             'bound_start_lead' => [['tập gym mỗi ngày '.$value.' tuần sau', self::daily('2026-10-26', null), self::NOW]],
             'bound_until_lead' => [['tập gym mỗi ngày '.$value.' hết tuần', self::daily('2026-10-23', '20261025'), self::NOW]],

@@ -84,20 +84,30 @@ it('keeps shopping lists intact after leading scheduling or priority modifiers',
 });
 
 it('binds scheduling-only fragments before or after the task without swallowing another task', function () {
-    foreach ([['call mum', 'three times', 'every Tuesday'], ['gọi mẹ', 'lặp lại 3 lần', 'thứ 3 mỗi tuần']] as $parts) {
+    // Copies of a daily series, a series-end count ("lặp lại 3 lần", #120), and copies on a weekday, which may mean
+    // either and stays for the fallback (#121): each wording binds to its task in any order.
+    $readings = [
+        [['call mum', 'three times', 'every day'], 3, '2026-11-02', 'FREQ=DAILY', false],
+        [['gọi mẹ', 'lặp lại 3 lần', 'thứ 3 mỗi tuần'], 1, '2026-11-03', 'COUNT=3', false],
+        [['call mum', 'three times', 'every Tuesday'], 1, null, null, true],
+    ];
+    foreach ($readings as [$parts, $tasks, $first, $rule, $low]) {
         foreach ([[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]] as $order) {
             foreach (NoteVocabulary::values('comma') as $comma) {
                 $text = implode($comma.' ', array_map(fn (int $i): string => $parts[$i], $order));
                 $build = app(NoteEngine::class)->build($text.'; buy milk tomorrow', complexContext(), budgetMs: 60000);
                 expect(app(NoteSplitter::class)->split($text.'; buy milk tomorrow'), $text)->toBe([$text, 'buy milk tomorrow']);
-                expect($build->lowConfidence, $text)->toBe([])->and($build->plan['create'])->toHaveCount(4)
+                expect($build->lowConfidence, $text)->toBe($low ? ['i1' => $text] : [])->and($build->plan['create'])->toHaveCount($tasks + 1)
                     ->and($build->plan['skipped'])->toBe([]);
-                foreach (array_slice($build->plan['create'], 0, 3) as $i => $task) {
-                    expect($task['title'])->toEndWith(' ('.($i + 1).'/3)')->and($task['due_date'])->toBe('2026-11-03')
-                        ->and($task['repeat_rule'])->toContain('BYDAY=TU')->and($task['start_time'])->toBeNull();
+                foreach (array_slice($build->plan['create'], 0, $tasks) as $i => $task) {
+                    expect(mb_strtolower($task['title']), $text)->toEndWith(mb_strtolower($tasks > 1 ? ' ('.($i + 1).'/'.$tasks.')' : ($low ? $text : $task['title'])))
+                        ->and($task['due_date'], $text)->toBe($first)->and($task['start_time'])->toBeNull();
+                    if ($rule !== null) {
+                        expect($task['repeat_rule'], $text)->toContain($rule);
+                    }
                 }
-                expect($build->plan['create'][3]['title'])->toBe('Buy milk')
-                    ->and($build->plan['create'][3]['due_date'])->toBe('2026-11-03');
+                expect($build->plan['create'][$tasks]['title'])->toBe('Buy milk')
+                    ->and($build->plan['create'][$tasks]['due_date'])->toBe('2026-11-03');
             }
         }
     }
@@ -127,7 +137,7 @@ it('preserves all constraints when relative time conflicts with the selected day
     ['2026-11-02T12:51:00+07:00', 'call mum in half an hour every Tuesday'],
     ['2026-11-03T23:45:00+07:00', 'call mum in half an hour every Tuesday'],
     ['2026-11-02T12:51:00+07:00', 'call mum in thirty minutes tomorrow'],
-    ['2026-11-03T12:51:00+07:00', 'nửa tiếng sau, plank, lặp lại 3 lần, thứ 3 mỗi tuần'],
+    ['2026-11-03T12:51:00+07:00', 'nửa tiếng sau, plank, 3 lần, mỗi ngày'],
 ]);
 
 it('combines a compatible relative timestamp and weekly schedule without shifting that timestamp', function () {
