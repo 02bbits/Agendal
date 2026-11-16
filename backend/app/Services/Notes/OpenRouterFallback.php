@@ -226,7 +226,8 @@ final class OpenRouterFallback
             'temperature' => 0,
             'max_tokens' => (int) config('note_llm.max_completion_tokens'),
             'provider' => ['require_parameters' => true, 'data_collection' => 'deny'],
-            'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'plan', 'strict' => true, 'schema' => $schema]],
+            'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'plan', 'strict' => true,
+                'schema' => config('note_llm.provider') === 'gemini' ? self::withoutBounds($schema) : $schema]],
             'messages' => [
                 ['role' => 'system', 'content' => $prompt],
                 ['role' => 'user', 'content' => json_encode($userContent, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
@@ -248,12 +249,28 @@ final class OpenRouterFallback
         return $body;
     }
 
+    /**
+     * Gemini refuses a long note's schema as "too many states" because of length, size, range, pattern and format
+     * bounds. It gets the same shape without them; the full schema still checks its answer in proposals().
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, mixed>
+     */
+    private static function withoutBounds(array $schema): array
+    {
+        $schema = array_diff_key($schema, array_flip(['maxLength', 'minimum', 'maximum', 'pattern', 'format', 'maxItems']));
+
+        return array_map(fn (mixed $value): mixed => is_array($value) ? self::withoutBounds($value) : $value, $schema);
+    }
+
     /** @param array<string, mixed> $body */
     private function send(array $body): Response
     {
         $timeout = (float) config('note_llm.timeout_seconds');
 
+        // One retry when the provider is busy (429, 503); anything else falls back to the rules at once
         return Http::withToken((string) config('note_llm.key'))->connectTimeout($timeout)->timeout($timeout)
+            ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
             ->post((string) config('note_llm.url'), $body)->throw();
     }
 

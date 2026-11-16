@@ -88,7 +88,7 @@ final class FieldExtractor
             reminder: $this->reminder($readable, $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
                 || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null)
-                || $this->hasUnresolvedReference($title, $context),
+                || $this->hasUnresolvedReference($title, $context) || $this->chatty($text, $context),
             repeatRule: $repeat['rule'],
             copies: $repeat['copies'] ?? 1,
             trustedFields: $this->trusted($text, $readable, $date, $time, $repeat, $dueDate, $project, $context),
@@ -174,6 +174,12 @@ final class FieldExtractor
 
         return ['priority' => $this->priority($readable, $date, $context)->value,
             'reminder' => $this->reminder($readable, $date, $start, $context)->value];
+    }
+
+    /** Conversational filler ("mệt quá", "à mà", "i think"): the text is prose, not a list of tasks. */
+    public function chatty(string $text, NoteContext $context): bool
+    {
+        return NoteVocabulary::contains('note_chatter', NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
     }
 
     /** A vague pointer ("cái đó", "that thing") the rules can't resolve to a task. */

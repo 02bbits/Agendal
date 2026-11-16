@@ -67,3 +67,15 @@ it('reads the rules budget from config', function () {
 
     expect(app(NoteEngine::class)->build('call mum tomorrow', engineContext())->plan['create'][0]['title'])->toBe('call mum tomorrow');
 });
+
+it('sends every item of a chatty note to the model, in order (ADR-008)', function () {
+    $text = 'hôm nay mệt quá. mai nộp báo cáo SQL 5h chiều. tối gọi mẹ';
+    $build = app(NoteEngine::class)->build($text, engineContext());
+
+    expect(array_keys($build->lowConfidence))->toBe(['i1', 'i2', 'i3'])
+        ->and($build->lowConfidence['i2'])->toBe('mai nộp báo cáo SQL 5h chiều');
+});
+
+it('keeps a plain task list on the rules', function () {
+    expect(app(NoteEngine::class)->build('mai nộp báo cáo SQL 5h chiều. tối gọi mẹ', engineContext())->lowConfidence)->toBe([]);
+});

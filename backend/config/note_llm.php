@@ -40,6 +40,6 @@ return [
     'reasoning_enabled' => env('NOTE_LLM_REASONING_ENABLED'),
 
     // The versioned prompt in resources/prompts, recorded on each note that used it.
-    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v6'),
+    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v7'),
 
 ];

@@ -578,7 +578,9 @@ it('sends Gemini requests without OpenRouter routing fields', function () {
 
     expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
     Http::assertSent(fn (Request $request): bool => ! array_key_exists('provider', $request->data())
-        && $request['response_format']['json_schema']['strict'] === true);
+        && $request['response_format']['json_schema']['strict'] === true
+        // No length, range, pattern or format bounds: Gemini rejects a long note's schema as too many states
+        && ! preg_match('/"(maxLength|minimum|maximum|pattern|format|maxItems)"/', json_encode($request['response_format'], JSON_THROW_ON_ERROR)));
 });
 
 it('writes model titles with the rules casing', function () {
@@ -588,3 +590,15 @@ it('writes model titles with the rules casing', function () {
 
     expect(app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1)->plan['create'][0]['title'])->toBe('Nộp bài SQL');
 });
+
+it('retries once when the provider is busy, and not on other errors', function (int $status, int $sent, string $engine) {
+    Http::fakeSequence('openrouter.ai/*')->push([], $status)->push(recordedNoteResponse());
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe($engine);
+    Http::assertSentCount($sent);
+})->with([
+    'busy' => [503, 2, 'rules_llm'],
+    'rate limited' => [429, 2, 'rules_llm'],
+    'bad request' => [400, 1, 'rules_fallback'],
+]);

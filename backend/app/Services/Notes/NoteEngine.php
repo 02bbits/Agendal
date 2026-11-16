@@ -57,7 +57,9 @@ final class NoteEngine
         $started = hrtime(true);
         $plan = self::EMPTY_PLAN;
         $lowConfidence = [];
+        $items = [];
         foreach ($this->splitter->split($text, array_values($context->projects)) as $index => $item) {
+            $items[self::ITEM_REF_PREFIX.($index + 1)] = $item;
             $ref = self::ITEM_REF_PREFIX.($index + 1);
             $expired = (hrtime(true) - $started) / 1e6 >= $budgetMs;
             $planned = $expired
@@ -72,6 +74,17 @@ final class NoteEngine
             if ($planned['low']) {
                 $lowConfidence = [...$lowConfidence, ...($planned['uncertain'] ?? [$ref => $item])];
             }
+        }
+        // Prose ("mệt quá… à mà mai nộp báo cáo…") splits into fragments that only make sense together:
+        // the model reads every item of the note, in order, so it can join and skip them (ADR-008).
+        if ($this->extractor->chatty($text, $context)) {
+            $read = array_map(self::itemIndex(...), array_keys($lowConfidence));
+            foreach ($items as $ref => $item) {
+                if (! in_array(self::itemIndex($ref), $read, true)) {
+                    $lowConfidence[$ref] = $item;
+                }
+            }
+            uksort($lowConfidence, strnatcmp(...));
         }
         $tasksById = array_column($openTasks, null, 'id');
         $validated = $this->validator->validate($plan, $context->projects, $tasksById);
