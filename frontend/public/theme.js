@@ -5,7 +5,9 @@
     var theme = localStorage.getItem("agendal.theme");
     var dark =
       theme === "dark" ||
-      (theme !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+      (theme !== "light" &&
+        typeof matchMedia === "function" &&
+        matchMedia("(prefers-color-scheme: dark)").matches);
     if (theme === "light" || theme === "dark")
       document.documentElement.setAttribute("data-theme", "agendal-" + theme);
     var pageView = localStorage.getItem("agendal.page_view") || "flat";
