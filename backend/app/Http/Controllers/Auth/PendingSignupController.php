@@ -52,7 +52,8 @@ class PendingSignupController extends Controller
 
         $user = $pendingSignup->verify($request, (string) $request->input('code'));
 
-        Auth::guard('web')->login($user, remember: true);
+        // No remember-me: sign-up has no such tick, so the session ends with the browser
+        Auth::guard('web')->login($user, remember: false);
         $request->session()->regenerate();
         Audit::log($request, 'sign_up', $user->id);
         Audit::log($request, 'email_verified', $user->id);

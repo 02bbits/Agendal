@@ -85,10 +85,15 @@ it('2. GET /auth/signup returns email, right code creates verified user and audi
     $verifyRes = $this->withCookies($cookies)->postJson('/api/v1/auth/signup/verify', [
         'code' => $capturedCode,
     ])->assertOk();
-    $cookies = carryCookies($verifyRes) + $cookies;
+    $signedIn = carryCookies($verifyRes);
+    $cookies = $signedIn + $cookies;
+
+    // Sign-up has no Remember me tick: no remember cookie and no remember token (AA §2.8)
+    expect(collect(array_keys($signedIn))->filter(fn ($name) => str_starts_with($name, 'remember_web'))->all())->toBe([]);
 
     $user = User::sole();
-    expect($user->email)->toBe('verified@example.com')
+    expect($user->getRememberToken())->toBeEmpty()
+        ->and($user->email)->toBe('verified@example.com')
         ->and($user->display_name)->toBe('verified')
         ->and($user->timezone)->toBe('Asia/Ho_Chi_Minh')
         ->and($user->email_verified_at)->not->toBeNull()

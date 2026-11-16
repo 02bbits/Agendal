@@ -49,11 +49,11 @@ describe("SetupScreen (issue #149 D)", () => {
     expect(nextBtn.disabled).toBe(true);
     expect(screen.getByText("Use at least 3 characters.")).toBeTruthy();
 
-    // Too long name (> 30 chars)
+    // The field stops at 30: a 31st character is not taken, so the name stays valid
     await user.clear(nameInput);
     await user.type(nameInput, "A".repeat(31));
-    expect(nextBtn.disabled).toBe(true);
-    expect(screen.getByText("Use 30 characters or fewer.")).toBeTruthy();
+    expect((nameInput as HTMLInputElement).value).toBe("A".repeat(30));
+    expect(nextBtn.disabled).toBe(false);
 
     // Angle brackets are refused
     await user.clear(nameInput);
@@ -90,7 +90,7 @@ describe("SetupScreen (issue #149 D)", () => {
     // Step 2: Dates and times
     expect(screen.getByText("Week starts on")).toBeTruthy();
     expect(screen.getByText("Time format")).toBeTruthy();
-    expect(screen.getByText("Time zone")).toBeTruthy();
+    expect(screen.queryByText("Time zone")).toBeNull();
 
     // Change to 12-hour format and Sunday
     await user.click(screen.getByRole("radio", { name: "Sunday" }));
@@ -116,7 +116,6 @@ describe("SetupScreen (issue #149 D)", () => {
       display_name: "Jordan",
       week_start: "sun",
       time_format: "12h",
-      timezone_auto: true,
       two_factor_enabled: false,
     });
   });
@@ -147,12 +146,11 @@ describe("SetupScreen (issue #149 D)", () => {
       display_name: "Taylor",
       week_start: "mon",
       time_format: "24h",
-      timezone_auto: true,
       two_factor_enabled: true,
     });
   });
 
-  it("auto-picks timezone from device and displays it read-only in step 2", async () => {
+  it("has no time zone row, and Finish sends no time zone", async () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onContinue = vi.fn().mockResolvedValue(undefined);
 
@@ -161,8 +159,8 @@ describe("SetupScreen (issue #149 D)", () => {
     // Advance to step 2
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    // Time zone row is present but has no "Change" button
-    expect(screen.getByText("Time zone")).toBeDefined();
+    // Settings picks the time zone; Setup neither shows nor changes it
+    expect(screen.queryByText("Time zone")).toBeNull();
     expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 
     // Advance to step 3
@@ -175,9 +173,30 @@ describe("SetupScreen (issue #149 D)", () => {
       display_name: "Sam",
       week_start: "mon",
       time_format: "24h",
-      timezone_auto: true,
       two_factor_enabled: false,
     });
+    expect(onContinue.mock.calls[0][0]).not.toHaveProperty("timezone_auto");
+    expect(onContinue.mock.calls[0][0]).not.toHaveProperty("timezone");
+  });
+
+  it("the name takes at most 30 characters, counted like the rule (an emoji is one)", async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    render(<SetupScreen initialName="" />);
+
+    const field = screen.getByLabelText(
+      "What should we call you?",
+    ) as HTMLInputElement;
+    await user.click(field);
+    await user.paste("x".repeat(45));
+    expect(field.value).toBe("x".repeat(30));
+
+    await user.clear(field);
+    await user.paste("😀".repeat(40));
+    expect([...field.value]).toHaveLength(30);
+    expect(
+      (screen.getByRole("button", { name: "Continue" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
   });
 
   it("Skip sends nothing and calls onSkip", async () => {

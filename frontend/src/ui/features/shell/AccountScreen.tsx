@@ -45,7 +45,7 @@ import { SelectDropdown } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
 import { Dialog } from "../../components/Dialog";
 import { PasswordField } from "../auth/PasswordField";
-import { displayNameError } from "../auth/validation";
+import { displayNameError, limitDisplayName } from "../auth/validation";
 import { api } from "../../../lib/api";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import { runThemeTransition } from "../../domain/themeTransition";
@@ -608,9 +608,8 @@ export function AccountScreen({
             <input
               type="text"
               value={displayName}
-              maxLength={60}
               onChange={(e) => {
-                setDisplayName(e.target.value);
+                setDisplayName(limitDisplayName(e.target.value));
                 setNameError(undefined);
               }}
               onBlur={handleNameBlur}

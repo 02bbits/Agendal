@@ -46,6 +46,14 @@ export function hasNonKeyboardCharacters(value: string): boolean {
 }
 
 /**
+ * What a name field keeps while typing: the first 30 characters, counted as the rule counts them
+ * (a letter or an emoji is one), so a longer paste is cut instead of refused.
+ */
+export function limitDisplayName(value: string): string {
+  return [...value].slice(0, 30).join("");
+}
+
+/**
  * A display name (Setup, Settings): 3 to 30 characters once trimmed, with no control, invisible
  * or text-direction characters and no angle brackets. The server checks the same (MeController).
  * The emoji joiner (U+200D) stays allowed.

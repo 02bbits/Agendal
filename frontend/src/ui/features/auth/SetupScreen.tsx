@@ -23,23 +23,11 @@ import type { TimeFormat, WeekStart } from "../../domain/types";
 import { ROUTES } from "../shell/routes";
 import { AuthLayout } from "./AuthLayout";
 import type { SetupPayload, SetupScreenProps } from "./setupTypes";
-import { displayNameError } from "./validation";
+import { displayNameError, limitDisplayName } from "./validation";
 
 export type { SetupPayload, SetupScreenProps };
 
 const noSubscribe = () => () => {};
-
-function getUtcOffset(zone: string, date: Date = now()): string {
-  try {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: zone,
-      timeZoneName: "shortOffset",
-    }).formatToParts(date);
-    const tzPart = parts.find((p) => p.type === "timeZoneName");
-    if (tzPart?.value) return tzPart.value;
-  } catch {}
-  return "";
-}
 
 export function SetupScreen({
   initialName = "",
@@ -83,8 +71,6 @@ export function SetupScreen({
     () => false,
   );
   const currentZone = mounted ? getDeviceTimeZone() : "UTC";
-  const offset = mounted ? getUtcOffset(currentZone) : "";
-  const displayZoneText = offset ? `${currentZone} · ${offset}` : currentZone;
 
   const formattedExample = mounted
     ? formatTime(localTime(currentZone, now()), timeFormat)
@@ -99,7 +85,6 @@ export function SetupScreen({
       week_start: weekStart,
       time_format: timeFormat,
       two_factor_enabled: twoFactor,
-      timezone_auto: true,
     };
 
     try {
@@ -114,7 +99,6 @@ export function SetupScreen({
         display_name: payload.display_name,
         week_start: payload.week_start,
         time_format: payload.time_format,
-        timezone_auto: true,
       };
 
       const res = await api("/me", {
@@ -148,7 +132,6 @@ export function SetupScreen({
       changeSettings?.({
         weekStart: payload.week_start,
         timeFormat: payload.time_format,
-        timezoneAuto: true,
       });
 
       showToast?.(t("auth.welcome"));
@@ -230,9 +213,8 @@ export function SetupScreen({
               <TextField
                 label={t("setup.name_label")}
                 value={name}
-                maxLength={60}
                 onChange={(e) => {
-                  setName(e.target.value);
+                  setName(limitDisplayName(e.target.value));
                   setNameTouched(true);
                 }}
                 onKeyDown={(e) => {
@@ -296,18 +278,6 @@ export function SetupScreen({
                       { value: "12h", label: t("app.time_12h") },
                     ]}
                   />
-                </div>
-
-                {/* Row 3: Time zone */}
-                <div className="flex min-h-14 items-center justify-between gap-3 px-4 py-2.5">
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <span className="text-body text-ink">
-                      {t("setup.time_zone")}
-                    </span>
-                    <span className="text-footnote text-ink-secondary truncate">
-                      {displayZoneText}
-                    </span>
-                  </div>
                 </div>
               </div>
             </div>

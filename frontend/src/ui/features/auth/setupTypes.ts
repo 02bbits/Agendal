@@ -6,8 +6,6 @@ export interface SetupPayload {
   display_name?: string;
   week_start: WeekStart;
   time_format: TimeFormat;
-  timezone?: string;
-  timezone_auto?: boolean;
   two_factor_enabled?: boolean;
 }
 
@@ -15,7 +13,6 @@ export interface SetupScreenProps {
   initialName?: string;
   initialWeekStart?: WeekStart;
   initialTimeFormat?: TimeFormat;
-  initialTimeZone?: string;
   onContinue?: (values: SetupPayload) => Promise<void> | void;
   onSkip?: () => void;
   navigate?: Navigate;
