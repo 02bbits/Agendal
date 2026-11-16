@@ -739,7 +739,7 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     await open();
 
     // As on the task row, a low priority goes unsaid and a raised one shows
-    const priorityText = (level: string) =>
+    const priorityText = (level: "low" | "high") =>
       new RegExp(`(?:^|· )${t(`priority.${level}`)}(?: ·|$)`);
     expect(screen.queryByText(priorityText("low"))).toBeNull();
 
