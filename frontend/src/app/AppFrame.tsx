@@ -37,7 +37,7 @@ import {
   type ToastData,
 } from "@/ui";
 import { cx } from "@/ui/components/cx";
-import { api, SESSION_EXPIRED } from "@/lib/api";
+import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { CONFLICT, forgetConflicts } from "@/lib/conflicts";
 import { readMe, saveMe } from "@/lib/localStore";
@@ -66,6 +66,7 @@ export interface SignedInUser {
   id: number;
   email: string;
   display_name: string | null;
+  email_verified_at?: string | null;
   theme?: AccountSettings["theme"];
   week_start?: AccountSettings["weekStart"];
   time_format?: AccountSettings["timeFormat"];
@@ -73,6 +74,8 @@ export interface SignedInUser {
   theme_palette?: string;
   page_view?: "flat" | "full";
   timezone?: string;
+  timezone_auto?: boolean;
+  two_factor_enabled?: boolean;
 }
 
 // The settings as `PATCH /me` names them
@@ -84,6 +87,7 @@ const SETTING_FIELDS = {
   pageView: "page_view",
   palette: "theme_palette",
   timezone: "timezone",
+  timezoneAuto: "timezone_auto",
 } as const;
 
 const THEME_KEY = "agendal.theme";
@@ -98,6 +102,7 @@ const SIGNED_OUT_PATHS: readonly string[] = [
   ROUTES.signIn,
   ROUTES.createAccount,
   ROUTES.forgotPassword,
+  ROUTES.verify,
 ];
 const PUBLIC_PATHS: readonly string[] = [
   ...SIGNED_OUT_PATHS,
@@ -129,10 +134,12 @@ const DEFAULT_SETTINGS: AccountSettings = {
   rememberDevice: true,
   pageView: "flat",
   palette: "default",
-  timezone: undefined,
+  timezone: "UTC",
   timezoneAuto: true,
 };
 
+// The server's value wins. Only an answer without the field (an older API) falls back to this
+// device's copy, which sign-out and a different account wipe
 const storedPageView = (): AccountSettings["pageView"] => {
   try {
     return localStorage.getItem(PAGE_VIEW_KEY) === "full" ? "full" : "flat";
@@ -159,8 +166,11 @@ const storedTimezoneAuto = (): boolean => {
 };
 
 const settingsOf = (me: SignedInUser): AccountSettings => {
-  const isAuto = storedTimezoneAuto();
-  const effectiveTz = isAuto ? undefined : (storedTimezone() ?? me.timezone);
+  const isAuto =
+    me.timezone_auto ?? storedTimezoneAuto() ?? DEFAULT_SETTINGS.timezoneAuto;
+  const effectiveTz = isAuto
+    ? undefined
+    : (me.timezone ?? storedTimezone() ?? DEFAULT_SETTINGS.timezone);
   setTimeZone(effectiveTz);
 
   return {
@@ -170,7 +180,7 @@ const settingsOf = (me: SignedInUser): AccountSettings => {
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
     pageView: me.page_view ?? storedPageView(),
     palette: me.theme_palette ?? "default",
-    timezone: effectiveTz,
+    timezone: me.timezone ?? storedTimezone() ?? DEFAULT_SETTINGS.timezone,
     timezoneAuto: isAuto,
   };
 };
@@ -201,6 +211,8 @@ interface AppFrameValue {
   };
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
+  /** Sets or updates the signed-in user in AppFrame state. */
+  setUser: (user: SignedInUser | null) => void;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */
   signOut: (everywhere?: boolean) => Promise<void>;
 }
@@ -225,6 +237,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(
+        PAGE_VIEW_KEY,
+      ) as AccountSettings["pageView"];
+      if (saved === "flat" || saved === "full") {
+        queueMicrotask(() => {
+          setSettings((prev) =>
+            prev.pageView === saved ? prev : { ...prev, pageView: saved },
+          );
+        });
+      }
+    } catch {}
+  }, []);
+
   // The page view on <html> follows the settings. Before anything is read, /theme.js has already
   // set the saved one and the defaults would undo it (sign-out sets "flat" itself)
   useEffect(() => {
@@ -236,7 +263,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     try {
       localStorage.setItem(PAGE_VIEW_KEY, settings.pageView ?? "flat");
     } catch {}
-  }, [settings.pageView, settings]);
+  }, [settings]);
 
   useEffect(() => {
     if (pathname === ROUTES.account) {
@@ -245,6 +272,18 @@ export function AppFrame({ children }: { children: ReactNode }) {
       document.documentElement.removeAttribute("data-account-page");
     }
   }, [pathname]);
+
+  const isAuthPage =
+    PUBLIC_PATHS.includes(pathname) ||
+    pathname === ROUTES.welcome ||
+    pathname === ROUTES.verify;
+  useEffect(() => {
+    if (isAuthPage) {
+      document.documentElement.setAttribute("data-auth-page", "true");
+    } else {
+      document.documentElement.removeAttribute("data-auth-page");
+    }
+  }, [isAuthPage]);
   // Read by the session-expired handler, which mustn't wait for a render
   const userRef = useRef<SignedInUser | null>(null);
   const setUser = useCallback((next: SignedInUser | null) => {
@@ -279,7 +318,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
           setUser(me);
           if (settingsEdits.current === editsBefore)
             setSettings(settingsOf(me));
-          if (signedOutPage) router.replace(ROUTES.inbox);
+          if (me.email_verified_at === null) {
+            if (pathname !== ROUTES.verify) router.replace(ROUTES.verify);
+          } else {
+            if (pathname === ROUTES.verify) router.replace(ROUTES.inbox);
+            else if (signedOutPage) router.replace(ROUTES.inbox);
+          }
         } else if (response.status === 401) {
           setUser(null);
           if (!publicPage)
@@ -293,6 +337,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
       current = false;
     };
   }, [pathname, router, setUser]);
+
+  // An unverified account can only stay on /verify. The way out of /verify for a verified user is
+  // the session check above, so a code accepted on /verify can still open Setup, not Inbox
+  useEffect(() => {
+    if (user?.email_verified_at === null && pathname !== ROUTES.verify)
+      router.replace(ROUTES.verify);
+  }, [user, pathname, router]);
+
+  // A 403 with code auth.email_unverified from any API call replaces to /verify
+  useEffect(() => {
+    const unverified = () => {
+      if (pathname !== ROUTES.verify) {
+        router.replace(ROUTES.verify);
+      }
+    };
+    window.addEventListener(EMAIL_UNVERIFIED, unverified);
+    return () => window.removeEventListener(EMAIL_UNVERIFIED, unverified);
+  }, [pathname, router]);
 
   // Back goes to the previous screen, but a deep link has none inside the app: then it goes to
   // that tab's root instead of out of the app (AP §2.4)
@@ -341,12 +403,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
   const openSettings = useCallback(
     (tab?: SettingsTab) => {
-      if (pathname !== ROUTES.account) {
+      if (pathname === ROUTES.account) {
+        router.replace(ROUTES.inbox);
+      } else {
         setSettingsTab(tab);
         setSettingsOpen(true);
       }
     },
-    [pathname],
+    [pathname, router],
   );
   const closeSettings = useCallback(() => {
     setSettingsOpen(false);
@@ -414,15 +478,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
           before[key as keyof AccountSettings],
         ]),
       );
+      if (patch.timezone && patch.timezoneAuto === undefined) {
+        patch.timezoneAuto = false;
+      }
       settingsRef.current = { ...before, ...patch };
       setSettings(settingsRef.current);
       if (patch.pageView && typeof window !== "undefined") {
         try {
           localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
-          document.documentElement.setAttribute(
-            "data-page-view",
-            patch.pageView,
-          );
         } catch {}
       }
       if (typeof window !== "undefined") {
@@ -463,7 +526,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
         body: JSON.stringify(body),
       })
         .then((response) => {
-          if (response.ok || response.status === 401) return;
+          if (response.ok || response.status === 401) {
+            if (response.ok && userRef.current) {
+              void saveMe({ ...userRef.current, ...body });
+            }
+            return;
+          }
           settingsRef.current = { ...settingsRef.current, ...revert };
           setSettings(settingsRef.current);
           showToast(t("error.generic", { request_id: "" }));
@@ -553,8 +621,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
       ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
     try {
       localStorage.setItem(THEME_KEY, settings.theme);
-      const palette = localStorage.getItem("agendal.theme_palette");
-      if (palette) applyThemePalette(palette);
     } catch {
       // Private mode: the theme just flashes on the next load
     }
@@ -613,6 +679,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     }),
     [
@@ -628,6 +695,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      setUser,
       signOut,
     ],
   );
@@ -828,7 +896,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
         onOpenSearch={handleOpenSearch}
         capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
         sidebar={
-          PUBLIC_PATHS.includes(pathname)
+          PUBLIC_PATHS.includes(pathname) ||
+          pathname === ROUTES.welcome ||
+          pathname === ROUTES.verify
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
@@ -855,6 +925,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
             settings={settings}
             onChange={changeSettings}
             onBack={closeSettings}
+            showToast={showToast}
+            twoFactorEnabled={user?.two_factor_enabled}
+            onTwoFactorChange={(enabled) =>
+              setUser(user ? { ...user, two_factor_enabled: enabled } : null)
+            }
             onSignOut={() => {
               closeSettings();
               signOut();

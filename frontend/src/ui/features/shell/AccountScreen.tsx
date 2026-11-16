@@ -11,11 +11,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { t, type CopyKey } from "../../copy";
+import { formatWait } from "../auth/CodeEntry";
 import { Button } from "../../components/Button";
 import { cx } from "../../components/cx";
 import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
 import {
   ArrowDownIcon,
+  ArrowLeftIcon,
   ArrowUpIcon,
   BellIcon,
   CalendarIcon,
@@ -26,6 +28,7 @@ import {
   FolderIcon,
   GripVerticalIcon,
   InboxIcon,
+  LockIcon,
   NotesIcon,
   PaletteIcon,
   RotateCcwIcon,
@@ -42,11 +45,15 @@ import {
   type SelectOption,
 } from "../../components/SelectDropdown";
 import { Switch } from "../../components/Switch";
-import { displayNameError } from "../auth/validation";
+import { Dialog } from "../../components/Dialog";
+import { PasswordField } from "../auth/PasswordField";
+import { displayNameError, limitDisplayName } from "../auth/validation";
+import { api } from "../../../lib/api";
 import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import { runThemeTransition } from "../../domain/themeTransition";
 import type { TimeFormat, WeekStart } from "../../domain/types";
 import { timeZone as getDeviceTimeZone } from "../../../lib/clock";
+import { ChangePassword } from "./ChangePassword";
 import {
   DEFAULT_SIDEBAR_TABS_ORDER,
   getStoredSidebarTabs,
@@ -152,6 +159,8 @@ export interface AccountScreenProps {
   onUpdateName?: { (name: string): Promise<void> };
   portal?: boolean;
   showToast?: (message: string) => void;
+  twoFactorEnabled?: boolean;
+  onTwoFactorChange?: (enabled: boolean) => void;
 }
 
 const noSubscribe = () => () => {};
@@ -182,6 +191,9 @@ export function AccountScreen({
   initialTab = "general",
   onUpdateName,
   portal = false,
+  showToast,
+  twoFactorEnabled: propsTwoFactorEnabled,
+  onTwoFactorChange,
 }: AccountScreenProps): ReactElement | null {
   const mounted = useSyncExternalStore(noSubscribe, inBrowser, onServer);
 
@@ -192,6 +204,108 @@ export function AccountScreen({
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [phoneView, setPhoneView] = useState<"list" | SettingsTab>("list");
   const detailHistoryPushed = useRef(false);
+
+  const [prevPropsTwoFactor, setPrevPropsTwoFactor] = useState(
+    propsTwoFactorEnabled,
+  );
+  const [twoFactorEnabled, setTwoFactorEnabled] = useState(
+    propsTwoFactorEnabled ?? false,
+  );
+  if (propsTwoFactorEnabled !== prevPropsTwoFactor) {
+    setPrevPropsTwoFactor(propsTwoFactorEnabled);
+    if (propsTwoFactorEnabled !== undefined) {
+      setTwoFactorEnabled(propsTwoFactorEnabled);
+    }
+  }
+  const [twoFactorBusy, setTwoFactorBusy] = useState(false);
+  const [twoFactorOffOpen, setTwoFactorOffOpen] = useState(false);
+  const [twoFactorPassword, setTwoFactorPassword] = useState("");
+  const [twoFactorOffError, setTwoFactorOffError] = useState<string | null>(
+    null,
+  );
+  const [twoFactorOffBusy, setTwoFactorOffBusy] = useState(false);
+  const twoFactorPasswordRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let active = true;
+    api("/me")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (active && data && typeof data.two_factor_enabled === "boolean") {
+          setTwoFactorEnabled(data.two_factor_enabled);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const handleToggleTwoFactor = async (newVal: boolean) => {
+    if (twoFactorBusy) return;
+    if (newVal) {
+      setTwoFactorBusy(true);
+      try {
+        const res = await api("/auth/two-factor", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: true }),
+        });
+        if (res.ok) {
+          setTwoFactorEnabled(true);
+          onTwoFactorChange?.(true);
+          showToast?.(t("settings.two_factor_on_toast"));
+        }
+      } catch {
+      } finally {
+        setTwoFactorBusy(false);
+      }
+    } else {
+      setTwoFactorPassword("");
+      setTwoFactorOffError(null);
+      setTwoFactorOffOpen(true);
+    }
+  };
+
+  const handleConfirmTwoFactorOff = async () => {
+    if (twoFactorOffBusy) return;
+    setTwoFactorOffBusy(true);
+    setTwoFactorOffError(null);
+    try {
+      const res = await api("/auth/two-factor", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          enabled: false,
+          current_password: twoFactorPassword,
+        }),
+      });
+      if (res.ok) {
+        setTwoFactorEnabled(false);
+        onTwoFactorChange?.(false);
+        setTwoFactorOffOpen(false);
+        showToast?.(t("settings.two_factor_off_toast"));
+      } else {
+        const body = await res.json().catch(() => null);
+        const errMsg =
+          res.status === 429
+            ? t("auth.current_password_locked", {
+                time: formatWait(Number(body?.error?.retry_after) || 60),
+              })
+            : (body?.error?.fields?.current_password?.[0] ??
+              body?.errors?.current_password?.[0] ??
+              body?.error?.message ??
+              body?.message ??
+              t("auth.current_password_wrong"));
+        setTwoFactorOffError(errMsg);
+        twoFactorPasswordRef.current?.focus();
+      }
+    } catch {
+      setTwoFactorOffError(t("error.generic"));
+    } finally {
+      setTwoFactorOffBusy(false);
+    }
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [prevName, setPrevName] = useState(name);
@@ -212,6 +326,7 @@ export function AccountScreen({
       return "inbox";
     }
   });
+  const [subView, setSubView] = useState<"change_password" | null>(null);
   const [dateFormat, setDateFormat] = useState(() => {
     try {
       return typeof localStorage !== "undefined"
@@ -394,7 +509,6 @@ export function AccountScreen({
       }
     };
   }, []);
-
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const modalRef = useRef<HTMLDivElement>(null);
 
@@ -403,7 +517,9 @@ export function AccountScreen({
   useEffect(() => {
     const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (!isDesktop && phoneView !== "list") {
+        if (subView === "change_password") {
+          setSubView(null);
+        } else if (!isDesktop && phoneView !== "list") {
           backToList();
         } else {
           handleClose();
@@ -412,7 +528,7 @@ export function AccountScreen({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isDesktop, phoneView, handleClose, backToList]);
+  }, [subView, isDesktop, phoneView, handleClose, backToList]);
 
   const deviceZone = getDeviceTimeZone();
   const timeZoneOptions = useMemo(() => {
@@ -548,7 +664,9 @@ export function AccountScreen({
   });
 
   const renderTabContent = (activeTab: SettingsTab) => {
-    return (
+    return subView === "change_password" ? (
+      <ChangePassword email={email} onBack={() => setSubView(null)} />
+    ) : (
       <>
         {/* TAB: ACCOUNT */}
         <div
@@ -616,9 +734,8 @@ export function AccountScreen({
             <input
               type="text"
               value={displayName}
-              maxLength={60}
               onChange={(e) => {
-                setDisplayName(e.target.value);
+                setDisplayName(limitDisplayName(e.target.value));
                 setNameError(undefined);
               }}
               onBlur={handleNameBlur}
@@ -662,11 +779,34 @@ export function AccountScreen({
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
               {t("settings.password_heading")}
             </h2>
-            <Button variant="secondary" size="sm" className="rounded-lg">
-              {t("settings.add_password")}
+            <Button
+              variant="secondary"
+              size="sm"
+              className="rounded-lg"
+              onClick={() => {
+                setTab("account");
+                setSubView("change_password");
+              }}
+            >
+              {t("settings.change_password")}
             </Button>
           </section>
 
+          {/* Two-step verification */}
+          <section className="border-t border-separator/40 pt-4">
+            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
+              {t("settings.two_factor_heading")}
+            </h2>
+            <Switch
+              icon={<LockIcon size={20} />}
+              label={t("settings.two_factor_label")}
+              checked={twoFactorEnabled}
+              disabled={twoFactorBusy}
+              onChange={handleToggleTwoFactor}
+              divider={false}
+              className="py-0"
+            />
+          </section>
           {/* Connected accounts */}
           <section className="border-t border-separator/40 pt-4">
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
@@ -1106,6 +1246,7 @@ export function AccountScreen({
           </section>
         </div>
 
+
         {/* TAB: NOTIFICATIONS */}
         {activeTab === "notifications" && (
           <div
@@ -1471,6 +1612,7 @@ export function AccountScreen({
             </section>
           </div>
         )}
+
       </>
     );
   };
@@ -1539,6 +1681,7 @@ export function AccountScreen({
                       tabIndex={checked ? 0 : -1}
                       onClick={() => {
                         setTab(item.id);
+                        setSubView(null);
                       }}
                       onKeyDown={(e) => onTabKeyDown(e, index)}
                       className={cx(
@@ -1576,9 +1719,25 @@ export function AccountScreen({
           <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
             {/* Header Bar */}
             <div className="flex h-14 items-center justify-between border-b border-separator/40 px-6 sm:px-8 shrink-0">
-              <span className="text-body sm:text-heading font-bold text-ink">
-                {currentTabObj?.label ?? t("settings.title")}
-              </span>
+              {subView === "change_password" ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSubView(null)}
+                    aria-label={t("common.back")}
+                    className="focus-ring cursor-pointer rounded-lg p-1.5 text-ink-tertiary hover:bg-fill hover:text-ink transition-colors"
+                  >
+                    <ArrowLeftIcon size={20} />
+                  </button>
+                  <span className="text-body sm:text-heading font-bold text-ink">
+                    {t("settings.change_password")}
+                  </span>
+                </div>
+              ) : (
+                <span className="text-body sm:text-heading font-bold text-ink">
+                  {currentTabObj?.label ?? t("settings.title")}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={handleClose}
@@ -1810,5 +1969,58 @@ export function AccountScreen({
       ? createPortal(modal, document.body)
       : modal;
 
-  return renderedModal;
+  return (
+    <>
+      {renderedModal}
+      <Dialog
+        open={twoFactorOffOpen}
+        title={t("settings.two_factor_off_title")}
+        onClose={() => {
+          if (!twoFactorOffBusy) {
+            setTwoFactorOffOpen(false);
+          }
+        }}
+        initialFocusRef={twoFactorPasswordRef}
+        history={false}
+        actions={
+          <>
+            <Button
+              variant="destructive"
+              disabled={twoFactorOffBusy}
+              onClick={handleConfirmTwoFactorOff}
+            >
+              {t("settings.two_factor_off_confirm")}
+            </Button>
+            <Button
+              variant="secondary"
+              disabled={twoFactorOffBusy}
+              onClick={() => setTwoFactorOffOpen(false)}
+            >
+              {t("common.cancel")}
+            </Button>
+          </>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleConfirmTwoFactorOff();
+          }}
+          className="mt-2"
+        >
+          <PasswordField
+            ref={twoFactorPasswordRef}
+            label={t("settings.current_password")}
+            autoComplete="current-password"
+            value={twoFactorPassword}
+            onChange={(e) => {
+              setTwoFactorPassword(e.target.value);
+              if (twoFactorOffError) setTwoFactorOffError(null);
+            }}
+            error={twoFactorOffError ?? undefined}
+          />
+        </form>
+      </Dialog>
+    </>
+  );
 }

@@ -46,6 +46,12 @@ export {
 } from "./components/Segmented";
 export { Switch, type SwitchProps } from "./components/Switch";
 export {
+  Stepper,
+  Step,
+  type StepperProps,
+  type StepProps,
+} from "./components/Stepper";
+export {
   SelectDropdown,
   type SelectDropdownProps,
   type SelectOption,
