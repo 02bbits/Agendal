@@ -65,7 +65,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3 Reset password (AA-4)
 
-1. **Request:** enter an email, then always see `auth.reset_sent` with the hint `auth.reset_sent_hint` ("After you set a new password, sign in with it.") and a link back to Sign in. Resend unlocks after 45 s, with a countdown. This screen never learns that the link was used, on this or any other device.
+1. **Request:** enter an email, then always see `auth.reset_sent` with the address in bold, and a link back to Sign in. The subtitle (`auth.reset_subtitle`) is only on the form, not on this screen, and there is no other hint line. Resend unlocks after 45 s, with a countdown. This screen never learns that the link was used, on this or any other device.
 2. **Email:** the link is `https://…/reset#token=…` (the token is in the fragment, so it never reaches server logs or a `Referer`). It expires in 60 minutes and works once.
 3. **Set new password:**
    - The page reads the token, then removes it from the address bar with `history.replaceState`.

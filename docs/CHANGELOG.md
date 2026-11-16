@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-16
 
+- **Reset request screen trimmed (Refs #149).** [AA §2.3](03-modules/AA-account-access.md#23-reset-password-aa-4): once the link is sent, the screen drops the subtitle and the `auth.reset_sent_hint` line (the key is removed from `pending.ts`) and sets the email address in bold inside `auth.reset_sent`.
 - **Create account counts accounts, not presses (Refs #149).** [AA §2.1](03-modules/AA-account-access.md#21-create-account-aa-1), [NF-13](05-quality/nfr.md#rate-limits-nf-13): the limit was 5 requests an hour per IP, so a few presses of the button locked sign-up for an hour. It is now 5 different emails an hour per IP (`auth.signup_limited`, new copy in `pending.ts`) plus 30 presses per 10 minutes per IP. Pressing again for the email already waiting, within 60 s, sends no new code and keeps the newest password.
 
 ## 2026-11-15
