@@ -19,12 +19,10 @@ import {
   ArrowDownIcon,
   ArrowLeftIcon,
   ArrowUpIcon,
-  BellIcon,
   CalendarIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  ClockIcon,
   FolderIcon,
   GripVerticalIcon,
   InboxIcon,
@@ -35,7 +33,6 @@ import {
   SearchIcon,
   SidebarIcon,
   SlidersIcon,
-  TrashIcon,
   UserIcon,
   XIcon,
 } from "../../components/icons";
@@ -69,8 +66,7 @@ import { useSortableList } from "./useSortableList";
 export type ThemeSetting = "system" | "light" | "dark";
 export type PageViewMode = "flat" | "full";
 
-export type SettingsTab =
-  "account" | "general" | "theme" | "sidebar" | "reminders" | "notifications";
+export type SettingsTab = "account" | "general" | "theme" | "sidebar";
 
 type TzOption = SelectOption<string>;
 
@@ -122,20 +118,6 @@ const POPULAR_TIMEZONES = [
   { value: "Pacific/Auckland", label: "Auckland (NZST)" },
 ] as const;
 
-const COMING_SOON_TIMEZONES = [
-  { value: "Pacific/Honolulu", label: "Honolulu (HST)" },
-  { value: "America/Anchorage", label: "Anchorage (AKST)" },
-  { value: "America/Buenos_Aires", label: "Buenos Aires (ART)" },
-  { value: "America/Santiago", label: "Santiago (CLT)" },
-  { value: "Atlantic/Reykjavik", label: "Reykjavik (GMT)" },
-  { value: "Europe/Athens", label: "Athens (EET)" },
-  { value: "Africa/Cairo", label: "Cairo (EEST)" },
-  { value: "Africa/Johannesburg", label: "Johannesburg (SAST)" },
-  { value: "Africa/Nairobi", label: "Nairobi (EAT)" },
-  { value: "Asia/Tehran", label: "Tehran (IRST)" },
-  { value: "Pacific/Fiji", label: "Fiji (FJT)" },
-] as const;
-
 export interface AccountScreenProps {
   name: string;
   email: string;
@@ -148,13 +130,6 @@ export interface AccountScreenProps {
   onSignOutEverywhere?: () => void;
   /** Shown when the app can be installed (AP-1). */
   onInstall?: () => void;
-  /** Reminders permission state text, e.g. "Allowed" (TK-6, Should). */
-  remindersStatus?: string;
-  notificationSupported?: boolean;
-  notificationPermission?: NotificationPermission;
-  vapidConfigured?: boolean | null;
-  onEnableNotifications?: () => void;
-  onSendTestNotification?: () => void;
   initialTab?: SettingsTab;
   onUpdateName?: { (name: string): Promise<void> };
   portal?: boolean;
@@ -182,12 +157,6 @@ export function AccountScreen({
   onSignOut,
   onSignOutEverywhere,
   onInstall,
-  remindersStatus,
-  notificationSupported = true,
-  notificationPermission = "default",
-  vapidConfigured = null,
-  onEnableNotifications,
-  onSendTestNotification,
   initialTab = "general",
   onUpdateName,
   portal = false,
@@ -316,7 +285,6 @@ export function AccountScreen({
     setPrevName(name);
     setDisplayName(name);
   }
-  const [language, setLanguage] = useState("en");
   const [homeView, setHomeView] = useState(() => {
     try {
       return typeof localStorage !== "undefined"
@@ -336,26 +304,6 @@ export function AccountScreen({
       return "DD-MM-YYYY";
     }
   });
-  const [nextWeekDay, setNextWeekDay] = useState(() => {
-    try {
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.next_week_day") || "mon"
-        : "mon";
-    } catch {
-      return "mon";
-    }
-  });
-  const [weekendDay, setWeekendDay] = useState(() => {
-    try {
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.weekend_day") || "sat"
-        : "sat";
-    } catch {
-      return "sat";
-    }
-  });
-  const [smartDateRecognition, setSmartDateRecognition] = useState(true);
-  const [syncTheme, setSyncTheme] = useState(true);
   const [showTaskCounts, setShowTaskCounts] = useState(() => {
     try {
       return typeof localStorage !== "undefined"
@@ -440,6 +388,10 @@ export function AccountScreen({
   };
 
   const openDetail = (tabId: SettingsTab) => {
+    if (!isDesktop && tabId === "sidebar") {
+      setPhoneView("list");
+      return;
+    }
     setTab(tabId);
     setPhoneView(tabId);
     if (typeof window !== "undefined") {
@@ -569,16 +521,7 @@ export function AccountScreen({
       });
     });
 
-    const otherOptions: TzOption[] = COMING_SOON_TIMEZONES.filter(
-      (tz) => !popularSet.has(tz.value),
-    ).map((tz) => ({
-      value: tz.value,
-      label: tz.label,
-      disabled: true,
-      badge: t("settings.coming_soon"),
-    }));
-
-    return [...activeOptions, ...otherOptions];
+    return activeOptions;
   }, [deviceZone, settings.timezone]);
 
   const allTabs: Array<{
@@ -591,13 +534,13 @@ export function AccountScreen({
       id: "account",
       label: t("settings.tab_account"),
       icon: <UserIcon size={17} />,
-      keywords: "account name email photo plan password beginner",
+      keywords: "account name email password two-step remember device",
     },
     {
       id: "general",
       label: t("app.tab_general"),
       icon: <SlidersIcon size={17} />,
-      keywords: "general time format week start page view device sign out",
+      keywords: "general time format week start page view",
     },
     {
       id: "theme",
@@ -611,28 +554,20 @@ export function AccountScreen({
       icon: <SidebarIcon size={17} />,
       keywords: "sidebar navigation projects tabs counts",
     },
-    {
-      id: "reminders",
-      label: t("settings.tab_reminders"),
-      icon: <ClockIcon size={17} />,
-      keywords: "reminders notifications alarm alert due schedule",
-    },
-    {
-      id: "notifications",
-      label: t("app.tab_notifications"),
-      icon: <BellIcon size={17} />,
-      keywords: "notifications push browser permission vapid alert",
-    },
   ];
 
   const query = searchQuery.trim().toLowerCase();
+  // Sidebar settings only change the desktop sidebar, so phones don't list them
+  const deviceTabs = isDesktop
+    ? allTabs
+    : allTabs.filter((tItem) => tItem.id !== "sidebar");
   const visibleTabs = query
-    ? allTabs.filter(
+    ? deviceTabs.filter(
         (tItem) =>
           tItem.label.toLowerCase().includes(query) ||
           tItem.keywords.toLowerCase().includes(query),
       )
-    : allTabs;
+    : deviceTabs;
 
   const onTabKeyDown = (event: KeyboardEvent, index: number) => {
     const step =
@@ -658,7 +593,10 @@ export function AccountScreen({
     }
   };
 
-  const activeTabId = !isDesktop && phoneView !== "list" ? phoneView : tab;
+  const activePhoneView =
+    !isDesktop && phoneView === "sidebar" ? "list" : phoneView;
+  const activeTabId =
+    !isDesktop && activePhoneView !== "list" ? activePhoneView : tab;
   const currentTabObj = allTabs.find(function isCurrent(tItem) {
     return tItem.id === activeTabId;
   });
@@ -679,52 +617,6 @@ export function AccountScreen({
                 : "hidden",
           )}
         >
-          {/* Plan */}
-          <section>
-            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
-              {t("settings.plan_heading")}
-            </h2>
-            <div className="flex items-center justify-between py-1">
-              <span className="text-body font-semibold text-ink">
-                {t("settings.plan_beginner")}
-              </span>
-              <Button variant="secondary" size="sm" className="rounded-lg">
-                {t("settings.manage_plan")}
-              </Button>
-            </div>
-          </section>
-
-          {/* Photo */}
-          <section>
-            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-              {t("settings.photo_heading")}
-            </h2>
-            <div className="flex items-center gap-4">
-              <span
-                className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-[#00897b] text-white text-xl font-bold shadow-xs"
-                aria-hidden="true"
-              >
-                {displayName ? displayName.slice(0, 1).toUpperCase() : "T"}
-              </span>
-              <div className="flex flex-col gap-1.5 min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button variant="secondary" size="sm" className="rounded-lg">
-                    {t("settings.change_photo")}
-                  </Button>
-                  <button
-                    type="button"
-                    className="rounded-lg border border-error/40 px-3 py-1.5 text-footnote font-medium text-error hover:bg-error/10 transition-colors cursor-pointer"
-                  >
-                    {t("settings.remove_photo")}
-                  </button>
-                </div>
-                <p className="m-0 text-footnote text-ink-secondary">
-                  {t("settings.photo_max_size")}
-                </p>
-              </div>
-            </div>
-          </section>
-
           {/* Name */}
           <section>
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1.5">
@@ -766,12 +658,9 @@ export function AccountScreen({
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-1">
               {t("settings.email_heading")}
             </h2>
-            <p className="m-0 mb-2.5 text-body text-ink font-medium break-words [overflow-wrap:anywhere]">
+            <p className="m-0 text-body text-ink font-medium break-words [overflow-wrap:anywhere]">
               {email}
             </p>
-            <Button variant="secondary" size="sm" className="rounded-lg">
-              {t("settings.change_email")}
-            </Button>
           </section>
 
           {/* Password */}
@@ -807,27 +696,15 @@ export function AccountScreen({
               className="py-0"
             />
           </section>
-          {/* Connected accounts */}
+
           <section className="border-t border-separator/40 pt-4">
-            <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
-              {t("settings.connected_accounts_heading")}
-            </h2>
-            <div className="flex flex-col gap-2 w-full lg:max-w-[320px]">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-lg w-full justify-center"
-              >
-                {t("settings.connect_facebook")}
-              </Button>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="rounded-lg w-full justify-center"
-              >
-                {t("settings.connect_apple")}
-              </Button>
-            </div>
+            <Switch
+              label={t("app.remember_device")}
+              checked={settings.rememberDevice}
+              onChange={(rememberDevice) => onChange({ rememberDevice })}
+              divider={false}
+              className="py-0"
+            />
           </section>
 
           {/* Sign out */}
@@ -851,28 +728,6 @@ export function AccountScreen({
               )}
             </div>
           </section>
-
-          {/* Delete account */}
-          <section className="border-t border-separator/40 pt-5 pb-2">
-            <div className="rounded-xl border border-error/30 bg-error/5 p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <div className="text-callout font-bold text-error flex items-center gap-2">
-                  <TrashIcon size={16} />
-                  {t("settings.delete_account")}
-                </div>
-                <div className="text-caption text-ink-secondary mt-1">
-                  {t("settings.delete_account_desc")}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="rounded-lg border border-error/50 bg-error/10 hover:bg-error hover:text-white text-error font-semibold text-footnote px-3.5 py-1.5 transition-colors cursor-pointer shrink-0"
-                onClick={() => {}}
-              >
-                {t("settings.delete_account")}
-              </button>
-            </div>
-          </section>
         </div>
 
         {/* TAB: GENERAL */}
@@ -886,40 +741,6 @@ export function AccountScreen({
                 : "hidden",
           )}
         >
-          {/* Language */}
-          <SelectDropdown
-            label={t("settings.language")}
-            value={language}
-            onChange={setLanguage}
-            options={[
-              { value: "en", label: "English" },
-              {
-                value: "vi",
-                label: "Tiếng Việt",
-                disabled: true,
-                badge: t("settings.coming_soon"),
-              },
-              {
-                value: "fr",
-                label: "Français",
-                disabled: true,
-                badge: t("settings.coming_soon"),
-              },
-              {
-                value: "de",
-                label: "Deutsch",
-                disabled: true,
-                badge: t("settings.coming_soon"),
-              },
-              {
-                value: "es",
-                label: "Español",
-                disabled: true,
-                badge: t("settings.coming_soon"),
-              },
-            ]}
-          />
-
           {/* Home view */}
           <SelectDropdown
             label={t("settings.home_view")}
@@ -959,8 +780,6 @@ export function AccountScreen({
               {/* Time zone */}
               <SelectDropdown
                 label={t("settings.time_zone")}
-                searchable
-                searchPlaceholder={t("settings.search_placeholder")}
                 value={
                   settings.timezoneAuto !== false
                     ? "auto"
@@ -1018,41 +837,6 @@ export function AccountScreen({
                 ]}
               />
 
-              {/* Next week */}
-              <SelectDropdown
-                label={t("settings.next_week")}
-                value={nextWeekDay}
-                onChange={(day) => {
-                  setNextWeekDay(day);
-                  try {
-                    localStorage.setItem("agendal.next_week_day", day);
-                  } catch {}
-                }}
-                helperText={t("settings.next_week_help")}
-                options={[
-                  { value: "mon", label: t("app.week_mon") },
-                  { value: "sun", label: t("app.week_sun") },
-                  { value: "sat", label: "Saturday" },
-                ]}
-              />
-
-              {/* Weekend */}
-              <SelectDropdown
-                label={t("settings.weekend")}
-                value={weekendDay}
-                onChange={(day) => {
-                  setWeekendDay(day);
-                  try {
-                    localStorage.setItem("agendal.weekend_day", day);
-                  } catch {}
-                }}
-                helperText={t("settings.weekend_help")}
-                options={[
-                  { value: "sat", label: "Saturday" },
-                  { value: "sun", label: t("app.week_sun") },
-                ]}
-              />
-
               {/* Page view setting */}
               <div className="pt-2">
                 <SelectDropdown
@@ -1068,31 +852,12 @@ export function AccountScreen({
                   ]}
                 />
               </div>
-
-              {/* Smart date recognition */}
-              <div className="pt-2">
-                <Switch
-                  label={t("settings.smart_date_recognition")}
-                  description={t("settings.smart_date_recognition_help")}
-                  checked={smartDateRecognition}
-                  onChange={setSmartDateRecognition}
-                  divider={false}
-                  className="py-0"
-                />
-              </div>
             </div>
           </div>
 
-          {/* Device */}
-          <div className="border-t border-separator/40 pt-4 space-y-2">
-            <Switch
-              label={t("app.remember_device")}
-              checked={settings.rememberDevice}
-              onChange={(rememberDevice) => onChange({ rememberDevice })}
-              divider={false}
-              className="py-0"
-            />
-            {onInstall && (
+          {/* Device: only while this browser can install the app */}
+          {onInstall && (
+            <div className="border-t border-separator/40 pt-4 space-y-2">
               <button
                 type="button"
                 className="focus-ring cursor-pointer bg-transparent disabled:cursor-default disabled:opacity-40 flex min-h-11 w-full items-center gap-3 py-1.5 text-left text-body text-ink hover:bg-fill/40 rounded-lg px-2"
@@ -1110,8 +875,8 @@ export function AccountScreen({
                   className="shrink-0 text-ink-tertiary"
                 />
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* TAB: THEME */}
@@ -1125,27 +890,6 @@ export function AccountScreen({
                 : "hidden",
           )}
         >
-          {/* Description */}
-          <p className="m-0 text-footnote text-ink-secondary">
-            {t("settings.theme_desc")}{" "}
-            <a
-              href="#"
-              onClick={(e) => e.preventDefault()}
-              className="text-primary hover:underline font-medium"
-            >
-              {t("settings.learn_more")}
-            </a>
-          </p>
-
-          {/* Sync theme toggle */}
-          <Switch
-            label={t("settings.sync_theme")}
-            checked={syncTheme}
-            onChange={setSyncTheme}
-            divider={false}
-            className="py-0"
-          />
-
           {/* Appearance Segmented Pill */}
           <section className="space-y-2.5">
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2.5">
@@ -1245,157 +989,6 @@ export function AccountScreen({
             </div>
           </section>
         </div>
-
-        {/* TAB: NOTIFICATIONS */}
-        {activeTab === "notifications" && (
-          <div
-            className="flex flex-col gap-6 max-w-[620px]"
-            data-testid="notifications-tab"
-          >
-            <section
-              className="flex flex-col gap-4 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
-              aria-label={t("app.notification_diag_title")}
-            >
-              <div>
-                <h3 className="m-0 text-heading font-semibold text-ink">
-                  {t("app.notification_diag_title")}
-                </h3>
-                <p className="m-0 mt-1 text-footnote text-ink-secondary">
-                  {t("app.notification_diag_desc")}
-                </p>
-              </div>
-
-              {/* Browser permission diagnostic */}
-              <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-body font-normal text-ink lg:text-callout lg:font-medium">
-                    {t("app.browser_permission")}
-                  </span>
-                  <span
-                    className={cx(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                      !notificationSupported
-                        ? "bg-fill text-ink-secondary"
-                        : notificationPermission === "granted"
-                          ? "bg-success/15 text-success"
-                          : notificationPermission === "denied"
-                            ? "bg-error/15 text-error"
-                            : "bg-warning/15 text-warning",
-                    )}
-                  >
-                    <span
-                      className={cx(
-                        "size-2 rounded-full",
-                        !notificationSupported
-                          ? "bg-ink-tertiary"
-                          : notificationPermission === "granted"
-                            ? "bg-success"
-                            : notificationPermission === "denied"
-                              ? "bg-error"
-                              : "bg-warning",
-                      )}
-                    />
-                    {!notificationSupported
-                      ? t("app.perm_unsupported")
-                      : notificationPermission === "granted"
-                        ? t("app.perm_enabled")
-                        : notificationPermission === "denied"
-                          ? t("app.perm_blocked")
-                          : t("app.perm_not_configured")}
-                  </span>
-                </div>
-                <p className="m-0 text-footnote text-ink-secondary">
-                  {!notificationSupported
-                    ? t("app.perm_desc_unsupported")
-                    : notificationPermission === "granted"
-                      ? t("app.perm_desc_enabled")
-                      : notificationPermission === "denied"
-                        ? t("app.perm_desc_blocked")
-                        : t("app.perm_desc_not_configured")}
-                </p>
-              </div>
-
-              {/* VAPID Server Status */}
-              <div className="flex flex-col gap-1.5 rounded-xl border border-separator/40 bg-fill/40 p-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-body font-normal text-ink lg:text-callout lg:font-medium">
-                    {t("app.server_push_service")}
-                  </span>
-                  <span
-                    className={cx(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-caption font-semibold",
-                      vapidConfigured === true
-                        ? "bg-success/15 text-success"
-                        : vapidConfigured === false
-                          ? "bg-error/15 text-error"
-                          : "bg-fill text-ink-secondary",
-                    )}
-                  >
-                    <span
-                      className={cx(
-                        "size-2 rounded-full",
-                        vapidConfigured === true
-                          ? "bg-success"
-                          : vapidConfigured === false
-                            ? "bg-error"
-                            : "bg-ink-tertiary",
-                      )}
-                    />
-                    {vapidConfigured === true
-                      ? t("app.vapid_ready")
-                      : vapidConfigured === false
-                        ? t("app.vapid_missing")
-                        : t("app.vapid_checking")}
-                  </span>
-                </div>
-                <p className="m-0 text-footnote text-ink-secondary">
-                  {vapidConfigured === true
-                    ? t("app.vapid_desc_ready")
-                    : vapidConfigured === false
-                      ? t("app.vapid_desc_missing")
-                      : t("app.vapid_desc_checking")}
-                </p>
-              </div>
-
-              {/* Action buttons */}
-              <div className="mt-2 flex flex-col gap-2.5">
-                {notificationPermission !== "granted" ? (
-                  <Button
-                    variant="primary"
-                    disabled={!notificationSupported}
-                    onClick={onEnableNotifications}
-                  >
-                    {t("app.enable_notifications")}
-                  </Button>
-                ) : (
-                  <Button variant="secondary" onClick={onSendTestNotification}>
-                    <BellIcon size={16} />
-                    {t("app.send_test_notification")}
-                  </Button>
-                )}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* TAB: REMINDERS */}
-        {activeTab === "reminders" && (
-          <div className="space-y-6 max-w-[620px]">
-            <section>
-              <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-2">
-                {t("settings.reminders_permission_heading")}
-              </h2>
-              <div className="flex items-center justify-between rounded-xl border border-separator/40 bg-fill/30 p-4 min-h-11">
-                <span className="text-body text-ink min-w-0 flex-1">
-                  {t("settings.reminders_system_label")}
-                </span>
-                <span className="text-footnote font-semibold text-ink-secondary shrink-0">
-                  {remindersStatus ?? "Allowed"}
-                </span>
-              </div>
-            </section>
-          </div>
-        )}
 
         {/* TAB: SIDEBAR */}
         {activeTab === "sidebar" && (
@@ -1757,23 +1350,12 @@ export function AccountScreen({
   );
 
   const preferencesTabIds = new Set(["general", "theme", "sidebar"]);
-  const tasksTabIds = new Set(["reminders", "notifications"]);
-  const knownGroupTabIds = new Set([
-    "account",
-    "general",
-    "theme",
-    "sidebar",
-    "reminders",
-    "notifications",
-  ]);
+  const knownGroupTabIds = new Set(["account", "general", "theme", "sidebar"]);
 
-  const preferencesTabs = allTabs.filter(function isPref(tItem) {
+  const preferencesTabs = deviceTabs.filter(function isPref(tItem) {
     return preferencesTabIds.has(tItem.id);
   });
-  const tasksTabs = allTabs.filter(function isTask(tItem) {
-    return tasksTabIds.has(tItem.id);
-  });
-  const dataTabs = allTabs.filter(function isData(tItem) {
+  const dataTabs = deviceTabs.filter(function isData(tItem) {
     return !knownGroupTabIds.has(tItem.id);
   });
 
@@ -1817,7 +1399,7 @@ export function AccountScreen({
       aria-label={t("settings.title")}
       className="fixed inset-0 z-[100] flex flex-col bg-paper h-dvh max-h-dvh"
     >
-      {phoneView === "list" ? (
+      {activePhoneView === "list" ? (
         <>
           <div className="flex min-h-14 items-center justify-end px-2 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
             <button
@@ -1892,11 +1474,6 @@ export function AccountScreen({
                     key: "preferences",
                     label: t("settings.group_preferences"),
                     tabs: preferencesTabs,
-                  },
-                  {
-                    key: "tasks",
-                    label: t("settings.group_tasks"),
-                    tabs: tasksTabs,
                   },
                   {
                     key: "data",

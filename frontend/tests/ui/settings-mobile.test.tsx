@@ -109,7 +109,7 @@ describe("Settings on phones (Part D)", () => {
 
     // Group labels render (Data group is omitted when backups/integrations/calendars are removed)
     expect(screen.getByText(t("settings.group_preferences"))).toBeTruthy();
-    expect(screen.getByText(t("settings.group_tasks"))).toBeTruthy();
+    expect(screen.queryByText(t("settings.group_tasks"))).toBeNull();
     expect(screen.queryByText(t("settings.group_data"))).toBeNull();
 
     // Preferences rows
@@ -123,23 +123,24 @@ describe("Settings on phones (Part D)", () => {
         name: new RegExp(t("settings.tab_theme"), "i"),
       }),
     ).toBeTruthy();
+    // Sidebar settings only change the desktop sidebar, so phones don't list them
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: new RegExp(t("settings.tab_sidebar"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
 
-    // Tasks rows
+    // Reminders and Notifications tabs are gone
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: new RegExp(t("settings.tab_reminders"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: new RegExp(t("app.tab_notifications"), "i"),
       }),
-    ).toBeTruthy();
+    ).toBeNull();
 
     // Removed tabs are not present
     expect(

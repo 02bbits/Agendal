@@ -14,7 +14,7 @@ const defaultSettings = {
 };
 
 describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
-  it("renders only the 6 core settings tabs on desktop", () => {
+  it("renders only the 4 core settings tabs on desktop", () => {
     // Desktop layout
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query.includes("768px"),
@@ -38,15 +38,15 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
       />,
     );
 
-    // Core 6 tabs (navigation has role="radio")
+    // Core 4 tabs (navigation has role="radio")
     expect(screen.getByRole("radio", { name: /Account/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /General/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Theme/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Sidebar/i })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: /Reminders/i })).toBeTruthy();
-    expect(screen.getByRole("radio", { name: /Notifications/i })).toBeTruthy();
 
     // Removed tabs must not exist
+    expect(screen.queryByRole("radio", { name: /Reminders/i })).toBeNull();
+    expect(screen.queryByRole("radio", { name: /Notifications/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Quick add/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Productivity/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Backups/i })).toBeNull();
@@ -54,7 +54,7 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
     expect(screen.queryByRole("radio", { name: /Calendars/i })).toBeNull();
   });
 
-  it("timezone dropdown has searchable combobox, displays popular timezones and coming soon on others", () => {
+  it("timezone dropdown lists popular timezones without a search box or coming-soon zones", () => {
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
       matches: query.includes("768px"),
       media: query,
@@ -87,14 +87,13 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
     expect(tzTrigger).toBeTruthy();
     fireEvent.click(tzTrigger);
 
-    // Listbox should open with search input
+    // Listbox opens without a search box, and no zone is a disabled "coming soon" one
     const listbox = screen.getByRole("listbox", { name: /Time zone/i });
     expect(listbox).toBeTruthy();
-
-    const searchInput = screen.getByRole("textbox", {
-      name: /Search Time zone/i,
-    });
-    expect(searchInput).toBeTruthy();
+    expect(
+      screen.queryByRole("textbox", { name: /Search Time zone/i }),
+    ).toBeNull();
+    expect(listbox.querySelectorAll('[aria-disabled="true"]').length).toBe(0);
 
     // Verify popular timezone is enabled and clickable (e.g. Tokyo)
     const tokyoOption = screen.getByRole("option", { name: /Tokyo/i });
