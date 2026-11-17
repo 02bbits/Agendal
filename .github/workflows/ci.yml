@@ -1,4 +1,5 @@
 # IM-04: CI gates 1, 2 and 6 from docs/06-testing/test-strategy.md.
+# IM-61: CI gates 5 and 7 (E2E and accessibility).
 # Every job must pass before a pull request can merge into main.
 name: CI
 
@@ -80,6 +81,74 @@ jobs:
         run: npm run build
       - name: Dependency audit
         run: npm audit --omit=dev --audit-level=high
+
+  e2e:
+    name: E2E
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_DB: agendal_e2e
+          POSTGRES_USER: agendal
+          POSTGRES_PASSWORD: agendal
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agendal -d agendal_e2e"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      mail:
+        image: axllent/mailpit:v1.27
+        ports: ["1025:1025", "8025:8025"]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, intl, mbstring
+          coverage: none
+      - uses: actions/cache@v6
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+      - name: Install backend dependencies
+        run: composer install --no-interaction --no-progress
+        working-directory: backend
+      - name: Prepare backend environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+          sed -i 's/DB_DATABASE=agendal/DB_DATABASE=agendal_e2e/' .env
+          sed -i 's/APP_ENV=local/APP_ENV=testing/' .env
+          php artisan migrate --force
+        working-directory: backend
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install frontend dependencies
+        run: npm ci
+        working-directory: frontend
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium webkit
+        working-directory: frontend
+      - name: Build frontend
+        run: npm run build
+        working-directory: frontend
+      - name: Run E2E tests
+        run: npm run e2e
+        working-directory: frontend
+        env:
+          CI: "true"
+          E2E_PASSWORD: "E2e ci river 42"
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 14
 
   secrets:
     name: Secret scan
