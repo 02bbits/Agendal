@@ -31,6 +31,7 @@ it('keeps calendar lists together but splits the following independent task', fu
     ['gym every Monday, Wednesday until Friday', 'weekly', 'UNTIL=20261106T235959Z', '2026-11-02'],
     ['gym every Monday, Wednesday until 2026-12-31', 'weekly', 'UNTIL=20261231T235959Z', '2026-11-02'],
     ['gym every Monday, Wednesday for 3 occurrences', 'weekly', 'COUNT=3', '2026-11-02'],
+    ['gym every Monday, Wednesday for 2 weeks', 'weekly', 'UNTIL=20261115T235959Z', '2026-11-02'],
     ['gym every month on day 1, 15, 25', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
     ['gym every month on 1st, 15th and 25th', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],
     ['gym monthly 1st, 15th and 25th', 'monthly', 'BYMONTHDAY=1,15,25', '2026-11-15'],

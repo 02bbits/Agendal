@@ -178,6 +178,7 @@ export const TrashIcon = icon(
 export const ChevronRightIcon = icon(<path d="m9 18 6-6-6-6" />);
 export const ChevronLeftIcon = icon(<path d="m15 18-6-6 6-6" />);
 export const ChevronDownIcon = icon(<path d="m6 9 6 6 6-6" />);
+export const ChevronUpIcon = icon(<path d="m18 15-6-6-6 6" />);
 export const MoreIcon = icon(
   <path d="M5 12h.01M12 12h.01M19 12h.01" strokeWidth="3.2" />,
 );
@@ -192,6 +193,7 @@ export const PaperclipIcon = icon(
 );
 export const ArrowUpIcon = icon(<path d="M12 19V5M5 12l7-7 7 7" />);
 export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
+export const ArrowLeftIcon = icon(<path d="m12 19-7-7 7-7M19 12H5" />);
 export const RotateCcwIcon = icon(
   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5" />,
 );
@@ -243,5 +245,18 @@ export const LockIcon = icon(
   <>
     <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </>,
+);
+export const AlertCircleIcon = icon(
+  <>
+    <circle cx="12" cy="12" r="10" />
+    <path d="M12 8v4" />
+    <path d="M12 16h.01" />
+  </>,
+);
+export const MailIcon = icon(
+  <>
+    <rect width="20" height="16" x="2" y="4" rx="2" />
+    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
   </>,
 );
