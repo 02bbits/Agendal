@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import {
   ROUTES,
@@ -14,6 +14,14 @@ import { useAppFrame } from "../AppFrame";
 export default function VerifyPage() {
   const { navigate, setUser } = useAppFrame();
   const [email, setEmail] = useState("");
+  // navigate changes when the path does; reading it from a ref keeps the effect below to
+  // one GET /auth/signup per visit. A second one sent with the pre-verify cookie could land
+  // after the code is accepted, answer 404 and send the new account back to Create account.
+  const navigateRef = useRef(navigate);
+  const verified = useRef(false);
+  useEffect(() => {
+    navigateRef.current = navigate;
+  }, [navigate]);
 
   useEffect(() => {
     let active = true;
@@ -25,15 +33,15 @@ export default function VerifyPage() {
           if (active && data?.email) {
             setEmail(data.email);
           }
-        } else if (response.status === 404) {
-          navigate(ROUTES.createAccount);
+        } else if (response.status === 404 && !verified.current) {
+          navigateRef.current(ROUTES.createAccount);
         }
       })
       .catch(() => {});
     return () => {
       active = false;
     };
-  }, [navigate]);
+  }, []);
 
   const handleVerify = async (code: string): Promise<VerifyResult> => {
     try {
@@ -46,6 +54,7 @@ export default function VerifyPage() {
       const body = await response.json().catch(() => null);
 
       if (response.ok) {
+        verified.current = true;
         if (body?.user) {
           setUser(body.user);
         }
