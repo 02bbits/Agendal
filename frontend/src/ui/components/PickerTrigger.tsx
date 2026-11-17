@@ -50,7 +50,7 @@ export function PickerTrigger({
       onClick={() => !disabled && onToggle()}
       onKeyDown={onKeyDown}
       className={cx(
-        "focus-ring relative inline-flex cursor-pointer items-center border-0 text-ink focus:outline-none disabled:cursor-default disabled:opacity-40",
+        "focus-ring relative inline-flex min-w-0 max-w-full cursor-pointer items-center border-0 text-ink focus:outline-none disabled:cursor-default disabled:opacity-40",
         isIcon
           ? "size-8 min-h-8 justify-center rounded-full bg-fill p-0 hover:bg-fill-2"
           : isScreen
@@ -63,7 +63,7 @@ export function PickerTrigger({
       ) : (
         <>
           {leading && <span className="shrink-0">{leading}</span>}
-          <span>{children}</span>
+          <span className="min-w-0 truncate">{children}</span>
           {isScreen ? (
             <ChevronRightIcon
               size={16}
