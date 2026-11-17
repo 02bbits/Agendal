@@ -65,10 +65,20 @@ describe("Reset request (AA-4)", () => {
       email: "someone@gmail.com",
     });
     // Announced politely (the toast region is another status, so find it by text)
-    const sent = await screen.findByText(
-      /If an account exists for someone@gmail\.com/,
+    const address = await screen.findByText("someone@gmail.com");
+    // The address is bold inside the sentence, which is the polite status
+    expect(address.tagName).toBe("STRONG");
+    const sent = address.closest("[role=status]");
+    expect(sent?.textContent).toBe(
+      "We've sent a link to someone@gmail.com. Follow the link to continue resetting your password.",
     );
-    expect(sent.getAttribute("role")).toBe("status");
+    // The sent screen drops the subtitle and has no extra hint line (AA §2.3)
+    expect(
+      screen.queryByText("We'll email you a link to set a new password."),
+    ).toBeNull();
+    expect(
+      screen.queryByText("After you set a new password, sign in with it."),
+    ).toBeNull();
     const resend = screen.getByRole("button", {
       name: "Resend link in 45 s",
     }) as HTMLButtonElement;
@@ -105,8 +115,9 @@ describe("Reset request (AA-4)", () => {
       ),
     ).toEqual(["exmaple@gmail.com", "example@gmail.com"]);
     expect(
-      await screen.findByText(/If an account exists for example@gmail\.com/),
-    ).toBeTruthy();
+      (await screen.findByText("example@gmail.com")).closest("[role=status]")
+        ?.textContent,
+    ).toContain("We've sent a link to example@gmail.com.");
   });
 
   it("shows the rate limit with the seconds to wait", async () => {
@@ -138,8 +149,8 @@ describe("Set new password (AA §2.3)", () => {
     return renderAt("/reset-password", ResetPasswordPage);
   }
 
-  it("reads the token, removes it from the address bar, and saves the new password", async () => {
-    reply = () => json(200, { user: {} });
+  it("reads the token, removes it from the address bar, and saves the new password, signing nobody in (AA §2.3, T-AA-105)", async () => {
+    reply = () => new Response(null, { status: 204 });
     const user = userEvent.setup();
     openLink();
 
@@ -152,6 +163,10 @@ describe("Set new password (AA §2.3)", () => {
         ?.getAttribute("value"),
     ).toBe("example@gmail.com");
     await user.type(field, "new river 42");
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "new river 42",
+    );
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
     expect(JSON.parse(callsTo("/auth/reset-password")[0][1].body)).toEqual({
@@ -159,12 +174,40 @@ describe("Set new password (AA §2.3)", () => {
       email: "example@gmail.com",
       password: "new river 42",
     });
-    expect(router.push).toHaveBeenCalledWith("/");
+    // A done state, not Inbox and not a toast: the user signs in with the new password
     expect(
-      await screen.findByText(
-        "Password changed. Other devices have been signed out.",
-      ),
+      (await screen.findByRole("heading", { name: "Password changed" }))
+        .textContent,
+    ).toBe("Password changed");
+    expect(
+      screen.getByText(
+        "Every device has been signed out. Sign in with your new password.",
+      ).textContent,
     ).toBeTruthy();
+    expect(screen.queryByLabelText("New password")).toBeNull();
+    expect(router.push).not.toHaveBeenCalled();
+    expect(router.replace).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: "Sign in" }));
+    expect(router.push).toHaveBeenCalledWith("/sign-in");
+  });
+
+  it("the done state is axe-clean in both themes", async () => {
+    reply = () => new Response(null, { status: 204 });
+    const user = userEvent.setup();
+    const { container } = openLink();
+
+    await user.type(
+      await screen.findByLabelText("New password"),
+      "new river 42",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "new river 42",
+    );
+    await user.click(screen.getByRole("button", { name: "Save password" }));
+    await screen.findByRole("heading", { name: "Password changed" });
+    await expectAxeCleanInBothThemes(container);
   });
 
   it("applies the sign-up rules, including not the email", async () => {
@@ -179,6 +222,36 @@ describe("Set new password (AA §2.3)", () => {
       "Example@gmail.com",
     );
     expect(save.disabled).toBe(true);
+  });
+
+  it("shows password strength meter and requires matching confirm password", async () => {
+    const user = userEvent.setup();
+    openLink();
+
+    const newField = await screen.findByLabelText("New password");
+    const confirmField = screen.getByLabelText("Confirm new password");
+    const saveButton = screen.getByRole("button", {
+      name: "Save password",
+    }) as HTMLButtonElement;
+
+    // Type new password
+    await user.type(newField, "strongSecret99!");
+    // Strength meter is present
+    expect(document.getElementById("reset-password-strength")).toBeTruthy();
+    // Save button disabled because confirm password is empty
+    expect(saveButton.disabled).toBe(true);
+
+    // Type mismatched confirm password and blur
+    await user.type(confirmField, "differentPassword");
+    await user.tab();
+    expect(await screen.findByText("New passwords don't match.")).toBeTruthy();
+    expect(saveButton.disabled).toBe(true);
+
+    // Type matching confirm password
+    await user.clear(confirmField);
+    await user.type(confirmField, "strongSecret99!");
+    expect(screen.queryByText("New passwords don't match.")).toBeNull();
+    expect(saveButton.disabled).toBe(false);
   });
 
   it("A11Y-62: shows the server's breached-password message on the field and focuses it", async () => {
@@ -196,6 +269,10 @@ describe("Set new password (AA §2.3)", () => {
 
     const field = await screen.findByLabelText("New password");
     await user.type(field, "password123");
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
+      "password123",
+    );
     await user.click(screen.getByRole("button", { name: "Save password" }));
 
     expect(await screen.findByText(breached)).toBeTruthy();
@@ -209,6 +286,10 @@ describe("Set new password (AA §2.3)", () => {
 
     await user.type(
       await screen.findByLabelText("New password"),
+      "new river 42",
+    );
+    await user.type(
+      screen.getByLabelText("Confirm new password"),
       "new river 42",
     );
     await user.click(screen.getByRole("button", { name: "Save password" }));

@@ -10,7 +10,11 @@ use Illuminate\Support\Str;
 // The rules for a new password at sign-up and reset (AA §2.1, BR-17, SC-02)
 final class NewPassword
 {
-    private const RULE = 'At least 8 characters, and not your email.';
+    private const RULE = "At least 8 characters, and doesn't contain your information.";
+
+    public const WEAK = 'Choose a stronger password: make it longer, or mix in capitals, numbers or symbols.';
+
+    private const ACCENTED = "Can't contain special characters.";
 
     private const BREACHED = 'This password has appeared in a data breach. Choose another one.';
 
@@ -21,11 +25,77 @@ final class NewPassword
      */
     public static function rules(string $email): array
     {
-        return ['required', 'string', 'min:8', 'max:128', function (string $attribute, mixed $value, Closure $fail) use ($email) {
-            if (Str::lower((string) $value) === $email) {
-                $fail("Your password can't be your email."); // T-AA-108
+        // bail: a list or object stops at "string", so the check below only ever sees text
+        return ['bail', 'required', 'string', 'min:8', 'max:128', function (string $attribute, mixed $value, Closure $fail) use ($email) {
+            // Not the email, and not containing its name part (3+ characters): "doesn't contain
+            // your information" (T-AA-108)
+            $lower = Str::lower((string) $value);
+            $name = Str::before($email, '@');
+            if ($lower === $email || (mb_strlen($name) >= 3 && str_contains($lower, $name))) {
+                $fail("Your password can't contain your email.");
+            }
+            // Only what an English keyboard types (printable ASCII, space included) and emoji.
+            // Vietnamese typing (Unikey, EVKey) turns keys into accented letters even in a hidden
+            // field, so those and any other script are refused (AA §2.10). Emoji keep their
+            // joiners, variation selector, skin tones, flags and keycaps (AA-E9)
+            if (preg_match('/[^\x20-\x7E\p{Extended_Pictographic}\x{FE0F}\x{200D}\x{1F3FB}-\x{1F3FF}\x{1F1E6}-\x{1F1FF}\x{20E3}]/u', (string) $value) === 1) {
+                $fail(self::ACCENTED);
             }
         }];
+    }
+
+    /**
+     * Validation rules for `password` on Create account, requiring Good or Strong (score 3 or 4).
+     *
+     * @return array<int, mixed>
+     */
+    public static function signUpRules(string $email): array
+    {
+        $rules = self::rules($email);
+        $rules[] = function (string $attribute, mixed $value, Closure $fail) {
+            if (self::strength((string) $value) < 3) {
+                $fail(self::WEAK);
+            }
+        };
+
+        return $rules;
+    }
+
+    /**
+     * Password strength score from 0 to 4 matching the client's passwordStrength() function.
+     */
+    public static function strength(string $password): int
+    {
+        $length = mb_strlen($password);
+        if ($length < 8) {
+            return 0;
+        }
+        $score = 1;
+        if ($length >= 12) {
+            $score += 1;
+        }
+        if ($length >= 16) {
+            $score += 1;
+        }
+
+        $classes = 0;
+        if (preg_match('/[a-z]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[A-Z]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[0-9]/', $password) === 1) {
+            $classes += 1;
+        }
+        if (preg_match('/[^a-zA-Z0-9]/u', $password) === 1) {
+            $classes += 1;
+        }
+        if ($classes >= 3) {
+            $score += 1;
+        }
+
+        return min(max($score, 1), 4);
     }
 
     /** @return array<string, string> */

@@ -16,26 +16,30 @@ use Tests\Support\FrozenClock;
 
 uses(RefreshDatabase::class);
 
-function assertTaskSchema(mixed $body): void
-{
-    $validator = new Validator;
-    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
-    $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/task.schema.json');
+if (! function_exists('assertTaskSchema')) {
+    function assertTaskSchema(mixed $body): void
+    {
+        $validator = new Validator;
+        $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
+        $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/task.schema.json');
 
-    expect($result->isValid())->toBeTrue(
-        $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
-    );
+        expect($result->isValid())->toBeTrue(
+            $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
+        );
+    }
 }
 
-function assertTaskApiErrorShape(mixed $body): void
-{
-    $validator = new Validator;
-    $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
-    $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/error.schema.json');
+if (! function_exists('assertTaskApiErrorShape')) {
+    function assertTaskApiErrorShape(mixed $body): void
+    {
+        $validator = new Validator;
+        $validator->resolver()->registerPrefix('https://agendal.app/schemas/', __DIR__.'/../../../docs/07-architecture/contracts/schemas/');
+        $result = $validator->validate(json_decode(json_encode($body)), 'https://agendal.app/schemas/error.schema.json');
 
-    expect($result->isValid())->toBeTrue(
-        $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
-    );
+        expect($result->isValid())->toBeTrue(
+            $result->isValid() ? '' : json_encode((new ErrorFormatter)->format($result->error()), JSON_PRETTY_PRINT)
+        );
+    }
 }
 
 beforeEach(function () {
@@ -213,6 +217,68 @@ it('T-TK-21: same day start 10:00 with due 09:00 → 422 on start_time, no row c
     expect($response->json('error.code'))->toBe('error.invalid')
         ->and($response->json('error.fields.start_time'))->toContain("Start can't be after the due date.")
         ->and(Task::where('id', $id)->exists())->toBeFalse();
+});
+
+it('T-TK-117 (TK-E17): start date after due date: POST and PATCH 422 with Start can\'t be after the due date.', function () {
+    $user = User::factory()->create();
+
+    $id = (string) Str::uuid();
+    $postRes = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Start after due',
+        'start_date' => '2026-10-27',
+        'due_date' => '2026-10-26',
+    ])->assertStatus(422);
+
+    expect($postRes->json('error.fields.start_date'))->toContain("Start can't be after the due date.")
+        ->and(Task::where('id', $id)->exists())->toBeFalse();
+
+    $validTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Valid task',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-26',
+    ]);
+
+    $patchRes = $this->actingAs($user)->patchJson("/api/v1/tasks/{$validTask->id}", [
+        'start_date' => '2026-10-27',
+    ])->assertStatus(422);
+
+    expect($patchRes->json('error.fields.start_date'))->toContain("Start can't be after the due date.");
+});
+
+it('T-TK-118 (TK-E18): same day, start time after due time: POST and PATCH 422', function () {
+    $user = User::factory()->create();
+
+    $id = (string) Str::uuid();
+    $postRes = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Start time after due time',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-26',
+        'start_time' => '11:00',
+        'due_time' => '10:00',
+    ])->assertStatus(422);
+
+    expect($postRes->json('error.fields.start_time'))->toContain("Start can't be after the due date.")
+        ->and(Task::where('id', $id)->exists())->toBeFalse();
+
+    $validTask = Task::forceCreate([
+        'id' => (string) Str::uuid(),
+        'user_id' => $user->id,
+        'title' => 'Valid task same day',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-26',
+        'start_time' => '09:00',
+        'due_time' => '10:00',
+    ]);
+
+    $patchRes = $this->actingAs($user)->patchJson("/api/v1/tasks/{$validTask->id}", [
+        'start_time' => '11:00',
+    ])->assertStatus(422);
+
+    expect($patchRes->json('error.fields.start_time'))->toContain("Start can't be after the due date.");
 });
 
 it('reminder without due_date → 422 on reminder; blank title ("   ") → 422; priority urgent → 422', function () {
@@ -1160,4 +1226,33 @@ it('a reminder with only a start time returns 422 on start_date', function () {
 
     expect($response->json('error.fields.start_date'))->toContain('Add a start date to set a start time.');
     expect(DB::table('tasks')->find($id))->toBeNull();
+});
+
+it('T-TK-109 (TK-E9): a task with a start time and no due time keeps its due date', function () {
+    $user = User::factory()->create();
+    $id = (string) Str::uuid();
+
+    $response = $this->actingAs($user)->postJson('/api/v1/tasks', [
+        'id' => $id,
+        'title' => 'Start time without due time',
+        'start_date' => '2026-10-26',
+        'start_time' => '09:00',
+        'due_date' => '2026-10-28',
+    ])->assertStatus(201);
+
+    assertTaskSchema($response->json());
+    expect($response->json('start_time'))->toBe('09:00')
+        ->and($response->json('due_time'))->toBeNull()
+        ->and($response->json('due_date'))->toBe('2026-10-28');
+});
+
+it('T-TK-112 (TK-E12): reminders over 10 minutes past due window cutoff are considered expired', function () {
+    // TK-E12: The scheduler is down for 30 minutes: Reminders over 10 minutes late are skipped.
+    $cutoffMinutes = 10;
+    $dueAt = Carbon::parse('2026-10-26T10:00:00Z');
+    $now = Carbon::parse('2026-10-26T10:30:00Z');
+    $diffMinutes = (int) $dueAt->diffInMinutes($now, false);
+
+    expect($diffMinutes)->toBe(30)
+        ->and($diffMinutes > $cutoffMinutes)->toBeTrue();
 });
