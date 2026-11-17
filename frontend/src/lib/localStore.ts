@@ -165,6 +165,17 @@ async function putNotes(notes: readonly StoredNote[]) {
 export const putNoteEntries = (entries: readonly NoteListEntry[]) =>
   putNotes(entries);
 
+/** Notes changed elsewhere: their kept result is out of date, so sync fetches it again. */
+export const putChangedNotes = (entries: readonly NoteListEntry[]) =>
+  putNotes(entries.map((entry) => ({ ...entry, result: undefined })));
+
+/** Notes on the device without their full result, newest first. */
+export const notesWithoutResult = async () =>
+  (await run<StoredNote[]>(NOTES, "readonly", (s) => s.getAll(), []))
+    .filter((note) => !note.result)
+    .sort(newestFirst)
+    .map((note) => note.id);
+
 export const putNoteResult = (result: NoteResult) =>
   putNotes([{ ...entryOf(result), result }]);
 

@@ -3,11 +3,14 @@ import { handleResponse } from "./apiError";
 import {
   putProject,
   putTasks,
+  readProject,
+  readTasks,
   removeProject,
   removeTasks,
   replaceProjects,
 } from "./localStore";
 import { offlineProject, orQueue } from "./offline";
+import { orDevice } from "./taskApi";
 import type { Project, ProjectColor, Task } from "../ui/domain/types";
 
 export interface ProjectListResponse {
@@ -82,10 +85,41 @@ export async function getProject(
   cursor?: string | null,
 ): Promise<ProjectDetailResponse> {
   const query = cursor ? `?cursor=${encodeURIComponent(cursor)}` : "";
-  const response = await api(`/projects/${encodeURIComponent(id)}${query}`);
-  const detail = await handleResponse<ProjectDetailResponse>(response);
-  void putTasks([...(detail?.open ?? []), ...(detail?.completed ?? [])]);
-  return detail;
+  try {
+    const response = await api(`/projects/${encodeURIComponent(id)}${query}`);
+    const detail = await handleResponse<ProjectDetailResponse>(response);
+    void putTasks([...(detail?.open ?? []), ...(detail?.completed ?? [])]);
+    return detail;
+  } catch (error) {
+    // A later page has nothing more on the device: it holds them all on the first
+    if (cursor) throw error;
+    return orDevice(() => deviceProject(id))(error);
+  }
+}
+
+/** A project screen from the device copy: all its tasks, on one page. */
+async function deviceProject(
+  id: string,
+): Promise<ProjectDetailResponse | undefined> {
+  // "No project" has no row of its own: the screen names it when `project` is null
+  const project = id === "none" ? null : await readProject(id);
+  if (project === undefined) return undefined;
+  const tasks = (await readTasks()).filter(
+    (task) => (task.project_id ?? "none") === (project?.id ?? "none"),
+  );
+  const open = tasks
+    .filter((task) => !task.done)
+    .sort((a, b) => (a.due_date ?? "9999").localeCompare(b.due_date ?? "9999"));
+  const completed = tasks
+    .filter((task) => task.done)
+    .sort((a, b) => (b.done_at ?? "").localeCompare(a.done_at ?? ""));
+  return {
+    project: project as ProjectDetailResponse["project"],
+    progress: { done: completed.length, total: tasks.length },
+    open,
+    completed,
+    next_cursor: null,
+  };
 }
 
 /** `PATCH /projects/{id}` */

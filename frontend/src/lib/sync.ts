@@ -6,7 +6,8 @@ import {
   addFailedNote,
   clearData,
   dropQueue,
-  putNoteEntries,
+  notesWithoutResult,
+  putChangedNotes,
   putNoteResult,
   putProject,
   putTasks,
@@ -46,6 +47,8 @@ const CURSOR = "cursor";
 const BATCH = 500;
 const KEEP_COMPLETED_DAYS = 90;
 const EVERY_MS = 60_000;
+/** Between note fetches: 10 a second, under the API's 20/s burst cap. */
+const NOTE_PACE_MS = 100;
 /** AP §2.2 retry: 1 s, 5 s, 30 s, then 60 s, each ±20 %. */
 const BACKOFF_MS = [1_000, 5_000, 30_000, 60_000];
 
@@ -93,6 +96,7 @@ async function run(): Promise<boolean> {
     const pushed = await push();
     const pulled = await pull();
     if (pushed || pulled) announce();
+    await fetchNoteResults();
     return true;
   } catch (error) {
     // No answer, a server error or a rate limit: retry with backoff. Any other refusal is the
@@ -204,6 +208,27 @@ async function replayNotes(queue: Awaited<ReturnType<typeof readQueue>>) {
   }
 }
 
+/**
+ * The pull brings Notes rows only; each note's full result is fetched here, so the note screen
+ * opens offline (AP §2.2). Paced under the API's burst limit; what's left waits for the next sync.
+ */
+async function fetchNoteResults() {
+  for (const id of await notesWithoutResult()) {
+    try {
+      await putNoteResult(
+        await handleResponse<NoteResult>(
+          await api(`/notes/${encodeURIComponent(id)}`),
+        ),
+      );
+    } catch (error) {
+      if (!(error instanceof ApiRequestError) || error.status !== 404)
+        throw error;
+      await removeNotes([id]);
+    }
+    await new Promise((resolve) => setTimeout(resolve, NOTE_PACE_MS));
+  }
+}
+
 /** A later edit elsewhere won (AP-E7, TK-E8): take the server's value and say so. */
 async function lost(patch: Patch, current: unknown) {
   if (patch.entity !== "task") return;
@@ -268,7 +293,7 @@ async function apply({ tasks, projects, notes }: PullPage["changes"]) {
   for (const project of projects.filter((p) => !p.deleted_at))
     await putProject(strip(project));
   await removeNotes(notes.filter((n) => n.deleted_at).map((n) => n.id));
-  await putNoteEntries(notes.filter((n) => !n.deleted_at).map(strip));
+  await putChangedNotes(notes.filter((n) => !n.deleted_at).map(strip));
   return tasks.length + projects.length + notes.length > 0;
 }
 

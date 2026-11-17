@@ -5,6 +5,23 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const source = readFileSync("public/sw.js", "utf8");
 const ORIGIN = "https://agendal.test";
 
+// Each precached page loads one script of its own, named after it
+const pageHtml = (u: string) =>
+  `cached ${u}<script src="/_next/static/${u.replace(/\W/g, "") || "root"}.js"></script>`;
+
+type MatchOptions = { ignoreSearch?: boolean };
+const urlOf = (input: Request | string) =>
+  typeof input === "string" ? `${ORIGIN}${input}` : input.url;
+const find = (
+  store: Map<string, Response>,
+  input: Request | string,
+  { ignoreSearch }: MatchOptions = {},
+) => {
+  const bare = (u: string) => (ignoreSearch ? u.split("?")[0] : u);
+  const key = [...store.keys()].find((k) => bare(k) === bare(urlOf(input)));
+  return key ? store.get(key)?.clone() : undefined;
+};
+
 function fakeCaches() {
   const stores = new Map<string, Map<string, Response>>();
   const open = async (name: string) => {
@@ -13,12 +30,14 @@ function fakeCaches() {
     return {
       addAll: async (urls: string[]) => {
         urls.forEach((u) =>
-          store.set(`${ORIGIN}${u}`, new Response(`cached ${u}`)),
+          store.set(`${ORIGIN}${u}`, new Response(pageHtml(u))),
         );
       },
       put: async (request: Request, response: Response) => {
         store.set(request.url, response);
       },
+      match: async (input: Request | string, options?: MatchOptions) =>
+        find(store, input, options),
     };
   };
   return {
@@ -26,10 +45,11 @@ function fakeCaches() {
     open,
     keys: async () => [...stores.keys()],
     delete: async (name: string) => stores.delete(name),
-    match: async (input: Request | string) => {
-      const url = typeof input === "string" ? `${ORIGIN}${input}` : input.url;
-      for (const store of stores.values())
-        if (store.has(url)) return store.get(url)?.clone();
+    match: async (input: Request | string, options?: MatchOptions) => {
+      for (const store of stores.values()) {
+        const hit = find(store, input, options);
+        if (hit) return hit;
+      }
     },
   };
 }
@@ -116,6 +136,15 @@ describe("service worker (SEC-51)", () => {
     const worker = loadWorker();
     await worker.waited("install");
     expect([...worker.caches.stores.keys()]).toEqual(["agendal-shell-2"]);
+    // Every screen and the files its page loads, so a first visit works offline (AP §2.2)
+    const cached = [...worker.caches.stores.get("agendal-shell-2")!.keys()];
+    for (const path of [
+      "/notes",
+      "/tasks/_",
+      "/_next/static/notes.js",
+      "/_next/static/tasks_.js",
+    ])
+      expect(cached).toContain(`${ORIGIN}${path}`);
 
     await worker.fetchEvent("/_next/static/app.js");
     worker.network.mockClear();
@@ -124,7 +153,7 @@ describe("service worker (SEC-51)", () => {
     expect(worker.network).not.toHaveBeenCalled();
   });
 
-  it("opens the cached page, or the shell, when offline", async () => {
+  it("opens the cached page, its screen's stand-in, or the shell, when offline", async () => {
     const online = loadWorker();
     await online.waited("install");
     await online.fetchEvent("/upcoming", { mode: "navigate" });
@@ -134,10 +163,18 @@ describe("service worker (SEC-51)", () => {
       "agendal-shell-2",
       online.caches.stores.get("agendal-shell-2")!,
     );
-    const seen = await offline.fetchEvent("/upcoming", { mode: "navigate" });
-    expect(await seen?.text()).toBe("network /upcoming");
-    const unseen = await offline.fetchEvent("/projects", { mode: "navigate" });
-    expect(await unseen?.text()).toBe("cached /");
+    const page = async (path: string) =>
+      (
+        await (await offline.fetchEvent(path, { mode: "navigate" }))?.text()
+      )?.split("<")[0];
+    expect(await page("/upcoming")).toBe("network /upcoming");
+    expect(await page("/projects")).toBe("cached /projects");
+    expect(await page("/notes?filter=pending")).toBe("cached /notes");
+    // A detail never opened online: the same screen's page, which reads its id from the URL
+    expect(await page("/tasks/abc")).toBe("cached /tasks/_");
+    expect(await page("/notes/abc")).toBe("cached /notes/_");
+    expect(await page("/?task=abc")).toBe("cached /");
+    expect(await page("/somewhere")).toBe("cached /");
   });
 
   it("drops old shell caches on activate, and only those", async () => {
@@ -172,12 +209,13 @@ describe("service worker (SEC-51)", () => {
     });
     await pending;
 
-    expect([...worker.caches.stores.get("agendal-shell-2")!.keys()]).toEqual([
-      `${ORIGIN}/`,
-      `${ORIGIN}/theme.js`,
-      `${ORIGIN}/inbox`,
-      `${ORIGIN}/_next/static/chunk.js`,
-    ]);
+    const cached = [...worker.caches.stores.get("agendal-shell-2")!.keys()];
+    expect(cached).toContain(`${ORIGIN}/inbox`);
+    expect(cached).toContain(`${ORIGIN}/_next/static/chunk.js`);
+    expect(cached.some((u) => u.includes("/api/") || u.includes("_rsc"))).toBe(
+      false,
+    );
+    expect(cached.every((u) => u.startsWith(ORIGIN))).toBe(true);
   });
 
   it("waits for the page's say-so before taking over (UX-42)", async () => {
