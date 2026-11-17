@@ -6,12 +6,7 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import {
-  AnimatePresence,
-  motion,
-  useReducedMotion,
-  type Variants,
-} from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "./icons";
 import { cx } from "./cx";
 
@@ -52,7 +47,6 @@ export function SelectDropdown<T extends string>({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredValue, setHoveredValue] = useState<T | null>(null);
-  const isFiltering = searchQuery.trim().length > 0;
 
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -229,64 +223,6 @@ export function SelectDropdown<T extends string>({
     }
   };
 
-  const containerVariants: Variants = {
-    closed: {
-      opacity: 0,
-      scale: prefersReducedMotion ? 1 : 0.9,
-      transition: {
-        duration: 0.22,
-        ease: EASE_SOFT_OUT,
-        staggerChildren: 0,
-      },
-    },
-    open: {
-      opacity: 1,
-      scale: 1,
-      transition: {
-        duration: 0.22,
-        ease: EASE_SOFT_OUT,
-      },
-    },
-  };
-
-  const listVariants: Variants = {
-    closed: {
-      transition: {
-        staggerChildren: 0,
-      },
-    },
-    open: {
-      transition: {
-        staggerChildren:
-          isFiltering || prefersReducedMotion
-            ? 0
-            : filteredOptions.length > 10
-              ? 0.033 * Math.sqrt(10 / filteredOptions.length)
-              : 0.033,
-      },
-    },
-  };
-
-  const itemVariants: Variants = {
-    closed: {
-      opacity: 0,
-      x: prefersReducedMotion ? 0 : 8,
-      filter: prefersReducedMotion ? "none" : "blur(4px)",
-      transition: {
-        duration: 0.1,
-      },
-    },
-    open: {
-      opacity: 1,
-      x: 0,
-      filter: "blur(0px)",
-      transition: {
-        duration: isFiltering || prefersReducedMotion ? 0 : 0.3,
-        ease: EASE_SOFT_OUT,
-      },
-    },
-  };
-
   return (
     <div ref={containerRef} className={cx("relative space-y-1.5", className)}>
       <label className="block text-body font-normal text-ink lg:text-callout lg:font-semibold">
@@ -352,16 +288,11 @@ export function SelectDropdown<T extends string>({
           </span>
         </button>
 
-        {/* Options list popup */}
-        <motion.div
-          key="select-dropdown-popup"
-          initial="closed"
-          animate={isOpen ? "open" : "closed"}
-          variants={containerVariants}
-          style={{ transformOrigin: "top" }}
+        {/* Options list popup: opens and closes at once, no drop-in motion */}
+        <div
           className={cx(
-            "z-50 rounded-xl border border-separator/70 bg-surface/95 backdrop-blur-md shadow-2xl p-1 origin-top max-h-64 overflow-y-auto space-y-0.5 absolute left-0 right-0 top-full mt-1",
-            isOpen ? "pointer-events-auto" : "pointer-events-none",
+            "z-50 rounded-xl border border-separator/70 bg-surface/95 backdrop-blur-md shadow-2xl p-1 max-h-64 overflow-y-auto space-y-0.5 absolute left-0 right-0 top-full mt-1",
+            !isOpen && "hidden",
           )}
         >
           {searchable && (
@@ -399,10 +330,9 @@ export function SelectDropdown<T extends string>({
             </div>
           )}
 
-          <motion.div
+          <div
             role={roleMode === "radio" ? "radiogroup" : "listbox"}
             aria-label={label}
-            variants={listVariants}
             onMouseLeave={() => setHoveredValue(null)}
             className="space-y-0.5"
           >
@@ -416,7 +346,7 @@ export function SelectDropdown<T extends string>({
                 const isDisabled = Boolean(option.disabled);
                 const isHovered = hoveredValue === option.value && !isDisabled;
                 return (
-                  <motion.button
+                  <button
                     key={option.value}
                     ref={(el) => {
                       optionRefs.current[idx] = el;
@@ -430,7 +360,6 @@ export function SelectDropdown<T extends string>({
                     }
                     aria-disabled={isDisabled ? true : undefined}
                     tabIndex={isOpen && !isDisabled ? 0 : -1}
-                    variants={itemVariants}
                     onMouseMove={() => {
                       if (!isDisabled && hoveredValue !== option.value) {
                         setHoveredValue(option.value);
@@ -508,12 +437,12 @@ export function SelectDropdown<T extends string>({
                         )}
                       </AnimatePresence>
                     </span>
-                  </motion.button>
+                  </button>
                 );
               })
             )}
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
       {helperText && (
         <p className="m-0 mt-1 text-footnote text-ink-secondary lg:text-caption lg:text-ink-tertiary">
