@@ -63,8 +63,10 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={titleId}
       >
-        <div className="grid min-h-14 grid-cols-[44px_1fr_auto] items-center gap-2">
+        {/* Equal side columns keep the title centred whether or not there is a confirm button */}
+        <div className="grid min-h-14 grid-cols-[1fr_minmax(0,auto)_1fr] items-center gap-2">
           <IconButton
+            className="justify-self-start"
             plain
             label={closeLabel}
             icon={<XIcon />}
@@ -73,7 +75,7 @@ export function Sheet({
           <h2
             ref={titleRef}
             id={titleId}
-            className="m-0 text-center text-heading font-semibold focus:outline-none"
+            className="m-0 truncate text-center text-heading font-semibold focus:outline-none"
             tabIndex={-1}
           >
             {title}
@@ -81,7 +83,7 @@ export function Sheet({
           {confirmLabel && onConfirm ? (
             <button
               type="button"
-              className="focus-ring min-h-11 cursor-pointer rounded-field border-0 bg-transparent px-2 text-heading font-semibold text-primary enabled:hover:bg-fill disabled:opacity-40"
+              className="focus-ring min-h-11 justify-self-end cursor-pointer rounded-field border-0 bg-transparent px-2 text-heading font-semibold text-primary enabled:hover:bg-fill disabled:opacity-40"
               onClick={onConfirm}
               disabled={confirmDisabled}
             >
