@@ -108,7 +108,7 @@ function StepBadge({
   }, [isCompleted]);
 
   return (
-    <span className="stepper__badge">
+    <span className="stepper__badge" aria-hidden="true">
       {isCompleted ? (
         <svg
           width={14}
@@ -534,16 +534,20 @@ export function Stepper({
                 }}
                 type="button"
                 aria-current={isActive ? "step" : undefined}
-                aria-label={t("stepper.step", {
-                  number: stepNumber,
-                  title,
-                })}
                 disabled={!isSelectable}
                 data-state={state}
                 onClick={() => goToStep(stepNumber, true)}
                 className="stepper__step-btn focus-ring"
               >
                 <StepBadge stepNumber={stepNumber} isCompleted={isCompleted} />
+                {/* The name reads "Step 1: Your name" and still contains the visible
+                    title, so voice control can say what it sees (WCAG 2.5.3) */}
+                <span className="sr-only">
+                  {t("stepper.step", {
+                    number: stepNumber,
+                    title: "",
+                  }).trimEnd()}{" "}
+                </span>
                 {title && <span className="stepper__step-title">{title}</span>}
               </button>
             </li>
