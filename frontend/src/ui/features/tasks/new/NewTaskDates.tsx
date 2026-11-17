@@ -1,11 +1,10 @@
 import type { ReactElement } from "react";
 import { DatePicker } from "../../../components/DatePicker";
 import { CalendarIcon, ClockIcon } from "../../../components/icons";
-import { Picker } from "../../../components/Picker";
+import { TimePicker } from "../../../components/TimePicker";
 import { t, type CopyKey } from "../../../copy";
 import type { TimeFormat, WeekStart } from "../../../domain/types";
 import { SettingsRow } from "../details/SettingsRow";
-import { buildTimeOptions } from "../details/timeOptions";
 
 const ERROR_ID = "new-task-dates-error";
 
@@ -32,12 +31,12 @@ export function NewTaskStartTime({
       error={error ? t(error) : undefined}
       errorId={ERROR_ID}
       control={
-        <Picker<string>
+        <TimePicker
           id="new-task-start"
           variant="row"
           label={t("task.start_time")}
           value={startTime}
-          options={buildTimeOptions(null, startTime, timeFormat)}
+          timeFormat={timeFormat}
           disabled={!startDate}
           onChange={onStartTimeChange}
           ariaDescribedBy={error ? ERROR_ID : undefined}
@@ -87,16 +86,13 @@ export function NewTaskDue({
             onChange={(value) => onDueDateChange(value ?? "")}
             weekStart={weekStart}
           />
-          <Picker<string>
+          <TimePicker
             id="new-task-due-time"
             variant="row"
             label={t("task.due_time")}
             value={dueTime}
-            options={buildTimeOptions(
-              sameDay ? startTime || null : null,
-              dueTime,
-              timeFormat,
-            )}
+            timeFormat={timeFormat}
+            minTime={sameDay ? startTime || null : null}
             disabled={!dueDate}
             onChange={onDueTimeChange}
             ariaDescribedBy={error ? ERROR_ID : undefined}

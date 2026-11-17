@@ -461,6 +461,18 @@ export const pending = {
   "settings.group_preferences": "Preferences",
   "settings.group_tasks": "Tasks and alerts",
   "settings.group_data": "Data and apps",
+  "common.decrease": "Decrease",
+  "common.increase": "Increase",
+  "common.ok": "OK",
+  "time.field": "Type a time",
+  "time.invalid": "Type a time like 9:30 or 21:15.",
+  "time.after": "Pick a time after {time}.",
+  "time.hour": "Hour",
+  "time.minute": "Minute",
+  "time.keyboard": "Type the time",
+  "time.dial": "Pick on the clock",
+  "time.am": "AM",
+  "time.pm": "PM",
 } as const;
 
 export type PendingKey = keyof typeof pending;

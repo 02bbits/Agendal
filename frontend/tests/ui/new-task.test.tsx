@@ -17,6 +17,7 @@ import type { CreateTaskBody } from "../../src/ui/domain/newTask";
 import { NewTaskSheet, t, type NewTaskSheetProps } from "../../src/ui";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { TODAY, projects } from "./fixtures";
+import { useWideScreen } from "./wideScreen";
 
 function Harness(props: Partial<NewTaskSheetProps>) {
   const [open, setOpen] = useState(false);
@@ -393,6 +394,8 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
   });
 
   it("start time, an added due date and due time all go in the create body (#154)", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     let sentBody: CreateTaskBody | undefined;
     const onCreate = vi.fn(async (body: CreateTaskBody) => {
       sentBody = body;
