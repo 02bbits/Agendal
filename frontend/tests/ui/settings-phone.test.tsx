@@ -64,13 +64,35 @@ describe("Phone Settings (issue #149 round 6)", () => {
     vi.unstubAllGlobals();
   });
 
-  it("the Sidebar section has exactly one switch named 'Show task counts' with an aria-describedby description, and no visible 'On'/'Off' text next to it", async () => {
+  it("phones don't list Sidebar settings: they only change the desktop sidebar", async () => {
     await openAccount();
 
-    const sidebarButton = screen.getByRole("button", {
-      name: new RegExp(t("settings.tab_sidebar"), "i"),
-    });
-    await userEvent.click(sidebarButton);
+    expect(
+      screen.queryByRole("button", {
+        name: new RegExp(t("settings.tab_sidebar"), "i"),
+      }),
+    ).toBeNull();
+  });
+
+  it("on desktop the Sidebar tab has exactly one switch named 'Show task counts', with no aria-describedby and no visible 'On'/'Off' text next to it", async () => {
+    // Desktop width: Settings shows its tabs, Sidebar among them
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: /min-width:\s*768px/.test(query),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    await openAccount();
+
+    await userEvent.click(
+      screen.getByRole("radio", {
+        name: new RegExp(t("settings.tab_sidebar"), "i"),
+      }),
+    );
 
     const switches = screen.getAllByRole("switch", {
       name: t("settings.sidebar_show_task_counts"),
