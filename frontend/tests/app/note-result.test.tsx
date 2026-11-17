@@ -738,6 +738,11 @@ describe("Check this first /notes/[id] (IM-45)", () => {
 
     await open();
 
+    // As on the task row, a low priority goes unsaid and a raised one shows
+    const priorityText = (level: "low" | "high") =>
+      new RegExp(`(?:^|· )${t(`priority.${level}`)}(?: ·|$)`);
+    expect(screen.queryByText(priorityText("low"))).toBeNull();
+
     await userEvent.click(
       await screen.findByRole("button", { name: /SQL quiz/ }),
     );
@@ -747,6 +752,8 @@ describe("Check this first /notes/[id] (IM-45)", () => {
     await userEvent.click(
       screen.getByRole("button", { name: t("common.done") }),
     );
+
+    expect(await screen.findByText(priorityText("high"))).toBeTruthy();
 
     await userEvent.click(
       screen.getByRole("button", { name: t("note.apply_preview") }),

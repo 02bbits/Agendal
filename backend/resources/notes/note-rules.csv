@@ -616,6 +616,16 @@ priority_high,khẩn
 priority_high,khẩn cấp
 priority_high,quan trọng
 priority_high,ưu tiên
+priority_high,top priority
+priority_high,very important
+priority_high,very urgent
+priority_high,super urgent
+priority_high,ưu tiên cao
+priority_high,khẩn trương
+priority_high,gấp lắm
+priority_high,rất gấp
+priority_high,cực gấp
+priority_high,rất quan trọng
 priority_high_content,deadline
 priority_high_content,exam
 priority_high_content,quiz
@@ -623,17 +633,61 @@ priority_high_content,submit
 priority_high_content,hạn chót
 priority_high_content,thi
 priority_high_content,kiểm tra
-priority_high_content,nộp
+priority_high_content,nộp bài
+priority_high_content,nộp báo cáo
+priority_high_content,nộp đồ án
+priority_high_content,nộp luận văn
+priority_high_content,nộp hồ sơ
 priority_low,low priority
 priority_low,whenever
 priority_low,someday
 priority_low,maybe
 priority_low,không gấp
 priority_low,khi nào rảnh
+priority_low,ưu tiên thấp
+priority_low,no rush
+priority_low,not a priority
+priority_low,không vội
+priority_medium,medium priority
+priority_medium,normal priority
+priority_medium,ưu tiên trung bình
+priority_medium,ưu tiên vừa
+priority_negation,not
+priority_negation,not that
+priority_negation,not so
+priority_negation,isn't
+priority_negation,is not
+priority_negation,it's not
+priority_negation,it's not that
+priority_negation,is not that
+priority_negation,isn't that
+priority_negation,không
+priority_negation,chưa
+priority_negation,ko
+priority_negation,k
+priority_negation,chẳng
+priority_negation,không cần
+priority_negation,chưa cần
+priority_negation,không quá
+priority_negation,không cần phải
 reminder_day_before,exam
 reminder_day_before,quiz
 reminder_day_before,thi
 reminder_day_before,kiểm tra
+content_word_exempt,thi công
+content_word_exempt,thi hành
+content_word_exempt,thực thi
+content_word_exempt,thi thoảng
+content_word_exempt,thi thố
+content_word_exempt,thi đua
+content_word_exempt,kiểm tra email
+content_word_exempt,kiểm tra mail
+content_word_exempt,kiểm tra tin nhắn
+content_word_exempt,kiểm tra lại
+content_word_exempt,kiểm tra xe
+content_word_exempt,kiểm tra sức khỏe
+content_word_exempt,kiểm tra hàng
+content_word_exempt,kiểm tra đơn
 acronym,SQL
 acronym,HCI
 acronym,CV
@@ -1090,3 +1144,176 @@ repeat_exclusion,không vào
 repeat_exclusion,không tính
 duration_unit:hour,giờ
 duration_fraction_suffix,rưỡi
+duration_suffix,from now
+bound_lead,for
+bound_lead,over
+bound_lead,during
+bound_lead,lasting
+bound_lead,trong
+bound_lead,trong vòng
+bound_lead,trong suốt
+bound_lead,suốt
+bound_lead,kéo dài
+bound_lead,liên tục
+bound_lead,within
+bound_lead_next,for the next
+bound_lead_next,for the coming
+bound_lead_next,over the next
+bound_lead_next,over the coming
+bound_lead_next,during the next
+bound_lead_next,in the next
+bound_lead_next,within the next
+bound_next_marker,next
+bound_next_marker,the next
+bound_next_marker,coming
+bound_next_marker,the coming
+bound_next_marker,upcoming
+bound_next_marker,the upcoming
+copy_unit,time
+copy_unit,times
+copy_unit,lần
+count_unit,occurrence
+count_unit,occurrences
+count_lead,for
+count_lead,after
+count_lead,end after
+count_lead,ends after
+count_lead,trong
+count_lead,sau
+count_lead,kết thúc sau
+count_lead,repeat
+count_lead,repeats
+count_lead,repeated
+count_lead,lặp lại
+count_lead,lặp
+count_lead,lặp đi lặp lại
+deadline_word,deadline
+deadline_word,due
+deadline_word,hạn
+deadline_word,hạn chót
+deadline_word,hạn nộp
+deadline_word,thời hạn
+repeat_endless,never ends
+repeat_endless,never ending
+repeat_endless,no end date
+repeat_endless,không kết thúc
+repeat_endless,vô thời hạn
+bound_more,more
+bound_trail,straight
+bound_trail,in a row
+bound_trail,consecutive
+bound_trail,sắp tới
+bound_trail,tới
+bound_trail,liền
+bound_trail,liên tiếp
+bound_trail,liên tục
+bound_fortnight,fortnight
+bound_fortnight,fortnights
+bound_start_lead,from
+bound_start_lead,starting
+bound_start_lead,starting from
+bound_start_lead,beginning
+bound_start_lead,từ
+bound_start_lead,bắt đầu
+bound_start_lead,bắt đầu từ
+bound_period:week:0,this week
+bound_period:week:0,the rest of the week
+bound_period:week:0,the rest of this week
+bound_period:week:0,rest of the week
+bound_period:week:0,tuần này
+bound_period:week:0,hết tuần này
+bound_period:week:0,hết tuần
+bound_period:week:0,cả tuần này
+bound_period:week:1,next week
+bound_period:week:1,tuần sau
+bound_period:week:1,tuần tới
+bound_period:week:1,cả tuần sau
+bound_period:month:0,this month
+bound_period:month:0,the rest of the month
+bound_period:month:0,the rest of this month
+bound_period:month:0,rest of the month
+bound_period:month:0,tháng này
+bound_period:month:0,hết tháng này
+bound_period:month:0,hết tháng
+bound_period:month:0,cả tháng này
+bound_period:month:1,next month
+bound_period:month:1,tháng sau
+bound_period:month:1,tháng tới
+bound_period:month:1,cả tháng sau
+bound_period:year:0,this year
+bound_period:year:0,the rest of the year
+bound_period:year:0,the rest of this year
+bound_period:year:0,rest of the year
+bound_period:year:0,năm nay
+bound_period:year:0,hết năm nay
+bound_period:year:0,hết năm
+bound_period:year:0,cả năm nay
+bound_period:year:1,next year
+bound_period:year:1,năm sau
+bound_period:year:1,năm tới
+bound_period:year:1,cả năm sau
+bound_until_lead,until
+bound_until_lead,till
+bound_until_lead,đến
+bound_until_lead,tới
+duration_fraction_suffix,and a half
+bound_through_lead,through
+bound_through_lead,throughout
+bound_through_lead,đến hết
+bound_through_lead,tới hết
+bound_through_lead,cho đến hết
+bound_approximate,about
+bound_approximate,around
+bound_approximate,roughly
+bound_approximate,approximately
+bound_approximate,nearly
+bound_approximate,almost
+bound_approximate,at least
+bound_approximate,at most
+bound_approximate,up to
+bound_approximate,several
+bound_approximate,a few
+bound_approximate,few
+bound_approximate,a couple of
+bound_approximate,a couple
+bound_approximate,couple of
+bound_approximate,some
+bound_approximate,many
+bound_approximate,khoảng
+bound_approximate,tầm
+bound_approximate,chừng
+bound_approximate,gần
+bound_approximate,hơn
+bound_approximate,ít nhất
+bound_approximate,tối đa
+bound_approximate,vài
+bound_approximate,một vài
+bound_approximate,mấy
+bound_approximate,dăm
+bound_approximate,nhiều
+bound_approximate_suffix,or so
+bound_approximate_suffix,or more
+bound_approximate_suffix,or less
+bound_approximate_suffix,or longer
+bound_approximate_suffix,give or take
+bound_approximate_suffix,ish
+bound_approximate_suffix,hoặc hơn
+bound_approximate_suffix,trở lên
+bound_approximate_suffix,trở xuống
+bound_approximate_suffix,gì đó
+bound_approximate_suffix,hay sao đó
+bound_end_word,until
+bound_end_word,till
+bound_end_word,through
+bound_end_word,throughout
+bound_end_word,ends on
+bound_end_word,ending on
+bound_end_word,đến hết
+bound_end_word,tới hết
+bound_end_word,cho đến hết
+bound_end_word,cho tới khi
+bound_end_word,kết thúc
+weekday_list_separator,","
+weekday_list_separator,&
+weekday_list_separator,-
+weekday_list_separator,/

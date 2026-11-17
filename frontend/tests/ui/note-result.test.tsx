@@ -38,6 +38,21 @@ const ink: NoteChange = {
   task: task({ id: "t-ink", title: "Buy printer ink" }),
 };
 
+// #120: a series with an end, from "lái xe mỗi thứ 3 trong 4 tuần"
+const drive: NoteChange = {
+  kind: "created",
+  label: "Tue 3 Nov",
+  task: task({
+    id: "t-drive",
+    title: "Lái xe",
+    start_date: "2026-11-03",
+    due_date: "2026-11-03",
+    repeat: "weekly",
+    repeat_rule:
+      "FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=TU;UNTIL=20261130T235959Z",
+  }),
+};
+
 function resultOf(
   changes: NoteChange[],
   skipped: SkippedItem[] = [],
@@ -111,6 +126,11 @@ describe("Note result (IM-43, RV-1)", () => {
     open(resultOf([sql, hci]));
     expect(screen.getByText("Mon 26 Oct · 09:00 · SQL Course")).toBeTruthy();
     expect(screen.getByText("Fri 30 Oct · HCI · was Wed 28 Oct")).toBeTruthy();
+  });
+
+  it("a created series shows how long it runs, not only its first date (#120)", () => {
+    open(resultOf([drive]));
+    expect(screen.getByText(/Tue 3 Nov · .*through 2026-11-30/)).toBeTruthy();
   });
 
   it("renaming: Escape and Enter give focus back to the pencil (UX-11)", async () => {
@@ -484,6 +504,11 @@ describe("Check this first (IM-45, NU-5)", () => {
     expect(
       screen.queryByRole("group", { name: t("note.ask_when") }),
     ).toBeNull();
+  });
+
+  it("a planned series shows its end, not only its frequency (#120)", () => {
+    open(confirm([drive]), { onOpenTask: vi.fn() });
+    expect(screen.getByText(/through 2026-11-30/)).toBeTruthy();
   });
 
   it("a row rescheduled here shows its new date instead of the note's", () => {

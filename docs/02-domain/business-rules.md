@@ -41,9 +41,9 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 | Splitting | *rồi*, *sau đó* (whole words, with words after them). *và* never splits | *then* |
 | Due date | hôm nay, tối nay, mai / ngày mai, mốt / ngày mốt, thứ 2 … thứ 7 / thứ hai … thứ bảy / T2 … T7, chủ nhật / CN, tuần sau / tuần tới, 3 ngày nữa, cuối tuần, cuối tháng, ngày 26/10, 26 tháng 10 | today, tonight, tomorrow, day after tomorrow, Monday … Sunday, next week, in 3 days, end of the week, end of the month, 26 Oct |
 | Time | 9h, 9h30, 9 giờ, 9 giờ 30, lúc 14h. sáng (09:00), trưa (12:00), chiều (15:00), tối (19:00), tối nay (20:00). *sáng / chiều / tối* after an hour sets am or pm: 2 giờ chiều → 14:00 | 9am, 9:30, at 14, morning, noon, evening, tonight |
-| Priority | gấp, khẩn, quan trọng, ưu tiên, hạn chót, thi, kiểm tra, nộp → High. không gấp, khi nào rảnh → Low | urgent, important, deadline, exam, quiz, submit → High. whenever, someday → Low |
+| Priority | gấp, khẩn, khẩn trương, quan trọng, ưu tiên, ưu tiên cao, hạn chót, thi, kiểm tra, nộp bài / báo cáo / đồ án / luận văn / hồ sơ → High. không gấp, không vội, khi nào rảnh, ưu tiên thấp → Low. A negation before a High word (không / chưa / chẳng / không cần + gấp, quan trọng …) → Low. ưu tiên trung bình / vừa → Medium. Compounds such as thi công, thực thi, kiểm tra email / xe / sức khỏe don't count | urgent, important, top priority, deadline, exam, quiz, submit → High. whenever, someday, no rush, not a priority → Low. not / isn't + a High word ("not urgent") → Low. medium / normal priority → Medium |
 | Repeat | mỗi ngày / hằng ngày / hàng ngày, mỗi tuần / hằng tuần, mỗi thứ 2, mỗi tháng / hằng tháng | every day, every week, every Monday, every month |
-| Reminder | thi, kiểm tra → 1 day before | exam, quiz |
+| Reminder | thi, kiểm tra → 1 day before (not in the compounds above) | exam, quiz |
 | Lead-ins (removed from the title) | nhớ, phải, cần, cần phải | remember to, I need to |
 | Complete | xong X, đã xong X, X xong rồi | done X, X is done |
 | Reschedule | dời / chuyển / hoãn X sang / qua / đến \<when> | move / postpone X to \<when> |
