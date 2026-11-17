@@ -129,9 +129,12 @@ export function Sidebar({
       <button
         type="button"
         onClick={onSearch}
-        className="focus-ring flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-field border border-transparent bg-fill px-3 text-left text-callout text-ink-tertiary shadow-none transition-all duration-150 hover:border-separator hover:bg-fill-2/70 hover:text-ink hover:shadow-xs motion-reduce:transition-none"
+        className="group focus-ring flex min-h-10 w-full cursor-pointer items-center gap-2 rounded-field border border-transparent bg-fill px-3 text-left text-callout text-ink-secondary shadow-none transition-all duration-150 hover:border-separator hover:bg-fill-2/70 hover:text-ink hover:shadow-xs motion-reduce:transition-none"
       >
-        <SearchIcon size={18} className="shrink-0 transition-colors" />
+        <SearchIcon
+          size={18}
+          className="shrink-0 text-ink-tertiary transition-colors group-hover:text-ink"
+        />
         <span className="flex-1 truncate">{t("search.placeholder")}</span>
       </button>
 

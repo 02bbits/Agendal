@@ -25,7 +25,7 @@ export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
           onClick={onWrite}
         >
           <SparklesIcon size={18} />
-          <span className="truncate" aria-hidden="true">
+          <span className="truncate text-ink-secondary" aria-hidden="true">
             {t("note.placeholder")}
           </span>
         </button>
