@@ -4,7 +4,6 @@ import { BellIcon, RepeatIcon } from "../../../components/icons";
 import { Picker } from "../../../components/Picker";
 import { t, type CopyKey } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
-import { reminderPast } from "../../../domain/edit";
 import {
   REMINDERS,
   type Project,
@@ -25,7 +24,8 @@ export interface SettingsRowsProps {
   projectsStatus?: "ready" | "failed";
   onRetryProjects?: () => void;
   todayDate: string;
-  clock: Clock;
+  /** Still passed by callers; the passed-reminder helper that used it is gone (#154). */
+  clock?: Clock;
   timeFormat?: TimeFormat;
   weekStart?: WeekStart;
   showSchedule?: boolean;
@@ -39,16 +39,12 @@ export function SettingsRows({
   projectsStatus = "ready",
   onRetryProjects,
   todayDate,
-  clock,
   timeFormat,
   weekStart,
   onSave,
   variant = "panel",
 }: SettingsRowsProps): ReactElement {
-  const isReminderPast = reminderPast(task, clock.now(), clock.timeZone);
-
   const hasDate = Boolean(task.start_date || task.due_date);
-  const reminderHelper = isReminderPast ? t("task.reminder_past") : undefined;
 
   // The series starts on the start date, the task's main date (#154)
   const repeatAnchor =
@@ -83,8 +79,6 @@ export function SettingsRows({
         variant={variant}
         icon={<BellIcon size={18} />}
         label={t("task.reminder")}
-        helper={reminderHelper}
-        helperId="task-reminder-helper"
         control={
           <Picker<Reminder>
             id="task-reminder"

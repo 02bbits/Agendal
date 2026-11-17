@@ -28,6 +28,7 @@ import { ProjectField } from "../../src/ui/features/tasks/details/ProjectField";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
+import { useWideScreen } from "./wideScreen";
 
 function Details({
   id,
@@ -96,6 +97,8 @@ describe("Task details fields (T-TK-10)", () => {
   });
 
   it("saves start time", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({ title: "Task", start_date: TODAY, due_date: TODAY }),
     );
@@ -113,6 +116,8 @@ describe("Task details fields (T-TK-10)", () => {
   });
 
   it("saves end time", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Task",
@@ -593,6 +598,8 @@ describe("Task details fields (T-TK-10)", () => {
 
 describe("Schedule validation (T-TK-20)", () => {
   it("offers only end times after start, so the UI can't break TK-3", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     open(
       task({
         title: "Schedule Task",
@@ -610,6 +617,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("shows start_after_due when start is after due, linked by aria-describedby, and a valid start time clears it", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Schedule Task",
@@ -640,6 +649,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("A11Y-41: the schedule error is linked with aria-describedby and is assertive", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     open(
       task({
         title: "Schedule Task",
@@ -723,6 +734,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("picking a start date then a start time saves both", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Task",
@@ -843,7 +856,7 @@ describe("Field edge cases and accessibility", () => {
     expect(screen.queryByText(t("task.reminder_needs_date"))).toBeNull();
   });
 
-  it("T-TK-104 (TK-E4): shows helper when reminder time has already passed", () => {
+  it("T-TK-104 (TK-E4): a reminder time already passed is kept, with no helper under it", () => {
     open(
       task({
         title: "Passed Task",
@@ -853,7 +866,12 @@ describe("Field edge cases and accessibility", () => {
         reminder: "15m",
       }),
     );
-    expect(screen.getByText(t("task.reminder_past"))).toBeTruthy();
+    expect(
+      screen.queryByText("This reminder time has already passed."),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("task.reminder") }).textContent,
+    ).toContain("15");
   });
 
   it("shows assistant footnote as text (A11Y-43)", () => {
@@ -1186,7 +1204,8 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     const view = render(
       ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
     );
-    expect(document.documentElement.dataset.taskPanel).toBe("open");
+    // The default panel sits at the side; a popup sets "popup" so the bar keeps its width
+    expect(document.documentElement.dataset.taskPanel).toBe("aside");
     expect(document.documentElement.style.overflow).toBe("");
     expect(document.body.style.overflow).toBe("");
 
@@ -1195,6 +1214,17 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     window.dispatchEvent(outsideEvent);
     expect(outsideEvent.defaultPrevented).toBe(true);
 
+    view.unmount();
+    expect(document.documentElement.dataset.taskPanel).toBeUndefined();
+  });
+
+  it("a popup task panel flags the page as popup, so the bottom bar keeps its width", () => {
+    const t1 = task({ id: "t-pop", title: "Popup Task" });
+    const ctx = setup([t1]);
+    const view = render(
+      ctx.wrap(<TaskPanel variant="popup" taskId={t1.id} onClose={() => {}} />),
+    );
+    expect(document.documentElement.dataset.taskPanel).toBe("popup");
     view.unmount();
     expect(document.documentElement.dataset.taskPanel).toBeUndefined();
   });

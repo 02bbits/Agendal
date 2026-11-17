@@ -167,7 +167,6 @@ export const catalog = {
   "task.repeat_future": "This and all future",
   "task.limit":
     "You've reached 5,000 open tasks. Complete or delete some to add more.",
-  "task.reminder_past": "This reminder time has already passed.",
   "task.title_required": "A task needs a title.",
   "task.reminder_needs_date": "Add a date to set a reminder.",
   "task.from_note": "From note: {name}",
@@ -197,8 +196,8 @@ export const catalog = {
   "repeat_custom.every": "Every",
   "repeat_unit.day": "Day",
   "repeat_custom.on_days": "On",
-  "repeat_custom.month_day": "On day {day}",
-  "repeat_custom.month_weekday": "On the {nth} {day}",
+  "repeat_custom.month_day": "Day {day} of each month",
+  "repeat_custom.month_weekday": "The {nth} {day} of each month",
   "repeat_end.label": "Ends",
   "repeat_custom.done": "Done",
   "reminder.0m": "At start time",

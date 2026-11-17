@@ -176,7 +176,6 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `task.repeat_this` | This task only | Dialog option |
 | `task.repeat_future` | This and all future | Dialog option |
 | `task.limit` † | You've reached 5,000 open tasks. Complete or delete some to add more. | Error ([NF-14](../05-quality/nfr.md#nf-14)) |
-| `task.reminder_past` † | This reminder time has already passed. | Helper under Reminder |
 | `task.title_required` † | A task needs a title. | Title cleared in details (TK) |
 | `task.reminder_needs_date` † | Add a date to set a reminder. | Reminder disabled without a date |
 | `task.from_note` † | From note: {name} | Link in Task details for assistant tasks |
@@ -205,8 +204,8 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `repeat_custom.every` † | Every | Number of days, weeks, months or years |
 | `repeat_unit.day` † | Day | Unit choice; also `repeat_unit.week` Week, `repeat_unit.month` Month, `repeat_unit.year` Year |
 | `repeat_custom.on_days` † | On | Weekday choice for a weekly repeat |
-| `repeat_custom.month_day` † | On day {day} | Monthly: the same day number |
-| `repeat_custom.month_weekday` † | On the {nth} {day} | Monthly: the same weekday of the month |
+| `repeat_custom.month_day` † | Day {day} of each month | Monthly: the same day number |
+| `repeat_custom.month_weekday` † | The {nth} {day} of each month | Monthly: the same weekday of the month |
 | `repeat_end.label` † | Ends | With `repeat_end.never` Never, `repeat_end.on` On (a date), `repeat_end.after` After … `repeat_end.times` times |
 | `repeat_custom.done` † | Done | Saves the custom repeat |
 | `reminder.0m` † | At start time | Reminder choice in Task details |

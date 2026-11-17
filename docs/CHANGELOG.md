@@ -2,6 +2,11 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-18
+
+- **Monthly repeat labels say "each month" (Refs #154).** [copy-catalog](01-product/copy-catalog.md): `repeat_custom.month_day` is now "Day {day} of each month" (was "On day {day}") and `repeat_custom.month_weekday` is "The {nth} {day} of each month" (was "On the {nth} {day}"), so the two Custom repeat choices read as a rule. New copy `common.decrease`, `common.increase`, `common.ok` and the `time.*` keys for typing a time and the phone clock sit in `pending.ts` until the catalog owner adds them.
+- **No helper for a passed reminder time (Refs #154).** [TK §2.2 Reminder, §3 state matrix, TK-E4](03-modules/TK-tasks.md#tk-e4): a reminder time that has already passed is still saved and nothing is sent, but Task details no longer shows a line under Reminder. `task.reminder_past` is removed from the [copy-catalog](01-product/copy-catalog.md).
+
 ## 2026-11-16
 
 - **Priority words (Refs #120).** [NU §2.3](03-modules/NU-note-understanding.md) Priority row, [business-rules](02-domain/business-rules.md) Priority and Reminder rows, [SUMMARY](SUMMARY.md) note fields: a negated High word gives Low; medium words give Medium; "nộp" sets High only in submission phrases; compounds such as *thi công*, *kiểm tra email* don't set High or the exam reminder.
