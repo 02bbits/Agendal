@@ -30,6 +30,13 @@ export interface DatePickerProps {
   clearable?: boolean;
   /** Takes the Today chip's place, for a screen where today can't be picked. */
   todayChip?: { label: string; disabled?: boolean; onSelect: () => void };
+  /**
+   * Opens the calendar in place, under the trigger, instead of in a popover or bottom sheet:
+   * for a picker inside a dialog, where a sheet would open at the bottom of the screen.
+   */
+  inline?: boolean;
+  /** With `inline`: the calendar is always shown, with no button to open it. */
+  alwaysOpen?: boolean;
 }
 
 export function DatePicker({
@@ -46,6 +53,8 @@ export function DatePicker({
   onOpenChange,
   clearable = false,
   todayChip,
+  inline = false,
+  alwaysOpen = false,
 }: DatePickerProps): ReactElement {
   const autoId = useId();
   const pickerId = id ?? `datepicker-${autoId}`;
@@ -90,6 +99,114 @@ export function DatePicker({
     },
   ] as const;
 
+  const panel = (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {clearable && (
+          <Chip selected={!value} onClick={() => selectAndClose("")}>
+            {t("task.no_date")}
+          </Chip>
+        )}
+        {chips.map((c) =>
+          c.k === "today" && todayChip ? (
+            <Chip
+              key={c.k}
+              disabled={todayChip.disabled}
+              onClick={() => {
+                setOpen(false);
+                todayChip.onSelect();
+              }}
+            >
+              {todayChip.label}
+            </Chip>
+          ) : (
+            <Chip
+              key={c.k}
+              selected={value === c.d}
+              disabled={disabled}
+              onClick={() => selectAndClose(c.d)}
+            >
+              {c.l}
+            </Chip>
+          ),
+        )}
+      </div>
+
+      <CalendarMonth
+        viewMonth={viewMonth}
+        setViewMonth={setViewMonth}
+        weekdayLabels={getWeekdayLabels(weekStart)}
+        weeks={buildMonthGrid(viewMonth, weekStart, todayStr, value)}
+        value={value}
+        focusedDate={focusedDate}
+        disabled={disabled}
+        dayRefs={dayRefs}
+        onDayKeyDown={onDayKeyDown}
+        selectAndClose={selectAndClose}
+      />
+    </div>
+  );
+
+  const trigger = (
+    <PickerTrigger
+      triggerRef={triggerRef}
+      id={pickerId}
+      label={label}
+      haspopup="dialog"
+      open={open}
+      describedBy={helperId}
+      disabled={disabled}
+      isScreen={isScreen}
+      isIcon={isIcon}
+      onToggle={() => setOpen(!open)}
+      onKeyDown={onTriggerKeyDown}
+    >
+      {isIcon ? <CalendarIcon size={16} /> : displayValue}
+    </PickerTrigger>
+  );
+
+  if (inline && alwaysOpen) {
+    return (
+      <div
+        role="group"
+        aria-label={label}
+        aria-disabled={disabled || undefined}
+        className={cx(
+          "w-full rounded-box border border-separator bg-surface p-3 transition-opacity",
+          disabled && "opacity-45",
+          className,
+        )}
+      >
+        {panel}
+      </div>
+    );
+  }
+
+  if (inline) {
+    return (
+      <div className={cx("flex flex-col gap-2", className)}>
+        <div className="inline-flex">{trigger}</div>
+        {open && (
+          <div
+            role="group"
+            aria-label={label}
+            onKeyDown={(e) => {
+              if (e.key !== "Escape") return;
+              // Close the calendar, not the dialog around it
+              e.preventDefault();
+              e.stopPropagation();
+              setOpen(false);
+              triggerRef.current?.focus();
+            }}
+            className="w-full rounded-box border border-separator bg-surface p-3 motion-safe:animate-fade-in"
+          >
+            {panel}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className={cx("inline-flex flex-col", className)}>
       <PopoverOrSheet
@@ -99,68 +216,9 @@ export function DatePicker({
         triggerRef={triggerRef}
         align={isScreen || isIcon ? "right" : "left"}
         popoverClassName="max-h-[calc(100vh-16px)] w-[308px] p-3"
-        trigger={
-          <PickerTrigger
-            triggerRef={triggerRef}
-            id={pickerId}
-            label={label}
-            haspopup="dialog"
-            open={open}
-            describedBy={helperId}
-            disabled={disabled}
-            isScreen={isScreen}
-            isIcon={isIcon}
-            onToggle={() => setOpen(!open)}
-            onKeyDown={onTriggerKeyDown}
-          >
-            {isIcon ? <CalendarIcon size={16} /> : displayValue}
-          </PickerTrigger>
-        }
+        trigger={trigger}
       >
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-wrap items-center gap-1.5">
-            {clearable && (
-              <Chip selected={!value} onClick={() => selectAndClose("")}>
-                {t("task.no_date")}
-              </Chip>
-            )}
-            {chips.map((c) =>
-              c.k === "today" && todayChip ? (
-                <Chip
-                  key={c.k}
-                  disabled={todayChip.disabled}
-                  onClick={() => {
-                    setOpen(false);
-                    todayChip.onSelect();
-                  }}
-                >
-                  {todayChip.label}
-                </Chip>
-              ) : (
-                <Chip
-                  key={c.k}
-                  selected={value === c.d}
-                  onClick={() => selectAndClose(c.d)}
-                >
-                  {c.l}
-                </Chip>
-              ),
-            )}
-          </div>
-
-          <CalendarMonth
-            viewMonth={viewMonth}
-            setViewMonth={setViewMonth}
-            weekdayLabels={getWeekdayLabels(weekStart)}
-            weeks={buildMonthGrid(viewMonth, weekStart, todayStr, value)}
-            value={value}
-            focusedDate={focusedDate}
-            disabled={disabled}
-            dayRefs={dayRefs}
-            onDayKeyDown={onDayKeyDown}
-            selectAndClose={selectAndClose}
-          />
-        </div>
+        {panel}
       </PopoverOrSheet>
       {helper && (
         <p id={helperId} className="mt-1 text-footnote text-ink-secondary">
