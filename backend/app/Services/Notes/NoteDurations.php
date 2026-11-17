@@ -90,7 +90,9 @@ final class NoteDurations
         }
         // A relative clause containing an unknown/composite quantity must not be read only in part.
         $number = '(?:[+\-]?\d+(?:[.,]\d+)?|'.NoteVocabulary::phrases('amount_half').'|'.NoteVocabulary::integerPattern().')';
-        $quantity = '(?:'.$number.'(?:\s+(?:(?:and|và)\s+)?'.$number.')*|\p{L}+)';
+        // A repeat word or another unit is no unknown quantity: "every day 2 weeks from now", "hàng tuần tháng sau".
+        $notQuantity = NoteVocabulary::phrases('repeat_prefix').'|'.implode('|', NoteVocabulary::family('duration_unit'));
+        $quantity = '(?:'.$number.'(?:\s+(?:(?:and|và)\s+)?'.$number.')*|(?!(?:'.$notQuantity.')(?!\p{L}))\p{L}+)';
         $unit = '(?:'.implode('|', NoteVocabulary::family('duration_unit')).')';
         $pair = $quantity.'\s*'.$unit.'(?:\s+(?:'.NoteVocabulary::phrases('duration_fraction_suffix').'))?';
         $sequence = $pair.'(?:\s+(?:(?:and|và)\s+)?'.$pair.')*';
