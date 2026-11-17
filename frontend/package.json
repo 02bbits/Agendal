@@ -11,6 +11,8 @@
     "format:check": "prettier --check .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
     "gen:copy": "node scripts/gen-copy.mjs"
   },
   "dependencies": {
@@ -20,6 +22,8 @@
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.65.1",
     "@tailwindcss/postcss": "4.1.11",
     "@testing-library/dom": "10.4.0",
     "@testing-library/react": "16.1.0",
