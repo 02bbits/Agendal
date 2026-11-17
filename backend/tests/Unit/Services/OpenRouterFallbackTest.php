@@ -602,3 +602,16 @@ it('retries once when the provider is busy, and not on other errors', function (
     'rate limited' => [429, 2, 'rules_llm'],
     'bad request' => [400, 1, 'rules_fallback'],
 ]);
+
+it('sends open-task titles only for command-like items, so a new task cannot borrow one (ADR-008)', function (string $text, bool $sent) {
+    $task = ['id' => (string) Str::uuid(), 'title' => 'Gọi cho mẹ hỏi thăm'];
+    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task]), $text);
+    app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request['messages'][1]['content'], $task['id']) === $sent);
+})->with([
+    'new task' => ['goi me thu 6 luc 7h toi', false],
+    'unaccented delete' => ['xoa goi me', true],
+    'unaccented move' => ['doi goi me sang thu 6', true],
+]);

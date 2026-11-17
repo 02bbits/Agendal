@@ -67,7 +67,8 @@ final class OpenRouterFallback
                     fn (array $entry): bool => NoteEngine::itemIndex($entry['ref']) === NoteEngine::itemIndex($ref)
                         && ! array_key_exists($entry['ref'], $items)), 'task_id');
                 $remaining = array_values(array_filter($openTasks, fn (array $task): bool => ! in_array($task['id'], $knownIds, true)));
-                $candidates[$ref] = $this->candidatesFor($item, $context, $remaining);
+                // ADR-008: open-task titles go out for command-like items only; a new task must not borrow one
+                $candidates[$ref] = $this->commandLike($item) ? $this->candidatesFor($item, $context, $remaining) : [];
             }
             $schema = $this->schema(array_keys($items), $candidates, array_values($context->projects));
             $body = $this->request($items, $candidates, $schema, $context);
@@ -144,6 +145,19 @@ final class OpenRouterFallback
         }
 
         return true;
+    }
+
+    /**
+     * A complete, move or delete word from the rules, compared without accents so "xoa call mum" and
+     * "doi call mum sang thu tu" count while "goi me thu 6" does not.
+     */
+    private function commandLike(string $item): bool
+    {
+        $plain = fn (string $text): string => Str::lower(Str::ascii($text));
+        $words = array_map(fn (string $word): string => preg_quote($plain($word), '~'),
+            [...NoteVocabulary::values('complete_command'), ...NoteVocabulary::values('move_command'), ...NoteVocabulary::values('delete_command')]);
+
+        return preg_match('~(?<![\p{L}\p{N}])(?:'.implode('|', $words).')(?![\p{L}\p{N}])~u', $plain($item)) === 1;
     }
 
     /**
