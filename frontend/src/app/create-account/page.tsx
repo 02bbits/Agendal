@@ -4,11 +4,12 @@ import { api } from "@/lib/api";
 import { timeZone } from "@/lib/clock";
 import { useOffline } from "@/lib/online";
 import { CreateAccountScreen, ROUTES, t, type SignUpFailure } from "@/ui";
+import { formatWait } from "@/ui/features/auth/CodeEntry";
 import { useAppFrame } from "../AppFrame";
 
 /** Create account (IM-11): POST /auth/register, then Inbox with the welcome toast. */
 export default function CreateAccountPage() {
-  const { navigate, showToast } = useAppFrame();
+  const { navigate } = useAppFrame();
   const offline = useOffline();
 
   async function register(values: {
@@ -27,13 +28,19 @@ export default function CreateAccountPage() {
     }
 
     if (response.ok) {
-      showToast(t("auth.welcome"));
-      navigate(ROUTES.inbox);
+      navigate(ROUTES.verify);
       return;
     }
     if (response.status === 429) {
-      const seconds = response.headers.get("Retry-After") ?? "60";
-      return { form: t("error.rate_limited", { seconds }) };
+      const seconds = Number(response.headers.get("Retry-After")) || 60;
+      const limit = await response.json().catch(() => null);
+      // The 5-accounts-an-hour limit has its own words and a minutes:seconds wait
+      return {
+        form:
+          limit?.error?.code === "auth.signup_limited"
+            ? t("auth.signup_limited", { time: formatWait(seconds) })
+            : t("error.rate_limited", { seconds: String(seconds) }),
+      };
     }
     const body = await response.json().catch(() => null);
     if (response.status === 422 && body?.error?.fields) {

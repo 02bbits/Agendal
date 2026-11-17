@@ -64,6 +64,9 @@
   --ag-due-tint: #eef3fa;
   --ag-bar: rgba(242, 242, 242, 0.94);
   --ag-scrim: rgba(0, 0, 0, 0.32);
+  --ag-navy: #252525;
+  --ag-navy-2: #333333;
+  --ag-hero-ink: #ededed;
 }
 
 @plugin "daisyui/theme" {
@@ -121,6 +124,9 @@
   --ag-due-tint: #1f2a36;
   --ag-bar: rgba(26, 26, 26, 0.94);
   --ag-scrim: rgba(0, 0, 0, 0.6);
+  --ag-navy: #252525;
+  --ag-navy-2: #333333;
+  --ag-hero-ink: #ededed;
 }
 
 /* Utilities for the tokens above: bg-surface, text-ink-secondary, border-control, … */
@@ -147,6 +153,9 @@
   --color-due-tint: var(--ag-due-tint);
   --color-bar: var(--ag-bar);
   --color-scrim: var(--ag-scrim);
+  --color-navy: var(--ag-navy);
+  --color-navy-2: var(--ag-navy-2);
+  --color-hero-ink: var(--ag-hero-ink);
 }
 
 /* Project colours are picked at runtime (style={{ background: var(--color-project-…) }}), so always emit them */
@@ -174,6 +183,11 @@
   --text-title: 22px;
   --text-title--line-height: 28px;
   --text-title--letter-spacing: -0.015em;
+  --text-title-2: 22px;
+  --text-title-2--line-height: 28px;
+  --text-title-2--letter-spacing: -0.015em;
+  --text-title-3: 17px;
+  --text-title-3--line-height: 22px;
   --text-dialog: 22px;
   --text-dialog--line-height: 28px;
   --text-dialog--letter-spacing: -0.015em;

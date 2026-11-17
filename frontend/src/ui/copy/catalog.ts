@@ -11,8 +11,9 @@ export const catalog = {
   "common.keep_editing": "Keep editing",
   "common.back": "Back",
   "auth.welcome": "Welcome to Agendal. Your account is ready.",
-  "auth.password_rule": "At least 8 characters, and not your email.",
-  "auth.password_same_as_email": "Your password can't be your email.",
+  "auth.password_rule":
+    "At least 8 characters, and doesn't contain your information.",
+  "auth.password_same_as_email": "Your password can't contain your email.",
   "auth.password_breached":
     "This password has appeared in a data breach. Choose another one.",
   "auth.email_taken":
@@ -22,7 +23,7 @@ export const catalog = {
   "auth.locked_body": "Try again in {seconds} s.",
   "auth.remember_me": "Remember me",
   "auth.reset_sent":
-    "If an account exists for {email}, we've sent a link to reset your password. It works for 60 minutes.",
+    "We've sent a link to {email}. Follow the link to continue resetting your password.",
   "auth.reset_resend": "Resend link",
   "auth.reset_expired":
     "This link has expired or was already used. Request a new one.",

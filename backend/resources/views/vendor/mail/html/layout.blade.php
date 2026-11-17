@@ -104,6 +104,16 @@ color: #EDEDED !important;
 .panel-content p {
 color: #EDEDED !important;
 }
+
+.code-box {
+background-color: #1A1A1A !important;
+color: #EDEDED !important;
+}
+
+.meta-line,
+.meta-line span {
+color: #A6A6A6 !important;
+}
 }
 
 [data-ogsc] body,
@@ -179,6 +189,11 @@ color: #EDEDED !important;
 
 [data-ogsc] .panel-content p {
 color: #EDEDED !important;
+}
+
+[data-ogsc] .meta-line,
+[data-ogsc] .meta-line span {
+color: #A6A6A6 !important;
 }
 </style>
 {!! $head ?? '' !!}

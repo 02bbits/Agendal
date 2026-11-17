@@ -25,9 +25,9 @@ function readLink(): Link {
 
 const noSubscribe = () => () => {};
 
-/** Set a new password (IM-13): POST /auth/reset-password, then Inbox with a toast. */
+/** Set a new password (IM-13): POST /auth/reset-password, then a done state with Sign in. */
 export default function ResetPasswordPage() {
-  const { navigate, showToast } = useAppFrame();
+  const { navigate } = useAppFrame();
   const offline = useOffline();
   // undefined while prerendering: the fragment exists only in the browser
   const link = useSyncExternalStore(noSubscribe, readLink, () => undefined);
@@ -54,11 +54,8 @@ export default function ResetPasswordPage() {
     } catch {
       return { form: t("auth.offline") };
     }
-    if (response.ok) {
-      showToast(t("auth.password_changed"));
-      navigate(ROUTES.inbox);
-      return;
-    }
+    // Nobody is signed in by a reset: the screen shows its done state with Sign in (AA §2.3)
+    if (response.ok) return;
     const body = await response.json().catch(() => null);
     if (body?.error?.code === "auth.reset_expired") return { expired: true };
     if (body?.error?.fields?.password)
@@ -74,6 +71,7 @@ export default function ResetPasswordPage() {
       email={link?.email ?? null}
       onSubmit={reset}
       forgotPasswordHref={ROUTES.forgotPassword}
+      signInHref={ROUTES.signIn}
       navigate={navigate}
       offline={offline}
     />

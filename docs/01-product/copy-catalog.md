@@ -27,15 +27,15 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | Key | Text | Where |
 |---|---|---|
 | `auth.welcome` | Welcome to Agendal. Your account is ready. | Toast after sign-up ([AA-1](../03-modules/AA-account-access.md#aa-1)) |
-| `auth.password_rule` | At least 8 characters, and not your email. | Helper under the password field |
-| `auth.password_same_as_email` † | Your password can't be your email. | Field error |
+| `auth.password_rule` | At least 8 characters, and doesn't contain your information. | Helper under the password field |
+| `auth.password_same_as_email` † | Your password can't contain your email. | Field error |
 | `auth.password_breached` † | This password has appeared in a data breach. Choose another one. | Field error (SEC-06) |
 | `auth.email_taken` † | An account with this email already exists. Sign in instead? | Field error, links to Sign in |
 | `auth.invalid` | Email or password is incorrect. | Sign-in error ([AA-2](../03-modules/AA-account-access.md#aa-2)) |
 | `auth.locked_title` | Too many attempts | Banner title ([AA-3](../03-modules/AA-account-access.md#aa-3)) |
 | `auth.locked_body` † | Try again in {seconds} s. | Banner body, live countdown |
 | `auth.remember_me` | Remember me | Checkbox, on by default |
-| `auth.reset_sent` † | If an account exists for {email}, we've sent a link to reset your password. It works for 60 minutes. | Same text either way ([AA-4](../03-modules/AA-account-access.md#aa-4)) |
+| `auth.reset_sent` † | We've sent a link to {email}. Follow the link to continue resetting your password. | Same text either way ([AA-4](../03-modules/AA-account-access.md#aa-4)) |
 | `auth.reset_resend` † | Resend link | Enabled after 45 s |
 | `auth.reset_expired` † | This link has expired or was already used. Request a new one. | Reset page |
 | `auth.password_changed` † | Password changed. Other devices have been signed out. | Toast |

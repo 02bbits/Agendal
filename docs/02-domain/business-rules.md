@@ -41,9 +41,9 @@ Notes can be written in English, Vietnamese or a mix. Both phrase sets are alway
 | Splitting | *rồi*, *sau đó* (whole words, with words after them). *và* never splits | *then* |
 | Due date | hôm nay, tối nay, mai / ngày mai, mốt / ngày mốt, thứ 2 … thứ 7 / thứ hai … thứ bảy / T2 … T7, chủ nhật / CN, tuần sau / tuần tới, 3 ngày nữa, cuối tuần, cuối tháng, ngày 26/10, 26 tháng 10 | today, tonight, tomorrow, day after tomorrow, Monday … Sunday, next week, in 3 days, end of the week, end of the month, 26 Oct |
 | Time | 9h, 9h30, 9 giờ, 9 giờ 30, lúc 14h. sáng (09:00), trưa (12:00), chiều (15:00), tối (19:00), tối nay (20:00). *sáng / chiều / tối* after an hour sets am or pm: 2 giờ chiều → 14:00 | 9am, 9:30, at 14, morning, noon, evening, tonight |
-| Priority | gấp, khẩn, quan trọng, ưu tiên, hạn chót, thi, kiểm tra, nộp → High. không gấp, khi nào rảnh → Low | urgent, important, deadline, exam, quiz, submit → High. whenever, someday → Low |
+| Priority | gấp, khẩn, khẩn trương, quan trọng, ưu tiên, ưu tiên cao, hạn chót, thi, kiểm tra, nộp bài / báo cáo / đồ án / luận văn / hồ sơ → High. không gấp, không vội, khi nào rảnh, ưu tiên thấp → Low. A negation before a High word (không / chưa / chẳng / không cần + gấp, quan trọng …) → Low. ưu tiên trung bình / vừa → Medium. Compounds such as thi công, thực thi, kiểm tra email / xe / sức khỏe don't count | urgent, important, top priority, deadline, exam, quiz, submit → High. whenever, someday, no rush, not a priority → Low. not / isn't + a High word ("not urgent") → Low. medium / normal priority → Medium |
 | Repeat | mỗi ngày / hằng ngày / hàng ngày, mỗi tuần / hằng tuần, mỗi thứ 2, mỗi tháng / hằng tháng | every day, every week, every Monday, every month |
-| Reminder | thi, kiểm tra → 1 day before | exam, quiz |
+| Reminder | thi, kiểm tra → 1 day before (not in the compounds above) | exam, quiz |
 | Lead-ins (removed from the title) | nhớ, phải, cần, cần phải | remember to, I need to |
 | Complete | xong X, đã xong X, X xong rồi | done X, X is done |
 | Reschedule | dời / chuyển / hoãn X sang / qua / đến \<when> | move / postpone X to \<when> |
@@ -87,7 +87,7 @@ The first row that matches wins. Names longer than 34 characters are cut at a wo
 | <a id="br-14"></a>BR-14 | Deleting a task asks for confirmation, and the toast offers Undo | [TK-5](../03-modules/TK-tasks.md#tk-5) |
 | <a id="br-15"></a>BR-15 | Deleting a project asks whether to move its tasks to No project or delete them too. The toast offers Undo | [PJ-4](../03-modules/PJ-projects.md#pj-4) |
 | <a id="br-16"></a>BR-16 | A project has a name and one of 8 colours | [PJ-1](../03-modules/PJ-projects.md#pj-1) |
-| <a id="br-17"></a>BR-17 | A password is at least 8 characters and differs from the email | [AA-1](../03-modules/AA-account-access.md#aa-1) |
+| <a id="br-17"></a>BR-17 | A password is at least 8 characters and doesn't contain the email (or its name part of 3+ characters). Create account needs a Good or Strong password. A new password uses only English keyboard characters (printable ASCII, space included) and emoji | [AA-1](../03-modules/AA-account-access.md#aa-1) |
 | <a id="br-18"></a>BR-18 | After 3 failed sign-ins, Sign in is disabled for 60 s with a countdown | [AA-3](../03-modules/AA-account-access.md#aa-3) |
 | <a id="br-19"></a>BR-19 | Password reset shows the same confirmation whether or not the account exists. The link is single-use and expires in 60 minutes. Resend unlocks after 45 s | [AA-4](../03-modules/AA-account-access.md#aa-4), [NF-10](../05-quality/nfr.md#nf-10) |
 | <a id="br-20"></a>BR-20 | Inbox shows Overdue before Today | [LV-1](../03-modules/LV-lists-search.md#lv-1) |

@@ -29,6 +29,7 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   fullWidth?: boolean;
   pill?: boolean;
+  plain?: boolean;
   /** Request in flight: shows a spinner, keeps the label for screen readers and ignores taps (UX-06). */
   busy?: boolean;
 }
@@ -40,6 +41,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       size = "md",
       fullWidth = false,
       pill = false,
+      plain = false,
       busy = false,
       type = "button",
       className,
@@ -70,6 +72,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           VARIANT[variant],
           SIZE[size],
           fullWidth && "w-full",
+          plain && "bg-transparent! hover:bg-fill! text-ink shadow-none",
           className,
         )}
         style={{

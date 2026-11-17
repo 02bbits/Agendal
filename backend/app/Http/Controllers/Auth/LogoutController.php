@@ -37,6 +37,7 @@ class LogoutController extends Controller
 
     private function endSession(Request $request): Response
     {
+        $request->attributes->set('signed_out', true);
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 

@@ -18,6 +18,8 @@ final class FieldExtractor
     /** Unaccented Vietnamese needs at least this many known syllables, so "call me" stays English. */
     private const MIN_VIETNAMESE_SYLLABLES = 2;
 
+    private const MONTHS_PER_YEAR = 12;
+
     public function __construct(
         private NoteDateParser $dates,
         private NoteTimeParser $times,
@@ -39,7 +41,11 @@ final class FieldExtractor
         $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
         $repeat = $this->repeats->parse($readable, $context);
         // An unsupported recurrence must not become a one-off date from a weekday inside it.
-        $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($readable, $context);
+        $timeText = $readable;
+        foreach ($repeat['boundSpans'] ?? [] as [$offset, $length]) {
+            $timeText = substr_replace($timeText, str_repeat(' ', $length), $offset, $length);
+        }
+        $time = $repeat['unreadable'] ? new ParsedTime : $this->times->parse($timeText, $context);
         if (($repeat['rule'] !== null && $time->unreadable) || ($repeat['copies'] > 1 && $time->start !== null)) {
             // One supplied time does not tell us when the other copies happen. Preserve the whole request.
             $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
@@ -58,7 +64,12 @@ final class FieldExtractor
         }
         $dueDate = $repeat['unreadable'] ? null : ($date->date ?? $time->date ?? $this->impliedDate($time, $repeat['repeat'], $context));
         if ($repeat['rule'] !== null) {
-            $anchor = $dueDate ?? $context->today()->format('Y-m-d');
+            $bound = $repeat['bound'] ?? null;
+            // "next week" runs in that week; "through next week" runs from now to its end.
+            $period = isset($bound['period']) ? $this->periodRange($bound['period'], $bound['offset'], $bound['through'], $context) : null;
+            $stated = $date->date ?? $time->date;
+            // A series in a later period starts on that period's first day.
+            $anchor = max($dueDate ?? $context->today()->format('Y-m-d'), $period[0] ?? '');
             try {
                 // The first matching day starts the series; the interval counts from that first occurrence.
                 $firstRule = (string) preg_replace('/;INTERVAL=\d+/', ';INTERVAL=1', $repeat['rule']);
@@ -66,12 +77,32 @@ final class FieldExtractor
             } catch (InvalidArgumentException) {
                 $dueDate = null;
             }
-            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date)) {
+            if ($dueDate !== null && $bound !== null) {
+                [$start, $end] = isset($bound['amount'])
+                    ? [$stated ?? $dueDate, $this->boundEnd($dueDate, $bound['amount'], $bound['unit'])]
+                    : $this->periodRange($bound['period'], $bound['offset'], $bound['through'], $context);
+                // A stated date outside the period, or no occurrence left in it ("every Monday this week" on a Tuesday).
+                $outside = $stated !== null && ($stated < $start || $stated > $end);
+                $dueDate = $outside || $dueDate > $end ? null : $dueDate;
+                $repeat['rule'] .= ';UNTIL='.str_replace('-', '', $end).'T235959Z';
+            }
+            // #120: words no reader took that still say how long ("for about 3 weeks", "vài tuần") mean part of the
+            // schedule was lost, however it was worded; keep the whole item for review instead of an unbounded series.
+            $unread = $this->unread($readable, $date, $time, $repeat['spans']);
+            if ($dueDate === null || ($time->date !== null && $dueDate !== $time->date) || NoteRepeatParser::hasDurationShape($unread) || NoteRepeatParser::hasDanglingAmount($unread)) {
                 $dueDate = null;
                 $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null];
                 $time = new ParsedTime;
                 $date = new ParsedDate(unreadable: true);
             }
+        }
+        // A one-off item that says how long or which period ("lái xe 4 tuần", "tập gym tuần này", "tập gym 2 tuần tới")
+        // has a schedule the rules can't place; a date read from part of it would be wrong. Kept whole for the fallback.
+        if ($repeat['rule'] === null && ! $repeat['unreadable']
+            && (NoteRepeatParser::hasDuration($readable) || NoteRepeatParser::hasDurationShape($this->unread($readable, $date, $time, $repeat['spans'])))) {
+            $dueDate = null;
+            $time = new ParsedTime;
+            $date = new ParsedDate(unreadable: true);
         }
         [$title, $notes] = $this->title($text, [...$date->spans, ...$time->spans, ...$repeat['spans']], $context);
         $project = $this->project($text, $context);
@@ -225,17 +256,22 @@ final class FieldExtractor
     }
 
     /**
-     * NU-E40: Vietnamese words that need no accents ("mai", "t2") only count in accented Vietnamese.
-     * They are blanked out with spaces so phrase offsets stay the same.
+     * NU-E40: Vietnamese words that need no accents ("mai", "t2") only count in accented Vietnamese. Vietnamese typed
+     * without accents keeps only numeric dates and times: its syllables are read as nothing, so "goi me thu 6" is no
+     * English "Thu". They are blanked out with spaces so phrase offsets stay the same.
      */
     private function withoutUnaccentedVietnamese(string $text): string
     {
         if ($this->hasAccentedLetters($text)) {
             return $text;
         }
+        $words = NoteVocabulary::phrases('vietnamese_ascii_word');
+        if ($this->unaccentedVietnamese($text)) {
+            $words .= '|'.NoteVocabulary::phrases('vietnamese_unaccented_syllable');
+        }
 
         return (string) preg_replace_callback(
-            NoteVocabulary::pattern(NoteVocabulary::phrases('vietnamese_ascii_word')),
+            NoteVocabulary::pattern($words),
             fn (array $word): string => str_repeat(' ', strlen($word[0])),
             $text,
         );
@@ -244,6 +280,54 @@ final class FieldExtractor
     private function hasAccentedLetters(string $text): bool
     {
         return preg_match('/[^\P{L}\x00-\x7F]/u', $text) === 1;
+    }
+
+    /**
+     * The words no reader took: $readable with the date, time and repeat phrases blanked.
+     *
+     * @param  list<array{int, int}>  $repeatSpans
+     */
+    private function unread(string $readable, ParsedDate $date, ParsedTime $time, array $repeatSpans): string
+    {
+        foreach ([...$date->spans, ...$time->spans, ...$repeatSpans] as [$offset, $length]) {
+            $readable = substr_replace($readable, str_repeat(' ', $length), $offset, $length);
+        }
+
+        return $readable;
+    }
+
+    /**
+     * The last day of a series that runs for an amount of time from its first date: "every day for 3 days" from
+     * 2 Nov runs 2, 3 and 4 Nov. A year is twelve calendar months.
+     */
+    private function boundEnd(string $first, int $amount, string $unit): string
+    {
+        return $this->addUnits(new DateTimeImmutable($first), $amount, $unit)->modify('-1 day')->format('Y-m-d');
+    }
+
+    /** NoteDurations::add, with a year as twelve calendar months. */
+    private function addUnits(DateTimeImmutable $at, int $amount, string $unit): DateTimeImmutable
+    {
+        return $unit === 'year' ? NoteDurations::add($at, $amount * self::MONTHS_PER_YEAR, 'month') : NoteDurations::add($at, $amount, $unit);
+    }
+
+    /**
+     * First and last day of this ($offset 0) or the next ($offset 1) week, month or year, or today and that last day
+     * when $fromNow; a week starts on the user's week start (AP-5).
+     *
+     * @return array{0: string, 1: string}
+     */
+    private function periodRange(string $period, int $offset, bool $fromNow, NoteContext $context): array
+    {
+        $today = $context->today();
+        $start = match ($period) {
+            'week' => $today->modify(sprintf('-%d days', ((int) $today->format('w') - $context->weekStart->firstDay() + 7) % 7)),
+            'month' => $today->modify('first day of this month'),
+            default => $today->setDate((int) $today->format('Y'), 1, 1),
+        };
+        $first = $this->addUnits($start, $offset, $period)->format('Y-m-d');
+
+        return [$fromNow ? $today->format('Y-m-d') : $first, $this->boundEnd($first, 1, $period)];
     }
 
     /** NU-E5: no date but a time or repeat → today, or tomorrow when that time has passed. */
@@ -257,15 +341,22 @@ final class FieldExtractor
         return $context->today()->modify($passed ? '+1 day' : '+0 days')->format('Y-m-d');
     }
 
-    /** High words win over Low words (NU-E24); otherwise Medium when due today, else Low. */
+    /**
+     * High words win over Low words (NU-E24); a negated High word ("not urgent") is a Low word. Then a Medium word
+     * ("ưu tiên trung bình"), otherwise Medium when due today, else Low.
+     */
     private function priority(string $text, ?string $dueDate, NoteContext $context): Priority
     {
-        $withoutLow = (string) preg_replace(NoteVocabulary::pattern(NoteVocabulary::phrases('priority_low')), ' ', $text);
-        if (NoteVocabulary::contains('priority_high', $withoutLow) || NoteVocabulary::contains('priority_high_content', $withoutLow)) {
+        $low = NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low');
+        $plain = (string) preg_replace(NoteVocabulary::pattern($low.'|'.NoteVocabulary::phrases('priority_medium')), ' ', NoteVocabulary::withoutContentExempt($text));
+        if (NoteVocabulary::contains('priority_high', $plain) || NoteVocabulary::contains('priority_high_content', $plain)) {
             return Priority::High;
         }
-        if (NoteVocabulary::contains('priority_low', $text)) {
+        if (preg_match(NoteVocabulary::pattern($low), $text) === 1) {
             return Priority::Low;
+        }
+        if (NoteVocabulary::contains('priority_medium', $text)) {
+            return Priority::Medium;
         }
 
         return $dueDate === $context->today()->format('Y-m-d') ? Priority::Medium : Priority::Low;
@@ -305,7 +396,7 @@ final class FieldExtractor
     {
         $reminder = match (true) {
             $dueDate === null => Reminder::None,
-            NoteVocabulary::contains('reminder_day_before', $text) => Reminder::OneDay,
+            NoteVocabulary::contains('reminder_day_before', NoteVocabulary::withoutContentExempt($text)) => Reminder::OneDay,
             $startTime !== null => Reminder::FifteenMinutes,
             default => Reminder::None,
         };
@@ -336,7 +427,8 @@ final class FieldExtractor
             }
             $title = substr_replace($title, str_repeat(' ', $length), $offset, $length);
         }
-        $pureWords = NoteVocabulary::pattern(NoteVocabulary::phrases('priority_high').'|'.NoteVocabulary::phrases('priority_low'));
+        // Low and Medium first: "ưu tiên thấp" goes whole, not as High "ưu tiên" and a stray "thấp".
+        $pureWords = NoteVocabulary::pattern(NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low').'|'.NoteVocabulary::phrases('priority_medium').'|'.NoteVocabulary::phrases('priority_high'));
         $title = NoteVocabulary::outsideLiterals($title, array_values($context->projects), fn (string $part): string => (string) preg_replace($pureWords, ' ', $part));
         $title = $this->tidy((string) preg_replace('/\s+/u', ' ', $title));
         $title = (string) preg_replace('~^(?:(?:'.NoteVocabulary::phrases('lead_in').')(?:\s+|$))+~iu', '', $title);
