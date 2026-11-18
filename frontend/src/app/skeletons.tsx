@@ -1,3 +1,5 @@
+"use client";
+
 import { cx, TASK_COLUMN_CLASS } from "@/ui";
 
 // The skeleton of each list screen (#161), shared by the screen while its data loads and by the
@@ -174,11 +176,11 @@ export function ProjectSkeleton() {
       )}
     >
       <div className="flex items-center justify-between py-2">
-        <div className="h-8 w-20 rounded-full bg-surface-hover/60" />
+        <div className="h-8 w-20 rounded-full bg-fill/80" />
       </div>
       <div className="mt-2 mb-3 flex items-center gap-3">
-        <div className="size-3 shrink-0 rounded-full bg-surface-hover/60" />
-        <div className="h-7 w-48 rounded-xl bg-surface-hover/60" />
+        <div className="size-3 shrink-0 rounded-full bg-fill/80" />
+        <div className="h-7 w-48 rounded-xl bg-fill/80" />
       </div>
       <div className="mb-6 flex flex-col gap-2">
         <div className="h-1.5 w-full rounded-full bg-fill/80" />
