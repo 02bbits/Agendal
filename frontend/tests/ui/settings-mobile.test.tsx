@@ -359,3 +359,51 @@ describe("Settings on phones (Part D)", () => {
     ).toBeTruthy();
   });
 });
+
+describe("Settings: every way back has the underline swipe", () => {
+  const props = {
+    name: "Alex River",
+    email: "alex@example.com",
+    settings: defaultSettings,
+    onChange: vi.fn(),
+    onBack: vi.fn(),
+    onSignOut: vi.fn(),
+  };
+  const swipes = (button: HTMLElement) =>
+    button.querySelector(".link-swipe") !== null;
+  const media = (desktop: boolean) => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: desktop && /min-width:\s*768px/.test(query),
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+  };
+
+  it("on a phone: '‹ Back' on the list and '‹ Settings' on a tab's page", () => {
+    media(false);
+    render(<SettingsScreen {...props} />);
+    expect(swipes(screen.getByRole("button", { name: t("common.back") }))).toBe(
+      true,
+    );
+    fireEvent.click(screen.getByRole("button", { name: t("app.tab_general") }));
+    const back = screen.getByRole("button", { name: t("common.back") });
+    expect(back.textContent).toContain(t("settings.title"));
+    expect(swipes(back)).toBe(true);
+  });
+
+  it("on desktop: '‹ Back' from Change password", () => {
+    media(true);
+    render(<SettingsScreen {...props} initialTab="account" />);
+    fireEvent.click(
+      screen.getByRole("button", { name: t("settings.change_password") }),
+    );
+    expect(swipes(screen.getByRole("button", { name: t("common.back") }))).toBe(
+      true,
+    );
+  });
+});

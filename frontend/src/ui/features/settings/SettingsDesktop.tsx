@@ -5,8 +5,9 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
+import { BackButton } from "../../components/BackButton";
 import { cx } from "../../components/cx";
-import { ArrowLeftIcon, SearchIcon, XIcon } from "../../components/icons";
+import { SearchIcon, XIcon } from "../../components/icons";
 import { t } from "../../copy";
 import type { SettingsTabItem } from "./settingsTabs";
 import type { SettingsTab } from "./types";
@@ -156,15 +157,16 @@ export function SettingsDesktop({
           <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
             <div className="flex h-14 items-center justify-between border-b border-separator/40 px-6 sm:px-8 shrink-0">
               {subPage ? (
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
+                <div className="flex items-center gap-3">
+                  <BackButton
+                    label={t("common.back")}
                     onClick={subPage.onBack}
-                    aria-label={t("common.back")}
-                    className={HEADER_BUTTON}
-                  >
-                    <ArrowLeftIcon size={20} />
-                  </button>
+                    className="h-9 rounded-lg px-1 text-callout font-medium text-primary"
+                  />
+                  <span
+                    className="h-4 w-px bg-separator/60"
+                    aria-hidden="true"
+                  />
                   <span className="text-body sm:text-heading font-bold text-ink">
                     {subPage.title}
                   </span>

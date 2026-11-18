@@ -1,10 +1,7 @@
 import type { ReactElement, ReactNode, RefObject } from "react";
+import { BackButton } from "../../components/BackButton";
 import { cx } from "../../components/cx";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  SearchIcon,
-} from "../../components/icons";
+import { ChevronRightIcon, SearchIcon } from "../../components/icons";
 import { t } from "../../copy";
 import type { SettingsTabItem } from "./settingsTabs";
 import type { SettingsTab } from "./types";
@@ -130,15 +127,13 @@ export function SettingsPhone({
           >
             {/* Back and the title share one 56px row under the camera gap */}
             <div className="relative flex h-14 items-center">
-              <button
-                type="button"
+              <BackButton
+                label={t("settings.title")}
+                ariaLabel={t("common.back")}
                 onClick={onBackToList}
-                aria-label={t("common.back")}
-                className="focus-ring inline-flex h-11 items-center gap-1 rounded-field pl-1 pr-3 text-body text-ink cursor-pointer z-10"
-              >
-                <ChevronLeftIcon size={22} className="shrink-0" />
-                <span>{t("settings.title")}</span>
-              </button>
+                iconSize={22}
+                className="z-10 h-11 rounded-field pl-1 pr-3 text-body text-ink"
+              />
               <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
                 {openTab.label}
               </h2>
@@ -160,14 +155,11 @@ export function SettingsPhone({
               BELOW_CAMERA,
             )}
           >
-            <button
-              type="button"
+            <BackButton
+              label={t("common.back")}
               onClick={onClose}
-              className="focus-ring inline-flex h-11 items-center gap-1 rounded-field px-2 text-callout font-medium text-primary cursor-pointer"
-            >
-              <ChevronLeftIcon size={18} className="shrink-0" />
-              <span>{t("common.back")}</span>
-            </button>
+              className="h-11 rounded-field px-2 text-callout font-medium text-primary"
+            />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             <h1 className="mt-1 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
