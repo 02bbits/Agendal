@@ -87,7 +87,7 @@ afterEach(() => {
 });
 
 describe("Project detail page /projects/[id]", () => {
-  it("shows smooth skeleton after 300 ms when loading (UX-03)", async () => {
+  it("shows its skeleton at once while loading, the same one the tap showed (UX-03, #161)", async () => {
     vi.useFakeTimers();
     fetchMock.mockImplementation(async (url: string) => {
       if (url === "/api/v1/me")
@@ -121,12 +121,7 @@ describe("Project detail page /projects/[id]", () => {
       );
     });
 
-    expect(screen.queryByRole("status", { busy: true })).toBeNull();
-
-    act(() => {
-      vi.advanceTimersByTime(300);
-    });
-
+    // No blank gap before it: the screen goes straight from the tap's skeleton to its own
     const skeleton = screen.getByRole("status", { busy: true });
     expect(skeleton).toBeTruthy();
 

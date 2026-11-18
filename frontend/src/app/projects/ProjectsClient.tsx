@@ -17,6 +17,7 @@ import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
 import { ProjectsModals } from "./ProjectsModals";
+import { ProjectsSkeleton } from "../skeletons";
 
 export function ProjectsClient() {
   const { navigate, user, showToast } = useAppFrame();
@@ -115,27 +116,7 @@ export function ProjectsClient() {
             accountInitial={accountInitial}
             navigate={navigate}
           />
-          <div
-            data-testid="projects-loading"
-            className="grid grid-cols-1 gap-4 [html[data-page-view='full']_&]:sm:grid-cols-2 [html[data-page-view='full']_&]:lg:grid-cols-3 [html[data-page-view='full']_&]:xl:grid-cols-4 animate-pulse"
-          >
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div
-                key={i}
-                className="flex flex-col gap-3 rounded-2xl border border-separator/50 bg-surface p-5 shadow-xs"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="size-3 shrink-0 rounded-full bg-fill/80" />
-                  <div
-                    className="h-5 rounded-xl bg-fill/80"
-                    style={{ width: i % 2 === 0 ? "60%" : "45%" }}
-                  />
-                </div>
-                <div className="mt-2 h-1.5 w-full rounded-full bg-fill/60" />
-                <div className="h-3.5 w-24 rounded-lg bg-fill/50" />
-              </div>
-            ))}
-          </div>
+          <ProjectsSkeleton />
         </div>
       ) : (
         <ProjectsScreen
