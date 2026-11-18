@@ -30,6 +30,7 @@ import {
   type NoteResult,
   type Project,
   type ProjectWithCounts,
+  type CopyKey,
   type TabId,
   type ToastData,
 } from "@/ui";
@@ -57,6 +58,8 @@ import {
   submitNote,
 } from "@/lib/noteApi";
 import { clearRecent } from "@/ui/domain/recentSearches";
+import { TabLoading, TabPending } from "./TabLoading";
+import { headerDate } from "./headerDate";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -101,6 +104,13 @@ const PUBLIC_PATHS: readonly string[] = [
   ...SIGNED_OUT_PATHS,
   ROUTES.resetPassword,
 ];
+
+const TAB_TITLE: Record<TabId, CopyKey> = {
+  inbox: "nav.inbox",
+  upcoming: "nav.upcoming",
+  projects: "nav.projects",
+  notes: "nav.notes",
+};
 
 const TAB_BY_PATH: Record<string, TabId> = {
   [ROUTES.inbox]: "inbox",
@@ -201,6 +211,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [settings, setSettings] = useState<AccountSettings>(DEFAULT_SETTINGS);
   const [user, setUserState] = useState<SignedInUser | null>(null);
+  // The first session check has answered (signed in, signed out or offline): the start screen
+  // only waits for this, the tab's own skeleton covers its data (#161)
+  const [sessionChecked, setSessionChecked] = useState(false);
+  // A tab tapped and on its way (#161): it lights up at once, and the first time it opens the
+  // content shows a loader (phone) or a skeleton (768px+) until its page is there
+  const [pendingTab, setPendingTab] = useState<{
+    tab: TabId;
+    firstVisit: boolean;
+  } | null>(null);
+  const visitedTabs = useRef<Set<TabId>>(new Set());
 
   useEffect(() => {
     try {
@@ -273,6 +293,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         if (settingsEdits.current === editsBefore) setSettings(settingsOf(me));
       });
     api("/me")
+      .finally(() => setSessionChecked(true))
       .then(async (response) => {
         if (!current) return;
         if (response.ok) {
@@ -332,6 +353,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   const navigate = useCallback<Navigate>(
     (href) => {
+      const to = TAB_BY_PATH[href];
+      if (to && href !== pathname)
+        setPendingTab({ tab: to, firstVisit: !visitedTabs.current.has(to) });
       // Tab switches replace the entry, so Back doesn't walk through every tab visited
       if (href in TAB_BY_PATH && pathname in TAB_BY_PATH) router.replace(href);
       else router.push(href);
@@ -638,6 +662,24 @@ export function AppFrame({ children }: { children: ReactNode }) {
     ],
   );
   const tab = TAB_BY_PATH[pathname];
+
+  // The page has come: the tab counts as opened, and the pending state ends
+  useEffect(() => {
+    if (tab) visitedTabs.current.add(tab);
+    queueMicrotask(() => setPendingTab(null));
+  }, [pathname, tab]);
+
+  // Every tab is fetched ahead once the session is known, so a first tap doesn't wait for it
+  useEffect(() => {
+    if (!sessionChecked || !user) return;
+    // Only a speed-up: a router without it (or a failed fetch) changes nothing
+    for (const href of Object.keys(TAB_BY_PATH)) {
+      try {
+        router.prefetch?.(href);
+      } catch {}
+    }
+  }, [sessionChecked, user, router]);
+  const shownTab = pendingTab?.tab ?? tab;
   // UX-40: on the four tab screens only
   const offline = useOffline();
 
@@ -831,119 +873,135 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   return (
     <AppFrameContext.Provider value={value}>
-      <AppShell
-        tab={tab}
-        banner={tab && offline ? <OfflineBanner /> : undefined}
-        navigate={navigate}
-        onOpenSearch={handleOpenSearch}
-        capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
-        sidebar={
-          PUBLIC_PATHS.includes(pathname) ||
-          pathname === ROUTES.welcome ||
-          pathname === ROUTES.verify
-            ? undefined
-            : {
-                accountName: user?.display_name ?? user?.email ?? "",
-                counts: sidebarCounts,
-                projects: sidebarProjects,
-                onNewProject: () => setCreatingProject(true),
-                onSearch: handleOpenSearch,
-                onAccount: openSettings,
+      {/* The full-screen loading screen when the app starts (#161) */}
+      <TabLoading tab={tab ?? null} ready={sessionChecked}>
+        <AppShell
+          tab={shownTab}
+          pending={
+            pendingTab && pendingTab.tab !== tab ? (
+              <TabPending
+                title={t(TAB_TITLE[pendingTab.tab])}
+                overline={headerDate()}
+                accountInitial={user?.display_name || user?.email || ""}
+                navigate={navigate}
+                // An opened tab whose page is still on its way shows its skeleton, never a blank
+                // area; the logo screen is only for a phone's first visit
+                wide={isWideSearch || !pendingTab.firstVisit}
+              />
+            ) : undefined
+          }
+          banner={tab && offline ? <OfflineBanner /> : undefined}
+          navigate={navigate}
+          onOpenSearch={handleOpenSearch}
+          capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
+          sidebar={
+            PUBLIC_PATHS.includes(pathname) ||
+            pathname === ROUTES.welcome ||
+            pathname === ROUTES.verify
+              ? undefined
+              : {
+                  accountName: user?.display_name ?? user?.email ?? "",
+                  counts: sidebarCounts,
+                  projects: sidebarProjects,
+                  onNewProject: () => setCreatingProject(true),
+                  onSearch: handleOpenSearch,
+                  onAccount: openSettings,
+                }
+          }
+          toast={<Toast toast={toast} onDismiss={dismissToast} />}
+        >
+          {children}
+          {settingsOpen && pathname !== ROUTES.account && (
+            <AccountScreen
+              portal={true}
+              name={user?.display_name ?? ""}
+              email={user?.email ?? ""}
+              settings={settings}
+              onChange={changeSettings}
+              onBack={closeSettings}
+              showToast={showToast}
+              twoFactorEnabled={user?.two_factor_enabled}
+              onTwoFactorChange={(enabled) =>
+                setUser(user ? { ...user, two_factor_enabled: enabled } : null)
               }
-        }
-        toast={<Toast toast={toast} onDismiss={dismissToast} />}
-      >
-        {children}
-        {settingsOpen && pathname !== ROUTES.account && (
-          <AccountScreen
-            portal={true}
-            name={user?.display_name ?? ""}
-            email={user?.email ?? ""}
-            settings={settings}
-            onChange={changeSettings}
-            onBack={closeSettings}
-            showToast={showToast}
-            twoFactorEnabled={user?.two_factor_enabled}
-            onTwoFactorChange={(enabled) =>
-              setUser(user ? { ...user, two_factor_enabled: enabled } : null)
-            }
-            onSignOut={() => {
-              closeSettings();
-              signOut();
-            }}
-            onSignOutEverywhere={() => {
-              closeSettings();
-              signOut(true);
-            }}
-            onUpdateName={async (newName: string) => {
-              try {
-                await api("/me", {
-                  method: "PATCH",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ display_name: newName }),
-                });
-                setUser(user ? { ...user, display_name: newName } : null);
-              } catch {}
-            }}
-          />
-        )}
-        {editing && (
-          <NoteEditor
-            note={editingNote ?? undefined}
-            onClose={closeNoteEditor}
-            onDraftRestored={() => showToast(t("note.draft_restored"))}
-            offline={offline}
-            onQueued={(toast) => {
-              closeNoteEditor();
-              notesChanged();
-              showToast(t(toast));
-            }}
-            onSubmit={
-              editingNote
-                ? (text, _clientId, confirmConflicts) =>
-                    replanNote(editingNote.id, text, confirmConflicts)
-                : submitNote
-            }
-            onSubmitted={(result) => {
-              rememberNote(result);
-              notesChanged(result.note.id);
-              openResult(result.note.id);
-            }}
-          />
-        )}
-        {searching && (
-          <SearchPopup
-            clock={appClock}
-            onClose={closeSearch}
-            projects={projectsList}
-            timeFormat={settings.timeFormat}
-            searchTasks={search}
-            searchNotes={searchNotes}
-            onOpenTask={handleOpenTask}
-            onOpenProject={handleOpenProject}
-            onOpenNote={() => {
-              // TODO: open the note here once the Notes screen is done.
-            }}
-          />
-        )}
-        {open && (
-          <NewTaskSheet
-            {...sheetProps}
-            weekStart={settings.weekStart}
-            timeFormat={settings.timeFormat}
-          />
-        )}
-        {creatingProject && (
-          <ProjectSheet
-            open
-            projects={projectsList}
-            onClose={() => setCreatingProject(false)}
-            clock={appClock}
-            onCreate={createProject}
-            onCreated={handleProjectCreated}
-          />
-        )}
-      </AppShell>
+              onSignOut={() => {
+                closeSettings();
+                signOut();
+              }}
+              onSignOutEverywhere={() => {
+                closeSettings();
+                signOut(true);
+              }}
+              onUpdateName={async (newName: string) => {
+                try {
+                  await api("/me", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ display_name: newName }),
+                  });
+                  setUser(user ? { ...user, display_name: newName } : null);
+                } catch {}
+              }}
+            />
+          )}
+          {editing && (
+            <NoteEditor
+              note={editingNote ?? undefined}
+              onClose={closeNoteEditor}
+              onDraftRestored={() => showToast(t("note.draft_restored"))}
+              offline={offline}
+              onQueued={(toast) => {
+                closeNoteEditor();
+                notesChanged();
+                showToast(t(toast));
+              }}
+              onSubmit={
+                editingNote
+                  ? (text, _clientId, confirmConflicts) =>
+                      replanNote(editingNote.id, text, confirmConflicts)
+                  : submitNote
+              }
+              onSubmitted={(result) => {
+                rememberNote(result);
+                notesChanged(result.note.id);
+                openResult(result.note.id);
+              }}
+            />
+          )}
+          {searching && (
+            <SearchPopup
+              clock={appClock}
+              onClose={closeSearch}
+              projects={projectsList}
+              timeFormat={settings.timeFormat}
+              searchTasks={search}
+              searchNotes={searchNotes}
+              onOpenTask={handleOpenTask}
+              onOpenProject={handleOpenProject}
+              onOpenNote={() => {
+                // TODO: open the note here once the Notes screen is done.
+              }}
+            />
+          )}
+          {open && (
+            <NewTaskSheet
+              {...sheetProps}
+              weekStart={settings.weekStart}
+              timeFormat={settings.timeFormat}
+            />
+          )}
+          {creatingProject && (
+            <ProjectSheet
+              open
+              projects={projectsList}
+              onClose={() => setCreatingProject(false)}
+              clock={appClock}
+              onCreate={createProject}
+              onCreated={handleProjectCreated}
+            />
+          )}
+        </AppShell>
+      </TabLoading>
     </AppFrameContext.Provider>
   );
 }

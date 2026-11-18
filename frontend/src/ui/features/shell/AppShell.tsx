@@ -18,6 +18,11 @@ export interface AppShellProps {
   banner?: ReactNode;
   toast?: ReactNode;
   children: ReactNode;
+  /**
+   * Shown in the content area while a tapped tab is on its way (#161); the current page stays
+   * mounted underneath, hidden, so it keeps its state.
+   */
+  pending?: ReactNode;
   onOpenSearch?: () => void;
 }
 
@@ -37,6 +42,7 @@ export function AppShell({
   banner,
   toast,
   children,
+  pending,
 }: AppShellProps) {
   useKeyboardInset();
 
@@ -99,7 +105,8 @@ export function AppShell({
           }
         >
           {banner}
-          {children}
+          {pending}
+          <div className={pending ? "hidden" : "contents"}>{children}</div>
         </main>
         {tab && (
           <div
