@@ -192,6 +192,14 @@ export const PaperclipIcon = icon(
   <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />,
 );
 export const ArrowUpIcon = icon(<path d="M12 19V5M5 12l7-7 7 7" />);
+/** iOS Share: a box with an arrow out of it (AP-1 install guidance). */
+export const ShareIcon = icon(
+  <>
+    <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+    <path d="m16 6-4-4-4 4" />
+    <path d="M12 2v13" />
+  </>,
+);
 export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
 export const ArrowLeftIcon = icon(<path d="m12 19-7-7 7-7M19 12H5" />);
 export const RotateCcwIcon = icon(
