@@ -13,16 +13,19 @@ const DEFAULT_DATE_FORMAT = "DD-MM-YYYY";
 const DATE_FORMATS = ["DD-MM-YYYY", "MM/DD/YYYY", "YYYY-MM-DD", "D MMM YYYY"];
 const DEFAULT_TIME_ZONE = "UTC";
 
-/** Settings > General: date and time, the page view, installing the app. */
+/** Settings > General: date and time, the page view (desktop), installing the app. */
 export function GeneralTab({
   settings,
   onChange,
   onInstall,
+  isDesktop,
 }: {
   settings: AccountSettings;
   onChange: ChangeSettings;
   /** Only while this browser can install the app (AP-1). */
   onInstall?: () => void;
+  /** Page view only changes the layout from 768px: a phone is always flat. */
+  isDesktop: boolean;
 }): ReactElement {
   const [dateFormat, setDateFormat] = useState(
     () => readStoredSetting(DATE_FORMAT_KEY) || DEFAULT_DATE_FORMAT,
@@ -96,20 +99,22 @@ export function GeneralTab({
             ]}
           />
 
-          <div className="pt-2">
-            <SelectDropdown
-              label={t("app.page_view")}
-              value={settings.pageView ?? "flat"}
-              onChange={(pageView) =>
-                onChange({ pageView: pageView as PageViewMode })
-              }
-              roleMode="radio"
-              options={[
-                { value: "flat", label: t("app.view_flat") },
-                { value: "full", label: t("app.view_full") },
-              ]}
-            />
-          </div>
+          {isDesktop && (
+            <div className="pt-2">
+              <SelectDropdown
+                label={t("app.page_view")}
+                value={settings.pageView ?? "flat"}
+                onChange={(pageView) =>
+                  onChange({ pageView: pageView as PageViewMode })
+                }
+                roleMode="radio"
+                options={[
+                  { value: "flat", label: t("app.view_flat") },
+                  { value: "full", label: t("app.view_full") },
+                ]}
+              />
+            </div>
+          )}
         </div>
       </div>
 

@@ -82,6 +82,8 @@ describe("Phone Settings (issue #149 round 6)", () => {
       }),
     );
     expect(screen.queryByText("Home view")).toBeNull();
+    // A phone is always flat, so General has no Page view either
+    expect(screen.queryByText(t("app.page_view"))).toBeNull();
     expect(screen.getByText(t("app.time_format"))).toBeTruthy();
   });
 

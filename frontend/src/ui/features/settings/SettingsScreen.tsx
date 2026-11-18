@@ -144,6 +144,7 @@ export function SettingsScreen({
           settings={settings}
           onChange={onChange}
           onInstall={onInstall}
+          isDesktop={isDesktop}
         />
       </SettingsPanel>
       <SettingsPanel active={activeTab === "theme"} isDesktop={isDesktop}>
