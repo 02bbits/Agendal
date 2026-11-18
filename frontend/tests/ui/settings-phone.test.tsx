@@ -74,6 +74,17 @@ describe("Phone Settings (issue #149 round 6)", () => {
     ).toBeNull();
   });
 
+  it("phones have no Home view setting in General: they always open on Inbox", async () => {
+    await openAccount();
+    await userEvent.click(
+      screen.getByRole("button", {
+        name: new RegExp(t("app.tab_general"), "i"),
+      }),
+    );
+    expect(screen.queryByText(t("settings.home_view"))).toBeNull();
+    expect(screen.getByText(t("app.time_format"))).toBeTruthy();
+  });
+
   it("on desktop the Sidebar tab has exactly one switch named 'Show task counts', with no aria-describedby and no visible 'On'/'Off' text next to it", async () => {
     // Desktop width: Settings shows its tabs, Sidebar among them
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({

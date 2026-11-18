@@ -293,11 +293,12 @@ describe("Settings on phones (Part D)", () => {
     // Back in list view
     const listHeading = screen.getByRole("heading", { level: 1 });
     expect(listHeading.textContent).toBe(t("settings.title"));
-    expect(screen.queryByRole("button", { name: t("common.back") })).toBeNull();
-    // List header has close button
+    // The list header has "‹ Back" (it leaves Settings) instead of a close button
+    const leave = screen.getByRole("button", { name: t("common.back") });
+    expect(leave.textContent).toBe(t("common.back"));
     expect(
-      screen.getByRole("button", { name: t("common.close") }),
-    ).toBeTruthy();
+      screen.queryByRole("button", { name: t("common.close") }),
+    ).toBeNull();
   });
 
   it("handles Esc: in detail goes to list, in list closes settings", () => {
@@ -322,9 +323,17 @@ describe("Settings on phones (Part D)", () => {
 
     expect(screen.getByRole("button", { name: t("common.back") })).toBeTruthy();
 
-    // Esc in detail returns to list
+    // Esc in detail returns to list (the list has its own "‹ Back", which leaves Settings)
     fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByRole("button", { name: t("common.back") })).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        level: 2,
+        name: t("settings.tab_theme"),
+      }),
+    ).toBeNull();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+      t("settings.title"),
+    );
     expect(onBack).not.toHaveBeenCalled();
 
     // Esc in list closes settings

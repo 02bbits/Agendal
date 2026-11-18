@@ -741,34 +741,36 @@ export function AccountScreen({
                 : "hidden",
           )}
         >
-          {/* Home view */}
-          <SelectDropdown
-            label={t("settings.home_view")}
-            value={homeView}
-            onChange={(val) => {
-              setHomeView(val);
-              try {
-                localStorage.setItem("agendal.home_view", val);
-              } catch {}
-            }}
-            options={[
-              {
-                value: "inbox",
-                label: t("nav.inbox"),
-                icon: <InboxIcon size={16} />,
-              },
-              {
-                value: "upcoming",
-                label: t("nav.upcoming"),
-                icon: <CalendarIcon size={16} />,
-              },
-              {
-                value: "projects",
-                label: t("nav.projects"),
-                icon: <SidebarIcon size={16} />,
-              },
-            ]}
-          />
+          {/* Home view: desktop only, phones always open on Inbox */}
+          {isDesktop && (
+            <SelectDropdown
+              label={t("settings.home_view")}
+              value={homeView}
+              onChange={(val) => {
+                setHomeView(val);
+                try {
+                  localStorage.setItem("agendal.home_view", val);
+                } catch {}
+              }}
+              options={[
+                {
+                  value: "inbox",
+                  label: t("nav.inbox"),
+                  icon: <InboxIcon size={16} />,
+                },
+                {
+                  value: "upcoming",
+                  label: t("nav.upcoming"),
+                  icon: <CalendarIcon size={16} />,
+                },
+                {
+                  value: "projects",
+                  label: t("nav.projects"),
+                  icon: <SidebarIcon size={16} />,
+                },
+              ]}
+            />
+          )}
 
           {/* Date & time section */}
           <div className="pt-2">
@@ -1401,23 +1403,23 @@ export function AccountScreen({
     >
       {activePhoneView === "list" ? (
         <>
-          <div className="flex min-h-14 items-center justify-end px-2 pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
+          {/* "‹ Back" on the left, like Task details and the other phone screens */}
+          {/* Clear of the notch or punch-hole camera: the safe area plus a gap, never under 1rem */}
+          <div className="flex h-14 box-content items-center justify-start px-2 pt-[max(0.5rem,calc(env(safe-area-inset-top,0px)+0.5rem))] shrink-0">
             <button
               type="button"
               onClick={handleClose}
-              aria-label={t("common.close")}
-              className="focus-ring flex size-11 items-center justify-center cursor-pointer"
+              className="focus-ring inline-flex h-11 items-center gap-1 rounded-field px-2 text-callout font-medium text-primary cursor-pointer"
             >
-              <span className="flex size-8 items-center justify-center rounded-full bg-fill text-ink-secondary">
-                <XIcon size={18} />
-              </span>
+              <ChevronLeftIcon size={18} className="shrink-0" />
+              <span>{t("common.back")}</span>
             </button>
           </div>
           <div
             key="settings-list"
             className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]"
           >
-            <h1 className="px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
+            <h1 className="mt-1 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
               {t("settings.title")}
             </h1>
             <div className="mt-3 flex h-10 items-center gap-2 rounded-field bg-fill px-3">
@@ -1511,19 +1513,22 @@ export function AccountScreen({
         </>
       ) : (
         <>
-          <div className="relative flex min-h-14 items-center px-1 bg-paper/90 backdrop-blur border-b border-separator pt-[max(0.75rem,env(safe-area-inset-top))] shrink-0">
-            <button
-              type="button"
-              onClick={backToList}
-              aria-label={t("common.back")}
-              className="focus-ring inline-flex h-11 items-center gap-1 rounded-field pl-1 pr-3 text-body text-ink cursor-pointer z-10"
-            >
-              <ChevronLeftIcon size={22} className="shrink-0" />
-              <span>{t("settings.title")}</span>
-            </button>
-            <h2 className="pointer-events-none absolute inset-x-24 text-center text-body font-semibold text-ink truncate">
-              {currentTabObj?.label ?? t("settings.title")}
-            </h2>
+          <div className="px-1 bg-paper/90 backdrop-blur border-b border-separator pt-[max(0.5rem,calc(env(safe-area-inset-top,0px)+0.5rem))] shrink-0">
+            {/* Back and the title share one 56px row under the camera gap */}
+            <div className="relative flex h-14 items-center">
+              <button
+                type="button"
+                onClick={backToList}
+                aria-label={t("common.back")}
+                className="focus-ring inline-flex h-11 items-center gap-1 rounded-field pl-1 pr-3 text-body text-ink cursor-pointer z-10"
+              >
+                <ChevronLeftIcon size={22} className="shrink-0" />
+                <span>{t("settings.title")}</span>
+              </button>
+              <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
+                {currentTabObj?.label ?? t("settings.title")}
+              </h2>
+            </div>
           </div>
           <div
             key={activeTabId}
