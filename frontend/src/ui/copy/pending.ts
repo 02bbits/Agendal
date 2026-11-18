@@ -473,6 +473,7 @@ export const pending = {
   "time.dial": "Pick on the clock",
   "time.am": "AM",
   "time.pm": "PM",
+  "app.loading": "Loading",
 } as const;
 
 export type PendingKey = keyof typeof pending;
