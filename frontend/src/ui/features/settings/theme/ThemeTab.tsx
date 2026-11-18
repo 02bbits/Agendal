@@ -30,6 +30,8 @@ export function ThemeTab({
   const currentPalette = settings.palette ?? DEFAULT_PALETTE;
 
   const choosePalette = (id: string, event: MouseEvent) => {
+    // The theme in use again changes nothing: no pulse, no fade
+    if (id === currentPalette) return;
     setRipplingId(id);
     setTimeout(
       () => setRipplingId((current) => (current === id ? null : current)),
