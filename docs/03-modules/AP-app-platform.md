@@ -33,7 +33,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Install (AP-1)
 
-- **Banner:** shown once per device, after the first sign-in on that device. It isn't shown when already installed (`display-mode: standalone`). Not now hides it for good on that device.
+- **Banner:** on Inbox, shown once per device, after the first sign-in on that device: it shows while a user is signed in and the device has no Install or Not now on record (a device flag that sign-out keeps). It isn't shown when already installed (`display-mode: standalone`). Not now hides it for good on that device.
 - **By platform:**
 
 | Platform | Banner | Install |
@@ -43,8 +43,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Firefox Android | Same as iOS, worded for its menu (`app.install_firefox`) | Manual |
 | Unsupported (Firefox desktop) | None | Account "Install app" hidden |
 
-- **Account sheet:** "Install app" is shown whenever the app isn't installed and install is possible.
-- **Event:** `app_installed` is sent on `appinstalled`, or the first time the app runs in standalone mode.
+- **Account sheet:** "Install app" is shown whenever the app isn't installed and install is possible, Not now included. On Chromium it opens the browser prompt; on iOS Safari and Firefox Android it shows the banner's guidance (`app.install_ios`, `app.install_firefox`) as a toast.
+- **Event:** none. The course demo has no analytics, so `app_installed` isn't sent.
 
 ### 2.2 Offline and sync (AP-2, NF-6)
 
