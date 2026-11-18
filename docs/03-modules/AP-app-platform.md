@@ -104,7 +104,6 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 | **Account** | Two-step verification by email (one switch; turning off asks for the password) | Fully Functional (#149) | `POST /api/v1/auth/two-factor` |
 | **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
 | **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
-| **General** | Home view (Inbox, Upcoming, Projects) | Fully Functional | `localStorage` (`agendal.home_view`) |
 | **General** | Page view (Flat view vs Full width) | Fully Functional (per account, #149) | `PATCH /api/v1/me` (`page_view`); `agendal.page_view` is only the copy `/theme.js` paints before the first frame |
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
 | **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |

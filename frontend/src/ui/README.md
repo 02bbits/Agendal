@@ -46,7 +46,7 @@ Components take every visible string as a prop (`closeLabel`, `actionLabel`, …
 | ----------------- | ----------------------------------------------------------------------- | ---------------- | ----------------------------------------- |
 | **Account**       | Name, Email, Password, Sign Out                                         | Production Ready | Backend synced (`/api/v1/me`, `/logout`)  |
 | **Account**       | Plan, Photo, Delete Account                                             | Roadmap Gap      | UI placeholder; backend endpoints planned |
-| **General**       | Home view, Page view, Time format, Week start                           | Production Ready | Synced (`/api/v1/me` & `localStorage`)    |
+| **General**       | Page view, Time format, Week start                                      | Production Ready | Synced (`/api/v1/me` & `localStorage`)    |
 | **General**       | Timezone, Date format, Next week, Smart date                            | Partial          | Persisted in `localStorage`               |
 | **Theme**         | Appearance (System/Light/Dark), 8 Palettes                              | Production Ready | Server sync (`theme`) & CSS variables     |
 | **Sidebar**       | Task counts, Reordering, Reset default                                  | Production Ready | Persisted in `localStorage`               |
