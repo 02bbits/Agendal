@@ -209,10 +209,10 @@ describe("Note result (IM-43, RV-1)", () => {
     expect(onSetDue).toHaveBeenCalledWith(expect.anything(), "2026-10-25");
   });
 
-  it("Pick date… opens a date field and hands over what was picked", async () => {
+  it("Custom opens a date field and hands over what was picked", async () => {
     const { onSetDue } = open(resultOf([ink]));
-    await userEvent.click(screen.getByRole("button", { name: "Pick date…" }));
-    fireEvent.change(screen.getByLabelText("Pick date…"), {
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.change(screen.getByLabelText("Custom"), {
       target: { value: "2026-11-05" },
     });
     expect(onSetDue).toHaveBeenCalledWith(expect.anything(), "2026-11-05");

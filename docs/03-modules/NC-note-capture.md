@@ -21,7 +21,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-4"></a>NC-4 | Turn a file into a note | Should | Accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB; extracted text lands in the editor to check; a removable file chip shows; unsupported or oversized files get a specific error; the result shows "From \<file name>" |
 | <a id="nc-5"></a>NC-5 | Start from an example | Could | Tapping an example chip fills the editor |
 | <a id="nc-6"></a>NC-6 | Capture while offline | Must | The button reads Save note; the note is stored on the device as "Waiting for connection"; on reconnect it is processed automatically with a toast "Back online. N notes turned into M tasks." |
-| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Pick date…; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
+| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Custom; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
 
 ## 1. Entry points and user stories
 
@@ -113,8 +113,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.5 New task sheet (NC-7)
 
 - **Fields:**
-  - Title (required, 1–200 characters, trimmed). Helper text `task.title_only`.
-  - Start date chips: Today, Tomorrow, Next week (Monday of next week, as [NU-E10](NU-note-understanding.md#nu-e10)), No date, Pick date… (native `<input type="date">`). The date a task is created with is its start date (#154). Start time, enabled once there is a start date.
+  - Title (required, 1–200 characters, trimmed).
+  - Start date chips: Today, Tomorrow, Next week (Monday of next week, as [NU-E10](NU-note-understanding.md#nu-e10)), No date, Custom (native `<input type="date">`). The date a task is created with is its start date (#154). Start time, enabled once there is a start date.
   - Due date (optional) with a due time, empty by default. It must be on or after the start, date and time ([BR-11](../02-domain/business-rules.md#br-11)).
   - Repeat: the presets and Custom… of [TK §2.2](TK-tasks.md#22-task-details-and-editing-tk-2-tk-3). Choosing a repeat with No date sets the start date to Today. Reminders are set in task details, not here.
   - Priority chips: Low, Medium, High.
@@ -166,12 +166,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e13"></a>NC-E13 | Signed out while notes are pending | The sign-out dialog counts them as unsaved changes (AA). Confirming deletes them | T-NC-113 |
 | <a id="nc-e14"></a>NC-E14 | The time zone changes between writing offline and syncing | `written_at` and `timezone` are from writing time ([NU-E26](NU-note-understanding.md#nu-e26)) | T-NC-114 |
 | <a id="nc-e15"></a>NC-E15 | New task with only spaces as the title | Add stays disabled. The server returns `422` too | T-NC-115 |
-| <a id="nc-e16"></a>NC-E16 | Pick date… cancelled | The previous start date chip stays selected | T-NC-116 |
+| <a id="nc-e16"></a>NC-E16 | Custom cancelled | The previous start date chip stays selected | T-NC-116 |
 | <a id="nc-e17"></a>NC-E17 | Dictating while the text has a selection | The selection is replaced by the dictated words, as typing would | T-NC-117 |
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 
@@ -237,7 +237,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | [NC-6](#nc-6) | The button reads Save note. Stored on the device as "Waiting for connection" | T-NC-40, OFF-03 |
 | [NC-6](#nc-6) | Processed on reconnect with the toast "Back online. N notes turned into M tasks." | OFF-04 (Playwright `setOffline`), T-NC-41 (toast counts, singular and plural) |
 | [NC-7](#nc-7) | `+` opens New task. Only a title is required | T-NC-50 |
-| [NC-7](#nc-7) | Start date chips Today, Tomorrow, Next week, No date, Pick date…, an optional due date, repeat, priority, project | T-NC-51 (dates computed with an injected clock), T-NC-52 (defaults by entry) |
+| [NC-7](#nc-7) | Start date chips Today, Tomorrow, Next week, No date, Custom, an optional due date, repeat, priority, project | T-NC-51 (dates computed with an injected clock), T-NC-52 (defaults by entry) |
 | [NC-7](#nc-7) | The toast confirms "Added “…”" | T-NC-53 |
 | — | Edge cases [NC-E1](#nc-e1)–[NC-E17](#nc-e17) | T-NC-101–117 |
 | — | Accessibility | A11Y-30–34 |

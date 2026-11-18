@@ -108,7 +108,6 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.discard_body` † | What you wrote won't be kept. | Same dialog |
 | `note.draft_restored` † | Your unsent note is back. | Editor, after a restored draft ([UX-13](ux-standards.md#ux-13)) |
 | `task.new` | New task | Sheet title ([NC-7](../03-modules/NC-note-capture.md#nc-7)) |
-| `task.title_only` | Only a title is needed | Sheet helper |
 | `task.added` | Added “{title}” | Toast |
 
 ## Note understanding and review (NU, RV)
@@ -142,7 +141,7 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.delete_body` | This note will be deleted. | Delete note dialog |
 | `note.deleted` | Deleted “{name}” | Toast after deleting |
 | `note.replan` † | Make tasks again | Editor primary button when editing a saved note ([RV-5](../03-modules/RV-review-control.md#rv-5)); primary button on a `pending` note's result screen ([RV §2.4](../03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20)) |
-| `note.ask_when` † | When? | Result row for a created task with no date, before the chips Today / Tomorrow / Next week / Pick date… ([Q4](../08-project/open-questions.md#q4)) |
+| `note.ask_when` † | When? | Result row for a created task with no date, before the chips Today / Tomorrow / Next week / Custom ([Q4](../08-project/open-questions.md#q4)) |
 | `note.needs_connection` † | This needs a connection. | Disabled note actions while offline |
 | `note.list_empty` † | Your notes will show here. Write one to get started. | Notes tab empty state |
 | `notes.made` † | Accepted | A `done` note: Notes filter chip, card status line before `note.made_*` ([RV-4](../03-modules/RV-review-control.md#rv-4)) |

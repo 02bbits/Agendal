@@ -54,7 +54,6 @@ export function NewTaskSheet({
         <form className="flex flex-col gap-4" onSubmit={form.submit}>
           <TextField
             label={t("task.title")}
-            helper={form.fieldError ? undefined : t("task.title_only")}
             error={form.fieldError}
             value={form.title}
             maxLength={MAX_TITLE_LENGTH}

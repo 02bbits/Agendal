@@ -104,7 +104,6 @@ export const catalog = {
   "note.discard_body": "What you wrote won't be kept.",
   "note.draft_restored": "Your unsent note is back.",
   "task.new": "New task",
-  "task.title_only": "Only a title is needed",
   "task.added": "Added “{title}”",
   "note.reading": "Reading your note…",
   "note.made_one": "1 task made",

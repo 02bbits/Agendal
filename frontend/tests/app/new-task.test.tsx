@@ -217,7 +217,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     const titleInput = within(sheet).getByLabelText("Title");
     await userEvent.type(titleInput, "Doctor appointment");
 
-    const pickChip = within(sheet).getByRole("radio", { name: "Pick date…" });
+    const pickChip = within(sheet).getByRole("radio", { name: "Custom" });
     await userEvent.click(pickChip);
 
     const day = within(sheet).getByRole("spinbutton", { name: "Day" });
@@ -330,7 +330,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
 
     const sheet = screen.getByRole("dialog", { name: "New task" });
     const todayRadio = within(sheet).getByRole("radio", { name: "Today" });
-    const pickChip = within(sheet).getByRole("radio", { name: "Pick date…" });
+    const pickChip = within(sheet).getByRole("radio", { name: "Custom" });
 
     expect(todayRadio.getAttribute("aria-checked")).toBe("true");
 

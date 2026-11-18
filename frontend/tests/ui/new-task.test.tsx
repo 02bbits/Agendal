@@ -125,7 +125,7 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     });
     const { sheet } = await renderSheet({ onCreate: onCreatePick });
     await userEvent.type(within(sheet).getByLabelText("Title"), "Dentist");
-    await userEvent.click(radio("Start date", "Pick date…"));
+    await userEvent.click(radio("Start date", "Custom"));
     const day = within(sheet).getByRole("spinbutton", { name: "Day" });
     const month = within(sheet).getByRole("spinbutton", { name: "Month" });
     const year = within(sheet).getByRole("spinbutton", { name: "Year" });
@@ -154,7 +154,7 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
       initialStartDate: "2026-11-05",
       onCreate,
     });
-    expect(radio("Start date", "Pick date…").getAttribute("aria-checked")).toBe(
+    expect(radio("Start date", "Custom").getAttribute("aria-checked")).toBe(
       "true",
     );
 
@@ -182,16 +182,16 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
     expect(screen.queryByRole("dialog", { name: /discard/i })).toBeNull();
   });
 
-  it("cancelling Pick date… keeps the previous chip selected (NC-E16)", async () => {
+  it("cancelling Custom keeps the previous chip selected (NC-E16)", async () => {
     const { sheet } = await renderSheet();
     // Default is Today
     expect(radio("Start date", "Today").getAttribute("aria-checked")).toBe(
       "true",
     );
 
-    // Select Pick date…
-    await userEvent.click(radio("Start date", "Pick date…"));
-    expect(radio("Start date", "Pick date…").getAttribute("aria-checked")).toBe(
+    // Select Custom
+    await userEvent.click(radio("Start date", "Custom"));
+    expect(radio("Start date", "Custom").getAttribute("aria-checked")).toBe(
       "true",
     );
     const day = within(sheet).getByRole("spinbutton", { name: "Day" });
@@ -202,12 +202,12 @@ describe("NewTaskSheet (T-NC-50, T-NC-51, T-NC-53)", () => {
       "true",
     );
 
-    // Change to Tomorrow, then select Pick date… and cancel via blur
+    // Change to Tomorrow, then select Custom and cancel via blur
     await userEvent.click(radio("Start date", "Tomorrow"));
     expect(radio("Start date", "Tomorrow").getAttribute("aria-checked")).toBe(
       "true",
     );
-    await userEvent.click(radio("Start date", "Pick date…"));
+    await userEvent.click(radio("Start date", "Custom"));
     const day2 = within(sheet).getByRole("spinbutton", { name: "Day" });
     fireEvent.blur(day2);
     expect(radio("Start date", "Tomorrow").getAttribute("aria-checked")).toBe(
