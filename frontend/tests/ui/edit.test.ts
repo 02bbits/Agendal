@@ -49,10 +49,10 @@ describe("normalizePatch (TK §2.2)", () => {
     });
   });
 
-  it("sets the due date to today when repeat is set without either date (rule c)", () => {
+  it("sets the start date to today when repeat is set without either date (rule c, #154)", () => {
     expect(normalizePatch(base, { repeat: "weekly" }, TODAY)).toEqual({
       repeat: "weekly",
-      due_date: TODAY,
+      start_date: TODAY,
     });
   });
 

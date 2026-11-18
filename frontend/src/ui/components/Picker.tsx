@@ -44,7 +44,7 @@ export function Picker<V extends string>({
   const selectedOption = options.find((o) => o.value === value);
 
   return (
-    <div className={cx("inline-flex flex-col", className)}>
+    <div className={cx("inline-flex min-w-0 max-w-full flex-col", className)}>
       <PopoverOrSheet
         open={open}
         onClose={() => setOpen(false)}

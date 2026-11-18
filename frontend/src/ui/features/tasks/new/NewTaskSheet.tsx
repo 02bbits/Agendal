@@ -1,11 +1,14 @@
 import type { ReactElement } from "react";
 import { Sheet } from "../../../components/Sheet";
 import { TextField } from "../../../components/TextField";
+import { RepeatIcon } from "../../../components/icons";
 import { t } from "../../../copy";
+import { SettingsRow } from "../details/SettingsRow";
+import { RepeatPicker } from "../repeat/RepeatPicker";
 import { ProjectField } from "../details/ProjectField";
 import { DiscardDialog } from "./DiscardDialog";
 import { DueChips } from "./DueChips";
-import { NewTaskDates, NewTaskStartDate } from "./NewTaskDates";
+import { NewTaskDue, NewTaskStartTime } from "./NewTaskDates";
 import { PriorityChips } from "./PriorityChips";
 import type { NewTaskSheetProps } from "./types";
 import { useNewTaskForm } from "./useNewTaskForm";
@@ -19,7 +22,7 @@ export function NewTaskSheet({
   onClose,
   pathname = "/",
   today,
-  initialDueDate,
+  initialStartDate,
   projects = [],
   projectsStatus = "ready",
   onRetryProjects,
@@ -31,7 +34,7 @@ export function NewTaskSheet({
   const form = useNewTaskForm({
     pathname,
     today,
-    initialDueDate,
+    initialStartDate,
     onCreate,
     onAdded,
     onClose,
@@ -51,7 +54,6 @@ export function NewTaskSheet({
         <form className="flex flex-col gap-4" onSubmit={form.submit}>
           <TextField
             label={t("task.title")}
-            helper={form.fieldError ? undefined : t("task.title_only")}
             error={form.fieldError}
             value={form.title}
             maxLength={MAX_TITLE_LENGTH}
@@ -65,52 +67,68 @@ export function NewTaskSheet({
             onKeyDown={form.onTitleKeyDown}
           />
 
-          <NewTaskStartDate
-            startDate={form.startDate}
-            onStartDateChange={form.setStartDate}
-            startTime={form.startTime}
-            onStartTimeChange={form.setStartTime}
-            error={form.datesError}
-            timeFormat={timeFormat}
-            weekStart={weekStart}
-          />
-
           <DueChips
-            value={form.due}
+            value={form.chip}
             picked={form.picked}
-            onChange={form.handleDueChange}
+            onChange={form.handleChipChange}
             onPickedChange={form.handlePickedChange}
             onCancelPick={form.handleCancelPick}
             weekStart={weekStart}
           />
 
-          <NewTaskDates
-            dueDate={form.dueDate}
-            dueTime={form.dueTime}
-            onDueTimeChange={form.setDueTime}
-            startDate={form.startDate}
-            onStartDateChange={form.setStartDate}
-            startTime={form.startTime}
-            onStartTimeChange={form.setStartTime}
-            repeat={form.repeat}
-            onRepeatChange={form.handleRepeatChange}
-            error={form.datesError}
-            timeFormat={timeFormat}
-            weekStart={weekStart}
-          />
+          <div className="flex flex-col">
+            <NewTaskStartTime
+              startDate={form.startDate}
+              startTime={form.startTime}
+              onStartTimeChange={form.setStartTime}
+              error={form.datesError}
+              timeFormat={timeFormat}
+            />
+
+            <NewTaskDue
+              dueDate={form.dueDate}
+              onDueDateChange={form.setDueDate}
+              dueTime={form.dueTime}
+              onDueTimeChange={form.setDueTime}
+              startDate={form.startDate}
+              startTime={form.startTime}
+              error={form.datesError}
+              timeFormat={timeFormat}
+              weekStart={weekStart}
+            />
+
+            <SettingsRow
+              icon={<RepeatIcon size={18} />}
+              label={t("task.repeat")}
+              control={
+                <RepeatPicker
+                  id="new-task-repeat"
+                  variant="row"
+                  value={form.repeat}
+                  anchor={form.startDate || form.dueDate || form.todayDate}
+                  weekStart={weekStart}
+                  className="max-w-[220px] [&>div]:max-w-full [&>div>button]:max-w-full [&>div>button>span]:truncate"
+                  onChange={form.setRepeat}
+                />
+              }
+            />
+          </div>
 
           <PriorityChips
             value={form.priority}
             onChange={form.handlePriorityChange}
           />
 
-          <ProjectField
-            projectId={form.projectId}
-            projects={projects}
-            projectsStatus={projectsStatus}
-            onRetryProjects={onRetryProjects}
-            onChange={form.setProjectId}
-          />
+          {/* Own wrapper: the row is then its last child, so its bottom border goes */}
+          <div>
+            <ProjectField
+              projectId={form.projectId}
+              projects={projects}
+              projectsStatus={projectsStatus}
+              onRetryProjects={onRetryProjects}
+              onChange={form.setProjectId}
+            />
+          </div>
 
           {form.formError && (
             <p role="alert" className="text-footnote text-error">

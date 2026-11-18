@@ -707,17 +707,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     const handleUpdate = () => {
       loadSidebarData();
     };
+    // Only on coming back: leaving the tab (Alt+Tab) used to reload every count as well
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadSidebarData();
+    };
 
     window.addEventListener("agendal:task-created", handleUpdate);
     window.addEventListener("agendal:projects-changed", handleUpdate);
     window.addEventListener(NOTE_UPDATED, handleUpdate);
-    document.addEventListener("visibilitychange", handleUpdate);
+    document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       window.removeEventListener("agendal:task-created", handleUpdate);
       window.removeEventListener("agendal:projects-changed", handleUpdate);
       window.removeEventListener(NOTE_UPDATED, handleUpdate);
-      document.removeEventListener("visibilitychange", handleUpdate);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [loadSidebarData]);
 

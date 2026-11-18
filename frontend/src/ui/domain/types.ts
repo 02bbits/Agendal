@@ -4,7 +4,18 @@
 
 export type Priority = "low" | "medium" | "high";
 export type Repeat = "never" | "daily" | "weekly" | "monthly" | "yearly";
-export type Reminder = "none" | "5m" | "15m" | "30m" | "1h" | "1d";
+export type Reminder =
+  | "none"
+  | "0m"
+  | "5m"
+  | "10m"
+  | "15m"
+  | "30m"
+  | "1h"
+  | "2h"
+  | "1d"
+  | "2d"
+  | "1w";
 
 export const PRIORITIES: readonly Priority[] = ["low", "medium", "high"];
 export const REPEATS: readonly Repeat[] = [
@@ -14,13 +25,19 @@ export const REPEATS: readonly Repeat[] = [
   "monthly",
   "yearly",
 ];
+// The picker's order (#154): at the start, then minutes, hours, days, a week before
 export const REMINDERS: readonly Reminder[] = [
   "none",
+  "0m",
   "5m",
+  "10m",
   "15m",
   "30m",
   "1h",
+  "2h",
   "1d",
+  "2d",
+  "1w",
 ];
 export type ProjectColor =
   "blue" | "red" | "orange" | "yellow" | "green" | "teal" | "purple" | "gray";

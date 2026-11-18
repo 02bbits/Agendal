@@ -713,7 +713,7 @@ function ChangeRow({
   );
 }
 
-/** Today, Tomorrow, Next week and Pick date… for a new task that has no date (Q4). */
+/** Today, Tomorrow, Next week and Custom for a new task that has no date (Q4). */
 function WhenChips({
   today,
   weekStart,
