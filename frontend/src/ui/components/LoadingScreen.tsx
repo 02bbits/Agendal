@@ -8,7 +8,8 @@ export interface LoadingScreenProps {
   visible?: boolean;
   /**
    * In a tab's content area on a phone, under the header, with the tab bar still there: a tab
-   * opened for the first time. Without it, the whole screen as the app starts.
+   * opened for the first time: only the spinner, no logo or name. Without it, the whole screen as
+   * the app starts.
    */
   inline?: boolean;
   className?: string;
@@ -38,15 +39,18 @@ export function LoadingScreen({
         className,
       )}
     >
-      <div className="flex items-center gap-3 text-title font-bold text-ink">
-        <span
-          className="inline-flex size-12 items-center justify-center rounded-box bg-neutral text-neutral-content shadow-sm"
-          aria-hidden="true"
-        >
-          <CheckIcon size={26} strokeWidth={2.25} />
-        </span>
-        <span aria-hidden="true">{t("app.name")}</span>
-      </div>
+      {/* The logo and name only on the full screen as the app starts; inside the app, a spinner */}
+      {!inline && (
+        <div className="flex items-center gap-3 text-title font-bold text-ink">
+          <span
+            className="inline-flex size-12 items-center justify-center rounded-box bg-neutral text-neutral-content shadow-sm"
+            aria-hidden="true"
+          >
+            <CheckIcon size={26} strokeWidth={2.25} />
+          </span>
+          <span aria-hidden="true">{t("app.name")}</span>
+        </div>
+      )}
       <span
         aria-hidden="true"
         className="loading loading-spinner loading-md text-ink-secondary motion-reduce:animate-none"

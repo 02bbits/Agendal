@@ -111,6 +111,13 @@ describe("TabPending: a tab opened for the first time (#161)", () => {
     expect(screen.getByRole("status", { name: t("app.loading") })).toBeTruthy();
     // In the content, not over the whole screen
     expect(screen.getByTestId("tab-loading").className).not.toContain("fixed");
+    // A loader inside the app: the spinner only, no logo or app name
+    expect(screen.getByTestId("tab-loading").textContent).not.toContain(
+      t("app.name"),
+    );
+    expect(
+      screen.getByTestId("tab-loading").querySelector(".loading-spinner"),
+    ).toBeTruthy();
   });
 
   it("otherwise: the header and the screen's own skeleton, the same one the screen shows", () => {
