@@ -25,6 +25,9 @@ function taskCount({ counts }: NoteListEntry): {
 
 // One short line that never wraps: "Accepted · 2" or "Pending"; screen readers hear the full count
 function StatusLine({ note }: { note: NoteListEntry }) {
+  if (note.failed) return null;
+  if (note.status === "pending")
+    return <span className="text-ink-secondary">{t("note.waiting")}</span>;
   if (note.status !== "done")
     return <span className="text-warning">{t("notes.needs")}</span>;
   const { count, label } = taskCount(note);
@@ -37,6 +40,8 @@ function StatusLine({ note }: { note: NoteListEntry }) {
   );
 }
 
+const ROW = "flex min-h-16 items-center gap-3 px-4 py-3 text-ink";
+
 export function NotesScreen({
   notes,
   total,
@@ -44,6 +49,7 @@ export function NotesScreen({
   filter,
   onFilter,
   onWriteNote,
+  onReviveNote,
   selected,
   today,
   timeZone,
@@ -57,6 +63,8 @@ export function NotesScreen({
   filter: NoteFilter;
   onFilter: (filter: NoteFilter) => void;
   onWriteNote: () => void;
+  /** Tap on a refused note: its text goes back to the editor. */
+  onReviveNote: (id: string) => void;
   selected?: string | null;
   today: string;
   timeZone: string;
@@ -125,46 +133,69 @@ export function NotesScreen({
                 : note.status === "done"
                   ? SparklesIcon
                   : NotesIcon;
-              return (
-                <li key={note.id}>
-                  <Link
-                    href={ROUTES.note(note.id)}
-                    navigate={navigate}
-                    aria-current={selected === note.id ? "true" : undefined}
-                    className={`focus-ring flex min-h-16 items-center gap-3 px-4 py-3 text-ink no-underline row-hover ${selected === note.id ? "bg-surface-hover/60" : ""}`}
-                  >
-                    <Icon size={19} className="text-ink-secondary" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">
-                        {note.name ?? note.excerpt.slice(0, 60)}
-                        {note.edited_at && (
-                          <span className="font-normal text-ink-secondary">
-                            {" · "}
-                            {t("note.edited_label")}
-                          </span>
-                        )}
-                      </span>
-                      <span className="line-clamp-2 text-footnote text-ink-secondary">
-                        {note.source_file_name
+              const row = (
+                <>
+                  <Icon size={19} className="text-ink-secondary" />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate font-semibold">
+                      {note.name ?? note.excerpt.slice(0, 60)}
+                      {note.edited_at && (
+                        <span className="font-normal text-ink-secondary">
+                          {" · "}
+                          {t("note.edited_label")}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={`line-clamp-2 text-footnote ${note.failed ? "text-warning" : "text-ink-secondary"}`}
+                    >
+                      {note.failed
+                        ? t("note.couldnt_process")
+                        : note.source_file_name
                           ? t("note.from_file", {
                               file_name: note.source_file_name,
                             })
                           : note.excerpt}
-                      </span>
                     </span>
-                    <span className="shrink-0 text-footnote whitespace-nowrap">
-                      <StatusLine note={note} />
-                    </span>
-                    <time
-                      dateTime={note.written_at}
-                      className="shrink-0 text-footnote text-ink-secondary"
+                  </span>
+                  <span className="shrink-0 text-footnote whitespace-nowrap">
+                    <StatusLine note={note} />
+                  </span>
+                  <time
+                    dateTime={note.written_at}
+                    className="shrink-0 text-footnote text-ink-secondary"
+                  >
+                    {formatTime(
+                      localDateTime(note.written_at, timeZone).time,
+                      timeFormat,
+                    )}
+                  </time>
+                </>
+              );
+              return (
+                <li key={note.id}>
+                  {note.failed ? (
+                    // Refused by the server: tap puts its text back in the editor (NU §3)
+                    <button
+                      type="button"
+                      onClick={() => onReviveNote(note.id)}
+                      className={`${ROW} focus-ring row-hover w-full cursor-pointer border-0 bg-transparent text-left`}
                     >
-                      {formatTime(
-                        localDateTime(note.written_at, timeZone).time,
-                        timeFormat,
-                      )}
-                    </time>
-                  </Link>
+                      {row}
+                    </button>
+                  ) : note.status === "pending" ? (
+                    // Nothing on the server to open yet (NC-6)
+                    <div className={ROW}>{row}</div>
+                  ) : (
+                    <Link
+                      href={ROUTES.note(note.id)}
+                      navigate={navigate}
+                      aria-current={selected === note.id ? "true" : undefined}
+                      className={`${ROW} focus-ring no-underline row-hover ${selected === note.id ? "bg-surface-hover/60" : ""}`}
+                    >
+                      {row}
+                    </Link>
+                  )}
                 </li>
               );
             })}

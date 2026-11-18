@@ -38,7 +38,7 @@ import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
 import { claimDevice, wipeDevice } from "@/lib/device";
 import { CONFLICT, forgetConflicts } from "@/lib/conflicts";
 import { readMe, saveMe } from "@/lib/localStore";
-import { startSync } from "@/lib/sync";
+import { NOTES_REPLAYED, startSync, type Replayed } from "@/lib/sync";
 import { useOffline } from "@/lib/online";
 import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
@@ -46,6 +46,7 @@ import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
 import { useUpdateToast } from "./useUpdateToast";
 import {
+  backOnlineText,
   forgetNotes,
   listNotes,
   NOTE_UPDATED,
@@ -485,8 +486,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
           title: (event as CustomEvent<{ title: string }>).detail.title,
         }),
       );
+    // Pending notes were sent after a reconnect (NC-6)
+    const onReplayed = (event: Event) =>
+      showToast(backOnlineText((event as CustomEvent<Replayed>).detail));
     window.addEventListener(CONFLICT, onConflict);
-    return () => window.removeEventListener(CONFLICT, onConflict);
+    window.addEventListener(NOTES_REPLAYED, onReplayed);
+    return () => {
+      window.removeEventListener(CONFLICT, onConflict);
+      window.removeEventListener(NOTES_REPLAYED, onReplayed);
+    };
   }, [showToast]);
 
   const signOut = useCallback(
@@ -880,6 +888,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
             note={editingNote ?? undefined}
             onClose={closeNoteEditor}
             onDraftRestored={() => showToast(t("note.draft_restored"))}
+            offline={offline}
+            onQueued={(toast) => {
+              closeNoteEditor();
+              notesChanged();
+              showToast(t(toast));
+            }}
             onSubmit={
               editingNote
                 ? (text, _clientId, confirmConflicts) =>

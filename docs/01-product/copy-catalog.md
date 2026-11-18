@@ -99,8 +99,10 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.empty` † | Write something first. | Error if the text has nothing visible ([NU-E15](../03-modules/NU-note-understanding.md#nu-e15)) |
 | `note.too_many_items` † | That's more than 30 things in one note. Split it into smaller notes. | Error result ([NU-E14](../03-modules/NU-note-understanding.md#nu-e14)) |
 | `note.waiting` | Waiting for connection | Notes card, pending |
-| `note.back_online_one` | Back online. 1 note turned into {tasks} tasks. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
-| `note.back_online_other` | Back online. {count} notes turned into {tasks} tasks. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)). `{tasks}` also takes `_one` |
+| `note.back_online_one` | Back online. 1 note turned into {tasks}. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)) |
+| `note.back_online_other` | Back online. {count} notes turned into {tasks}. | Toast ([NC-6](../03-modules/NC-note-capture.md#nc-6)). `{tasks}` is `note.task_count_*` |
+| `note.task_count_one` | 1 task | Fills `{tasks}` in `note.back_online_*` |
+| `note.task_count_other` | {count} tasks | Same |
 | `note.needs_look_one` † | 1 needs a look. | Added to the back-online toast when a note ended in confirm or follow-up. Toast only: a Notes card uses `notes.needs` |
 | `note.needs_look_other` † | {count} need a look. | Same |
 | `note.couldnt_process` † | Couldn't turn this note into tasks. Tap to edit it. | Notes card, for a queued note rejected with a `422` |

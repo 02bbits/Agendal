@@ -107,7 +107,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Atomic:** one transaction, in reverse log order. The note becomes `pending`, with `redo_until`.
 - **Toast:** `note.undone` with Undo. That **redo** replays the undo's own log, restores the note to `done`, and is available while the toast is open ([UX-04](../01-product/ux-standards.md#ux-04)).
 - **Afterwards:** a `pending` note's result screen has **Make tasks again** (`note.replan`, primary) beside Edit note (secondary). It plans the note's current text again against the current tasks (`PUT /notes/{id}`, §2.5) and shows the new result.
-- **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`.
+- **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`. The task rows of a result are disabled too (no pencil to tap, no link to the task page): the editor needs Apply to save, and the task page isn't loaded offline from here.
 
 ### 2.5 Edit note (RV-5)
 

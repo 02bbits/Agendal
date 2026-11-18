@@ -63,14 +63,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - It posts to `POST /notes`, shows `note.reading` after 300 ms, then replaces the editor with the RV screen.
   - A network error or `5xx` queues the note ([NU §3](NU-note-understanding.md#3-state-matrix)).
   - `client_id` is made when the editor opens and kept for retries ([NC-E10](#nc-e10), [NC-E11](#nc-e11)). Changing the text after a failed send gives the next try a new `client_id`, because the server answers a known id with its stored result and ignores the body ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)).
-  - **Until the result screen ([IM-43](../08-project/tasks.md#im-43)) and the offline queue ([IM-53](../08-project/tasks.md#im-53)) exist:** a success clears the draft, closes the editor and shows `note.made_*`. A network error or `5xx` queues nothing: the text stays, editable, with `note.send_failed` and Retry. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
+  - A network error or `5xx` keeps the note on the device under the same `client_id` (status `pending`), closes the editor and shows `note.processing_failed`; it is sent again on the next sync ([IM-53](../08-project/tasks.md#im-53)). `422` shows its inline error and keeps the text. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
 - **Offline:**
   - The button reads `note.save_offline`.
   - The note is written to IndexedDB with the same fields and status `pending`.
   - The editor closes with the toast `note.saved_offline`.
-  - The Notes tab shows the card with `note.waiting` ([NC-6](#nc-6)).
+  - The Notes tab shows the card with `note.waiting` ([NC-6](#nc-6)). It has no result to open, so the card is not a link until the note is processed.
 - **Storage write fails** (quota or private mode): the text stays in the editor with `app.storage_low`. Nothing is lost.
-- **Replay:** on reconnect, oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)), then one toast `note.back_online_*` (plus `note.needs_look_*`).
+- **Replay:** on reconnect, after the queued task edits and oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)), then one toast `note.back_online_*` (plus `note.needs_look_*`). N is the notes sent, M the tasks those notes plan to create (applied or not, because with `NOTE_CHANGES_TO_CONFIRM` at 1 most notes wait for Apply), and the needs-a-look count the notes that ended `confirm` or `followup`. A note the server refuses (`4xx` except `429`) is not sent again: its card shows `note.couldnt_process` (the text stays on the device), and a tap puts the text back in the editor as the unsent draft, ahead of any other draft, and removes the card. A `429` or `5xx` stops the replay and the rest wait, in order.
 
 ### 2.3 Dictation (NC-3, Should)
 

@@ -107,4 +107,6 @@ export interface NoteListEntry {
   edited_at?: string | null;
   source_file_name: string | null;
   counts: { created: number; updated: number; deleted: number };
+  /** Device only: a pending note the server refused (`note.couldnt_process`). */
+  failed?: boolean;
 }
