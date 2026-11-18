@@ -21,6 +21,7 @@ import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
 import { now, timeZone } from "@/lib/clock";
 import { useInboxData } from "./useInboxData";
+import { takeHomeView } from "./homeView";
 
 const clock: Clock = {
   now,
@@ -63,28 +64,11 @@ function InboxContent() {
   );
   const accountInitial = user?.display_name || user?.email || "";
 
+  // Home view opens its tab once, when the app starts on "/". After that every tab is the
+  // user's own choice: coming back to Inbox, or any later navigation, never redirects
   useEffect(() => {
-    try {
-      const home = localStorage.getItem("agendal.home_view");
-      if (
-        home &&
-        home !== "inbox" &&
-        typeof window !== "undefined" &&
-        window.location.pathname === "/"
-      ) {
-        const target =
-          home === "upcoming"
-            ? "/upcoming"
-            : home === "projects"
-              ? "/projects"
-              : home === "notes"
-                ? "/notes"
-                : null;
-        if (target) {
-          navigate(target);
-        }
-      }
-    } catch {}
+    const target = takeHomeView();
+    if (target) navigate(target);
   }, [navigate]);
 
   return (
