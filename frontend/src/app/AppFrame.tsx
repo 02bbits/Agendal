@@ -14,6 +14,7 @@ import {
 import {
   AccountScreen,
   AppShell,
+  InstallBanner,
   OfflineBanner,
   Link,
   NewTaskSheet,
@@ -46,6 +47,7 @@ import { createProject, getProject, listProjects } from "@/lib/projectApi";
 import { inbox, search, upcoming } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useNewTask } from "./useNewTask";
+import { useInstall } from "./useInstall";
 import { useUpdateToast } from "./useUpdateToast";
 import {
   backOnlineText,
@@ -736,6 +738,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const shownPath = pendingTab?.href ?? pathname;
   // UX-40: on the four tab screens only
   const offline = useOffline();
+  // AP-1: on Inbox, once a user is signed in, until Install or Not now on this device
+  const installer = useInstall(showToast);
+  const installBanner = user && tab === "inbox" && installer.banner && (
+    <InstallBanner
+      kind={installer.banner}
+      onInstall={installer.install}
+      onNotNow={installer.notNow}
+    />
+  );
 
   const [inboxCount, setInboxCount] = useState<number | undefined>(undefined);
   const [upcomingCount, setUpcomingCount] = useState<number | undefined>(
@@ -958,7 +969,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
               />
             ) : undefined
           }
-          banner={tab && offline ? <OfflineBanner /> : undefined}
+          banner={
+            (tab && offline) || installBanner ? (
+              <>
+                {tab && offline && <OfflineBanner />}
+                {installBanner}
+              </>
+            ) : undefined
+          }
           navigate={navigate}
           onOpenSearch={handleOpenSearch}
           capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
@@ -1000,6 +1018,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 closeSettings();
                 signOut(true);
               }}
+              onInstall={installer.kind ? installer.install : undefined}
               onUpdateName={async (newName: string) => {
                 try {
                   await api("/me", {

@@ -1,3 +1,5 @@
+import { INSTALL_DONE_KEY } from "./install";
+
 const deleteDatabase = (name: string) =>
   new Promise<void>((resolve) => {
     const request = indexedDB.deleteDatabase(name);
@@ -14,7 +16,10 @@ export async function wipeDevice() {
     ...databases.flatMap(({ name }) => (name ? [deleteDatabase(name)] : [])),
     ...cacheNames.map((name) => caches.delete(name)),
   ]);
+  // Not now / installed is about the device, not the account: the banner stays gone (AP-1)
+  const installDone = localStorage.getItem(INSTALL_DONE_KEY);
   localStorage.clear();
+  if (installDone) localStorage.setItem(INSTALL_DONE_KEY, installDone);
   sessionStorage.clear();
 }
 

@@ -4,6 +4,7 @@ export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export { OfflineBanner } from "./shell/OfflineBanner";
+export { InstallBanner, type InstallBannerProps } from "./shell/InstallBanner";
 export {
   AccountScreen,
   type AccountScreenProps,
