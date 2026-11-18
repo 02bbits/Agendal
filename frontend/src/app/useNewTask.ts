@@ -35,7 +35,9 @@ export function useNewTask({
   const pathname = explicitPathname ?? currentPathname ?? "/";
 
   const [open, setOpen] = useState(false);
-  const [initialDueDate, setInitialDueDate] = useState<string | undefined>();
+  const [initialStartDate, setInitialStartDate] = useState<
+    string | undefined
+  >();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
     "ready",
@@ -54,14 +56,15 @@ export function useNewTask({
 
   const openNewTask = useCallback(
     (opts?: unknown) => {
-      const dueDate =
+      // The date a task is created on is its start date (#154)
+      const startDate =
         opts &&
         typeof opts === "object" &&
-        "dueDate" in opts &&
-        typeof (opts as { dueDate: unknown }).dueDate === "string"
-          ? (opts as { dueDate: string }).dueDate
+        "startDate" in opts &&
+        typeof (opts as { startDate: unknown }).startDate === "string"
+          ? (opts as { startDate: string }).startDate
           : undefined;
-      setInitialDueDate(dueDate);
+      setInitialStartDate(startDate);
       setOpen(true);
       loadProjects();
     },
@@ -70,7 +73,7 @@ export function useNewTask({
 
   const closeNewTask = useCallback(() => {
     setOpen(false);
-    setInitialDueDate(undefined);
+    setInitialStartDate(undefined);
   }, []);
 
   const handleAdded = useCallback(
@@ -94,7 +97,7 @@ export function useNewTask({
   const sheetProps: NewTaskSheetProps = {
     open,
     pathname,
-    initialDueDate,
+    initialStartDate,
     projects,
     projectsStatus,
     onRetryProjects: loadProjects,

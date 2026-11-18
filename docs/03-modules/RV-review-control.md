@@ -52,7 +52,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - A row's accessible name reads its badge, title and meta: "Created: SQL quiz, Mon 26 Oct · 09:00 · SQL Course" (A11Y-21).
 - **Skipped section** (`note.skipped`): each skipped item with its reason (`note.skip_already_done`, `note.skip_not_found`, `note.skip_no_change`), or the plain text for `skip`.
 - **Hints:** a duplicate row carries `note.duplicate_hint` ([NU-E13](NU-note-understanding.md#nu-e13)).
-- **When? chips ([Q4](../08-project/open-questions.md#q4)):** a created row whose task has no due date shows `note.ask_when` with chips Today, Tomorrow, Next week and Pick date…. A chip sets the due date like an edit in Task details (`PATCH /tasks/{id}`), and the row's meta updates. The chips disappear once the task has a date, and after Undo all.
+- **When? chips ([Q4](../08-project/open-questions.md#q4)):** a created row whose task has no due date shows `note.ask_when` with chips Today, Tomorrow, Next week and Custom. A chip sets the due date like an edit in Task details (`PATCH /tasks/{id}`), and the row's meta updates. The chips disappear once the task has a date, and after Undo all.
 - **Buttons:** Undo all (secondary) and Done (primary). Done returns to the screen the editor was opened from. The header menu has **Edit note** (§2.5). The trash icon is **Delete note** (§2.7).
 - **Where the data comes from:** after Make tasks the note is already in hand and isn't asked for again; opened by link, the note is loaded first. Either way each created and changed task is read by its id, so a task removed since shows `note.gone_since` and the When? chips follow the task's real date. The result takes the editor's place in the history, so Back goes to where the editor was opened ([RV-E12](#rv-e12)).
 - **After undo:**
@@ -107,7 +107,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Atomic:** one transaction, in reverse log order. The note becomes `pending`, with `redo_until`.
 - **Toast:** `note.undone` with Undo. That **redo** replays the undo's own log, restores the note to `done`, and is available while the toast is open ([UX-04](../01-product/ux-standards.md#ux-04)).
 - **Afterwards:** a `pending` note's result screen has **Make tasks again** (`note.replan`, primary) beside Edit note (secondary). It plans the note's current text again against the current tasks (`PUT /notes/{id}`, §2.5) and shows the new result.
-- **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`.
+- **Needs a connection:** Undo all, Apply changes, Keep it as task and Edit the note all act on the server's plan. Offline, these buttons are disabled with `note.needs_connection`. The task rows of a result are disabled too (no pencil to tap, no link to the task page): the editor needs Apply to save, and the task page isn't loaded offline from here.
 
 ### 2.5 Edit note (RV-5)
 

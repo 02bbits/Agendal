@@ -58,11 +58,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Start (date and time) must be before due (date and time) when both exist; otherwise shows `task.start_after_due` ("Start can't be after the due date.") and is not saved ([BR-11](../02-domain/business-rules.md#br-11), DB `CHECK`).
   - Clearing the due date clears the due time (and the reminder only if it counted from the due date). Clearing one date never clears the other date.
 - **Reminder:**
-  - Options: None, 5, 15 or 30 minutes, 1 hour, 1 day before.
+  - Options (#154): None, At start time, 5, 10, 15 or 30 minutes, 1 or 2 hours, 1 or 2 days, 1 week before. Set in task details only; New task has no reminder.
   - Disabled when there is neither a start date nor a due date.
   - Offset counts from the start time; without one, from 09:00 on the start date; without a start date, from the due time; without a due time, from 09:00 on the due date ([BR-12](../02-domain/business-rules.md#br-12)).
-  - A reminder time already passed shows `task.reminder_past`. It is still saved, and no notification is sent.
-- **Repeat:** Never, Daily, Weekly, Monthly, Yearly. Choosing a repeat with no dates sets the due date to today.
+  - A reminder time already passed is still saved, with no note under it, and no notification is sent.
+- **Repeat (#154):** a picker built from the date the series starts on (the start date, else the due date, else today). Example for a start on Monday 17 Nov:
+  - Doesn't repeat; Every day; Every weekday (Mon–Fri); Every week on Monday; Every 2 weeks on Monday; Every month on the 17th; Every month on the third Monday (the last Monday when no later one exists that month); Every year on 17 Nov.
+  - **Custom…** opens a dialog: every N (1–999) days, weeks, months or years; for weeks, one or more weekdays (in the user's week order); for months, the same day number or the same weekday of the month; ends Never, On a date, or After N (1–1000) times.
+  - Every choice is stored as `repeat` plus a `repeat_rule` (RRULE, see §2.3). The row shows its summary, e.g. "Every 2 weeks on Monday and Wednesday".
+  - Choosing a repeat with no dates sets the **start date** to today (the start date is a task's main date); the due date stays empty.
 - **Priority:** Low, Medium, High. Flags stay priority only.
 - **Notes:** up to 5,000 characters, the box grows with the text.
 - **Assistant tasks:** an assistant-made task shows `task.created_by_assistant` with the link `task.from_note` ("From note: {name}"), which opens the note's result ([NU-7](NU-note-understanding.md#nu-7)).
@@ -84,7 +88,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **This and all future:** deletes this occurrence. No future ones exist yet, so the series ends.
   - Past completed occurrences are never touched.
 - **Edit scope:** an edit applies to this occurrence and is carried into every later one, because each copies the previous one. There is no "edit all" dialog, since only one open occurrence ever exists.
-- **Calendar rules from notes (IM-37 extension):** an optional `repeat_rule` stores interval, selected weekdays/month pattern and COUNT or UNTIL. These calendar rules skip impossible dates; enum-only legacy tasks keep the anchor-day clamping above. The frontend formats `repeat_rule` and `repeat_anchor` into a localized description in task details. Custom repeat controls are separate from note recognition.
+- **Calendar rules from notes (IM-37 extension):** an optional `repeat_rule` stores interval, selected weekdays/month pattern and COUNT or UNTIL. These calendar rules skip impossible dates; enum-only legacy tasks keep the anchor-day clamping above. The frontend formats `repeat_rule` and `repeat_anchor` into a localized description in task details. Task details and New task build these rules from the presets and the Custom dialog of §2.2 (#154); BYDAY may carry an ordinal (`3MO`, `-1FR`), and UNTIL is sent as the end of that day in UTC (`20261220T235959Z`), the form the server's RRULE library requires. Note recognition is separate.
 
 ### 2.4 Delete (TK-5)
 
@@ -117,7 +121,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Task row checkbox | — | — | Struck through, toast | Revert and `error.save_failed` with Retry | Works, queued | — |
 | Task details | — | Skeleton after 300 ms (deep link) | Fields | `404` → `error.not_found` with Back. Field error inline | Works. Edits queued. Assistant link to the note works from cache | — |
 | Delete dialog | — | Busy button | Back, toast | `error.save_failed` | Works, queued | — |
-| Reminder field | Disabled without a date | — | Saved | `task.reminder_past` (helper, not an error) | Works. `remind_at` is computed on sync | Push denied: helper `task.push_denied`, with a link to how to turn it back on |
+| Reminder field | Disabled without a date | — | Saved | No helper (a passed time is kept, nothing is sent) | Works. `remind_at` is computed on sync | Push denied: helper `task.push_denied`, with a link to how to turn it back on |
 
 ## 4. Edge cases
 
@@ -126,7 +130,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e1"></a>TK-E1 | Monthly repeat on the 31st | Anchor day capped per month (§2.3) | T-TK-101 |
 | <a id="tk-e2"></a>TK-E2 | Completing an overdue daily task 3 days late | The next occurrence is today (missed ones skipped) | T-TK-102 |
 | <a id="tk-e3"></a>TK-E3 | Completing a weekly task early (due Friday, done Tuesday) | The next occurrence is the following Friday (from the due date) | T-TK-103 |
-| <a id="tk-e4"></a>TK-E4 | Reminder time already passed | Saved, with the `task.reminder_past` helper. Nothing is sent | T-TK-104 |
+| <a id="tk-e4"></a>TK-E4 | Reminder time already passed | Saved, with no helper. Nothing is sent | T-TK-104 |
 | <a id="tk-e5"></a>TK-E5 | "This task only" on a repeating task | Deletes it and creates the next occurrence | T-TK-105 |
 | <a id="tk-e6"></a>TK-E6 | Toast Undo after completing a repeating task | Reopens it and deletes the generated occurrence | T-TK-106 |
 | <a id="tk-e7"></a>TK-E7 | Completed on two devices offline | Per-field LWW on `done`. Only one next occurrence: it is created by the server when `done` first becomes true, and is unique on `previous_occurrence_id` | T-TK-107, OFF-20 |
@@ -146,7 +150,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.reminder_past`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`, `task.starts_at`, `task.starts_today`, `task.due_at_time`.
+`task.completed`, `task.title_required`, `task.end_before_start`, `task.reminder_needs_date`, `task.created_by_assistant`, `task.from_note`, `task.delete_title`, `task.deleted`, `task.repeat_scope_title`, `task.repeat_this`, `task.repeat_future`, `task.push_explainer`, `task.push_denied`, `app.install_for_reminders`, `task.limit`, `app.conflict`, `error.save_failed`, `error.not_found`, `common.undo`, `task.start_date`, `task.due_time`, `task.start_after_due`, `task.in_progress`, `task.planned`, `task.due_at`, `task.due_on`, `task.starts_at`, `task.starts_today`, `task.due_at_time`.
 
 ## 6. Accessibility
 

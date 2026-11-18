@@ -115,7 +115,10 @@ export function PopoverOrSheet({
   };
 
   return (
-    <div ref={setContainer} className={cx("relative inline-block", className)}>
+    <div
+      ref={setContainer}
+      className={cx("relative inline-block min-w-0 max-w-full", className)}
+    >
       {trigger}
       {showPopover &&
         createPortal(

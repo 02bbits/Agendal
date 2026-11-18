@@ -1,5 +1,6 @@
 import { useId, useRef, type ReactNode, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { cx } from "./cx";
 import { useHistoryEntry } from "./useHistoryEntry";
 import { useModalFocus } from "./useModalFocus";
 
@@ -17,6 +18,10 @@ export interface DialogProps {
   history?: boolean;
   /** Initial element to focus on open, e.g. Cancel button (A11Y-42). */
   initialFocusRef?: RefObject<HTMLElement | null>;
+  /** "wide" fits a small form (Custom repeat); questions stay at the default width. */
+  size?: "default" | "wide" | "xwide";
+  /** "row" puts two actions side by side (Cancel left, the main action right). */
+  actionsLayout?: "stack" | "row";
 }
 
 export function Dialog({
@@ -28,6 +33,8 @@ export function Dialog({
   children,
   history = true,
   initialFocusRef,
+  size = "default",
+  actionsLayout = "stack",
 }: DialogProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -51,7 +58,14 @@ export function Dialog({
       <div
         ref={dialogRef}
         onClick={(e) => e.stopPropagation()}
-        className="flex w-full max-w-[360px] flex-col gap-2 rounded-dialog bg-surface-elevated p-5 text-ink shadow-2xl motion-safe:animate-scale-in"
+        className={cx(
+          "flex max-h-[calc(100dvh-32px)] w-full flex-col gap-2 overflow-y-auto rounded-dialog bg-surface-elevated p-5 text-ink shadow-2xl motion-safe:animate-scale-in",
+          size === "xwide"
+            ? "max-w-[760px]"
+            : size === "wide"
+              ? "max-w-[460px]"
+              : "max-w-[360px]",
+        )}
         role="alertdialog"
         aria-modal="true"
         aria-labelledby={titleId}
@@ -74,7 +88,14 @@ export function Dialog({
           </p>
         )}
         {children}
-        <div className="mt-3 flex flex-col gap-2">{actions}</div>
+        <div
+          className={cx(
+            "mt-3 flex gap-2",
+            actionsLayout === "row" ? "flex-row [&>*]:flex-1" : "flex-col",
+          )}
+        >
+          {actions}
+        </div>
       </div>
     </div>,
     document.body,

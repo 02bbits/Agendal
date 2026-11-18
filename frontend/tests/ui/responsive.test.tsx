@@ -114,9 +114,9 @@ describe("Bottom bar next to the task panel (UX-28)", () => {
       name: "Main",
     }).parentElement!;
     // Left-aligned, not centred by mx-auto, so it ends at the panel's edge
-    expect(bars.className).toContain("xl:[html[data-task-panel]_&]:ml-0");
+    expect(bars.className).toContain("xl:[html[data-task-panel=aside]_&]:ml-0");
     expect(bars.className).toContain(
-      "xl:[html[data-task-panel]_&]:w-[calc(100%-400px)]",
+      "xl:[html[data-task-panel=aside]_&]:w-[calc(100%-400px)]",
     );
   });
 });

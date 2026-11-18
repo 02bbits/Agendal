@@ -21,7 +21,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-4"></a>NC-4 | Turn a file into a note | Should | Accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB; extracted text lands in the editor to check; a removable file chip shows; unsupported or oversized files get a specific error; the result shows "From \<file name>" |
 | <a id="nc-5"></a>NC-5 | Start from an example | Could | Tapping an example chip fills the editor |
 | <a id="nc-6"></a>NC-6 | Capture while offline | Must | The button reads Save note; the note is stored on the device as "Waiting for connection"; on reconnect it is processed automatically with a toast "Back online. N notes turned into M tasks." |
-| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; due chips Today, Tomorrow, Next week, No date, Pick date…; priority; project; a toast confirms "Added “…”" |
+| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Custom; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
 
 ## 1. Entry points and user stories
 
@@ -63,14 +63,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - It posts to `POST /notes`, shows `note.reading` after 300 ms, then replaces the editor with the RV screen.
   - A network error or `5xx` queues the note ([NU §3](NU-note-understanding.md#3-state-matrix)).
   - `client_id` is made when the editor opens and kept for retries ([NC-E10](#nc-e10), [NC-E11](#nc-e11)). Changing the text after a failed send gives the next try a new `client_id`, because the server answers a known id with its stored result and ignores the body ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)).
-  - **Until the result screen ([IM-43](../08-project/tasks.md#im-43)) and the offline queue ([IM-53](../08-project/tasks.md#im-53)) exist:** a success clears the draft, closes the editor and shows `note.made_*`. A network error or `5xx` queues nothing: the text stays, editable, with `note.send_failed` and Retry. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
+  - A network error or `5xx` keeps the note on the device under the same `client_id` (status `pending`), closes the editor and shows `note.processing_failed`; it is sent again on the next sync ([IM-53](../08-project/tasks.md#im-53)). `422` shows its inline error and keeps the text. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
 - **Offline:**
   - The button reads `note.save_offline`.
   - The note is written to IndexedDB with the same fields and status `pending`.
   - The editor closes with the toast `note.saved_offline`.
-  - The Notes tab shows the card with `note.waiting` ([NC-6](#nc-6)).
+  - The Notes tab shows the card with `note.waiting` ([NC-6](#nc-6)). It has no result to open, so the card is not a link until the note is processed.
 - **Storage write fails** (quota or private mode): the text stays in the editor with `app.storage_low`. Nothing is lost.
-- **Replay:** on reconnect, oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)), then one toast `note.back_online_*` (plus `note.needs_look_*`).
+- **Replay:** on reconnect, after the queued task edits and oldest first ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md), [ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)), then one toast `note.back_online_*` (plus `note.needs_look_*`). N is the notes sent, M the tasks those notes plan to create (applied or not, because with `NOTE_CHANGES_TO_CONFIRM` at 1 most notes wait for Apply), and the needs-a-look count the notes that ended `confirm` or `followup`. A note the server refuses (`4xx` except `429`) is not sent again: its card shows `note.couldnt_process` (the text stays on the device), and a tap puts the text back in the editor as the unsent draft, ahead of any other draft, and removes the card. A `429` or `5xx` stops the replay and the rest wait, in order.
 
 ### 2.3 Dictation (NC-3, Should)
 
@@ -113,21 +113,23 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.5 New task sheet (NC-7)
 
 - **Fields:**
-  - Title (required, 1–200 characters, trimmed). Helper text `task.title_only`.
-  - Due chips: Today, Tomorrow, Next week (Monday of next week, as [NU-E10](NU-note-understanding.md#nu-e10)), No date, Pick date… (native `<input type="date">`).
-  - Repeat: Never (default), Daily, Weekly, Monthly, Yearly, under Start date. Choosing one with No date moves the due chip to Today. Choosing No date with a repeat on and no start date sets it back to Never.
+  - Title (required, 1–200 characters, trimmed).
+  - Start date chips: Today, Tomorrow, Next week (Monday of next week, as [NU-E10](NU-note-understanding.md#nu-e10)), No date, Custom (native `<input type="date">`). The date a task is created with is its start date (#154). Start time, enabled once there is a start date.
+  - Due date (optional) with a due time, empty by default. It must be on or after the start, date and time ([BR-11](../02-domain/business-rules.md#br-11)).
+  - Repeat: the presets and Custom… of [TK §2.2](TK-tasks.md#22-task-details-and-editing-tk-2-tk-3). Choosing a repeat with No date sets the start date to Today. Reminders are set in task details, not here.
   - Priority chips: Low, Medium, High.
   - Project picker: No project, the user's projects, New project…. New project opens over the sheet and comes back with the project selected.
 - **Defaults depend on where the sheet opened ([Q20](../08-project/open-questions.md#q20)):**
 
-| Opened from | Due | Project |
+| Opened from | Start date | Project |
 |---|---|---|
 | Inbox | Today | — |
 | Upcoming | Tomorrow | — |
 | A project | No date | That project |
 | Anywhere else | No date | — |
 
-- **Default priority** follows the NU rule: Medium when due today, otherwise Low. It follows changes to the due chip until the user taps a priority.
+- The **+** on a day in Upcoming opens with that day as the start date.
+- **Default priority:** Medium when the task starts today, otherwise Low. It follows changes to the start date chip until the user taps a priority.
 - **Add:**
   - Enabled when the title has visible text. Enter or Ctrl/Cmd+Enter submits.
   - The sheet closes, the task appears in the list at once ([UX-01](../01-product/ux-standards.md#ux-01)), and the toast `task.added` shows.
@@ -164,12 +166,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e13"></a>NC-E13 | Signed out while notes are pending | The sign-out dialog counts them as unsaved changes (AA). Confirming deletes them | T-NC-113 |
 | <a id="nc-e14"></a>NC-E14 | The time zone changes between writing offline and syncing | `written_at` and `timezone` are from writing time ([NU-E26](NU-note-understanding.md#nu-e26)) | T-NC-114 |
 | <a id="nc-e15"></a>NC-E15 | New task with only spaces as the title | Add stays disabled. The server returns `422` too | T-NC-115 |
-| <a id="nc-e16"></a>NC-E16 | Pick date… cancelled | The previous due chip stays selected | T-NC-116 |
+| <a id="nc-e16"></a>NC-E16 | Custom cancelled | The previous start date chip stays selected | T-NC-116 |
 | <a id="nc-e17"></a>NC-E17 | Dictating while the text has a selection | The selection is replaced by the dictated words, as typing would | T-NC-117 |
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.title_only`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 
@@ -235,7 +237,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | [NC-6](#nc-6) | The button reads Save note. Stored on the device as "Waiting for connection" | T-NC-40, OFF-03 |
 | [NC-6](#nc-6) | Processed on reconnect with the toast "Back online. N notes turned into M tasks." | OFF-04 (Playwright `setOffline`), T-NC-41 (toast counts, singular and plural) |
 | [NC-7](#nc-7) | `+` opens New task. Only a title is required | T-NC-50 |
-| [NC-7](#nc-7) | Due chips Today, Tomorrow, Next week, No date, Pick date…, priority, project | T-NC-51 (dates computed with an injected clock), T-NC-52 (defaults by entry) |
+| [NC-7](#nc-7) | Start date chips Today, Tomorrow, Next week, No date, Custom, an optional due date, repeat, priority, project | T-NC-51 (dates computed with an injected clock), T-NC-52 (defaults by entry) |
 | [NC-7](#nc-7) | The toast confirms "Added “…”" | T-NC-53 |
 | — | Edge cases [NC-E1](#nc-e1)–[NC-E17](#nc-e17) | T-NC-101–117 |
 | — | Accessibility | A11Y-30–34 |

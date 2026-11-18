@@ -212,7 +212,7 @@ describe("NoteEditor (IM-41)", () => {
     expect(field()).toBe(screen.getByRole("textbox", { name: "Your note" }));
   });
 
-  it("saves the draft 500 ms after the last keystroke (T-NC-101)", async () => {
+  it("saves the draft 500 ms after the last keystroke (T-NC-101, OFF-01)", async () => {
     render(<NoteEditor onClose={() => {}} />);
     await userEvent.type(field(), "buy milk");
     expect(saveDraft).not.toHaveBeenCalled();
@@ -249,7 +249,7 @@ describe("NoteEditor (IM-41)", () => {
     visibility.mockRestore();
   });
 
-  it("puts an unsent note back with the cursor at the end (T-NC-101)", async () => {
+  it("puts an unsent note back with the cursor at the end (T-NC-101, OFF-01)", async () => {
     vi.mocked(loadDraft).mockResolvedValue("call the bank");
     const onDraftRestored = vi.fn();
     render(<NoteEditor onClose={() => {}} onDraftRestored={onDraftRestored} />);
@@ -414,6 +414,52 @@ describe("NoteEditor submit (IM-42)", () => {
     expect(onSubmit).toHaveBeenCalledTimes(2);
     expect(onSubmit.mock.calls[1]).toEqual(onSubmit.mock.calls[0]);
     expect(onSubmitted).toHaveBeenCalledWith(made);
+  });
+
+  it("T-NC-40: offline the button reads Save note; a kept note clears the draft and closes through onQueued", async () => {
+    const onSubmit = vi
+      .fn()
+      .mockResolvedValue({ queued: "note.saved_offline" });
+    const onQueued = vi.fn();
+    const onSubmitted = vi.fn();
+    const u = user();
+    render(
+      <NoteEditor
+        offline
+        onClose={() => {}}
+        onSubmit={onSubmit}
+        onQueued={onQueued}
+        onSubmitted={onSubmitted}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Make tasks" })).toBeNull();
+    await u.type(field(), "call mum");
+    await u.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(onQueued).toHaveBeenCalledWith("note.saved_offline");
+    expect(onSubmitted).not.toHaveBeenCalled();
+    expect(clearDraft).toHaveBeenCalled();
+    await expectAxeCleanInBothThemes();
+  });
+
+  it("NC-E12: a note the device can't store stays in the editor with the storage warning", async () => {
+    const onSubmit = vi.fn().mockResolvedValue({ error: "app.storage_low" });
+    const onQueued = vi.fn();
+    const u = user();
+    render(
+      <NoteEditor
+        offline
+        onClose={() => {}}
+        onSubmit={onSubmit}
+        onQueued={onQueued}
+      />,
+    );
+    await u.type(field(), "call mum");
+    await u.click(screen.getByRole("button", { name: "Save note" }));
+
+    expect(alert()?.textContent).toBe(t("app.storage_low"));
+    expect((field() as HTMLTextAreaElement).value).toBe("call mum");
+    expect(onQueued).not.toHaveBeenCalled();
   });
 
   it("new words after a failure go out under a new client id", async () => {

@@ -1,13 +1,22 @@
 import { api } from "./api";
 import { ApiRequestError, handleResponse } from "./apiError";
 import { now, timeZone } from "./clock";
+import { loadDraft, saveDraft } from "./draft";
 import {
+  enqueue,
   putNoteEntries,
   putNoteResult,
+  readFailedNotes,
   readNoteEntries,
+  readQueue,
+  removeFailedNote,
   removeNote,
+  type NoteBody,
 } from "./localStore";
-import { isCopyKey, type CopyKey } from "../ui/copy";
+import { SYNC_REQUEST } from "./offline";
+import { isOffline } from "./online";
+import type { Replayed } from "./sync";
+import { isCopyKey, tc, type CopyKey } from "../ui/copy";
 import type { TaskApi, TaskPatch } from "../ui/domain/api";
 import type { NoteHit } from "../ui/domain/search";
 import type { NoteResult, NoteListEntry, NoteFilter } from "../ui/domain/types";
@@ -18,12 +27,19 @@ export interface NoteSubmitFailure {
   retryAfter?: number;
 }
 
-/** What sending a note answers: the result, or why it wasn't made. */
-export type NoteSubmission = Promise<NoteResult | NoteSubmitFailure>;
+/** The note is kept on the device and sent later (NC-6): the toast to show. */
+export interface NoteQueued {
+  queued: CopyKey;
+}
+
+/** What sending a note answers: the result, kept for later, or why it wasn't made. */
+export type NoteSubmission = Promise<
+  NoteResult | NoteQueued | NoteSubmitFailure
+>;
 
 /** What Edit note answers: also `{conflicts}` when tasks edited by hand need an answer first (RV-E16). */
 export type NoteReplan = Promise<
-  NoteResult | NoteSubmitFailure | { conflicts: number }
+  NoteResult | NoteQueued | NoteSubmitFailure | { conflicts: number }
 >;
 
 /**
@@ -34,22 +50,39 @@ export async function submitNote(
   text: string,
   clientId: string,
 ): NoteSubmission {
+  // Written now, whenever it is sent: the zone and time of writing (NC-E14)
+  const body: NoteBody = {
+    client_id: clientId,
+    text,
+    written_at: now().toISOString(),
+    timezone: timeZone(),
+  };
+  if (isOffline()) return keep(body, "note.saved_offline", "app.storage_low");
   try {
     return await handleResponse<NoteResult>(
       await api("/notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          client_id: clientId,
-          text,
-          written_at: now().toISOString(),
-          timezone: timeZone(),
-        }),
+        body: JSON.stringify(body),
       }),
     );
   } catch (error) {
+    // No answer or a server error: kept with the same client_id, so a lost reply can't make two
+    // notes (NC-E11, NU §3)
+    if (!(error instanceof ApiRequestError) || error.status >= 500)
+      return keep(body, "note.processing_failed", "note.send_failed");
     return submitFailure(error);
   }
+}
+
+async function keep(
+  body: NoteBody,
+  queued: CopyKey,
+  full: CopyKey,
+): Promise<NoteQueued | NoteSubmitFailure> {
+  if (!(await enqueue([{ kind: "note", body }]))) return { error: full };
+  window.dispatchEvent(new Event(SYNC_REQUEST));
+  return { queued };
 }
 
 function submitFailure(error: unknown): NoteSubmitFailure {
@@ -179,7 +212,60 @@ export async function listNotes(
     await api(`/notes?${params}`),
   );
   void putNoteEntries(page?.items ?? []);
-  return page;
+  // Notes still waiting for a connection aren't on the server yet; they lead the first page
+  const waiting = cursor || filter === "made" ? [] : await pendingNotes();
+  return waiting.length === 0
+    ? page
+    : {
+        ...page,
+        items: [...waiting, ...page.items],
+        total: page.total + waiting.length,
+        needs_count: page.needs_count + waiting.length,
+      };
+}
+
+/** Notes waiting to be sent, and those the server refused, newest first, as Notes rows (NC-6). */
+export async function pendingNotes(): Promise<NoteListEntry[]> {
+  const waiting = (await readQueue()).flatMap(({ entry }) =>
+    entry.kind === "note" ? [entry.body] : [],
+  );
+  const refused = await readFailedNotes();
+  return [
+    ...waiting.map((body) => ({ body, failed: false })),
+    ...refused.map((body) => ({ body, failed: true })),
+  ]
+    .sort((a, b) => b.body.written_at.localeCompare(a.body.written_at))
+    .map(({ body, failed }) => ({
+      id: body.client_id,
+      status: "pending" as const,
+      name: null,
+      excerpt: body.text.slice(0, 140),
+      written_at: body.written_at,
+      source_file_name: null,
+      counts: { created: 0, updated: 0, deleted: 0 },
+      ...(failed && { failed }),
+    }));
+}
+
+/**
+ * Tap on a refused note (NU §3): its text goes back to the editor as the unsent draft, ahead of
+ * any other draft, and the card goes away.
+ */
+export async function reviveNote(clientId: string) {
+  const body = (await readFailedNotes()).find((b) => b.client_id === clientId);
+  if (!body) return;
+  const draft = await loadDraft().catch(() => "");
+  await saveDraft(draft ? `${body.text}\n${draft}` : body.text);
+  await removeFailedNote(clientId);
+  notesChanged();
+}
+
+/** The "Back online" toast (NC-6): notes sent, tasks made, and how many need a look. */
+export function backOnlineText({ notes, tasks, needs }: Replayed) {
+  const text = tc("note.back_online", notes, {
+    tasks: tc("note.task_count", tasks),
+  });
+  return needs > 0 ? `${text} ${tc("note.needs_look", needs)}` : text;
 }
 
 const NEEDS_LOOK: readonly string[] = ["confirm", "followup", "pending"];
@@ -191,7 +277,7 @@ const NEEDS_LOOK: readonly string[] = ["confirm", "followup", "pending"];
 export async function deviceNotes(
   filter: NoteFilter,
 ): Promise<NoteListPage | null> {
-  const all = await readNoteEntries();
+  const all = [...(await pendingNotes()), ...(await readNoteEntries())];
   if (all.length === 0) return null;
   const needs = all.filter((note) => NEEDS_LOOK.includes(note.status));
   const items =

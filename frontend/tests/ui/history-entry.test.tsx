@@ -130,6 +130,65 @@ describe("history entries for sheets and dialogs", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+  it("a picker that closes as it opens a dialog: tapping outside the dialog closes only the dialog (#154)", async () => {
+    function Stack() {
+      const [task, setTask] = useState(false);
+      const [picker, setPicker] = useState(false);
+      const [custom, setCustom] = useState(false);
+      return (
+        <>
+          <Button onClick={() => setTask(true)}>Open task</Button>
+          <Sheet
+            open={task}
+            title="New task"
+            closeLabel="Close"
+            onClose={() => setTask(false)}
+          >
+            <Button onClick={() => setPicker(true)}>Repeat</Button>
+            <Sheet
+              open={picker}
+              title="Repeat"
+              closeLabel="Close repeat"
+              onClose={() => setPicker(false)}
+            >
+              <Button
+                onClick={() => {
+                  setPicker(false);
+                  setCustom(true);
+                }}
+              >
+                Custom
+              </Button>
+            </Sheet>
+            <Dialog
+              open={custom}
+              title="Custom repeat"
+              onClose={() => setCustom(false)}
+              actions={<Button onClick={() => setCustom(false)}>Cancel</Button>}
+            />
+          </Sheet>
+        </>
+      );
+    }
+    render(<Stack />);
+    await userEvent.click(screen.getByText("Open task"));
+    await userEvent.click(screen.getByText("Repeat"));
+    await userEvent.click(screen.getByText("Custom"));
+    const dialog = screen.getByRole("alertdialog", { name: "Custom repeat" });
+
+    await userEvent.click(dialog.parentElement!);
+    await act(async () => {
+      while (await popstate(300));
+    });
+
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(screen.getByRole("dialog", { name: "New task" })).toBeTruthy();
+
+    // One Back now closes the task sheet: the picker's leftover entry was skipped
+    await goBack();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
   it("keeps Next.js's history state on the entry it adds", async () => {
     window.history.replaceState({ __NA: true }, "");
     render(<Screen />);

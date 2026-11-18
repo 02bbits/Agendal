@@ -4,7 +4,8 @@ export type RepeatLocale = "en" | "vi";
 type RepeatingTask = Pick<
   Task,
   "repeat" | "repeat_rule" | "repeat_anchor" | "due_date"
->;
+> &
+  Partial<Pick<Task, "start_date">>;
 
 const weekdays = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"];
 const units = {
@@ -111,7 +112,10 @@ export function describeRepeat(
       : interval === 1
         ? task.repeat
         : `every ${interval} ${unit}s`;
-  const anchor = dateParts(task.repeat_anchor ?? task.due_date);
+  // The series starts from the start date, the task's main date (#154)
+  const anchor = dateParts(
+    task.repeat_anchor ?? task.start_date ?? task.due_date,
+  );
   let days = parts.BYDAY;
   let monthDays = parts.BYMONTHDAY;
   let months = parts.BYMONTH;

@@ -140,8 +140,9 @@ class TaskController extends Controller
 
         $startDate = $startDateStr;
         $dueDate = $dueDateStr;
+        // A repeat with neither date starts today: the start date is a task's main date (#154)
         if (DueDateFallback::needed($dueDate, $startDate, $repeatStr)) {
-            $dueDate = $today;
+            $startDate = $today;
         }
 
         // Start before due (TK-3)

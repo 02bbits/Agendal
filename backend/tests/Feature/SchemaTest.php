@@ -77,7 +77,7 @@ it('rejects values outside each list', function (string $table, array $row, stri
     expect($base[$table])->toThrow(QueryException::class, $constraint);
 })->with([
     'priority' => ['tasks', ['priority' => 'urgent'], 'tasks_priority'],
-    'reminder' => ['tasks', ['reminder' => '2h'], 'tasks_reminder'],
+    'reminder' => ['tasks', ['reminder' => '3h'], 'tasks_reminder'],
     'repeat' => ['tasks', ['repeat' => 'hourly'], 'tasks_repeat'],
     'created_by' => ['tasks', ['created_by' => 'robot'], 'tasks_created_by'],
     'colour' => ['projects', ['colour' => 'pink'], 'projects_colour'],
