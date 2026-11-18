@@ -349,7 +349,6 @@ export const pending = {
   "settings.calendars_heading": "Calendar Subscriptions",
   "settings.calendars_desc": "Subscribe in Google or Apple Calendar.",
   "settings.language": "Language",
-  "settings.home_view": "Home view",
   "settings.date_time": "Date & time",
   "settings.time_zone": "Time zone",
   "settings.date_format": "Date format",

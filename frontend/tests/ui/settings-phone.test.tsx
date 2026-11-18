@@ -74,14 +74,14 @@ describe("Phone Settings (issue #149 round 6)", () => {
     ).toBeNull();
   });
 
-  it("phones have no Home view setting in General: they always open on Inbox", async () => {
+  it("General has no Home view setting: the app always opens on Inbox", async () => {
     await openAccount();
     await userEvent.click(
       screen.getByRole("button", {
         name: new RegExp(t("app.tab_general"), "i"),
       }),
     );
-    expect(screen.queryByText(t("settings.home_view"))).toBeNull();
+    expect(screen.queryByText("Home view")).toBeNull();
     expect(screen.getByText(t("app.time_format"))).toBeTruthy();
   });
 

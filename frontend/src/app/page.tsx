@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useSyncExternalStore } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import {
   Button,
   InboxScreen,
@@ -21,7 +21,6 @@ import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
 import { now, timeZone } from "@/lib/clock";
 import { useInboxData } from "./useInboxData";
-import { takeHomeView } from "./homeView";
 
 const clock: Clock = {
   now,
@@ -63,13 +62,6 @@ function InboxContent() {
     () => undefined,
   );
   const accountInitial = user?.display_name || user?.email || "";
-
-  // Home view opens its tab once, when the app starts on "/". After that every tab is the
-  // user's own choice: coming back to Inbox, or any later navigation, never redirects
-  useEffect(() => {
-    const target = takeHomeView();
-    if (target) navigate(target);
-  }, [navigate]);
 
   return (
     <div className="pb-8">

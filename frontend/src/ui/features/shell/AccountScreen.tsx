@@ -285,15 +285,6 @@ export function AccountScreen({
     setPrevName(name);
     setDisplayName(name);
   }
-  const [homeView, setHomeView] = useState(() => {
-    try {
-      return typeof localStorage !== "undefined"
-        ? localStorage.getItem("agendal.home_view") || "inbox"
-        : "inbox";
-    } catch {
-      return "inbox";
-    }
-  });
   const [subView, setSubView] = useState<"change_password" | null>(null);
   const [dateFormat, setDateFormat] = useState(() => {
     try {
@@ -741,37 +732,6 @@ export function AccountScreen({
                 : "hidden",
           )}
         >
-          {/* Home view: desktop only, phones always open on Inbox */}
-          {isDesktop && (
-            <SelectDropdown
-              label={t("settings.home_view")}
-              value={homeView}
-              onChange={(val) => {
-                setHomeView(val);
-                try {
-                  localStorage.setItem("agendal.home_view", val);
-                } catch {}
-              }}
-              options={[
-                {
-                  value: "inbox",
-                  label: t("nav.inbox"),
-                  icon: <InboxIcon size={16} />,
-                },
-                {
-                  value: "upcoming",
-                  label: t("nav.upcoming"),
-                  icon: <CalendarIcon size={16} />,
-                },
-                {
-                  value: "projects",
-                  label: t("nav.projects"),
-                  icon: <SidebarIcon size={16} />,
-                },
-              ]}
-            />
-          )}
-
           {/* Date & time section */}
           <div className="pt-2">
             <h2 className="text-overline uppercase font-semibold text-ink-secondary mb-3.5">
