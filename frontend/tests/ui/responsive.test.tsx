@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  AccountScreen,
+  SettingsScreen,
   AppShell,
   Dialog,
   ScreenHeader,
@@ -193,7 +193,7 @@ describe("Overline labels", () => {
           title="Inbox"
           accountInitial="e"
         />
-        <AccountScreen
+        <SettingsScreen
           name="example"
           email="example@gmail.com"
           settings={{

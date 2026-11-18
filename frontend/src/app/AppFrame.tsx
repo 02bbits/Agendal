@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
-  AccountScreen,
+  SettingsScreen,
   AppShell,
   InstallBanner,
   OfflineBanner,
@@ -947,7 +947,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       >
         {children}
         {settingsOpen && pathname !== ROUTES.account && (
-          <AccountScreen
+          <SettingsScreen
             portal={true}
             initialTab={settingsTab ?? "general"}
             name={user?.display_name ?? ""}

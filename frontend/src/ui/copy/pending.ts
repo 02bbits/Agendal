@@ -459,7 +459,6 @@ export const pending = {
     "Your other devices were signed out. We sent a note to {email}.",
   "settings.group_preferences": "Preferences",
   "settings.group_tasks": "Tasks and alerts",
-  "settings.group_data": "Data and apps",
   "common.decrease": "Decrease",
   "common.increase": "Increase",
   "common.ok": "OK",

@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AccountScreen, InstallBanner } from "@/ui";
+import { SettingsScreen, InstallBanner } from "@/ui";
 import { useInstall } from "@/app/useInstall";
 import { wipeDevice } from "@/lib/device";
 import { expectAxeCleanInBothThemes } from "./axe";
@@ -21,7 +21,7 @@ function Banner() {
 function Account({ toast = () => {} }: { toast?: (message: string) => void }) {
   const installer = useInstall(toast);
   return (
-    <AccountScreen
+    <SettingsScreen
       name="example"
       email="example@gmail.com"
       settings={{

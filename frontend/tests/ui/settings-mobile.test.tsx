@@ -1,9 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
-import {
-  AccountScreen,
-  type AccountSettings,
-} from "../../src/ui/features/shell/AccountScreen";
+import { SettingsScreen, type AccountSettings } from "../../src/ui";
 import { t } from "../../src/ui/copy";
 
 const defaultSettings: AccountSettings = {
@@ -36,7 +33,7 @@ describe("Settings on phones (Part D)", () => {
   it("profile card shows name and email and opens Account", () => {
     mockMatchMedia(false);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -67,7 +64,7 @@ describe("Settings on phones (Part D)", () => {
     mockMatchMedia(false);
     const onUpdateName = vi.fn().mockResolvedValue(undefined);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -97,7 +94,7 @@ describe("Settings on phones (Part D)", () => {
   it("the group labels render with their rows, and Account is not a row in the groups", () => {
     mockMatchMedia(false);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -110,7 +107,7 @@ describe("Settings on phones (Part D)", () => {
     // Group labels render (Data group is omitted when backups/integrations/calendars are removed)
     expect(screen.getByText(t("settings.group_preferences"))).toBeTruthy();
     expect(screen.queryByText(t("settings.group_tasks"))).toBeNull();
-    expect(screen.queryByText(t("settings.group_data"))).toBeNull();
+    expect(screen.queryByText("Data and apps")).toBeNull();
 
     // Preferences rows
     expect(
@@ -179,7 +176,7 @@ describe("Settings on phones (Part D)", () => {
   it("search shows one card with matches and hides the profile card and groups", () => {
     mockMatchMedia(false);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -200,7 +197,7 @@ describe("Settings on phones (Part D)", () => {
     expect(screen.queryByText("alex@example.com")).toBeNull();
     expect(screen.queryByText(t("settings.group_preferences"))).toBeNull();
     expect(screen.queryByText(t("settings.group_tasks"))).toBeNull();
-    expect(screen.queryByText(t("settings.group_data"))).toBeNull();
+    expect(screen.queryByText("Data and apps")).toBeNull();
     expect(
       screen.queryByRole("button", { name: t("app.sign_out") }),
     ).toBeNull();
@@ -235,7 +232,7 @@ describe("Settings on phones (Part D)", () => {
     mockMatchMedia(false);
     const onSignOut = vi.fn();
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -254,7 +251,7 @@ describe("Settings on phones (Part D)", () => {
   it("the detail header has a back button labelled Back that shows 'Settings' and returns to the list", () => {
     mockMatchMedia(false);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -305,7 +302,7 @@ describe("Settings on phones (Part D)", () => {
     mockMatchMedia(false);
     const onBack = vi.fn();
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -344,7 +341,7 @@ describe("Settings on phones (Part D)", () => {
   it("renders two-pane desktop layout from md (768px) up", () => {
     mockMatchMedia(true);
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}

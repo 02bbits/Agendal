@@ -21,7 +21,7 @@ import {
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
 import { AccountMenu } from "./AccountMenu";
-import type { SettingsTab, ThemeSetting } from "./AccountScreen";
+import type { SettingsTab, ThemeSetting } from "../settings/types";
 import {
   ROUTES,
   SIDEBAR_TABS_ORDER_KEY,

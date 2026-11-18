@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { AccountScreen } from "../../src/ui/features/shell/AccountScreen";
+import { SettingsScreen } from "../../src/ui";
 
 const defaultSettings = {
   theme: "system" as const,
@@ -13,7 +13,7 @@ const defaultSettings = {
   timezoneAuto: true,
 };
 
-describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
+describe("SettingsScreen Settings Tabs & Timezone Optimization", () => {
   it("renders only the 4 core settings tabs on desktop", () => {
     // Desktop layout
     window.matchMedia = vi.fn().mockImplementation((query: string) => ({
@@ -28,7 +28,7 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
     }));
 
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         settings={defaultSettings}
@@ -69,7 +69,7 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
     const onChange = vi.fn();
 
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         initialTab="general"
@@ -121,7 +121,7 @@ describe("AccountScreen Settings Tabs & Timezone Optimization", () => {
     const onChange = vi.fn();
 
     render(
-      <AccountScreen
+      <SettingsScreen
         name="Alex River"
         email="alex@example.com"
         initialTab="general"

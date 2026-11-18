@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  AccountScreen,
+  SettingsScreen,
   AppShell,
   RouteEmptyState,
   ScreenHeader,
@@ -124,7 +124,7 @@ describe("ScreenHeader", () => {
   });
 });
 
-describe("AccountScreen", () => {
+describe("SettingsScreen", () => {
   function Harness({
     onChange,
   }: {
@@ -139,7 +139,7 @@ describe("AccountScreen", () => {
     });
     return (
       <main>
-        <AccountScreen
+        <SettingsScreen
           name="example"
           email="example@gmail.com"
           settings={settings}

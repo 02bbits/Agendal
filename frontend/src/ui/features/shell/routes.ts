@@ -49,6 +49,21 @@ export function readStoredSetting(key: string): string | null {
   }
 }
 
+/**
+ * Saves a setting this browser keeps (storage blocked: it lasts until the page closes) and,
+ * with `changeEvent`, tells the rest of the app it changed.
+ */
+export function writeStoredSetting(
+  key: string,
+  value: string,
+  changeEvent?: string,
+): void {
+  try {
+    localStorage.setItem(key, value);
+  } catch {}
+  if (changeEvent) window.dispatchEvent(new Event(changeEvent));
+}
+
 export function getStoredSidebarTabs(): Record<TabId, boolean> {
   return parseSidebarTabs(readStoredSetting(SIDEBAR_TABS_STORAGE_KEY));
 }

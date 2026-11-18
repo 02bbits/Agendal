@@ -7,12 +7,14 @@ export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export { OfflineBanner } from "./shell/OfflineBanner";
 export { InstallBanner, type InstallBannerProps } from "./shell/InstallBanner";
 export {
-  AccountScreen,
-  type AccountScreenProps,
-  type AccountSettings,
-  type SettingsTab,
-  type ThemeSetting,
-} from "./shell/AccountScreen";
+  SettingsScreen,
+  type SettingsScreenProps,
+} from "./settings/SettingsScreen";
+export type {
+  AccountSettings,
+  SettingsTab,
+  ThemeSetting,
+} from "./settings/types";
 export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
   NoteResultScreen,

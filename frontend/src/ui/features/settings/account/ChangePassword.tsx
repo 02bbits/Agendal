@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { t } from "../../copy";
-import { Button } from "../../components/Button";
-import { CheckIcon } from "../../components/icons";
-import { cx } from "../../components/cx";
-import { formatWait } from "../auth/CodeEntry";
-import { PasswordField } from "../auth/PasswordField";
-import { hasNonKeyboardCharacters } from "../auth/validation";
-import { PasswordStrength } from "../auth/PasswordStrength";
-import { api } from "../../../lib/api";
+import { t } from "../../../copy";
+import { Button } from "../../../components/Button";
+import { CheckIcon } from "../../../components/icons";
+import { cx } from "../../../components/cx";
+import { formatWait } from "../../auth/CodeEntry";
+import { PasswordField } from "../../auth/PasswordField";
+import { hasNonKeyboardCharacters } from "../../auth/validation";
+import { PasswordStrength } from "../../auth/PasswordStrength";
+import { api } from "../../../../lib/api";
 
 export interface ChangePasswordProps {
   email: string;

@@ -10,7 +10,7 @@ import { t } from "../../copy";
 import { UserIcon, SlidersIcon } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
 import { runThemeTransition } from "../../domain/themeTransition";
-import type { SettingsTab, ThemeSetting } from "./AccountScreen";
+import type { SettingsTab, ThemeSetting } from "../settings/types";
 
 export interface AccountMenuProps {
   /** The button that opens the menu: a press on it toggles, so it is not an outside press. */
