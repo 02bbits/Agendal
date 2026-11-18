@@ -6,6 +6,7 @@ import {
   TabLoading,
   TabPending,
 } from "../../src/app/TabLoading";
+import { InboxSkeleton, ProjectSkeleton } from "../../src/app/skeletons";
 import { AppShell } from "../../src/ui/features/shell/AppShell";
 import { LoadingScreen } from "../../src/ui/components/LoadingScreen";
 import { t } from "../../src/ui/copy";
@@ -95,36 +96,47 @@ describe("TabLoading: full screen only as the app starts (#161)", () => {
 describe("TabPending: a tab opened for the first time (#161)", () => {
   afterEach(cleanup);
 
-  it("on a phone: the tab's header, then the loading screen in the content", () => {
+  it("on a phone's first visit: the tab's header, then the loading screen in the content", () => {
     render(
       <TabPending
         title="Upcoming"
         overline="WEDNESDAY, 18 NOVEMBER"
         accountInitial="H"
         navigate={() => true}
-        wide={false}
+        body={<LoadingScreen inline />}
       />,
     );
     expect(screen.getByRole("heading", { name: "Upcoming" })).toBeTruthy();
     expect(screen.getByText("WEDNESDAY, 18 NOVEMBER")).toBeTruthy();
     expect(screen.getByRole("status", { name: t("app.loading") })).toBeTruthy();
-    expect(screen.queryByTestId("tab-skeleton")).toBeNull();
     // In the content, not over the whole screen
     expect(screen.getByTestId("tab-loading").className).not.toContain("fixed");
   });
 
-  it("from 768px: the header, then a skeleton, no loading screen", () => {
-    render(
+  it("otherwise: the header and the screen's own skeleton, the same one the screen shows", () => {
+    const { container } = render(
       <TabPending
-        title="Projects"
+        title="Inbox"
         accountInitial="H"
         navigate={() => true}
-        wide={true}
+        body={<InboxSkeleton />}
       />,
     );
-    expect(screen.getByRole("heading", { name: "Projects" })).toBeTruthy();
-    expect(screen.getByTestId("tab-skeleton")).toBeTruthy();
-    expect(screen.queryByTestId("tab-loading")).toBeNull();
+    expect(screen.getByRole("heading", { name: "Inbox" })).toBeTruthy();
+    expect(screen.getByTestId("inbox-loading")).toBeTruthy();
+    expect(container.querySelector('[data-testid="tab-loading"]')).toBeNull();
+  });
+
+  it("a project brings its own header inside its skeleton", () => {
+    render(
+      <TabPending
+        accountInitial="H"
+        navigate={() => true}
+        body={<ProjectSkeleton />}
+      />,
+    );
+    expect(screen.queryByRole("heading")).toBeNull();
+    expect(screen.getByRole("status")).toBeTruthy();
   });
 
   it("the shell keeps the current page mounted but hidden while a tab is pending", () => {

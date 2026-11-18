@@ -33,6 +33,7 @@ import {
   type CopyKey,
   type TabId,
   type ToastData,
+  LoadingScreen,
 } from "@/ui";
 import { cx } from "@/ui/components/cx";
 import { api, SESSION_EXPIRED, EMAIL_UNVERIFIED } from "@/lib/api";
@@ -58,6 +59,12 @@ import {
   submitNote,
 } from "@/lib/noteApi";
 import { clearRecent } from "@/ui/domain/recentSearches";
+import {
+  InboxSkeleton,
+  ProjectSkeleton,
+  ProjectsSkeleton,
+  UpcomingSkeleton,
+} from "./skeletons";
 import { TabLoading, TabPending } from "./TabLoading";
 import { headerDate } from "./headerDate";
 
@@ -104,6 +111,29 @@ const PUBLIC_PATHS: readonly string[] = [
   ...SIGNED_OUT_PATHS,
   ROUTES.resetPassword,
 ];
+
+/** What a tapped screen shows under its header until its page is there (#161). */
+function pendingBody(
+  pending: { tab: TabId; project: boolean },
+  logo: boolean,
+): ReactNode {
+  if (logo) return <LoadingScreen inline />;
+  if (pending.project) return <ProjectSkeleton />;
+  if (pending.tab === "inbox") return <InboxSkeleton />;
+  if (pending.tab === "projects") return <ProjectsSkeleton />;
+  if (pending.tab === "upcoming") {
+    let board = false;
+    try {
+      board = localStorage.getItem("agendal.upcoming.view_mode") === "board";
+    } catch {}
+    return <UpcomingSkeleton board={board} />;
+  }
+  // Notes keeps its own screen: a plain list skeleton until it is there
+  return <InboxSkeleton />;
+}
+
+// A project's own page, opened from the sidebar or the Projects list
+const PROJECT_PATH = /^\/projects\/[^/?#]+$/;
 
 const TAB_TITLE: Record<TabId, CopyKey> = {
   inbox: "nav.inbox",
@@ -214,10 +244,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // The first session check has answered (signed in, signed out or offline): the start screen
   // only waits for this, the tab's own skeleton covers its data (#161)
   const [sessionChecked, setSessionChecked] = useState(false);
-  // A tab tapped and on its way (#161): it lights up at once, and the first time it opens the
-  // content shows a loader (phone) or a skeleton (768px+) until its page is there
+  // A tab or a sidebar project tapped and on its way (#161): it lights up at once, and the
+  // content shows its header with a loader (a tab's first visit on a phone) or a skeleton until
+  // its page is there
   const [pendingTab, setPendingTab] = useState<{
+    href: string;
     tab: TabId;
+    /** A project page, not one of the four tabs. */
+    project: boolean;
     firstVisit: boolean;
   } | null>(null);
   const visitedTabs = useRef<Set<TabId>>(new Set());
@@ -355,7 +389,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
     (href) => {
       const to = TAB_BY_PATH[href];
       if (to && href !== pathname)
-        setPendingTab({ tab: to, firstVisit: !visitedTabs.current.has(to) });
+        setPendingTab({
+          href,
+          tab: to,
+          project: false,
+          firstVisit: !visitedTabs.current.has(to),
+        });
+      else if (PROJECT_PATH.test(href) && href !== pathname)
+        setPendingTab({
+          href,
+          tab: "projects",
+          project: true,
+          firstVisit: false,
+        });
       // Tab switches replace the entry, so Back doesn't walk through every tab visited
       if (href in TAB_BY_PATH && pathname in TAB_BY_PATH) router.replace(href);
       else router.push(href);
@@ -679,7 +725,15 @@ export function AppFrame({ children }: { children: ReactNode }) {
       } catch {}
     }
   }, [sessionChecked, user, router]);
-  const shownTab = pendingTab?.tab ?? tab;
+  // A tapped tab shows as current at once. A project page has no tab bar or Write a note
+  // bar, so a tapped project takes them away at once too, not after its page arrives
+  const shownTab = pendingTab
+    ? pendingTab.project
+      ? undefined
+      : pendingTab.tab
+    : tab;
+  // The sidebar marks the tapped project at once too
+  const shownPath = pendingTab?.href ?? pathname;
   // UX-40: on the four tab screens only
   const offline = useOffline();
 
@@ -789,13 +843,23 @@ export function AppFrame({ children }: { children: ReactNode }) {
     [projectsList],
   );
 
+  // The sidebar's projects are fetched ahead too, so opening one doesn't wait for its page
+  useEffect(() => {
+    if (!sessionChecked || !user) return;
+    for (const p of projectsList.slice(0, 30)) {
+      try {
+        router.prefetch?.(ROUTES.project(p.id));
+      } catch {}
+    }
+  }, [sessionChecked, user, router, projectsList]);
+
   const sidebarProjects = useMemo(() => {
     if (projectsList.length === 0) return undefined;
 
     return (
       <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
         {sortedSidebarProjects.map((p) => {
-          const isCurrent = pathname === ROUTES.project(p.id);
+          const isCurrent = shownPath === ROUTES.project(p.id);
           return (
             <li key={p.id}>
               <Link
@@ -854,7 +918,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   }, [
     projectsList.length,
     sortedSidebarProjects,
-    pathname,
+    shownPath,
     navigate,
     noProjectCount,
   ]);
@@ -878,15 +942,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <AppShell
           tab={shownTab}
           pending={
-            pendingTab && pendingTab.tab !== tab ? (
+            pendingTab && pendingTab.href !== pathname ? (
               <TabPending
-                title={t(TAB_TITLE[pendingTab.tab])}
-                overline={headerDate()}
+                title={
+                  pendingTab.project ? undefined : t(TAB_TITLE[pendingTab.tab])
+                }
+                overline={pendingTab.project ? undefined : headerDate()}
                 accountInitial={user?.display_name || user?.email || ""}
                 navigate={navigate}
-                // An opened tab whose page is still on its way shows its skeleton, never a blank
-                // area; the logo screen is only for a phone's first visit
-                wide={isWideSearch || !pendingTab.firstVisit}
+                body={pendingBody(
+                  pendingTab,
+                  // The logo screen only for a phone's first visit to a tab
+                  !isWideSearch && pendingTab.firstVisit && !pendingTab.project,
+                )}
               />
             ) : undefined
           }
