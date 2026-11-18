@@ -119,13 +119,16 @@ export function NewTaskSheet({
             onChange={form.handlePriorityChange}
           />
 
-          <ProjectField
-            projectId={form.projectId}
-            projects={projects}
-            projectsStatus={projectsStatus}
-            onRetryProjects={onRetryProjects}
-            onChange={form.setProjectId}
-          />
+          {/* Own wrapper: the row is then its last child, so its bottom border goes */}
+          <div>
+            <ProjectField
+              projectId={form.projectId}
+              projects={projects}
+              projectsStatus={projectsStatus}
+              onRetryProjects={onRetryProjects}
+              onChange={form.setProjectId}
+            />
+          </div>
 
           {form.formError && (
             <p role="alert" className="text-footnote text-error">
