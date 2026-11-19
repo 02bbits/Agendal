@@ -5,7 +5,7 @@ import { test } from "@playwright/test";
 // (a locked account, a reset password):
 //   chromium-phone 01–20, chromium-desktop 21–40, webkit-phone 41–60, webkit-desktop 61–80.
 // Inside a block, each spec file uses fixed numbers:
-//   WF-07: 1–4, WF-06: 5–8, WF-01..04: 9–16, spare: 17–20.
+//   WF-07: 1–4, WF-06: 5–8, WF-01..04: 9–16, WF-05: 17, spare: 18–20.
 export const PROJECTS = [
   "chromium-phone",
   "chromium-desktop",
