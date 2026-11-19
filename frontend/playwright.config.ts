@@ -64,6 +64,8 @@ export default defineConfig({
         QUEUE_CONNECTION: "sync",
         // The build on :3001 (local service worker checks) signs in through Sanctum too
         SANCTUM_STATEFUL_DOMAINS: "localhost:3000,localhost:3001",
+        // Links in emails (password reset) open the app under test
+        FRONTEND_URL: baseURL,
       },
     },
     {
