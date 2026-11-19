@@ -209,7 +209,8 @@ final class OpenRouterFallback
         ];
 
         return ['type' => 'object', 'additionalProperties' => false, 'required' => ['items'], 'properties' => [
-            'items' => ['type' => 'array', 'maxItems' => count($refs), 'items' => [
+            // An item may hold several tasks ("call the bank, and the report is due friday"): one create each.
+            'items' => ['type' => 'array', 'maxItems' => (int) config('notes.max_items'), 'items' => [
                 'type' => 'object', 'additionalProperties' => false, 'required' => array_keys($properties), 'properties' => $properties,
             ]],
         ]];
@@ -292,7 +293,7 @@ final class OpenRouterFallback
      * One proposal per ref, valid against the schema; anything else throws and the rules result stands.
      *
      * @param  array<string, mixed>  $schema
-     * @return array<string, array<string, mixed>>
+     * @return array<string, list<array<string, mixed>>>
      */
     private function proposals(Response $response, array $schema, int $reserved, string $reservationDay): array
     {
@@ -303,10 +304,7 @@ final class OpenRouterFallback
         }
         $proposals = [];
         foreach ($data->items as $item) {
-            if (isset($proposals[$item->ref])) {
-                throw new UnexpectedValueException('The model proposed one ref twice');
-            }
-            $proposals[$item->ref] = (array) $item;
+            $proposals[$item->ref][] = (array) $item;
         }
 
         return $proposals;
@@ -316,7 +314,7 @@ final class OpenRouterFallback
      * Each proposal that validates on its own, against its own candidates, replaces that item's rules entries.
      * Entries stay in the note's item order (i1, i2, …).
      *
-     * @param  array<string, array<string, mixed>>  $proposals
+     * @param  array<string, list<array<string, mixed>>>  $proposals
      * @param  array<string, list<TaskRow>>  $candidates
      * @return array{0: array<string, mixed>, 1: int, 2: array<string, array{source: string, status: string, reason: string, field_sources?: array<string, string>}>}
      */
@@ -325,11 +323,20 @@ final class OpenRouterFallback
         $plan = array_intersect_key($rules->plan, array_flip([...self::PLAN_KINDS, 'needs_confirm']));
         $accepted = 0;
         $outcomes = array_fill_keys(array_keys($rules->lowConfidence), ['source' => 'pending', 'status' => 'missing', 'reason' => 'no_proposal']);
-        foreach ($proposals as $ref => $proposal) {
+        foreach ($proposals as $ref => $list) {
             $allowed = array_column($candidates[$ref] ?? [], null, 'id');
             $original = $rules->lowConfidence[$ref] ?? '';
             $fieldSources = ['action' => 'llm'];
-            if (in_array($proposal['action'], [ProposedAction::Create->value, ProposedAction::Reschedule->value], true)) {
+            $proposal = $list[0];
+            $several = count($list) > 1;
+            // Several proposals for one item are only separate new tasks; a copy or a change there has no single target.
+            if ($several && array_filter($list, fn (array $one): bool => $one['action'] !== ProposedAction::Create->value || $one['copies'] !== 1) !== []) {
+                $outcomes[$ref] = ['source' => 'pending', 'status' => 'rejected', 'reason' => 'invalid_proposal'];
+
+                continue;
+            }
+            // The rules read one date, time or priority for the whole item; with several tasks it is no one task's.
+            if (! $several && in_array($proposal['action'], [ProposedAction::Create->value, ProposedAction::Reschedule->value], true)) {
                 $known = $this->extractor->extract($original, $context)->trustedFields;
                 $modelDate = $proposal['due_date'];
                 if ($proposal['action'] === ProposedAction::Reschedule->value) {
@@ -343,7 +350,12 @@ final class OpenRouterFallback
                     $proposal['priority'] = null;
                 }
             }
-            $proposed = $this->proposalPlan($proposal, $original, $allowed, $context);
+            $proposed = $this->proposalPlan([...$proposal, 'ref' => $ref], $original, $allowed, $context);
+            // The second and later tasks of one item get the item's ref with -2, -3, like the copies of a create.
+            foreach (array_slice($list, 1) as $index => $more) {
+                $extra = $proposed === null ? null : $this->proposalPlan([...$more, 'ref' => $ref.'-'.($index + 2)], $original, $allowed, $context);
+                $proposed = $extra === null ? null : array_merge_recursive($proposed, $extra);
+            }
             if ($proposed === null) {
                 $outcomes[$ref] = ['source' => 'pending', 'status' => 'rejected', 'reason' => 'invalid_proposal'];
 

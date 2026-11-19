@@ -79,3 +79,17 @@ it('sends every item of a chatty note to the model, in order (ADR-008)', functio
 it('keeps a plain task list on the rules', function () {
     expect(app(NoteEngine::class)->build('mai nộp báo cáo SQL 5h chiều. tối gọi mẹ', engineContext())->lowConfidence)->toBe([]);
 });
+
+it('calls a reference the note does not explain unclear, and a move it cannot date unclear for the model to read', function () {
+    foreach (['xử lý vụ hôm qua nói', 'làm cái đó lúc nào cũng được', 'follow up on what we talked about'] as $note) {
+        $build = app(NoteEngine::class)->build($note, engineContext());
+        expect($build->plan['create'], $note)->toBe([])
+            ->and(array_column($build->plan['skipped'], 'reason'), $note)->toBe(['unclear'])
+            ->and($build->lowConfidence, $note)->toBe([]);
+    }
+    $open = [['id' => 'e0000000-0000-4000-8000-000000000001', 'title' => 'Chạy bộ', 'due_date' => '2026-10-24']];
+    $build = app(NoteEngine::class)->build('dời chạy bộ sang hôm khác', engineContext(), $open);
+    expect($build->lowConfidence)->toBe(['i1' => 'dời chạy bộ sang hôm khác'])
+        ->and($build->plan['update'])->toBe([])->and($build->plan['create'])->toBe([])
+        ->and(array_column($build->plan['skipped'], 'reason'))->toBe(['unclear']);
+});

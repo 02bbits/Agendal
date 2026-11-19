@@ -177,5 +177,5 @@ it('validates notes the language model read, accepted or unclear, against the sh
     expect($check->isValid())->toBeTrue($check->isValid() ? '' : json_encode((new ErrorFormatter)->format($check->error())));
 })->with([
     'accepted' => ['create', 'toi can mua sua', 'done', 'accepted'],
-    'unclear' => ['unclear', 'do that thing whenever', 'followup', 'unclear'],
+    'unclear' => ['unclear', 'toi can mua cai do', 'followup', 'unclear'],
 ]);

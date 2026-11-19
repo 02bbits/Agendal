@@ -165,6 +165,18 @@ final class NoteEngine
         if ($fields->title === '') {
             return $this->skipped($ref, $item, SkipReason::Skip);
         }
+        // "xử lý vụ hôm qua nói", "làm cái đó": what it points at isn't in the note, so it is no task (the
+        // follow-up asks when nothing else is left). Not for the model either: with no open task to point at, the
+        // server keeps it unclear whatever the model says. A command naming an open task goes through commands().
+        if ($this->extractor->hasUnresolvedReference($fields->title, $context)) {
+            return $this->skipped($ref, $item, SkipReason::Unclear);
+        }
+        // "dời chạy bộ sang hôm khác": a move whose new date the rules can't read is no reschedule and no plain
+        // task either, so it is unclear. The model sees the open tasks and may still move one with a date it
+        // reads, or make the task a move verb can start ("move the boxes to the garage").
+        if (NoteVocabulary::startsWith(NoteVocabulary::withoutLeadIn($item), 'move_command')) {
+            return $this->skipped($ref, $item, SkipReason::Unclear, true);
+        }
         $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
         $entries = NoteCopies::expand($entry, $fields->copies);
 

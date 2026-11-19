@@ -441,8 +441,10 @@ it('retrieves accented candidate titles for unaccented uncertain input without r
 
 it('keeps unresolved references in followup even if the model invents a specific task', function () {
     $text = 'do that thing whenever';
+    // The rules already call it unclear and don't ask; forced through, the server still holds it.
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    expect($rules->lowConfidence)->toBe(['i1' => $text]);
+    expect($rules->lowConfidence)->toBe([])->and($rules->plan['skipped'][0]['reason'])->toBe('unclear');
+    $rules = forcedLow($rules, $text);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'create', 'title' => 'Buy milk']]))]);
     $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
 
@@ -614,4 +616,33 @@ it('sends open-task titles only for command-like items, so a new task cannot bor
     'new task' => ['goi me thu 6 luc 7h toi', false],
     'unaccented delete' => ['xoa goi me', true],
     'unaccented move' => ['doi goi me sang thu 6', true],
+]);
+
+it('makes each task the model finds in one item, with the item ref then -2, -3', function () {
+    $text = 'ok so basically call the bank tomorrow and anyway the report is due friday';
+    $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
+    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+        ['ref' => 'i1', 'action' => 'create', 'title' => 'Call the bank', 'due_date' => '2026-10-24'],
+        ['ref' => 'i1', 'action' => 'create', 'title' => 'Report', 'due_date' => '2026-10-30'],
+    ]))]);
+    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+
+    expect($result->engine->value)->toBe('rules_llm')
+        ->and(array_map(fn (array $e): array => [$e['ref'], $e['title'], $e['due_date']], $result->plan['create']))
+        ->toBe([['i1', 'Call the bank', '2026-10-24'], ['i1-2', 'Report', '2026-10-30']]);
+});
+
+it('keeps the rules entry when one item gets several proposals that are not all single new tasks', function (array $second) {
+    $text = 'toi can mua sua';
+    $rules = app(NoteEngine::class)->build($text, $this->context);
+    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+        ['ref' => 'i1', 'action' => 'create', 'title' => 'Mua sữa'], ['ref' => 'i1', ...$second],
+    ]))]);
+    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+
+    expect(array_column($result->plan['create'], 'title'))->toBe(array_column($rules->plan['create'], 'title'))
+        ->and($result->itemOutcomes['i1']['reason'])->toBe('invalid_proposal');
+})->with([
+    'an unclear one' => [['action' => 'unclear', 'title' => null]],
+    'copies' => [['action' => 'create', 'title' => 'Mua trứng', 'copies' => 2]],
 ]);
