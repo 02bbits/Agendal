@@ -15,7 +15,6 @@ import {
 } from "../../shell/routes";
 import { useSortableList } from "../../shell/useSortableList";
 
-
 /**
  * The desktop sidebar's tabs as Settings > Sidebar changes them: which show, in what order, and
  * whether they show their task counts. Each change is saved in this browser and the sidebar is
@@ -68,7 +67,11 @@ export function useSidebarTabs() {
 
   const changeShowCounts = (next: boolean) => {
     setShowCounts(next);
-    writeStoredSetting(SIDEBAR_COUNTS_KEY, String(next), SIDEBAR_COUNTS_CHANGED);
+    writeStoredSetting(
+      SIDEBAR_COUNTS_KEY,
+      String(next),
+      SIDEBAR_COUNTS_CHANGED,
+    );
   };
 
   return {
