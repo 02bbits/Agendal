@@ -45,12 +45,16 @@ export function hasNonKeyboardCharacters(value: string): boolean {
   );
 }
 
+/** The longest display name, in characters as the rule counts them. */
+export const MAX_DISPLAY_NAME_LENGTH = 30;
+const MIN_DISPLAY_NAME_LENGTH = 3;
+
 /**
  * What a name field keeps while typing: the first 30 characters, counted as the rule counts them
  * (a letter or an emoji is one), so a longer paste is cut instead of refused.
  */
 export function limitDisplayName(value: string): string {
-  return [...value].slice(0, 30).join("");
+  return [...value].slice(0, MAX_DISPLAY_NAME_LENGTH).join("");
 }
 
 /**
@@ -62,8 +66,8 @@ export function displayNameError(name: string): CopyKey | undefined {
   const trimmed = name.trim();
   const length = [...trimmed].length;
   if (length === 0) return "setup.name_required";
-  if (length < 3) return "setup.name_too_short";
-  if (length > 30) return "setup.name_too_long";
+  if (length < MIN_DISPLAY_NAME_LENGTH) return "setup.name_too_short";
+  if (length > MAX_DISPLAY_NAME_LENGTH) return "setup.name_too_long";
   if (/[\p{Cc}\p{Zl}\p{Zp}<>]|(?!‍)\p{Cf}/u.test(trimmed)) {
     return "setup.name_invalid";
   }

@@ -33,6 +33,8 @@ class MeController extends Controller
             'time_format' => ['sometimes', Rule::in(['24h', '12h'])],
             'remember_device' => ['sometimes', 'boolean'],
             'install_prompt_shown' => ['sometimes', 'boolean'],
+            'theme_palette' => ['sometimes', Rule::in(['default', 'agendal', 'moonstone', 'tangerine', 'kale', 'blueberry', 'lavender', 'raspberry'])],
+            'page_view' => ['sometimes', Rule::in(['flat', 'full'])],
             'timezone' => ['sometimes', 'string', Rule::in(DateTimeZone::listIdentifiers(DateTimeZone::ALL_WITH_BC))],
             'timezone_auto' => ['sometimes', 'boolean'],
         ]);

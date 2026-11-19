@@ -1,7 +1,7 @@
 import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AccountScreen, InstallBanner } from "@/ui";
+import { AccountMenu, InstallBanner } from "@/ui";
 import { useInstall } from "@/app/useInstall";
 import { wipeDevice } from "@/lib/device";
 import { expectAxeCleanInBothThemes } from "./axe";
@@ -18,22 +18,18 @@ function Banner() {
   ) : null;
 }
 
+/** Desktop: Install app sits in the account menu above Sign out (a phone has it on Settings). */
 function Account({ toast = () => {} }: { toast?: (message: string) => void }) {
   const installer = useInstall(toast);
   return (
-    <AccountScreen
-      name="example"
+    <AccountMenu
+      accountName="example"
       email="example@gmail.com"
-      settings={{
-        theme: "system",
-        weekStart: "mon",
-        timeFormat: "24h",
-        rememberDevice: true,
-        pageView: "flat",
-      }}
-      onChange={() => {}}
-      onBack={() => {}}
+      theme="system"
+      onThemeChange={() => {}}
+      onOpenSettings={() => {}}
       onSignOut={() => {}}
+      onClose={() => {}}
       onInstall={installer.kind ? installer.install : undefined}
     />
   );
@@ -131,10 +127,21 @@ describe("Account Install app", () => {
   it("T-AP-03: opens the browser prompt on Chromium, even after Not now", async () => {
     localStorage.setItem("agendal.install", "1");
     render(<Account />);
-    expect(screen.queryByRole("button", { name: /Install app/ })).toBeNull();
+    expect(screen.queryByRole("menuitem", { name: /Install app/ })).toBeNull();
 
     const event = offerPrompt("dismissed");
-    await userEvent.click(screen.getByRole("button", { name: /Install app/ }));
+    // Right above Sign out, with the same neutral icon as Account and Settings
+    const items = screen
+      .getAllByRole("menuitem")
+      .map((item) => item.textContent);
+    expect(items.slice(-2)).toEqual(["Install app", "Sign out"]);
+    const icon = screen
+      .getByRole("menuitem", { name: /Install app/ })
+      .querySelector("span");
+    expect(icon?.className).toContain("text-ink-secondary");
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: /Install app/ }),
+    );
     expect(event.prompt).toHaveBeenCalled();
   });
 
@@ -142,7 +149,9 @@ describe("Account Install app", () => {
     userAgent(IPHONE);
     const toast = vi.fn();
     render(<Account toast={toast} />);
-    await userEvent.click(screen.getByRole("button", { name: /Install app/ }));
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: /Install app/ }),
+    );
     expect(toast).toHaveBeenCalledWith("Tap Share, then Add to Home Screen.");
   });
 });

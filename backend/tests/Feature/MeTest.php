@@ -14,19 +14,22 @@ it('T-AP-21, T-AP-50: returns the settings with their defaults', function () {
     $this->actingAs($this->user, 'sanctum')->getJson('/api/v1/me')->assertOk()->assertJson([
         'id' => $this->user->id, 'theme' => 'system', 'week_start' => 'mon', 'time_format' => '24h',
         'remember_device' => true, 'install_prompt_shown' => false, 'timezone_auto' => true,
+        'theme_palette' => 'default', 'page_view' => 'flat',
     ])->assertJsonMissing(['password' => $this->user->password])->assertJsonMissingPath('remember_token');
 });
 
 it('T-AP-21, T-AP-50: saves settings, and the next read on any device sees them', function () {
     $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', [
         'theme' => 'dark', 'week_start' => 'sun', 'time_format' => '12h', 'remember_device' => false, 'install_prompt_shown' => true,
+        'theme_palette' => 'lavender', 'page_view' => 'full',
     ])->assertOk()->assertJson([
-        'theme' => 'dark', 'week_start' => 'sun',
+        'theme' => 'dark', 'week_start' => 'sun', 'theme_palette' => 'lavender', 'page_view' => 'full',
     ]);
 
     $this->app['auth']->forgetGuards();
     $this->actingAs(User::find($this->user->id), 'sanctum')->getJson('/api/v1/me')->assertJson([
         'theme' => 'dark', 'week_start' => 'sun', 'time_format' => '12h', 'remember_device' => false, 'install_prompt_shown' => true,
+        'theme_palette' => 'lavender', 'page_view' => 'full',
     ]);
 });
 
@@ -44,8 +47,18 @@ it('rejects values outside the allowed set with 422', function (array $body) {
     'time format' => [['time_format' => '13h']],
     'remember device' => [['remember_device' => 'maybe']],
     'name too long' => [['display_name' => str_repeat('a', 31)]],
+    'theme palette' => [['theme_palette' => 'neon']],
+    'page view' => [['page_view' => 'wide']],
     'invalid timezone' => [['timezone' => 'Invalid/Zone']],
 ]);
+
+it('saves timezone, and the next read sees it', function () {
+    $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', [
+        'timezone' => 'Asia/Tokyo',
+    ])->assertOk()->assertJson(['timezone' => 'Asia/Tokyo']);
+
+    expect($this->user->fresh()->timezone)->toBe('Asia/Tokyo');
+});
 
 it('PR #153: saves a display name of 3 to 30 characters, trimmed, emoji included', function (string $sent, string $saved) {
     $this->actingAs($this->user, 'sanctum')->patchJson('/api/v1/me', ['display_name' => $sent])->assertOk();

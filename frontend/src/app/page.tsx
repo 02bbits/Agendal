@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useSyncExternalStore } from "react";
+import { Suspense, useSyncExternalStore } from "react";
 import {
   Button,
   InboxScreen,
@@ -61,30 +61,6 @@ function InboxContent() {
     () => undefined,
   );
   const accountInitial = user?.display_name || user?.email || "";
-
-  useEffect(() => {
-    try {
-      const home = localStorage.getItem("agendal.home_view");
-      if (
-        home &&
-        home !== "inbox" &&
-        typeof window !== "undefined" &&
-        window.location.pathname === "/"
-      ) {
-        const target =
-          home === "upcoming"
-            ? "/upcoming"
-            : home === "projects"
-              ? "/projects"
-              : home === "notes"
-                ? "/notes"
-                : null;
-        if (target) {
-          navigate(target);
-        }
-      }
-    } catch {}
-  }, [navigate]);
 
   return (
     <div className="pb-8">

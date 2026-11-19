@@ -87,7 +87,10 @@ export function Segmented<V extends string>({
                 ? "min-h-10 rounded-full py-2 px-5 text-callout font-medium text-ink-secondary hover:text-ink aria-checked:bg-surface-elevated aria-checked:text-ink aria-checked:font-semibold aria-checked:shadow-xs aria-checked:ring-1 aria-checked:ring-separator/40"
                 : "min-h-8 rounded-tile px-2 text-footnote font-medium text-ink-secondary after:absolute after:inset-x-0 after:-inset-y-1.5 aria-checked:bg-fill-thumb aria-checked:text-ink aria-checked:shadow-xs",
             )}
-            onClick={(event) => onChange(option.value, event)}
+            // The current choice again changes nothing (no theme fade or save run twice)
+            onClick={(event) => {
+              if (!checked) onChange(option.value, event);
+            }}
             onKeyDown={(event) => onKeyDown(event, index)}
           >
             <span className="inline-flex items-center justify-center gap-1.5">

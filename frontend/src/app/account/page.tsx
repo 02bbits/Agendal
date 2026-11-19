@@ -1,7 +1,7 @@
 "use client";
 
 import { api } from "../../lib/api";
-import { AccountScreen, t } from "../../ui";
+import { SettingsScreen, t } from "../../ui";
 import { useAppFrame } from "../AppFrame";
 import { useInstall } from "../useInstall";
 
@@ -63,7 +63,7 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <AccountScreen
+      <SettingsScreen
         name={user?.display_name ?? ""}
         email={user?.email ?? ""}
         settings={settings}
