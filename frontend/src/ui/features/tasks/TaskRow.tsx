@@ -151,7 +151,7 @@ export function TaskRow({
       >
         <span
           className={cx(
-            "line-clamp-2 text-body font-medium transition-colors group-[.is-done]/task:text-ink-tertiary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit",
+            "line-clamp-2 text-body font-medium transition-colors group-[.is-done]/task:text-ink-secondary group-[.is-done]/task:line-through [&_mark]:bg-transparent [&_mark]:font-semibold [&_mark]:text-inherit",
             tone === "due" && !task.done && "text-due-ink",
           )}
           data-slot="title"
