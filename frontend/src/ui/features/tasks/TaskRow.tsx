@@ -158,6 +158,8 @@ export function TaskRow({
         >
           {renderTitle ? renderTitle(task.title) : task.title}
         </span>
+        {/* A space between title and meta, so their text doesn't run together */}
+        {" "}
         <span
           className="flex flex-wrap items-center gap-1.5 text-footnote text-ink-secondary"
           data-slot="meta"

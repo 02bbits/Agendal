@@ -1,10 +1,13 @@
 import { t, type CopyKey } from "../copy";
 import type { EntryKind } from "./entries";
 import { describeRepeat } from "./repeat";
-import { rowMeta } from "./rowMeta";
+import { repeatLabel, rowMeta } from "./rowMeta";
 import type { Project, Task, TimeFormat } from "./types";
 
-/** Accessible name of a task row (A11Y-51): "{title}, {meta parts}, {project}, {priority} priority, reminder set, repeats {repeat}". */
+/**
+ * Accessible name of a task row (A11Y-51): what the row shows ("{title}, {project}, {meta parts},
+ * {repeat}"), then what only its icons say ("{priority} priority, reminder set, repeats {repeat}").
+ */
 export function taskAccessibleName(
   task: Task,
   project: Project | null | undefined,
@@ -15,12 +18,13 @@ export function taskAccessibleName(
     entry?: EntryKind;
   },
 ): string {
-  const parts: string[] = [task.title];
-  const meta = rowMeta(task, opts);
-  for (const part of meta) {
-    parts.push(part.text);
-  }
-  parts.push(project ? project.name : t("project.none"));
+  // What the row shows, in its order, so the name starts with the visible text (WCAG 2.5.3)
+  const parts: string[] = [
+    task.title,
+    project ? project.name : t("project.none"),
+    ...rowMeta(task, opts).map((part) => part.text),
+  ];
+  if (task.repeat !== "never" && !task.done) parts.push(repeatLabel(task));
   if (task.priority === "medium" || task.priority === "high")
     parts.push(
       t("task.priority_named", {

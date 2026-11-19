@@ -241,7 +241,7 @@ describe("Inbox screen", () => {
     expect(overdue.querySelector(".text-error")!.textContent).toBe("Overdue");
     const row = within(overdue.closest("section")!).getByRole("link");
     expect(row.getAttribute("aria-label")).toBe(
-      "Submit HCI reflection, Due Yesterday, HCI, High priority",
+      "Submit HCI reflection, HCI, Due Yesterday, High priority",
     );
   });
 
