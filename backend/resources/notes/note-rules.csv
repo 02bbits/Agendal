@@ -556,6 +556,8 @@ date_preferred_prefix,vào
 date_preferred_prefix,trước
 weekday_this,this
 weekday_this_suffix,này
+weekday_week_this,tuần này
+weekday_week_this,this week
 weekday_next,next
 repeat_prefix,every
 repeat_prefix,mỗi

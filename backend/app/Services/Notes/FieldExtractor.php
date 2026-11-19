@@ -99,7 +99,7 @@ final class FieldExtractor
         // A one-off item that says how long or which period ("lái xe 4 tuần", "tập gym tuần này", "tập gym 2 tuần tới")
         // has a schedule the rules can't place; a date read from part of it would be wrong. Kept whole for the fallback.
         if ($repeat['rule'] === null && ! $repeat['unreadable']
-            && (NoteRepeatParser::hasDuration($readable) || NoteRepeatParser::hasDurationShape($this->unread($readable, $date, $time, $repeat['spans'])))) {
+            && (NoteRepeatParser::hasDuration(NoteDateParser::withoutWeekdays($readable)) || NoteRepeatParser::hasDurationShape($this->unread($readable, $date, $time, $repeat['spans'])))) {
             $dueDate = null;
             $time = new ParsedTime;
             $date = new ParsedDate(unreadable: true);

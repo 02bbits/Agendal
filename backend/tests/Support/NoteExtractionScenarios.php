@@ -21,7 +21,7 @@ final class NoteExtractionScenarios
     public const EXTRACTION_ONLY_CATEGORIES = [
         'note_chatter', 'unresolved_reference', 'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
-        'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
+        'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_week_this', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
         'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
@@ -113,6 +113,7 @@ final class NoteExtractionScenarios
             'date_preferred_prefix' => [['học thứ 2 '.$value.' thứ 7', ['dueDate' => '2026-10-24'], self::NOW]],
             'weekday_this' => [['nộp '.$value.' friday', ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_this_suffix' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23'], self::NOW]],
+            'weekday_week_this' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23', 'title' => 'Nộp'], self::NOW]],
             'weekday_next' => [['nộp '.$value.' monday', ['dueDate' => '2026-10-26'], self::NOW]],
             'repeat_prefix' => [['tập gym '.$value.' monday', ['repeat' => 'weekly', 'dueDate' => '2026-10-26'], self::NOW]],
             'duration_prefix' => [['đọc sách '.$value.' 3 days', ['dueDate' => self::day(3)], self::NOW]],
