@@ -311,7 +311,14 @@ describe("NoteEditor submit (IM-42)", () => {
     expect((field() as HTMLTextAreaElement).readOnly).toBe(true);
     expect(screen.queryByText(t("note.reading"))).toBeNull();
     await advance(300);
-    expect(screen.getByRole("status").textContent).toBe(t("note.reading"));
+    expect(screen.getByRole("status").textContent).toBe(
+      `${t("note.reading")} · ${t("note.reading_seconds", { seconds: 0 })}`,
+    );
+    // The counter goes up each second from Make tasks
+    await advance(1000);
+    expect(screen.getByRole("status").textContent).toContain(
+      t("note.reading_seconds", { seconds: 1 }),
+    );
 
     // A second tap and Ctrl+Enter while busy send nothing (NC-E10)
     await u.click(makeTasks());

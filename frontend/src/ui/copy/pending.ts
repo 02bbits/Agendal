@@ -10,6 +10,7 @@ export const pending = {
   "note.skip_change": "Don't apply this change",
   "note.omitted": "Left out: {count}",
   "note.counter": "{count} / {max}",
+  "note.reading_seconds": "{seconds} s",
   "note.undo_omit": "Undo omission",
   "note.review_title": "Review before applying",
   "note.preview_new": "NEW",
