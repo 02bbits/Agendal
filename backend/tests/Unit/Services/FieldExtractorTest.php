@@ -21,6 +21,19 @@ it('keeps only explicitly read calendar fields as trusted for the model', functi
     expect(extractFields('toi muon di cho 7h chieu', [])->trustedFields)->not->toHaveKey('start_time');
 });
 
+it('keeps a priority word of any level as trusted for the model, and no default priority', function (string $text, string $priority) {
+    expect(extractFields($text, [])->trustedFields['priority'] ?? null, $text)->toBe($priority);
+})->with([
+    ['gọi mẹ cái đó, gấp', 'high'],
+    ['gọi mẹ cái đó, không gấp', 'low'],
+    ['gọi mẹ cái đó, ưu tiên trung bình', 'medium'],
+    ['call mum about that thing, normal priority', 'medium'],
+]);
+
+it('leaves a default priority out of the trusted fields', function () {
+    expect(extractFields('gọi mẹ cái đó hôm nay', [])->trustedFields)->not->toHaveKey('priority');
+});
+
 /** Friday 23 Oct 2026, 08:12 in Ho Chi Minh City, as in the note corpus. */
 const EXTRACTOR_NOW = '2026-10-23T08:12:00+07:00';
 
@@ -157,6 +170,9 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'a lone verb still has a verb' => ['call tomorrow', ['title' => 'Call', 'lowConfidence' => false]],
     'NU-E28 other language is low' => ['comprar leche', ['lowConfidence' => true]],
     'NU-E40 unaccented Vietnamese is low' => ['toi can mua sua', ['lowConfidence' => true, 'title' => 'Toi can mua sua', 'dueDate' => null]],
+    'NU-E40 unaccented Vietnamese beyond the syllable list' => ['toi co mot cuoc gap voi giang vien luc 11:45 hom nay', ['lowConfidence' => true]],
+    'English with Vietnamese-looking words stays English' => ['call me and an ex tomorrow', ['lowConfidence' => false]],
+    'short English stays English' => ['go to the gym', ['lowConfidence' => false]],
 ]);
 
 it('reads real notes the way a person means them', function (string $text, array $expected) {

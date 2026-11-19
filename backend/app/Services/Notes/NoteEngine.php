@@ -63,7 +63,7 @@ final class NoteEngine
             $ref = self::ITEM_REF_PREFIX.($index + 1);
             $expired = (hrtime(true) - $started) / 1e6 >= $budgetMs;
             $planned = $expired
-                ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'low' => false]
+                ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'lowConfidence' => false]
                 : $this->planItem($ref, $item, $context, $openTasks, $doneTasks);
             if (count($plan['create']) + count($planned['plan']['create']) > (int) config('notes.max_items')) {
                 throw ValidationException::withMessages(['text' => ['note.too_many_items']]);
@@ -71,7 +71,7 @@ final class NoteEngine
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
-            if ($planned['low']) {
+            if ($planned['lowConfidence']) {
                 $lowConfidence = [...$lowConfidence, ...($planned['uncertain'] ?? [$ref => $item])];
             }
         }
@@ -95,7 +95,7 @@ final class NoteEngine
     /**
      * @param  list<TaskRow>  $openTasks
      * @param  list<TaskRow>  $doneTasks
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool, uncertain?: array<string, string>}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool, uncertain?: array<string, string>}
      */
     private function planItem(string $ref, string $item, NoteContext $context, array $openTasks, array $doneTasks): array
     {
@@ -113,30 +113,30 @@ final class NoteEngine
      * others add "-2", "-3", so every entry has its own.
      *
      * @param  list<CommandMatch>  $matches
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool, uncertain: array<string, string>}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool, uncertain: array<string, string>}
      */
     private function commands(string $ref, string $item, array $matches): array
     {
         $plan = self::EMPTY_PLAN;
-        $low = false;
+        $lowConfidence = false;
         $uncertain = [];
         foreach ($matches as $index => $match) {
             $targetRef = $index === 0 ? $ref : $ref.'-'.($index + 1);
             $source = $match->sourceText ?? $item;
             $planned = $this->command($targetRef, $source, $match);
-            if ($planned['low']) {
+            if ($planned['lowConfidence']) {
                 $uncertain[$targetRef] = $source;
             }
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
-            $low = $low || $planned['low'];
+            $lowConfidence = $lowConfidence || $planned['lowConfidence'];
         }
 
-        return ['plan' => $plan, 'low' => $low, 'uncertain' => $uncertain];
+        return ['plan' => $plan, 'lowConfidence' => $lowConfidence, 'uncertain' => $uncertain];
     }
 
-    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
+    /** @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool} */
     private function command(string $ref, string $item, CommandMatch $match): array
     {
         if ($match->skip !== null) {
@@ -144,7 +144,7 @@ final class NoteEngine
             return $this->skipped($ref, $item, $match->skip, $match->skip === SkipReason::NotFound);
         }
         if ($match->newTask !== null) {
-            return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'low' => $match->newTask->lowConfidence];
+            return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'lowConfidence' => $match->newTask->lowConfidence];
         }
         // A change that would leave the task as it is comes back as a no_change skip, never empty.
         $change = $match->change;
@@ -152,12 +152,12 @@ final class NoteEngine
         $entry = ['ref' => $ref, 'task_id' => $change->taskId, 'label' => $change->label, ...$change->fields];
         $tie = $match->isTie() ? [['ref' => $ref, 'candidates' => $match->tiedTaskIds, 'preselected' => $change->taskId]] : [];
 
-        return ['plan' => [...self::EMPTY_PLAN, $change->delete ? 'delete' : 'update' => [$entry], 'ambiguous' => $tie], 'low' => false];
+        return ['plan' => [...self::EMPTY_PLAN, $change->delete ? 'delete' : 'update' => [$entry], 'ambiguous' => $tie], 'lowConfidence' => false];
     }
 
     /**
      * @param  list<TaskRow>  $openTasks
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool}
      */
     private function task(string $ref, string $item, NoteContext $context, array $openTasks): array
     {
@@ -168,13 +168,13 @@ final class NoteEngine
         $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
         $entries = NoteCopies::expand($entry, $fields->copies);
 
-        return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'low' => $fields->lowConfidence];
+        return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'lowConfidence' => $fields->lowConfidence];
     }
 
-    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
-    private function skipped(string $ref, string $item, SkipReason $reason, bool $low = false): array
+    /** @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool} */
+    private function skipped(string $ref, string $item, SkipReason $reason, bool $lowConfidence = false): array
     {
-        return ['plan' => [...self::EMPTY_PLAN, 'skipped' => [['ref' => $ref, 'text' => $item, 'reason' => $reason->value]]], 'low' => $low];
+        return ['plan' => [...self::EMPTY_PLAN, 'skipped' => [['ref' => $ref, 'text' => $item, 'reason' => $reason->value]]], 'lowConfidence' => $lowConfidence];
     }
 
     /**

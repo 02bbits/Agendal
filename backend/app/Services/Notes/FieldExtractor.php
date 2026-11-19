@@ -153,7 +153,8 @@ final class FieldExtractor
                 $trusted['copies'] = $repeat['copies'];
             }
         }
-        if (NoteVocabulary::contains('priority_high', $readable) || NoteVocabulary::contains('priority_high_content', $readable) || NoteVocabulary::contains('priority_low', $readable)) {
+        if (NoteVocabulary::contains('priority_high', $readable) || NoteVocabulary::contains('priority_high_content', $readable)
+            || NoteVocabulary::contains('priority_low', $readable) || NoteVocabulary::contains('priority_medium', $readable)) {
             $trusted['priority'] = $this->priority($readable, $dueDate, $context)->value;
         }
         if ($project !== null) {
@@ -347,12 +348,12 @@ final class FieldExtractor
      */
     private function priority(string $text, ?string $dueDate, NoteContext $context): Priority
     {
-        $low = NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low');
-        $plain = (string) preg_replace(NoteVocabulary::pattern($low.'|'.NoteVocabulary::phrases('priority_medium')), ' ', NoteVocabulary::withoutContentExempt($text));
+        $lowWords = NoteVocabulary::negatedPriority().'|'.NoteVocabulary::phrases('priority_low');
+        $plain = (string) preg_replace(NoteVocabulary::pattern($lowWords.'|'.NoteVocabulary::phrases('priority_medium')), ' ', NoteVocabulary::withoutContentExempt($text));
         if (NoteVocabulary::contains('priority_high', $plain) || NoteVocabulary::contains('priority_high_content', $plain)) {
             return Priority::High;
         }
-        if (preg_match(NoteVocabulary::pattern($low), $text) === 1) {
+        if (preg_match(NoteVocabulary::pattern($lowWords), $text) === 1) {
             return Priority::Low;
         }
         if (NoteVocabulary::contains('priority_medium', $text)) {
@@ -509,8 +510,9 @@ final class FieldExtractor
     }
 
     /**
-     * NU-E40: Vietnamese typed without accents ("toi can mua sua", "mai hop nhom 9h"). Most of its words are
-     * Vietnamese syllables from the rules, at least two of them, and no letter carries an accent.
+     * NU-E40: Vietnamese typed without accents ("toi can mua sua", "mai hop nhom 9h"). No letter carries an accent, at
+     * least two words are Vietnamese syllables from the rules, and either most words are, or every word is shaped
+     * like one.
      */
     private function unaccentedVietnamese(string $text): bool
     {
@@ -520,8 +522,16 @@ final class FieldExtractor
         $words = preg_split('/[^\p{L}]+/u', mb_strtolower($text), flags: PREG_SPLIT_NO_EMPTY) ?: [];
         $syllables = array_map(mb_strtolower(...), NoteVocabulary::values('vietnamese_unaccented_syllable'));
         $vietnamese = count(array_intersect($words, $syllables));
+        if ($vietnamese < self::MIN_VIETNAMESE_SYLLABLES) {
+            return false;
+        }
+        // Words outside the list still count when every one is shaped like a Vietnamese syllable without accents
+        // (onset, vowel, final): "toi co mot cuoc gap voi giang vien". "call", "milk" and "meeting" are not.
+        $shape = '~^(?:'.NoteVocabulary::phrases('vietnamese_onset').')?(?:'.NoteVocabulary::phrases('vietnamese_nucleus')
+            .')(?:'.NoteVocabulary::phrases('vietnamese_coda').')?$~u';
 
-        return $vietnamese >= self::MIN_VIETNAMESE_SYLLABLES && $vietnamese * 2 >= count($words);
+        return $vietnamese * 2 >= count($words)
+            || array_filter($words, fn (string $word): bool => preg_match($shape, $word) !== 1) === [];
     }
 
     /**

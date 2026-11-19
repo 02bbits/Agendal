@@ -27,6 +27,7 @@ final class NoteExtractionScenarios
         'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
         'bound_through_lead', 'bound_approximate', 'bound_approximate_suffix', 'bound_end_word',
         'bound_next_marker', 'copy_unit', 'count_unit', 'count_lead', 'deadline_word', 'repeat_endless', 'priority_negation', 'content_word_exempt', 'weekday_list_separator',
+        'vietnamese_onset', 'vietnamese_nucleus', 'vietnamese_coda',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -123,6 +124,10 @@ final class NoteExtractionScenarios
             'month_link' => [['pay rent 28th '.$value.' October', ['dueDate' => '2026-10-28', 'title' => 'Pay rent'], self::NOW]],
             'year_word' => [['nộp bài 26 tháng 9 '.$value.' 2027', ['dueDate' => '2027-09-26', 'title' => 'Nộp bài'], self::NOW]],
             'vietnamese_unaccented_syllable' => [['toi '.$value, ['lowConfidence' => true], self::NOW]],
+            // Two listed syllables and three unlisted ones: low confidence only through the syllable shape.
+            'vietnamese_onset' => [['toi co '.str_repeat($value.'ang ', 3), ['lowConfidence' => true], self::NOW]],
+            'vietnamese_nucleus' => [['toi co '.str_repeat('b'.$value.'t ', 3), ['lowConfidence' => true], self::NOW]],
+            'vietnamese_coda' => [['toi co '.str_repeat('ba'.$value.' ', 3), ['lowConfidence' => true], self::NOW]],
             'date_separator' => [['đọc sách 26'.$value.'10', ['dueDate' => '2026-10-26'], self::NOW]],
             'date_day_word' => [['đọc sách '.$value.' 26/10', ['dueDate' => '2026-10-26', 'title' => 'Đọc sách'], self::NOW]],
             'month_word' => [['đọc sách 26 '.$value.' 10', ['dueDate' => '2026-10-26'], self::NOW]],
