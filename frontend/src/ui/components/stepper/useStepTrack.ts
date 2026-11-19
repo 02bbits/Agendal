@@ -27,14 +27,12 @@ function naturalTrackWidth(track: HTMLElement): number {
   items.forEach((item) =>
     Object.assign(item.style, { flex: "0 0 auto", width: "auto" }),
   );
-  copy
-    .querySelectorAll<HTMLElement>(".stepper__step-btn")
-    .forEach((btn) =>
-      Object.assign(btn.style, {
-        width: "auto",
-        padding: NATURAL_STEP_PADDING,
-      }),
-    );
+  copy.querySelectorAll<HTMLElement>(".stepper__step-btn").forEach((btn) =>
+    Object.assign(btn.style, {
+      width: "auto",
+      padding: NATURAL_STEP_PADDING,
+    }),
+  );
   copy
     .querySelectorAll<HTMLElement>(".stepper__step-title")
     .forEach((title) => (title.style.display = "inline"));
