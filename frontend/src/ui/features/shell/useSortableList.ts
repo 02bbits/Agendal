@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "../../domain/motion";
 import {
   useCallback,
   useEffect,
@@ -94,9 +95,7 @@ export function useSortableList<T extends string>(
   // FLIP animation on displayOrder change
   useLayoutEffect(() => {
     followPointer();
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const prefersReduced = prefersReducedMotion();
 
     if (prefersReduced || prevTopsRef.current.size === 0) {
       prevTopsRef.current.clear();
@@ -277,9 +276,7 @@ export function useSortableList<T extends string>(
     }
 
     const draggedEl = itemElementsRef.current.get(currentDrag);
-    const prefersReduced =
-      typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    const prefersReduced = prefersReducedMotion();
 
     if (draggedEl) {
       if (prefersReduced) {

@@ -1,9 +1,6 @@
 import {
   Children,
   isValidElement,
-  useCallback,
-  useLayoutEffect,
-  useRef,
   useState,
   type ButtonHTMLAttributes,
   type CSSProperties,
@@ -13,6 +10,9 @@ import {
 import { Button } from "./Button";
 import { cx } from "./cx";
 import { t } from "../copy";
+import { StepBadge } from "./stepper/StepBadge";
+import { usePaneTransition } from "./stepper/usePaneTransition";
+import { useStepTrack } from "./stepper/useStepTrack";
 
 export interface StepProps {
   title?: string;
@@ -49,94 +49,6 @@ export interface StepperProps {
   stableHeight?: boolean;
 }
 
-const SPRING =
-  "linear(0, 0.0603, 0.2033, 0.3821, 0.5633, 0.7258, 0.8584, 0.9574, 1.0242, 1.0634, 1.0809, 1.0828, 1.0747, 1.0613, 1.046, 1.0313, 1.0186, 1.0085, 1.0012, 0.9965, 0.994, 0.9931, 0.9933, 0.9941, 0.9953, 0.9966, 0.9978, 0.9988, 1)";
-const FALLBACK_SPRING = "cubic-bezier(0.34, 1.4, 0.64, 1)";
-
-function prefersReducedMotion(): boolean {
-  return (
-    typeof window !== "undefined" &&
-    (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false)
-  );
-}
-
-let cachedSpringEasing: string | null = null;
-function getSpringEasing(): string {
-  if (cachedSpringEasing !== null) return cachedSpringEasing;
-  if (
-    typeof CSS !== "undefined" &&
-    typeof CSS.supports === "function" &&
-    CSS.supports("transition-timing-function", "linear(0, 1)")
-  ) {
-    cachedSpringEasing = SPRING;
-  } else {
-    cachedSpringEasing = FALLBACK_SPRING;
-  }
-  return cachedSpringEasing;
-}
-
-function StepBadge({
-  stepNumber,
-  isCompleted,
-}: {
-  stepNumber: number;
-  isCompleted: boolean;
-}) {
-  const pathRef = useRef<SVGPathElement>(null);
-  const wasCompletedRef = useRef(isCompleted);
-
-  useLayoutEffect(() => {
-    const wasCompleted = wasCompletedRef.current;
-    wasCompletedRef.current = isCompleted;
-
-    if (!wasCompleted && isCompleted) {
-      const reducedMotion = prefersReducedMotion();
-
-      if (!reducedMotion) {
-        const path = pathRef.current;
-        if (path && typeof path.animate === "function") {
-          path.animate(
-            [{ strokeDashoffset: "24" }, { strokeDashoffset: "0" }],
-            {
-              duration: 360,
-              easing: "cubic-bezier(0.22, 1, 0.36, 1)",
-            },
-          );
-        }
-      }
-    }
-  }, [isCompleted]);
-
-  return (
-    <span className="stepper__badge">
-      {isCompleted ? (
-        <svg
-          width={14}
-          height={14}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden="true"
-          className="stepper__check"
-        >
-          <path
-            ref={pathRef}
-            d="M20 6 9 17l-5-5"
-            stroke="currentColor"
-            strokeDasharray={24}
-            strokeDashoffset={0}
-          />
-        </svg>
-      ) : (
-        stepNumber
-      )}
-    </span>
-  );
-}
-
 export function Stepper({
   children,
   step: controlledStep,
@@ -165,288 +77,25 @@ export function Stepper({
   const [maxReachedStep, setMaxReachedStep] = useState(currentStep);
   const effectiveMaxReached = Math.max(maxReachedStep, currentStep);
 
-  const [compact, setCompact] = useState(false);
-  const trackRef = useRef<HTMLOListElement>(null);
-  const indicatorRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const gliderRef = useRef<HTMLDivElement>(null);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const newPaneRef = useRef<HTMLDivElement>(null);
-  const leavingPaneRef = useRef<HTMLDivElement>(null);
-  const nextButtonRef = useRef<HTMLButtonElement>(null);
-  const backButtonRef = useRef<HTMLButtonElement>(null);
-
-  const isFirstGliderPlacement = useRef(true);
-  const lastHeightRef = useRef<number | null>(null);
-  const shouldFocusNewPaneRef = useRef(false);
-
-  const [viewState, setViewState] = useState<{
-    step: number;
-    previous: number | null;
-    direction: number;
-  }>({
-    step: currentStep,
-    previous: null,
-    direction: 1,
-  });
-
-  const [prevRenderStep, setPrevRenderStep] = useState(currentStep);
-  if (currentStep !== prevRenderStep) {
-    setPrevRenderStep(currentStep);
-    setViewState({
-      step: currentStep,
-      previous: prevRenderStep,
-      direction: currentStep > prevRenderStep ? 1 : -1,
-    });
-  }
-
-  const placeGlider = useCallback(
-    (immediate = false) => {
-      const activeIndex = currentStep - 1;
-      const activeEl = indicatorRefs.current[activeIndex];
-      const glider = gliderRef.current;
-      if (!activeEl || !glider) return;
-
-      const reducedMotion = prefersReducedMotion();
-
-      const spring = getSpringEasing();
-      const skipTransition =
-        immediate || isFirstGliderPlacement.current || reducedMotion;
-
-      if (skipTransition) {
-        glider.style.transition = "none";
-      } else {
-        glider.style.transition = `transform 560ms ${spring}, width 560ms ${spring}, height 560ms ${spring}`;
-      }
-
-      glider.style.transform = `translate3d(${activeEl.offsetLeft}px, ${activeEl.offsetTop}px, 0)`;
-      glider.style.width = `${activeEl.offsetWidth}px`;
-      glider.style.height = `${activeEl.offsetHeight}px`;
-      glider.style.opacity = "1";
-
-      if (isFirstGliderPlacement.current) {
-        void glider.offsetHeight; // force reflow
-        if (!reducedMotion) {
-          glider.style.transition = `transform 560ms ${spring}, width 560ms ${spring}, height 560ms ${spring}`;
-        }
-        isFirstGliderPlacement.current = false;
-      }
-    },
-    [currentStep],
+  const { compact, trackRef, gliderRef, stepRefs } = useStepTrack(
+    currentStep,
+    totalSteps,
   );
-
-  const measureTitles = useCallback(() => {
-    const track = trackRef.current;
-    if (!track) return;
-
-    let naturalWidth = 0;
-    if (typeof document !== "undefined") {
-      const clone = track.cloneNode(true) as HTMLElement;
-      clone.className = "stepper__track";
-      clone.style.position = "absolute";
-      clone.style.left = "-9999px";
-      clone.style.top = "-9999px";
-      clone.style.visibility = "hidden";
-      clone.style.width = "max-content";
-      clone.style.maxWidth = "none";
-
-      const items = clone.querySelectorAll<HTMLElement>(".stepper__step-item");
-      items.forEach((item) => {
-        item.style.flex = "0 0 auto";
-        item.style.width = "auto";
-      });
-      const btns = clone.querySelectorAll<HTMLElement>(".stepper__step-btn");
-      btns.forEach((btn) => {
-        btn.style.width = "auto";
-        btn.style.padding = "0 8px";
-      });
-      const titles = clone.querySelectorAll<HTMLElement>(
-        ".stepper__step-title",
-      );
-      titles.forEach((t) => {
-        t.style.display = "inline";
-      });
-
-      // Outside `.stepper`, so the compact rules can't reach the copy: the answer depends on the
-      // titles and the track width only, never on the current mode (no flip-flop)
-      document.body.appendChild(clone);
-      const sumNaturalWidths = Array.from(items).reduce(
-        (acc, item) => acc + item.getBoundingClientRect().width,
-        0,
-      );
-      naturalWidth = sumNaturalWidths + 8; // + the track's 4 px padding each side
-      clone.remove();
-    }
-
-    const shouldBeCompact = naturalWidth > track.clientWidth;
-    setCompact((prev) => (prev !== shouldBeCompact ? shouldBeCompact : prev));
-  }, []);
-
-  useLayoutEffect(() => {
-    measureTitles();
-    placeGlider();
-  }, [currentStep, compact, measureTitles, placeGlider]);
-
-  useLayoutEffect(() => {
-    const track = trackRef.current;
-    if (!track || typeof ResizeObserver === "undefined") return;
-
-    const observer = new ResizeObserver(() => {
-      measureTitles();
-      placeGlider(true);
-    });
-    observer.observe(track);
-    return () => observer.disconnect();
-  }, [totalSteps, measureTitles, placeGlider]);
-
-  useLayoutEffect(() => {
-    const newPane = newPaneRef.current;
-    if (newPane && lastHeightRef.current === null) {
-      lastHeightRef.current = newPane.offsetHeight;
-    }
-  }, []);
-
-  useLayoutEffect(() => {
-    if (viewState.previous === null) return;
-
-    const reducedMotion = prefersReducedMotion();
-    const spring = getSpringEasing();
-
-    const viewport = viewportRef.current;
-    const newPane = newPaneRef.current;
-    const leavingPane = leavingPaneRef.current;
-
-    // 1. Height animation
-    const newHeight = newPane ? newPane.offsetHeight : 0;
-    const lastHeight = lastHeightRef.current;
-    lastHeightRef.current = newHeight;
-
-    if (
-      !reducedMotion &&
-      viewport &&
-      typeof viewport.animate === "function" &&
-      lastHeight !== null &&
-      lastHeight > 0 &&
-      newHeight > 0 &&
-      lastHeight !== newHeight
-    ) {
-      const heightAnim = viewport.animate(
-        [{ height: `${lastHeight}px` }, { height: `${newHeight}px` }],
-        { duration: 560, easing: spring },
-      );
-      heightAnim.onfinish = () => {
-        viewport.style.height = "";
-      };
-    }
-
-    // 2. Leaving pane animation
-    if (leavingPane && typeof leavingPane.animate === "function") {
-      // Its resting state is gone: between the fade's end and its removal it must not reappear
-      leavingPane.style.opacity = "0";
-      if (reducedMotion) {
-        leavingPane.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 150,
-          easing: "ease",
-        });
-      } else {
-        leavingPane.animate([{ opacity: 1 }, { opacity: 0 }], {
-          duration: 140,
-          easing: "ease",
-        });
-        leavingPane.animate(
-          [
-            { transform: "none" },
-            { transform: `translateX(${-viewState.direction * 36}px)` },
-          ],
-          {
-            duration: 200,
-            easing: "ease",
-          },
-        );
-      }
-    }
-
-    // 3. New pane animation
-    if (newPane && typeof newPane.animate === "function") {
-      if (reducedMotion) {
-        newPane.animate([{ opacity: 0 }, { opacity: 1 }], {
-          duration: 150,
-          easing: "ease",
-        });
-      } else {
-        newPane.animate(
-          [
-            { transform: `translateX(${viewState.direction * 36}px)` },
-            { transform: "none" },
-          ],
-          {
-            duration: 560,
-            easing: spring,
-          },
-        );
-        newPane.animate(
-          [{ opacity: 0 }, { opacity: 0, offset: 0.25 }, { opacity: 1 }],
-          {
-            duration: 420,
-            easing: "ease",
-          },
-        );
-      }
-    }
-
-    // 4. Focus management
-    const activeEl =
-      typeof document !== "undefined" ? document.activeElement : null;
-    const isFocusInLeaving =
-      activeEl && leavingPane ? leavingPane.contains(activeEl) : false;
-    const isFocusOnNav =
-      activeEl &&
-      (activeEl === nextButtonRef.current ||
-        activeEl === backButtonRef.current);
-    const shouldFocus =
-      shouldFocusNewPaneRef.current || isFocusInLeaving || isFocusOnNav;
-
-    if (shouldFocus && newPane) {
-      const focusTarget =
-        newPane.querySelector<HTMLElement>(
-          'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
-        ) ?? newPane;
-      focusTarget.focus();
-      shouldFocusNewPaneRef.current = false;
-    }
-
-    // 5. Remove leaving pane from state after animation completes
-    const timer = setTimeout(
-      () => {
-        setViewState((s) =>
-          s.previous !== null ? { ...s, previous: null } : s,
-        );
-      },
-      reducedMotion ? 150 : 200,
-    );
-
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [viewState]);
+  const {
+    view,
+    viewportRef,
+    newPaneRef,
+    leavingPaneRef,
+    backButtonRef,
+    nextButtonRef,
+    keepFocusWithPane,
+  } = usePaneTransition(currentStep);
 
   const goToStep = (targetStep: number, isDirectNav = false) => {
     if (targetStep < 1 || targetStep > totalSteps) return;
     if (linear && isDirectNav && targetStep > effectiveMaxReached) return;
 
-    const activeEl =
-      typeof document !== "undefined" ? document.activeElement : null;
-    const inOldPane =
-      activeEl && viewportRef.current
-        ? viewportRef.current.contains(activeEl)
-        : false;
-    const onNavBtn =
-      activeEl &&
-      (activeEl === nextButtonRef.current ||
-        activeEl === backButtonRef.current);
-    if (inOldPane || onNavBtn) {
-      shouldFocusNewPaneRef.current = true;
-    }
-
+    keepFocusWithPane();
     setMaxReachedStep((prev) => Math.max(prev, targetStep));
 
     if (controlledStep === undefined) {
@@ -530,7 +179,7 @@ export function Stepper({
             >
               <button
                 ref={(el) => {
-                  indicatorRefs.current[index] = el;
+                  stepRefs.current[index] = el;
                 }}
                 type="button"
                 aria-current={isActive ? "step" : undefined}
@@ -572,7 +221,7 @@ export function Stepper({
               {step}
             </div>
           ))}
-        {viewState.previous !== null && (
+        {view.previous !== null && (
           <div
             ref={leavingPaneRef}
             aria-hidden="true"
@@ -583,7 +232,7 @@ export function Stepper({
               pointerEvents: "none",
             }}
           >
-            {steps[viewState.previous - 1]}
+            {steps[view.previous - 1]}
           </div>
         )}
 
@@ -592,7 +241,7 @@ export function Stepper({
           tabIndex={-1}
           className="stepper__pane stepper__pane--active outline-none"
         >
-          {steps[viewState.step - 1]}
+          {steps[view.step - 1]}
         </div>
       </div>
 
