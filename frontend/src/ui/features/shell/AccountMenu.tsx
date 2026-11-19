@@ -1,4 +1,5 @@
 import {
+  type ComponentType,
   useEffect,
   useRef,
   useState,
@@ -7,7 +8,13 @@ import {
   type RefObject,
 } from "react";
 import { t } from "../../copy";
-import { UserIcon, SlidersIcon } from "../../components/icons";
+import { cx } from "../../components/cx";
+import {
+  DownloadIcon,
+  LogOutIcon,
+  SlidersIcon,
+  UserIcon,
+} from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
 import { runThemeTransition } from "../../domain/themeTransition";
 import type { SettingsTab, ThemeSetting } from "../settings/types";
@@ -21,10 +28,22 @@ export interface AccountMenuProps {
   onThemeChange: (theme: ThemeSetting) => void;
   onOpenSettings: (tab?: SettingsTab) => void;
   onSignOut: () => void;
+  /** While this browser can install the app (AP-1): a row above Sign out. */
+  onInstall?: () => void;
   onClose: () => void;
   /** Opened from the keyboard: start on the first item. From a click: nothing is highlighted. */
   focusFirst?: boolean;
 }
+
+interface MenuItem {
+  label: string;
+  Icon: ComponentType<{ size?: number }>;
+  /** Sign out: the label and its icon in the error colour. */
+  danger?: boolean;
+  onSelect: () => void;
+}
+
+const ICON_SIZE = 18;
 
 const ITEM =
   "flex h-10 min-h-10 w-full cursor-pointer items-center gap-2.5 rounded-field border-0 bg-transparent px-2.5 text-left text-callout outline-none transition-colors data-[active=true]:bg-fill";
@@ -36,6 +55,7 @@ export function AccountMenu({
   onThemeChange,
   onOpenSettings,
   onSignOut,
+  onInstall,
   onClose,
   triggerRef,
   focusFirst = false,
@@ -78,7 +98,67 @@ export function AccountMenu({
     return () => document.removeEventListener("pointerdown", handlePointerDown);
   }, [onClose, triggerRef]);
 
-  const count = 3;
+  /** Pick an item: the menu closes first. */
+  const choose = (action: () => void) => () => {
+    onClose();
+    action();
+  };
+  const topItems: MenuItem[] = [
+    {
+      label: t("nav.account"),
+      Icon: UserIcon,
+      onSelect: choose(() => onOpenSettings("account")),
+    },
+    {
+      label: t("settings.title"),
+      Icon: SlidersIcon,
+      onSelect: choose(() => onOpenSettings()),
+    },
+  ];
+  const bottomItems: MenuItem[] = [
+    ...(onInstall
+      ? [
+          {
+            label: t("app.install_app"),
+            Icon: DownloadIcon,
+            onSelect: choose(onInstall),
+          },
+        ]
+      : []),
+    {
+      label: t("app.sign_out"),
+      Icon: LogOutIcon,
+      danger: true,
+      onSelect: choose(onSignOut),
+    },
+  ];
+  const count = topItems.length + bottomItems.length;
+
+  const renderItem = (item: MenuItem, index: number) => (
+    <button
+      key={item.label}
+      type="button"
+      role="menuitem"
+      tabIndex={active === index ? 0 : -1}
+      data-active={active === index}
+      onMouseMove={() => {
+        if (active !== index) activate(index);
+      }}
+      onClick={item.onSelect}
+      className={cx(ITEM, item.danger ? "text-error" : "text-ink")}
+    >
+      <span
+        className={cx(
+          "inline-flex shrink-0",
+          item.danger ? "text-error" : "text-ink-secondary",
+        )}
+        aria-hidden="true"
+      >
+        <item.Icon size={ICON_SIZE} />
+      </span>
+      <span className="flex-1 truncate">{item.label}</span>
+    </button>
+  );
 
   const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === "Escape") {
@@ -144,51 +224,7 @@ export function AccountMenu({
 
       <div className="my-1 h-px bg-separator -mx-1.5" role="separator" />
 
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={active === 0 ? 0 : -1}
-        data-active={active === 0}
-        onMouseMove={() => {
-          if (active !== 0) activate(0);
-        }}
-        onClick={() => {
-          onClose();
-          onOpenSettings("account");
-        }}
-        className={`${ITEM} text-ink`}
-      >
-        <span
-          className="inline-flex shrink-0 text-ink-secondary"
-          aria-hidden="true"
-        >
-          <UserIcon size={18} />
-        </span>
-        <span className="flex-1 truncate">{t("nav.account")}</span>
-      </button>
-
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={active === 1 ? 0 : -1}
-        data-active={active === 1}
-        onMouseMove={() => {
-          if (active !== 1) activate(1);
-        }}
-        onClick={() => {
-          onClose();
-          onOpenSettings();
-        }}
-        className={`${ITEM} text-ink`}
-      >
-        <span
-          className="inline-flex shrink-0 text-ink-secondary"
-          aria-hidden="true"
-        >
-          <SlidersIcon size={18} />
-        </span>
-        <span className="flex-1 truncate">{t("settings.title")}</span>
-      </button>
+      {topItems.map((item, index) => renderItem(item, index))}
 
       {/* Theme row: the menu stays open while the theme changes */}
       <div
@@ -213,22 +249,9 @@ export function AccountMenu({
 
       <div className="my-1 h-px bg-separator -mx-1.5" role="separator" />
 
-      <button
-        type="button"
-        role="menuitem"
-        tabIndex={active === 2 ? 0 : -1}
-        data-active={active === 2}
-        onMouseMove={() => {
-          if (active !== 2) activate(2);
-        }}
-        onClick={() => {
-          onClose();
-          onSignOut();
-        }}
-        className={`${ITEM} text-error`}
-      >
-        <span className="flex-1 truncate">{t("app.sign_out")}</span>
-      </button>
+      {bottomItems.map((item, index) =>
+        renderItem(item, topItems.length + index),
+      )}
     </div>
   );
 }

@@ -81,6 +81,8 @@ export interface SidebarProps {
   onThemeChange?: (theme: ThemeSetting) => void;
   /** Callback to sign out. */
   onSignOut?: () => void;
+  /** While this browser can install the app (AP-1): in the account menu above Sign out. */
+  onInstall?: () => void;
 }
 
 /** Sidebar from 768px wide, in place of the tab bar (UX-27). */
@@ -97,6 +99,7 @@ export function Sidebar({
   theme,
   onThemeChange,
   onSignOut,
+  onInstall,
 }: SidebarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuFromKeyboard, setMenuFromKeyboard] = useState(false);
@@ -255,6 +258,7 @@ export function Sidebar({
               setMenuOpen(false);
               onSignOut?.();
             }}
+            onInstall={onInstall}
             onClose={() => {
               setMenuOpen(false);
               triggerRef.current?.focus();

@@ -941,6 +941,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                 onNewProject: () => setCreatingProject(true),
                 onSearch: handleOpenSearch,
                 onAccount: openSettings,
+                onInstall: installer.kind ? installer.install : undefined,
               }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
