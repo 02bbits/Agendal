@@ -57,10 +57,13 @@ test.describe("WF-03: Resolve an unclear note", () => {
     // Closing the editor leaves the note needing a look
     await editor.getByRole("button", { name: "Cancel" }).click();
     await expect(editor).toBeHidden();
-    await open(page, "/notes");
+    // Closing takes the editor's history entry off a moment later, which can cut a page load short
+    await expect(async () => {
+      await open(page, "/notes");
+    }).toPass();
     await page.getByRole("button", { name: "Pending" }).click();
     await expect(
-      page.getByRole("link", { name: /try a darker logo/ }),
+      page.getByRole("link", { name: /try a darker logo/ }).first(),
     ).toBeVisible();
   });
 });
