@@ -1,5 +1,9 @@
 import { defineConfig, devices } from "@playwright/test";
 
+// The app under test. CI serves the production build on :3000. Locally the service worker
+// (IM-50 and on) only runs in a build, so point this at one, e.g. `next start -p 3001`
+const baseURL = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false,
@@ -7,7 +11,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : "list",
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
@@ -58,11 +62,13 @@ export default defineConfig({
         SESSION_SECURE_COOKIE: "false",
         SESSION_COOKIE: "agendal_e2e_session",
         QUEUE_CONNECTION: "sync",
+        // The build on :3001 (local service worker checks) signs in through Sanctum too
+        SANCTUM_STATEFUL_DOMAINS: "localhost:3000,localhost:3001",
       },
     },
     {
       command: process.env.CI ? "npm run start" : "npm run dev",
-      url: "http://localhost:3000",
+      url: baseURL,
       reuseExistingServer: !process.env.CI,
       timeout: 180_000,
     },
