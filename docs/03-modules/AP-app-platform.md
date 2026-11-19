@@ -15,7 +15,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| <a id="ap-1"></a>AP-1 | Install as an app | Must | After the first sign-in, an Install banner shows once (Install / Not now); Install app stays available in Account |
+| <a id="ap-1"></a>AP-1 | Install as an app | Must | After the first sign-in, an Install banner shows once (Install / Not now); Install app stays available above Sign out (Settings on a phone, the account menu on desktop) |
 | <a id="ap-2"></a>AP-2 | Work offline | Must | Every edit is saved on the device and syncs later; a "You're offline" banner shows on list screens |
 | <a id="ap-3"></a>AP-3 | Light and dark themes | Must | Follows the system setting; Dark mode can be switched in Account |
 | <a id="ap-4"></a>AP-4 | Consistent back navigation | Must | The in-app back button and the browser's Back both return to the previous screen |
@@ -41,9 +41,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Chromium (Android, desktop), Samsung Internet | `app.install_title` with Install / Not now | Uses the saved `beforeinstallprompt` event |
 | iOS Safari | `app.install_ios` (Share → Add to Home Screen), with a share icon | Manual |
 | Firefox Android | Same as iOS, worded for its menu (`app.install_firefox`) | Manual |
-| Unsupported (Firefox desktop) | None | Account "Install app" hidden |
+| Unsupported (Firefox desktop) | None | "Install app" hidden |
 
-- **Account sheet:** "Install app" is shown whenever the app isn't installed and install is possible, Not now included. On Chromium it opens the browser prompt; on iOS Safari and Firefox Android it shows the banner's guidance (`app.install_ios`, `app.install_firefox`) as a toast.
+- **Install app row:** above Sign out, on the Settings page on a phone and in the account menu (the sidebar's account row) on desktop, with the same neutral icon as the rows around it. It is shown whenever the app isn't installed and install is possible, Not now included. On Chromium it opens the browser prompt; on iOS Safari and Firefox Android it shows the banner's guidance (`app.install_ios`, `app.install_firefox`) as a toast.
 - **Event:** none. The course demo has no analytics, so `app_installed` isn't sent.
 
 ### 2.2 Offline and sync (AP-2, NF-6)
@@ -108,7 +108,7 @@ The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one fil
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
 | **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |
 | **General** | Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
-| **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
+| **Account** | Remember this device; Install app (above Sign out: the phone Settings page, the desktop account menu) | Fully Functional | Server sync & PWA prompt |
 | **Theme** | Appearance & 8 Theme Palettes | Fully Functional (palette per account, #149) | `PATCH /api/v1/me` (`theme`, `theme_palette`) → `--color-primary`; `agendal.theme_palette` is the pre-paint copy |
 | **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
 | **Sidebar** | Drag (mouse and touch, the other rows slide to make room) + up/down buttons | Fully Functional (#149) | `localStorage` (`agendal.sidebar_tabs_order`) |
@@ -210,7 +210,7 @@ The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one fil
 | Req | Acceptance criterion | Tests |
 |---|---|---|
 | [AP-1](#ap-1) | After the first sign-in, an Install banner shows once (Install / Not now) | T-AP-01 (Chromium), T-AP-101 (iOS guidance), T-AP-02 (not shown again) |
-| [AP-1](#ap-1) | Install app stays available in Account | T-AP-03 |
+| [AP-1](#ap-1) | Install app stays available above Sign out | T-AP-03 |
 | [AP-2](#ap-2) | Every edit is saved on the device and syncs later | OFF-01–04 (NC), OFF-10–15, OFF-20–21 (TK), PERF-04 |
 | [AP-2](#ap-2) | "You're offline" banner on list screens | T-AP-10 (within 2 s), T-AP-104 |
 | [AP-3](#ap-3) | Follows the system setting. Dark mode can be switched in Account | T-AP-20 (`prefers-color-scheme` emulation), T-AP-21 (three-way setting synced), T-AP-22 (no flash) |

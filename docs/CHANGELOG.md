@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-19
+
+- **Install app above Sign out (Refs #160).** [AP-1, AP §2.1, the Settings matrix and the AP-1 test row](03-modules/AP-app-platform.md#ap-1), [SUMMARY](SUMMARY.md) Install row: Install app is no longer in Settings > General. On a phone it is a row on the Settings page above Sign out; on desktop it is in the account menu above Sign out, with the same neutral icon as Account and Settings.
+
 ## 2026-11-18
 
 - **Settings split by tab; Page view on desktop only; quieter choices and Back links (Refs #160).** [AP §2.3.1](03-modules/AP-app-platform.md#231-settings-architecture--implementation-status): Settings now lives in `src/ui/features/settings/` (`SettingsScreen` plus one file per tab, hook and page) instead of one `AccountScreen.tsx`. General shows Page view on desktop only, since a phone is always flat. Every way back in Settings underlines on hover, and tapping the choice already in use changes nothing. [screens](01-product/screens.md) Settings dialog row (also drops the old Home view), [SUMMARY](SUMMARY.md) Settings row and `frontend/src/ui/README.md` follow.
