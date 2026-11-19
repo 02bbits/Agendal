@@ -92,8 +92,18 @@ export function UpcomingDayStrip({
             </div>
 
             {/* Under the dot for phone/flat view; inline on full width desktop */}
-            {isToday && (
+            {isToday ? (
               <span className="mt-0.5 whitespace-nowrap text-tab font-medium text-ink-tertiary [html[data-page-view='full']_&]:md:mt-0 [html[data-page-view='full']_&]:md:text-footnote [html[data-page-view='full']_&]:md:font-normal [html[data-page-view='full']_&]:md:order-2">
+                {t("list.strip_today")}
+              </span>
+            ) : (
+              // Every day keeps the Today line's room, so the strip is as tall in a week without
+              // today: a shorter bar would move the list as the week changes and flip it back
+              <span
+                aria-hidden="true"
+                data-testid="strip-today-space"
+                className="invisible mt-0.5 whitespace-nowrap text-tab font-medium [html[data-page-view='full']_&]:md:hidden"
+              >
                 {t("list.strip_today")}
               </span>
             )}

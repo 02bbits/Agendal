@@ -2,8 +2,14 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-19
+
+- **Install app above Sign out (Refs #160).** [AP-1, AP §2.1, the Settings matrix and the AP-1 test row](03-modules/AP-app-platform.md#ap-1), [SUMMARY](SUMMARY.md) Install row: Install app is no longer in Settings > General. On a phone it is a row on the Settings page above Sign out; on desktop it is in the account menu above Sign out, with the same neutral icon as Account and Settings.
+
 ## 2026-11-18
 
+- **Settings split by tab; Page view on desktop only; quieter choices and Back links (Refs #160).** [AP §2.3.1](03-modules/AP-app-platform.md#231-settings-architecture--implementation-status): Settings now lives in `src/ui/features/settings/` (`SettingsScreen` plus one file per tab, hook and page) instead of one `AccountScreen.tsx`. General shows Page view on desktop only, since a phone is always flat. Every way back in Settings underlines on hover, and tapping the choice already in use changes nothing. [screens](01-product/screens.md) Settings dialog row (also drops the old Home view), [SUMMARY](SUMMARY.md) Settings row and `frontend/src/ui/README.md` follow.
+- **No Home view setting (Refs #160).** [AP §Settings](03-modules/AP-app-platform.md), [SUMMARY](SUMMARY.md) Settings row, `frontend/src/ui/README.md`: Settings > General no longer has Home view; the app always opens on Inbox. `agendal.home_view` is no longer read or written, and `settings.home_view` is removed from `pending.ts`.
 - **Install banner details (Refs #53).** [AP §2.1](03-modules/AP-app-platform.md#21-install-ap-1): the banner shows on Inbox while a user is signed in and the device has no Install or Not now on record (sign-out keeps that record). Account's Install app on iOS Safari and Firefox Android shows the guidance as a toast. No `app_installed` event (no analytics).
 - **New task copy trimmed (Refs #154).** [copy-catalog](01-product/copy-catalog.md), [screens](01-product/screens.md), [NC-7, NC §2.5, NC-E16](03-modules/NC-note-capture.md): the Title field no longer shows "Only a title is needed" (`task.title_only` removed). `task.pick_date` is now "Custom" (was "Pick date…"), on New task's start date chips and the result screen's When? chips ([RV](03-modules/RV-review-control.md), [SUMMARY](SUMMARY.md)). `time.invalid` in `pending.ts` is now "Invalid time" (was "Type a time like 9:30 or 21:15.").
 - **Monthly repeat labels say "each month" (Refs #154).** [copy-catalog](01-product/copy-catalog.md): `repeat_custom.month_day` is now "Day {day} of each month" (was "On day {day}") and `repeat_custom.month_weekday` is "The {nth} {day} of each month" (was "On the {nth} {day}"), so the two Custom repeat choices read as a rule. New copy `common.decrease`, `common.increase`, `common.ok` and the `time.*` keys for typing a time and the phone clock sit in `pending.ts` until the catalog owner adds them.

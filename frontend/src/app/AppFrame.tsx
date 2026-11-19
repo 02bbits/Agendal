@@ -12,7 +12,7 @@ import {
   type ReactNode,
 } from "react";
 import {
-  AccountScreen,
+  SettingsScreen,
   AppShell,
   InstallBanner,
   OfflineBanner,
@@ -26,7 +26,10 @@ import {
   t,
   Toast,
   useMediaQuery,
+  applyThemePalette,
+  clearThemePalette,
   type AccountSettings,
+  type SettingsTab,
   type Navigate,
   type NoteResult,
   type Project,
@@ -59,6 +62,7 @@ import {
   submitNote,
 } from "@/lib/noteApi";
 import { clearRecent } from "@/ui/domain/recentSearches";
+import { setTimeZone } from "@/lib/clock";
 
 /** The signed-in user, as `GET /user` returns it. */
 export interface SignedInUser {
@@ -70,6 +74,8 @@ export interface SignedInUser {
   week_start?: AccountSettings["weekStart"];
   time_format?: AccountSettings["timeFormat"];
   remember_device?: boolean;
+  theme_palette?: string;
+  page_view?: "flat" | "full";
   timezone?: string;
   timezone_auto?: boolean;
   two_factor_enabled?: boolean;
@@ -81,6 +87,8 @@ const SETTING_FIELDS = {
   weekStart: "week_start",
   timeFormat: "time_format",
   rememberDevice: "remember_device",
+  pageView: "page_view",
+  palette: "theme_palette",
   timezone: "timezone",
   timezoneAuto: "timezone_auto",
 } as const;
@@ -119,6 +127,8 @@ const tabRootOf = (path: string): string =>
   ) ?? ROUTES.inbox;
 
 const PAGE_VIEW_KEY = "agendal.page_view";
+const TIMEZONE_KEY = "agendal.timezone";
+const TIMEZONE_AUTO_KEY = "agendal.timezone_auto";
 
 const DEFAULT_SETTINGS: AccountSettings = {
   theme: "system",
@@ -126,6 +136,7 @@ const DEFAULT_SETTINGS: AccountSettings = {
   timeFormat: "24h",
   rememberDevice: true,
   pageView: "flat",
+  palette: "default",
   timezone: "UTC",
   timezoneAuto: true,
 };
@@ -140,15 +151,40 @@ const storedPageView = (): AccountSettings["pageView"] => {
   }
 };
 
+const storedTimezone = (): string | undefined => {
+  try {
+    return localStorage.getItem(TIMEZONE_KEY) || undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const storedTimezoneAuto = (): boolean => {
+  try {
+    const val = localStorage.getItem(TIMEZONE_AUTO_KEY);
+    return val === null ? true : val === "true";
+  } catch {
+    return true;
+  }
+};
+
 const settingsOf = (me: SignedInUser): AccountSettings => {
+  const isAuto =
+    me.timezone_auto ?? storedTimezoneAuto() ?? DEFAULT_SETTINGS.timezoneAuto;
+  const effectiveTz = isAuto
+    ? undefined
+    : (me.timezone ?? storedTimezone() ?? DEFAULT_SETTINGS.timezone);
+  setTimeZone(effectiveTz);
+
   return {
     theme: me.theme ?? DEFAULT_SETTINGS.theme,
     weekStart: me.week_start ?? DEFAULT_SETTINGS.weekStart,
     timeFormat: me.time_format ?? DEFAULT_SETTINGS.timeFormat,
     rememberDevice: me.remember_device ?? DEFAULT_SETTINGS.rememberDevice,
-    pageView: storedPageView(),
-    timezone: me.timezone ?? DEFAULT_SETTINGS.timezone,
-    timezoneAuto: me.timezone_auto ?? DEFAULT_SETTINGS.timezoneAuto,
+    pageView: me.page_view ?? storedPageView(),
+    palette: me.theme_palette ?? "default",
+    timezone: me.timezone ?? storedTimezone() ?? DEFAULT_SETTINGS.timezone,
+    timezoneAuto: isAuto,
   };
 };
 
@@ -168,7 +204,7 @@ interface AppFrameValue {
   /** Opens the search popup or navigates to search. */
   openSearch: () => void;
   /** Opens the settings popup. */
-  openSettings: () => void;
+  openSettings: (tab?: SettingsTab) => void;
   /** Closes the settings popup. */
   closeSettings: () => void;
   /** Opens the new task bottom sheet. */
@@ -365,15 +401,23 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const openSearch = useCallback(() => setSearching(true), []);
   const closeSearch = useCallback(() => setSearching(false), []);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const openSettings = useCallback(() => {
-    if (pathname === ROUTES.account) {
-      router.replace(ROUTES.inbox);
-    } else {
-      setSettingsOpen(true);
-    }
-  }, [pathname, router]);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab | undefined>(
+    undefined,
+  );
+  const openSettings = useCallback(
+    (tab?: SettingsTab) => {
+      if (pathname === ROUTES.account) {
+        router.replace(ROUTES.inbox);
+      } else {
+        setSettingsTab(tab);
+        setSettingsOpen(true);
+      }
+    },
+    [pathname, router],
+  );
   const closeSettings = useCallback(() => {
     setSettingsOpen(false);
+    setSettingsTab(undefined);
   }, []);
   const isWideSearch = useMediaQuery("(min-width: 768px)");
   const hasPanel = useMediaQuery("(min-width: 1280px)");
@@ -447,6 +491,29 @@ export function AppFrame({ children }: { children: ReactNode }) {
           localStorage.setItem(PAGE_VIEW_KEY, patch.pageView);
         } catch {}
       }
+      if (typeof window !== "undefined") {
+        if (patch.timezone !== undefined) {
+          try {
+            localStorage.setItem(TIMEZONE_KEY, patch.timezone);
+          } catch {}
+        }
+        if (patch.timezoneAuto !== undefined) {
+          try {
+            localStorage.setItem(TIMEZONE_AUTO_KEY, String(patch.timezoneAuto));
+          } catch {}
+        }
+        if (patch.timezone !== undefined || patch.timezoneAuto !== undefined) {
+          const isAuto =
+            patch.timezoneAuto !== undefined
+              ? patch.timezoneAuto
+              : settingsRef.current.timezoneAuto;
+          const zone = isAuto
+            ? undefined
+            : (patch.timezone ?? settingsRef.current.timezone);
+          setTimeZone(zone);
+          window.dispatchEvent(new Event("agendal.sync"));
+        }
+      }
       const body = Object.fromEntries(
         Object.entries(patch)
           .map(([key, value]) => [
@@ -515,6 +582,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
         }
       }
       await wipeDevice();
+      clearThemePalette();
+      document.documentElement.setAttribute("data-page-view", "flat");
       forgetNotes();
       forgetConflicts();
       clearRecent();
@@ -549,6 +618,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     // Until /me answers or the user picks one, these are only defaults and would undo what
     // /theme.js applied
     if (!user && settingsEdits.current === 0) return;
+    applyThemePalette(settings.palette ?? "default");
     const root = document.documentElement;
     if (settings.theme === "system") root.removeAttribute("data-theme");
     else root.setAttribute("data-theme", DAISY_THEME[settings.theme]);
@@ -862,19 +932,25 @@ export function AppFrame({ children }: { children: ReactNode }) {
             ? undefined
             : {
                 accountName: user?.display_name ?? user?.email ?? "",
+                email: user?.email ?? "",
+                theme: settings.theme,
+                onThemeChange: (theme) => changeSettings({ theme }),
+                onSignOut: () => signOut(),
                 counts: sidebarCounts,
                 projects: sidebarProjects,
                 onNewProject: () => setCreatingProject(true),
                 onSearch: handleOpenSearch,
                 onAccount: openSettings,
+                onInstall: installer.kind ? installer.install : undefined,
               }
         }
         toast={<Toast toast={toast} onDismiss={dismissToast} />}
       >
         {children}
         {settingsOpen && pathname !== ROUTES.account && (
-          <AccountScreen
+          <SettingsScreen
             portal={true}
+            initialTab={settingsTab ?? "general"}
             name={user?.display_name ?? ""}
             email={user?.email ?? ""}
             settings={settings}

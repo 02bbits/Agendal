@@ -15,6 +15,8 @@ import { projects, task } from "./fixtures";
 import { TODAY } from "./harness";
 import { createMemoryApi } from "./memoryApi";
 import { TaskStoreProvider } from "../../src/ui/features/tasks/store";
+import { UpcomingDayStrip } from "../../src/ui/features/lists/UpcomingDayStrip";
+import { weekOf, shiftWeek } from "../../src/ui/domain/week";
 
 const tomorrow = addDays(TODAY, 1);
 
@@ -1218,5 +1220,37 @@ describe("Upcoming screen (Section 8)", () => {
     expect(radiogroup).toBeTruthy();
     const radios = within(radiogroup).getAllByRole("radio");
     expect(radios.length).toBeGreaterThan(0);
+  });
+});
+
+describe("Upcoming day strip keeps one height across weeks", () => {
+  it("a week without today keeps the Today line's room, so the bar doesn't shrink as the week changes", () => {
+    const thisWeek = weekOf(TODAY, "mon");
+    const nextWeek = weekOf(shiftWeek(TODAY, 1), "mon");
+    const strip = (week: string[]) =>
+      render(
+        <UpcomingDayStrip
+          week={week}
+          today={TODAY}
+          activeDay={week[week.length - 1]}
+          countsByDay={{}}
+          onPickDay={() => {}}
+        />,
+      );
+    const lines = (container: HTMLElement) =>
+      [...container.querySelectorAll("button")].map((b) => b.children.length);
+    const now = strip(thisWeek);
+    // Today shows its label; the other six keep a hidden one of the same size
+    expect(now.getAllByTestId("strip-today-space")).toHaveLength(6);
+    const nowLines = lines(now.container);
+    now.unmount();
+    const next = strip(nextWeek);
+    expect(next.getAllByTestId("strip-today-space")).toHaveLength(7);
+    for (const el of next.getAllByTestId("strip-today-space")) {
+      expect(el.getAttribute("aria-hidden")).toBe("true");
+      expect(el.className).toContain("invisible");
+    }
+    // Every day has the same rows in both weeks
+    expect(lines(next.container)).toEqual(nowLines);
   });
 });

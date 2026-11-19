@@ -15,7 +15,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| <a id="ap-1"></a>AP-1 | Install as an app | Must | After the first sign-in, an Install banner shows once (Install / Not now); Install app stays available in Account |
+| <a id="ap-1"></a>AP-1 | Install as an app | Must | After the first sign-in, an Install banner shows once (Install / Not now); Install app stays available above Sign out (Settings on a phone, the account menu on desktop) |
 | <a id="ap-2"></a>AP-2 | Work offline | Must | Every edit is saved on the device and syncs later; a "You're offline" banner shows on list screens |
 | <a id="ap-3"></a>AP-3 | Light and dark themes | Must | Follows the system setting; Dark mode can be switched in Account |
 | <a id="ap-4"></a>AP-4 | Consistent back navigation | Must | The in-app back button and the browser's Back both return to the previous screen |
@@ -41,9 +41,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Chromium (Android, desktop), Samsung Internet | `app.install_title` with Install / Not now | Uses the saved `beforeinstallprompt` event |
 | iOS Safari | `app.install_ios` (Share → Add to Home Screen), with a share icon | Manual |
 | Firefox Android | Same as iOS, worded for its menu (`app.install_firefox`) | Manual |
-| Unsupported (Firefox desktop) | None | Account "Install app" hidden |
+| Unsupported (Firefox desktop) | None | "Install app" hidden |
 
-- **Account sheet:** "Install app" is shown whenever the app isn't installed and install is possible, Not now included. On Chromium it opens the browser prompt; on iOS Safari and Firefox Android it shows the banner's guidance (`app.install_ios`, `app.install_firefox`) as a toast.
+- **Install app row:** above Sign out, on the Settings page on a phone and in the account menu (the sidebar's account row) on desktop, with the same neutral icon as the rows around it. It is shown whenever the app isn't installed and install is possible, Not now included. On Chromium it opens the browser prompt; on iOS Safari and Firefox Android it shows the banner's guidance (`app.install_ios`, `app.install_firefox`) as a toast.
 - **Event:** none. The course demo has no analytics, so `app_installed` isn't sent.
 
 ### 2.2 Offline and sync (AP-2, NF-6)
@@ -92,7 +92,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3.1 Settings Architecture & Implementation Status
 
-The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`). Below 768 px it is a full-screen page instead: a list of categories, and each opens with a back arrow (back button, Esc and browser Back return to the list) (#149). On desktop the sidebar's account row opens a menu with Account, Settings, a theme switch and Sign out.
+The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one file per tab, hook and page in `src/ui/features/settings/`) follows Todoist's 2-pane modal pattern with a left sub-navigation rail, category search filtering, and background scroll locking (`useBackgroundScrollLock`). Below 768 px it is a full-screen page instead: a list of categories, and each opens with a back arrow (back button, Esc and browser Back return to the list) (#149). On desktop the sidebar's account row opens a menu with Account, Settings, a theme switch and Sign out. Every way back in Settings ("‹ Back", "‹ Settings", Back from Change password) underlines on hover like the app's other Back links, and tapping the choice already in use (a theme, Light or Dark) changes nothing.
 
 **Phone layout and copy (#149).** Below `lg` every category is one column: text shares a row only with a compact control (a switch, a short value), wider controls sit under their label at full width, and help text sits under the control. One type scale: overline headings, 15 px labels, 13 px secondary help. Help text is kept only where the label alone isn't clear, at most one short line, and never repeats the switch's state; the end of every category scrolls clear of the home indicator.
 
@@ -104,12 +104,11 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 | **Account** | Two-step verification by email (one switch; turning off asks for the password) | Fully Functional (#149) | `POST /api/v1/auth/two-factor` |
 | **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
 | **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
-| **General** | Home view (Inbox, Upcoming, Projects) | Fully Functional | `localStorage` (`agendal.home_view`) |
-| **General** | Page view (Flat view vs Full width) | Fully Functional (per account, #149) | `PATCH /api/v1/me` (`page_view`); `agendal.page_view` is only the copy `/theme.js` paints before the first frame |
+| **General** | Page view (Flat view vs Full width), desktop only: a phone is always flat and doesn't show it | Fully Functional (per account, #149) | `PATCH /api/v1/me` (`page_view`); `agendal.page_view` is only the copy `/theme.js` paints before the first frame |
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
 | **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |
 | **General** | Date format, Next week, Weekend, Smart date | Functional UI / Partial backend | `localStorage` |
-| **General** | Remember this device & Install app | Fully Functional | Server sync & PWA prompt |
+| **Account** | Remember this device; Install app (above Sign out: the phone Settings page, the desktop account menu) | Fully Functional | Server sync & PWA prompt |
 | **Theme** | Appearance & 8 Theme Palettes | Fully Functional (palette per account, #149) | `PATCH /api/v1/me` (`theme`, `theme_palette`) → `--color-primary`; `agendal.theme_palette` is the pre-paint copy |
 | **Sidebar** | Show task counts toggle | Fully Functional | `localStorage` (`agendal.sidebar_task_counts`) |
 | **Sidebar** | Drag (mouse and touch, the other rows slide to make room) + up/down buttons | Fully Functional (#149) | `localStorage` (`agendal.sidebar_tabs_order`) |
@@ -211,7 +210,7 @@ The Settings dialog (`src/ui/features/shell/AccountScreen.tsx`) follows Todoist'
 | Req | Acceptance criterion | Tests |
 |---|---|---|
 | [AP-1](#ap-1) | After the first sign-in, an Install banner shows once (Install / Not now) | T-AP-01 (Chromium), T-AP-101 (iOS guidance), T-AP-02 (not shown again) |
-| [AP-1](#ap-1) | Install app stays available in Account | T-AP-03 |
+| [AP-1](#ap-1) | Install app stays available above Sign out | T-AP-03 |
 | [AP-2](#ap-2) | Every edit is saved on the device and syncs later | OFF-01–04 (NC), OFF-10–15, OFF-20–21 (TK), PERF-04 |
 | [AP-2](#ap-2) | "You're offline" banner on list screens | T-AP-10 (within 2 s), T-AP-104 |
 | [AP-3](#ap-3) | Follows the system setting. Dark mode can be switched in Account | T-AP-20 (`prefers-color-scheme` emulation), T-AP-21 (three-way setting synced), T-AP-22 (no flash) |
