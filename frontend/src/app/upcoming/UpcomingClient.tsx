@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Button,
   PlusIcon,
@@ -25,7 +25,7 @@ import {
 import { httpTaskApi } from "@/lib/taskApi";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
-import { headerDate, subscribeHeaderDate } from "../headerDate";
+import { useHeaderDate } from "../headerDate";
 import { UpcomingSkeleton } from "../skeletons";
 import { UpcomingFilterChips } from "./UpcomingFilterChips";
 import { useUpcomingData } from "./useUpcomingData";
@@ -74,7 +74,7 @@ export function UpcomingClient() {
   const { filter, chooseFilter, viewMode, chooseViewMode } = useUpcomingView();
   // Where the list was, so coming back from a task or New task lands there again
   const viewRef = useRef<{ anchor: string; day?: string } | null>(null);
-  const date = useSyncExternalStore(subscribeHeaderDate, headerDate, () => "");
+  const date = useHeaderDate();
   const accountInitial = user?.display_name || user?.email || "";
   // Full width and the board put the controls in the header
   const isFull = settings.pageView === "full" || viewMode === "board";

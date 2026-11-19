@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useSyncExternalStore } from "react";
+import { Suspense } from "react";
 import {
   Button,
   InboxScreen,
@@ -13,7 +13,7 @@ import {
   useTaskPanel,
   useTaskStore,
 } from "@/ui";
-import { headerDate, subscribeHeaderDate } from "./headerDate";
+import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
 import { appClock } from "./appClock";
@@ -47,11 +47,7 @@ function InboxContent() {
     handleRetryProjects,
   } = useInboxData();
 
-  const date = useSyncExternalStore(
-    subscribeHeaderDate,
-    () => headerDate(),
-    () => undefined,
-  );
+  const date = useHeaderDate();
   const accountInitial = user?.display_name || user?.email || "";
 
   return (

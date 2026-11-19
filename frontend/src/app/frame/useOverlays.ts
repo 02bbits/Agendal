@@ -1,5 +1,6 @@
+import { usePanelScreen } from "@/ui/components/useMediaQuery";
 import { useCallback, useState } from "react";
-import { ROUTES, useMediaQuery, type NoteResult, type SettingsTab } from "@/ui";
+import { ROUTES, type NoteResult, type SettingsTab } from "@/ui";
 
 type Router = {
   push: (href: string) => void;
@@ -11,7 +12,7 @@ const EDITOR_CLOSE_WAIT_MS = 250;
 
 /** Which layer is open over the screen: the note editor, the search popup or Settings. */
 export function useOverlays(pathname: string, router: Router) {
-  const notePanelWide = useMediaQuery("(min-width: 1280px)");
+  const notePanelWide = usePanelScreen();
 
   const [editing, setEditing] = useState(false);
   const [editingNote, setEditingNote] = useState<NoteResult["note"] | null>(

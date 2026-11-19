@@ -1,4 +1,5 @@
 "use client";
+import { useWideScreen } from "@/ui/components/useMediaQuery";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -8,7 +9,6 @@ import {
   OfflineBanner,
   ROUTES,
   Toast,
-  useMediaQuery,
   type Project,
 } from "@/ui";
 import { useOffline } from "@/lib/online";
@@ -47,7 +47,7 @@ const TAB_PATHS = Object.keys(TAB_BY_PATH);
 export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const wide = useMediaQuery("(min-width: 768px)");
+  const wide = useWideScreen();
 
   const { toast, showToast, dismissToast } = useToast();
   const { user, userRef, setUser } = useSignedInUser();

@@ -1,7 +1,7 @@
+import { usePanelScreen } from "../../components/useMediaQuery";
 import { useCallback, useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { Navigate } from "../shell/routes";
-import { useMediaQuery } from "./useMediaQuery";
 
 export interface TaskPanelState {
   selectedTaskId: string | null;
@@ -15,7 +15,7 @@ export interface TaskPanelState {
 const KEEP_SCROLL = { scroll: false } as const;
 
 export function useTaskPanel(baseNavigate?: Navigate): TaskPanelState {
-  const isWide = useMediaQuery("(min-width: 1280px)");
+  const isWide = usePanelScreen();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();

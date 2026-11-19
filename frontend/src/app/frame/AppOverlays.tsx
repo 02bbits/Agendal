@@ -1,4 +1,5 @@
 "use client";
+import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
   NewTaskSheet,
@@ -7,7 +8,6 @@ import {
   ROUTES,
   SearchPopup,
   t,
-  useMediaQuery,
   type NewTaskSheetProps,
   type Project,
   type ProjectWithCounts,
@@ -54,7 +54,7 @@ export function AppOverlays({
   onProjectCreated: (created: Project) => void;
 }) {
   const { navigate, settings, showToast } = useAppFrame();
-  const wide = useMediaQuery("(min-width: 1280px)");
+  const wide = usePanelScreen();
   const { note, search: searchPopup, settings: settingsPopup } = overlays;
   const { editingNote } = note;
 

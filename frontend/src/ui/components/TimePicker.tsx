@@ -1,3 +1,4 @@
+import { useWideScreen } from "./useMediaQuery";
 import {
   useEffect,
   useId,
@@ -14,7 +15,6 @@ import { cx } from "./cx";
 import { CheckIcon } from "./icons";
 import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
-import { useMediaQuery } from "./useMediaQuery";
 import type { PickerVariant } from "./usePickerKeyboard";
 
 export interface TimePickerProps {
@@ -76,7 +76,7 @@ export function TimePicker({
   const [pm, setPm] = useState(false);
   const [active, setActive] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const isWide = useMediaQuery("(min-width: 768px)");
+  const isWide = useWideScreen();
   const isScreen = variant === "screen" || variant === "row";
 
   const allowed = (time: string) => minTime === null || time > minTime;
