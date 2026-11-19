@@ -62,7 +62,7 @@ A task entity in API requests and responses exposes the following fields:
 | `due_date` | string \| null | Floating local date `YYYY-MM-DD` for the deadline |
 | `due_time` | string \| null | Floating local time `HH:MM` for the deadline on `due_date` |
 | `priority` | string \| null | `low`, `medium`, or `high` |
-| `reminder` | string | `none`, `5m`, `15m`, `30m`, `1h`, `1d` |
+| `reminder` | string | `none`, `0m` (at the start), `5m`, `10m`, `15m`, `30m`, `1h`, `2h`, `1d`, `2d`, `1w` (#154; notes still use only the first six) |
 | `repeat` | string | `never`, `daily`, `weekly`, `monthly`, `yearly` |
 | `repeat_rule` | string \| null | RRULE string (≤ 300 characters) |
 | `repeat_anchor` | string \| null | Original local date of the series (`start_date` if present, else `due_date`), read-only |
@@ -102,7 +102,7 @@ Example response fragment:
 ### Writing a rule
 
 - Use uppercase RRULE keys/values, with `FREQ` first and matching `repeat`. The supported components are `FREQ`, `INTERVAL`, `BYDAY`, `BYMONTHDAY`, `BYMONTH`, `WKST`, `COUNT` and `UNTIL`; keys cannot repeat. The backend checks RRULE semantics in addition to the JSON Schema's string shape.
-- `INTERVAL` is 1–999 (default 1). `COUNT` is 1–10,000 and includes the first occurrence. Use either COUNT or UNTIL, never both. UNTIL is a UTC RRULE date-time; note date-only ends are encoded as `YYYYMMDDT235959Z`, inclusive of that floating local date.
+- `INTERVAL` is 1–999 (default 1). `COUNT` is 1–10,000 and includes the first occurrence. Use either COUNT or UNTIL, never both. UNTIL is a UTC RRULE date-time; note date-only ends are encoded as `YYYYMMDDT235959Z`, inclusive of that floating local date. A note's duration (`for 3 months`) or period (`this week`) is stored as UNTIL on its last day, counted from the series' first date ([NU §2.5](../03-modules/NU-note-understanding.md#calendar-recurrence)).
 - Invalid rules or a frequency mismatch in `POST/PATCH /tasks` return `422`, with a `repeat_rule` field error. A rule cannot accompany `repeat: never`.
 - A winning `PATCH` of `repeat` without a winning `repeat_rule` clears the custom rule, even if the enum value is unchanged. To preserve or change a custom rule while writing the frequency, send both fields with consistent `at` timestamps. A `repeat_rule`-only patch is checked against the merged frequency.
 - `repeat_anchor` is maintained by the server: enabling recurrence sets it from the due date, disabling recurrence clears it, and moving an occurrence preserves it. Calendar rules skip dates that do not exist; legacy enum-only monthly/yearly tasks keep their month-end clamping. See [TK §2.3](../03-modules/TK-tasks.md#23-repeating-tasks-tk-4).

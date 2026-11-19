@@ -117,4 +117,114 @@ describe("a different account on this device (AA-E7)", () => {
     expect(indexedDBMock.deleteDatabase).not.toHaveBeenCalled();
     expect(localStorage.getItem("draft")).toBe("buy milk");
   });
+
+  it("after signOut, --color-primary is empty and data-page-view is flat", async () => {
+    document.documentElement.style.setProperty("--color-primary", "#db4c3f");
+    document.documentElement.style.setProperty(
+      "--color-primary-tint",
+      "#db4c3f22",
+    );
+    document.documentElement.setAttribute("data-page-view", "full");
+    localStorage.setItem("agendal.theme_palette", "agendal");
+    localStorage.setItem("agendal.page_view", "full");
+
+    function SignOutTrigger() {
+      const { signOut } = useAppFrame();
+      return <button onClick={() => void signOut()}>Sign out</button>;
+    }
+
+    render(
+      <AppFrame>
+        <Who />
+        <SignOutTrigger />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user1@example.com");
+
+    const signOutBtn = screen.getByRole("button", { name: "Sign out" });
+    signOutBtn.click();
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+  });
+
+  it("sign-out then a different account whose /me has the defaults results in no inline --color-primary and data-page-view flat", async () => {
+    meReply = () =>
+      json(200, {
+        id: 1,
+        email: "user1@example.com",
+        display_name: "User 1",
+        theme_palette: "lavender",
+        page_view: "full",
+      });
+
+    function SignOutTrigger() {
+      const { signOut } = useAppFrame();
+      return <button onClick={() => void signOut()}>Sign out</button>;
+    }
+
+    const { unmount } = render(
+      <AppFrame>
+        <Who />
+        <SignOutTrigger />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user1@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("#8c52ff");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "full",
+      );
+    });
+
+    const signOutBtn = screen.getByRole("button", { name: "Sign out" });
+    signOutBtn.click();
+
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+
+    unmount();
+
+    // Now a different account signs in with defaults
+    meReply = () =>
+      json(200, {
+        id: 2,
+        email: "user2@example.com",
+        display_name: "User 2",
+        theme_palette: "default",
+        page_view: "flat",
+      });
+
+    render(
+      <AppFrame>
+        <Who />
+      </AppFrame>,
+    );
+
+    await screen.findByText("user2@example.com");
+    await waitFor(() => {
+      expect(
+        document.documentElement.style.getPropertyValue("--color-primary"),
+      ).toBe("");
+      expect(document.documentElement.getAttribute("data-page-view")).toBe(
+        "flat",
+      );
+    });
+  });
 });

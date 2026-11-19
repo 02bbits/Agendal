@@ -52,6 +52,16 @@ it('stops persisted series after the requested count', function () {
     expect(Task::count())->toBe(3);
 });
 
+it('stops persisted series at the end of a requested duration', function () {
+    $response = $this->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'lái xe mỗi thứ 3 trong 2 tuần', 'written_at' => '2026-11-02T20:36:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertCreated()
+        ->assertJsonPath('changes.0.task.title', 'Lái xe')->assertJsonPath('changes.0.task.due_date', '2026-11-03');
+    $id = $response->json('changes.0.task.id');
+    expect(Task::findOrFail($id)->repeat_rule)->toEndWith(';UNTIL=20261116T235959Z');
+    $last = $this->postJson("/api/v1/tasks/$id/complete", ['at' => '2026-11-02T13:36:01Z'])->assertOk()->assertJsonPath('next.due_date', '2026-11-10')->json('next.id');
+    $this->postJson("/api/v1/tasks/$last/complete", ['at' => '2026-11-02T13:36:01Z'])->assertOk()->assertJsonMissingPath('next');
+    expect(Task::count())->toBe(2);
+});
+
 it('advances monthly ordinal weekdays and clears a custom rule when the frequency is replaced', function () {
     $response = $this->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'test every second monday of month', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'])->assertCreated()
         ->assertJsonPath('changes.0.task.due_date', '2026-11-09');
@@ -154,17 +164,15 @@ it('applies a spelled relative time and a date-led shopping list without phantom
     expect(Task::count())->toBe(2);
 });
 
-it('applies scheduling fragments as three independent weekly tasks', function () {
-    $response = $this->postJson('/api/v1/notes', [
+it('applies scheduling fragments as one weekly series that repeats three times', function () {
+    $this->postJson('/api/v1/notes', [
         'client_id' => (string) Str::uuid(), 'text' => 'lặp lại 3 lần, gọi mẹ, thứ 3 mỗi tuần',
         'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh',
-    ])->assertCreated()->assertJsonCount(3, 'changes');
-    foreach ($response->json('changes') as $i => $change) {
-        expect($change['task']['title'])->toBe('Gọi mẹ ('.($i + 1).'/3)')
-            ->and($change['task']['due_date'])->toBe('2026-11-03')
-            ->and($change['task']['repeat_rule'])->toContain('BYDAY=TU');
-    }
-    expect(Task::count())->toBe(3);
+    ])->assertCreated()->assertJsonCount(1, 'changes')
+        ->assertJsonPath('changes.0.task.title', 'Gọi mẹ')
+        ->assertJsonPath('changes.0.task.due_date', '2026-11-03')
+        ->assertJsonPath('changes.0.task.repeat_rule', 'FREQ=WEEKLY;INTERVAL=1;WKST=MO;BYDAY=TU;COUNT=3');
+    expect(Task::count())->toBe(1);
 });
 
 it('retains unsupported exclusions without applying the excluded date as a schedule', function () {

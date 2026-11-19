@@ -39,6 +39,8 @@ export const projects: Project[] = [
 let seq = 0;
 export function task(overrides: Partial<Task> & Pick<Task, "title">): Task {
   seq += 1;
+  const minute = String(seq % 60).padStart(2, "0");
+  const second = String(Math.floor(seq / 60) % 60).padStart(2, "0");
   return {
     id: `t-${seq}`,
     start_date: null,
@@ -53,7 +55,7 @@ export function task(overrides: Partial<Task> & Pick<Task, "title">): Task {
     done: false,
     done_at: null,
     created_by: "user",
-    created_at: `2026-10-20T08:${String(seq).padStart(2, "0")}:00Z`,
+    created_at: `2026-10-20T08:${minute}:${second}Z`,
     ...overrides,
   };
 }

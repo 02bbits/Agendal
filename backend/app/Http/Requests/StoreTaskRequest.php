@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
+use App\Enums\Reminder;
 use App\Services\Tasks\DueDateFallback;
 use App\Services\Tasks\RepeatSchedule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreTaskRequest extends FormRequest
@@ -45,7 +47,7 @@ class StoreTaskRequest extends FormRequest
             'start_time' => ['nullable', 'date_format:H:i'],
             'due_time' => ['nullable', 'date_format:H:i'],
             'priority' => ['nullable', 'in:low,medium,high'],
-            'reminder' => ['nullable', 'in:none,5m,15m,30m,1h,1d'],
+            'reminder' => ['nullable', Rule::enum(Reminder::class)],
             'repeat' => ['nullable', 'in:never,daily,weekly,monthly,yearly'],
             'repeat_rule' => ['nullable', 'string', 'max:300'],
             'notes' => ['nullable', 'string', 'max:5000'],

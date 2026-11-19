@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  AccountScreen,
+  SettingsScreen,
   AppShell,
   Dialog,
   ScreenHeader,
@@ -114,9 +114,9 @@ describe("Bottom bar next to the task panel (UX-28)", () => {
       name: "Main",
     }).parentElement!;
     // Left-aligned, not centred by mx-auto, so it ends at the panel's edge
-    expect(bars.className).toContain("xl:[html[data-task-panel]_&]:ml-0");
+    expect(bars.className).toContain("xl:[html[data-task-panel=aside]_&]:ml-0");
     expect(bars.className).toContain(
-      "xl:[html[data-task-panel]_&]:w-[calc(100%-400px)]",
+      "xl:[html[data-task-panel=aside]_&]:w-[calc(100%-400px)]",
     );
   });
 });
@@ -193,7 +193,7 @@ describe("Overline labels", () => {
           title="Inbox"
           accountInitial="e"
         />
-        <AccountScreen
+        <SettingsScreen
           name="example"
           email="example@gmail.com"
           settings={{
@@ -342,7 +342,7 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(onNewProject).toHaveBeenCalled();
   });
 
-  it("links Search and the account from the sidebar", () => {
+  it("links Search and opens the account menu from the sidebar", () => {
     renderWide();
     const sidebar = screen
       .getByRole("navigation", { name: "Menu" })
@@ -350,7 +350,8 @@ describe("Tablet and desktop (UX-27, UX-28)", () => {
     expect(sidebar.querySelector("button")!.textContent).toContain(
       "Search tasks",
     );
-    const account = sidebar.querySelector('a[href="/account"]')!;
+    // The account row opens the account menu
+    const account = sidebar.querySelector('button[aria-haspopup="menu"]')!;
     expect(account.textContent).toContain("example");
     expect(account.textContent).toContain("E");
   });

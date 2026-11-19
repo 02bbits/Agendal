@@ -2,10 +2,44 @@
 // The ?v= build id in this script's URL gives every deploy a new worker, so updates are detected.
 const CACHE = `agendal-shell-${new URL(self.location.href).searchParams.get("v") ?? "dev"}`;
 
+// Every screen, so each opens offline on the first visit, not only those already seen (AP §2.2).
+// A detail screen's page is the same for every id, so `/tasks/_` stands in for all tasks
+const PAGES = [
+  "/",
+  "/upcoming",
+  "/projects",
+  "/notes",
+  "/search",
+  "/account",
+  "/sign-in",
+  "/tasks/_",
+  "/projects/_",
+  "/notes/_",
+];
+const DETAIL = /^\/(tasks|projects|notes)\/[^/]+$/;
+
+/** The cached page for a navigation: its own, else its screen's stand-in, else the Inbox. */
+async function cachedPage(url) {
+  const hit = await caches.match(url.pathname, { ignoreSearch: true });
+  if (hit) return hit;
+  const detail = url.pathname.match(DETAIL);
+  return (detail && caches.match(`/${detail[1]}/_`)) || caches.match("/");
+}
+
 self.addEventListener("install", (event) => {
   // No skipWaiting here: the page offers Reload instead (UX-42)
   event.waitUntil(
-    caches.open(CACHE).then((cache) => cache.addAll(["/", "/theme.js"])),
+    caches.open(CACHE).then(async (cache) => {
+      await cache.addAll([...PAGES, "/theme.js"]);
+      // And the scripts and styles those pages load
+      const assets = new Set();
+      for (const page of PAGES) {
+        const html = await (await cache.match(page)).text();
+        for (const [path] of html.matchAll(/\/_next\/static\/[^"'\s\\)]+/g))
+          assets.add(path);
+      }
+      await cache.addAll([...assets]);
+    }),
   );
 });
 
@@ -85,10 +119,8 @@ self.addEventListener("fetch", (event) => {
     fetch(request)
       .then((response) => store(request, response))
       .catch(async () => {
-        const hit = await caches.match(request);
-        if (hit) return hit;
-        if (request.mode === "navigate") return caches.match("/");
-        return Response.error();
+        if (request.mode === "navigate") return cachedPage(url);
+        return (await caches.match(request)) ?? Response.error();
       }),
   );
 });

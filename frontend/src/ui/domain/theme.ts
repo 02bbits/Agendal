@@ -48,4 +48,7 @@ export function clearThemePalette(): void {
   if (typeof document === "undefined") return;
   document.documentElement.style.removeProperty("--color-primary");
   document.documentElement.style.removeProperty("--color-primary-tint");
+  try {
+    localStorage.removeItem("agendal.theme_palette");
+  } catch {}
 }

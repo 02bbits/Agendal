@@ -29,12 +29,19 @@ export function SettingsRow({
   const messages = (
     <>
       {error && (
-        <p id={errorId} role="alert" className="mt-1 text-footnote text-error">
+        <p
+          id={errorId}
+          role="alert"
+          className="mt-1 max-w-64 text-footnote text-error"
+        >
           {error}
         </p>
       )}
       {helper && !error && (
-        <p id={helperId} className="mt-1 text-footnote text-ink-secondary">
+        <p
+          id={helperId}
+          className="mt-1 max-w-64 text-footnote text-ink-secondary"
+        >
           {helper}
         </p>
       )}
@@ -42,6 +49,7 @@ export function SettingsRow({
   );
 
   // The helper or error sits under the label, so the control stays centred on the whole row.
+  // The label keeps its one line; a long value on the right (a repeat summary) is cut with "…"
   return (
     <div
       className={cx(
@@ -53,32 +61,34 @@ export function SettingsRow({
     >
       {isScreen ? (
         <>
-          <div className="flex min-w-0 flex-col">
+          <div className="flex shrink-0 flex-col">
             <div className="flex items-center gap-3">
               <div className="flex size-8 shrink-0 items-center justify-center text-ink-secondary">
                 {icon}
               </div>
-              <span className="text-body font-normal text-ink">{label}</span>
+              <span className="whitespace-nowrap text-body font-normal text-ink">
+                {label}
+              </span>
             </div>
             {messages}
           </div>
-          <div className="flex shrink-0 items-center gap-1.5">
+          <div className="flex min-w-0 items-center justify-end gap-1.5">
             {control}
             {extraAction}
           </div>
         </>
       ) : (
         <>
-          <div className="flex min-w-0 flex-col">
+          <div className="flex shrink-0 flex-col">
             <div className="flex items-center gap-2 text-body text-ink">
               <span className="flex items-center justify-center text-ink-tertiary">
                 {icon}
               </span>
-              <span>{label}</span>
+              <span className="whitespace-nowrap">{label}</span>
             </div>
             {messages}
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex min-w-0 items-center justify-end gap-2">
             {control}
             {extraAction}
           </div>

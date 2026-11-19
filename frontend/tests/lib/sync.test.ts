@@ -2,7 +2,10 @@ import "fake-indexeddb/auto";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CONFLICT, forgetConflicts } from "../../src/lib/conflicts";
 import {
+  putNoteResult,
+  putProject,
   putTasks,
+  readNoteResult,
   readQueue,
   readSetting,
   readTask,
@@ -10,7 +13,8 @@ import {
   saveSetting,
 } from "../../src/lib/localStore";
 import { api } from "../../src/lib/api";
-import { createTask, patch } from "../../src/lib/taskApi";
+import { getProject } from "../../src/lib/projectApi";
+import { createTask, getTask, patch } from "../../src/lib/taskApi";
 import { retryDelay, startSync, SYNCED, syncNow } from "../../src/lib/sync";
 import { task } from "../ui/fixtures";
 
@@ -291,6 +295,83 @@ describe("sync (ADR-005)", () => {
     expect(String(sent("/api/v1/sync?")[0]![0])).toBe(
       "/api/v1/sync?cursor=0&limit=500&full=1",
     );
+  });
+});
+
+describe("details offline (AP §2.2)", () => {
+  const entry = (id: string, status: string) => ({
+    id,
+    status,
+    name: null,
+    excerpt: id,
+    written_at: "2026-10-23T08:00:00Z",
+    edited_at: null,
+    source_file_name: null,
+    counts: { created: 0, updated: 0, deleted: 0 },
+  });
+  const resultOf = (id: string, status: string) => ({
+    note: { id, client_id: id, status, name: null, text: id },
+    changes: [],
+    skipped: [],
+  });
+
+  it("sync fetches each pulled note's full result, again when the note changed, so its screen opens offline", async () => {
+    await putNoteResult(resultOf("n-1", "confirm") as never);
+    server = (url, init) => {
+      if (url.startsWith("/api/v1/sync?"))
+        return json(200, {
+          changes: {
+            tasks: [],
+            projects: [],
+            notes: [entry("n-1", "done"), entry("n-2", "followup")],
+          },
+          next_cursor: 9,
+          has_more: false,
+        });
+      const note = url.match(/^\/api\/v1\/notes\/(n-\d)$/)?.[1];
+      if (note === "n-1") return json(200, resultOf("n-1", "done"));
+      if (note === "n-2") return json(200, resultOf("n-2", "followup"));
+      return defaultServer(url, init);
+    };
+
+    expect(await syncNow()).toBe(true);
+
+    expect((await readNoteResult("n-1"))?.note.status).toBe("done");
+    expect((await readNoteResult("n-2"))?.note.status).toBe("followup");
+    // Kept results aren't asked for again
+    fetchMock.mockClear();
+    server = defaultServer;
+    await syncNow();
+    expect(sent("/api/v1/notes/")).toEqual([]);
+  });
+
+  it("task and project screens read the device copy when there is no answer", async () => {
+    await putProject({
+      id: "p-1",
+      name: "Home",
+      colour: "blue",
+    } as never);
+    await putTasks([
+      task({ id: "t-2", title: "Paint", project_id: "p-1" }),
+      task({ id: "t-3", title: "Done", project_id: "p-1", done: true }),
+    ]);
+    networkUp = false;
+
+    expect((await getTask("t-1")).title).toBe("Buy milk");
+    await expect(getTask("t-404")).rejects.toThrow();
+    const home = await getProject("p-1");
+    expect(home.project.name).toBe("Home");
+    expect(home.open.map((t) => t.id)).toEqual(["t-2"]);
+    expect(home.completed.map((t) => t.id)).toEqual(["t-3"]);
+    expect(home.progress).toEqual({ done: 1, total: 2 });
+    const none = await getProject("none");
+    expect(none.project).toBeNull();
+    expect(none.open.map((t) => t.id)).toEqual(["t-1"]);
+  });
+
+  it("a server refusal is not covered up by the device copy", async () => {
+    server = () => json(404, { error: { code: "error.not_found" } });
+    await expect(getTask("t-1")).rejects.toThrow();
   });
 });
 

@@ -21,6 +21,7 @@ export type TaskPatch = Partial<
     | "priority"
     | "reminder"
     | "repeat"
+    | "repeat_rule"
     | "notes"
     | "project_id"
   >
