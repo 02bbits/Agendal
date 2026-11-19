@@ -1,6 +1,7 @@
 <?php
 
 use App\Enums\PlanStatus;
+use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Notes\NoteBuild;
 use App\Services\Notes\NoteContext;
@@ -646,3 +647,26 @@ it('keeps the rules entry when one item gets several proposals that are not all 
     'an unclear one' => [['action' => 'unclear', 'title' => null]],
     'copies' => [['action' => 'create', 'title' => 'Mua trứng', 'copies' => 2]],
 ]);
+
+it('asks the model the user picked with their own key, outside the app budget', function () {
+    config(['note_llm.daily_user_calls' => 0]);
+    Http::fake(['api.openai.com/*' => Http::response(recordedNoteResponse())]);
+    $user = new User;
+    $user->forceFill(['llm_enabled' => true, 'llm_model' => 'openai:gpt-5.4-mini', 'llm_keys' => ['openai' => ['key' => 'sk-test-only', 'models' => ['gpt-5.4-mini']]]]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.openai.com/v1/chat/completions'
+        && $request->hasHeader('Authorization', 'Bearer sk-test-only') && $request['model'] === 'gpt-5.4-mini'
+        && ! array_key_exists('provider', $request->data()));
+});
+
+it('keeps the rules result when the user turned AI off', function () {
+    Http::fake();
+    $user = new User;
+    $user->forceFill(['llm_enabled' => false]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user))->toBe($rules);
+    Http::assertNothingSent();
+});

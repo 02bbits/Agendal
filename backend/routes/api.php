@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\AiSettingsController;
 use App\Http\Controllers\Auth\ChangePasswordController;
 use App\Http\Controllers\Auth\CheckPasswordController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
@@ -42,6 +43,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/two-factor', TwoFactorController::class)->middleware('throttle:two-factor-toggle');
         Route::post('auth/change-password', ChangePasswordController::class);
         Route::post('auth/check-password', CheckPasswordController::class);
+        Route::get('me/ai', [AiSettingsController::class, 'show']);
+        Route::patch('me/ai', [AiSettingsController::class, 'update']);
+        Route::put('me/ai/keys/{provider}', [AiSettingsController::class, 'saveKey'])->middleware('throttle:ai-keys');
+        Route::delete('me/ai/keys/{provider}', [AiSettingsController::class, 'removeKey']);
         Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
         Route::get('notes', [NoteController::class, 'index']);
         Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');

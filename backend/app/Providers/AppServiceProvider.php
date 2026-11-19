@@ -34,6 +34,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('register', fn (Request $request) => Limit::perMinutes(10, 30)->by($request->ip()));
 
         // Two-factor toggle: 5 per 2 minutes per user
+        // Each key Save asks the provider; a few tries are enough to paste a key right.
+        RateLimiter::for('ai-keys', fn (Request $request) => Limit::perMinutes(10, 10)->by('ai-keys:'.$request->user()?->id));
+
         RateLimiter::for('two-factor-toggle', fn (Request $request) => Limit::perMinutes(2, 5)->by('two-factor-toggle:'.$request->user()?->id));
 
         RateLimiter::for('forgot-password', fn (Request $request) => [

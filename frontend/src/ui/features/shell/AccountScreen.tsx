@@ -39,6 +39,7 @@ import {
   TrashIcon,
   UserIcon,
   XIcon,
+  SparklesIcon,
 } from "../../components/icons";
 import { Segmented } from "../../components/Segmented";
 import { SelectDropdown } from "../../components/SelectDropdown";
@@ -51,6 +52,7 @@ import { ALL_THEME_PALETTES, applyThemePalette } from "../../domain/theme";
 import { runThemeTransition } from "../../domain/themeTransition";
 import type { TimeFormat, WeekStart } from "../../domain/types";
 import { timeZone as getDeviceTimeZone } from "../../../lib/clock";
+import { AiSettings } from "./AiSettings";
 import { ChangePassword } from "./ChangePassword";
 import {
   DEFAULT_SIDEBAR_TABS_ORDER,
@@ -67,6 +69,7 @@ export type PageViewMode = "flat" | "full";
 export type SettingsTab =
   | "account"
   | "general"
+  | "ai"
   | "subscription"
   | "theme"
   | "sidebar"
@@ -444,6 +447,12 @@ export function AccountScreen({
       label: t("app.tab_general"),
       icon: <SlidersIcon size={17} />,
       keywords: "general time format week start page view device sign out",
+    },
+    {
+      id: "ai",
+      label: t("settings.tab_ai"),
+      icon: <SparklesIcon size={17} />,
+      keywords: "ai model api key gemini openrouter openai llm provider",
     },
     {
       id: "theme",
@@ -1546,6 +1555,8 @@ export function AccountScreen({
             </section>
           </div>
         )}
+
+        {activeTab === "ai" && <AiSettings />}
 
         {/* TAB: INTEGRATIONS */}
         {activeTab === "integrations" && (

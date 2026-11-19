@@ -24,6 +24,34 @@ return [
         default => 'https://openrouter.ai/api/v1/chat/completions',
     }),
 
+    // Providers a user may add their own key for (Settings › AI). Each speaks the OpenAI chat format with
+    // structured outputs; models_url lists what a key can use, and `models` keeps the ones that can plan a note.
+    'providers' => [
+        'gemini' => [
+            'name' => 'Gemini',
+            'url' => 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            'models_url' => 'https://generativelanguage.googleapis.com/v1beta/openai/models',
+            'key_url' => 'https://aistudio.google.com/apikey',
+            'models' => '~^gemini-(?!.*(?:embedding|tts|image|live|audio))~',
+        ],
+        'openrouter' => [
+            'name' => 'OpenRouter',
+            'url' => 'https://openrouter.ai/api/v1/chat/completions',
+            // The model list is public; this one answers only for a working key.
+            'check_url' => 'https://openrouter.ai/api/v1/key',
+            'models_url' => 'https://openrouter.ai/api/v1/models?supported_parameters=structured_outputs',
+            'key_url' => 'https://openrouter.ai/keys',
+            'models' => '~.~',
+        ],
+        'openai' => [
+            'name' => 'OpenAI',
+            'url' => 'https://api.openai.com/v1/chat/completions',
+            'models_url' => 'https://api.openai.com/v1/models',
+            'key_url' => 'https://platform.openai.com/api-keys',
+            'models' => '~^(?:gpt-|o\d)(?!.*(?:audio|realtime|transcribe|tts|image|search))~',
+        ],
+    ],
+
     // Seconds per note; on timeout or error the rules result stands (rules_fallback).
     'timeout_seconds' => (float) env('NOTE_LLM_TIMEOUT_SECONDS', 1.5),
 

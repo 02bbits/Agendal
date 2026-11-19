@@ -10,6 +10,7 @@ use App\Enums\ProposedAction;
 use App\Enums\Reminder;
 use App\Enums\Repeat;
 use App\Enums\SkipReason;
+use App\Models\User;
 use App\Services\Tasks\RepeatSchedule;
 use BackedEnum;
 use DateTimeImmutable;
@@ -47,15 +48,17 @@ final class OpenRouterFallback
         private FieldExtractor $extractor,
     ) {}
 
-    /** @param list<TaskRow> $openTasks */
-    public function improve(NoteBuild $rules, string $text, NoteContext $context, array $openTasks, int $userId): NoteBuild
+    /**
+     * @param  list<TaskRow>  $openTasks
+     * @param  User|null  $user  whose Settings › AI choose the model; without one the app's provider answers
+     */
+    public function improve(NoteBuild $rules, string $text, NoteContext $context, array $openTasks, int $userId, ?User $user = null): NoteBuild
     {
         if ($rules->lowConfidence === []) {
             return $rules;
         }
-        // Kill switch or no provider: the app stays on rules only (ADR-008).
-        if (! config('note_llm.enabled') || ! in_array(config('note_llm.provider'), self::PROVIDERS, true)
-            || ! config('note_llm.key') || ! config('note_llm.model')) {
+        $route = $this->route($user);
+        if ($route === null) {
             return $rules;
         }
         $started = hrtime(true);
@@ -71,14 +74,15 @@ final class OpenRouterFallback
                 $candidates[$ref] = $this->commandLike($item) ? $this->candidatesFor($item, $context, $remaining) : [];
             }
             $schema = $this->schema(array_keys($items), $candidates, array_values($context->projects));
-            $body = $this->request($items, $candidates, $schema, $context);
-            // UTF-8 bytes bound the input tokens, schema included; reserve them before sending.
+            $body = $this->request($items, $candidates, $schema, $context, $route);
+            // UTF-8 bytes bound the input tokens, schema included; reserve them before sending. A user's own key
+            // spends their own quota, so only the app's key has a budget.
             $reserved = strlen(json_encode($body, JSON_THROW_ON_ERROR)) + (int) config('note_llm.max_completion_tokens');
-            $reservationDay = $this->budget->reserve($userId, $reserved);
+            $reservationDay = $route['own'] ? null : $this->budget->reserve($userId, $reserved);
             if ($reservationDay === false) {
                 return $this->failed($rules, 'budget_exhausted');
             }
-            $proposals = $this->proposals($this->send($body), $schema, $reserved, $reservationDay);
+            $proposals = $this->proposals($this->send($body, $route), $schema, $reserved, $reservationDay);
             [$plan, $accepted, $outcomes] = $this->merge($rules, $proposals, $candidates, $context);
             Log::info('note_llm', ['elapsed_ms' => $this->elapsedMs($started), 'accepted' => $accepted]);
 
@@ -95,6 +99,34 @@ final class OpenRouterFallback
 
             return $this->failed($rules, $reason);
         }
+    }
+
+    /**
+     * Who answers: the model the user picked in Settings › AI with their own key, else the app's configured provider.
+     * Null keeps the rules result: the kill switch (ADR-008), AI turned off by the user, or no provider at all.
+     *
+     * @return array{provider: string, url: string, key: string, model: string, own: bool}|null
+     */
+    private function route(?User $user): ?array
+    {
+        if (! config('note_llm.enabled')) {
+            return null;
+        }
+        if ($user !== null && ! $user->llm_enabled) {
+            return null;
+        }
+        [$provider, $model] = array_pad(explode(':', (string) $user?->llm_model, 2), 2, '');
+        $key = $user?->llm_keys[$provider]['key'] ?? null;
+        $own = config('note_llm.providers.'.$provider);
+        if (is_string($key) && is_array($own) && $model !== '') {
+            return ['provider' => $provider, 'url' => $own['url'], 'key' => $key, 'model' => $model, 'own' => true];
+        }
+        if (! in_array(config('note_llm.provider'), self::PROVIDERS, true) || ! config('note_llm.key') || ! config('note_llm.model')) {
+            return null;
+        }
+
+        return ['provider' => (string) config('note_llm.provider'), 'url' => (string) config('note_llm.url'),
+            'key' => (string) config('note_llm.key'), 'model' => (string) config('note_llm.model'), 'own' => false];
     }
 
     /** Timeout, error or spent budget: the rules result stands, recorded as rules_fallback (ADR-008). */
@@ -223,9 +255,10 @@ final class OpenRouterFallback
      * @param  array<string, string>  $items
      * @param  array<string, list<TaskRow>>  $candidates
      * @param  array<string, mixed>  $schema
+     * @param  array{provider: string, url: string, key: string, model: string, own: bool}  $route
      * @return array<string, mixed>
      */
-    private function request(array $items, array $candidates, array $schema, NoteContext $context): array
+    private function request(array $items, array $candidates, array $schema, NoteContext $context, array $route): array
     {
         $input = [];
         foreach ($items as $ref => $text) {
@@ -237,12 +270,12 @@ final class OpenRouterFallback
         $userContent = ['items' => $input, 'now' => $context->local()->format(DATE_ATOM), 'timezone' => $context->timezone, 'projects' => array_values($context->projects)];
 
         $body = [
-            'model' => config('note_llm.model'),
+            'model' => $route['model'],
             'temperature' => 0,
             'max_tokens' => (int) config('note_llm.max_completion_tokens'),
             'provider' => ['require_parameters' => true, 'data_collection' => 'deny'],
             'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'plan', 'strict' => true,
-                'schema' => config('note_llm.provider') === 'gemini' ? self::withoutBounds($schema) : $schema]],
+                'schema' => $route['provider'] === 'openrouter' ? $schema : self::withoutBounds($schema)]],
             'messages' => [
                 ['role' => 'system', 'content' => $prompt],
                 ['role' => 'user', 'content' => json_encode($userContent, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
@@ -252,11 +285,11 @@ final class OpenRouterFallback
         if ($reasoning !== null && $reasoning !== '') {
             $body['reasoning'] = ['enabled' => (bool) $reasoning];
         }
-        if (config('note_llm.provider') !== 'openrouter') {
-            // OpenRouter-only routing fields; NVIDIA and Gemini's OpenAI-compatible endpoints reject them.
+        if ($route['provider'] !== 'openrouter') {
+            // OpenRouter-only routing fields; the other OpenAI-compatible endpoints reject them.
             unset($body['provider'], $body['reasoning']);
         }
-        if (config('note_llm.provider') === 'nvidia') {
+        if ($route['provider'] === 'nvidia') {
             $body['chat_template_kwargs'] = ['enable_thinking' => false];
             $body['stream'] = false;
         }
@@ -278,15 +311,18 @@ final class OpenRouterFallback
         return array_map(fn (mixed $value): mixed => is_array($value) ? self::withoutBounds($value) : $value, $schema);
     }
 
-    /** @param array<string, mixed> $body */
-    private function send(array $body): Response
+    /**
+     * @param  array<string, mixed>  $body
+     * @param  array{provider: string, url: string, key: string, model: string, own: bool}  $route
+     */
+    private function send(array $body, array $route): Response
     {
         $timeout = (float) config('note_llm.timeout_seconds');
 
         // One retry when the provider is busy (429, 503); anything else falls back to the rules at once
-        return Http::withToken((string) config('note_llm.key'))->connectTimeout($timeout)->timeout($timeout)
+        return Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
             ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
-            ->post((string) config('note_llm.url'), $body)->throw();
+            ->post($route['url'], $body)->throw();
     }
 
     /**
@@ -295,9 +331,11 @@ final class OpenRouterFallback
      * @param  array<string, mixed>  $schema
      * @return array<string, list<array<string, mixed>>>
      */
-    private function proposals(Response $response, array $schema, int $reserved, string $reservationDay): array
+    private function proposals(Response $response, array $schema, int $reserved, ?string $reservationDay): array
     {
-        $this->budget->settle($reserved, max(0, (int) $response->json('usage.total_tokens', $reserved)), $reservationDay);
+        if ($reservationDay !== null) {
+            $this->budget->settle($reserved, max(0, (int) $response->json('usage.total_tokens', $reserved)), $reservationDay);
+        }
         $data = json_decode((string) $response->json('choices.0.message.content'), flags: JSON_THROW_ON_ERROR);
         if (! (new Validator)->validate($data, json_decode(json_encode($schema, JSON_THROW_ON_ERROR)))->isValid()) {
             throw new UnexpectedValueException('The model output breaks the plan schema');
