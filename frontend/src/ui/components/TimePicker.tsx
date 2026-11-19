@@ -1,4 +1,3 @@
-import { useWideScreen } from "./useMediaQuery";
 import {
   useEffect,
   useId,
@@ -11,10 +10,19 @@ import { t } from "../copy";
 import { formatTime } from "../domain/dates";
 import type { TimeFormat } from "../domain/types";
 import { ClockPicker } from "./ClockPicker";
+import {
+  boxesFor,
+  hourIsComplete,
+  lastTwoDigits,
+  timeOptions,
+  typedTime,
+} from "./clock/timeOptions";
+import { TimeOptionList } from "./clock/TimeOptionList";
+import { TypedTimeField } from "./clock/TypedTimeField";
 import { cx } from "./cx";
-import { CheckIcon } from "./icons";
 import { PickerTrigger } from "./PickerTrigger";
 import { PopoverOrSheet } from "./PopoverOrSheet";
+import { useWideScreen } from "./useMediaQuery";
 import type { PickerVariant } from "./usePickerKeyboard";
 
 export interface TimePickerProps {
@@ -32,23 +40,12 @@ export interface TimePickerProps {
   className?: string;
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
-/** The hour and minute boxes for a time, in the clock the user reads (12- or 24-hour). */
-function boxesFor(time: string, twelve: boolean) {
-  if (!time) return { hour: "", minute: "", pm: false };
-  const h = Number(time.slice(0, 2));
-  return {
-    hour: pad(twelve ? (h % 12 === 0 ? 12 : h % 12) : h),
-    minute: time.slice(3, 5),
-    pm: h >= 12,
-  };
-}
+/** The popover appears a frame after it mounts; the hour field gets this many frames to take focus. */
+const FOCUS_TRIES = 20;
 
 /**
- * Start and due time (#154). From 768px a popover with a fixed HH : MM field (the colon is part
- * of the field, so only digits go in) over the quarter-hour list; on a phone a sheet with a
- * clock face.
+ * Start and due time (#154). From 768px a popover with a fixed HH : MM field over the
+ * quarter-hour list; on a phone a sheet with a clock face.
  */
 export function TimePicker({
   id,
@@ -65,7 +62,6 @@ export function TimePicker({
   const autoId = useId();
   const pickerId = id ?? `time-${autoId}`;
   const listId = `${pickerId}-list`;
-  const errorId = `${pickerId}-error`;
   const twelve = timeFormat === "12h";
   const triggerRef = useRef<HTMLButtonElement>(null);
   const hourRef = useRef<HTMLInputElement>(null);
@@ -78,27 +74,13 @@ export function TimePicker({
   const [error, setError] = useState<string | null>(null);
   const isWide = useWideScreen();
   const isScreen = variant === "screen" || variant === "row";
+  const options = timeOptions(value, minTime, timeFormat);
 
-  const allowed = (time: string) => minTime === null || time > minTime;
-
-  // None, then the quarter hours (plus the current value) after the minimum
-  const times: string[] = [];
-  for (let h = 0; h < 24; h++)
-    for (let m = 0; m < 60; m += 15) times.push(`${pad(h)}:${pad(m)}`);
-  if (value && !times.includes(value)) times.push(value);
-  times.sort();
-  const options = [
-    { value: "", label: t("task.not_set") },
-    ...times
-      .filter(allowed)
-      .map((time) => ({ value: time, label: formatTime(time, timeFormat) })),
-  ];
-
-  // The popover is placed (and made visible) a frame after it mounts, and a hidden field can't
-  // take focus: keep trying for a few frames so typing goes straight into the hour
+  // A hidden field can't take focus: keep trying for a few frames so typing goes straight into
+  // the hour
   useEffect(() => {
     if (!open || !isWide) return;
-    let tries = 20;
+    let tries = FOCUS_TRIES;
     let frame = 0;
     const focus = () => {
       const field = hourRef.current;
@@ -110,6 +92,7 @@ export function TimePicker({
     return () => cancelAnimationFrame(frame);
   }, [open, isWide]);
 
+  /** The boxes show this time. */
   const show = (time: string) => {
     const boxes = boxesFor(time, twelve);
     setHour(boxes.hour);
@@ -117,35 +100,32 @@ export function TimePicker({
     setPm(boxes.pm);
   };
 
+  const openPicker = () => {
+    show(value);
+    // Start the list on the time already set
+    setActive(
+      Math.max(
+        0,
+        options.findIndex((o) => o.value === value),
+      ),
+    );
+    setOpen(true);
+  };
+
   const close = () => {
     setOpen(false);
     setError(null);
   };
+
   const choose = (time: string) => {
     onChange(time);
     close();
     triggerRef.current?.focus();
   };
 
-  // What the boxes hold, as "HH:MM", or why it isn't a time
-  const typedTime = (): { time: string } | { error: string } => {
-    const h = Number(hour);
-    const m = minute === "" ? 0 : Number(minute);
-    const validHour = twelve ? h >= 1 && h <= 12 : h >= 0 && h <= 23;
-    if (hour === "" || !validHour || m > 59)
-      return { error: t("time.invalid") };
-    const h24 = twelve ? (h % 12) + (pm ? 12 : 0) : h;
-    const time = `${pad(h24)}:${pad(m)}`;
-    if (!allowed(time))
-      return {
-        error: t("time.after", { time: formatTime(minTime!, timeFormat) }),
-      };
-    return { time };
-  };
-
   const confirm = () => {
     if (hour === "" && minute === "") return choose("");
-    const typed = typedTime();
+    const typed = typedTime({ hour, minute, pm, twelve, minTime, timeFormat });
     if ("error" in typed) setError(typed.error);
     else choose(typed.time);
   };
@@ -172,20 +152,14 @@ export function TimePicker({
     }
   };
 
-  const onHourChange = (raw: string) => {
-    const digits = raw.replace(/\D/g, "").slice(-2);
+  const onHour = (raw: string) => {
+    const digits = lastTwoDigits(raw);
     setHour(digits);
     setError(null);
-    // Two digits, or one that can't start a longer hour, and on to the minutes
-    if (digits.length === 2 || Number(digits) > (twelve ? 1 : 2)) {
-      minuteRef.current?.focus();
-      minuteRef.current?.select();
-    }
+    if (!hourIsComplete(digits, twelve)) return;
+    minuteRef.current?.focus();
+    minuteRef.current?.select();
   };
-
-  const selected = value ? formatTime(value, timeFormat) : t("task.not_set");
-  const box =
-    "h-9 w-9 border-0 bg-transparent p-0 text-center text-body font-semibold tabular-nums text-ink outline-none placeholder:text-ink-tertiary";
 
   return (
     <div className={cx("inline-flex flex-col", className)}>
@@ -206,18 +180,7 @@ export function TimePicker({
             describedBy={ariaDescribedBy}
             disabled={disabled}
             isScreen={isScreen}
-            onToggle={() => {
-              if (open) return close();
-              show(value);
-              // Start the list on the time already set
-              setActive(
-                Math.max(
-                  0,
-                  options.findIndex((o) => o.value === value),
-                ),
-              );
-              setOpen(true);
-            }}
+            onToggle={() => (open ? close() : openPicker())}
             onKeyDown={(event) => {
               if (event.key === "ArrowDown" && !open) {
                 event.preventDefault();
@@ -226,121 +189,45 @@ export function TimePicker({
               }
             }}
           >
-            {selected}
+            {value ? formatTime(value, timeFormat) : t("task.not_set")}
           </PickerTrigger>
         }
       >
         {isWide ? (
           <div className="flex max-h-[min(380px,calc(100vh-16px))] flex-col">
-            <div className="border-b border-separator p-2">
-              <div
-                role="group"
-                aria-label={t("time.field")}
-                aria-describedby={error ? errorId : undefined}
-                className={cx(
-                  "flex h-11 items-center gap-1 rounded-field border bg-surface px-2 focus-within:ring-2 focus-within:ring-primary/40",
-                  error ? "border-error" : "border-control",
-                )}
-              >
-                <input
-                  ref={hourRef}
-                  aria-label={t("time.hour")}
-                  aria-controls={listId}
-                  aria-invalid={error ? true : undefined}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="HH"
-                  maxLength={3}
-                  value={hour}
-                  onFocus={(event) => event.target.select()}
-                  onChange={(event) => onHourChange(event.target.value)}
-                  onKeyDown={(event) => onFieldKeyDown(event, "hour")}
-                  className={box}
-                />
-                <span
-                  aria-hidden="true"
-                  className="text-body font-semibold text-ink-secondary"
-                >
-                  :
-                </span>
-                <input
-                  ref={minuteRef}
-                  aria-label={t("time.minute")}
-                  aria-controls={listId}
-                  aria-invalid={error ? true : undefined}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  placeholder="MM"
-                  maxLength={3}
-                  value={minute}
-                  onFocus={(event) => event.target.select()}
-                  onChange={(event) => {
-                    setMinute(event.target.value.replace(/\D/g, "").slice(-2));
-                    setError(null);
-                  }}
-                  onKeyDown={(event) => onFieldKeyDown(event, "minute")}
-                  className={box}
-                />
-                {twelve && (
-                  <button
-                    type="button"
-                    aria-label={t(pm ? "time.pm" : "time.am")}
-                    onClick={() => {
-                      setPm((v) => !v);
-                      setError(null);
-                    }}
-                    className="focus-ring ml-auto min-h-8 cursor-pointer rounded-full border-0 bg-fill px-2.5 text-footnote font-semibold text-ink"
-                  >
-                    {t(pm ? "time.pm" : "time.am")}
-                  </button>
-                )}
-              </div>
-              {error && (
-                <p
-                  id={errorId}
-                  role="alert"
-                  className="m-0 mt-1.5 text-footnote text-error"
-                >
-                  {error}
-                </p>
-              )}
-            </div>
-            <div
+            <TypedTimeField
+              hourRef={hourRef}
+              minuteRef={minuteRef}
+              hour={hour}
+              minute={minute}
+              pm={pm}
+              twelve={twelve}
+              error={error}
+              errorId={`${pickerId}-error`}
+              listId={listId}
+              onHour={onHour}
+              onMinute={(raw) => {
+                setMinute(lastTwoDigits(raw));
+                setError(null);
+              }}
+              onTogglePm={() => {
+                setPm((was) => !was);
+                setError(null);
+              }}
+              onKeyDown={onFieldKeyDown}
+            />
+            <TimeOptionList
               id={listId}
-              role="listbox"
-              aria-label={label}
-              className="flex flex-col gap-0.5 overflow-y-auto p-1"
-            >
-              {options.map((option, index) => (
-                <div
-                  key={option.value || "none"}
-                  id={`${listId}-${index}`}
-                  role="option"
-                  aria-selected={option.value === value}
-                  ref={(el) => {
-                    if (el && index === active)
-                      el.scrollIntoView?.({ block: "nearest" });
-                  }}
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => {
-                    // The boxes show what was picked as the picker closes
-                    show(option.value);
-                    choose(option.value);
-                  }}
-                  className={cx(
-                    "flex min-h-10 cursor-pointer items-center justify-between gap-3 rounded-field px-3 text-body text-ink hover:bg-fill",
-                    index === active && "bg-fill",
-                  )}
-                >
-                  <span className="truncate">{option.label}</span>
-                  {option.value === value && (
-                    <span className="shrink-0 text-primary">
-                      <CheckIcon size={18} />
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
+              label={label}
+              options={options}
+              value={value}
+              active={active}
+              onPick={(time) => {
+                // The boxes show what was picked as the picker closes
+                show(time);
+                choose(time);
+              }}
+            />
           </div>
         ) : (
           <ClockPicker
