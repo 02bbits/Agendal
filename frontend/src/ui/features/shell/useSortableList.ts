@@ -1,4 +1,3 @@
-import { prefersReducedMotion } from "../../domain/motion";
 import {
   useCallback,
   useEffect,
@@ -8,11 +7,15 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-
-export interface UseSortableListOptions<T extends string> {
-  order: T[];
-  onCommit: (next: T[]) => void;
-}
+import { prefersReducedMotion } from "../../domain/motion";
+import {
+  clearMotion,
+  moveItem,
+  releasePointer,
+  settleDropped,
+  slideMovedRows,
+  targetIndexFor,
+} from "./sortableRows";
 
 export interface SortableItemProps {
   ref: (el: HTMLElement | null) => void;
@@ -92,89 +95,48 @@ export function useSortableList<T extends string>(
     el.style.transform = `translateY(${dy - (slotTop(index) - slotTop(startIndex))}px)`;
   }, []);
 
-  // FLIP animation on displayOrder change
+  // The other rows slide into their new places after each reorder (FLIP)
   useLayoutEffect(() => {
     followPointer();
-    const prefersReduced = prefersReducedMotion();
-
-    if (prefersReduced || prevTopsRef.current.size === 0) {
-      prevTopsRef.current.clear();
+    const oldTops = prevTopsRef.current;
+    if (prefersReducedMotion() || oldTops.size === 0) {
+      oldTops.clear();
       return;
     }
-
-    const currentDragging = draggingIdRef.current;
-    const cleanups: Array<() => void> = [];
-
-    // A row may still be sliding from the last move. Its old top was read where it showed
-    // (mid-slide); its new top must be read without that slide, or it jumps (the jitter)
-    const moving: Array<[HTMLElement, number]> = [];
-    for (const [id, oldTop] of prevTopsRef.current.entries()) {
-      if (id === currentDragging) continue;
+    const rows: Array<[HTMLElement, number]> = [];
+    for (const [id, oldTop] of oldTops) {
       const el = itemElementsRef.current.get(id);
-      if (!el) continue;
-      el.style.transition = "none";
-      el.style.transform = "none";
-      moving.push([el, oldTop]);
+      if (el && id !== draggingIdRef.current) rows.push([el, oldTop]);
     }
-
-    for (const [el, oldTop] of moving) {
-      const newTop = el.getBoundingClientRect().top;
-      const delta = oldTop - newTop;
-
-      if (delta !== 0) {
-        el.style.transition = "none";
-        el.style.transform = `translateY(${delta}px)`;
-
-        // Force reflow
-        void el.offsetHeight;
-
-        el.style.transition = "transform 200ms cubic-bezier(.2,.7,.3,1)";
-        el.style.transform = "none";
-
-        const onTransitionEnd = (e: TransitionEvent) => {
-          if (e.target === el && e.propertyName === "transform") {
-            el.style.transition = "";
-            el.style.transform = "";
-          }
-        };
-        el.addEventListener("transitionend", onTransitionEnd);
-        cleanups.push(() => {
-          el.removeEventListener("transitionend", onTransitionEnd);
-        });
-      }
-    }
-
-    prevTopsRef.current.clear();
-
-    return () => {
-      cleanups.forEach((c) => c());
-    };
+    oldTops.clear();
+    const cleanups = slideMovedRows(rows);
+    return () => cleanups.forEach((cleanup) => cleanup());
   }, [displayOrder, followPointer]);
 
-  const cancelDrag = useCallback(() => {
-    const draggedEl = draggingIdRef.current
-      ? itemElementsRef.current.get(draggingIdRef.current)
-      : null;
-    if (draggedEl) {
-      draggedEl.style.transition = "";
-      draggedEl.style.transform = "";
-    }
-    if (
-      handleElementRef.current &&
+  /** A pointer event from another finger or pen than the one dragging. */
+  const otherPointer = useCallback(
+    (e: { pointerId?: number }) =>
       activePointerIdRef.current !== null &&
-      typeof handleElementRef.current.releasePointerCapture === "function"
-    ) {
-      try {
-        handleElementRef.current.releasePointerCapture(
-          activePointerIdRef.current,
-        );
-      } catch {}
-    }
-    setDisplayOrder(startOrderRef.current);
+      e.pointerId !== undefined &&
+      e.pointerId !== activePointerIdRef.current,
+    [],
+  );
+
+  const endDrag = useCallback(() => {
+    releasePointer(handleElementRef.current, activePointerIdRef.current);
     setDraggingId(null);
     activePointerIdRef.current = null;
     handleElementRef.current = null;
   }, []);
+
+  // Escape or a lost pointer: everything goes back where it was
+  const cancelDrag = useCallback(() => {
+    const dragged = draggingIdRef.current;
+    const el = dragged ? itemElementsRef.current.get(dragged) : undefined;
+    if (el) clearMotion(el);
+    setDisplayOrder(startOrderRef.current);
+    endDrag();
+  }, [endDrag]);
 
   const handlePointerDown = useCallback((e: ReactPointerEvent, id: T) => {
     if (e.button !== undefined && e.button !== 0) return;
@@ -208,111 +170,39 @@ export function useSortableList<T extends string>(
     (e: ReactPointerEvent | PointerEvent) => {
       const currentDrag = draggingIdRef.current;
       if (!currentDrag) return;
-      if (
-        activePointerIdRef.current !== null &&
-        e.pointerId !== undefined &&
-        e.pointerId !== activePointerIdRef.current
-      ) {
-        return;
-      }
+      if (otherPointer(e)) return;
 
       lastYRef.current = e.clientY;
       followPointer();
 
-      const currentOrder = displayOrderRef.current;
-      const currentIndex = currentOrder.indexOf(currentDrag);
-      if (currentIndex === -1) return;
-
-      let targetIndex = currentIndex;
-
-      // Check downward movement
-      while (targetIndex < currentOrder.length - 1) {
-        const neighborId = currentOrder[targetIndex + 1];
-        const neighborRect = itemRectsRef.current.get(neighborId);
-        if (
-          neighborRect &&
-          e.clientY > neighborRect.top + neighborRect.height / 2
-        ) {
-          targetIndex++;
-        } else {
-          break;
-        }
-      }
-
-      // Check upward movement
-      while (targetIndex > 0) {
-        const neighborId = currentOrder[targetIndex - 1];
-        const neighborRect = itemRectsRef.current.get(neighborId);
-        if (
-          neighborRect &&
-          e.clientY < neighborRect.top + neighborRect.height / 2
-        ) {
-          targetIndex--;
-        } else {
-          break;
-        }
-      }
-
-      if (targetIndex !== currentIndex) {
-        recordTops();
-        const next = [...currentOrder];
-        next.splice(currentIndex, 1);
-        next.splice(targetIndex, 0, currentDrag);
-        setDisplayOrder(next);
-      }
+      const order = displayOrderRef.current;
+      const index = order.indexOf(currentDrag);
+      if (index === -1) return;
+      const target = targetIndexFor(
+        order,
+        index,
+        e.clientY,
+        itemRectsRef.current,
+      );
+      if (target === index) return;
+      recordTops();
+      setDisplayOrder(moveItem(order, index, target));
     },
-    [recordTops, followPointer],
+    [recordTops, followPointer, otherPointer],
   );
 
-  const handlePointerUp = useCallback((e: ReactPointerEvent | PointerEvent) => {
-    const currentDrag = draggingIdRef.current;
-    if (!currentDrag) return;
-    if (
-      activePointerIdRef.current !== null &&
-      e.pointerId !== undefined &&
-      e.pointerId !== activePointerIdRef.current
-    ) {
-      return;
-    }
-
-    const draggedEl = itemElementsRef.current.get(currentDrag);
-    const prefersReduced = prefersReducedMotion();
-
-    if (draggedEl) {
-      if (prefersReduced) {
-        draggedEl.style.transition = "";
-        draggedEl.style.transform = "";
-      } else {
-        draggedEl.style.transition = "transform 200ms cubic-bezier(.2,.7,.3,1)";
-        draggedEl.style.transform = "none";
-        const onEnd = () => {
-          draggedEl.style.transition = "";
-          draggedEl.style.transform = "";
-          draggedEl.removeEventListener("transitionend", onEnd);
-        };
-        draggedEl.addEventListener("transitionend", onEnd);
-      }
-    }
-
-    if (
-      handleElementRef.current &&
-      typeof handleElementRef.current.releasePointerCapture === "function" &&
-      activePointerIdRef.current !== null
-    ) {
-      try {
-        handleElementRef.current.releasePointerCapture(
-          activePointerIdRef.current,
-        );
-      } catch {}
-    }
-
-    const finalOrder = displayOrderRef.current;
-    setDraggingId(null);
-    activePointerIdRef.current = null;
-    handleElementRef.current = null;
-
-    onCommitRef.current(finalOrder);
-  }, []);
+  const handlePointerUp = useCallback(
+    (e: ReactPointerEvent | PointerEvent) => {
+      const currentDrag = draggingIdRef.current;
+      if (!currentDrag || otherPointer(e)) return;
+      const el = itemElementsRef.current.get(currentDrag);
+      if (el) settleDropped(el, prefersReducedMotion());
+      const finalOrder = displayOrderRef.current;
+      endDrag();
+      onCommitRef.current(finalOrder);
+    },
+    [otherPointer, endDrag],
+  );
 
   // Window listeners while dragging
   useEffect(() => {
@@ -382,9 +272,7 @@ export function useSortableList<T extends string>(
         return;
       }
       recordTops();
-      const next = [...displayOrderRef.current];
-      const [moved] = next.splice(fromIndex, 1);
-      next.splice(toIndex, 0, moved!);
+      const next = moveItem(displayOrderRef.current, fromIndex, toIndex);
       setDisplayOrder(next);
       onCommitRef.current(next);
     },
