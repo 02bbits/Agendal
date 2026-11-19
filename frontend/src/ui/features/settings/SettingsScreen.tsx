@@ -33,7 +33,7 @@ export interface SettingsScreenProps {
   onSignOut: () => void;
   /** Should; omitted until AA ships it. */
   onSignOutEverywhere?: () => void;
-  /** Shown when the app can be installed (AP-1). */
+  /** While the app can be installed (AP-1): a phone lists it above Sign out; desktop has it in the account menu. */
   onInstall?: () => void;
   initialTab?: SettingsTab;
   onUpdateName?: SaveDisplayName;
@@ -143,7 +143,6 @@ export function SettingsScreen({
         <GeneralTab
           settings={settings}
           onChange={onChange}
-          onInstall={onInstall}
           isDesktop={isDesktop}
         />
       </SettingsPanel>
@@ -191,6 +190,7 @@ export function SettingsScreen({
       onBackToList={backToList}
       onClose={close}
       onSignOut={onSignOut}
+      onInstall={onInstall}
     >
       {content}
     </SettingsPhone>

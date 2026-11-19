@@ -394,6 +394,8 @@ describe("Settings: every way back has the underline swipe", () => {
     const back = screen.getByRole("button", { name: t("common.back") });
     expect(back.textContent).toContain(t("settings.title"));
     expect(swipes(back)).toBe(true);
+    // The same look as every other Back: the theme colour
+    expect(back.className).toContain("text-primary");
   });
 
   it("on desktop: '‹ Back' from Change password", () => {
@@ -405,5 +407,47 @@ describe("Settings: every way back has the underline swipe", () => {
     expect(swipes(screen.getByRole("button", { name: t("common.back") }))).toBe(
       true,
     );
+  });
+});
+
+describe("Install app on a phone sits on the Settings page, above Sign out", () => {
+  it("lists it before Sign out, and General no longer has it", () => {
+    window.matchMedia = vi.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }));
+    const onInstall = vi.fn();
+    render(
+      <SettingsScreen
+        name="Alex River"
+        email="alex@example.com"
+        settings={defaultSettings}
+        onChange={vi.fn()}
+        onBack={vi.fn()}
+        onSignOut={vi.fn()}
+        onInstall={onInstall}
+      />,
+    );
+    const install = screen.getByRole("button", { name: t("app.install_app") });
+    const signOut = screen.getByRole("button", { name: t("app.sign_out") });
+    expect(
+      install.compareDocumentPosition(signOut) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    // An action, not a page: no chevron
+    expect(install.querySelectorAll("svg")).toHaveLength(1);
+    fireEvent.click(install);
+    expect(onInstall).toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: t("app.tab_general") }));
+    expect(
+      screen.queryByRole("button", { name: t("app.install_app") }),
+    ).toBeNull();
   });
 });
