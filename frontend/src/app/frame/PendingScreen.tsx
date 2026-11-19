@@ -1,5 +1,5 @@
 import { LoadingScreen, t } from "@/ui";
-import { readStoredSetting } from "@/ui/features/shell/routes";
+import { readViewMode } from "@/ui/features/lists/storage";
 import {
   InboxSkeleton,
   ProjectSkeleton,
@@ -12,8 +12,6 @@ import { TAB_TITLE } from "./frameRoutes";
 import type { PendingTab } from "./useTabNavigation";
 import { useAppFrame } from "./AppFrameContext";
 
-const UPCOMING_VIEW_KEY = "agendal.upcoming.view_mode";
-
 /** What a tapped screen shows under its header until its page is there (#161). */
 function pendingBody(pending: PendingTab, logo: boolean) {
   if (logo) return <LoadingScreen inline />;
@@ -24,11 +22,7 @@ function pendingBody(pending: PendingTab, logo: boolean) {
     case "projects":
       return <ProjectsSkeleton />;
     case "upcoming":
-      return (
-        <UpcomingSkeleton
-          board={readStoredSetting(UPCOMING_VIEW_KEY) === "board"}
-        />
-      );
+      return <UpcomingSkeleton board={readViewMode() === "board"} />;
     default:
       // Notes keeps its own screen: a plain list skeleton until it is there
       return <InboxSkeleton />;

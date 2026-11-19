@@ -12,21 +12,13 @@ import {
   t,
   useTaskPanel,
   useTaskStore,
-  type Clock,
 } from "@/ui";
 import { headerDate, subscribeHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
-import { now, timeZone } from "@/lib/clock";
+import { appClock } from "./appClock";
 import { useInboxData } from "./useInboxData";
 import { InboxSkeleton } from "./skeletons";
-
-const clock: Clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
 
 function InboxToast() {
   const { toast, dismissToast } = useTaskStore();
@@ -99,7 +91,7 @@ function InboxContent() {
       {status === "ready" && (
         <TaskStoreProvider
           api={httpTaskApi}
-          clock={clock}
+          clock={appClock}
           initialTasks={tasks}
           initialProjects={projectList}
           timeFormat={settings.timeFormat}
