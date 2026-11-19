@@ -228,7 +228,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(nextBtn.disabled).toBe(false);
 
     const tue3Btn = screen.getByRole("button", {
-      name: /^3 Nov · Today · Tuesday,/,
+      name: /, 3 Nov · Today · Tuesday,/,
     }) as HTMLButtonElement;
     expect(within(tue3Btn).getByText("Tue")).toBeTruthy();
     expect(tue3Btn.getAttribute("aria-current")).toBe("date");
@@ -237,13 +237,13 @@ describe("Upcoming screen (Section 8)", () => {
     expect(within(tue3Btn).getAllByText("(Today)")).toHaveLength(1);
 
     const wed4Btn = screen.getByRole("button", {
-      name: /^4 Nov · Tomorrow · Wednesday,/,
+      name: /, 4 Nov · Tomorrow · Wednesday,/,
     }) as HTMLButtonElement;
     expect(wed4Btn.disabled).toBe(false);
 
     for (const d of [2, 4, 5, 6, 7, 8]) {
       expect(
-        screen.getByRole("button", { name: new RegExp(`^${d} Nov.*tasks$`) }),
+        screen.getByRole("button", { name: new RegExp(`, ${d} Nov.*tasks$`) }),
       ).toBeTruthy();
     }
   });
@@ -261,7 +261,7 @@ describe("Upcoming screen (Section 8)", () => {
 
     for (const d of [9, 10, 11, 12, 13, 14, 15]) {
       expect(
-        screen.getByRole("button", { name: new RegExp(`^${d} Nov.*tasks$`) }),
+        screen.getByRole("button", { name: new RegExp(`, ${d} Nov.*tasks$`) }),
       ).toBeTruthy();
     }
 
@@ -276,7 +276,7 @@ describe("Upcoming screen (Section 8)", () => {
       ).disabled,
     ).toBe(true);
     expect(
-      screen.getByRole("button", { name: /^3 Nov · Today · Tuesday,/ }),
+      screen.getByRole("button", { name: /, 3 Nov · Today · Tuesday,/ }),
     ).toBeTruthy();
   });
 
@@ -337,17 +337,17 @@ describe("Upcoming screen (Section 8)", () => {
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="sun" />));
 
     const sun1Btn = screen.getByRole("button", {
-      name: /^1 Nov.*tasks$/,
+      name: /, 1 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(sun1Btn.disabled).toBe(true);
 
     const mon2Btn = screen.getByRole("button", {
-      name: /^2 Nov.*tasks$/,
+      name: /, 2 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(mon2Btn.disabled).toBe(true);
 
     const tue3Btn = screen.getByRole("button", {
-      name: /^3 Nov.*tasks$/,
+      name: /, 3 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(tue3Btn.disabled).toBe(true);
 
@@ -482,13 +482,13 @@ describe("Upcoming screen (Section 8)", () => {
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
     const tue3Btn = screen.getByRole("button", {
-      name: /^3 Nov.*tasks$/,
+      name: /, 3 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(tue3Btn.getAttribute("aria-current")).toBe("date");
     expect(tue3Btn.disabled).toBe(true);
 
     const wed4Btn = screen.getByRole("button", {
-      name: /^4 Nov.*tasks$/,
+      name: /, 4 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(wed4Btn.disabled).toBe(false);
   });
@@ -499,7 +499,7 @@ describe("Upcoming screen (Section 8)", () => {
     ]);
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
-    const tue3Btn = screen.getByRole("button", { name: /^3 Nov.*tasks?$/ });
+    const tue3Btn = screen.getByRole("button", { name: /, 3 Nov.*tasks?$/ });
     const dot = within(tue3Btn).getByTestId("day-dot");
     const labels = within(tue3Btn).getAllByText("(Today)");
     expect(labels).toHaveLength(1);
@@ -600,7 +600,9 @@ describe("Upcoming screen (Section 8)", () => {
     expect(
       screen.queryByRole("group", { name: "Days of the week" }),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: /^3 Nov.*tasks$/ })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: /, 3 Nov.*tasks$/ }),
+    ).toBeNull();
 
     for (const d of [4, 5, 6, 7, 8]) {
       expect(
@@ -647,7 +649,7 @@ describe("Upcoming screen (Section 8)", () => {
         ]);
       });
 
-      const thu5Btn = screen.getByRole("button", { name: /^5 Nov.*tasks$/ });
+      const thu5Btn = screen.getByRole("button", { name: /, 5 Nov.*tasks$/ });
       const thu5Number = within(thu5Btn).getByText("5");
       expect(thu5Number.className).toContain("bg-primary");
       expect(thu5Number.className).not.toContain("bg-fill");
@@ -664,22 +666,22 @@ describe("Upcoming screen (Section 8)", () => {
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
     const mon2Btn = screen.getByRole("button", {
-      name: /^2 Nov.*tasks$/,
+      name: /, 2 Nov.*tasks$/,
     }) as HTMLButtonElement;
     expect(mon2Btn.disabled).toBe(true);
 
     const tue3Btn = screen.getByRole("button", {
-      name: /^3 Nov.*tasks$/,
+      name: /, 3 Nov.*tasks$/,
     });
     expect(tue3Btn.getAttribute("aria-current")).toBe("date");
 
     const thu5Btn = screen.getByRole("button", {
-      name: /^5 Nov.*tasks$/,
+      name: /, 5 Nov.*tasks$/,
     });
     expect(within(thu5Btn).getByTestId("day-dot")).toBeTruthy();
 
     const wed4Btn = screen.getByRole("button", {
-      name: /^4 Nov.*tasks$/,
+      name: /, 4 Nov.*tasks$/,
     });
     expect(within(wed4Btn).queryByTestId("day-dot")).toBeNull();
   });
@@ -713,13 +715,13 @@ describe("Upcoming screen (Section 8)", () => {
       for (const d of [9, 10, 11, 12, 13, 14, 15]) {
         expect(
           screen.getByRole("button", {
-            name: new RegExp(`^${d} Nov.*tasks$`),
+            name: new RegExp(`, ${d} Nov.*tasks$`),
           }),
         ).toBeTruthy();
       }
 
       const tue10Btn = screen.getByRole("button", {
-        name: /^10 Nov.*tasks$/,
+        name: /, 10 Nov.*tasks$/,
       });
       expect(tue10Btn.getAttribute("aria-current")).toBe("true");
       const badge = within(tue10Btn).getByText("10");
@@ -738,7 +740,7 @@ describe("Upcoming screen (Section 8)", () => {
     render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
     const thu5Btn = screen.getByRole("button", {
-      name: /^5 Nov.*tasks$/,
+      name: /, 5 Nov.*tasks$/,
     });
     await userEvent.click(thu5Btn);
 
@@ -813,7 +815,7 @@ describe("Upcoming screen (Section 8)", () => {
       render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
       const tue3Btn = screen.getByRole("button", {
-        name: /^3 Nov.*tasks$/,
+        name: /, 3 Nov.*tasks$/,
       });
       expect(tue3Btn.getAttribute("aria-current")).toBe("date");
 
@@ -822,7 +824,7 @@ describe("Upcoming screen (Section 8)", () => {
       });
 
       const sun15Btn = screen.getByRole("button", {
-        name: /^15 Nov.*tasks$/,
+        name: /, 15 Nov.*tasks$/,
       });
       expect(sun15Btn.getAttribute("aria-current")).toBe("true");
       const badge = within(sun15Btn).getByText("15");
@@ -853,7 +855,7 @@ describe("Upcoming screen (Section 8)", () => {
     await userEvent.click(nextBtn);
 
     const sun15Btn = screen.getByRole("button", {
-      name: /^15 Nov.*tasks$/,
+      name: /, 15 Nov.*tasks$/,
     });
     await userEvent.click(sun15Btn);
 
@@ -1121,14 +1123,14 @@ describe("Upcoming screen (Section 8)", () => {
     expect(prevBtn.disabled).toBe(false);
     expect(
       screen
-        .getByRole("button", { name: /^9 Nov.*tasks$/ })
+        .getByRole("button", { name: /, 9 Nov.*tasks$/ })
         .getAttribute("aria-current"),
     ).toBe("true");
 
     await userEvent.click(prevBtn);
     expect(
       screen
-        .getByRole("button", { name: /^4 Nov.*tasks$/ })
+        .getByRole("button", { name: /, 4 Nov.*tasks$/ })
         .getAttribute("aria-current"),
     ).toBe("true");
 
@@ -1141,7 +1143,7 @@ describe("Upcoming screen (Section 8)", () => {
     await userEvent.click(nextBtnSun);
     expect(
       screen
-        .getByRole("button", { name: /^8 Nov.*tasks$/ })
+        .getByRole("button", { name: /, 8 Nov.*tasks$/ })
         .getAttribute("aria-current"),
     ).toBe("true");
   });
@@ -1206,7 +1208,7 @@ describe("Upcoming screen (Section 8)", () => {
     );
 
     expect(screen.getByText("9 – 15 Nov")).toBeTruthy();
-    const day12Btn = screen.getByRole("button", { name: /^12 Nov.*tasks$/ });
+    const day12Btn = screen.getByRole("button", { name: /, 12 Nov.*tasks$/ });
     expect(day12Btn.getAttribute("aria-current")).toBe("true");
 
     unmount();

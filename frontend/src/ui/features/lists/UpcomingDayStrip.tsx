@@ -28,6 +28,10 @@ export function UpcomingDayStrip({
         const heading = dayHeading(date, today);
         const { weekday, day } = stripLabel(date);
         const ariaCurrent = isToday ? "date" : isActive ? "true" : undefined;
+        // The name starts with what the button shows (WCAG 2.5.3), then the full date and count
+        const shown = isToday
+          ? `${weekday} ${day} ${t("list.strip_today")}`
+          : `${weekday} ${day}`;
 
         return (
           <button
@@ -36,7 +40,10 @@ export function UpcomingDayStrip({
             disabled={isPast || isToday}
             onClick={() => onPickDay(date)}
             aria-current={ariaCurrent}
-            aria-label={t("list.day_with_count", { day: heading, count })}
+            aria-label={t("list.day_with_count", {
+              day: `${shown}, ${heading}`,
+              count,
+            })}
             className={cx(
               "focus-ring relative flex flex-col items-center justify-start rounded-xl border-0 bg-transparent py-1.5 transition-colors min-h-[58px]",
               "[html[data-page-view='full']_&]:md:flex-row [html[data-page-view='full']_&]:md:items-center [html[data-page-view='full']_&]:md:justify-center [html[data-page-view='full']_&]:md:gap-1.5 [html[data-page-view='full']_&]:md:min-h-0 [html[data-page-view='full']_&]:md:py-2",
@@ -57,7 +64,7 @@ export function UpcomingDayStrip({
               >
                 {weekday}
               </span>
-
+              {/* Spaces keep the shown words apart when read as one text */}{" "}
               {isToday ? (
                 <span className="rounded-md bg-fill px-1.5 text-footnote font-semibold text-ink">
                   {day}
@@ -77,7 +84,6 @@ export function UpcomingDayStrip({
                 </span>
               )}
             </div>
-
             <div className="mt-1 flex h-1.5 justify-center [html[data-page-view='full']_&]:md:mt-0 [html[data-page-view='full']_&]:md:order-3">
               {hasTasks && (
                 <span
@@ -89,8 +95,7 @@ export function UpcomingDayStrip({
                   )}
                 />
               )}
-            </div>
-
+            </div>{" "}
             {/* Under the dot for phone/flat view; inline on full width desktop */}
             {isToday ? (
               <span className="mt-0.5 whitespace-nowrap text-tab font-medium text-ink-tertiary [html[data-page-view='full']_&]:md:mt-0 [html[data-page-view='full']_&]:md:text-footnote [html[data-page-view='full']_&]:md:font-normal [html[data-page-view='full']_&]:md:order-2">
