@@ -70,7 +70,7 @@ import {
   ProjectsSkeleton,
   UpcomingSkeleton,
 } from "./skeletons";
-import { TabLoading, TabPending } from "./TabLoading";
+import { TabLoading, TabPending, type Splash } from "./TabLoading";
 import { headerDate } from "./headerDate";
 import { setTimeZone } from "@/lib/clock";
 
@@ -121,6 +121,11 @@ const PUBLIC_PATHS: readonly string[] = [
   ...SIGNED_OUT_PATHS,
   ROUTES.resetPassword,
 ];
+/** Sign in, Create account, Verify, Setup and the like: no shell, and a loading screen to leave. */
+const isAuthPath = (path: string) =>
+  PUBLIC_PATHS.includes(path) ||
+  path === ROUTES.welcome ||
+  path === ROUTES.verify;
 
 /** What a tapped screen shows under its header until its page is there (#161). */
 function pendingBody(
@@ -282,6 +287,12 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // The first session check has answered (signed in, signed out or offline): the start screen
   // only waits for this, the tab's own skeleton covers its data (#161)
   const [sessionChecked, setSessionChecked] = useState(false);
+  // The full-screen loading screen (#161): as the app starts on one of its screens, going in from
+  // the sign-in screens, and going back to Sign in
+  const [splash, setSplash] = useState<Splash | null>(() =>
+    TAB_BY_PATH[pathname] ? "start" : null,
+  );
+  const endSplash = useCallback(() => setSplash(null), []);
   // A tab or a sidebar project tapped and on its way (#161): it lights up at once, and the
   // content shows its header with a loader (a tab's first visit on a phone) or a skeleton until
   // its page is there
@@ -330,10 +341,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     }
   }, [pathname]);
 
-  const isAuthPage =
-    PUBLIC_PATHS.includes(pathname) ||
-    pathname === ROUTES.welcome ||
-    pathname === ROUTES.verify;
+  const isAuthPage = isAuthPath(pathname);
   useEffect(() => {
     if (isAuthPage) {
       document.documentElement.setAttribute("data-auth-page", "true");
@@ -379,8 +387,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
           if (me.email_verified_at === null) {
             if (pathname !== ROUTES.verify) router.replace(ROUTES.verify);
           } else {
-            if (pathname === ROUTES.verify) router.replace(ROUTES.inbox);
-            else if (signedOutPage) router.replace(ROUTES.inbox);
+            if (pathname === ROUTES.verify || signedOutPage) {
+              setSplash("enter");
+              router.replace(ROUTES.inbox);
+            }
           }
         } else if (response.status === 401) {
           setUser(null);
@@ -425,6 +435,9 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   const navigate = useCallback<Navigate>(
     (href) => {
+      // Signed in, verified or set up: into the app behind the loading screen
+      if (isAuthPath(pathname) && !isAuthPath(href.split(/[?#]/)[0]!))
+        setSplash("enter");
       const to = TAB_BY_PATH[href];
       if (to && href !== pathname)
         setPendingTab({
@@ -638,15 +651,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(
     async (everywhere = false) => {
+      // The loading screen covers the wipe until Sign in is there
+      setSplash("leave");
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
       const response = await api(path, { method: "POST" }).catch(() => null);
       // Offline, this device is still wiped at once; the server session ends when it expires (AA §2.4).
       // Other devices can only be signed out from the server, so that waits for a connection.
       if (everywhere) {
-        if (!response) return showToast(t("app.offline"));
+        const stay = (message: string) => {
+          setSplash(null);
+          showToast(message);
+        };
+        if (!response) return stay(t("app.offline"));
         if (!response.ok && response.status !== 401) {
           const body = await response.json().catch(() => null);
-          return showToast(
+          return stay(
             t("error.generic", { request_id: body?.error?.request_id ?? "" }),
           );
         }
@@ -673,6 +692,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       // Signed out already: a plain visit is the auth gate's job, without the toast
       if (!userRef.current) return;
       setUser(null);
+      setSplash("leave");
       showToast(t("auth.session_expired"));
       const here = window.location.pathname + window.location.search;
       router.replace(`${ROUTES.signIn}?next=${encodeURIComponent(here)}`);
@@ -1019,7 +1039,17 @@ export function AppFrame({ children }: { children: ReactNode }) {
   return (
     <AppFrameContext.Provider value={value}>
       {/* The full-screen loading screen when the app starts (#161) */}
-      <TabLoading tab={tab ?? null} ready={sessionChecked}>
+      <TabLoading
+        show={splash !== null}
+        ready={
+          splash === "start"
+            ? sessionChecked
+            : splash === "enter"
+              ? !isAuthPage && user !== null
+              : isAuthPage
+        }
+        onDone={endSplash}
+      >
         <AppShell
           tab={shownTab}
           pending={

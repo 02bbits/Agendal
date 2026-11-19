@@ -1,4 +1,10 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
@@ -64,6 +70,17 @@ afterEach(() => {
 });
 
 describe("Sign in (AA-2)", () => {
+  it("#161: signed in, the loading screen covers the way into the app", async () => {
+    const user = userEvent.setup();
+    reply = () =>
+      json(200, {
+        user: { id: 1, email: "example@gmail.com", email_verified_at: "x" },
+      });
+    await signIn(user);
+    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
+    expect(screen.getByTestId("loading-screen")).toBeTruthy();
+  });
+
   it("T-AA-112: enables Sign in once both fields have text, including from autofill's input events", async () => {
     const { email, password, submit } = renderPage();
 
