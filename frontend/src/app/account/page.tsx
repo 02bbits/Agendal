@@ -1,25 +1,12 @@
 "use client";
 
-import { api } from "../../lib/api";
-import { SettingsScreen, t } from "../../ui";
+import { t } from "../../ui";
 import { useAppFrame } from "../AppFrame";
-import { useInstall } from "../useInstall";
+import { AppSettingsScreen } from "../frame/AppSettingsScreen";
 
 /** Account: appearance applies at once. Name and email come from the session check. */
 export default function AccountPage() {
-  const { back, settings, changeSettings, user, setUser, signOut, showToast } =
-    useAppFrame();
-  const installer = useInstall(showToast);
-
-  const handleUpdateName = async (newName: string) => {
-    try {
-      await api("/me", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ display_name: newName }),
-      });
-    } catch {}
-  };
+  const { back } = useAppFrame();
 
   return (
     <div className="relative min-h-[calc(100vh-120px)]">
@@ -63,23 +50,7 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <SettingsScreen
-        name={user?.display_name ?? ""}
-        email={user?.email ?? ""}
-        settings={settings}
-        onChange={changeSettings}
-        onBack={back}
-        showToast={showToast}
-        twoFactorEnabled={user?.two_factor_enabled}
-        onTwoFactorChange={(enabled) =>
-          setUser(user ? { ...user, two_factor_enabled: enabled } : null)
-        }
-        // The unsynced-changes dialog arrives with the offline queue (IM-51); nothing is queued yet
-        onSignOut={() => signOut()}
-        onSignOutEverywhere={() => signOut(true)}
-        onInstall={installer.kind ? installer.install : undefined}
-        onUpdateName={handleUpdateName}
-      />
+      <AppSettingsScreen onBack={back} />
     </div>
   );
 }
