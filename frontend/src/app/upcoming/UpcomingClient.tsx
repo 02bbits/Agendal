@@ -1,4 +1,5 @@
 "use client";
+import { TASK_CREATED, PROJECTS_CHANGED } from "@/ui/domain/appEvents";
 
 import { useEffect, useRef, useState } from "react";
 import {
@@ -220,21 +221,18 @@ export function UpcomingClient() {
       }
     };
 
-    window.addEventListener("agendal:task-created", handleTaskCreated);
+    window.addEventListener(TASK_CREATED, handleTaskCreated);
 
     // Changes pulled by sync (IM-52)
 
     window.addEventListener(SYNCED, handleTaskCreated);
-    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
+    window.addEventListener(PROJECTS_CHANGED, handleProjectsChanged);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
-      window.removeEventListener("agendal:task-created", handleTaskCreated);
+      window.removeEventListener(TASK_CREATED, handleTaskCreated);
       window.removeEventListener(SYNCED, handleTaskCreated);
-      window.removeEventListener(
-        "agendal:projects-changed",
-        handleProjectsChanged,
-      );
+      window.removeEventListener(PROJECTS_CHANGED, handleProjectsChanged);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, []);

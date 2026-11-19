@@ -1,12 +1,14 @@
+import {
+  TASK_CREATED,
+  PROJECTS_CHANGED,
+  notifyProjectsChanged,
+} from "@/ui/domain/appEvents";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { Project, ProjectWithCounts, TabId } from "@/ui";
 import { listNotes, NOTE_UPDATED } from "@/lib/noteApi";
 import { getProject, listProjects } from "@/lib/projectApi";
 import { inbox, upcoming } from "@/lib/taskApi";
 import { isMainPath, PUBLIC_PATHS } from "./frameRoutes";
-
-const TASK_CREATED = "agendal:task-created";
-export const PROJECTS_CHANGED = "agendal:projects-changed";
 
 type Counts = Partial<Record<TabId, number>>;
 /** The tabs' counts, and the open tasks under No project. */
@@ -96,7 +98,7 @@ export function useSidebarData(pathname: string) {
   /** A project made in the sheet shows at once, before the next fetch. */
   const addProject = useCallback((created: Project) => {
     setProjects((prev) => [...prev, { ...created, open: 0, done: 0 }]);
-    window.dispatchEvent(new CustomEvent(PROJECTS_CHANGED));
+    notifyProjectsChanged();
   }, []);
 
   return {

@@ -1,3 +1,4 @@
+import { TASK_CREATED, PROJECTS_CHANGED } from "@/ui/domain/appEvents";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
@@ -104,15 +105,15 @@ export function useInboxData() {
     const onVis = () => {
       if (document.visibilityState === "visible") fetchData();
     };
-    window.addEventListener("agendal:task-created", refresh);
+    window.addEventListener(TASK_CREATED, refresh);
     // Changes pulled by sync (IM-52)
     window.addEventListener(SYNCED, refresh);
-    window.addEventListener("agendal:projects-changed", refresh);
+    window.addEventListener(PROJECTS_CHANGED, refresh);
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener(TASK_CREATED, refresh);
       window.removeEventListener(SYNCED, refresh);
-      window.removeEventListener("agendal:projects-changed", refresh);
+      window.removeEventListener(PROJECTS_CHANGED, refresh);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);

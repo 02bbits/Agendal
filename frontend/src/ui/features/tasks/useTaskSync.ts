@@ -1,3 +1,4 @@
+import { TASK_CREATED } from "../../domain/appEvents";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   beginChange,
@@ -69,10 +70,10 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
         setTasks(rowsRef.current);
       }
     };
-    window.addEventListener("agendal:task-created", onTaskCreated);
+    window.addEventListener(TASK_CREATED, onTaskCreated);
     window.addEventListener("agendal:task-deleted", onTaskDeleted);
     return () => {
-      window.removeEventListener("agendal:task-created", onTaskCreated);
+      window.removeEventListener(TASK_CREATED, onTaskCreated);
       window.removeEventListener("agendal:task-deleted", onTaskDeleted);
     };
   }, []);
