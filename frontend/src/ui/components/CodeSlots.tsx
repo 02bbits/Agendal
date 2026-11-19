@@ -20,33 +20,39 @@ import {
   useMotionValue,
   useReducedMotion,
   useTransform,
-  type MotionValue,
 } from "motion/react";
 import { CheckIcon } from "./icons";
 import { t } from "../copy";
+import { Slot } from "./codeSlots/Slot";
+import {
+  clamp01,
+  digitsOf,
+  firstEmptyOf,
+  isFull,
+  slotsStyle,
+  toSlots,
+} from "./codeSlots/slots";
+import {
+  useSuccessWash,
+  type CodeSlotsStatus,
+} from "./codeSlots/useSuccessWash";
 
-const EASE_OUT = [0.23, 1, 0.32, 1] as const;
-const WASH_IN = 0.3;
-const WASH_OUT = 0.2;
-const SINK_DELAY = 0.06;
-const SINK_STEP = 0.03;
-const CHECK_DELAY = 0.28;
-const CHECK_RISE = 8;
-const SINK_FADE = 0.6;
+/** A slot is a little taller than wide. */
+const SLOT_HEIGHT_RATIO = 1.18;
+/** How far a digit sinks under the success wash, as part of the slot's height. */
+const SINK_RATIO = 0.5;
+/** With reduced motion a wrong code clears after this long. */
+const REDUCED_DRAIN_MS = 300;
 
-const clamp01 = (v: number): number => Math.min(1, Math.max(0, v));
-const digitsOf = (raw: unknown): string => String(raw ?? "").replace(/\D/g, "");
-const toSlots = (raw: unknown, n: number): string[] => {
-  const d = digitsOf(raw).slice(0, n);
-  return Array.from({ length: n }, (_, i) => d[i] ?? "");
+/** Arrow keys, Home and End move the caret without typing. */
+const CARET_KEYS: Record<string, (active: number, length: number) => number> = {
+  ArrowLeft: (active) => Math.max(active - 1, 0),
+  ArrowRight: (active, length) => Math.min(active + 1, length - 1),
+  Home: () => 0,
+  End: (_active, length) => length - 1,
 };
-const firstEmptyOf = (slots: string[]): number => {
-  const i = slots.indexOf("");
-  return i === -1 ? slots.length - 1 : i;
-};
-const isFull = (slots: string[]): boolean => slots.every(Boolean);
 
-export type CodeSlotsStatus = "idle" | "error" | "success";
+export type { CodeSlotsStatus };
 
 export interface CodeSlotsProps {
   length?: number;
@@ -110,27 +116,13 @@ export default function CodeSlots({
   );
   const [active, setActive] = useState<number>(() => firstEmptyOf(slots));
   const [focused, setFocused] = useState<boolean>(false);
-  const [prevStatus, setPrevStatus] = useState(status);
-  const [veiled, setVeiled] = useState(status === "success");
-  const [covered, setCovered] = useState(status === "success");
-
-  if (status !== prevStatus) {
-    setPrevStatus(status);
-    if (status === "success") {
-      setVeiled(true);
-    }
-  }
-
   const activeMv = useMotionValue<number>(active);
-  const openMv = useMotionValue<number>(status === "success" ? 1 : 0);
-  const checkMv = useMotionValue<number>(status === "success" ? 1 : 0);
   const glide = useRef<Set<number>>(new Set());
   const target = useRef<number[]>([]);
   const draining = useRef<boolean>(false);
   const drainTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
     undefined,
   );
-  const statusRef = useRef<CodeSlotsStatus>(status);
   const emitted = useRef<string>(
     digitsOf(value ?? defaultValue).slice(0, length),
   );
@@ -163,8 +155,14 @@ export default function CodeSlots({
   }
   const { mvs, drops } = springs;
   const pitch = slotSize + gap;
-  const height = Math.round(slotSize * 1.18);
-  const washRadius = Math.min(radius, slotSize / 2);
+  const height = Math.round(slotSize * SLOT_HEIGHT_RATIO);
+  const { statusRef, veiled, covered, washClip, checkTransform, checkOpacity } =
+    useSuccessWash({
+      status,
+      drops,
+      washRadius: Math.min(radius, slotSize / 2),
+      live,
+    });
 
   const drive = useCallback(
     (i: number, to: number, delayMs = 0) => {
@@ -228,17 +226,6 @@ export default function CodeSlots({
     return Math.min(Math.max(x, 0), (mvs.length - 1) * pitch);
   });
   const caretTransform = useTransform(caretX, (x) => `translateX(${x}px)`);
-  const washClip = useTransform(
-    openMv,
-    (o) => `inset(0 ${(1 - clamp01(o)) * 50}% round ${washRadius + 1}px)`,
-  );
-  const checkTransform = useTransform(
-    checkMv,
-    (c) =>
-      `translateY(${(1 - c) * CHECK_RISE}px) scale(${0.85 + 0.15 * Math.max(c, 0)})`,
-  );
-  const checkOpacity = useTransform(checkMv, clamp01);
-
   const commit = useCallback(
     (next: string[]) => {
       const prev = slotsRef.current;
@@ -299,18 +286,9 @@ export default function CodeSlots({
     } else if (k === "Delete") {
       e.preventDefault();
       clearSlot(active);
-    } else if (k === "ArrowLeft") {
+    } else if (k in CARET_KEYS) {
       e.preventDefault();
-      jumpActive(Math.max(active - 1, 0));
-    } else if (k === "ArrowRight") {
-      e.preventDefault();
-      jumpActive(Math.min(active + 1, length - 1));
-    } else if (k === "Home") {
-      e.preventDefault();
-      jumpActive(0);
-    } else if (k === "End") {
-      e.preventDefault();
-      jumpActive(length - 1);
+      jumpActive(CARET_KEYS[k]!(active, length));
     }
   };
 
@@ -383,61 +361,17 @@ export default function CodeSlots({
     setSlots(next);
     moveActive(firstEmptyOf(next), [...landing, ...leaving]);
     if (!isFull(prev) && isFull(next)) onComplete?.(clean);
-  }, [value, length, land, drive, moveActive, mvs, drops, onComplete]);
-
-  useEffect(() => {
-    const was = statusRef.current;
-    statusRef.current = status;
-    const L = live.current;
-    if (status === "success") {
-      if (L.reduce) {
-        openMv.jump(1);
-        drops.forEach((d) => d.jump(1));
-        checkMv.jump(1);
-        setCovered(true);
-        return;
-      }
-      // Hide the slots only once the wash covers them all, and not if the code was undone meanwhile
-      animate(openMv, 1, { duration: WASH_IN, ease: EASE_OUT }).then(() => {
-        if (statusRef.current === "success") setCovered(true);
-      });
-      drops.forEach((d, k) =>
-        animate(d, 1, {
-          type: "spring",
-          duration: 0.3,
-          bounce: 0,
-          delay: SINK_DELAY + k * SINK_STEP,
-        }),
-      );
-      animate(checkMv, 1, {
-        type: "spring",
-        duration: 0.35,
-        bounce: L.bounce,
-        delay: CHECK_DELAY,
-      });
-      return;
-    }
-    if (was !== "success") return;
-    setCovered(false);
-    if (L.reduce) {
-      openMv.jump(0);
-      checkMv.jump(0);
-      drops.forEach((d) => d.jump(0));
-      setVeiled(false);
-      return;
-    }
-    animate(checkMv, 0, { duration: 0.15, ease: EASE_OUT });
-    animate(openMv, 0, {
-      duration: WASH_OUT,
-      ease: EASE_OUT,
-      delay: 0.06,
-    }).then(() => {
-      if (openMv.get() === 0) setVeiled(false);
-    });
-    drops.forEach((d) =>
-      animate(d, 0, { type: "spring", duration: 0.3, bounce: 0, delay: 0.1 }),
-    );
-  }, [status, checkMv, drops, openMv]);
+  }, [
+    value,
+    length,
+    land,
+    drive,
+    moveActive,
+    mvs,
+    drops,
+    onComplete,
+    statusRef,
+  ]);
 
   useEffect(() => {
     if (status !== "error") return;
@@ -460,7 +394,9 @@ export default function CodeSlots({
         draining.current = false;
         commit(Array.from({ length }, () => ""));
       },
-      L.reduce ? 300 : (filled.length - 1) * step + L.settle * 1000,
+      L.reduce
+        ? REDUCED_DRAIN_MS
+        : (filled.length - 1) * step + L.settle * 1000,
     );
   }, [status, commit, drive, length, moveActive]);
 
@@ -482,18 +418,19 @@ export default function CodeSlots({
     status !== "success" &&
     (status === "error" || !view[active]);
 
-  const inlineStyle: Record<string, string | number> = {
-    "--cs-size": `${slotSize}px`,
-    "--cs-height": `${height}px`,
-    "--cs-gap": `${gap}px`,
-    "--cs-radius": `${Math.min(radius, slotSize / 2)}px`,
-    "--cs-font": `${Math.round(slotSize * 0.5)}px`,
-  };
-  if (accentColor) inlineStyle["--cs-accent"] = accentColor;
-  if (inkColor) inlineStyle["--cs-ink"] = inkColor;
-  if (slotColor) inlineStyle["--cs-slot"] = slotColor;
-  if (digitColor) inlineStyle["--cs-digit"] = digitColor;
-  if (dangerColor) inlineStyle["--cs-danger"] = dangerColor;
+  const inlineStyle = slotsStyle({
+    slotSize,
+    height,
+    gap,
+    radius,
+    colors: {
+      accent: accentColor,
+      ink: inkColor,
+      slot: slotColor,
+      digit: digitColor,
+      danger: dangerColor,
+    },
+  });
 
   return (
     <div
@@ -537,7 +474,7 @@ export default function CodeSlots({
             char={mask && ch ? "•" : ch}
             active={focused && i === active}
             rise={rise}
-            sink={Math.round(height * 0.5)}
+            sink={Math.round(height * SINK_RATIO)}
           />
         ))}
         <motion.span
@@ -567,56 +504,5 @@ export default function CodeSlots({
           : t("code.count", { count: view.filter(Boolean).length, length })}
       </span>
     </div>
-  );
-}
-
-interface SlotProps {
-  mv: MotionValue<number>;
-  drop: MotionValue<number>;
-  char: string;
-  active: boolean;
-  rise: number;
-  sink: number;
-}
-
-function Slot({ mv, drop, char, active, rise, sink }: SlotProps) {
-  const [prevChar, setPrevChar] = useState(char);
-  const [shown, setShown] = useState(char);
-
-  if (char !== prevChar) {
-    setPrevChar(char);
-    if (char) {
-      setShown(char);
-    }
-  }
-
-  const fill = useTransform(mv, (t) => `scale(${Math.max(t, 0)})`);
-  const lift = useTransform(
-    [mv, drop],
-    ([t, d]) =>
-      `translateY(${(1 - (t as number)) * rise + Math.max(d as number, 0) * sink}px)`,
-  );
-  const ink = useTransform(
-    [mv, drop],
-    ([t, d]) => clamp01(t as number) * (1 - clamp01((d as number) / SINK_FADE)),
-  );
-
-  return (
-    <span
-      className="code-slots__slot"
-      data-active={active ? "" : undefined}
-      data-filled={char ? "" : undefined}
-      aria-hidden="true"
-    >
-      <motion.span className="code-slots__fill" style={{ transform: fill }} />
-      {shown ? (
-        <motion.span
-          className="code-slots__digit"
-          style={{ transform: lift, opacity: ink }}
-        >
-          {shown}
-        </motion.span>
-      ) : null}
-    </span>
   );
 }
