@@ -14,21 +14,22 @@ export async function signIn(
   await expect(page.getByRole("heading", { name: "Inbox" })).toBeVisible();
 }
 
+/**
+ * Signs out the way a person does (#160): on a wide screen from the sidebar's account menu, on a
+ * phone from Settings, opened from the header's Account link.
+ */
 export async function signOut(page: Page): Promise<void> {
-  // Real Account menu path
-  await page.getByRole("link", { name: /Account/i }).click();
+  const accountMenu = page.locator('nav button[aria-haspopup="menu"]');
+  if (await accountMenu.isVisible()) {
+    await accountMenu.click();
+    await page.getByRole("menuitem", { name: "Sign out" }).click();
+  } else {
+    await page.getByRole("link", { name: "Account" }).click();
+    const settings = page.getByRole("dialog", { name: "Settings" });
+    await expect(settings).toBeVisible();
+    await settings.getByRole("button", { name: "Sign out" }).click();
+  }
 
-  // Switch to Account tab
-  const accountTab = page.getByRole("radio", { name: /^Account$/i });
-  await expect(accountTab).toBeVisible();
-  await accountTab.click();
-
-  // Click Sign out button
-  const signOutBtn = page.getByRole("button", { name: /^Sign out$/i });
-  await expect(signOutBtn).toBeVisible();
-  await signOutBtn.click();
-
-  // Assert return to Sign in screen
   await expect(
     page.getByRole("heading", { name: "Welcome back" }),
   ).toBeVisible();
