@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-20
+
+- **Language-model fallback (Refs #37, IM-38).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md): what is sent (filler sends the whole note; unexplained references and undated moves are unclear at the rules), per-user keys and models in Settings › LLM Provider (Claude via the Anthropic SDK; Gemini, OpenRouter, OpenAI), several tasks from one item, the 429/503 retry, budgets on the app key only, how own keys are stored. [AP §2.3.1](03-modules/AP-app-platform.md) LLM Provider row, [api.md](07-architecture/api.md) `/me/ai` routes, [data-model](07-architecture/data-model.md) `users.llm_*`. [NU-E40](03-modules/NU-note-understanding.md#nu-e40): unaccented Vietnamese is also recognised by syllable shape.
+
 ## 2026-11-16
 
 - **Priority words (Refs #120).** [NU §2.3](03-modules/NU-note-understanding.md) Priority row, [business-rules](02-domain/business-rules.md) Priority and Reminder rows, [SUMMARY](SUMMARY.md) note fields: a negated High word gives Low; medium words give Medium; "nộp" sets High only in submission phrases; compounds such as *thi công*, *kiểm tra email* don't set High or the exam reminder.
