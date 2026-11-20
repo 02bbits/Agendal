@@ -98,7 +98,7 @@ export function NotesScreen({
         {total !== undefined && (
           <p className="mt-1 text-footnote text-ink-secondary">
             {t("notes.summary", {
-              count: countText(total),
+              count: countText(total, "no"),
               needs: countText(needs ?? 0),
             })}
           </p>

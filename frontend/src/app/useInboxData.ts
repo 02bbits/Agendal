@@ -13,7 +13,7 @@ function subtitleOf(tasks: readonly Task[]) {
     completedToday: () => false,
   });
   return t("list.inbox_subtitle", {
-    overdue: countText(view.overdue.length),
+    overdue: countText(view.overdue.length, "no"),
     today: countText(view.today.length),
   });
 }
@@ -56,7 +56,7 @@ export function useInboxData() {
         setProjectsStatus("ready");
         setSubtitle(
           t("list.inbox_subtitle", {
-            overdue: countText(inboxData?.overdue?.length ?? 0),
+            overdue: countText(inboxData?.overdue?.length ?? 0, "no"),
             today: countText(inboxData?.today?.length ?? 0),
           }),
         );

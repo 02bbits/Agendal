@@ -32,7 +32,7 @@ function subtitleOf(tasks: readonly Task[]) {
   ).length;
   return count === 1
     ? t("list.upcoming_subtitle_one", { count: 1 })
-    : t("list.upcoming_subtitle", { count: countText(count) });
+    : t("list.upcoming_subtitle", { count: countText(count, "no") });
 }
 
 /** Overdue first, then the coming days, each task once. */

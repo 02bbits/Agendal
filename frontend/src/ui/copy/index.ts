@@ -39,9 +39,14 @@ export function tc(key: CountKey, count: number, vars: CopyVars = {}): string {
   return fill(strings[form], { count, ...vars });
 }
 
-/** A count shown on a page: "None" for 0 (#168). Navigation shows nothing for 0 instead. */
-export function countText(count: number): string {
-  return count === 0 ? t("common.none") : String(count);
+/**
+ * A count shown on a page (#168): 0 reads "No" before what is counted ("No overdue", "No open
+ * tasks") and "None" for a day or a heading ("None today", "Overdue None"). Navigation shows
+ * nothing for 0 instead.
+ */
+export function countText(count: number, zero: "none" | "no" = "none"): string {
+  if (count !== 0) return String(count);
+  return t(zero === "no" ? "common.no" : "common.none");
 }
 
 /** Curly quotes around task and project names, as the voice guide asks. */

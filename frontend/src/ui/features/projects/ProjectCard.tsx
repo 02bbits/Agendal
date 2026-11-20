@@ -118,7 +118,7 @@ export function ProjectCard({
         ) : (
           <span>
             {tc("project.open_count", progress.total - progress.done, {
-              count: countText(progress.total - progress.done),
+              count: countText(progress.total - progress.done, "no"),
             })}
           </span>
         )}

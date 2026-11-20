@@ -79,7 +79,7 @@ export function ProjectsScreen({
           {tc("project.count", sortedProjects.length)}
           {" · "}
           {tc("project.open_count", totalOpen, {
-            count: countText(totalOpen),
+            count: countText(totalOpen, "no"),
           })}
         </p>
       </ScreenHeader>

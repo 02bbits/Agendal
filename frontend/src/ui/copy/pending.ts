@@ -128,6 +128,7 @@ export const pending = {
   "task.merged_back": "{date} went back into the repeat",
   "task.back_to": "Back to {date}",
   "common.none": "None",
+  "common.no": "No",
   "task.created": "Created {date}",
   "task.edited": "Edited {date}",
   "task.saves_as_you_go": "Changes save as you go",
