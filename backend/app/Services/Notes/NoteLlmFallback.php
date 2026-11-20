@@ -25,13 +25,14 @@ use Throwable;
 use UnexpectedValueException;
 
 /**
- * ADR-008: asks the model about low-confidence items only, with minimum context, schema-only output and
- * budgets. Each proposal is validated like a rules plan; unresolved writes are held for follow-up.
+ * ADR-008: asks a language model about low-confidence items only, with minimum context, schema-only output and
+ * budgets: the model the user picked with their own key, else the app's provider from .env. Each proposal is
+ * validated like a rules plan; unresolved writes are held for follow-up.
  *
  * @phpstan-import-type TaskRow from CommandMatcher
  * @phpstan-import-type ValidatedPlan from PlanValidator
  */
-final class OpenRouterFallback
+final class NoteLlmFallback
 {
     private const PLAN_KINDS = ['create', 'update', 'delete', 'skipped', 'ambiguous'];
 

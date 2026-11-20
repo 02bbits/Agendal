@@ -71,7 +71,7 @@ A sensible order: IM-46 (small, closes the note flow's last dead end), then IM-5
 ## 6. Decisions waiting on the team
 
 - **Lists after the start/due change** (#131 merged). Inbox and Upcoming still group by due date only; the spec's start-day entries, "Planned" and dashed due-day cards aren't built. It affects IM-51/52 too (what the device stores and syncs).
-- **LLM fallback** (IM-38). The issue is closed, but the code is on a branch, not `main` (PR #123, with NVIDIA next to OpenRouter, was closed). Ask khang-ngo4444 where it stands before building IM-49 or the Notes tab.
+- **LLM fallback** (IM-38). In PR #162 (it replaces the closed #123): the app's provider from `.env` (OpenRouter, Gemini or NVIDIA) and Settings › LLM Provider for users' own keys (Claude, Gemini, OpenRouter, OpenAI).
 - **Recurrence scope** (#121: should "3 times every day" make three series?).
 - **How a duration counts** (#120, PR #155): from the series' first date, last day included; "this week" and "next week" run to the period's end. The issue asked the team to agree this.
 - **Stale spec text.** See the last row of SUMMARY §13.

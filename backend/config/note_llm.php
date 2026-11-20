@@ -6,7 +6,8 @@ return [
     // Kill switch: false keeps the app on rules only.
     'enabled' => env('NOTE_LLM_ENABLED', false),
 
-    // openrouter (ADR-008); nvidia and gemini are for local testing only: their free tiers may keep prompts.
+    // The app's provider: openrouter, gemini or nvidia (free tiers may keep prompts). Users may add their own keys
+    // for the providers below in Settings › LLM Provider.
     'provider' => $provider = env('NOTE_LLM_PROVIDER', 'openrouter'),
 
     'key' => match ($provider) {

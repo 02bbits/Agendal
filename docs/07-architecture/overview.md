@@ -11,7 +11,7 @@ flowchart LR
     M[(Email service)]
     P[(Web Push service)]
     X[(Google Cloud Vision<br/>OCR for photos and scanned PDFs)]
-    L[(OpenRouter<br/>low-confidence items only)]
+    L[(LLM provider<br/>low-confidence items only)]
 
     U -- "notes, task edits" --> A
     A -- "plans, results, lists" --> U
@@ -26,7 +26,7 @@ flowchart LR
 | Email service (SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
 | Web Push | [TK-6](../03-modules/TK-tasks.md#tk-6) (Should) | No push reminders. Inbox still shows what is due |
 | Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)) | [NC-4](../03-modules/NC-note-capture.md#nc-4) (Should): photos and PDFs without a text layer. Text PDFs and Word files are read on the server, with no outside call | Photos and scanned PDFs can't be read. Typing still works |
-| OpenRouter ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
+| LLM provider: OpenRouter, Gemini or NVIDIA, or a user's own Claude, Gemini, OpenRouter or OpenAI key ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
 | Browser speech service | [NC-3](../03-modules/NC-note-capture.md#nc-3) (Should), through the Web Speech API | Dictation unavailable. Typing still works |
 
 ## Containers
@@ -84,4 +84,4 @@ One Linux server ([Q14](../08-project/open-questions.md#q14)). It's a demo, so t
 | Processes | Nginx (TLS, static files, reverse proxy), the Next.js server (Node), PHP-FPM for Laravel, one queue worker under Supervisor, the scheduler (cron every minute), PostgreSQL |
 | Backups | Nightly `pg_dump`, kept 7 days, copied off the server ([scalability](../05-quality/scalability.md#data-protection-and-operations)) |
 | CI | Lint, type-check and tests on every pull request (GitHub Actions). The note corpus runs on any change to the rules |
-| Secrets | Server `.env` and CI secrets only: email, push keys, the OpenRouter key, and the Google Cloud service-account key |
+| Secrets | Server `.env` and CI secrets only: email, push keys, the app's LLM provider key, and the Google Cloud service-account key |

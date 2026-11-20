@@ -16,9 +16,9 @@ use App\Services\Notes\CommandMatcher;
 use App\Services\Notes\NoteApplier;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
+use App\Services\Notes\NoteLlmFallback;
 use App\Services\Notes\NoteSplitter;
 use App\Services\Notes\NoteUndo;
-use App\Services\Notes\OpenRouterFallback;
 use App\Services\Notes\PlanValidator;
 use App\Services\Notes\TaskCandidates;
 use DateTimeZone;
@@ -39,7 +39,7 @@ class ProcessNote
         private TaskCandidates $candidates,
         private NoteApplier $applier,
         private NoteUndo $undo,
-        private OpenRouterFallback $fallback,
+        private NoteLlmFallback $fallback,
     ) {}
 
     /**

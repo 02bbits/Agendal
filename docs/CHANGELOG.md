@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-20
 
+- **Not only OpenRouter (Refs #37, IM-38).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md) status, provider and privacy, [Q19](08-project/open-questions.md#q19), [architecture overview](07-architecture/overview.md) diagram, external services and secrets, [SC-20](07-architecture/security.md#sc-20), [NF-9](05-quality/nfr.md#nf-9), [overview](01-product/overview.md) actors, [glossary](08-project/glossary.md), [project](08-project/project.md) risk, [IM-38, IM-65](08-project/tasks.md#im-38), [SUMMARY](SUMMARY.md), [HANDOVER](HANDOVER.md): the LLM is the app's provider from `.env` (OpenRouter, Gemini or NVIDIA) or a user's own key (Claude, Gemini, OpenRouter, OpenAI); `data_collection: "deny"` is OpenRouter's only.
 - **Language-model fallback (Refs #37, IM-38).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md): what is sent (filler sends the whole note; unexplained references and undated moves are unclear at the rules), per-user keys and models in Settings › LLM Provider (Claude via the Anthropic SDK; Gemini, OpenRouter, OpenAI), several tasks from one item, the 429/503 retry, budgets on the app key only, how own keys are stored. [AP §2.3.1](03-modules/AP-app-platform.md) LLM Provider row, [api.md](07-architecture/api.md) `/me/ai` routes, [data-model](07-architecture/data-model.md) `users.llm_*`. [NU-E40](03-modules/NU-note-understanding.md#nu-e40): unaccented Vietnamese is also recognised by syllable shape.
 
 ## 2026-11-19

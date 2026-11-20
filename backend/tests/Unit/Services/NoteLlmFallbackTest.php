@@ -7,7 +7,7 @@ use App\Services\Notes\ClaudeMessages;
 use App\Services\Notes\NoteBuild;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
-use App\Services\Notes\OpenRouterFallback;
+use App\Services\Notes\NoteLlmFallback;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
@@ -60,7 +60,7 @@ it('sends only uncertain items with privacy and schema restrictions (SEC-40, SEC
     Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
     $text = 'toi can mua sua; call dad';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->engine->value)->toBe('rules_llm');
     expect(array_column($result->plan['create'], 'title'))->toBe(['Mua sữa', 'Call dad']);
     Http::assertSent(function (Request $request): bool {
@@ -75,10 +75,10 @@ it('sends only uncertain items with privacy and schema restrictions (SEC-40, SEC
 it('does not call the provider for confident notes or when disabled', function () {
     Http::fake();
     $rules = app(NoteEngine::class)->build('call mum', $this->context);
-    expect(app(OpenRouterFallback::class)->improve($rules, 'call mum', $this->context, [], 1)->engine->value)->toBe('rules');
+    expect(app(NoteLlmFallback::class)->improve($rules, 'call mum', $this->context, [], 1)->engine->value)->toBe('rules');
     config(['note_llm.enabled' => false]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
     Http::assertNothingSent();
 });
 
@@ -90,7 +90,7 @@ it('falls back on provider failure or invalid output (T-NU-127)', function (stri
         default => Http::response(['choices' => [['message' => ['content' => '{"items":[{}]}']]]]),
     });
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    $result = app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
     expectRulesKept($result, $rules);
 })->with(['timeout', 'down', 'invalid-json', 'invalid-schema']);
 
@@ -103,7 +103,7 @@ it('rejects task IDs outside the supplied candidate set (SEC-41)', function () {
     ]]]);
     Http::fake(['openrouter.ai/*' => Http::response($response)]);
     $rules = app(NoteEngine::class)->build('delete absent task', $this->context);
-    $result = app(OpenRouterFallback::class)->improve($rules, 'delete absent task', $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, 'delete absent task', $this->context, [], 1);
     expect($result->plan['delete'])->toBe([])->and($result->engine->value)->toBe('rules_fallback');
 });
 
@@ -111,7 +111,7 @@ it('enforces per-user and global budgets before dispatch (SEC-42)', function () 
     Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
     config(['note_llm.daily_user_calls' => 1]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    $fallback = app(OpenRouterFallback::class);
+    $fallback = app(NoteLlmFallback::class);
     expect($fallback->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
     expect($fallback->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_fallback');
     config(['note_llm.daily_tokens' => 1]);
@@ -123,7 +123,7 @@ it('replaces only the uncertain item and records the prompt version', function (
     Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
     $text = 'toi can mua sua; call dad tomorrow';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect(array_column($result->plan['create'], 'ref'))->toBe(['i1', 'i2'])
         ->and($result->promptVersion)->toBe(config('note_llm.prompt_version'));
@@ -133,7 +133,7 @@ it('reads the endpoint and limits from config', function () {
     config(['note_llm.url' => 'https://llm.example.test/v1/chat', 'note_llm.max_completion_tokens' => 64, 'note_llm.reasoning_enabled' => false]);
     Http::fake(['llm.example.test/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+    app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
 
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://llm.example.test/v1/chat' && $request['max_tokens'] === 64
         && $request['reasoning'] === ['enabled' => false]);
@@ -143,7 +143,7 @@ it('omits the reasoning parameter when the model has no configured preference', 
     config(['note_llm.reasoning_enabled' => null]);
     Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+    app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
 
     Http::assertSent(fn (Request $request): bool => ! array_key_exists('reasoning', $request->data()));
 });
@@ -157,7 +157,7 @@ it('keeps the confirm step when improving an unrelated uncertain item', function
         $rules->name, $rules->engine, $rules->lowConfidence,
     );
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and($result->plan['needs_confirm'])->toBeTrue()
@@ -177,7 +177,7 @@ it('labels a model reschedule using the current note result copy', function () {
     ]]]);
     Http::fake(['openrouter.ai/*' => Http::response($response)]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and($result->plan['update'][0]['label'])->toBe('Due Fri 30 Oct 09:00');
@@ -188,7 +188,7 @@ it('keeps the rules result if the configured prompt cannot be read', function ()
     Http::fake();
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
 
     expectRulesKept($result, $rules);
     Http::assertNothingSent();
@@ -199,7 +199,7 @@ it('keeps the rules result if the budget cache is unavailable', function () {
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
     Cache::shouldReceive('lock')->once()->andThrow(new RuntimeException('Cache unavailable'));
 
-    $result = app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
 
     expectRulesKept($result, $rules);
     Http::assertNothingSent();
@@ -218,7 +218,7 @@ it('normalizes model reschedules like rules reschedules', function (array $old, 
     ]]]);
     Http::fake(['openrouter.ai/*' => Http::response($response)]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expect($result->engine->value)->toBe('rules_llm');
     if (isset($expected['reason'])) {
@@ -268,7 +268,7 @@ it('rejects a task that was supplied for a different uncertain item', function (
     ]]);
     Http::fake(['openrouter.ai/*' => Http::response($response)]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, $tasks, 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, $tasks, 1);
 
     expect(array_column($result->plan['delete'], 'ref'))->toBe(['i2'])
         ->and(array_column($result->plan['skipped'], 'ref'))->toBe(['i1'])
@@ -282,7 +282,7 @@ it('accepts a calendar recurrence from the model and starts on its first matchin
         'repeat' => 'weekly', 'repeat_rule' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR', 'due_date' => '2026-10-24',
     ]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and($result->plan['create'][0]['repeat_rule'])->toBe('FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR')
@@ -304,7 +304,7 @@ it('replaces all copies of one uncertain item without leaving stale rules entrie
         'copies' => 3, 'repeat' => 'daily', 'repeat_rule' => 'FREQ=DAILY', 'due_date' => '2026-10-24',
     ]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and(array_column($result->plan['create'], 'ref'))->toBe(['i1', 'i1-2', 'i1-3', 'i2'])
@@ -317,7 +317,7 @@ it('keeps the rules item when model copies would exceed the note item limit', fu
     $rules = app(NoteEngine::class)->build($text, $this->context);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['copies' => 2]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expectRulesKept($result, $rules);
 });
@@ -329,7 +329,7 @@ it('keeps the original request when the model gives one time for several copies'
         'copies' => 3, 'due_date' => '2026-10-24', 'start_time' => '09:00',
     ]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expectRulesKept($result, $rules);
 });
@@ -342,7 +342,7 @@ it('rejects copy counts attached to a model command', function () {
         'action' => 'delete', 'task_id' => $task['id'], 'copies' => 2,
     ]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expectRulesKept($result, $rules);
 });
@@ -355,7 +355,7 @@ it('rejects an invalid calendar proposal while accepting another valid item', fu
         ['ref' => 'i2', 'title' => 'Mua bánh'],
     ]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and(array_column($result->plan['create'], 'title'))->toBe(['Toi can mua sua', 'Mua bánh'])
@@ -371,7 +371,7 @@ it('routes only the unresolved command target and preserves its known sibling', 
         ->and($rules->plan['skipped'])->toHaveCount(1);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['ref' => $ref, 'action' => 'skip']]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expect($result->plan['delete'])->toBe($rules->plan['delete'])
         ->and($result->engine->value)->toBe('rules_llm')
@@ -387,7 +387,7 @@ it('lets the model interpret unrecognized commands against relevant candidate ID
         'action' => $action, 'task_id' => $task['id'], 'due_date' => '2026-10-28',
     ]]))]);
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task, $other]), $text);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task, $other], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task, $other], 1);
 
     expect($result->engine->value)->toBe('rules_llm')->and($result->plan['create'])->toBe([])
         ->and($result->plan[$action === 'delete' ? 'delete' : 'update'][0]['task_id'])->toBe($task['id']);
@@ -406,7 +406,7 @@ it('preserves an unresolved sibling omitted from the model response', function (
     expect(array_keys($rules->lowConfidence))->toBe(['i1', 'i1-2']);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['ref' => 'i1', 'action' => 'skip']]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect(array_column($result->plan['skipped'], 'ref'))->toBe(['i1', 'i1-2'])
         ->and($result->plan['skipped'][1])->toBe($rules->plan['skipped'][1]);
@@ -420,7 +420,7 @@ it('rejects a create proposal that also identifies an existing task', function (
         'action' => 'create', 'task_id' => $task['id'], 'title' => 'Call mum',
     ]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expectRulesKept($result, $rules);
 });
@@ -431,7 +431,7 @@ it('retrieves accented candidate titles for unaccented uncertain input without r
     $rules = app(NoteEngine::class)->build($text, $this->context, [$task]);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'delete', 'task_id' => $task['id']]]))]);
 
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     expect($result->plan['delete'][0]['task_id'])->toBe($task['id'])->and($result->status)->toBe(PlanStatus::Confirm);
     Http::assertSent(function (Request $request) use ($task): bool {
@@ -448,7 +448,7 @@ it('keeps unresolved references in followup even if the model invents a specific
     expect($rules->lowConfidence)->toBe([])->and($rules->plan['skipped'][0]['reason'])->toBe('unclear');
     $rules = forcedLow($rules, $text);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'create', 'title' => 'Buy milk']]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->status)->toBe(PlanStatus::Followup)->and($result->plan['create'])->toBe([])
         ->and($result->plan['skipped'][0])->toMatchArray(['text' => $text, 'reason' => 'unclear']);
@@ -458,7 +458,7 @@ it('lists an unclear sentence and keeps the rest of the note for review', functi
     $text = 'blargh 9h; call dad tomorrow';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'unclear', 'title' => null]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->status)->toBe(PlanStatus::Confirm)->and($result->plan['create'])->toHaveCount(1)
         ->and($result->plan['skipped'][0]['reason'])->toBe('unclear');
@@ -471,7 +471,7 @@ it('keeps the rules entries of missing and rejected items next to an accepted pr
         ['ref' => 'i1', 'title' => 'Mua sữa'],
         ['ref' => 'i2', 'title' => null],
     ]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect(array_column($result->plan['create'], 'title'))->toBe(['Mua sữa', 'Toi can mua banh', 'Toi can di bo'])
         ->and($result->plan['skipped'])->toBe([])
         ->and($result->itemOutcomes['i1']['status'])->toBe('accepted')
@@ -485,7 +485,7 @@ it('supplies a deterministic first date for an understood recurrence', function 
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
         'title' => 'Đi bộ', 'due_date' => null, 'repeat' => $repeat, 'repeat_rule' => $rule, 'start_time' => $time,
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'][0])->toMatchArray(['due_date' => $date, 'repeat' => $repeat, 'start_time' => $time])
         ->and($result->itemOutcomes['i1']['status'])->toBe('accepted');
 })->with([
@@ -501,7 +501,7 @@ it('preserves a reliably read clock while letting the model clean the title', fu
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
         'title' => 'Đánh cầu lông', 'start_time' => '14:00', 'due_date' => '2026-10-23',
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'][0]['start_time'])->toBe('02:00')
         ->and($result->itemOutcomes['i1']['field_sources']['start_time'])->toBe('rules');
 });
@@ -514,7 +514,7 @@ it('preserves tomorrow and the clock even when a model proposes today or omits t
         'title' => 'Đi chơi', 'due_date' => $modelDate, 'start_time' => $modelTime,
         'priority' => 'medium', 'reminder' => 'none',
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $context, [], 1);
     expect($result->plan['create'][0])->toMatchArray([
         'title' => 'Đi chơi', 'due_date' => '2026-11-04', 'start_time' => '07:00',
         'end_time' => null, 'priority' => 'low', 'reminder' => '15m',
@@ -538,7 +538,7 @@ it('keeps known date and clock on a reschedule without replacing task identity',
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
         'action' => 'reschedule', 'task_id' => $task['id'], 'due_date' => '2026-11-03', 'start_time' => '10:00',
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $context, [$task], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $context, [$task], 1);
     expect($result->plan['update'][0])->toMatchArray(['task_id' => $task['id'], 'due_date' => '2026-11-04', 'start_time' => '09:00'])
         ->and($result->plan['create'])->toBe([]);
 });
@@ -549,7 +549,7 @@ it('allows the model to interpret an unreadable time while preserving a clear da
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
         'title' => 'Call mum', 'due_date' => null, 'start_time' => '15:00',
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'][0])->toMatchArray(['due_date' => '2026-10-24', 'start_time' => '15:00'])
         ->and($result->itemOutcomes['i1']['field_sources']['due_date'])->toBe('rules')
         ->and($result->itemOutcomes['i1']['field_sources']['start_time'])->toBe('llm');
@@ -561,7 +561,7 @@ it('preserves both endpoints of a reliable range when only the wording needs int
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
         'title' => 'Họp', 'due_date' => '2026-10-23', 'start_time' => '11:00', 'end_time' => '12:00',
     ]]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'][0])->toMatchArray(['due_date' => '2026-10-24', 'start_time' => '09:00', 'end_time' => '10:00'])
         ->and($result->itemOutcomes['i1']['field_sources']['end_time'])->toBe('rules');
 });
@@ -570,7 +570,7 @@ it('routes a possible observation through the model instead of treating frequenc
     $text = 'daily walk could benefits health';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'skip']]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'])->toBe([])->and($result->plan['skipped'][0]['reason'])->toBe('skip')
         ->and($result->itemOutcomes['i1']['status'])->toBe('skipped');
 });
@@ -580,7 +580,7 @@ it('sends Gemini requests without OpenRouter routing fields', function () {
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
     Http::assertSent(fn (Request $request): bool => ! array_key_exists('provider', $request->data())
         && $request['response_format']['json_schema']['strict'] === true
         // No length, range, pattern or format bounds: Gemini rejects a long note's schema as too many states
@@ -592,14 +592,14 @@ it('writes model titles with the rules casing', function () {
     $rules = app(NoteEngine::class)->build($text, $this->context);
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['title' => ' nộp bài sql ']]))]);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1)->plan['create'][0]['title'])->toBe('Nộp bài SQL');
+    expect(app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1)->plan['create'][0]['title'])->toBe('Nộp bài SQL');
 });
 
 it('retries once when the provider is busy, and not on other errors', function (int $status, int $sent, string $engine) {
     Http::fakeSequence('openrouter.ai/*')->push([], $status)->push(recordedNoteResponse());
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe($engine);
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe($engine);
     Http::assertSentCount($sent);
 })->with([
     'busy' => [503, 2, 'rules_llm'],
@@ -611,7 +611,7 @@ it('sends open-task titles only for command-like items, so a new task cannot bor
     $task = ['id' => (string) Str::uuid(), 'title' => 'Gọi cho mẹ hỏi thăm'];
     Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task]), $text);
-    app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+    app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
     Http::assertSent(fn (Request $request): bool => str_contains($request['messages'][1]['content'], $task['id']) === $sent);
 })->with([
@@ -627,7 +627,7 @@ it('makes each task the model finds in one item, with the item ref then -2, -3',
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Call the bank', 'due_date' => '2026-10-24'],
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Report', 'due_date' => '2026-10-30'],
     ]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->engine->value)->toBe('rules_llm')
         ->and(array_map(fn (array $e): array => [$e['ref'], $e['title'], $e['due_date']], $result->plan['create']))
@@ -640,7 +640,7 @@ it('keeps the rules entry when one item gets several proposals that are not all 
     Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Mua sữa'], ['ref' => 'i1', ...$second],
     ]))]);
-    $result = app(OpenRouterFallback::class)->improve($rules, $text, $this->context, [], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect(array_column($result->plan['create'], 'title'))->toBe(array_column($rules->plan['create'], 'title'))
         ->and($result->itemOutcomes['i1']['reason'])->toBe('invalid_proposal');
@@ -656,7 +656,7 @@ it('asks the model the user picked with their own key, outside the app budget', 
     $user->forceFill(['llm_enabled' => true, 'llm_model' => 'openai:gpt-5.4-mini', 'llm_keys' => ['openai' => ['key' => 'sk-test-only', 'models' => ['gpt-5.4-mini']]]]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.openai.com/v1/chat/completions'
         && $request->hasHeader('Authorization', 'Bearer sk-test-only') && $request['model'] === 'gpt-5.4-mini'
         && ! array_key_exists('provider', $request->data()));
@@ -668,7 +668,7 @@ it('keeps the rules result when the user turned AI off', function () {
     $user->forceFill(['llm_enabled' => false]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user))->toBe($rules);
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user))->toBe($rules);
     Http::assertNothingSent();
 });
 
@@ -686,6 +686,6 @@ it('asks Claude through the Anthropic SDK with the prompt, the note items and th
     $user->forceFill(['llm_enabled' => true, 'llm_model' => 'anthropic:claude-opus-5-5', 'llm_keys' => ['anthropic' => ['key' => 'sk-ant-test-only', 'models' => ['claude-opus-5-5']]]]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
     Http::assertNothingSent();
 });

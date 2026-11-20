@@ -6,7 +6,7 @@ namespace Tests\Manual;
 
 use App\Services\Notes\NoteBuild;
 use App\Services\Notes\NoteContext;
-use App\Services\Notes\OpenRouterFallback;
+use App\Services\Notes\NoteLlmFallback;
 use Dotenv\Dotenv;
 use Illuminate\Http\Client\Events\ConnectionFailed;
 use Illuminate\Http\Client\Events\RequestSending;
@@ -87,7 +87,7 @@ final class NoteLlmPreview
             $http[] = ['status' => 'connection_failed_or_timeout',
                 'elapsed_ms' => $sentAt === null ? null : round((hrtime(true) - $sentAt) / 1e6)];
         });
-        $build = app(OpenRouterFallback::class)->improve($rules, $text, $context, $tasks, 0);
+        $build = app(NoteLlmFallback::class)->improve($rules, $text, $context, $tasks, 0);
 
         return ['build' => $build, 'http' => $http, 'provider' => $selected['provider'], 'model' => $model];
     }

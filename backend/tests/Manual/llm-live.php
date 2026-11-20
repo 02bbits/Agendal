@@ -15,7 +15,7 @@ if (PHP_SAPI !== 'cli') {
 
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
-use App\Services\Notes\OpenRouterFallback;
+use App\Services\Notes\NoteLlmFallback;
 use Dotenv\Dotenv;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Http\Client\Events\ConnectionFailed;
@@ -131,7 +131,7 @@ foreach ($cases as $case) {
     $http = [];
     $start = hrtime(true);
     $rules = app(NoteEngine::class)->build($case['text'], $context, $case['tasks']);
-    $result = app(OpenRouterFallback::class)->improve($rules, $case['text'], $context, $case['tasks'], 1);
+    $result = app(NoteLlmFallback::class)->improve($rules, $case['text'], $context, $case['tasks'], 1);
     echo json_encode(['case' => $case['id'], 'elapsed_ms' => round((hrtime(true) - $start) / 1e6),
         'engine' => $result->engine->value, 'status' => $result->status->value, 'http' => $http,
         'low_confidence' => $rules->lowConfidence,
