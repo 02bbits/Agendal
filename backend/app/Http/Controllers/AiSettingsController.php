@@ -21,7 +21,10 @@ class AiSettingsController extends Controller
     /** @return array<string, mixed> */
     public function show(Request $request): array
     {
-        return $this->settings($this->user($request));
+        $user = $this->user($request);
+        $this->keepModelUsable($user);
+
+        return $this->settings($user);
     }
 
     /** @return array<string, mixed> */
@@ -32,6 +35,10 @@ class AiSettingsController extends Controller
             'enabled' => ['sometimes', 'boolean'],
             'model' => ['sometimes', 'string', Rule::in($this->choices($user))],
         ]);
+        if (isset($data['model']) && $data['model'] !== $user->llm_model) {
+            [$provider, $model] = explode(':', $data['model'], 2);
+            $this->providers->tryModel($provider, (string) ($user->llm_keys[$provider]['key'] ?? ''), $model);
+        }
         $user->forceFill([
             'llm_enabled' => $data['enabled'] ?? $user->llm_enabled,
             'llm_model' => $data['model'] ?? $user->llm_model,
@@ -49,10 +56,7 @@ class AiSettingsController extends Controller
         $user = $this->user($request);
         $keys = [...($user->llm_keys ?? []), $provider => ['key' => $key, 'models' => $models]];
         $user->forceFill(['llm_keys' => $keys])->save();
-        // The first key also picks the model, so it is used straight away.
-        if (! in_array($user->llm_model, $this->choices($user), true)) {
-            $user->forceFill(['llm_model' => $provider.':'.$models[0]])->save();
-        }
+        $this->keepModelUsable($user);
 
         return $this->settings($user);
     }
@@ -63,10 +67,7 @@ class AiSettingsController extends Controller
         $keys = $user->llm_keys ?? [];
         unset($keys[$provider]);
         $user->forceFill(['llm_keys' => $keys === [] ? null : $keys])->save();
-        // A model of the removed key moves to the first one another key has, or to none.
-        if (! in_array($user->llm_model, $this->choices($user), true)) {
-            $user->forceFill(['llm_model' => $this->choices($user)[0] ?? null])->save();
-        }
+        $this->keepModelUsable($user);
 
         return response()->noContent();
     }
@@ -84,7 +85,7 @@ class AiSettingsController extends Controller
                 'name' => $provider['name'],
                 'key_url' => $provider['key_url'],
                 'last4' => isset($keys[$id]) ? substr($keys[$id]['key'], -4) : null,
-                'models' => $keys[$id]['models'] ?? [],
+                'models' => $this->providers->usable($id, $keys[$id]['models'] ?? []),
             ], array_keys($this->providers->all()), $this->providers->all()),
         ];
     }
@@ -99,13 +100,35 @@ class AiSettingsController extends Controller
         $choices = [];
         foreach ($user->llm_keys ?? [] as $provider => $key) {
             if (array_key_exists($provider, $this->providers->all())) {
-                foreach ($key['models'] as $model) {
+                foreach ($this->providers->usable($provider, $key['models']) as $model) {
                     $choices[] = $provider.':'.$model;
                 }
             }
         }
 
         return $choices;
+    }
+
+    /**
+     * The first key picks the model, so it is used straight away; a model that is gone (its key removed, or no longer
+     * kept by the provider's filter) moves to the default of the first provider with a key, or to none.
+     */
+    private function keepModelUsable(User $user): void
+    {
+        if (in_array($user->llm_model, $this->choices($user), true)) {
+            return;
+        }
+        $model = null;
+        foreach (array_keys($this->providers->all()) as $provider) {
+            $pick = $this->providers->pick($provider, $this->providers->usable($provider, $user->llm_keys[$provider]['models'] ?? []));
+            if ($pick !== null) {
+                $model = $provider.':'.$pick;
+                break;
+            }
+        }
+        if ($model !== $user->llm_model) {
+            $user->forceFill(['llm_model' => $model])->save();
+        }
     }
 
     private function user(Request $request): User

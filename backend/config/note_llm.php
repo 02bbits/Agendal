@@ -25,14 +25,26 @@ return [
     }),
 
     // Providers a user may add their own key for (Settings › AI). Each speaks the OpenAI chat format with
-    // structured outputs; models_url lists what a key can use, and `models` keeps the ones that can plan a note.
+    // structured outputs; models_url lists what a key can use, `models` keeps the chat models that can plan a note,
+    // and `default` is picked when a key is added (else the first kept model).
     'providers' => [
+        // Claude goes through the official Anthropic SDK (ClaudeMessages), not the OpenAI chat format.
+        'anthropic' => [
+            'name' => 'Claude',
+            'sdk' => 'anthropic',
+            'key_url' => 'https://console.anthropic.com/settings/keys',
+            'models' => '~^claude-(?:fable|opus|sonnet|haiku)-\d~',
+            'default' => 'claude-opus-5-5',
+        ],
         'gemini' => [
             'name' => 'Gemini',
             'url' => 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
             'models_url' => 'https://generativelanguage.googleapis.com/v1beta/openai/models',
             'key_url' => 'https://aistudio.google.com/apikey',
-            'models' => '~^gemini-(?!.*(?:embedding|tts|image|live|audio))~',
+            // Flash and Pro by version ("gemini-3.5-flash-lite", "gemini-3.1-pro-preview") and their -latest aliases;
+            // not computer-use, robotics, transcribe, image or other special-purpose models.
+            'models' => '~^gemini-(?:\d+(?:\.\d+)?-(?:flash|pro)(?:-lite)?(?:-preview)?|(?:flash|flash-lite|pro)-latest)$~',
+            'default' => 'gemini-3.5-flash-lite',
         ],
         'openrouter' => [
             'name' => 'OpenRouter',
@@ -42,6 +54,7 @@ return [
             'models_url' => 'https://openrouter.ai/api/v1/models?supported_parameters=structured_outputs',
             'key_url' => 'https://openrouter.ai/keys',
             'models' => '~.~',
+            'default' => 'google/gemini-3.5-flash-lite',
         ],
         'openai' => [
             'name' => 'OpenAI',
@@ -49,6 +62,7 @@ return [
             'models_url' => 'https://api.openai.com/v1/models',
             'key_url' => 'https://platform.openai.com/api-keys',
             'models' => '~^(?:gpt-|o\d)(?!.*(?:audio|realtime|transcribe|tts|image|search))~',
+            'default' => 'gpt-5.4-mini',
         ],
     ],
 

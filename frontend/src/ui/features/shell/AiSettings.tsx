@@ -30,6 +30,7 @@ const KEY_ERRORS: CopyKey[] = [
   "ai.key_limited",
   "ai.key_unreachable",
   "ai.key_no_models",
+  "ai.model_unavailable",
 ];
 
 /** Settings › AI: the AI switch, one key per LLM provider (checked with the provider on Save) and the model. */
@@ -40,6 +41,7 @@ export function AiSettings() {
   const [showKey, setShowKey] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<CopyKey | null>(null);
+  const [modelError, setModelError] = useState<CopyKey | null>(null);
 
   const load = () =>
     api("/me/ai")
@@ -61,13 +63,23 @@ export function AiSettings() {
     body: Partial<Pick<AiSettingsData, "enabled" | "model">>,
   ) => {
     if (data) setData({ ...data, ...body });
+    setModelError(null);
     const res = await api("/me/ai", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).catch(() => null);
-    if (res?.ok) setData(await res.json());
-    else load();
+    if (res?.ok) return setData(await res.json());
+    // A picked model is tried with the provider first; one it refuses stays unpicked
+    if (body.model) {
+      const code = res
+        ? (await res.json().catch(() => null))?.error?.fields?.model?.[0]
+        : "ai.key_unreachable";
+      setModelError(
+        KEY_ERRORS.find((k) => k === code) ?? "ai.model_unavailable",
+      );
+    }
+    load();
   };
 
   const save = async (provider: string) => {
@@ -284,12 +296,19 @@ export function AiSettings() {
 
           <div className="rounded-xl border border-separator/40 bg-fill/30 px-4 py-3">
             {models.length > 0 && data.model ? (
-              <SelectDropdown
-                label={t("ai.model")}
-                options={models}
-                value={data.model}
-                onChange={(model) => patch({ model })}
-              />
+              <>
+                <SelectDropdown
+                  label={t("ai.model")}
+                  options={models}
+                  value={data.model}
+                  onChange={(model) => patch({ model })}
+                />
+                {modelError && (
+                  <p role="alert" className="m-0 mt-2 text-footnote text-error">
+                    {t(modelError)}
+                  </p>
+                )}
+              </>
             ) : (
               <div className="flex min-h-11 items-center justify-between gap-3">
                 <span className="text-body text-ink">{t("ai.model")}</span>

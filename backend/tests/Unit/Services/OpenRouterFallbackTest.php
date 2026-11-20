@@ -3,6 +3,7 @@
 use App\Enums\PlanStatus;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
+use App\Services\Notes\ClaudeMessages;
 use App\Services\Notes\NoteBuild;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
@@ -668,5 +669,23 @@ it('keeps the rules result when the user turned AI off', function () {
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
     expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user))->toBe($rules);
+    Http::assertNothingSent();
+});
+
+it('asks Claude through the Anthropic SDK with the prompt, the note items and the bounds-free schema', function () {
+    Http::fake();
+    $content = json_decode(recordedNoteResponse()['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR);
+    $claude = Mockery::mock(ClaudeMessages::class);
+    $claude->shouldReceive('plan')->once()
+        ->withArgs(fn (string $key, string $model, string $system, string $user, array $schema): bool => $key === 'sk-ant-test-only'
+            && $model === 'claude-opus-5-5' && $system !== '' && str_contains($user, 'toi can mua sua')
+            && ! str_contains(json_encode($schema, JSON_THROW_ON_ERROR), 'maxLength'))
+        ->andReturn(['content' => json_encode($content, JSON_THROW_ON_ERROR), 'tokens' => 100]);
+    app()->instance(ClaudeMessages::class, $claude);
+    $user = new User;
+    $user->forceFill(['llm_enabled' => true, 'llm_model' => 'anthropic:claude-opus-5-5', 'llm_keys' => ['anthropic' => ['key' => 'sk-ant-test-only', 'models' => ['claude-opus-5-5']]]]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(OpenRouterFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
     Http::assertNothingSent();
 });

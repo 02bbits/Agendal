@@ -16,7 +16,6 @@ use BackedEnum;
 use DateTimeImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
-use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -46,6 +45,8 @@ final class OpenRouterFallback
         private NoteNamer $namer,
         private CommandMatcher $matcher,
         private FieldExtractor $extractor,
+        private LlmProviders $providers,
+        private ClaudeMessages $claude,
     ) {}
 
     /**
@@ -117,9 +118,14 @@ final class OpenRouterFallback
         }
         [$provider, $model] = array_pad(explode(':', (string) $user?->llm_model, 2), 2, '');
         $key = $user?->llm_keys[$provider]['key'] ?? null;
-        $own = config('note_llm.providers.'.$provider);
-        if (is_string($key) && is_array($own) && $model !== '') {
-            return ['provider' => $provider, 'url' => $own['url'], 'key' => $key, 'model' => $model, 'own' => true];
+        $own = $this->providers->all()[$provider] ?? null;
+        if (is_string($key) && $own !== null) {
+            // A model the provider filter no longer keeps falls back to the provider's default.
+            $usable = $this->providers->usable($provider, $user->llm_keys[$provider]['models'] ?? []);
+            $model = in_array($model, $usable, true) ? $model : $this->providers->pick($provider, $usable);
+            if ($model !== null) {
+                return ['provider' => $provider, 'url' => $own['url'] ?? '', 'key' => $key, 'model' => $model, 'own' => true];
+            }
         }
         if (! in_array(config('note_llm.provider'), self::PROVIDERS, true) || ! config('note_llm.key') || ! config('note_llm.model')) {
             return null;
@@ -312,31 +318,43 @@ final class OpenRouterFallback
     }
 
     /**
+     * The model's JSON answer and the tokens it used.
+     *
      * @param  array<string, mixed>  $body
      * @param  array{provider: string, url: string, key: string, model: string, own: bool}  $route
+     * @return array{content: string, tokens: int|null}
      */
-    private function send(array $body, array $route): Response
+    private function send(array $body, array $route): array
     {
         $timeout = (float) config('note_llm.timeout_seconds');
+        if (($this->providers->all()[$route['provider']]['sdk'] ?? null) === 'anthropic') {
+            // The same prompt, note items and bounds-free schema, as a Claude Messages request.
+            return $this->claude->plan($route['key'], $route['model'], (string) $body['messages'][0]['content'],
+                (string) $body['messages'][1]['content'], $body['response_format']['json_schema']['schema'], $timeout);
+        }
 
         // One retry when the provider is busy (429, 503); anything else falls back to the rules at once
-        return Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
+        $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
             ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
             ->post($route['url'], $body)->throw();
+        $tokens = $response->json('usage.total_tokens');
+
+        return ['content' => (string) $response->json('choices.0.message.content'), 'tokens' => is_numeric($tokens) ? (int) $tokens : null];
     }
 
     /**
      * One proposal per ref, valid against the schema; anything else throws and the rules result stands.
      *
+     * @param  array{content: string, tokens: int|null}  $answer
      * @param  array<string, mixed>  $schema
      * @return array<string, list<array<string, mixed>>>
      */
-    private function proposals(Response $response, array $schema, int $reserved, ?string $reservationDay): array
+    private function proposals(array $answer, array $schema, int $reserved, ?string $reservationDay): array
     {
         if ($reservationDay !== null) {
-            $this->budget->settle($reserved, max(0, (int) $response->json('usage.total_tokens', $reserved)), $reservationDay);
+            $this->budget->settle($reserved, max(0, $answer['tokens'] ?? $reserved), $reservationDay);
         }
-        $data = json_decode((string) $response->json('choices.0.message.content'), flags: JSON_THROW_ON_ERROR);
+        $data = json_decode($answer['content'], flags: JSON_THROW_ON_ERROR);
         if (! (new Validator)->validate($data, json_decode(json_encode($schema, JSON_THROW_ON_ERROR)))->isValid()) {
             throw new UnexpectedValueException('The model output breaks the plan schema');
         }
