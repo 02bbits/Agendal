@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 it('persists independent model calendar series, replays once and advances the selected weekdays', function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-11-01T15:11:00Z'));
-    config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model', 'note_llm.prompt_version' => 'note-plan-v2']);
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only', 'note_llm.prompt_version' => 'note-plan-v2']);
     $this->actingAs(User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']));
     Http::preventStrayRequests();
     $response = json_decode(file_get_contents(__DIR__.'/../Fixtures/note-llm-response.json'), true, flags: JSON_THROW_ON_ERROR);
@@ -20,7 +20,7 @@ it('persists independent model calendar series, replays once and advances the se
     $rule = 'FREQ=WEEKLY;BYDAY=MO,WE,FR';
     $items['items'][0] = [...$items['items'][0], 'repeat' => 'weekly', 'repeat_rule' => $rule, 'copies' => 3, 'due_date' => '2026-11-02'];
     $response['choices'][0]['message']['content'] = json_encode($items, JSON_THROW_ON_ERROR);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
     $input = ['client_id' => (string) Str::uuid(), 'text' => 'toi can mua sua', 'written_at' => '2026-11-01T22:11:00+07:00', 'timezone' => 'Asia/Ho_Chi_Minh'];
 
     // Three changes reach the confirm threshold: the model's plan waits for Apply like a rules plan

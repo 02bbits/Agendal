@@ -160,13 +160,13 @@ it('limits note submission and includes Retry-After (T-NU-84)', function () {
 });
 
 it('validates notes the language model read, accepted or unclear, against the shared API schema (ADR-008)', function (string $action, string $text, string $status, string $outcome) {
-    config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model']);
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only']);
     Http::preventStrayRequests();
     $response = json_decode((string) file_get_contents(base_path('tests/Fixtures/note-llm-response.json')), true, flags: JSON_THROW_ON_ERROR);
     $items = json_decode($response['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR);
     $items['items'][0] = [...$items['items'][0], 'action' => $action, 'title' => $action === 'create' ? 'Mua sữa' : null];
     $response['choices'][0]['message']['content'] = json_encode($items, JSON_THROW_ON_ERROR);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
     $result = $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload($text))->assertCreated()
         ->assertJsonPath('note.engine', 'rules_llm')->assertJsonPath('note.status', $status)

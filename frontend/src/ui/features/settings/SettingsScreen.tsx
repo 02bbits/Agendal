@@ -15,7 +15,6 @@ import { TwoFactorOffDialog } from "./account/TwoFactorOffDialog";
 import { useDisplayName, type SaveDisplayName } from "./account/useDisplayName";
 import { useTwoFactor } from "./account/useTwoFactor";
 import { GeneralTab } from "./general/GeneralTab";
-import { LlmProviderTab } from "./llm/LlmProviderTab";
 import { SettingsDesktop } from "./SettingsDesktop";
 import { SettingsPanel } from "./SettingsSection";
 import { SettingsPhone } from "./SettingsPhone";
@@ -146,9 +145,6 @@ export function SettingsScreen({
           onChange={onChange}
           isDesktop={isDesktop}
         />
-      </SettingsPanel>
-      <SettingsPanel active={activeTab === "llm"} isDesktop={isDesktop}>
-        <LlmProviderTab />
       </SettingsPanel>
       <SettingsPanel active={activeTab === "theme"} isDesktop={isDesktop}>
         <ThemeTab settings={settings} onChange={onChange} />

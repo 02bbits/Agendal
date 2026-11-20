@@ -1,7 +1,6 @@
 <?php
 
 use App\Enums\PlanStatus;
-use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use App\Services\Notes\ClaudeMessages;
 use App\Services\Notes\NoteBuild;
@@ -20,7 +19,8 @@ uses(TestCase::class);
 
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
-    config(['note_llm.enabled' => true, 'note_llm.key' => 'test-only', 'note_llm.model' => 'test/model', 'note_llm.prompt_version' => 'note-plan-v2']);
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only', 'note_llm.model' => null,
+        'note_llm.prompt_version' => 'note-plan-v2']);
     Cache::flush();
     Http::preventStrayRequests();
     $this->context = new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh');
@@ -57,14 +57,16 @@ function modelNoteResponse(array $proposals): array
 }
 
 it('sends only uncertain items with privacy and schema restrictions (SEC-40, SEC-43)', function () {
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $text = 'toi can mua sua; call dad';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->engine->value)->toBe('rules_llm');
     expect(array_column($result->plan['create'], 'title'))->toBe(['Mua sữa', 'Call dad']);
     Http::assertSent(function (Request $request): bool {
-        expect($request['provider'])->toBe(['require_parameters' => true, 'data_collection' => 'deny']);
+        expect($request->data())->not->toHaveKey('provider')
+            ->and($request->hasHeader('Authorization', 'Bearer test-only'))->toBeTrue()
+            ->and($request['model'])->toBe('gemini-3.5-flash-lite');
         expect($request['response_format']['json_schema']['strict'])->toBeTrue();
         expect($request['messages'][1]['content'])->not->toContain('call dad', 'email', 'display_name', 'task_notes');
 
@@ -94,21 +96,8 @@ it('falls back on provider failure or invalid output (T-NU-127)', function (stri
     expectRulesKept($result, $rules);
 })->with(['timeout', 'down', 'invalid-json', 'invalid-schema']);
 
-it('rejects task IDs outside the supplied candidate set (SEC-41)', function () {
-    $response = recordedNoteResponse();
-    $response['choices'][0]['message']['content'] = json_encode(['items' => [[
-        'ref' => 'i1', 'action' => 'delete', 'task_id' => (string) Str::uuid(), 'title' => null,
-        'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => null,
-        'project' => null, 'repeat' => 'never', 'repeat_rule' => null, 'copies' => 1, 'reminder' => 'none',
-    ]]]);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
-    $rules = app(NoteEngine::class)->build('delete absent task', $this->context);
-    $result = app(NoteLlmFallback::class)->improve($rules, 'delete absent task', $this->context, [], 1);
-    expect($result->plan['delete'])->toBe([])->and($result->engine->value)->toBe('rules_fallback');
-});
-
 it('enforces per-user and global budgets before dispatch (SEC-42)', function () {
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     config(['note_llm.daily_user_calls' => 1]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
     $fallback = app(NoteLlmFallback::class);
@@ -119,8 +108,58 @@ it('enforces per-user and global budgets before dispatch (SEC-42)', function () 
     Http::assertSentCount(1);
 });
 
+it('keeps the rules result without the app key', function () {
+    Http::fake();
+    config(['note_llm.key' => null]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
+    Http::assertNothingSent();
+});
+
+it('reads the key from the secret file before the variable, on each call', function () {
+    $file = tempnam(sys_get_temp_dir(), 'llm');
+    file_put_contents($file, 'file-key
+');
+    config(['note_llm.key_file' => $file]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
+    Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Bearer file-key'));
+    unlink($file);
+});
+
+it('keeps the rules result when the secret file is missing or empty, without falling back to the variable', function (string $content) {
+    $file = sys_get_temp_dir().'/llm-missing-'.Str::random(8);
+    if ($content !== 'missing') {
+        file_put_contents($file, $content);
+    }
+    config(['note_llm.key_file' => $file]);
+    Http::fake();
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
+    Http::assertNothingSent();
+    @unlink($file);
+})->with(['missing', ' 
+']);
+
+it('rejects task IDs outside the supplied candidate set (SEC-41)', function () {
+    $response = recordedNoteResponse();
+    $response['choices'][0]['message']['content'] = json_encode(['items' => [[
+        'ref' => 'i1', 'action' => 'delete', 'task_id' => (string) Str::uuid(), 'title' => null,
+        'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => null,
+        'project' => null, 'repeat' => 'never', 'repeat_rule' => null, 'copies' => 1, 'reminder' => 'none',
+    ]]]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
+    $rules = app(NoteEngine::class)->build('delete absent task', $this->context);
+    $result = app(NoteLlmFallback::class)->improve($rules, 'delete absent task', $this->context, [], 1);
+    expect($result->plan['delete'])->toBe([])->and($result->engine->value)->toBe('rules_fallback');
+});
+
 it('replaces only the uncertain item and records the prompt version', function () {
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $text = 'toi can mua sua; call dad tomorrow';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -129,27 +168,18 @@ it('replaces only the uncertain item and records the prompt version', function (
         ->and($result->promptVersion)->toBe(config('note_llm.prompt_version'));
 });
 
-it('reads the endpoint and limits from config', function () {
-    config(['note_llm.url' => 'https://llm.example.test/v1/chat', 'note_llm.max_completion_tokens' => 64, 'note_llm.reasoning_enabled' => false]);
+it('reads the endpoint, model and limits from config', function () {
+    config(['note_llm.providers.gemini.url' => 'https://llm.example.test/v1/chat', 'note_llm.max_completion_tokens' => 64, 'note_llm.model' => 'test/model']);
     Http::fake(['llm.example.test/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
     app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
 
     Http::assertSent(fn (Request $request): bool => $request->url() === 'https://llm.example.test/v1/chat' && $request['max_tokens'] === 64
-        && $request['reasoning'] === ['enabled' => false]);
-});
-
-it('omits the reasoning parameter when the model has no configured preference', function () {
-    config(['note_llm.reasoning_enabled' => null]);
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
-    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
-
-    Http::assertSent(fn (Request $request): bool => ! array_key_exists('reasoning', $request->data()));
+        && $request['model'] === 'test/model');
 });
 
 it('keeps the confirm step when improving an unrelated uncertain item', function () {
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $text = 'toi can mua sua; call dad';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     $rules = new NoteBuild(
@@ -175,7 +205,7 @@ it('labels a model reschedule using the current note result copy', function () {
         'due_date' => '2026-10-30', 'start_time' => null, 'end_time' => null, 'priority' => null,
         'project' => null, 'repeat' => 'never', 'repeat_rule' => null, 'copies' => 1, 'reminder' => 'none',
     ]]]);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
@@ -194,17 +224,6 @@ it('keeps the rules result if the configured prompt cannot be read', function ()
     Http::assertNothingSent();
 });
 
-it('keeps the rules result if the budget cache is unavailable', function () {
-    Http::fake();
-    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-    Cache::shouldReceive('lock')->once()->andThrow(new RuntimeException('Cache unavailable'));
-
-    $result = app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
-
-    expectRulesKept($result, $rules);
-    Http::assertNothingSent();
-});
-
 it('normalizes model reschedules like rules reschedules', function (array $old, array $proposed, array $expected) {
     $task = ['id' => (string) Str::uuid(), 'title' => 'Call mum', ...$old];
     $text = 'doi call mum sang thu sau';
@@ -216,7 +235,7 @@ it('normalizes model reschedules like rules reschedules', function (array $old, 
         'due_date' => null, 'start_time' => null, 'end_time' => null, 'priority' => null,
         'project' => null, 'repeat' => 'never', 'repeat_rule' => null, 'copies' => 1, 'reminder' => 'none', ...$proposed,
     ]]]);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
@@ -266,7 +285,7 @@ it('rejects a task that was supplied for a different uncertain item', function (
     $response['choices'][0]['message']['content'] = json_encode(['items' => [
         ['ref' => 'i1', ...$proposal], ['ref' => 'i2', ...$proposal],
     ]]);
-    Http::fake(['openrouter.ai/*' => Http::response($response)]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($response)]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, $tasks, 1);
 
@@ -278,7 +297,7 @@ it('rejects a task that was supplied for a different uncertain item', function (
 it('accepts a calendar recurrence from the model and starts on its first matching date', function () {
     $text = 'toi can mua sua';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'repeat' => 'weekly', 'repeat_rule' => 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE,FR', 'due_date' => '2026-10-24',
     ]]))]);
 
@@ -300,7 +319,7 @@ it('replaces all copies of one uncertain item without leaving stale rules entrie
     $text = 'toi can mua sua 3 times every day; call dad';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     expect(array_column($rules->plan['create'], 'ref'))->toBe(['i1', 'i1-2', 'i1-3', 'i2']);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'copies' => 3, 'repeat' => 'daily', 'repeat_rule' => 'FREQ=DAILY', 'due_date' => '2026-10-24',
     ]]))]);
 
@@ -315,7 +334,7 @@ it('keeps the rules item when model copies would exceed the note item limit', fu
     config(['notes.max_items' => 2]);
     $text = 'toi can mua sua; call dad';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['copies' => 2]]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['copies' => 2]]))]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
@@ -325,7 +344,7 @@ it('keeps the rules item when model copies would exceed the note item limit', fu
 it('keeps the original request when the model gives one time for several copies', function () {
     $text = 'toi can mua sua';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'copies' => 3, 'due_date' => '2026-10-24', 'start_time' => '09:00',
     ]]))]);
 
@@ -338,7 +357,7 @@ it('rejects copy counts attached to a model command', function () {
     $task = ['id' => (string) Str::uuid(), 'title' => 'Call mum'];
     $text = 'delete mum phone';
     $rules = app(NoteEngine::class)->build($text, $this->context, [$task]);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'action' => 'delete', 'task_id' => $task['id'], 'copies' => 2,
     ]]))]);
 
@@ -350,7 +369,7 @@ it('rejects copy counts attached to a model command', function () {
 it('rejects an invalid calendar proposal while accepting another valid item', function (string $rule) {
     $text = 'toi can mua sua; toi can mua banh';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([
         ['repeat' => 'weekly', 'repeat_rule' => $rule, 'due_date' => '2026-10-24'],
         ['ref' => 'i2', 'title' => 'Mua bánh'],
     ]))]);
@@ -369,7 +388,7 @@ it('routes only the unresolved command target and preserves its known sibling', 
     expect($rules->lowConfidence)->toBe([$ref => 'delete absent'])
         ->and($rules->plan['delete'])->toHaveCount(1)
         ->and($rules->plan['skipped'])->toHaveCount(1);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['ref' => $ref, 'action' => 'skip']]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['ref' => $ref, 'action' => 'skip']]))]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
@@ -383,7 +402,7 @@ it('routes only the unresolved command target and preserves its known sibling', 
 it('lets the model interpret unrecognized commands against relevant candidate IDs', function (string $text, string $action) {
     $task = ['id' => (string) Str::uuid(), 'title' => 'Call mum', 'due_date' => '2026-10-26'];
     $other = ['id' => (string) Str::uuid(), 'title' => 'Buy eggs'];
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'action' => $action, 'task_id' => $task['id'], 'due_date' => '2026-10-28',
     ]]))]);
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task, $other]), $text);
@@ -404,7 +423,7 @@ it('preserves an unresolved sibling omitted from the model response', function (
     $text = 'delete absent and unknown';
     $rules = app(NoteEngine::class)->build($text, $this->context);
     expect(array_keys($rules->lowConfidence))->toBe(['i1', 'i1-2']);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['ref' => 'i1', 'action' => 'skip']]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['ref' => 'i1', 'action' => 'skip']]))]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
@@ -416,7 +435,7 @@ it('rejects a create proposal that also identifies an existing task', function (
     $task = ['id' => (string) Str::uuid(), 'title' => 'Call mum'];
     $text = 'doi call mum sang thu tu';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task]), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'action' => 'create', 'task_id' => $task['id'], 'title' => 'Call mum',
     ]]))]);
 
@@ -429,7 +448,7 @@ it('retrieves accented candidate titles for unaccented uncertain input without r
     $task = ['id' => (string) Str::uuid(), 'title' => 'Gọi mẹ'];
     $text = 'xoa goi me';
     $rules = app(NoteEngine::class)->build($text, $this->context, [$task]);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'delete', 'task_id' => $task['id']]]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['action' => 'delete', 'task_id' => $task['id']]]))]);
 
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
@@ -447,7 +466,7 @@ it('keeps unresolved references in followup even if the model invents a specific
     $rules = app(NoteEngine::class)->build($text, $this->context);
     expect($rules->lowConfidence)->toBe([])->and($rules->plan['skipped'][0]['reason'])->toBe('unclear');
     $rules = forcedLow($rules, $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'create', 'title' => 'Buy milk']]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['action' => 'create', 'title' => 'Buy milk']]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->status)->toBe(PlanStatus::Followup)->and($result->plan['create'])->toBe([])
@@ -457,7 +476,7 @@ it('keeps unresolved references in followup even if the model invents a specific
 it('lists an unclear sentence and keeps the rest of the note for review', function () {
     $text = 'blargh 9h; call dad tomorrow';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'unclear', 'title' => null]]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['action' => 'unclear', 'title' => null]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
 
     expect($result->status)->toBe(PlanStatus::Confirm)->and($result->plan['create'])->toHaveCount(1)
@@ -467,7 +486,7 @@ it('lists an unclear sentence and keeps the rest of the note for review', functi
 it('keeps the rules entries of missing and rejected items next to an accepted proposal', function () {
     $text = 'toi can mua sua; toi can mua banh; toi can di bo';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([
         ['ref' => 'i1', 'title' => 'Mua sữa'],
         ['ref' => 'i2', 'title' => null],
     ]))]);
@@ -482,7 +501,7 @@ it('keeps the rules entries of missing and rejected items next to an accepted pr
 it('supplies a deterministic first date for an understood recurrence', function (string $repeat, ?string $rule, ?string $time, string $date) {
     $text = 'di bo hang ngay';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'title' => 'Đi bộ', 'due_date' => null, 'repeat' => $repeat, 'repeat_rule' => $rule, 'start_time' => $time,
     ]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -498,7 +517,7 @@ it('supplies a deterministic first date for an understood recurrence', function 
 it('preserves a reliably read clock while letting the model clean the title', function () {
     $text = 'Tao muốn đánh cầu lông lúc 2h';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'title' => 'Đánh cầu lông', 'start_time' => '14:00', 'due_date' => '2026-10-23',
     ]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -510,7 +529,7 @@ it('preserves tomorrow and the clock even when a model proposes today or omits t
     $context = new NoteContext(new DateTimeImmutable('2026-11-03T10:00:00+07:00'), 'Asia/Ho_Chi_Minh');
     $text = 'Mai tao phải đi chơi 7 giờ';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $context), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'title' => 'Đi chơi', 'due_date' => $modelDate, 'start_time' => $modelTime,
         'priority' => 'medium', 'reminder' => 'none',
     ]]))]);
@@ -535,7 +554,7 @@ it('keeps known date and clock on a reschedule without replacing task identity',
     $text = 'Bạn chuyển Call mum sang ngày mai lúc 9 giờ';
     $task = ['id' => (string) Str::uuid(), 'title' => 'Call mum', 'due_date' => '2026-11-05'];
     $rules = forcedLow(app(NoteEngine::class)->build($text, $context, [$task]), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'action' => 'reschedule', 'task_id' => $task['id'], 'due_date' => '2026-11-03', 'start_time' => '10:00',
     ]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $context, [$task], 1);
@@ -546,7 +565,7 @@ it('keeps known date and clock on a reschedule without replacing task identity',
 it('allows the model to interpret an unreadable time while preserving a clear date', function () {
     $text = 'could you call mum tomorrow at 3pmish';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'title' => 'Call mum', 'due_date' => null, 'start_time' => '15:00',
     ]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -558,7 +577,7 @@ it('allows the model to interpret an unreadable time while preserving a clear da
 it('preserves both endpoints of a reliable range when only the wording needs interpretation', function () {
     $text = 'Bạn sắp xếp họp ngày mai từ 9h đến 10h';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([[
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([[
         'title' => 'Họp', 'due_date' => '2026-10-23', 'start_time' => '11:00', 'end_time' => '12:00',
     ]]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -569,34 +588,43 @@ it('preserves both endpoints of a reliable range when only the wording needs int
 it('routes a possible observation through the model instead of treating frequency as task intent', function () {
     $text = 'daily walk could benefits health';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['action' => 'skip']]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['action' => 'skip']]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
     expect($result->plan['create'])->toBe([])->and($result->plan['skipped'][0]['reason'])->toBe('skip')
         ->and($result->itemOutcomes['i1']['status'])->toBe('skipped');
 });
 
-it('sends Gemini requests without OpenRouter routing fields', function () {
-    config(['note_llm.provider' => 'gemini', 'note_llm.url' => 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions']);
+it('sends Gemini the schema without bounds', function () {
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
     expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
-    Http::assertSent(fn (Request $request): bool => ! array_key_exists('provider', $request->data())
-        && $request['response_format']['json_schema']['strict'] === true
+    Http::assertSent(fn (Request $request): bool => $request['response_format']['json_schema']['strict'] === true
         // No length, range, pattern or format bounds: Gemini rejects a long note's schema as too many states
         && ! preg_match('/"(maxLength|minimum|maximum|pattern|format|maxItems)"/', json_encode($request['response_format'], JSON_THROW_ON_ERROR)));
+});
+
+it('asks DeepSeek in JSON mode with the schema in the prompt', function () {
+    config(['note_llm.provider' => 'deepseek']);
+    Http::fake(['api.deepseek.com/*' => Http::response(recordedNoteResponse())]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
+    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.deepseek.com/chat/completions'
+        && $request['model'] === 'deepseek-flash' && $request['response_format'] === ['type' => 'json_object']
+        && str_contains($request['messages'][0]['content'], 'JSON schema') && str_contains($request['messages'][0]['content'], '"items"'));
 });
 
 it('writes model titles with the rules casing', function () {
     $text = 'toi can nop bai sql';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([['title' => ' nộp bài sql ']]))]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([['title' => ' nộp bài sql ']]))]);
 
     expect(app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1)->plan['create'][0]['title'])->toBe('Nộp bài SQL');
 });
 
 it('retries once when the provider is busy, and not on other errors', function (int $status, int $sent, string $engine) {
-    Http::fakeSequence('openrouter.ai/*')->push([], $status)->push(recordedNoteResponse());
+    Http::fakeSequence('generativelanguage.googleapis.com/*')->push([], $status)->push(recordedNoteResponse());
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
     expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe($engine);
@@ -609,7 +637,7 @@ it('retries once when the provider is busy, and not on other errors', function (
 
 it('sends open-task titles only for command-like items, so a new task cannot borrow one (ADR-008)', function (string $text, bool $sent) {
     $task = ['id' => (string) Str::uuid(), 'title' => 'Gọi cho mẹ hỏi thăm'];
-    Http::fake(['openrouter.ai/*' => Http::response(recordedNoteResponse())]);
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task]), $text);
     app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
 
@@ -620,10 +648,22 @@ it('sends open-task titles only for command-like items, so a new task cannot bor
     'unaccented move' => ['doi goi me sang thu 6', true],
 ]);
 
+it('does not offer a task that only shares an unaccented command word with the item', function (string $text, bool $sent) {
+    $task = ['id' => (string) Str::uuid(), 'title' => 'Chạy bộ'];
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);
+    $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context, [$task]), $text);
+    app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [$task], 1);
+
+    Http::assertSent(fn (Request $request): bool => str_contains($request['messages'][1]['content'], $task['id']) === $sent);
+})->with([
+    '"bo" (bỏ) is the verb' => ['bo qua dinh dang task', false],
+    'the task is named' => ['xoa chay bo', true],
+]);
+
 it('makes each task the model finds in one item, with the item ref then -2, -3', function () {
     $text = 'ok so basically call the bank tomorrow and anyway the report is due friday';
     $rules = forcedLow(app(NoteEngine::class)->build($text, $this->context), $text);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Call the bank', 'due_date' => '2026-10-24'],
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Report', 'due_date' => '2026-10-30'],
     ]))]);
@@ -637,7 +677,7 @@ it('makes each task the model finds in one item, with the item ref then -2, -3',
 it('keeps the rules entry when one item gets several proposals that are not all single new tasks', function (array $second) {
     $text = 'toi can mua sua';
     $rules = app(NoteEngine::class)->build($text, $this->context);
-    Http::fake(['openrouter.ai/*' => Http::response(modelNoteResponse([
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response(modelNoteResponse([
         ['ref' => 'i1', 'action' => 'create', 'title' => 'Mua sữa'], ['ref' => 'i1', ...$second],
     ]))]);
     $result = app(NoteLlmFallback::class)->improve($rules, $text, $this->context, [], 1);
@@ -649,27 +689,20 @@ it('keeps the rules entry when one item gets several proposals that are not all 
     'copies' => [['action' => 'create', 'title' => 'Mua trứng', 'copies' => 2]],
 ]);
 
-it('asks the model the user picked with their own key, outside the app budget', function () {
-    config(['note_llm.daily_user_calls' => 0]);
-    Http::fake(['api.openai.com/*' => Http::response(recordedNoteResponse())]);
-    $user = new User;
-    $user->forceFill(['llm_enabled' => true, 'llm_model' => 'openai:gpt-5.4-mini', 'llm_keys' => ['openai' => ['key' => 'sk-test-only', 'models' => ['gpt-5.4-mini']]]]);
-    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+it('gives Claude nullable enums as anyOf, which its structured outputs accept', function () {
+    $schema = ['type' => 'object', 'properties' => [
+        'task_id' => ['type' => ['string', 'null'], 'enum' => [null, 'a', 'b']],
+        'project' => ['type' => ['string', 'null'], 'enum' => [null]],
+        'title' => ['type' => ['string', 'null']],
+        'action' => ['type' => 'string', 'enum' => ['create', 'skip']],
+    ]];
 
-    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
-    Http::assertSent(fn (Request $request): bool => $request->url() === 'https://api.openai.com/v1/chat/completions'
-        && $request->hasHeader('Authorization', 'Bearer sk-test-only') && $request['model'] === 'gpt-5.4-mini'
-        && ! array_key_exists('provider', $request->data()));
-});
-
-it('keeps the rules result when the user turned AI off', function () {
-    Http::fake();
-    $user = new User;
-    $user->forceFill(['llm_enabled' => false]);
-    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
-
-    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user))->toBe($rules);
-    Http::assertNothingSent();
+    expect(ClaudeMessages::nullableEnums($schema)['properties'])->toBe([
+        'task_id' => ['anyOf' => [['type' => 'string', 'enum' => ['a', 'b']], ['type' => 'null']]],
+        'project' => ['anyOf' => [['type' => 'null']]],
+        'title' => ['type' => ['string', 'null']],
+        'action' => ['type' => 'string', 'enum' => ['create', 'skip']],
+    ]);
 });
 
 it('asks Claude through the Anthropic SDK with the prompt, the note items and the bounds-free schema', function () {
@@ -677,15 +710,14 @@ it('asks Claude through the Anthropic SDK with the prompt, the note items and th
     $content = json_decode(recordedNoteResponse()['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR);
     $claude = Mockery::mock(ClaudeMessages::class);
     $claude->shouldReceive('plan')->once()
-        ->withArgs(fn (string $key, string $model, string $system, string $user, array $schema): bool => $key === 'sk-ant-test-only'
-            && $model === 'claude-opus-5-5' && $system !== '' && str_contains($user, 'toi can mua sua')
+        ->withArgs(fn (string $key, string $model, string $system, string $user, array $schema): bool => $key === 'test-only'
+            && $model === 'claude-haiku-5-5' && $system !== '' && str_contains($user, 'toi can mua sua')
             && ! str_contains(json_encode($schema, JSON_THROW_ON_ERROR), 'maxLength'))
         ->andReturn(['content' => json_encode($content, JSON_THROW_ON_ERROR), 'tokens' => 100]);
     app()->instance(ClaudeMessages::class, $claude);
-    $user = new User;
-    $user->forceFill(['llm_enabled' => true, 'llm_model' => 'anthropic:claude-opus-5-5', 'llm_keys' => ['anthropic' => ['key' => 'sk-ant-test-only', 'models' => ['claude-opus-5-5']]]]);
+    config(['note_llm.provider' => 'anthropic']);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
-    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1, $user)->engine->value)->toBe('rules_llm');
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
     Http::assertNothingSent();
 });

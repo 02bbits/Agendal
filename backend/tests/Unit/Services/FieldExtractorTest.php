@@ -179,6 +179,10 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'NU-E28 other language is low' => ['comprar leche', ['lowConfidence' => true]],
     'NU-E40 unaccented Vietnamese is low' => ['toi can mua sua', ['lowConfidence' => true, 'title' => 'Toi can mua sua', 'dueDate' => null]],
     'NU-E40 unaccented Vietnamese beyond the syllable list' => ['toi co mot cuoc gap voi giang vien luc 11:45 hom nay', ['lowConfidence' => true]],
+    'NU-E40 môn is no English Mon' => ['hoc mon ly', ['title' => 'Hoc mon ly', 'dueDate' => null, 'lowConfidence' => true]],
+    'NU-E40 sát is no English Sat' => ['sat hach lai xe', ['title' => 'Sat hach lai xe', 'dueDate' => null, 'lowConfidence' => true]],
+    'NU-E40 Tuệ is no English Tue' => ['tue chi nhac nop bai', ['dueDate' => null, 'lowConfidence' => true]],
+    'English Mon stays a weekday' => ['sql quiz mon 9am', ['title' => 'SQL quiz', 'dueDate' => '2026-10-26', 'startTime' => '09:00']],
     'English with Vietnamese-looking words stays English' => ['call me and an ex tomorrow', ['lowConfidence' => false]],
     'short English stays English' => ['go to the gym', ['lowConfidence' => false]],
 ]);

@@ -141,7 +141,7 @@ class ProcessNote
         $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
         $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
         // Low-confidence items only; off, failing or over budget, the rules result stands (ADR-008)
-        $build = $this->fallback->improve($build, $text, $context, array_values($open), $user->id, $user);
+        $build = $this->fallback->improve($build, $text, $context, array_values($open), $user->id);
         if ($build->plan['dropped'] > 0) {
             Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
         }

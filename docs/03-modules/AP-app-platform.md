@@ -104,7 +104,6 @@ The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one fil
 | **Account** | Two-step verification by email (one switch; turning off asks for the password) | Fully Functional (#149) | `POST /api/v1/auth/two-factor` |
 | **Account** | Sign out | Fully Functional | `POST /api/v1/logout` |
 | **Account** | Plan, Avatar photo, Change email, Delete account | UI Gap / Roadmap | Future backend endpoints |
-| **LLM Provider** | Use AI for unclear notes; per provider (Claude, Gemini, OpenRouter, OpenAI) Get key, Not set or the key's last four, Set → key field with Save / Cancel, Remove; Model from the saved keys | Fully Functional ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) | `GET/PATCH /api/v1/me/ai`, `PUT/DELETE /api/v1/me/ai/keys/{provider}` |
 | **General** | Page view (Flat view vs Full width), desktop only: a phone is always flat and doesn't show it | Fully Functional (per account, #149) | `PATCH /api/v1/me` (`page_view`); `agendal.page_view` is only the copy `/theme.js` paints before the first frame |
 | **General** | Time format & Week start | Fully Functional | `PATCH /api/v1/me` |
 | **General** | Timezone (Automatic or a chosen zone) | Fully Functional (#149) | `PATCH /api/v1/me` (`timezone`, `timezone_auto`) |

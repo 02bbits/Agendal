@@ -10,7 +10,6 @@ use App\Enums\ProposedAction;
 use App\Enums\Reminder;
 use App\Enums\Repeat;
 use App\Enums\SkipReason;
-use App\Models\User;
 use App\Services\Tasks\RepeatSchedule;
 use BackedEnum;
 use DateTimeImmutable;
@@ -21,22 +20,22 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use JsonException;
 use Opis\JsonSchema\Validator;
+use SensitiveParameter;
 use Throwable;
 use UnexpectedValueException;
 
 /**
- * ADR-008: asks a language model about low-confidence items only, with minimum context, schema-only output and
- * budgets: the model the user picked with their own key, else the app's provider from .env. Each proposal is
- * validated like a rules plan; unresolved writes are held for follow-up.
+ * ADR-008: asks the app's language model about low-confidence items only, with minimum context, schema-only output
+ * and budgets. Each proposal is validated like a rules plan; unresolved writes are held for follow-up.
  *
  * @phpstan-import-type TaskRow from CommandMatcher
  * @phpstan-import-type ValidatedPlan from PlanValidator
+ *
+ * @phpstan-type Route array{url: string, key: string, model: string, output: string, sdk: bool}
  */
 final class NoteLlmFallback
 {
     private const PLAN_KINDS = ['create', 'update', 'delete', 'skipped', 'ambiguous'];
-
-    private const PROVIDERS = ['openrouter', 'nvidia', 'gemini'];
 
     private const TIME_PATTERN = '^([01][0-9]|2[0-3]):[0-5][0-9]$';
 
@@ -46,20 +45,18 @@ final class NoteLlmFallback
         private NoteNamer $namer,
         private CommandMatcher $matcher,
         private FieldExtractor $extractor,
-        private LlmProviders $providers,
         private ClaudeMessages $claude,
     ) {}
 
     /**
      * @param  list<TaskRow>  $openTasks
-     * @param  User|null  $user  whose Settings › AI choose the model; without one the app's provider answers
      */
-    public function improve(NoteBuild $rules, string $text, NoteContext $context, array $openTasks, int $userId, ?User $user = null): NoteBuild
+    public function improve(NoteBuild $rules, string $text, NoteContext $context, array $openTasks, int $userId): NoteBuild
     {
         if ($rules->lowConfidence === []) {
             return $rules;
         }
-        $route = $this->route($user);
+        $route = $this->route();
         if ($route === null) {
             return $rules;
         }
@@ -77,14 +74,15 @@ final class NoteLlmFallback
             }
             $schema = $this->schema(array_keys($items), $candidates, array_values($context->projects));
             $body = $this->request($items, $candidates, $schema, $context, $route);
-            // UTF-8 bytes bound the input tokens, schema included; reserve them before sending. A user's own key
-            // spends their own quota, so only the app's key has a budget.
+            // UTF-8 bytes bound the input tokens, schema included; reserve them before sending.
             $reserved = strlen(json_encode($body, JSON_THROW_ON_ERROR)) + (int) config('note_llm.max_completion_tokens');
-            $reservationDay = $route['own'] ? null : $this->budget->reserve($userId, $reserved);
+            $reservationDay = $this->budget->reserve($userId, $reserved);
             if ($reservationDay === false) {
                 return $this->failed($rules, 'budget_exhausted');
             }
-            $proposals = $this->proposals($this->send($body, $route), $schema, $reserved, $reservationDay);
+            $answer = $this->send($body, $route);
+            $this->budget->settle($reserved, max(0, $answer['tokens'] ?? $reserved), $reservationDay);
+            $proposals = $this->proposals($answer['content'], $schema);
             [$plan, $accepted, $outcomes] = $this->merge($rules, $proposals, $candidates, $context);
             Log::info('note_llm', ['elapsed_ms' => $this->elapsedMs($started), 'accepted' => $accepted]);
 
@@ -104,36 +102,44 @@ final class NoteLlmFallback
     }
 
     /**
-     * Who answers: the model the user picked in Settings › AI with their own key, else the app's configured provider.
-     * Null keeps the rules result: the kill switch (ADR-008), AI turned off by the user, or no provider at all.
+     * The app's provider from config, with its cheapest model unless NOTE_LLM_MODEL names one. Null keeps the rules
+     * result: the kill switch (ADR-008), an unknown provider, or no key.
      *
-     * @return array{provider: string, url: string, key: string, model: string, own: bool}|null
+     * @return Route|null
      */
-    private function route(?User $user): ?array
+    private function route(): ?array
     {
-        if (! config('note_llm.enabled')) {
+        $config = config('note_llm.providers')[(string) config('note_llm.provider')] ?? null;
+        if (! config('note_llm.enabled') || ! is_array($config)) {
             return null;
         }
-        if ($user !== null && ! $user->llm_enabled) {
-            return null;
-        }
-        [$provider, $model] = array_pad(explode(':', (string) $user?->llm_model, 2), 2, '');
-        $key = $user?->llm_keys[$provider]['key'] ?? null;
-        $own = $this->providers->all()[$provider] ?? null;
-        if (is_string($key) && $own !== null) {
-            // A model the provider filter no longer keeps falls back to the provider's default.
-            $usable = $this->providers->usable($provider, $user->llm_keys[$provider]['models'] ?? []);
-            $model = in_array($model, $usable, true) ? $model : $this->providers->pick($provider, $usable);
-            if ($model !== null) {
-                return ['provider' => $provider, 'url' => $own['url'] ?? '', 'key' => $key, 'model' => $model, 'own' => true];
-            }
-        }
-        if (! in_array(config('note_llm.provider'), self::PROVIDERS, true) || ! config('note_llm.key') || ! config('note_llm.model')) {
+        $key = $this->key();
+        if ($key === null) {
             return null;
         }
 
-        return ['provider' => (string) config('note_llm.provider'), 'url' => (string) config('note_llm.url'),
-            'key' => (string) config('note_llm.key'), 'model' => (string) config('note_llm.model'), 'own' => false];
+        return ['url' => (string) ($config['url'] ?? ''), 'key' => $key, 'model' => (string) (config('note_llm.model') ?: $config['model']),
+            'output' => (string) ($config['output'] ?? 'json_schema'), 'sdk' => isset($config['sdk'])];
+    }
+
+    /**
+     * The provider key: from the secret file when one is set (an unreadable or empty file turns the model off rather
+     * than falling back to the variable), else from the environment.
+     */
+    private function key(): ?string
+    {
+        $file = config('note_llm.key_file');
+        if (is_string($file) && $file !== '') {
+            $key = is_file($file) && is_readable($file) ? trim((string) file_get_contents($file)) : '';
+            if ($key === '') {
+                Log::warning('note_llm', ['outcome' => 'key_file_unreadable']);
+            }
+
+            return $key === '' ? null : $key;
+        }
+        $key = config('note_llm.key');
+
+        return is_string($key) && $key !== '' ? $key : null;
     }
 
     /** Timeout, error or spent budget: the rules result stands, recorded as rules_fallback (ADR-008). */
@@ -192,11 +198,16 @@ final class NoteLlmFallback
      */
     private function commandLike(string $item): bool
     {
-        $plain = fn (string $text): string => Str::lower(Str::ascii($text));
-        $words = array_map(fn (string $word): string => preg_quote($plain($word), '~'),
-            [...NoteVocabulary::values('complete_command'), ...NoteVocabulary::values('move_command'), ...NoteVocabulary::values('delete_command')]);
+        $words = array_map(fn (string $word): string => preg_quote($word, '~'), $this->commandWords());
 
-        return preg_match('~(?<![\p{L}\p{N}])(?:'.implode('|', $words).')(?![\p{L}\p{N}])~u', $plain($item)) === 1;
+        return preg_match('~(?<![\p{L}\p{N}])(?:'.implode('|', $words).')(?![\p{L}\p{N}])~u', Str::lower(Str::ascii($item))) === 1;
+    }
+
+    /** @return list<string> the complete, move and delete words, without accents */
+    private function commandWords(): array
+    {
+        return array_map(fn (string $word): string => Str::lower(Str::ascii($word)),
+            [...NoteVocabulary::values('complete_command'), ...NoteVocabulary::values('move_command'), ...NoteVocabulary::values('delete_command')]);
     }
 
     /**
@@ -207,7 +218,9 @@ final class NoteLlmFallback
      */
     private function candidatesFor(string $item, NoteContext $context, array $openTasks): array
     {
-        $words = NoteVocabulary::tokens(Str::ascii(implode(' ', $this->matcher->words($item, $context))));
+        // An unaccented command word is no name word: "bo" (bỏ) in "bo qua dinh dang" must not pick "Chạy bộ".
+        $words = array_values(array_diff(NoteVocabulary::tokens(Str::ascii(implode(' ', $this->matcher->words($item, $context)))),
+            array_filter($this->commandWords(), fn (string $word): bool => ! str_contains($word, ' '))));
         $score = fn (array $task): float => $this->matcher->score($words, Str::ascii($task['title']));
         // Uncertain intent may be an unrecognized command. Supply only relevant, already user-scoped tasks.
         $openTasks = array_values(array_filter($openTasks, fn (array $task): bool => $score($task) > 0));
@@ -262,7 +275,7 @@ final class NoteLlmFallback
      * @param  array<string, string>  $items
      * @param  array<string, list<TaskRow>>  $candidates
      * @param  array<string, mixed>  $schema
-     * @param  array{provider: string, url: string, key: string, model: string, own: bool}  $route
+     * @param  Route  $route
      * @return array<string, mixed>
      */
     private function request(array $items, array $candidates, array $schema, NoteContext $context, array $route): array
@@ -276,32 +289,23 @@ final class NoteLlmFallback
         $prompt = (string) file_get_contents(resource_path('prompts/'.config('note_llm.prompt_version').'.txt'));
         $userContent = ['items' => $input, 'now' => $context->local()->format(DATE_ATOM), 'timezone' => $context->timezone, 'projects' => array_values($context->projects)];
 
-        $body = [
+        $bounded = self::withoutBounds($schema);
+        if ($route['output'] === 'json_object') {
+            // JSON mode only checks that the answer is JSON: the schema goes in the prompt, and proposals() checks it.
+            $prompt .= "\n\nReturn only JSON that matches this JSON schema:\n".json_encode($bounded, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE);
+        }
+
+        return [
             'model' => $route['model'],
             'temperature' => 0,
             'max_tokens' => (int) config('note_llm.max_completion_tokens'),
-            'provider' => ['require_parameters' => true, 'data_collection' => 'deny'],
-            'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'plan', 'strict' => true,
-                'schema' => $route['provider'] === 'openrouter' ? $schema : self::withoutBounds($schema)]],
+            'response_format' => $route['output'] === 'json_object' ? ['type' => 'json_object']
+                : ['type' => 'json_schema', 'json_schema' => ['name' => 'plan', 'strict' => true, 'schema' => $bounded]],
             'messages' => [
                 ['role' => 'system', 'content' => $prompt],
                 ['role' => 'user', 'content' => json_encode($userContent, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE)],
             ],
         ];
-        $reasoning = config('note_llm.reasoning_enabled');
-        if ($reasoning !== null && $reasoning !== '') {
-            $body['reasoning'] = ['enabled' => (bool) $reasoning];
-        }
-        if ($route['provider'] !== 'openrouter') {
-            // OpenRouter-only routing fields; the other OpenAI-compatible endpoints reject them.
-            unset($body['provider'], $body['reasoning']);
-        }
-        if ($route['provider'] === 'nvidia') {
-            $body['chat_template_kwargs'] = ['enable_thinking' => false];
-            $body['stream'] = false;
-        }
-
-        return $body;
     }
 
     /**
@@ -322,13 +326,13 @@ final class NoteLlmFallback
      * The model's JSON answer and the tokens it used.
      *
      * @param  array<string, mixed>  $body
-     * @param  array{provider: string, url: string, key: string, model: string, own: bool}  $route
+     * @param  Route  $route
      * @return array{content: string, tokens: int|null}
      */
-    private function send(array $body, array $route): array
+    private function send(array $body, #[SensitiveParameter] array $route): array
     {
         $timeout = (float) config('note_llm.timeout_seconds');
-        if (($this->providers->all()[$route['provider']]['sdk'] ?? null) === 'anthropic') {
+        if ($route['sdk']) {
             // The same prompt, note items and bounds-free schema, as a Claude Messages request.
             return $this->claude->plan($route['key'], $route['model'], (string) $body['messages'][0]['content'],
                 (string) $body['messages'][1]['content'], $body['response_format']['json_schema']['schema'], $timeout);
@@ -346,16 +350,12 @@ final class NoteLlmFallback
     /**
      * One proposal per ref, valid against the schema; anything else throws and the rules result stands.
      *
-     * @param  array{content: string, tokens: int|null}  $answer
      * @param  array<string, mixed>  $schema
      * @return array<string, list<array<string, mixed>>>
      */
-    private function proposals(array $answer, array $schema, int $reserved, ?string $reservationDay): array
+    private function proposals(string $answer, array $schema): array
     {
-        if ($reservationDay !== null) {
-            $this->budget->settle($reserved, max(0, $answer['tokens'] ?? $reserved), $reservationDay);
-        }
-        $data = json_decode($answer['content'], flags: JSON_THROW_ON_ERROR);
+        $data = json_decode($answer, flags: JSON_THROW_ON_ERROR);
         if (! (new Validator)->validate($data, json_decode(json_encode($schema, JSON_THROW_ON_ERROR)))->isValid()) {
             throw new UnexpectedValueException('The model output breaks the plan schema');
         }

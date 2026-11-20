@@ -4,7 +4,6 @@ import {
   PaletteIcon,
   SidebarIcon,
   SlidersIcon,
-  SparklesIcon,
   UserIcon,
 } from "../../components/icons";
 import type { SettingsTab } from "./types";
@@ -31,12 +30,6 @@ export function settingsTabs(isDesktop: boolean): SettingsTabItem[] {
       label: t("app.tab_general"),
       Icon: SlidersIcon,
       keywords: "general time format week start page view",
-    },
-    {
-      id: "llm",
-      label: t("settings.tab_ai"),
-      Icon: SparklesIcon,
-      keywords: "ai llm provider model api key claude gemini openrouter openai",
     },
     {
       id: "theme",
