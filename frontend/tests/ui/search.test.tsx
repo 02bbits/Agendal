@@ -359,6 +359,34 @@ describe("SearchPanel & SearchPopup", () => {
     }
   });
 
+  it("a quick filter with nothing typed and no results says nothing matches this filter, never {query}", async () => {
+    render(
+      <SearchPanel
+        variant="popup"
+        projects={mockProjects}
+        today="2026-10-23"
+        timeFormat="24h"
+        searchTasks={async () => ({
+          items: [],
+          counts: { all: 0, open: 0, completed: 0 },
+          next_cursor: null,
+        })}
+        searchNotes={async () => ({ items: [] })}
+        onOpenTask={() => {}}
+        onOpenProject={() => {}}
+        onOpenNote={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Starts today" }));
+    expect(
+      await screen.findByText("Nothing matches this filter.", undefined, {
+        timeout: 3000,
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/\{query\}|“Starts today”/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show all" })).toBeNull();
+  });
+
   it("does not allow a slow old answer to replace a newer query", async () => {
     vi.useFakeTimers();
     try {

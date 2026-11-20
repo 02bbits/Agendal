@@ -3,9 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
-  CalendarIcon,
-  ChipGroup,
-  ClockIcon,
   PlusIcon,
   ScreenHeader,
   TaskPanel,
@@ -13,284 +10,90 @@ import {
   Toast,
   UpcomingScreen,
   UpcomingViewSwitch,
-  addDays,
-  entriesOf,
   t,
   useTaskPanel,
   useTaskStore,
-  type Clock,
-  type Project,
-  type Task,
   type UpcomingFilter,
   type UpcomingViewMode,
 } from "@/ui";
+import {
+  readFilter,
+  readViewMode,
+  writeFilter,
+  writeViewMode,
+} from "@/ui/features/lists/storage";
+import { httpTaskApi } from "@/lib/taskApi";
 import { useAppFrame } from "../AppFrame";
-import { httpTaskApi, inbox, projects, upcoming } from "@/lib/taskApi";
-import { now, timeZone, today } from "@/lib/clock";
-import { ApiRequestError } from "@/lib/apiError";
-import { readProjects, readTasks } from "@/lib/localStore";
-import { headerDate, subscribeHeaderDate } from "../headerDate";
-import { useSyncExternalStore } from "react";
-import { SYNCED } from "@/lib/sync";
+import { appClock } from "../appClock";
+import { useHeaderDate } from "../headerDate";
 import { UpcomingSkeleton } from "../skeletons";
-
-const clock: Clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
-
-// "N tasks in the next 7 days": open tasks with a start or due day from tomorrow to a week out
-function subtitleOf(tasks: readonly Task[]) {
-  const todayStr = today(timeZone(), now());
-  const limitDate = addDays(todayStr, 7);
-  const count = tasks.filter(
-    (task) =>
-      !task.done &&
-      entriesOf(task).some((e) => e.date > todayStr && e.date <= limitDate),
-  ).length;
-  return count === 1
-    ? t("list.upcoming_subtitle_one", { count: 1 })
-    : t("list.upcoming_subtitle", { count });
-}
+import { UpcomingFilterChips } from "./UpcomingFilterChips";
+import { useUpcomingData } from "./useUpcomingData";
 
 function UpcomingToast() {
   const { toast, dismissToast } = useTaskStore();
   return <Toast toast={toast} onDismiss={dismissToast} />;
 }
 
-export function UpcomingClient() {
-  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
-  const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
-  const [status, setStatus] = useState<"loading" | "error" | "ready">(
-    "loading",
-  );
-  const [errorMessage, setErrorMessage] = useState<string>("");
-  // Bumped on every load: Next keeps this page mounted but hidden after we
-  // leave (cacheComponents), and the load runs again when we come back; a new
-  // store key makes fresh tasks replace the store's old copy
-  const [loadSeq, setLoadSeq] = useState(0);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [projectList, setProjectList] = useState<Project[]>([]);
-  const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
-    "ready",
-  );
-  const [subtitle, setSubtitle] = useState<string>("");
+/** The filter and List or Board this device chose last; the board widens the page. */
+function useUpcomingView() {
   const [filter, setFilter] = useState<UpcomingFilter>("all");
   const [viewMode, setViewMode] = useState<UpcomingViewMode>("list");
-  const viewRef = useRef<{ anchor: string; day?: string } | null>(null);
-  // Set once the network answers; until then the device copy may show (AP-2)
-  const fresh = useRef(false);
-  const shownFromDevice = useRef(false);
 
   useEffect(() => {
-    try {
-      const savedFilter = localStorage.getItem("agendal.upcoming.filter");
-      if (savedFilter === "scheduled" || savedFilter === "due") {
-        /* eslint-disable-next-line react-hooks/set-state-in-effect */
-        setFilter(savedFilter);
-      }
-      const savedMode = localStorage.getItem("agendal.upcoming.view_mode");
-      if (savedMode === "board" || savedMode === "grid") {
-        setViewMode("board");
-      }
-    } catch {}
+    /* eslint-disable-next-line react-hooks/set-state-in-effect */
+    setFilter(readFilter());
+    setViewMode(readViewMode());
   }, []);
 
   useEffect(() => {
-    if (viewMode === "board") {
-      document.documentElement.dataset.boardView = "true";
-    } else {
-      delete document.documentElement.dataset.boardView;
-    }
+    const root = document.documentElement;
+    if (viewMode === "board") root.dataset.boardView = "true";
+    else delete root.dataset.boardView;
     return () => {
-      delete document.documentElement.dataset.boardView;
+      delete root.dataset.boardView;
     };
   }, [viewMode]);
 
-  const date = useSyncExternalStore(
-    subscribeHeaderDate,
-    () => headerDate(),
-    () => "",
-  );
-
-  const accountInitial = user?.display_name || user?.email || "";
-
-  const handleFilterChange = (next: UpcomingFilter) => {
+  const chooseFilter = (next: UpcomingFilter) => {
     setFilter(next);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("agendal.upcoming.filter", next);
-      } catch {}
-    }
+    writeFilter(next);
   };
-
-  const handleViewModeChange = (next: UpcomingViewMode) => {
+  const chooseViewMode = (next: UpcomingViewMode) => {
     setViewMode(next);
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem("agendal.upcoming.view_mode", next);
-      } catch {}
-    }
+    writeViewMode(next);
   };
+  return { filter, chooseFilter, viewMode, chooseViewMode };
+}
 
-  const handleRetryProjects = () => {
-    projects()
-      .then((pData) => {
-        setProjectList(pData ?? []);
-        setProjectsStatus("ready");
-      })
-      .catch(() => {
-        setProjectsStatus("failed");
-      });
-  };
-
-  const fetchData = () => {
-    Promise.all([upcoming({ days: 366 }), inbox(), projects()])
-      .then(([upcomingData, inboxData, projectsData]) => {
-        fresh.current = true;
-        const flatUpcoming = (upcomingData?.days ?? []).flatMap((d) => d.tasks);
-        const overdueTasks = inboxData?.overdue ?? [];
-        const seen = new Set<string>();
-        const combinedTasks: Task[] = [];
-        for (const t of [...overdueTasks, ...flatUpcoming]) {
-          if (!seen.has(t.id)) {
-            seen.add(t.id);
-            combinedTasks.push(t);
-          }
-        }
-        setTasks(combinedTasks);
-        setProjectList(projectsData ?? []);
-        setProjectsStatus("ready");
-        setSubtitle(subtitleOf(flatUpcoming));
-        setLoadSeq((n) => n + 1);
-        setStatus("ready");
-      })
-      .catch((err: unknown) => {
-        // Offline with the device copy on screen: keep it, the banner says why
-        if (!(err instanceof ApiRequestError) && shownFromDevice.current)
-          return;
-        if (err instanceof ApiRequestError) {
-          setErrorMessage(
-            t("error.generic", {
-              request_id: err.requestId ?? err.code,
-            }),
-          );
-        } else {
-          setErrorMessage(t("app.offline"));
-        }
-        setStatus("error");
-      });
-  };
-
-  const handleRetry = () => {
-    setStatus("loading");
-    fetchData();
-  };
-
-  useEffect(() => {
-    void Promise.all([readTasks(), readProjects()]).then(
-      ([cached, cachedProjects]) => {
-        const dated = cached.filter((task) => task.start_date || task.due_date);
-        if (
-          fresh.current ||
-          (cached.length === 0 && cachedProjects.length === 0)
-        )
-          return;
-        shownFromDevice.current = true;
-        setTasks(dated);
-        setProjectList(cachedProjects);
-        setSubtitle(subtitleOf(dated));
-        setLoadSeq((n) => n + 1);
-        setStatus("ready");
-      },
-    );
-    fetchData();
-
-    const handleTaskCreated = () => {
-      fetchData();
-    };
-    const handleProjectsChanged = () => {
-      fetchData();
-    };
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchData();
-      }
-    };
-
-    window.addEventListener("agendal:task-created", handleTaskCreated);
-
-    // Changes pulled by sync (IM-52)
-
-    window.addEventListener(SYNCED, handleTaskCreated);
-    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-
-    return () => {
-      window.removeEventListener("agendal:task-created", handleTaskCreated);
-      window.removeEventListener(SYNCED, handleTaskCreated);
-      window.removeEventListener(
-        "agendal:projects-changed",
-        handleProjectsChanged,
-      );
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-    };
-  }, []);
-
+/** Upcoming (LV-2): the coming days as a list or a board, with the task panel beside them. */
+export function UpcomingClient() {
+  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
+  const data = useUpcomingData();
+  const { filter, chooseFilter, viewMode, chooseViewMode } = useUpcomingView();
+  // Where the list was, so coming back from a task or New task lands there again
+  const viewRef = useRef<{ anchor: string; day?: string } | null>(null);
+  const date = useHeaderDate();
+  const accountInitial = user?.display_name || user?.email || "";
+  // Full width and the board put the controls in the header
   const isFull = settings.pageView === "full" || viewMode === "board";
-
-  const filterChipsMd = (
-    <ChipGroup
-      label={t("list.filter_label")}
-      value={filter}
-      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-      size="md"
-      options={[
-        { value: "all", label: t("list.filter_all") },
-        {
-          value: "scheduled",
-          label: t("list.filter_scheduled"),
-          icon: <ClockIcon size={16} />,
-        },
-        {
-          value: "due",
-          label: t("list.filter_due"),
-          icon: <CalendarIcon size={16} />,
-        },
-      ]}
-    />
-  );
-
-  const filterChipsSm = (
-    <ChipGroup
-      label={t("list.filter_label")}
-      value={filter}
-      onChange={(next) => handleFilterChange(next as UpcomingFilter)}
-      options={[
-        { value: "all", label: t("list.filter_all") },
-        {
-          value: "scheduled",
-          label: t("list.filter_scheduled"),
-          icon: <ClockIcon size={14} />,
-        },
-        {
-          value: "due",
-          label: t("list.filter_due"),
-          icon: <CalendarIcon size={14} />,
-        },
-      ]}
-    />
-  );
 
   const headerControls = (
     <div className="flex items-center gap-3">
-      {isFull && <div className="hidden md:block">{filterChipsMd}</div>}
+      {isFull && (
+        <div className="hidden md:block">
+          <UpcomingFilterChips
+            value={filter}
+            onChange={chooseFilter}
+            size="md"
+          />
+        </div>
+      )}
       {/* Pinned to the top-right corner of the page, level with the date (the AppShell column is relative) */}
       <UpcomingViewSwitch
         viewMode={viewMode}
-        onChange={handleViewModeChange}
+        onChange={chooseViewMode}
         className="md:absolute md:top-[34px] md:right-10"
       />
       <Button
@@ -314,37 +117,45 @@ export function UpcomingClient() {
         navigate={navigate}
         action={isFull ? headerControls : undefined}
       >
-        {subtitle && (
+        {data.subtitle && (
           <p className="m-0 mt-1 text-footnote text-ink-secondary">
-            {subtitle}
+            {data.subtitle}
           </p>
         )}
-        {isFull && <div className="mt-4 md:hidden">{filterChipsSm}</div>}
+        {isFull && (
+          <div className="mt-4 md:hidden">
+            <UpcomingFilterChips value={filter} onChange={chooseFilter} />
+          </div>
+        )}
       </ScreenHeader>
 
       {!isFull && (
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-          {filterChipsMd}
+          <UpcomingFilterChips
+            value={filter}
+            onChange={chooseFilter}
+            size="md"
+          />
           {headerControls}
         </div>
       )}
 
-      {status === "loading" && (
+      {data.status === "loading" && (
         <UpcomingSkeleton board={viewMode === "board"} />
       )}
-      {status === "error" && (
+      {data.status === "error" && (
         <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-          <p className="text-callout text-ink-secondary">{errorMessage}</p>
-          <Button onClick={handleRetry}>{t("common.retry")}</Button>
+          <p className="text-callout text-ink-secondary">{data.errorMessage}</p>
+          <Button onClick={data.retry}>{t("common.retry")}</Button>
         </div>
       )}
-      {status === "ready" && (
+      {data.status === "ready" && (
         <TaskStoreProvider
-          key={loadSeq}
+          key={data.loadSeq}
           api={httpTaskApi}
-          clock={clock}
-          initialTasks={tasks}
-          initialProjects={projectList}
+          clock={appClock}
+          initialTasks={data.tasks}
+          initialProjects={data.projectList}
           timeFormat={settings.timeFormat}
         >
           <UpcomingScreen
@@ -353,18 +164,18 @@ export function UpcomingClient() {
             showHeader={false}
             showFilter={false}
             filter={filter}
-            onFilterChange={handleFilterChange}
+            onFilterChange={chooseFilter}
             viewMode={viewMode}
-            onViewModeChange={handleViewModeChange}
+            onViewModeChange={chooseViewMode}
             selectedTaskId={selectedTaskId}
             weekStart={settings.weekStart}
             initialView={() => viewRef.current}
             onViewChange={(view) => {
               viewRef.current = { anchor: view.anchor, day: undefined };
             }}
-            onAddTask={(date) => {
-              viewRef.current = { anchor: date, day: date };
-              openNewTask({ startDate: date });
+            onAddTask={(day) => {
+              viewRef.current = { anchor: day, day };
+              openNewTask({ startDate: day });
             }}
             onNewTask={() => openNewTask()}
           />
@@ -373,9 +184,9 @@ export function UpcomingClient() {
               variant={settings.pageView === "full" ? "aside" : "popup"}
               taskId={selectedTaskId}
               onClose={closePanel}
-              projects={projectList}
-              projectsStatus={projectsStatus}
-              onRetryProjects={handleRetryProjects}
+              projects={data.projectList}
+              projectsStatus={data.projectsStatus}
+              onRetryProjects={data.retryProjects}
               weekStart={settings.weekStart}
             />
           )}

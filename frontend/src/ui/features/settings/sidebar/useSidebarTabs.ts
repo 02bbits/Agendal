@@ -5,16 +5,15 @@ import {
   getStoredSidebarTabs,
   getStoredSidebarTabsOrder,
   readStoredSetting,
+  SIDEBAR_COUNTS_CHANGED,
+  SIDEBAR_COUNTS_KEY,
+  SIDEBAR_TABS_CHANGED,
   SIDEBAR_TABS_ORDER_KEY,
   SIDEBAR_TABS_STORAGE_KEY,
   writeStoredSetting,
   type TabId,
 } from "../../shell/routes";
 import { useSortableList } from "../../shell/useSortableList";
-
-const TABS_CHANGED_EVENT = "agendal:sidebar_tabs_changed";
-const COUNTS_CHANGED_EVENT = "agendal:sidebar_counts_changed";
-const SHOW_COUNTS_KEY = "agendal.sidebar_task_counts";
 
 /**
  * The desktop sidebar's tabs as Settings > Sidebar changes them: which show, in what order, and
@@ -25,7 +24,7 @@ export function useSidebarTabs() {
   const [enabled, setEnabled] = useState(getStoredSidebarTabs);
   const [order, setOrder] = useState(getStoredSidebarTabsOrder);
   const [showCounts, setShowCounts] = useState(
-    () => readStoredSetting(SHOW_COUNTS_KEY) !== "false",
+    () => readStoredSetting(SIDEBAR_COUNTS_KEY) !== "false",
   );
 
   const saveOrder = (next: TabId[]) => {
@@ -33,7 +32,7 @@ export function useSidebarTabs() {
     writeStoredSetting(
       SIDEBAR_TABS_ORDER_KEY,
       JSON.stringify(next),
-      TABS_CHANGED_EVENT,
+      SIDEBAR_TABS_CHANGED,
     );
   };
 
@@ -42,7 +41,7 @@ export function useSidebarTabs() {
     writeStoredSetting(
       SIDEBAR_TABS_STORAGE_KEY,
       JSON.stringify(next),
-      TABS_CHANGED_EVENT,
+      SIDEBAR_TABS_CHANGED,
     );
   };
 
@@ -68,7 +67,11 @@ export function useSidebarTabs() {
 
   const changeShowCounts = (next: boolean) => {
     setShowCounts(next);
-    writeStoredSetting(SHOW_COUNTS_KEY, String(next), COUNTS_CHANGED_EVENT);
+    writeStoredSetting(
+      SIDEBAR_COUNTS_KEY,
+      String(next),
+      SIDEBAR_COUNTS_CHANGED,
+    );
   };
 
   return {

@@ -130,6 +130,13 @@ export const ClockIcon = icon(
     <path d="M12 7.5V12l3 2" />
   </>,
 );
+/** Type the time instead of using the clock face. */
+export const KeyboardIcon = icon(
+  <>
+    <rect x="3" y="6" width="18" height="12" rx="2" />
+    <path d="M7 10h.01M11 10h.01M15 10h.01M7 14h10" />
+  </>,
+);
 export const BellIcon = icon(
   <>
     <path d="M6 8.5a6 6 0 0 1 12 0c0 6.5 2.5 8.5 2.5 8.5h-17S6 15 6 8.5" />

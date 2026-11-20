@@ -1,4 +1,5 @@
 "use client";
+import { PROJECTS_CHANGED, notifyProjectsChanged } from "@/ui/domain/appEvents";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -74,22 +75,19 @@ export function ProjectsClient() {
     const handleProjectsChanged = () => {
       load();
     };
-    window.addEventListener("agendal:projects-changed", handleProjectsChanged);
+    window.addEventListener(PROJECTS_CHANGED, handleProjectsChanged);
     // Changes pulled by sync (IM-52)
     window.addEventListener(SYNCED, handleProjectsChanged);
     return () => {
       window.removeEventListener(SYNCED, handleProjectsChanged);
-      window.removeEventListener(
-        "agendal:projects-changed",
-        handleProjectsChanged,
-      );
+      window.removeEventListener(PROJECTS_CHANGED, handleProjectsChanged);
     };
   }, [load]);
 
   const handleCreated = (created: Project) => {
     setProjects((prev) => [...prev, { ...created, open: 0, done: 0 }]);
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+      notifyProjectsChanged();
     }
     setCreating(false);
 

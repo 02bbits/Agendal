@@ -1,3 +1,4 @@
+import { useWideScreen } from "./useMediaQuery";
 import {
   useCallback,
   useEffect,
@@ -13,7 +14,6 @@ import { t } from "../copy";
 import { cx } from "./cx";
 import { placePopover } from "./popoverPosition";
 import { Sheet } from "./Sheet";
-import { useMediaQuery } from "./useMediaQuery";
 
 export interface PopoverOrSheetProps {
   open: boolean;
@@ -54,7 +54,7 @@ export function PopoverOrSheet({
     setModalHost(el?.closest(".modal, [data-modal-host]") ?? null);
   }, []);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const isWide = useMediaQuery("(min-width: 768px)");
+  const isWide = useWideScreen();
   const showPopover = open && isWide;
 
   const place = useCallback(() => {

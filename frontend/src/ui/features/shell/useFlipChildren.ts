@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "../../domain/motion";
 import { useLayoutEffect, useRef, type RefObject } from "react";
 
 /**
@@ -29,7 +30,7 @@ export function useFlipChildren(
     if (
       !previous ||
       typeof children[0]?.animate !== "function" ||
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+      prefersReducedMotion()
     )
       return;
 

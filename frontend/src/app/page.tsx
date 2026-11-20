@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useSyncExternalStore } from "react";
+import { Suspense } from "react";
 import {
   Button,
   InboxScreen,
@@ -12,21 +12,13 @@ import {
   t,
   useTaskPanel,
   useTaskStore,
-  type Clock,
 } from "@/ui";
-import { headerDate, subscribeHeaderDate } from "./headerDate";
+import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
-import { now, timeZone } from "@/lib/clock";
+import { appClock } from "./appClock";
 import { useInboxData } from "./useInboxData";
 import { InboxSkeleton } from "./skeletons";
-
-const clock: Clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
 
 function InboxToast() {
   const { toast, dismissToast } = useTaskStore();
@@ -55,11 +47,7 @@ function InboxContent() {
     handleRetryProjects,
   } = useInboxData();
 
-  const date = useSyncExternalStore(
-    subscribeHeaderDate,
-    () => headerDate(),
-    () => undefined,
-  );
+  const date = useHeaderDate();
   const accountInitial = user?.display_name || user?.email || "";
 
   return (
@@ -99,7 +87,7 @@ function InboxContent() {
       {status === "ready" && (
         <TaskStoreProvider
           api={httpTaskApi}
-          clock={clock}
+          clock={appClock}
           initialTasks={tasks}
           initialProjects={projectList}
           timeFormat={settings.timeFormat}

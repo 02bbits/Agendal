@@ -38,6 +38,11 @@ export const DEFAULT_SIDEBAR_TABS_ORDER: TabId[] = [
 
 export const SIDEBAR_TABS_STORAGE_KEY = "agendal.sidebar_tabs_enabled";
 export const SIDEBAR_TABS_ORDER_KEY = "agendal.sidebar_tabs_order";
+export const SIDEBAR_COUNTS_KEY = "agendal.sidebar_task_counts";
+/** Settings > Sidebar changed the tabs or their order: the sidebar reads them again. */
+export const SIDEBAR_TABS_CHANGED = "agendal:sidebar_tabs_changed";
+/** Settings > Sidebar turned the counts on or off. */
+export const SIDEBAR_COUNTS_CHANGED = "agendal:sidebar_counts_changed";
 
 /** Reads a saved setting; null on the server or when storage is blocked. */
 export function readStoredSetting(key: string): string | null {
