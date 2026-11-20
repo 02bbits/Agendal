@@ -234,6 +234,7 @@ export async function pendingNotes(): Promise<NoteListEntry[]> {
     ...waiting.map((body) => ({ body, failed: false })),
     ...refused.map((body) => ({ body, failed: true })),
   ]
+    .reverse()
     .sort((a, b) => b.body.written_at.localeCompare(a.body.written_at))
     .map(({ body, failed }) => ({
       id: body.client_id,

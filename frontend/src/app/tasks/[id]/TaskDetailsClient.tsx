@@ -210,7 +210,7 @@ export default function TaskDetailsClient({
         className="flex animate-pulse flex-col gap-5 pb-8 pt-1"
       >
         <div className="flex items-center justify-between py-1">
-          <div className="h-9 w-20 rounded-full bg-surface-hover/60" />
+          <div className="h-9 w-20 rounded-full bg-fill/80" />
         </div>
         <div className="flex items-center gap-3 py-1">
           <div className="size-6 shrink-0 rounded-full bg-fill/80" />
@@ -218,9 +218,9 @@ export default function TaskDetailsClient({
         </div>
         <div className="h-20 w-full rounded-2xl border border-separator/40 bg-surface/70" />
         <div className="flex items-center gap-2">
-          <div className="h-8 w-16 rounded-full bg-surface-hover/60" />
-          <div className="h-8 w-20 rounded-full bg-surface-hover/60" />
-          <div className="h-8 w-16 rounded-full bg-surface-hover/60" />
+          <div className="h-8 w-16 rounded-full bg-fill/80" />
+          <div className="h-8 w-20 rounded-full bg-fill/80" />
+          <div className="h-8 w-16 rounded-full bg-fill/80" />
         </div>
         <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface/80 divide-y divide-separator/40">
           {[1, 2, 3, 4].map((i) => (
