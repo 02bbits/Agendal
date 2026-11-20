@@ -178,7 +178,12 @@ export function SearchResults({
           </Button>
         </div>
       ) : noResults ? (
-        <EmptyState title={t("search.no_match", { query: query.trim() })} />
+        // Only a filter or a project picked, nothing typed: the message names that instead
+        <EmptyState
+          title={t("search.no_match", {
+            query: query.trim() || filterLabel || "",
+          })}
+        />
       ) : (
         <div id={listboxId} role="listbox" className="flex flex-col gap-3">
           {taskRows.length > 0 && (
