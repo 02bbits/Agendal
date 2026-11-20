@@ -123,6 +123,8 @@ export const pending = {
   "task.notes_add": "Add notes",
   "task.no_date": "No date",
   "task.not_set": "None",
+  "task.merged_back": "{date} went back into the repeat",
+  "task.back_to": "Back to {date}",
   "common.none": "None",
   "task.created": "Created {date}",
   "task.edited": "Edited {date}",

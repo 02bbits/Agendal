@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from "react";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { ApiRequestError } from "../../src/lib/apiError";
@@ -270,35 +270,175 @@ describe("Complete a task (TK-1, WF-06)", () => {
     ).toBeTruthy();
   });
 
-  it("#168: reopening a done repeating task takes its next occurrence away at once, not after the answer", async () => {
+  it("#168: unticking a done repeat whose series is open: the row goes back into it, the open row stays, Undo restores", async () => {
     const done = task({
-      id: "t-rep",
-      title: "Daily standup",
+      id: "m-1",
+      title: "Retro Nov",
       due_date: "2026-10-22",
-      repeat: "daily",
+      repeat: "monthly",
       done: true,
       done_at: "2026-10-22T01:12:00Z",
     });
-    const nextTask = task({
-      id: "t-next",
-      title: "Daily standup next",
+    const open = task({
+      id: "m-2",
+      title: "Retro Dec",
       due_date: TODAY,
-      repeat: "daily",
-      previous_occurrence_id: "t-rep",
+      repeat: "monthly",
+      previous_occurrence_id: "m-1",
     });
-    const { wrap, memory } = setup([done, nextTask]);
-    // The server never answers: nothing but the click itself can take the row away
-    vi.spyOn(memory.api, "reopen").mockReturnValueOnce(new Promise(() => {}));
+    const { wrap, memory } = setup([done, open]);
+    const reopen = vi
+      .spyOn(memory.api, "reopen")
+      .mockResolvedValueOnce({ task: done, merged: true });
+    const restore = vi.spyOn(memory.api, "restore").mockResolvedValueOnce(done);
 
     render(wrap(<TodayList />));
     await userEvent.click(
-      screen.getByRole("checkbox", { name: "Reopen Daily standup" }),
+      screen.getByRole("checkbox", { name: "Reopen Retro Nov" }),
+    );
+    expect(reopen).toHaveBeenCalledWith("m-1", expect.any(String), {
+      merge: true,
+    });
+    // It rises and fades while the server answers, never shown as an open row of its own
+    expect(screen.getByText("Retro Nov").closest("li")!.className).toContain(
+      "animate-merge-out",
     );
 
-    expect(screen.queryByText("Daily standup next")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Retro Nov")).toBeNull());
+    expect(screen.getByText("Retro Dec").closest("li")!.className).toContain(
+      "animate-merge-in",
+    );
     expect(
-      screen.getByRole("checkbox", { name: "Complete Daily standup" }),
+      screen.getByRole("checkbox", { name: "Complete Retro Dec" }),
     ).toBeTruthy();
+    expect(
+      screen.getByText("Yesterday went back into the repeat"),
+    ).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(restore).toHaveBeenCalledWith("m-1");
+    expect(
+      await screen.findByRole("checkbox", { name: "Reopen Retro Nov" }),
+    ).toBeTruthy();
+  });
+
+  it("#168: unticking the repeat just ticked by mistake rolls back to its date, the next one gone", async () => {
+    const done = task({
+      id: "r-1",
+      title: "Retro 20 Nov",
+      due_date: "2026-10-22",
+      repeat: "monthly",
+      done: true,
+      done_at: "2026-10-23T01:00:00Z",
+    });
+    const next = task({
+      id: "r-2",
+      title: "Retro 20 Dec",
+      due_date: TODAY,
+      repeat: "monthly",
+      previous_occurrence_id: "r-1",
+    });
+    const { wrap, memory } = setup([done, next]);
+    vi.spyOn(memory.api, "reopen").mockResolvedValueOnce({
+      task: { ...done, done: false, done_at: null },
+      next,
+      withdrawn: ["r-2"],
+    });
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Retro 20 Nov" }),
+    );
+
+    expect(
+      await screen.findByRole("checkbox", { name: "Complete Retro 20 Nov" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("Retro 20 Dec")).toBeNull();
+    expect(screen.getByText("Back to Yesterday")).toBeTruthy();
+  });
+
+  it("#168: unticking a done repeat with no open occurrence left reopens it, lit up", async () => {
+    const done = task({
+      id: "e-1",
+      title: "Retro last",
+      due_date: "2026-10-22",
+      repeat: "monthly",
+      done: true,
+      done_at: "2026-10-22T01:12:00Z",
+    });
+    const { wrap, memory } = setup([done]);
+    vi.spyOn(memory.api, "reopen").mockResolvedValueOnce({
+      task: { ...done, done: false, done_at: null },
+    });
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Retro last" }),
+    );
+
+    const reopened = await screen.findByRole("checkbox", {
+      name: "Complete Retro last",
+    });
+    expect(reopened.closest("li")!.className).toContain("animate-merge-in");
+  });
+
+  it("#168: reopening older done occurrences one after another leaves one open, never duplicates", async () => {
+    const at = "2026-10-22T01:12:00Z";
+    const dec = task({
+      id: "s-1",
+      title: "Retro Dec",
+      due_date: "2026-10-20",
+      repeat: "monthly",
+      done: true,
+      done_at: at,
+    });
+    const jan = task({
+      id: "s-2",
+      title: "Retro Jan",
+      due_date: "2026-10-21",
+      repeat: "monthly",
+      done: true,
+      done_at: at,
+      previous_occurrence_id: "s-1",
+    });
+    const feb = task({
+      id: "s-3",
+      title: "Retro Feb",
+      due_date: TODAY,
+      repeat: "monthly",
+      previous_occurrence_id: "s-2",
+    });
+    const { wrap, memory } = setup([dec, jan, feb]);
+    // The server keeps one open occurrence: Feb withdrawn by the first, Dec back to done by the second
+    vi.spyOn(memory.api, "reopen")
+      .mockResolvedValueOnce({
+        task: { ...dec, done: false, done_at: null },
+        withdrawn: ["s-3"],
+      })
+      .mockResolvedValueOnce({
+        task: { ...jan, done: false, done_at: null },
+        closed: [dec],
+      });
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Retro Dec" }),
+    );
+    // The answers keep one open occurrence: Feb withdrawn, then Dec back to done
+    await waitFor(() => expect(screen.queryByText("Retro Feb")).toBeNull());
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Retro Jan" }),
+    );
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("checkbox", { name: "Reopen Retro Dec" }),
+      ).toBeTruthy(),
+    );
+    const open = within(screen.getByRole("list", { name: "Today" }))
+      .getAllByRole("checkbox")
+      .map((box) => box.getAttribute("aria-label"));
+    expect(open).toEqual(["Complete Retro Jan"]);
   });
 
   it("reverts the row and offers Retry when the server rejects it (UX-01)", async () => {
