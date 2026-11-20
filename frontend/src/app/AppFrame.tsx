@@ -287,11 +287,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
   // The first session check has answered (signed in, signed out or offline): the start screen
   // only waits for this, the tab's own skeleton covers its data (#161)
   const [sessionChecked, setSessionChecked] = useState(false);
-  // The full-screen loading screen (#161): as the app starts on one of its screens, going in from
-  // the sign-in screens, and going back to Sign in
-  const [splash, setSplash] = useState<Splash | null>(() =>
-    TAB_BY_PATH[pathname] ? "start" : null,
-  );
+  // The full-screen loading screen (#161): as the app starts or reloads on any screen (the
+  // sign-in screens too, so nothing half-loaded or about to be redirected ever shows), going in
+  // from the sign-in screens, and going back to Sign in
+  const [splash, setSplash] = useState<Splash | null>("start");
   const endSplash = useCallback(() => setSplash(null), []);
   // A tab or a sidebar project tapped and on its way (#161): it lights up at once, and the
   // content shows its header with a loader (a tab's first visit on a phone) or a skeleton until
@@ -1043,7 +1042,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
         show={splash !== null}
         ready={
           splash === "start"
-            ? sessionChecked
+            ? // Checked, and on the right side: a signed-out visit to the app waits for Sign in
+              sessionChecked && (user !== null || isAuthPage)
             : splash === "enter"
               ? !isAuthPage && user !== null
               : isAuthPage

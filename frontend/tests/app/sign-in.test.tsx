@@ -70,6 +70,15 @@ afterEach(() => {
 });
 
 describe("Sign in (AA-2)", () => {
+  it("#161: opened or reloaded, Sign in starts behind the loading screen until the session check answers", async () => {
+    renderPage();
+    expect(screen.getByTestId("loading-screen").dataset.state).toBe("visible");
+    await waitFor(
+      () => expect(screen.queryByTestId("loading-screen")).toBeNull(),
+      { timeout: 3000 },
+    );
+  });
+
   it("#161: signed in, the loading screen covers the way into the app", async () => {
     const user = userEvent.setup();
     reply = () =>
