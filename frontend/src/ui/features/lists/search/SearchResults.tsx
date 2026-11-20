@@ -20,6 +20,10 @@ const TABS: ReadonlyArray<{ tab: SearchTab; label: CopyKey }> = [
 /** Widths of the three loading rows, so they don't look like one block. */
 const SKELETON_WIDTHS = ["50%", "70%", "40%"];
 
+/** "Nothing matches this filter." without Upcoming's "Show all": the filter chip's × clears it here. */
+const filterEmptyPrefix = () =>
+  t("list.filter_empty").split(t("common.show_all"))[0]!.trim();
+
 const shows = (tab: SearchTab, section: SearchTab) =>
   tab === "all" || tab === section;
 
@@ -177,13 +181,11 @@ export function SearchResults({
             {t("common.retry")}
           </Button>
         </div>
+      ) : noResults && query.trim() ? (
+        <EmptyState title={t("search.no_match", { query: query.trim() })} />
       ) : noResults ? (
-        // Only a filter or a project picked, nothing typed: the message names that instead
-        <EmptyState
-          title={t("search.no_match", {
-            query: query.trim() || filterLabel || "",
-          })}
-        />
+        // Only a filter or a project picked, nothing typed: no text to name, so the filter's own message
+        <EmptyState title={filterEmptyPrefix()} />
       ) : (
         <div id={listboxId} role="listbox" className="flex flex-col gap-3">
           {taskRows.length > 0 && (

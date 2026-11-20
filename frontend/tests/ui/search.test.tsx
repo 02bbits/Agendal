@@ -359,7 +359,7 @@ describe("SearchPanel & SearchPopup", () => {
     }
   });
 
-  it("a quick filter with nothing typed and no results names the filter, never {query}", async () => {
+  it("a quick filter with nothing typed and no results says nothing matches this filter, never {query}", async () => {
     render(
       <SearchPanel
         variant="popup"
@@ -379,11 +379,12 @@ describe("SearchPanel & SearchPopup", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: "Starts today" }));
     expect(
-      await screen.findByText("Nothing matches “Starts today”", undefined, {
+      await screen.findByText("Nothing matches this filter.", undefined, {
         timeout: 3000,
       }),
     ).toBeTruthy();
-    expect(screen.queryByText(/\{query\}/)).toBeNull();
+    expect(screen.queryByText(/\{query\}|“Starts today”/)).toBeNull();
+    expect(screen.queryByRole("button", { name: "Show all" })).toBeNull();
   });
 
   it("does not allow a slow old answer to replace a newer query", async () => {
