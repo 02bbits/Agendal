@@ -13,6 +13,7 @@ import {
   useTaskPanel,
   useTaskStore,
 } from "@/ui";
+import { LoadError } from "@/ui/components/LoadError";
 import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
@@ -77,12 +78,7 @@ function InboxContent() {
       </ScreenHeader>
       {status === "loading" && <InboxSkeleton />}
       {status === "error" && (
-        <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-          <p className="text-callout text-ink-secondary">
-            {errorMessage || t("error.generic")}
-          </p>
-          <Button onClick={handleRetry}>{t("common.retry")}</Button>
-        </div>
+        <LoadError message={errorMessage} onRetry={handleRetry} />
       )}
       {status === "ready" && (
         <TaskStoreProvider

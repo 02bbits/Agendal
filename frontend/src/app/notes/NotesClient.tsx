@@ -17,7 +17,6 @@ import { useMediaQuery } from "../../ui/components/useMediaQuery";
 import { useModalFocus } from "../../ui/components/useModalFocus";
 import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
-import { Button } from "../../ui/components/Button";
 import { TextButton } from "../../ui/components/TextButton";
 import { cx } from "../../ui/components/cx";
 import { PanelHeader } from "../../ui/features/tasks/details/PanelHeader";
@@ -56,6 +55,8 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const busy = loadingMore === requestKey;
   const data = loaded?.key === requestKey ? loaded.page : null;
   const error = loaded?.key === requestKey && loaded.error;
+  // The summary stays from the last list while another filter loads
+  const summary = loaded?.page;
   const pushed = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -193,49 +194,23 @@ function NotesContent({ noteId }: { noteId?: string }) {
   return (
     <div>
       <div hidden={!!selected && !wide} inert={!!selected}>
-        {data ? (
-          <NotesScreen
-            notes={data.items}
-            total={data.total}
-            needs={data.needs_count}
-            filter={filter}
-            onFilter={setFilter}
-            onWriteNote={openNoteEditor}
-            onReviveNote={(id) => void reviveNote(id).then(openNoteEditor)}
-            selected={selected}
-            today={today}
-            timeZone={appClock.timeZone}
-            timeFormat={settings.timeFormat}
-            accountInitial={user?.display_name ?? user?.email ?? ""}
-            navigate={navigate}
-          />
-        ) : error ? (
-          <p role="status" className="py-8 text-body">
-            {t("error.generic", { request_id: "" })}
-          </p>
-        ) : (
-          // Loading: the header, filter chips and a few rows in place, like the note screen's skeleton
-          <div
-            role="status"
-            aria-busy="true"
-            aria-label={t("nav.notes")}
-            className="flex animate-pulse flex-col gap-4 pt-3 md:pt-8"
-          >
-            <div className="h-3 w-40 rounded bg-surface" />
-            <div className="h-10 w-32 rounded bg-surface" />
-            <div className="flex gap-2">
-              <div className="h-7 w-12 rounded-full bg-surface" />
-              <div className="h-7 w-20 rounded-full bg-surface" />
-              <div className="h-7 w-16 rounded-full bg-surface" />
-            </div>
-            <div className="h-80 w-full rounded-box bg-surface" />
-          </div>
-        )}
-        {error && (
-          <Button onClick={() => setRevision((value) => value + 1)}>
-            {t("common.retry")}
-          </Button>
-        )}
+        <NotesScreen
+          status={data ? "ready" : error ? "error" : "loading"}
+          onRetry={() => setRevision((value) => value + 1)}
+          notes={data?.items ?? []}
+          total={summary?.total}
+          needs={summary?.needs_count}
+          filter={filter}
+          onFilter={setFilter}
+          onWriteNote={openNoteEditor}
+          onReviveNote={(id) => void reviveNote(id).then(openNoteEditor)}
+          selected={selected}
+          today={today}
+          timeZone={appClock.timeZone}
+          timeFormat={settings.timeFormat}
+          accountInitial={user?.display_name ?? user?.email ?? ""}
+          navigate={navigate}
+        />
         {data?.next_cursor && <div ref={sentinelRef} aria-hidden="true" />}
         {data?.next_cursor && (
           <TextButton busy={busy} onClick={more} className="mx-auto block">
