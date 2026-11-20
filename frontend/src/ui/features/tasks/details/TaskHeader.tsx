@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { cx } from "../../../components/cx";
-import { CheckIcon, ChevronLeftIcon } from "../../../components/icons";
+import { BackBar } from "../../../components/BackBar";
+import { CheckIcon } from "../../../components/icons";
 import { t } from "../../../copy";
 import type { Project, Task } from "../../../domain/types";
 import { useTaskStore } from "../store";
@@ -57,16 +58,7 @@ export function TaskHeader({
   return (
     <div>
       {isScreen ? (
-        <div className="flex h-11 items-center justify-between border-b border-separator px-4">
-          <button
-            type="button"
-            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary"
-            onClick={onBack}
-          >
-            <ChevronLeftIcon size={18} />
-            <span className="link-swipe">{backLabel ?? t("common.back")}</span>
-          </button>
-        </div>
+        <BackBar label={backLabel ?? t("common.back")} onBack={onBack} />
       ) : (
         <PanelHeader onClose={onClose ?? onBack} />
       )}
