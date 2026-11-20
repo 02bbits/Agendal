@@ -24,6 +24,7 @@
     "done_at": { "type": ["string", "null"], "format": "date-time" },
     "created_by": { "enum": ["user", "assistant"] },
     "source_note_id": { "$ref": "#/$defs/uuid_or_null" },
+    "previous_occurrence_id": { "$ref": "#/$defs/uuid_or_null" },
     "created_at": { "type": "string", "format": "date-time" },
     "updated_at": { "type": "string", "format": "date-time" }
   },

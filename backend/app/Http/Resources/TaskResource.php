@@ -47,6 +47,8 @@ class TaskResource extends JsonResource
             'done_at' => $this->formatIso($this->done_at),
             'created_by' => $this->created_by,
             'source_note_id' => $this->source_note_id,
+            // Read-only: tells a client which occurrences belong to one series
+            'previous_occurrence_id' => $this->previous_occurrence_id,
             'created_at' => $this->formatIso($this->created_at),
             'updated_at' => $this->formatIso($this->updated_at),
         ];

@@ -245,15 +245,23 @@ class TaskController extends Controller
     {
         $at = is_string($request->input('at')) ? $request->input('at') : null;
 
-        return $this->lifecycleResponse($lifecycle->reopen($task, $at));
+        return $this->lifecycleResponse($lifecycle->reopen($task, $at, $request->boolean('merge')));
     }
 
-    /** @param array{task: Task, next: Task|null} $result */
+    /** @param array{task: Task, next: Task|null, withdrawn?: list<Task>, closed?: list<Task>, merged?: bool} $result */
     private function lifecycleResponse(array $result): JsonResponse
     {
+        $withdrawn = array_map(fn (Task $task): string => $task->id, $result['withdrawn'] ?? []);
+        $closed = $result['closed'] ?? [];
+
         return response()->json([
             'task' => new TaskResource($result['task']),
             ...($result['next'] === null ? [] : ['next' => new TaskResource($result['next'])]),
+            // Reopening a repeating task: the other occurrences that changed with it
+            ...($withdrawn === [] ? [] : ['withdrawn' => $withdrawn]),
+            ...($closed === [] ? [] : ['closed' => TaskResource::collection($closed)]),
+            // Unticked in Completed while its series has an open occurrence: removed, merged into it
+            ...(($result['merged'] ?? false) ? ['merged' => true] : []),
         ]);
     }
 
