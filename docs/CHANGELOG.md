@@ -2,8 +2,13 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-20
+
+- **Loading screen on every reload (Refs #161).** [screens](01-product/screens.md) Loading screen row, [SUMMARY](SUMMARY.md) §6 Platform table: opening or reloading any screen, Sign in, Create account, Verify, Setup and the password screens included, starts behind the full loading screen until the session check answers and the app is on the right screen, so a page about to be redirected never flashes.
+
 ## 2026-11-19
 
+- **Loading screen on the way in and out (Refs #161).** [screens](01-product/screens.md) Loading screen row, [SUMMARY](SUMMARY.md) §6 Platform table: the full loading screen now also covers going into the app from the sign-in screens (Sign in, the two-step code, Setup's Finish or Skip, a signed-in visit to Sign in or Verify) and going back to Sign in (Sign out, Sign out on all devices, a session that ended), not only the start. Moving between the sign-in screens has none; a sign-out held back offline takes it away.
 - **Install app above Sign out (Refs #160).** [AP-1, AP §2.1, the Settings matrix and the AP-1 test row](03-modules/AP-app-platform.md#ap-1), [SUMMARY](SUMMARY.md) Install row: Install app is no longer in Settings > General. On a phone it is a row on the Settings page above Sign out; on desktop it is in the account menu above Sign out, with the same neutral icon as Account and Settings.
 
 ## 2026-11-18

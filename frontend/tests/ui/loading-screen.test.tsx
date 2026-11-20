@@ -13,9 +13,17 @@ import { t } from "../../src/ui/copy";
 
 const FADE = 150;
 
-function Frame({ tab, ready }: { tab: string | null; ready: boolean }) {
+function Frame({
+  tab,
+  ready,
+  onDone,
+}: {
+  tab: string | null;
+  ready: boolean;
+  onDone?: () => void;
+}) {
   return (
-    <TabLoading tab={tab} ready={ready}>
+    <TabLoading show={tab !== null} ready={ready} onDone={onDone}>
       <p>Page</p>
     </TabLoading>
   );
@@ -84,6 +92,26 @@ describe("TabLoading: full screen only as the app starts (#161)", () => {
     rerender(<Frame tab="upcoming" ready={true} />);
     await advance(10);
     expect(loading()).toBeNull();
+  });
+
+  it("comes back when asked again (signing in or out), until the screen it goes to is there", async () => {
+    const onDone = vi.fn();
+    const { rerender } = render(
+      <Frame tab={null} ready={false} onDone={onDone} />,
+    );
+    expect(loading()).toBeNull();
+    // Signed in on Sign in: going into the app
+    rerender(<Frame tab="enter" ready={false} onDone={onDone} />);
+    expect(loading()?.dataset.state).toBe("visible");
+    await advance(LOADING_MIN_MS + 200);
+    expect(loading()?.dataset.state).toBe("visible");
+    // Inbox is there
+    rerender(<Frame tab="enter" ready={true} onDone={onDone} />);
+    await advance(10);
+    expect(loading()?.dataset.state).toBe("hiding");
+    await advance(FADE + 10);
+    expect(loading()).toBeNull();
+    expect(onDone).toHaveBeenCalledTimes(1);
   });
 
   it("doesn't show when the app starts off the tabs (sign in)", async () => {

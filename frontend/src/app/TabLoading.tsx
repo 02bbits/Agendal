@@ -10,28 +10,50 @@ export const LOADING_MIN_MS = 400;
 export const LOADING_MAX_MS = 3000;
 const FADE_MS = 150;
 
+/** Why the full-screen loading screen is up. */
+export type Splash =
+  /** The app opening on one of its screens. */
+  | "start"
+  /** Signed in, verified or set up: going from the sign-in screens into the app. */
+  | "enter"
+  /** Signing out, or the session ended: going back to Sign in. */
+  | "leave";
+
 /**
- * The full-screen loading screen when the app starts on a tab (#161), as Instagram does: it waits
- * only for the app to start (`ready`: the first session check has answered), at least
- * LOADING_MIN_MS and at most LOADING_MAX_MS, then fades out and never comes back. From then on
+ * The full-screen loading screen (#161), as Instagram does: when the app starts, when you go
+ * into it from the sign-in screens, and when you sign out. It stays until `ready` (the session
+ * check has answered, or the screen it was going to is there), at least LOADING_MIN_MS so it
+ * never just flashes and at most LOADING_MAX_MS, then fades out and calls `onDone`. In between,
  * the header, tab bar and sidebar stay, and each tab shows its skeleton the first time it loads.
  */
 export function TabLoading({
-  tab,
+  show,
   ready,
+  onDone,
   children,
 }: {
-  tab: string | null;
+  show: boolean;
   ready: boolean;
+  onDone?: () => void;
   children: ReactNode;
 }) {
   const [phase, setPhase] = useState<"hidden" | "visible" | "hiding">(
-    tab ? "visible" : "hidden",
+    show ? "visible" : "hidden",
   );
+  const [shown, setShown] = useState(show);
+  if (show !== shown) {
+    setShown(show);
+    // Called off (e.g. sign out held back offline): it fades out at once
+    if (show) setPhase("visible");
+    else if (phase === "visible") setPhase("hiding");
+  }
   const shownAt = useRef(0);
 
   useEffect(() => {
-    if (phase !== "visible") return;
+    if (phase !== "visible") {
+      shownAt.current = 0;
+      return;
+    }
     if (!shownAt.current) shownAt.current = now().getTime();
     const elapsed = now().getTime() - shownAt.current;
     const wait = (ready ? LOADING_MIN_MS : LOADING_MAX_MS) - elapsed;
@@ -41,9 +63,12 @@ export function TabLoading({
 
   useEffect(() => {
     if (phase !== "hiding") return;
-    const timer = setTimeout(() => setPhase("hidden"), FADE_MS);
+    const timer = setTimeout(() => {
+      setPhase("hidden");
+      onDone?.();
+    }, FADE_MS);
     return () => clearTimeout(timer);
-  }, [phase]);
+  }, [phase, onDone]);
 
   return (
     <>

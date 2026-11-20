@@ -28,6 +28,7 @@ import { usePrefetch } from "./frame/usePrefetch";
 import { useSession } from "./frame/useSession";
 import { useSidebarData } from "./frame/useSidebarData";
 import { useSignedInUser } from "./frame/useSignedInUser";
+import { splashReady, useSplash } from "./frame/useSplash";
 import { useSyncToasts } from "./frame/useSyncToasts";
 import { useTabNavigation } from "./frame/useTabNavigation";
 import { useToast } from "./frame/useToast";
@@ -50,6 +51,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const wide = useWideScreen();
 
   const { toast, showToast, dismissToast } = useToast();
+  const splash = useSplash();
   const { user, userRef, setUser } = useSignedInUser();
   const account = useAccountSettings({ user, userRef, showToast });
   const { settings, changeSettings } = account;
@@ -61,13 +63,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
     setUser,
     settings: account,
     showToast,
+    showSplash: splash.show,
   });
   useSyncToasts(user !== null, showToast);
   useUpdateToast(showToast);
   usePageFlags(pathname);
 
   const { tab, navigate, back, pendingTab, shownTab, shownPath } =
-    useTabNavigation(pathname, router);
+    useTabNavigation(pathname, router, splash.enterApp);
   const overlays = useOverlays(pathname, router);
   const {
     open: newTaskOpen,
@@ -160,8 +163,16 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   return (
     <AppFrameContext.Provider value={value}>
-      {/* The full-screen loading screen when the app starts (#161) */}
-      <TabLoading tab={tab ?? null} ready={sessionChecked}>
+      {/* The full-screen loading screen: opening, reloading, going in and out (#161) */}
+      <TabLoading
+        show={splash.splash !== null}
+        ready={splashReady(splash.splash, {
+          sessionChecked,
+          signedIn: user !== null,
+          onAuthScreen: isAuthPath(pathname),
+        })}
+        onDone={splash.end}
+      >
         <AppShell
           tab={shownTab}
           pending={

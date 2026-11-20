@@ -7,6 +7,7 @@ import { claimDevice, wipeDevice } from "@/lib/device";
 import { readMe, saveMe } from "@/lib/localStore";
 import { forgetNotes } from "@/lib/noteApi";
 import { PUBLIC_PATHS, SIGNED_OUT_PATHS } from "./frameRoutes";
+import type { Splash } from "../TabLoading";
 import type { SignedInUser } from "./signedInUser";
 import type { AccountSettingsState } from "./useAccountSettings";
 import type { ShowToast } from "./useToast";
@@ -31,6 +32,7 @@ export function useSession({
   user,
   settings,
   showToast,
+  showSplash,
 }: {
   pathname: string;
   router: Router;
@@ -42,6 +44,8 @@ export function useSession({
     "loadFromServer" | "editCount" | "reset"
   >;
   showToast: ShowToast;
+  /** The full-screen loading screen on the way in or out (#161); null calls it off. */
+  showSplash: (splash: Splash | null) => void;
 }) {
   // The first check has answered (signed in, signed out or offline): the start screen only
   // waits for this, the tab's own skeleton covers its data (#161)
@@ -79,6 +83,7 @@ export function useSession({
           if (pathname !== ROUTES.verify) router.replace(ROUTES.verify);
         } else if (SIGNED_OUT_PATHS.includes(pathname)) {
           // Verify is among them: a verified account leaves it for Inbox
+          showSplash("enter");
           router.replace(ROUTES.inbox);
         }
       })
@@ -86,7 +91,15 @@ export function useSession({
     return () => {
       current = false;
     };
-  }, [pathname, router, setUser, userRef, loadFromServer, editCount]);
+  }, [
+    pathname,
+    router,
+    setUser,
+    userRef,
+    loadFromServer,
+    editCount,
+    showSplash,
+  ]);
 
   // An unverified account can only stay on /verify. The way out of /verify for a verified user is
   // the session check above, so a code accepted on /verify can still open Setup, not Inbox
@@ -111,6 +124,7 @@ export function useSession({
       // Signed out already: a plain visit is the auth gate's job, without the toast
       if (!userRef.current) return;
       setUser(null);
+      showSplash("leave");
       showToast(t("auth.session_expired"));
       router.replace(
         signInBack(window.location.pathname + window.location.search),
@@ -118,20 +132,27 @@ export function useSession({
     };
     window.addEventListener(SESSION_EXPIRED, expired);
     return () => window.removeEventListener(SESSION_EXPIRED, expired);
-  }, [router, showToast, setUser, userRef]);
+  }, [router, showToast, setUser, userRef, showSplash]);
 
   const signOut = useCallback(
     async (everywhere = false) => {
+      // The loading screen covers the wipe until Sign in is there
+      showSplash("leave");
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
       const response = await api(path, { method: "POST" }).catch(() => null);
       // Offline, this device is still wiped at once; the server session ends when it expires
       // (AA §2.4). Other devices can only be signed out from the server, so that waits for a
       // connection.
       if (everywhere) {
-        if (!response) return showToast(t("app.offline"));
+        // Held back: still signed in, so the loading screen goes again
+        const stay = (message: string) => {
+          showSplash(null);
+          showToast(message);
+        };
+        if (!response) return stay(t("app.offline"));
         if (!response.ok && response.status !== 401) {
           const body = await response.json().catch(() => null);
-          return showToast(
+          return stay(
             t("error.generic", { request_id: body?.error?.request_id ?? "" }),
           );
         }
@@ -147,7 +168,7 @@ export function useSession({
       document.documentElement.removeAttribute("data-theme");
       router.replace(ROUTES.signIn);
     },
-    [router, showToast, setUser, reset],
+    [router, showToast, setUser, reset, showSplash],
   );
 
   return { sessionChecked, signOut };

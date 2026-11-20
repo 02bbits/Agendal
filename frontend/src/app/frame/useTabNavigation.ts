@@ -1,6 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Navigate, TabId } from "@/ui";
-import { PROJECT_PATH, TAB_BY_PATH, tabRootOf } from "./frameRoutes";
+import {
+  isAuthPath,
+  PROJECT_PATH,
+  TAB_BY_PATH,
+  tabRootOf,
+} from "./frameRoutes";
 
 type Router = {
   push: (href: string) => void;
@@ -23,7 +28,12 @@ export interface PendingTab {
  * Back doesn't walk through every tab visited; Back from a deep link goes to that tab's root
  * instead of out of the app (AP §2.4).
  */
-export function useTabNavigation(pathname: string, router: Router) {
+export function useTabNavigation(
+  pathname: string,
+  router: Router,
+  /** Signed in, verified or set up: called as the app is entered from the sign-in screens. */
+  onEnterApp: () => void,
+) {
   const [pendingTab, setPendingTab] = useState<PendingTab | null>(null);
   const visitedTabs = useRef<Set<TabId>>(new Set());
   const arrivedByDeepLink = useRef(true);
@@ -43,6 +53,8 @@ export function useTabNavigation(pathname: string, router: Router) {
 
   const navigate = useCallback<Navigate>(
     (href) => {
+      if (isAuthPath(pathname) && !isAuthPath(href.split(/[?#]/)[0]!))
+        onEnterApp();
       const to = TAB_BY_PATH[href];
       if (href !== pathname && to)
         setPendingTab({
@@ -62,7 +74,7 @@ export function useTabNavigation(pathname: string, router: Router) {
       else router.push(href);
       return true;
     },
-    [router, pathname],
+    [router, pathname, onEnterApp],
   );
 
   const back = useCallback(() => {
