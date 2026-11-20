@@ -86,7 +86,7 @@ describe("Sign in (AA-2)", () => {
         user: { id: 1, email: "example@gmail.com", email_verified_at: "x" },
       });
     await signIn(user);
-    await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
     expect(screen.getByTestId("loading-screen")).toBeTruthy();
   });
 
@@ -120,7 +120,7 @@ describe("Sign in (AA-2)", () => {
       password: "quiet river 42",
       remember: false,
     });
-    expect(router.push).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/");
   });
 
   it("T-AA-11, A11Y-60: show/hide is a pressed toggle", async () => {
@@ -173,7 +173,7 @@ describe("Sign in (AA-2)", () => {
   it("T-AA-111, SEC-24: goes back to a same-origin return path, never another site", async () => {
     window.history.replaceState(null, "", "/sign-in?next=%2Fupcoming");
     await signIn(userEvent.setup());
-    expect(router.push).toHaveBeenLastCalledWith("/upcoming");
+    expect(router.replace).toHaveBeenLastCalledWith("/upcoming");
 
     expect(safeReturnPath("//evil.com")).toBe("/");
     expect(safeReturnPath("/\\evil.com")).toBe("/");
@@ -271,7 +271,7 @@ describe("Two-factor authentication (issue #149 C)", () => {
     }
 
     await act(() => vi.advanceTimersByTimeAsync(800));
-    expect(router.push).toHaveBeenCalledWith("/");
+    expect(router.replace).toHaveBeenCalledWith("/");
   });
 
   it("wrong code shows error under slots", async () => {
