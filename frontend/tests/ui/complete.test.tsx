@@ -270,6 +270,37 @@ describe("Complete a task (TK-1, WF-06)", () => {
     ).toBeTruthy();
   });
 
+  it("#168: reopening a done repeating task takes its next occurrence away at once, not after the answer", async () => {
+    const done = task({
+      id: "t-rep",
+      title: "Daily standup",
+      due_date: "2026-10-22",
+      repeat: "daily",
+      done: true,
+      done_at: "2026-10-22T01:12:00Z",
+    });
+    const nextTask = task({
+      id: "t-next",
+      title: "Daily standup next",
+      due_date: TODAY,
+      repeat: "daily",
+      previous_occurrence_id: "t-rep",
+    });
+    const { wrap, memory } = setup([done, nextTask]);
+    // The server never answers: nothing but the click itself can take the row away
+    vi.spyOn(memory.api, "reopen").mockReturnValueOnce(new Promise(() => {}));
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Daily standup" }),
+    );
+
+    expect(screen.queryByText("Daily standup next")).toBeNull();
+    expect(
+      screen.getByRole("checkbox", { name: "Complete Daily standup" }),
+    ).toBeTruthy();
+  });
+
   it("reverts the row and offers Retry when the server rejects it (UX-01)", async () => {
     const { wrap, memory } = setup(seed());
     render(wrap(<TodayList />));

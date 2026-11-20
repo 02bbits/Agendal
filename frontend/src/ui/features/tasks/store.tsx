@@ -140,6 +140,12 @@ export function TaskStoreProvider({
       } else {
         clearSettle(id);
       }
+      // Reopened: the server deletes the occurrence its completion made, so it goes now, not
+      // after the answer; the list never shows both open for a moment (#168)
+      const madeNext = isComplete
+        ? undefined
+        : tasks.find((row) => row.previous_occurrence_id === id && !row.done);
+      if (madeNext) removeRow(madeNext.id);
 
       const fields = isComplete
         ? { done: true, done_at: at }
@@ -158,9 +164,10 @@ export function TaskStoreProvider({
           }
           return r.task;
         });
-      change(id, fields, req, (err) =>
-        handleSaveError(err, () => lifecycleRef.current(id, action)),
-      );
+      change(id, fields, req, (err) => {
+        if (madeNext) insertRow(madeNext);
+        handleSaveError(err, () => lifecycleRef.current(id, action));
+      });
     },
     [
       api,
@@ -170,8 +177,11 @@ export function TaskStoreProvider({
       clock,
       getTask,
       handleSaveError,
+      insertRow,
+      removeRow,
       settle,
       showToast,
+      tasks,
     ],
   );
 
