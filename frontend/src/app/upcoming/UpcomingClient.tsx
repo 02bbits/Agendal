@@ -7,12 +7,10 @@ import {
   ScreenHeader,
   TaskPanel,
   TaskStoreProvider,
-  Toast,
   UpcomingScreen,
   UpcomingViewSwitch,
   t,
   useTaskPanel,
-  useTaskStore,
   type UpcomingFilter,
   type UpcomingViewMode,
 } from "@/ui";
@@ -29,11 +27,6 @@ import { useHeaderDate } from "../headerDate";
 import { UpcomingSkeleton } from "../skeletons";
 import { UpcomingFilterChips } from "./UpcomingFilterChips";
 import { useUpcomingData } from "./useUpcomingData";
-
-function UpcomingToast() {
-  const { toast, dismissToast } = useTaskStore();
-  return <Toast toast={toast} onDismiss={dismissToast} />;
-}
 
 /** The filter and List or Board this device chose last; the board widens the page. */
 function useUpcomingView() {
@@ -68,7 +61,13 @@ function useUpcomingView() {
 
 /** Upcoming (LV-2): the coming days as a list or a board, with the task panel beside them. */
 export function UpcomingClient() {
-  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const {
+    navigate: rawNav,
+    user,
+    settings,
+    openNewTask,
+    showToast,
+  } = useAppFrame();
   const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
   const data = useUpcomingData();
   const { filter, chooseFilter, viewMode, chooseViewMode } = useUpcomingView();
@@ -157,6 +156,8 @@ export function UpcomingClient() {
           initialTasks={data.tasks}
           initialProjects={data.projectList}
           timeFormat={settings.timeFormat}
+          // The app's one toast: it stays when the user moves to another tab
+          onToast={showToast}
         >
           <UpcomingScreen
             accountInitial={accountInitial}
@@ -190,7 +191,6 @@ export function UpcomingClient() {
               weekStart={settings.weekStart}
             />
           )}
-          <UpcomingToast />
         </TaskStoreProvider>
       )}
     </div>
