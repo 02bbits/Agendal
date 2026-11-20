@@ -38,8 +38,8 @@ async function signOutWith(button: string) {
     </AppFrame>,
   );
   await screen.findByText("ann@example.com");
-  // Settings' one Sign out asks first (#168); the choice is in the dialog
-  await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  // Each sign-out in Settings asks first (#168)
+  await userEvent.click(screen.getByRole("button", { name: button }));
   await userEvent.click(
     within(screen.getByRole("alertdialog")).getByRole("button", {
       name: button,

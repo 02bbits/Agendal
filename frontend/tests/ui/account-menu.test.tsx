@@ -158,7 +158,7 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("#168: Sign out closes the menu and asks first: Cancel or Escape keep you in, the choice signs out", async () => {
+  it("#168: the menu has one Sign out; its dialog offers Sign out, Sign out on all devices and Cancel", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();
     const onSignOutEverywhere = vi.fn();
@@ -171,12 +171,21 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     );
     const ask = async () => {
       await user.click(screen.getByRole("button", { name: /Jane Doe/i }));
+      expect(
+        screen.queryByRole("menuitem", { name: "Sign out on all devices" }),
+      ).toBeNull();
       await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
-      return screen.getByRole("alertdialog", { name: "Sign out?" });
+      return screen.getByRole("alertdialog");
     };
 
     let dialog = await ask();
     expect(screen.queryByRole("menu")).toBeNull();
+    expect(within(dialog).getByText("Sign out?")).toBeTruthy();
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Sign out", "Sign out on all devices", "Cancel"]);
     // Cancel has the focus, so Enter never signs out by mistake
     expect(document.activeElement?.textContent).toBe("Cancel");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));

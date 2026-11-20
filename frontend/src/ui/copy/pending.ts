@@ -125,6 +125,9 @@ export const pending = {
   "task.not_set": "None",
   "app.sign_out_title": "Sign out?",
   "app.sign_out_body": "You'll need to sign in again on this device.",
+  "app.sign_out_all_title": "Sign out on all devices?",
+  "app.sign_out_all_body":
+    "Every device signed in to this account will need to sign in again.",
   "task.merged_back": "{date} went back into the repeat",
   "task.back_to": "Back to {date}",
   "common.none": "None",
