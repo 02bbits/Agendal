@@ -125,7 +125,10 @@ The anchor is stored separately from the current occurrence's `due_date`. For ex
 Both endpoints return `200 {task, next?}`, with different meanings for `next`:
 
 - `POST /tasks/{id}/complete`: `task` is the saved task; `next`, when present, is the generated occurrence to add/merge by id. A retry reuses the existing occurrence. Exhausted rules and a deliberately deleted child produce no `next`.
-- `POST /tasks/{id}/reopen`: `task` is the reopened task; `next`, when present, is the uncompleted generated occurrence withdrawn by Undo, so clients remove it by id. An already-completed child is preserved. Recompletion can restore the withdrawn child using the task's current schedule without creating a duplicate.
+- `POST /tasks/{id}/reopen`: `task` is the reopened task. A repeating series keeps one open occurrence (#168): every open occurrence after this one is withdrawn and listed by id in `withdrawn`; an open one before it goes back to done and is listed in `closed`. `next`, when present, is the withdrawn occurrence that directly followed this one (what Undo removes), so clients remove it by id. Done occurrences after it stay done. Recompletion goes on from the last done occurrence and can restore the withdrawn one using the task's current schedule without creating a duplicate.
+  - With `"merge": true` (a done occurrence unticked in a Completed list), the server decides: when an occurrence after it is done, or open and edited, and the series still has an open occurrence, the task is removed instead (soft delete) and the answer carries `"merged": true`; the open occurrence stays as it is. Otherwise it is reopened as above, so the occurrence ticked last rolls back to its own date. `POST /tasks/{id}/restore` undoes a merge.
+  - Task bodies carry `previous_occurrence_id` (read-only), the occurrence whose completion made this one.
+  - `POST /sync/patches` takes the same choice offline as the field `merged` with value `true`.
 
 Each operation applies per-field LWW and runs in a transaction. A stale `at` can leave the task unchanged. Reopening still enforces the 5,000-open-task limit after withdrawing the generated child.
 

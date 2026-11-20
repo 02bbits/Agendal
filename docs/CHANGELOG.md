@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-20
 
+- **Undoing a done repeating task (Refs #168).** [TK §2 and TK-E21](03-modules/TK-tasks.md#tk-e21), [api](07-architecture/api.md) reopen: a series keeps one open occurrence. Unticking the occurrence ticked last rolls it back to its own date; unticking an older one (or one whose next occurrence was edited) puts it back into the repeat, which stays as it is. Reopen answers `withdrawn` and `closed`, takes `merge` (also as the sync field `merged`), and task bodies carry `previous_occurrence_id`.
 - **Loading screen on every reload (Refs #161).** [screens](01-product/screens.md) Loading screen row, [SUMMARY](SUMMARY.md) §6 Platform table: opening or reloading any screen, Sign in, Create account, Verify, Setup and the password screens included, starts behind the full loading screen until the session check answers and the app is on the right screen, so a page about to be redirected never flashes.
 
 ## 2026-11-19
