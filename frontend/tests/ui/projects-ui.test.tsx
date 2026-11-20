@@ -508,7 +508,7 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
     expect(confirmed).toBe(true);
   });
 
-  it("shows Move to No project and Delete them too when project has tasks", async () => {
+  it("#168: with tasks, one Move to No project checkbox, on by default; off deletes them and the button says so", async () => {
     let chosenAction = "";
     render(
       <DeleteProjectDialog
@@ -522,22 +522,35 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
       />,
     );
 
-    const moveRadio = screen.getByRole("radio", {
+    const move = screen.getByRole("checkbox", {
       name: "Move to No project",
     }) as HTMLInputElement;
-    const deleteRadio = screen.getByRole("radio", {
-      name: "Delete them too",
-    }) as HTMLInputElement;
+    expect(move.checked).toBe(true);
+    expect(screen.queryByRole("radio")).toBeNull();
 
-    expect(moveRadio.checked).toBe(true);
-    expect(deleteRadio.checked).toBe(false);
-
-    await userEvent.click(deleteRadio);
-    expect(deleteRadio.checked).toBe(true);
-
-    const deleteBtn = screen.getByRole("button", { name: "Delete" });
-    await userEvent.click(deleteBtn);
+    await userEvent.click(move);
+    expect(move.checked).toBe(false);
+    await userEvent.click(
+      screen.getByRole("button", { name: "Delete project and 3 tasks" }),
+    );
     expect(chosenAction).toBe("delete");
+  });
+
+  it("#168: kept on, Delete moves the tasks to No project", async () => {
+    let chosenAction = "";
+    render(
+      <DeleteProjectDialog
+        open
+        project={seedProjects[0]!}
+        taskCount={3}
+        onConfirm={(action) => {
+          chosenAction = action;
+        }}
+        onCancel={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(chosenAction).toBe("move");
   });
 
   it("focuses the Cancel button initially (A11Y-82)", () => {
