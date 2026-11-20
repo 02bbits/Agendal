@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from "../../../domain/appEvents";
 import { useState, type ReactElement } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "../../../components/Button";
@@ -85,7 +86,7 @@ export function ProjectField({
     setLocalProjects((prev) => [...prev, newProject]);
     onChange(newProject.id);
     if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+      notifyProjectsChanged();
     }
     setCreating(false);
   };

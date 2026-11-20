@@ -85,6 +85,14 @@ describe("Sign out (AA-5)", () => {
     expectWiped();
   });
 
+  it("#161: the loading screen covers signing out, on its way to Sign in", async () => {
+    await signOutWith("Sign out");
+    expect(await screen.findByTestId("loading-screen")).toBeTruthy();
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/sign-in"),
+    );
+  });
+
   it("offline, still wipes the device at once", async () => {
     reply = () => Promise.reject(new TypeError("Failed to fetch"));
     await signOutWith("Sign out");
@@ -112,5 +120,9 @@ describe("Sign out (AA-5)", () => {
     expect(await screen.findByText("You're offline")).toBeTruthy();
     expect(router.replace).not.toHaveBeenCalled();
     expect(localStorage.getItem("draft")).toBe("buy milk");
+    // Still signed in: the loading screen goes again
+    await waitFor(() =>
+      expect(screen.queryByTestId("loading-screen")).toBeNull(),
+    );
   });
 });

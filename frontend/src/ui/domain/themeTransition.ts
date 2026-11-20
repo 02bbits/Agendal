@@ -1,3 +1,4 @@
+import { prefersReducedMotion } from "./motion";
 /**
  * Creates a smooth 60fps Dark/Light mode theme toggle transition featuring
  * a Circular Reveal animation and subtle Pulse Ripple micro-interaction.
@@ -21,8 +22,7 @@ export function runThemeTransition(
   if (
     typeof document === "undefined" ||
     !("startViewTransition" in document) ||
-    (typeof window !== "undefined" &&
-      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches)
+    prefersReducedMotion()
   ) {
     applyChange();
     return;

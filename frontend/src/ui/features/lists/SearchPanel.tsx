@@ -1,6 +1,5 @@
 import {
   forwardRef,
-  useCallback,
   useEffect,
   useId,
   useImperativeHandle,
@@ -9,42 +8,23 @@ import {
   useState,
   type ReactElement,
 } from "react";
-import { timeZone } from "../../../lib/clock";
-import { Button } from "../../components/Button";
-import { TextButton } from "../../components/TextButton";
-import { Chip } from "../../components/Chip";
-import { cx } from "../../components/cx";
-import { EmptyState } from "../../components/EmptyState";
-import {
-  BellIcon,
-  CalendarIcon,
-  CheckIcon,
-  ClockIcon,
-  FlagIcon,
-  NotesIcon,
-  SearchIcon,
-  SparklesIcon,
-  XIcon,
-} from "../../components/icons";
-import { Picker } from "../../components/Picker";
-import { ProjectDot } from "../../components/ProjectDot";
-import { t, tc } from "../../copy";
-import { formatDay, formatTime } from "../../domain/dates";
-import { localDateTime } from "../../domain/edit";
+import { t } from "../../copy";
 import {
   addRecent,
   clearRecent,
   readRecent,
   removeRecent,
 } from "../../domain/recentSearches";
-import {
-  highlightParts,
-  QUERY_MAX,
-  type NoteHit,
-  type SearchFilter,
-  type SearchTab,
-} from "../../domain/search";
+import type { NoteHit, SearchFilter, SearchTab } from "../../domain/search";
 import type { Project, Task, TimeFormat } from "../../domain/types";
+import { SearchField } from "./search/SearchField";
+import {
+  FILTER_LABEL,
+  SearchHome,
+  type QuickFilter,
+} from "./search/SearchHome";
+import { SearchResults } from "./search/SearchResults";
+import { useSearchKeyboard } from "./search/useSearchKeyboard";
 import { useSearch } from "./useSearch";
 
 export interface SearchPanelProps {
@@ -71,32 +51,35 @@ export interface SearchPanelProps {
   inputRef?: React.Ref<HTMLInputElement>;
 }
 
-function renderHighlighted(text: string, query: string) {
-  // Matched words with only a space between them read as one highlight
-  const parts = highlightParts(text, query).reduce<
-    ReturnType<typeof highlightParts>
-  >((merged, part, i, all) => {
-    const last = merged[merged.length - 1];
-    const bridges =
-      !part.match && part.text.trim() === "" && all[i + 1]?.match === true;
-    if (last?.match && (part.match || bridges)) last.text += part.text;
-    else merged.push({ ...part });
-    return merged;
-  }, []);
-  return parts.map((part, i) => {
-    return part.match ? (
-      <mark
-        key={i}
-        className="rounded-[3px] bg-ink/20 px-0.5 font-semibold text-ink"
-      >
-        {part.text}
-      </mark>
-    ) : (
-      part.text
-    );
-  });
+/** One result the keyboard can reach, in the order the listbox shows them. */
+type ResultRow =
+  | { type: "task"; id: string }
+  | { type: "note"; id: string }
+  | { type: "project"; id: string };
+
+/** What the one constraint in use is called: its quick filter, Completed or its project. */
+function constraintLabel({
+  filter,
+  completed,
+  projectId,
+  projects,
+}: {
+  filter: SearchFilter | null;
+  completed: boolean;
+  projectId: string | null;
+  projects: Project[];
+}): string | null {
+  if (filter) return t(FILTER_LABEL[filter]);
+  if (completed) return t(FILTER_LABEL.completed);
+  if (!projectId) return null;
+  const project = projects.find((p) => p.id === projectId);
+  return project?.name ?? t("search.in_project");
 }
 
+/**
+ * Search (LV-5, NU): the field, then either the home (quick filters, recent searches, projects)
+ * or the results. Used by the desktop popup and the phone's Search screen.
+ */
 export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
   function SearchPanel(
     {
@@ -114,18 +97,12 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
     },
     ref,
   ): ReactElement {
-    const internalInputRef = useRef<HTMLInputElement>(null);
-    useImperativeHandle(
-      ref,
-      () => internalInputRef.current as HTMLInputElement,
-    );
-    useImperativeHandle(
-      inputRef,
-      () => internalInputRef.current as HTMLInputElement,
-    );
-
+    const fieldRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(ref, () => fieldRef.current as HTMLInputElement);
+    useImperativeHandle(inputRef, () => fieldRef.current as HTMLInputElement);
     const listboxId = useId();
 
+    const search = useSearch({ searchTasks, searchNotes, projects });
     const {
       input,
       setInput,
@@ -135,825 +112,163 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
       setCompleted,
       projectId,
       setProjectId,
-      pending,
-      hasCriteria,
-      tasks,
-      counts,
-      nextCursor,
-      notes,
-      projectHits,
-      error,
-      retry,
-      runNow,
-      loadMore,
-    } = useSearch({ searchTasks, searchNotes, projects });
+    } = search;
 
     const [tab, setTab] = useState<SearchTab>("all");
-    const [recentList, setRecentList] = useState<string[]>([]);
-    const [activeIndex, setActiveIndex] = useState(-1);
+    const [recent, setRecent] = useState<string[]>([]);
+    useEffect(() => setRecent(readRecent()), []);
+    useEffect(() => fieldRef.current?.focus(), []);
 
-    useEffect(() => {
-      setRecentList(readRecent());
-    }, []);
-
-    const key = JSON.stringify([input.trim(), filter, completed, projectId]);
-    const prevKeyRef = useRef(key);
-    useEffect(() => {
-      if (prevKeyRef.current !== key) {
-        prevKeyRef.current = key;
-        setTab("all");
-      }
-    }, [key]);
-
-    // Flat visible rows for listbox keyboard navigation
-    type VisibleRow =
-      | { type: "task"; id: string; item: Task }
-      | { type: "project"; id: string; item: Project }
-      | { type: "note"; id: string; item: NoteHit };
-
-    const visibleRows = useMemo<VisibleRow[]>(() => {
-      const rows: VisibleRow[] = [];
-      if (tab === "all" || tab === "tasks") {
-        for (const t of tasks) {
-          rows.push({ type: "task", id: t.id, item: t });
-        }
-      }
-      if (tab === "all" || tab === "notes") {
-        for (const n of notes) {
-          rows.push({ type: "note", id: n.id, item: n });
-        }
-      }
-      if (tab === "all" || tab === "projects") {
-        for (const p of projectHits) {
-          rows.push({ type: "project", id: p.id, item: p });
-        }
-      }
-      return rows;
-    }, [tab, tasks, notes, projectHits]);
-
-    // Reset active index to unselected whenever new results arrive or tab changes
-    useEffect(() => {
-      setActiveIndex(-1);
-    }, [tasks, projectHits, notes, tab]);
-
-    const activeOptionId =
-      visibleRows.length > 0 &&
-      activeIndex >= 0 &&
-      activeIndex < visibleRows.length
-        ? `search-opt-${activeIndex}`
-        : undefined;
-
-    const handleSelectTask = useCallback(
-      (id: string) => {
-        if (input.trim()) {
-          addRecent(input);
-        }
-        onOpenTask(id);
-      },
-      [input, onOpenTask],
-    );
-
-    const handleSelectProject = useCallback(
-      (id: string) => {
-        if (input.trim()) {
-          addRecent(input);
-        }
-        onOpenProject(id);
-      },
-      [input, onOpenProject],
-    );
-
-    const handleSelectNote = useCallback(
-      (id: string) => {
-        onOpenNote(id);
-      },
-      [onOpenNote],
-    );
-
-    const navigateNext = useCallback(() => {
-      if (visibleRows.length === 0) return;
-      const next = activeIndex < 0 ? 0 : (activeIndex + 1) % visibleRows.length;
-      setActiveIndex(next);
-      document
-        .getElementById(`search-opt-${next}`)
-        ?.scrollIntoView?.({ block: "nearest" });
-    }, [activeIndex, visibleRows.length]);
-
-    const navigatePrev = useCallback(() => {
-      if (visibleRows.length === 0) return;
-      const next = activeIndex <= 0 ? visibleRows.length - 1 : activeIndex - 1;
-      setActiveIndex(next);
-      document
-        .getElementById(`search-opt-${next}`)
-        ?.scrollIntoView?.({ block: "nearest" });
-    }, [activeIndex, visibleRows.length]);
-
-    const activateCurrent = useCallback(() => {
-      if (pending || visibleRows.length === 0 || activeIndex < 0) {
-        if (input.trim()) {
-          addRecent(input);
-          setRecentList(readRecent());
-        }
-        runNow();
-      } else {
-        const row = visibleRows[activeIndex];
-        if (row) {
-          if (row.type === "task") handleSelectTask(row.id);
-          else if (row.type === "project") handleSelectProject(row.id);
-          else if (row.type === "note") handleSelectNote(row.id);
-        }
-      }
-    }, [
-      pending,
-      visibleRows,
-      activeIndex,
-      input,
-      runNow,
-      handleSelectTask,
-      handleSelectProject,
-      handleSelectNote,
+    // A new search starts on All
+    const searchKey = JSON.stringify([
+      input.trim(),
+      filter,
+      completed,
+      projectId,
     ]);
-
-    const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === "ArrowDown") {
-        if (visibleRows.length > 0) {
-          e.preventDefault();
-          navigateNext();
-        }
-      } else if (e.key === "ArrowUp") {
-        if (visibleRows.length > 0) {
-          e.preventDefault();
-          navigatePrev();
-        }
-      } else if (e.key === "Enter") {
-        e.preventDefault();
-        activateCurrent();
-      }
-    };
-
-    // Auto-focus input on mount
+    const lastSearchKey = useRef(searchKey);
     useEffect(() => {
-      internalInputRef.current?.focus();
-    }, []);
+      if (lastSearchKey.current === searchKey) return;
+      lastSearchKey.current = searchKey;
+      setTab("all");
+    }, [searchKey]);
 
-    // Global keyboard listener for search panel (UX: arrows work without explicitly clicking search box)
-    useEffect(() => {
-      const onGlobalKeyDown = (e: KeyboardEvent) => {
-        if (e.defaultPrevented) return;
+    /** Only one constraint at a time: a quick filter, Completed or a project. */
+    const constrain = (next: {
+      filter?: SearchFilter | null;
+      completed?: boolean;
+      projectId?: string | null;
+    }) => {
+      setFilter(next.filter ?? null);
+      setCompleted(next.completed ?? false);
+      setProjectId(next.projectId ?? null);
+    };
+    const chooseQuickFilter = (quick: QuickFilter) =>
+      constrain(
+        quick === "completed" ? { completed: true } : { filter: quick },
+      );
 
-        const active = document.activeElement;
-
-        // If typing inside another input/textarea, ignore
-        if (
-          active &&
-          active !== internalInputRef.current &&
-          (active.tagName === "INPUT" ||
-            active.tagName === "TEXTAREA" ||
-            (active as HTMLElement).isContentEditable)
-        ) {
-          return;
-        }
-
-        // If a picker popover is open, let it handle arrows
-        if (document.querySelector('[id*="picker"][role="listbox"]')) {
-          return;
-        }
-
-        if (e.key === "ArrowDown") {
-          if (visibleRows.length > 0) {
-            e.preventDefault();
-            navigateNext();
-          }
-        } else if (e.key === "ArrowUp") {
-          if (visibleRows.length > 0) {
-            e.preventDefault();
-            navigatePrev();
-          }
-        } else if (e.key === "Enter") {
-          if (activeIndex >= 0) {
-            e.preventDefault();
-            activateCurrent();
-          }
-        } else if (
-          e.key.length === 1 &&
-          !e.ctrlKey &&
-          !e.metaKey &&
-          !e.altKey &&
-          active !== internalInputRef.current
-        ) {
-          internalInputRef.current?.focus();
-        }
-      };
-
-      window.addEventListener("keydown", onGlobalKeyDown);
-      return () => window.removeEventListener("keydown", onGlobalKeyDown);
-    }, [visibleRows, activeIndex, navigateNext, navigatePrev, activateCurrent]);
-
-    const handleRecentClick = (q: string) => {
-      setInput(q);
-      setFilter(null);
-      setCompleted(false);
-      setProjectId(null);
-      addRecent(q);
-      setRecentList(readRecent());
-      runNow();
+    const remember = () => {
+      if (!input.trim()) return;
+      addRecent(input);
+      setRecent(readRecent());
     };
 
-    const handleRemoveRecent = (e: React.MouseEvent, q: string) => {
-      e.stopPropagation();
-      const updated = removeRecent(q);
-      setRecentList(updated);
+    const rows = useMemo<ResultRow[]>(
+      () => [
+        ...(tab === "all" || tab === "tasks"
+          ? search.tasks.map((task) => ({ type: "task" as const, id: task.id }))
+          : []),
+        ...(tab === "all" || tab === "notes"
+          ? search.notes.map((note) => ({ type: "note" as const, id: note.id }))
+          : []),
+        ...(tab === "all" || tab === "projects"
+          ? search.projectHits.map((p) => ({
+              type: "project" as const,
+              id: p.id,
+            }))
+          : []),
+      ],
+      [tab, search.tasks, search.notes, search.projectHits],
+    );
+
+    const openTask = (id: string) => {
+      if (input.trim()) addRecent(input);
+      onOpenTask(id);
+    };
+    const openProject = (id: string) => {
+      if (input.trim()) addRecent(input);
+      onOpenProject(id);
+    };
+    const openRow = (row: ResultRow) => {
+      if (row.type === "task") openTask(row.id);
+      else if (row.type === "project") openProject(row.id);
+      else onOpenNote(row.id);
     };
 
-    const handleClearRecent = () => {
-      clearRecent();
-      setRecentList([]);
-    };
+    const keyboard = useSearchKeyboard({
+      rows,
+      inputRef: fieldRef,
+      canOpen: !search.pending,
+      open: openRow,
+      searchNow: () => {
+        remember();
+        search.runNow();
+      },
+    });
 
-    const clearActiveConstraint = () => {
-      setFilter(null);
-      setCompleted(false);
-      setProjectId(null);
-    };
-
-    const activeFilterLabel = filter
-      ? filter === "overdue"
-        ? t("search.filter_overdue")
-        : filter === "due_week"
-          ? t("search.filter_due_week")
-          : filter === "starts_today"
-            ? t("search.filter_starts_today")
-            : filter === "high_priority"
-              ? t("search.filter_high")
-              : t("search.filter_from_note")
-      : completed
-        ? t("search.filter_completed")
-        : projectId
-          ? (projects.find((p) => {
-              return p.id === projectId;
-            })?.name ?? t("search.in_project"))
-          : null;
-
-    // Notes only answer a text search, not a quick filter or a project
-    const showNotes =
-      input.trim() !== "" && !filter && !completed && !projectId;
-    const totalCount =
-      tab === "all"
-        ? counts.all + projectHits.length + notes.length
-        : tab === "tasks"
-          ? counts.all
-          : tab === "projects"
-            ? projectHits.length
-            : notes.length;
-
-    let rowRunningIndex = 0;
+    const filterLabel = constraintLabel({
+      filter,
+      completed,
+      projectId,
+      projects,
+    });
 
     return (
       <div className="flex flex-col flex-1 min-h-0 w-full">
-        {/* Field */}
-        {variant === "popup" ? (
-          <div className="flex h-14 w-full items-center gap-2.5 border-b border-separator px-4">
-            <SearchIcon size={18} className="shrink-0 text-ink-secondary" />
-            <input
-              ref={internalInputRef}
-              role="combobox"
-              type="search"
-              aria-expanded={hasCriteria}
-              aria-controls={listboxId}
-              aria-activedescendant={activeOptionId}
-              maxLength={QUERY_MAX}
-              autoFocus
-              autoComplete="off"
-              spellCheck={false}
-              placeholder={t("search.placeholder")}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleKeyDown}
-              className="h-full min-w-0 flex-1 border-0 bg-transparent text-[17px] text-ink placeholder:text-ink-tertiary focus:outline-none"
-            />
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 px-4 pb-2">
-            <div className="flex h-[52px] flex-1 items-center gap-2 rounded-field border border-control bg-surface px-4 field-ring">
-              <SearchIcon size={18} className="shrink-0 text-ink-secondary" />
-              <input
-                ref={internalInputRef}
-                role="combobox"
-                type="search"
-                aria-expanded={hasCriteria}
-                aria-controls={listboxId}
-                aria-activedescendant={activeOptionId}
-                maxLength={QUERY_MAX}
-                autoFocus
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={t("search.placeholder")}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="h-full min-w-0 flex-1 border-0 bg-transparent text-body text-ink placeholder:text-ink-tertiary focus:outline-none"
-              />
-            </div>
-            {onCancel && (
-              <button
-                type="button"
-                onClick={onCancel}
-                className="focus-ring shrink-0 link-swipe text-callout font-medium text-ink-secondary hover:text-ink px-1"
-              >
-                {t("common.cancel")}
-              </button>
-            )}
-          </div>
-        )}
+        <SearchField
+          variant={variant}
+          inputRef={fieldRef}
+          value={input}
+          onChange={setInput}
+          onKeyDown={keyboard.onKeyDown}
+          expanded={search.hasCriteria}
+          listboxId={listboxId}
+          activeOptionId={keyboard.activeOptionId}
+          onCancel={onCancel}
+        />
 
-        {/* Content area */}
         <div className="flex-1 overflow-y-auto overscroll-contain p-2">
-          {!hasCriteria ? (
-            /* Home (no criteria) */
-            <div className="flex flex-col gap-4 py-2">
-              {/* 1. Quick filters */}
-              <div>
-                <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                  {t("search.quick_filters")}
-                </div>
-                <div className="flex flex-wrap gap-2 px-3 pb-2">
-                  <Chip
-                    onClick={() => {
-                      setFilter("overdue");
-                      setCompleted(false);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_overdue")}
-                  </Chip>
-                  <Chip
-                    icon={<CalendarIcon size={16} />}
-                    onClick={() => {
-                      setFilter("due_week");
-                      setCompleted(false);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_due_week")}
-                  </Chip>
-                  <Chip
-                    icon={<ClockIcon size={16} />}
-                    onClick={() => {
-                      setFilter("starts_today");
-                      setCompleted(false);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_starts_today")}
-                  </Chip>
-                  <Chip
-                    icon={<FlagIcon size={16} />}
-                    onClick={() => {
-                      setFilter("high_priority");
-                      setCompleted(false);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_high")}
-                  </Chip>
-                  <Chip
-                    icon={<SparklesIcon size={16} />}
-                    onClick={() => {
-                      setFilter("from_note");
-                      setCompleted(false);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_from_note")}
-                  </Chip>
-                  <Chip
-                    icon={<CheckIcon size={16} />}
-                    onClick={() => {
-                      setFilter(null);
-                      setCompleted(true);
-                      setProjectId(null);
-                    }}
-                  >
-                    {t("search.filter_completed")}
-                  </Chip>
-                </div>
-              </div>
-
-              {/* 2. Recent searches */}
-              {recentList.length > 0 && (
-                <div>
-                  <div className="flex items-center justify-between px-3 pt-2.5 pb-1">
-                    <span className="text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                      {t("search.recent")}
-                    </span>
-                    <button
-                      type="button"
-                      className="focus-ring link-swipe text-footnote font-medium text-ink-secondary hover:text-ink cursor-pointer"
-                      onClick={handleClearRecent}
-                    >
-                      {t("common.clear")}
-                    </button>
-                  </div>
-                  <div className="flex flex-col gap-0.5 px-1">
-                    {recentList.map((item) => (
-                      <div
-                        key={item}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => handleRecentClick(item)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            handleRecentClick(item);
-                          }
-                        }}
-                        className="flex items-center gap-3 rounded-tile px-3 py-2 text-left hover:bg-fill cursor-pointer group"
-                      >
-                        <ClockIcon
-                          size={16}
-                          className="shrink-0 text-ink-tertiary"
-                        />
-                        <span className="flex-1 truncate text-body text-ink">
-                          {item}
-                        </span>
-                        <button
-                          type="button"
-                          className="focus-ring p-1 rounded-full text-ink-tertiary hover:text-ink opacity-70 hover:opacity-100"
-                          aria-label={t("search.remove_recent", {
-                            query: item,
-                          })}
-                          onClick={(e) => handleRemoveRecent(e, item)}
-                        >
-                          <XIcon size={14} />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 3. Notes */}
-              <div>
-                <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                  {t("search.tab_notes")}
-                </div>
-                <p className="m-0 px-3 pt-1 pb-2 text-footnote text-ink-tertiary">
-                  {t("search.no_notes")}
-                </p>
-              </div>
-
-              {/* 4. In project */}
-              {projects.length > 0 && (
-                <div>
-                  <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                    {t("search.in_project")}
-                  </div>
-                  <div className="flex flex-wrap gap-2 px-3 pb-2">
-                    {projects.map((p) => (
-                      <Chip
-                        key={p.id}
-                        icon={<ProjectDot colour={p.colour} />}
-                        onClick={() => {
-                          setProjectId(p.id);
-                          setFilter(null);
-                          setCompleted(false);
-                        }}
-                      >
-                        {p.name}
-                      </Chip>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+          {search.hasCriteria ? (
+            <SearchResults
+              variant={variant}
+              query={input}
+              tab={tab}
+              onTab={setTab}
+              filterLabel={filterLabel}
+              onClearFilter={() => constrain({})}
+              projects={projects}
+              projectId={projectId}
+              onProject={setProjectId}
+              pending={search.pending}
+              error={Boolean(search.error)}
+              onRetry={search.retry}
+              tasks={search.tasks}
+              taskCount={search.counts.all}
+              hasMoreTasks={Boolean(search.nextCursor)}
+              onLoadMore={() => void search.loadMore()}
+              notes={search.notes}
+              showNotes={
+                input.trim() !== "" && !filter && !completed && !projectId
+              }
+              projectHits={search.projectHits}
+              listboxId={listboxId}
+              activeIndex={keyboard.activeIndex}
+              onOpenTask={openTask}
+              onOpenNote={onOpenNote}
+              onOpenProject={openProject}
+              today={today}
+              timeFormat={timeFormat}
+            />
           ) : (
-            /* Results (criteria set) */
-            <div className="flex flex-col gap-2">
-              {/* Tab chips row */}
-              <div
-                role="tablist"
-                className="flex flex-wrap items-center gap-1.5 px-1 py-1"
-              >
-                {activeFilterLabel && (
-                  <Chip
-                    selected
-                    icon={<XIcon size={14} />}
-                    onClick={clearActiveConstraint}
-                  >
-                    {activeFilterLabel}
-                  </Chip>
-                )}
-
-                <Chip
-                  role="tab"
-                  aria-selected={tab === "all"}
-                  selected={tab === "all"}
-                  onClick={() => setTab("all")}
-                >
-                  {t("list.filter_all")}
-                  {!pending &&
-                    ` ${counts.all + projectHits.length + notes.length}`}
-                </Chip>
-                <Chip
-                  role="tab"
-                  aria-selected={tab === "tasks"}
-                  selected={tab === "tasks"}
-                  onClick={() => setTab("tasks")}
-                >
-                  {t("search.tab_tasks")}
-                  {!pending && ` ${counts.all}`}
-                </Chip>
-                <Chip
-                  role="tab"
-                  aria-selected={tab === "projects"}
-                  selected={tab === "projects"}
-                  onClick={() => setTab("projects")}
-                >
-                  {t("search.tab_projects")}
-                  {!pending && ` ${projectHits.length}`}
-                </Chip>
-                <Chip
-                  role="tab"
-                  aria-selected={tab === "notes"}
-                  selected={tab === "notes"}
-                  onClick={() => setTab("notes")}
-                >
-                  {t("search.tab_notes")}
-                  {!pending && ` ${notes.length}`}
-                </Chip>
-
-                {variant === "popup" && (
-                  <div className="ml-auto shrink-0">
-                    <Picker
-                      label={t("search.any_project")}
-                      value={projectId ?? ""}
-                      onChange={(val) => setProjectId(val || null)}
-                      options={[
-                        { value: "", label: t("search.any_project") },
-                        ...projects.map((p) => ({
-                          value: p.id,
-                          label: p.name,
-                          leading: <ProjectDot colour={p.colour} />,
-                        })),
-                      ]}
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Status announcement */}
-              <p className="sr-only" role="status" aria-live="polite">
-                {pending ? "" : tc("search.count", totalCount)}
-              </p>
-
-              {/* Pending Skeleton */}
-              {pending ? (
-                <div
-                  className="flex flex-col gap-2 p-2"
-                  role="status"
-                  aria-busy="true"
-                >
-                  {[1, 2, 3].map((i) => (
-                    <div
-                      key={i}
-                      className="flex h-12 items-center gap-3 rounded-tile border border-separator/40 bg-surface px-4 py-3"
-                    >
-                      <div className="size-5 shrink-0 rounded-full bg-fill/80 animate-pulse" />
-                      <div
-                        className="h-4 rounded-xl bg-fill/80 animate-pulse"
-                        style={{
-                          width: i === 1 ? "50%" : i === 2 ? "70%" : "40%",
-                        }}
-                      />
-                      <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60 animate-pulse" />
-                    </div>
-                  ))}
-                </div>
-              ) : error ? (
-                /* Error */
-                <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
-                  <p className="text-body text-ink-secondary">
-                    {t("error.generic")}
-                  </p>
-                  <Button variant="secondary" onClick={retry}>
-                    {t("common.retry")}
-                  </Button>
-                </div>
-              ) : visibleRows.length === 0 ? (
-                /* Finished with 0 results */
-                <EmptyState
-                  title={t("search.no_match", { query: input.trim() })}
-                />
-              ) : (
-                /* Listbox Results */
-                <div
-                  id={listboxId}
-                  role="listbox"
-                  className="flex flex-col gap-3"
-                >
-                  {/* Tasks Section */}
-                  {(tab === "all" || tab === "tasks") && tasks.length > 0 && (
-                    <div className="flex flex-col">
-                      <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                        {t("search.tab_tasks")}
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {tasks.map((task) => {
-                          const rowIndex = rowRunningIndex++;
-                          const isActive = activeIndex === rowIndex;
-                          const project = projects.find((p) => {
-                            return p.id === task.project_id;
-                          });
-                          return (
-                            <button
-                              key={task.id}
-                              id={`search-opt-${rowIndex}`}
-                              type="button"
-                              role="option"
-                              aria-selected={isActive}
-                              onClick={() => handleSelectTask(task.id)}
-                              className={cx(
-                                "flex items-center gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
-                                isActive
-                                  ? "border-primary ring-1 ring-primary/40 shadow-sm"
-                                  : "border-separator hover:border-ink-tertiary hover:shadow-sm",
-                              )}
-                            >
-                              <span
-                                className={cx(
-                                  "inline-flex size-[22px] items-center justify-center rounded-full border-[1.5px] transition-colors shrink-0",
-                                  task.done
-                                    ? "border-ink bg-ink text-surface"
-                                    : "border-ink-tertiary",
-                                )}
-                                aria-hidden="true"
-                              >
-                                {task.done && (
-                                  <CheckIcon size={14} strokeWidth={2.5} />
-                                )}
-                              </span>
-
-                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                <span className="line-clamp-2 text-body font-medium text-ink">
-                                  {renderHighlighted(task.title, input)}
-                                </span>
-                                <span
-                                  className="flex flex-wrap items-center gap-1.5 text-footnote text-ink-secondary"
-                                  aria-hidden="true"
-                                >
-                                  <span
-                                    className="mr-0.5 inline-block size-2 shrink-0 rounded-full"
-                                    style={{
-                                      background: `var(--color-project-${project ? project.colour : "gray"})`,
-                                    }}
-                                  />
-                                  <span>
-                                    {project ? project.name : t("project.none")}
-                                  </span>
-                                  {task.due_date && (
-                                    <>
-                                      <span>·</span>
-                                      <span>
-                                        {formatDay(task.due_date, today)}
-                                        {task.due_time
-                                          ? ` ${formatTime(task.due_time, timeFormat)}`
-                                          : ""}
-                                      </span>
-                                    </>
-                                  )}
-                                  {task.reminder !== "none" && (
-                                    <BellIcon
-                                      size={13}
-                                      className="text-ink-tertiary"
-                                    />
-                                  )}
-                                </span>
-                              </div>
-
-                              {task.priority === "high" && !task.done && (
-                                <span
-                                  className="ml-2 shrink-0 self-center text-error"
-                                  data-slot="flag"
-                                  aria-hidden="true"
-                                >
-                                  <FlagIcon size={18} />
-                                </span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      {nextCursor && (
-                        <TextButton
-                          className="mt-2 w-full"
-                          onClick={() => {
-                            void loadMore();
-                          }}
-                        >
-                          {t("search.load_more")}
-                        </TextButton>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Notes Section */}
-                  {(tab === "all" || tab === "notes") && showNotes && (
-                    <div className="flex flex-col">
-                      <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                        {t("search.tab_notes")}
-                      </div>
-                      {notes.length === 0 && (
-                        <p className="m-0 px-3 py-2 text-footnote text-ink-tertiary">
-                          {t("search.no_notes")}
-                        </p>
-                      )}
-                      <div className="flex flex-col gap-2">
-                        {notes.map((note) => {
-                          const rowIndex = rowRunningIndex++;
-                          const isActive = activeIndex === rowIndex;
-                          const loc = localDateTime(
-                            note.written_at,
-                            timeZone(),
-                          );
-                          const dateLine = `${formatDay(loc.date, today)} ${loc.time}`;
-
-                          return (
-                            <button
-                              key={note.id}
-                              id={`search-opt-${rowIndex}`}
-                              type="button"
-                              role="option"
-                              aria-selected={isActive}
-                              onClick={() => handleSelectNote(note.id)}
-                              className={cx(
-                                "flex items-start gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
-                                isActive
-                                  ? "border-primary ring-1 ring-primary/40 shadow-sm"
-                                  : "border-separator hover:border-ink-tertiary hover:shadow-sm",
-                              )}
-                            >
-                              <NotesIcon
-                                size={18}
-                                className="mt-0.5 shrink-0 text-ink-secondary"
-                              />
-                              <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                                <span className="line-clamp-1 text-body font-medium text-ink">
-                                  {renderHighlighted(note.title, input)}
-                                </span>
-                                <span className="line-clamp-2 text-footnote text-ink-secondary">
-                                  {renderHighlighted(note.snippet, input)}
-                                </span>
-                                <span className="text-[12px] text-ink-tertiary">
-                                  {dateLine}
-                                </span>
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Projects Section */}
-                  {(tab === "all" || tab === "projects") &&
-                    projectHits.length > 0 && (
-                      <div className="flex flex-col">
-                        <div className="px-3 pt-2.5 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-secondary">
-                          {t("search.tab_projects")}
-                        </div>
-                        <div className="flex flex-col gap-2">
-                          {projectHits.map((project) => {
-                            const rowIndex = rowRunningIndex++;
-                            const isActive = activeIndex === rowIndex;
-                            return (
-                              <button
-                                key={project.id}
-                                id={`search-opt-${rowIndex}`}
-                                type="button"
-                                role="option"
-                                aria-selected={isActive}
-                                onClick={() => handleSelectProject(project.id)}
-                                className={cx(
-                                  "flex items-center gap-3 rounded-2xl border bg-surface px-4 py-3 text-left w-full cursor-pointer shadow-xs transition-all",
-                                  isActive
-                                    ? "border-primary ring-1 ring-primary/40 shadow-sm"
-                                    : "border-separator hover:border-ink-tertiary hover:shadow-sm",
-                                )}
-                              >
-                                <ProjectDot colour={project.colour} />
-                                <span className="flex-1 truncate text-body font-medium text-ink">
-                                  {renderHighlighted(project.name, input)}
-                                </span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-                </div>
-              )}
-            </div>
+            <SearchHome
+              projects={projects}
+              recent={recent}
+              onFilter={chooseQuickFilter}
+              onProject={(id) => constrain({ projectId: id })}
+              onRecent={(query) => {
+                setInput(query);
+                constrain({});
+                addRecent(query);
+                setRecent(readRecent());
+                search.runNow();
+              }}
+              onRemoveRecent={(query) => setRecent(removeRecent(query))}
+              onClearRecent={() => {
+                clearRecent();
+                setRecent([]);
+              }}
+            />
           )}
         </div>
       </div>

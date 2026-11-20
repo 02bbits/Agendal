@@ -1,4 +1,8 @@
 "use client";
+import {
+  notifyTaskCreated,
+  notifyProjectsChanged,
+} from "@/ui/domain/appEvents";
 
 import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
@@ -86,10 +90,8 @@ export function useNewTask({
   const handleCreate = useCallback(async (body: CreateTaskBody) => {
     const created = await createTask(body);
     if (typeof window !== "undefined") {
-      window.dispatchEvent(
-        new CustomEvent("agendal:task-created", { detail: created }),
-      );
-      window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+      notifyTaskCreated(created);
+      notifyProjectsChanged();
     }
     return created;
   }, []);

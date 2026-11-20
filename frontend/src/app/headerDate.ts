@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from "react";
 import { localTime, now, timeZone, today } from "@/lib/clock";
 import { formatLongDate } from "@/ui";
 
@@ -16,20 +17,16 @@ export function subscribeHeaderDate(callback: () => void): () => void {
     ((24 * 60 - (h * 60 + m)) * 60 - now().getSeconds()) * 1000 + 500;
   const timer = setTimeout(callback, msToMidnight);
   const onVisible = () => {
-    if (
-      typeof document !== "undefined" &&
-      document.visibilityState === "visible"
-    ) {
-      callback();
-    }
+    if (document.visibilityState === "visible") callback();
   };
-  if (typeof document !== "undefined") {
-    document.addEventListener("visibilitychange", onVisible);
-  }
+  document.addEventListener("visibilitychange", onVisible);
   return () => {
     clearTimeout(timer);
-    if (typeof document !== "undefined") {
-      document.removeEventListener("visibilitychange", onVisible);
-    }
+    document.removeEventListener("visibilitychange", onVisible);
   };
+}
+
+/** Today's date for a tab's header, kept right across midnight; none while rendering on the server. */
+export function useHeaderDate(): string | undefined {
+  return useSyncExternalStore(subscribeHeaderDate, headerDate, () => undefined);
 }

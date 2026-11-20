@@ -1,21 +1,13 @@
-import type { ReactNode } from "react";
 import { t } from "../../copy";
-import {
-  CalendarIcon,
-  FolderIcon,
-  InboxIcon,
-  NotesIcon,
-} from "../../components/icons";
 import { cx } from "../../components/cx";
 import { Link } from "./Link";
 import { TABS, type Navigate, type TabId } from "./routes";
+import { TAB_ICON } from "./tabIcons";
 
-const ICONS: Record<TabId, ReactNode> = {
-  inbox: <InboxIcon size={22} />,
-  upcoming: <CalendarIcon size={22} />,
-  projects: <FolderIcon size={22} />,
-  notes: <NotesIcon size={22} />,
-};
+function TabIcon({ id }: { id: TabId }) {
+  const Icon = TAB_ICON[id];
+  return <Icon size={22} />;
+}
 
 export interface TabBarProps {
   active?: TabId;
@@ -49,7 +41,7 @@ export function TabBar({ active, navigate }: TabBarProps) {
               tab.id === active && "bg-fill",
             )}
           >
-            {ICONS[tab.id]}
+            <TabIcon id={tab.id} />
           </span>
           <span className="text-tab font-medium">{t(tab.label)}</span>
         </Link>

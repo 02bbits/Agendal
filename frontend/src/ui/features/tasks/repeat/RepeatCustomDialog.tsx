@@ -1,3 +1,4 @@
+import { useWideScreen } from "../../../components/useMediaQuery";
 import { useId, useState, type ReactElement } from "react";
 import { Button } from "../../../components/Button";
 import { cx } from "../../../components/cx";
@@ -5,7 +6,6 @@ import { DatePicker } from "../../../components/DatePicker";
 import { Dialog } from "../../../components/Dialog";
 import { NumberStepper } from "../../../components/NumberStepper";
 import { Segmented } from "../../../components/Segmented";
-import { useMediaQuery } from "../../../components/useMediaQuery";
 import { t } from "../../../copy";
 import {
   buildRule,
@@ -56,7 +56,7 @@ export function RepeatCustomDialog({
 
   // From 768px the end-date calendar sits beside the rule, always shown and only usable with
   // Ends: On; on a phone it shows under Ends as soon as On is picked
-  const isWide = useMediaQuery("(min-width: 768px)");
+  const isWide = useWideScreen();
   const endsOn = draft.end.kind === "on";
   const calendar = (
     <DatePicker

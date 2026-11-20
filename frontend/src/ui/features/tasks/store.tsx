@@ -1,3 +1,4 @@
+import { notifyTaskCreated } from "../../domain/appEvents";
 import * as React from "react";
 import { CheckCircleIcon } from "../../components/icons";
 import type { ToastData } from "../../components/Toast";
@@ -206,9 +207,7 @@ export function TaskStoreProvider({
         (saved) => {
           insertRow(saved);
           if (typeof window !== "undefined") {
-            window.dispatchEvent(
-              new CustomEvent("agendal:task-created", { detail: saved }),
-            );
+            notifyTaskCreated(saved);
           }
         },
         (err) => {
@@ -240,9 +239,7 @@ export function TaskStoreProvider({
             madeNextId = res.next.id;
             insertRow(res.next);
             if (typeof window !== "undefined") {
-              window.dispatchEvent(
-                new CustomEvent("agendal:task-created", { detail: res.next }),
-              );
+              notifyTaskCreated(res.next);
             }
           }
         },
