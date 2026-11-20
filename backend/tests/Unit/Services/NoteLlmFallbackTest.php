@@ -19,12 +19,16 @@ uses(TestCase::class);
 
 beforeEach(function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-10-23T08:12:00+07:00'));
-    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only', 'note_llm.model' => null,
+    $this->keyFile = tempnam(sys_get_temp_dir(), 'llm');
+    file_put_contents($this->keyFile, 'test-only');
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key_file' => $this->keyFile, 'note_llm.model' => null,
         'note_llm.prompt_version' => 'note-plan-v2']);
     Cache::flush();
     Http::preventStrayRequests();
     $this->context = new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh');
 });
+
+afterEach(fn () => @unlink($this->keyFile));
 
 function recordedNoteResponse(): array
 {
@@ -108,16 +112,18 @@ it('enforces per-user and global budgets before dispatch (SEC-42)', function () 
     Http::assertSentCount(1);
 });
 
-it('keeps the rules result without the app key', function () {
+it('keeps the rules result without a key file, even with a key in the environment', function () {
     Http::fake();
-    config(['note_llm.key' => null]);
+    putenv('GEMINI_API_KEY=env-key');
+    config(['note_llm.key_file' => null]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
     expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
     Http::assertNothingSent();
+    putenv('GEMINI_API_KEY');
 });
 
-it('reads the key from the secret file before the variable, on each call', function () {
+it('reads the key from the secret file on each call', function () {
     $file = tempnam(sys_get_temp_dir(), 'llm');
     file_put_contents($file, 'file-key
 ');
@@ -130,7 +136,7 @@ it('reads the key from the secret file before the variable, on each call', funct
     unlink($file);
 });
 
-it('keeps the rules result when the secret file is missing or empty, without falling back to the variable', function (string $content) {
+it('keeps the rules result when the secret file is missing or empty', function (string $content) {
     $file = sys_get_temp_dir().'/llm-missing-'.Str::random(8);
     if ($content !== 'missing') {
         file_put_contents($file, $content);

@@ -352,7 +352,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | Abuse | Control | Test |
 |---|---|---|
 | Flooding notes to burn the LLM budget | [SC-11](../07-architecture/security.md#sc-11) rate limits. [SC-12](../07-architecture/security.md#sc-12) per-user and global budgets, plus the kill switch | SEC-10, SEC-42 |
-| Prompt injection that tries to delete or change other tasks | [SC-13](../07-architecture/security.md#sc-13) schema-only output, candidate IDs only, server validation, deletes always confirmed ([NU-E37](#nu-e37)) | SEC-40, SEC-41 |
+| Prompt injection that tries to delete or change other tasks | [SC-13](../07-architecture/security.md#sc-13) schema-only output, candidate IDs only, server validation, deletes and the model's changes to existing tasks always confirmed ([NU-E37](#nu-e37)) | SEC-40, SEC-41, `NotePromptInjectionTest` |
 | Replaying a note to duplicate tasks | [SC-14](../07-architecture/security.md#sc-14) `UNIQUE (user_id, client_id)` | SEC-13 |
 | Pathological text that makes regexes backtrack (CPU exhaustion) | [SC-24](../07-architecture/security.md#sc-24) linear-time patterns only (no nested quantifiers), the 5,000-character cap, a 200 ms engine time limit per note (then rules output so far, with the remaining items as tasks with their raw text) | SEC-23 |
 | Note text leaking into logs | [SC-21](../07-architecture/security.md#sc-21) metadata-only logging | SEC-44, SEC-61 |

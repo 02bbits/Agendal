@@ -12,7 +12,7 @@ uses(RefreshDatabase::class);
 
 it('persists independent model calendar series, replays once and advances the selected weekdays', function () {
     app()->instance(ClockInterface::class, new FrozenClock('2026-11-01T15:11:00Z'));
-    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only', 'note_llm.prompt_version' => 'note-plan-v2']);
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key_file' => tap(tempnam(sys_get_temp_dir(), 'llm'), fn (string $file) => file_put_contents($file, 'test-only')), 'note_llm.prompt_version' => 'note-plan-v2']);
     $this->actingAs(User::factory()->create(['timezone' => 'Asia/Ho_Chi_Minh']));
     Http::preventStrayRequests();
     $response = json_decode(file_get_contents(__DIR__.'/../Fixtures/note-llm-response.json'), true, flags: JSON_THROW_ON_ERROR);

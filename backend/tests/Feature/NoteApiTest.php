@@ -160,7 +160,7 @@ it('limits note submission and includes Retry-After (T-NU-84)', function () {
 });
 
 it('validates notes the language model read, accepted or unclear, against the shared API schema (ADR-008)', function (string $action, string $text, string $status, string $outcome) {
-    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key' => 'test-only']);
+    config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key_file' => tap(tempnam(sys_get_temp_dir(), 'llm'), fn (string $file) => file_put_contents($file, 'test-only'))]);
     Http::preventStrayRequests();
     $response = json_decode((string) file_get_contents(base_path('tests/Fixtures/note-llm-response.json')), true, flags: JSON_THROW_ON_ERROR);
     $items = json_decode($response['choices'][0]['message']['content'], true, flags: JSON_THROW_ON_ERROR);

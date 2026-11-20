@@ -84,4 +84,4 @@ One Linux server ([Q14](../08-project/open-questions.md#q14)). It's a demo, so t
 | Processes | Nginx (TLS, static files, reverse proxy), the Next.js server (Node), PHP-FPM for Laravel, one queue worker under Supervisor, the scheduler (cron every minute), PostgreSQL |
 | Backups | Nightly `pg_dump`, kept 7 days, copied off the server ([scalability](../05-quality/scalability.md#data-protection-and-operations)) |
 | CI | Lint, type-check and tests on every pull request (GitHub Actions). The note corpus runs on any change to the rules |
-| Secrets | Server `.env` and CI secrets only: email, push keys, the LLM provider key (as a secret file, `*_API_KEY_FILE`), and the Google Cloud service-account key |
+| Secrets | Server `.env` and CI secrets only: email, push keys, the LLM provider key (only as a secret file, `*_API_KEY_FILE`), and the Google Cloud service-account key |

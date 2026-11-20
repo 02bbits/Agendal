@@ -9,16 +9,13 @@ return [
     // The app's provider: gemini, deepseek or anthropic. The team holds the key; users add none.
     'provider' => $provider = env('NOTE_LLM_PROVIDER', 'gemini'),
 
-    // Server-side only: never returned to a client, logged, or sent anywhere but that provider.
-    'key' => env($keyName = match ($provider) {
-        'deepseek' => 'DEEPSEEK_API_KEY',
-        'anthropic' => 'ANTHROPIC_API_KEY',
-        default => 'GEMINI_API_KEY',
+    // The provider key lives only in a file the app's user alone can read (e.g. a Docker secret), never in .env.
+    // The file is read on each call, so `config:cache` never copies the key into bootstrap/cache. Without it, rules only.
+    'key_file' => env(match ($provider) {
+        'deepseek' => 'DEEPSEEK_API_KEY_FILE',
+        'anthropic' => 'ANTHROPIC_API_KEY_FILE',
+        default => 'GEMINI_API_KEY_FILE',
     }),
-
-    // Preferred over the variable above: a file only the app's user can read (e.g. a Docker secret). It is read on
-    // each call, so `config:cache` never copies the key into bootstrap/cache.
-    'key_file' => env($keyName.'_FILE'),
 
     // Empty: the provider's cheapest model below. Changes must keep the corpus gates.
     'model' => env('NOTE_LLM_MODEL') ?: null,

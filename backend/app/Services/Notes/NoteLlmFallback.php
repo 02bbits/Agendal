@@ -123,23 +123,21 @@ final class NoteLlmFallback
     }
 
     /**
-     * The provider key: from the secret file when one is set (an unreadable or empty file turns the model off rather
-     * than falling back to the variable), else from the environment.
+     * The provider key, read from its secret file on each call; no file set, or an unreadable or empty one, turns the
+     * model off. The key is never taken from the environment itself.
      */
     private function key(): ?string
     {
         $file = config('note_llm.key_file');
-        if (is_string($file) && $file !== '') {
-            $key = is_file($file) && is_readable($file) ? trim((string) file_get_contents($file)) : '';
-            if ($key === '') {
-                Log::warning('note_llm', ['outcome' => 'key_file_unreadable']);
-            }
-
-            return $key === '' ? null : $key;
+        if (! is_string($file) || $file === '') {
+            return null;
         }
-        $key = config('note_llm.key');
+        $key = is_file($file) && is_readable($file) ? trim((string) file_get_contents($file)) : '';
+        if ($key === '') {
+            Log::warning('note_llm', ['outcome' => 'key_file_unreadable']);
+        }
 
-        return is_string($key) && $key !== '' ? $key : null;
+        return $key === '' ? null : $key;
     }
 
     /** Timeout, error or spent budget: the rules result stands, recorded as rules_fallback (ADR-008). */
@@ -162,6 +160,11 @@ final class NoteLlmFallback
     private function finish(NoteBuild $rules, array $plan, array $outcomes, string $text, NoteContext $context, array $tasks, int $accepted): NoteBuild
     {
         $tasksById = array_column($tasks, null, 'id');
+        // A change the model proposed to an existing task always waits for Apply, whatever changes_to_confirm says.
+        $fromModel = fn (array $entry): bool => ($outcomes[$entry['ref']]['status'] ?? null) === 'accepted';
+        if (array_filter([...$plan['update'], ...$plan['delete']], $fromModel) !== []) {
+            $plan['needs_confirm'] = true;
+        }
         $validated = $this->validator->validate($plan, $context->projects, $tasksById);
 
         return new NoteBuild($validated, $this->validator->status($validated),
