@@ -12,6 +12,10 @@ export { IconButton, type IconButtonProps } from "./components/IconButton";
 export { TextField, type TextFieldProps } from "./components/TextField";
 export { Chip, type ChipProps } from "./components/Chip";
 export { Sheet, type SheetProps } from "./components/Sheet";
+export {
+  LoadingScreen,
+  type LoadingScreenProps,
+} from "./components/LoadingScreen";
 export { Dialog, type DialogProps } from "./components/Dialog";
 export {
   Toast,

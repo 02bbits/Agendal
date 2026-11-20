@@ -16,6 +16,10 @@ const nextConfig: NextConfig = {
   env: { NEXT_PUBLIC_BUILD_ID: String(Date.now()) },
   cacheComponents: true,
   partialPrefetching: true,
+  // A tab opened in the last 5 minutes reuses its page from the browser's router cache, so
+  // switching back is instant (#161). Only the page shell is cached: each screen still fetches
+  // its own data from the API when it shows.
+  experimental: { staleTimes: { dynamic: 300 } },
   // NF-16 on every page. No script allow-list: Next.js inlines its bootstrap scripts
   // and a nonce would turn off the prerendered static pages (ASVS deviation 4).
   headers() {

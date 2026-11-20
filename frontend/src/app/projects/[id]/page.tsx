@@ -1,5 +1,6 @@
 import { Suspense, use } from "react";
 import { ProjectClient } from "./ProjectClient";
+import { ProjectSkeleton } from "../../skeletons";
 
 export const instant = false;
 
@@ -10,7 +11,7 @@ interface PageProps {
 export default function Page({ params }: PageProps) {
   const { id } = use(params);
   return (
-    <Suspense fallback={null}>
+    <Suspense fallback={<ProjectSkeleton />}>
       <ProjectClient id={id} />
     </Suspense>
   );
