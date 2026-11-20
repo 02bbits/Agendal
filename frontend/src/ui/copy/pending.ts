@@ -123,6 +123,7 @@ export const pending = {
   "task.notes_add": "Add notes",
   "task.no_date": "No date",
   "task.not_set": "None",
+  "common.none": "None",
   "task.created": "Created {date}",
   "task.edited": "Edited {date}",
   "task.saves_as_you_go": "Changes save as you go",

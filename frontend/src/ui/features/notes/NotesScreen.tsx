@@ -1,7 +1,7 @@
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
-import { t, tc } from "../../copy";
+import { countText, t, tc } from "../../copy";
 import { formatDay, formatLongDate, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
@@ -34,7 +34,7 @@ function StatusLine({ note }: { note: NoteListEntry }) {
   return (
     <span className="text-ink-secondary">
       {t("notes.made")}
-      <span aria-hidden="true"> · {count}</span>
+      <span aria-hidden="true"> · {countText(count)}</span>
       <span className="sr-only">, {label}</span>
     </span>
   );

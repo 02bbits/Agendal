@@ -74,6 +74,7 @@ export {
 export { cx } from "./components/cx";
 export {
   t,
+  countText,
   tc,
   quoted,
   isCopyKey,

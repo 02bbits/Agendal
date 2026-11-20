@@ -1,4 +1,4 @@
-import { t, tc } from "../../copy";
+import { countText, t, tc } from "../../copy";
 import type { Progress } from "../../domain/progress";
 import type { ProjectColor } from "../../domain/types";
 import { Link } from "../shell/Link";
@@ -117,7 +117,9 @@ export function ProjectCard({
           <span>{t("project.all_done")}</span>
         ) : (
           <span>
-            {tc("project.open_count", progress.total - progress.done)}
+            {tc("project.open_count", progress.total - progress.done, {
+              count: countText(progress.total - progress.done),
+            })}
           </span>
         )}
       </div>

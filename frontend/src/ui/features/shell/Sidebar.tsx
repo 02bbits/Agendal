@@ -114,7 +114,7 @@ export function Sidebar({
                   <Icon size={20} />
                 </span>
                 <span className="flex-1">{t(tab.label)}</span>
-                {showCounts && counts?.[tab.id] !== undefined && (
+                {showCounts && counts?.[tab.id] ? (
                   <span
                     className={cx(
                       "text-footnote tabular-nums",
@@ -125,7 +125,7 @@ export function Sidebar({
                   >
                     {counts[tab.id]}
                   </span>
-                )}
+                ) : null}
               </Link>
             </li>
           );

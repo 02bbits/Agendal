@@ -39,6 +39,11 @@ export function tc(key: CountKey, count: number, vars: CopyVars = {}): string {
   return fill(strings[form], { count, ...vars });
 }
 
+/** A count shown on a page: "None" for 0 (#168). Navigation shows nothing for 0 instead. */
+export function countText(count: number): string {
+  return count === 0 ? t("common.none") : String(count);
+}
+
 /** Curly quotes around task and project names, as the voice guide asks. */
 export function quoted(name: string): string {
   return `“${name}”`;

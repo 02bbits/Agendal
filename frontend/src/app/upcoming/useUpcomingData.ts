@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { addDays, entriesOf, t, type Project, type Task } from "@/ui";
+import {
+  addDays,
+  countText,
+  entriesOf,
+  t,
+  type Project,
+  type Task,
+} from "@/ui";
 import { PROJECTS_CHANGED, TASK_CREATED } from "@/ui/domain/appEvents";
 import { ApiRequestError } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
@@ -25,7 +32,7 @@ function subtitleOf(tasks: readonly Task[]) {
   ).length;
   return count === 1
     ? t("list.upcoming_subtitle_one", { count: 1 })
-    : t("list.upcoming_subtitle", { count });
+    : t("list.upcoming_subtitle", { count: countText(count) });
 }
 
 /** Overdue first, then the coming days, each task once. */
