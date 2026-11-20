@@ -130,7 +130,7 @@ export function SettingsPhone({
             <BackBar label={t("common.back")} onBack={onClose} />
           </div>
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-            <h1 className="mt-1 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
+            <h1 className="mt-3 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
               {t("settings.title")}
             </h1>
             <div className="mt-3 flex h-10 items-center gap-2 rounded-field bg-fill px-3">
