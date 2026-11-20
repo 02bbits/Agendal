@@ -305,9 +305,11 @@ describe("Complete a task (TK-1, WF-06)", () => {
     );
 
     await waitFor(() => expect(screen.queryByText("Retro Nov")).toBeNull());
-    expect(screen.getByText("Retro Dec").closest("li")!.className).toContain(
-      "animate-merge-in",
-    );
+    expect(
+      within(screen.getByText("Retro Dec").closest("li")!).getByTestId(
+        "merge-swipe",
+      ),
+    ).toBeTruthy();
     expect(
       screen.getByRole("checkbox", { name: "Complete Retro Dec" }),
     ).toBeTruthy();
@@ -379,7 +381,9 @@ describe("Complete a task (TK-1, WF-06)", () => {
     const reopened = await screen.findByRole("checkbox", {
       name: "Complete Retro last",
     });
-    expect(reopened.closest("li")!.className).toContain("animate-merge-in");
+    expect(
+      within(reopened.closest("li")!).getByTestId("merge-swipe"),
+    ).toBeTruthy();
   });
 
   it("#168: reopening older done occurrences one after another leaves one open, never duplicates", async () => {

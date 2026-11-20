@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { localTime, now, timeZone } from "../../../lib/clock";
 import { useConflicted } from "../../../lib/conflicts";
 import { t } from "../../copy";
@@ -62,6 +62,18 @@ export function TaskRow({
   const store = useOptionalTaskStore();
   const leaving = store?.isLeaving(task.id) ?? false;
   const arriving = store?.isArriving(task.id) ?? false;
+  const rowRef = useRef<HTMLLIElement>(null);
+  // Out of sight (a long Completed list): brought into view, so the change is seen
+  useEffect(() => {
+    if (!arriving) return;
+    const still = window.matchMedia?.(
+      "(prefers-reduced-motion: reduce)",
+    ).matches;
+    rowRef.current?.scrollIntoView?.({
+      block: "nearest",
+      behavior: still ? "auto" : "smooth",
+    });
+  }, [arriving]);
   // Lost a sync conflict: marked until the task is opened (AP §2.2, LV §2)
   const conflicted = useConflicted(task.id);
   const accessibleName = [
@@ -86,6 +98,7 @@ export function TaskRow({
 
   return (
     <li
+      ref={rowRef}
       className={cx(
         "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 cursor-pointer",
         tone === "due"
@@ -98,9 +111,16 @@ export function TaskRow({
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
         leaving && "pointer-events-none motion-safe:animate-merge-out",
-        arriving && "motion-safe:animate-merge-in",
       )}
     >
+      {/* A done repeat went back into this row (#168): the tick's tint wipes across, then fades */}
+      {arriving && (
+        <span
+          aria-hidden="true"
+          data-testid="merge-swipe"
+          className="pointer-events-none absolute inset-0 origin-left bg-ink/10 motion-safe:animate-merge-swipe motion-reduce:hidden"
+        />
+      )}
       {/* Ticked: a tint wipes across left to right, red when overdue, blue for a due entry; the row moves after SETTLE_MS */}
       {settling && task.done && (
         <span

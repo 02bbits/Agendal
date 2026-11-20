@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 /** The done row rises and fades at least this long while the server answers. */
 export const MERGE_OUT_MS = 260;
 /** The open row it went back into lights up this long. */
-export const MERGE_IN_MS = 800;
+export const MERGE_IN_MS = 1400;
 
 const reducedMotion = () =>
   typeof window !== "undefined" &&
