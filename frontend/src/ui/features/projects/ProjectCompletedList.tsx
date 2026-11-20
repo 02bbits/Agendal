@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Button } from "../../components/Button";
+import { TextButton } from "../../components/TextButton";
 import { t } from "../../copy";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { LoadMoreCompletedHandler } from "../../domain/projects";
@@ -70,10 +70,10 @@ export function ProjectCompletedList({
         </ul>
       </div>
       {hasMore && (
-        <Button
-          variant="secondary"
+        // The same look as Show more results and Load more elsewhere (#168)
+        <TextButton
           className="mt-3 w-full"
-          disabled={loadingMore}
+          busy={loadingMore}
           onClick={async () => {
             if (shown < completed.length) {
               setShown((n) => n + COMPLETED_PAGE);
@@ -84,7 +84,7 @@ export function ProjectCompletedList({
           }}
         >
           {t("project.show_completed")}
-        </Button>
+        </TextButton>
       )}
     </div>
   );
