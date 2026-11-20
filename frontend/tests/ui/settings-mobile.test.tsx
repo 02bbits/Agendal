@@ -30,6 +30,41 @@ describe("Settings on phones (Part D)", () => {
     }));
   };
 
+  it("#168: Sign out and Sign out on all devices sit on Settings with an icon, not in Account", () => {
+    for (const wide of [false, true]) {
+      mockMatchMedia(wide);
+      const onSignOut = vi.fn();
+      const onSignOutEverywhere = vi.fn();
+      const { unmount } = render(
+        <SettingsScreen
+          name="Alex River"
+          email="alex@example.com"
+          settings={defaultSettings}
+          onChange={vi.fn()}
+          onBack={vi.fn()}
+          onSignOut={onSignOut}
+          onSignOutEverywhere={onSignOutEverywhere}
+          initialTab="account"
+        />,
+      );
+      const signOut = screen.getByRole("button", { name: "Sign out" });
+      const everywhere = screen.getByRole("button", {
+        name: "Sign out on all devices",
+      });
+      expect(signOut.querySelector("svg")).toBeTruthy();
+      expect(everywhere.querySelector("svg")).toBeTruthy();
+      fireEvent.click(everywhere);
+      expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+
+      // The Account page itself has no sign-out buttons any more
+      if (!wide) {
+        fireEvent.click(screen.getByText("Alex River").closest("button")!);
+        expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+      }
+      unmount();
+    }
+  });
+
   it("profile card shows name and email and opens Account", () => {
     mockMatchMedia(false);
     render(

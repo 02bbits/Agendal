@@ -9,6 +9,7 @@ import {
 import { t } from "../../copy";
 import { ROW_PRESS, SettingsCard, SettingsRow } from "./SettingsRow";
 import type { SettingsTabItem } from "./settingsTabs";
+import { SignOutButtons } from "./SignOutButtons";
 import type { SettingsTab } from "./types";
 
 /** Clear of the notch or punch-hole camera: the safe area plus a gap, never under 0.5rem. */
@@ -49,7 +50,7 @@ function TabGroup({
 
 /**
  * Settings on a phone: a full-screen list (the account card, Preferences, Install app while the
- * browser can install it, Sign out) with search,
+ * browser can install it, Sign out and Sign out on all devices) with search,
  * and each tab on its own page with "‹ Settings" to go back.
  */
 export function SettingsPhone({
@@ -63,6 +64,7 @@ export function SettingsPhone({
   onBackToList,
   onClose,
   onSignOut,
+  onSignOutEverywhere,
   onInstall,
   children,
 }: {
@@ -78,6 +80,7 @@ export function SettingsPhone({
   onBackToList: () => void;
   onClose: () => void;
   onSignOut: () => void;
+  onSignOutEverywhere?: () => void;
   /** Only while this browser can install the app (AP-1). */
   onInstall?: () => void;
   children: ReactNode;
@@ -211,18 +214,11 @@ export function SettingsPhone({
                     />
                   </SettingsCard>
                 )}
-                <SettingsCard className="mt-6">
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    className={cx(
-                      "focus-ring flex min-h-[52px] w-full items-center justify-center text-body font-semibold text-error",
-                      ROW_PRESS,
-                    )}
-                  >
-                    {t("app.sign_out")}
-                  </button>
-                </SettingsCard>
+                <SignOutButtons
+                  variant="phone"
+                  onSignOut={onSignOut}
+                  onSignOutEverywhere={onSignOutEverywhere}
+                />
               </>
             )}
           </div>

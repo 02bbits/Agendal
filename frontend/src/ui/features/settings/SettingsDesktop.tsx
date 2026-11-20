@@ -10,6 +10,7 @@ import { cx } from "../../components/cx";
 import { SearchIcon, XIcon } from "../../components/icons";
 import { t } from "../../copy";
 import type { SettingsTabItem } from "./settingsTabs";
+import { SignOutButtons } from "./SignOutButtons";
 import type { SettingsTab } from "./types";
 
 const HEADER_BUTTON =
@@ -24,7 +25,7 @@ function arrowStep(key: string): number {
 
 /**
  * Settings on desktop: a dialog over the app with the tab menu and search on the left and the
- * open tab on the right.
+ * open tab on the right; Sign out at the foot of the menu.
  */
 export function SettingsDesktop({
   modalRef,
@@ -36,6 +37,8 @@ export function SettingsDesktop({
   title,
   subPage,
   onClose,
+  onSignOut,
+  onSignOutEverywhere,
   children,
 }: {
   modalRef: RefObject<HTMLDivElement | null>;
@@ -49,6 +52,8 @@ export function SettingsDesktop({
   /** A page opened from the tab (Change password), with its way back. */
   subPage?: { title: string; onBack: () => void };
   onClose: () => void;
+  onSignOut: () => void;
+  onSignOutEverywhere?: () => void;
   children: ReactNode;
 }): ReactElement {
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
@@ -152,6 +157,11 @@ export function SettingsDesktop({
                 )}
               </div>
             </div>
+            <SignOutButtons
+              variant="desktop"
+              onSignOut={onSignOut}
+              onSignOutEverywhere={onSignOutEverywhere}
+            />
           </nav>
 
           <div className="flex flex-1 flex-col min-w-0 min-h-0 bg-surface">
