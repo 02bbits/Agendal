@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { api } from "../../../../lib/api";
 import { t, type CopyKey } from "../../../copy";
 import { Button } from "../../../components/Button";
@@ -47,14 +47,21 @@ export function LlmProviderTab() {
   const [error, setError] = useState<CopyKey | null>(null);
   const [modelError, setModelError] = useState<CopyKey | null>(null);
 
-  const load = () =>
-    api("/me/ai")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((body: AiSettingsData | null) => body && setData(body))
-      .catch(() => {});
+  // Only a settings answer replaces what is shown, never some other body
+  const accept = useCallback((body: AiSettingsData | null) => {
+    if (Array.isArray(body?.providers)) setData(body);
+  }, []);
+  const load = useCallback(
+    () =>
+      api("/me/ai")
+        .then((res) => (res.ok ? res.json() : null))
+        .then(accept)
+        .catch(() => {}),
+    [accept],
+  );
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
 
   const toggle = (id: string) => {
     setOpen(open === id ? null : id);
@@ -73,7 +80,7 @@ export function LlmProviderTab() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     }).catch(() => null);
-    if (res?.ok) return setData(await res.json());
+    if (res?.ok) return accept(await res.json());
     // A picked model is tried with the provider first; one it refuses stays unpicked
     if (body.model) {
       const code = res
@@ -96,7 +103,7 @@ export function LlmProviderTab() {
     }).catch(() => null);
     setBusy(false);
     if (res?.ok) {
-      setData(await res.json());
+      accept(await res.json());
       toggle(provider);
       return;
     }
