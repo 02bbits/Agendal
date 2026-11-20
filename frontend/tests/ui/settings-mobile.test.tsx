@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { SettingsScreen, type AccountSettings } from "../../src/ui";
 import { t } from "../../src/ui/copy";
 
@@ -30,7 +30,7 @@ describe("Settings on phones (Part D)", () => {
     }));
   };
 
-  it("#168: Sign out and Sign out on all devices sit on Settings with an icon, not in Account", () => {
+  it("#168: Settings has one Sign out, with its icon, that asks first; Sign out on all devices is in the dialog", () => {
     for (const wide of [false, true]) {
       mockMatchMedia(wide);
       const onSignOut = vi.fn();
@@ -48,13 +48,18 @@ describe("Settings on phones (Part D)", () => {
         />,
       );
       const signOut = screen.getByRole("button", { name: "Sign out" });
-      const everywhere = screen.getByRole("button", {
-        name: "Sign out on all devices",
-      });
       expect(signOut.querySelector("svg")).toBeTruthy();
-      expect(everywhere.querySelector("svg")).toBeTruthy();
-      fireEvent.click(everywhere);
+      expect(
+        screen.queryByRole("button", { name: "Sign out on all devices" }),
+      ).toBeNull();
+      fireEvent.click(signOut);
+      fireEvent.click(
+        within(screen.getByRole("alertdialog")).getByRole("button", {
+          name: "Sign out on all devices",
+        }),
+      );
       expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+      expect(onSignOut).not.toHaveBeenCalled();
 
       // The Account page itself has no sign-out buttons any more
       if (!wide) {
@@ -278,8 +283,14 @@ describe("Settings on phones (Part D)", () => {
     );
 
     const signOutBtn = screen.getByRole("button", { name: t("app.sign_out") });
-    expect(signOutBtn).toBeTruthy();
     fireEvent.click(signOutBtn);
+    // It asks first (#168)
+    expect(onSignOut).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: t("app.sign_out"),
+      }),
+    );
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 

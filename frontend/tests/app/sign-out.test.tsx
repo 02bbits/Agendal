@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
@@ -38,7 +38,13 @@ async function signOutWith(button: string) {
     </AppFrame>,
   );
   await screen.findByText("ann@example.com");
-  await userEvent.click(screen.getByRole("button", { name: button }));
+  // Settings' one Sign out asks first (#168); the choice is in the dialog
+  await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  await userEvent.click(
+    within(screen.getByRole("alertdialog")).getByRole("button", {
+      name: button,
+    }),
+  );
 }
 
 beforeEach(() => {

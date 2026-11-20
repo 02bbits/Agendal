@@ -37,6 +37,8 @@ export interface SidebarProps {
   onThemeChange?: (theme: ThemeSetting) => void;
   /** Callback to sign out. */
   onSignOut?: () => void;
+  /** Sign out on all devices, offered in the Sign out dialog. */
+  onSignOutEverywhere?: () => void;
   /** While this browser can install the app (AP-1): in the account menu above Sign out. */
   onInstall?: () => void;
 }
@@ -55,6 +57,7 @@ export function Sidebar({
   theme,
   onThemeChange,
   onSignOut,
+  onSignOutEverywhere,
   onInstall,
 }: SidebarProps) {
   const [projectsOpen, setProjectsOpen] = useState(true);
@@ -174,6 +177,7 @@ export function Sidebar({
         onThemeChange={onThemeChange}
         onAccount={onAccount}
         onSignOut={onSignOut}
+        onSignOutEverywhere={onSignOutEverywhere}
         onInstall={onInstall}
       />
     </nav>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Sidebar } from "../../src/ui/features/shell/Sidebar";
@@ -158,19 +158,45 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("Sign out calls the handler and closes menu", async () => {
+  it("#168: Sign out closes the menu and asks first: Cancel or Escape keep you in, the choice signs out", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();
-    render(<Sidebar {...defaultProps} onSignOut={onSignOut} />);
+    const onSignOutEverywhere = vi.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        onSignOut={onSignOut}
+        onSignOutEverywhere={onSignOutEverywhere}
+      />,
+    );
+    const ask = async () => {
+      await user.click(screen.getByRole("button", { name: /Jane Doe/i }));
+      await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
+      return screen.getByRole("alertdialog", { name: "Sign out?" });
+    };
 
-    const trigger = screen.getByRole("button", { name: /Jane Doe/i });
-    await user.click(trigger);
-
-    const signOutItem = screen.getByRole("menuitem", { name: "Sign out" });
-    await user.click(signOutItem);
-
-    expect(onSignOut).toHaveBeenCalledTimes(1);
+    let dialog = await ask();
     expect(screen.queryByRole("menu")).toBeNull();
+    // Cancel has the focus, so Enter never signs out by mistake
+    expect(document.activeElement?.textContent).toBe("Cancel");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    await ask();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(onSignOut).not.toHaveBeenCalled();
+
+    dialog = await ask();
+    await user.click(
+      within(dialog).getByRole("button", { name: "Sign out on all devices" }),
+    );
+    expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+
+    dialog = await ask();
+    await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("theme switch calls the setter", async () => {
