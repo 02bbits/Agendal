@@ -6,7 +6,8 @@ return [
     // Kill switch: false keeps the app on rules only.
     'enabled' => env('NOTE_LLM_ENABLED', false),
 
-    // The app's provider: gemini, deepseek or anthropic. The team holds the key; users add none.
+    // The app's provider. Only gemini runs for now; deepseek and anthropic stay in the code, off (`enabled`), until the
+    // team turns them on. The team holds the key; users add none.
     'provider' => $provider = env('NOTE_LLM_PROVIDER', 'gemini'),
 
     // The provider key lives only in a file the app's user alone can read (e.g. a Docker secret), never in .env.
@@ -20,21 +21,25 @@ return [
     // Empty: the provider's cheapest model below. Changes must keep the corpus gates.
     'model' => env('NOTE_LLM_MODEL') ?: null,
 
+    // `model`: the provider's most stable model (GA, not a preview or a -latest alias).
     // `output`: json_schema constrains the answer to the plan schema; json_object (DeepSeek) only to JSON, so the
     // schema goes in the prompt. The server checks every answer against the full schema either way.
     'providers' => [
         'gemini' => [
             'url' => 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+            'enabled' => true,
             'model' => 'gemini-3.5-flash-lite',
             'output' => 'json_schema',
         ],
         'deepseek' => [
             'url' => 'https://api.deepseek.com/chat/completions',
+            'enabled' => false,
             'model' => 'deepseek-flash',
             'output' => 'json_object',
         ],
         // Claude goes through the official Anthropic SDK (ClaudeMessages), not the OpenAI chat format.
         'anthropic' => [
+            'enabled' => false,
             'sdk' => 'anthropic',
             'model' => 'claude-haiku-5-5',
         ],

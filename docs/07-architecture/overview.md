@@ -26,7 +26,7 @@ flowchart LR
 | Email service (SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
 | Web Push | [TK-6](../03-modules/TK-tasks.md#tk-6) (Should) | No push reminders. Inbox still shows what is due |
 | Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)) | [NC-4](../03-modules/NC-note-capture.md#nc-4) (Should): photos and PDFs without a text layer. Text PDFs and Word files are read on the server, with no outside call | Photos and scanned PDFs can't be read. Typing still works |
-| LLM provider: Gemini (default), DeepSeek or Claude, with the team's key ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
+| LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
 | Browser speech service | [NC-3](../03-modules/NC-note-capture.md#nc-3) (Should), through the Web Speech API | Dictation unavailable. Typing still works |
 
 ## Containers

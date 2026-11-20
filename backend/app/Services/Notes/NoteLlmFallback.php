@@ -102,15 +102,15 @@ final class NoteLlmFallback
     }
 
     /**
-     * The app's provider from config, with its cheapest model unless NOTE_LLM_MODEL names one. Null keeps the rules
-     * result: the kill switch (ADR-008), an unknown provider, or no key.
+     * The app's provider from config, with its most stable model unless NOTE_LLM_MODEL names one. Null keeps the rules
+     * result: the kill switch (ADR-008), an unknown or turned-off provider, or no key.
      *
      * @return Route|null
      */
     private function route(): ?array
     {
         $config = config('note_llm.providers')[(string) config('note_llm.provider')] ?? null;
-        if (! config('note_llm.enabled') || ! is_array($config)) {
+        if (! config('note_llm.enabled') || ! is_array($config) || ($config['enabled'] ?? false) !== true) {
             return null;
         }
         $key = $this->key();

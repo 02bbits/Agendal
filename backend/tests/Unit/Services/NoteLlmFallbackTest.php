@@ -610,8 +610,21 @@ it('sends Gemini the schema without bounds', function () {
         && ! preg_match('/"(maxLength|minimum|maximum|pattern|format|maxItems)"/', json_encode($request['response_format'], JSON_THROW_ON_ERROR)));
 });
 
-it('asks DeepSeek in JSON mode with the schema in the prompt', function () {
-    config(['note_llm.provider' => 'deepseek']);
+it('does not call DeepSeek or Claude while they are off', function (string $provider) {
+    file_put_contents($this->keyFile, 'test-only');
+    config(['note_llm.provider' => $provider]);
+    Http::fake();
+    $claude = Mockery::mock(ClaudeMessages::class);
+    $claude->shouldNotReceive('plan');
+    app()->instance(ClaudeMessages::class, $claude);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1))->toBe($rules);
+    Http::assertNothingSent();
+})->with(['deepseek', 'anthropic']);
+
+it('asks DeepSeek in JSON mode with the schema in the prompt, once turned on', function () {
+    config(['note_llm.provider' => 'deepseek', 'note_llm.providers.deepseek.enabled' => true]);
     Http::fake(['api.deepseek.com/*' => Http::response(recordedNoteResponse())]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
@@ -721,7 +734,7 @@ it('asks Claude through the Anthropic SDK with the prompt, the note items and th
             && ! str_contains(json_encode($schema, JSON_THROW_ON_ERROR), 'maxLength'))
         ->andReturn(['content' => json_encode($content, JSON_THROW_ON_ERROR), 'tokens' => 100]);
     app()->instance(ClaudeMessages::class, $claude);
-    config(['note_llm.provider' => 'anthropic']);
+    config(['note_llm.provider' => 'anthropic', 'note_llm.providers.anthropic.enabled' => true]);
     $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
 
     expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe('rules_llm');
