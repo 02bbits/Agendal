@@ -63,7 +63,7 @@ export function DeleteProjectDialog({
     >
       {taskCount > 0 && (
         // One checkbox, on by default (the safe choice); off deletes the tasks with the project (#168)
-        <label className="my-2 flex cursor-pointer items-center gap-3 py-2 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary">
+        <label className="mt-3 flex cursor-pointer items-center gap-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary">
           <input
             type="checkbox"
             checked={action === "move"}
