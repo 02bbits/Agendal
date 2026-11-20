@@ -46,7 +46,7 @@ export function startAfterDue(
  * fields that change:
  * - a start time with no start date → start_date = due ?? todayDate
  * - a due time with no due date → due_date = todayDate
- * - a repeat (≠ never) with neither date → due_date = todayDate
+ * - a repeat (≠ never) with neither date → start_date = todayDate (the start is the main date, #154)
  * - clearing the start date → start_time = null; and if no due date → reminder = "none", repeat = "never"
  * - clearing the due date → due_time = null; and if no start date → reminder = "none", repeat = "never"
  * Fields equal to the current value are dropped, so no empty patch is sent (TK-E16).
@@ -73,6 +73,7 @@ export function normalizePatch(
     if (!due) {
       next.reminder = "none";
       next.repeat = "never";
+      next.repeat_rule = null;
     }
   }
   if ("due_date" in next && !next.due_date) {
@@ -80,6 +81,7 @@ export function normalizePatch(
     if (!start) {
       next.reminder = "none";
       next.repeat = "never";
+      next.repeat_rule = null;
     }
   }
 
@@ -96,12 +98,13 @@ export function normalizePatch(
     due = next.due_date;
   }
   if (!due && !start && repeat && repeat !== "never") {
-    next.due_date = todayDate;
-    due = next.due_date;
+    next.start_date = todayDate;
+    start = next.start_date;
   }
 
   for (const key of Object.keys(next) as Array<keyof TaskPatch>) {
-    if (next[key] === task[key]) {
+    // null and a missing field both mean "not set" (e.g. repeat_rule on older tasks)
+    if (next[key] === task[key] || (next[key] == null && task[key] == null)) {
       delete next[key];
     }
   }
@@ -126,11 +129,16 @@ export function patchErrors(task: Task, patch: TaskPatch): TaskUpdateErrors {
 }
 
 const OFFSET_MINUTES: Record<Exclude<Reminder, "none">, number> = {
+  "0m": 0,
   "5m": 5,
+  "10m": 10,
   "15m": 15,
   "30m": 30,
   "1h": 60,
+  "2h": 120,
   "1d": 1440,
+  "2d": 2880,
+  "1w": 10080,
 };
 
 /**

@@ -1,5 +1,5 @@
 import type { TimeFormat, WeekStart } from "../../domain/types";
-import type { AccountSettings } from "../shell/AccountScreen";
+import type { AccountSettings } from "../settings/types";
 import type { Navigate } from "../shell/routes";
 
 export interface SetupPayload {

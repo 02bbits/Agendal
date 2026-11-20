@@ -11,7 +11,6 @@ import { describe, expect, it, vi } from "vitest";
 import {
   PRIORITIES,
   REMINDERS,
-  REPEATS,
   ProjectScreen,
   TaskDetails,
   TaskPanel,
@@ -24,10 +23,12 @@ import * as datePickerModule from "../../src/ui/components/DatePicker";
 import * as projectApi from "../../src/lib/projectApi";
 import { DateTimeFields } from "../../src/ui/features/tasks/details/DateTimeFields";
 import { DetailsFooter } from "../../src/ui/features/tasks/details/DetailsFooter";
+import { repeatPresets } from "../../src/ui/domain/repeatPresets";
 import { ProjectField } from "../../src/ui/features/tasks/details/ProjectField";
 import { expectAxeCleanInBothThemes } from "./axe";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
+import { useWideScreen } from "./wideScreen";
 
 function Details({
   id,
@@ -96,6 +97,8 @@ describe("Task details fields (T-TK-10)", () => {
   });
 
   it("saves start time", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({ title: "Task", start_date: TODAY, due_date: TODAY }),
     );
@@ -113,6 +116,8 @@ describe("Task details fields (T-TK-10)", () => {
   });
 
   it("saves end time", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Task",
@@ -377,22 +382,80 @@ describe("Task details fields (T-TK-10)", () => {
     );
   });
 
-  it.each(REPEATS)("saves repeat %s", async (repeat) => {
+  // #154: the Repeat row offers presets worked out from the start date (TODAY is a Friday)
+  it.each(repeatPresets(TODAY).filter((preset) => preset.id !== "never"))(
+    "saves repeat preset $id with its rule",
+    async (preset) => {
+      const { patchSpy } = open(
+        task({ title: "Task", start_date: TODAY, repeat: "never" }),
+      );
+      await userEvent.click(
+        screen.getByRole("button", { name: t("task.repeat") }),
+      );
+      await userEvent.click(screen.getByRole("option", { name: preset.label }));
+      await waitFor(() =>
+        expect(patchSpy).toHaveBeenCalledWith(
+          expect.any(String),
+          preset.value.repeat_rule
+            ? {
+                repeat: preset.value.repeat,
+                repeat_rule: preset.value.repeat_rule,
+              }
+            : { repeat: preset.value.repeat },
+          expect.any(String),
+        ),
+      );
+    },
+  );
+
+  it("saves repeat never from a repeating task", async () => {
     const { patchSpy } = open(
-      task({
-        title: "Task",
-        due_date: TODAY,
-        repeat: repeat === "never" ? "daily" : "never",
-      }),
+      task({ title: "Task", start_date: TODAY, repeat: "daily" }),
     );
-    const trigger = screen.getByRole("button", { name: t("task.repeat") });
-    await userEvent.click(trigger);
-    const optionLabel = t(`repeat.${repeat}` as CopyKey);
-    await userEvent.click(screen.getByRole("option", { name: optionLabel }));
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.repeat") }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: t("repeat_preset.never") }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { repeat },
+        { repeat: "never" },
+        expect.any(String),
+      ),
+    );
+  });
+
+  it("Custom… builds every 2 weeks on Monday and Wednesday, and saves it", async () => {
+    const { patchSpy } = open(
+      task({ title: "Task", start_date: "2026-10-26", repeat: "never" }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: t("task.repeat") }),
+    );
+    await userEvent.click(
+      screen.getByRole("option", { name: t("repeat_preset.custom") }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("repeat_custom.title"),
+    });
+    const every = within(dialog).getByLabelText(t("repeat_custom.every"), {
+      selector: "input",
+    });
+    await userEvent.clear(every);
+    await userEvent.type(every, "2");
+    await userEvent.click(within(dialog).getByRole("button", { name: "We" }));
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("repeat_custom.done") }),
+    );
+    await waitFor(() =>
+      expect(patchSpy).toHaveBeenCalledWith(
+        expect.any(String),
+        {
+          repeat: "weekly",
+          repeat_rule: "FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE",
+        },
         expect.any(String),
       ),
     );
@@ -535,6 +598,8 @@ describe("Task details fields (T-TK-10)", () => {
 
 describe("Schedule validation (T-TK-20)", () => {
   it("offers only end times after start, so the UI can't break TK-3", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     open(
       task({
         title: "Schedule Task",
@@ -552,6 +617,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("shows start_after_due when start is after due, linked by aria-describedby, and a valid start time clears it", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Schedule Task",
@@ -582,6 +649,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("A11Y-41: the schedule error is linked with aria-describedby and is assertive", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     open(
       task({
         title: "Schedule Task",
@@ -665,6 +734,8 @@ describe("Schedule validation (T-TK-20)", () => {
   });
 
   it("picking a start date then a start time saves both", async () => {
+    // The typed time list is the 768px+ picker; phones get the clock
+    useWideScreen();
     const { patchSpy } = open(
       task({
         title: "Task",
@@ -785,7 +856,7 @@ describe("Field edge cases and accessibility", () => {
     expect(screen.queryByText(t("task.reminder_needs_date"))).toBeNull();
   });
 
-  it("T-TK-104 (TK-E4): shows helper when reminder time has already passed", () => {
+  it("T-TK-104 (TK-E4): a reminder time already passed is kept, with no helper under it", () => {
     open(
       task({
         title: "Passed Task",
@@ -795,7 +866,12 @@ describe("Field edge cases and accessibility", () => {
         reminder: "15m",
       }),
     );
-    expect(screen.getByText(t("task.reminder_past"))).toBeTruthy();
+    expect(
+      screen.queryByText("This reminder time has already passed."),
+    ).toBeNull();
+    expect(
+      screen.getByRole("button", { name: t("task.reminder") }).textContent,
+    ).toContain("15");
   });
 
   it("shows assistant footnote as text (A11Y-43)", () => {
@@ -1128,7 +1204,8 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     const view = render(
       ctx.wrap(<TaskPanel taskId={t1.id} onClose={() => {}} />),
     );
-    expect(document.documentElement.dataset.taskPanel).toBe("open");
+    // The default panel sits at the side; a popup sets "popup" so the bar keeps its width
+    expect(document.documentElement.dataset.taskPanel).toBe("aside");
     expect(document.documentElement.style.overflow).toBe("");
     expect(document.body.style.overflow).toBe("");
 
@@ -1137,6 +1214,17 @@ describe("Side panel from 1280px (TaskPanel & navigation)", () => {
     window.dispatchEvent(outsideEvent);
     expect(outsideEvent.defaultPrevented).toBe(true);
 
+    view.unmount();
+    expect(document.documentElement.dataset.taskPanel).toBeUndefined();
+  });
+
+  it("a popup task panel flags the page as popup, so the bottom bar keeps its width", () => {
+    const t1 = task({ id: "t-pop", title: "Popup Task" });
+    const ctx = setup([t1]);
+    const view = render(
+      ctx.wrap(<TaskPanel variant="popup" taskId={t1.id} onClose={() => {}} />),
+    );
+    expect(document.documentElement.dataset.taskPanel).toBe("popup");
     view.unmount();
     expect(document.documentElement.dataset.taskPanel).toBeUndefined();
   });

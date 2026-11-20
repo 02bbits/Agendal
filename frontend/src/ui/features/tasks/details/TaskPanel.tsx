@@ -91,11 +91,12 @@ export function TaskPanel({
 
   useBackgroundScrollLock(panelRef);
 
-  // While the panel is open, the shell's bottom bar (Write a note, tabs) stops
-  // short of it instead of covering Clear and Delete (see AppShell)
+  // While the panel is open, the shell's bottom bar (Write a note, tabs) goes under its scrim,
+  // and beside a side panel it stops short of it instead of covering Clear and Delete. A popup
+  // in the middle leaves the bar where it is (see AppShell)
   useEffect(() => {
     const root = document.documentElement;
-    root.dataset.taskPanel = "open";
+    root.dataset.taskPanel = variant === "popup" ? "popup" : "aside";
 
     const onWindowKeyDown = (e: globalThis.KeyboardEvent) => {
       // Esc closes the top layer first, e.g. Search opened over the panel
@@ -111,7 +112,7 @@ export function TaskPanel({
       delete root.dataset.taskPanel;
       window.removeEventListener("keydown", onWindowKeyDown);
     };
-  }, [closeSaving]);
+  }, [closeSaving, variant]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLElement>) => {

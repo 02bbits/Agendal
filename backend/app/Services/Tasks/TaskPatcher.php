@@ -127,14 +127,14 @@ class TaskPatcher
             }
         }
 
-        // - repeat with neither date falls back to today
+        // - repeat with neither date starts today, on the start date (#154)
         if (DueDateFallback::needed(
             is_string($merged['due_date']) ? $merged['due_date'] : null,
             is_string($merged['start_date']) ? $merged['start_date'] : null,
             (string) $merged['repeat'],
         )) {
-            $merged['due_date'] = $this->clock->today($timezone);
-            $fieldUpdatedAt['due_date'] = Stamp::of(array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null));
+            $merged['start_date'] = $this->clock->today($timezone);
+            $fieldUpdatedAt['start_date'] = Stamp::of(array_key_exists('repeat', $effectiveAtMap) ? $effectiveAtMap['repeat'] : $this->resolveEffectiveAt(null));
         }
 
         // - repeat changes from never → repeat_anchor = active anchor date; repeat becomes never → repeat_anchor = null;

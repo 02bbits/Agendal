@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ChangePassword } from "../../src/ui/features/shell/ChangePassword";
+import { ChangePassword } from "../../src/ui/features/settings/account/ChangePassword";
 
 describe("ChangePassword (issue #149 B4)", () => {
   const email = "user@example.com";

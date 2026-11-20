@@ -381,6 +381,7 @@ export function NoteResultScreen({
                 weekStart={weekStart}
                 onSetDue={onSetDue}
                 navigate={navigate}
+                offline={offline}
                 preview={confirming}
                 project={projects.find(
                   (project) =>
@@ -428,7 +429,7 @@ export function NoteResultScreen({
         </section>
       )}
 
-      {changes.length > 0 && !confirming && !notApplied && (
+      {changes.length > 0 && !confirming && !notApplied && !offline && (
         <p className="mt-4 mb-0 text-footnote text-ink-secondary">
           {t("note.result_hint")}
         </p>
@@ -542,6 +543,8 @@ interface ChangeRowProps {
   weekStart: WeekStart;
   onSetDue: (task: Task, date: string) => void;
   navigate?: Navigate;
+  /** Offline, a task can't be opened from here: its editor and page need the server's plan (RV §2.4). */
+  offline?: boolean;
 }
 
 function ChangeRow({
@@ -556,6 +559,7 @@ function ChangeRow({
   weekStart,
   onSetDue,
   navigate,
+  offline = false,
 }: ChangeRowProps) {
   const badge = BADGE[change.kind];
   const badgeText =
@@ -650,7 +654,10 @@ function ChangeRow({
       {opens && (
         <span
           aria-hidden="true"
-          className="inline-flex size-9 shrink-0 items-center justify-center self-center text-ink-secondary"
+          className={cx(
+            "inline-flex size-9 shrink-0 items-center justify-center self-center text-ink-secondary",
+            offline && "opacity-40",
+          )}
         >
           <PencilIcon size={18} />
         </span>
@@ -660,7 +667,16 @@ function ChangeRow({
 
   return (
     <li className="border-b border-separator last:border-b-0">
-      {opens && onOpen ? (
+      {opens && offline ? (
+        <button
+          type="button"
+          disabled
+          aria-label={`${sentence(badgeText)}: ${task.title}, ${meta}`}
+          className="flex min-h-[52px] w-full items-start gap-3 border-0 bg-transparent px-3.5 py-3 text-left text-ink disabled:cursor-default"
+        >
+          {body}
+        </button>
+      ) : opens && onOpen ? (
         <button
           type="button"
           onClick={() => onOpen(task)}
@@ -699,7 +715,7 @@ function ChangeRow({
   );
 }
 
-/** Today, Tomorrow, Next week and Pick date… for a new task that has no date (Q4). */
+/** Today, Tomorrow, Next week and Custom for a new task that has no date (Q4). */
 function WhenChips({
   today,
   weekStart,

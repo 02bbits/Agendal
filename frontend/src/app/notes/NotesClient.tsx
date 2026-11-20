@@ -9,6 +9,7 @@ import { ApiRequestError } from "../../lib/apiError";
 import {
   deviceNotes,
   listNotes,
+  reviveNote,
   NOTE_UPDATED,
   type NoteListPage,
 } from "../../lib/noteApi";
@@ -200,6 +201,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
             filter={filter}
             onFilter={setFilter}
             onWriteNote={openNoteEditor}
+            onReviveNote={(id) => void reviveNote(id).then(openNoteEditor)}
             selected={selected}
             today={today}
             timeZone={appClock.timeZone}

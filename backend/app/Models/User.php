@@ -15,7 +15,7 @@ use Illuminate\Notifications\Notifiable;
  * @property string|null $llm_model
  * @property array<string, array{key: string, models: list<string>}>|null $llm_keys
  */
-#[Fillable(['email', 'display_name', 'password', 'timezone', 'timezone_auto', 'remember_device', 'theme', 'week_start', 'time_format', 'install_prompt_shown', 'llm_enabled', 'llm_model'])]
+#[Fillable(['email', 'display_name', 'password', 'timezone', 'timezone_auto', 'remember_device', 'theme', 'week_start', 'time_format', 'install_prompt_shown', 'theme_palette', 'page_view', 'llm_enabled', 'llm_model'])]
 #[Hidden(['password', 'remember_token', 'llm_keys'])]
 class User extends Authenticatable
 {

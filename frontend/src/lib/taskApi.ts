@@ -1,6 +1,12 @@
 import { api } from "./api";
-import { handleResponse } from "./apiError";
-import { putTasks, removeTasks, replaceProjects } from "./localStore";
+import { ApiRequestError, handleResponse } from "./apiError";
+import {
+  putTasks,
+  readProjects,
+  readTask,
+  removeTasks,
+  replaceProjects,
+} from "./localStore";
 import { offlineTask, orQueue } from "./offline";
 import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
@@ -13,6 +19,15 @@ function keep(task: Task): Task {
   void putTasks([task]);
   return task;
 }
+
+/** No answer at all (offline): the device's copy, when it has one (AP §2.2). */
+export const orDevice =
+  <T>(read: () => Promise<T | undefined>) =>
+  async (error: unknown): Promise<T> => {
+    const kept = error instanceof ApiRequestError ? undefined : await read();
+    if (kept === undefined) throw error;
+    return kept;
+  };
 
 export interface InboxData {
   overdue: Task[];
@@ -121,15 +136,23 @@ export async function search(params: {
 }
 
 export async function getTask(id: string): Promise<Task> {
-  const response = await api(`/tasks/${encodeURIComponent(id)}`);
-  return keep(await handleResponse<Task>(response));
+  try {
+    const response = await api(`/tasks/${encodeURIComponent(id)}`);
+    return keep(await handleResponse<Task>(response));
+  } catch (error) {
+    return orDevice(() => readTask(id))(error);
+  }
 }
 
 export async function projects(): Promise<Project[]> {
-  const response = await api("/projects");
-  const list = await handleResponse<Project[]>(response);
-  if (Array.isArray(list)) void replaceProjects(list);
-  return list;
+  try {
+    const response = await api("/projects");
+    const list = await handleResponse<Project[]>(response);
+    if (Array.isArray(list)) void replaceProjects(list);
+    return list;
+  } catch (error) {
+    return orDevice(readProjects)(error);
+  }
 }
 
 export function patch(id: string, fields: TaskPatch, at: string) {

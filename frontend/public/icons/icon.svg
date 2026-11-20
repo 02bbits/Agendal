@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Agendal mark (AuthLayout brand): ink square, paper check. Source for the PNG icons (IM-54) -->
+  <rect width="512" height="512" fill="#252525"/>
+  <path d="M368 176 208 336l-64-64" fill="none" stroke="#f2f2f2" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

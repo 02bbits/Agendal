@@ -1,13 +1,12 @@
 import { useState, type ReactElement } from "react";
 import { DatePicker } from "../../../components/DatePicker";
 import { CalendarIcon } from "../../../components/icons";
-import { Picker } from "../../../components/Picker";
+import { TimePicker } from "../../../components/TimePicker";
 import { t } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import { startAfterDue } from "../../../domain/edit";
 import type { Task, TimeFormat, WeekStart } from "../../../domain/types";
 import { SettingsRow } from "./SettingsRow";
-import { buildTimeOptions } from "./timeOptions";
 
 export interface DateTimeFieldsProps {
   task: Pick<Task, "start_date" | "start_time" | "due_date" | "due_time">;
@@ -65,15 +64,11 @@ export function DateTimeFields({
               weekStart={weekStart}
               variant="row"
             />
-            <Picker<string>
+            <TimePicker
               id="task-start"
               label={t("task.start")}
               value={task.start_time ?? ""}
-              options={buildTimeOptions(
-                null,
-                task.start_time ?? "",
-                timeFormat,
-              )}
+              timeFormat={timeFormat}
               disabled={!task.start_date}
               onChange={(val) => save({ start_time: val || null })}
               variant="row"
@@ -103,15 +98,12 @@ export function DateTimeFields({
               weekStart={weekStart}
               variant="row"
             />
-            <Picker<string>
+            <TimePicker
               id="task-due-time"
               label={t("task.due_time")}
               value={task.due_time ?? ""}
-              options={buildTimeOptions(
-                sameDay ? task.start_time : null,
-                task.due_time ?? "",
-                timeFormat,
-              )}
+              timeFormat={timeFormat}
+              minTime={sameDay ? task.start_time : null}
               disabled={!task.due_date}
               onChange={(val) => save({ due_time: val || null })}
               variant="row"

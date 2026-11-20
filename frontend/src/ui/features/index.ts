@@ -1,16 +1,20 @@
 export { AppShell, type AppShellProps } from "./shell/AppShell";
+export { AccountMenu, type AccountMenuProps } from "./shell/AccountMenu";
 export { TabBar, type TabBarProps } from "./shell/TabBar";
 export { Sidebar, type SidebarProps } from "./shell/Sidebar";
 export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export { OfflineBanner } from "./shell/OfflineBanner";
+export { InstallBanner, type InstallBannerProps } from "./shell/InstallBanner";
 export {
-  AccountScreen,
-  type AccountScreenProps,
-  type AccountSettings,
-  type SettingsTab,
-  type ThemeSetting,
-} from "./shell/AccountScreen";
+  SettingsScreen,
+  type SettingsScreenProps,
+} from "./settings/SettingsScreen";
+export type {
+  AccountSettings,
+  SettingsTab,
+  ThemeSetting,
+} from "./settings/types";
 export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
   NoteResultScreen,
@@ -53,7 +57,11 @@ export {
   isEmail,
   normalizeEmail,
   safeReturnPath,
+  displayNameError,
   hasNonKeyboardCharacters,
+  limitDisplayName,
+  passwordRuleError,
+  hasAccentedLetters,
   type SignUpErrors,
 } from "./auth/validation";
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";

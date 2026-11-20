@@ -1,13 +1,15 @@
 "use client";
 
 import { api } from "../../lib/api";
-import { AccountScreen, t } from "../../ui";
+import { SettingsScreen, t } from "../../ui";
 import { useAppFrame } from "../AppFrame";
+import { useInstall } from "../useInstall";
 
 /** Account: appearance applies at once. Name and email come from the session check. */
 export default function AccountPage() {
   const { back, settings, changeSettings, user, setUser, signOut, showToast } =
     useAppFrame();
+  const installer = useInstall(showToast);
 
   const handleUpdateName = async (newName: string) => {
     try {
@@ -61,7 +63,7 @@ export default function AccountPage() {
         </div>
       </div>
 
-      <AccountScreen
+      <SettingsScreen
         name={user?.display_name ?? ""}
         email={user?.email ?? ""}
         settings={settings}
@@ -75,6 +77,7 @@ export default function AccountPage() {
         // The unsynced-changes dialog arrives with the offline queue (IM-51); nothing is queued yet
         onSignOut={() => signOut()}
         onSignOutEverywhere={() => signOut(true)}
+        onInstall={installer.kind ? installer.install : undefined}
         onUpdateName={handleUpdateName}
       />
     </div>

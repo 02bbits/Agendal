@@ -1,6 +1,7 @@
 import "fake-indexeddb/auto";
 import { Suspense } from "react";
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame } from "../../src/app/AppFrame";
 import InboxPage from "../../src/app/page";
@@ -8,9 +9,11 @@ import NotesPage from "../../src/app/notes/page";
 import NoteResultPage from "../../src/app/notes/[id]/page";
 import { setTimeZone } from "../../src/lib/clock";
 import {
+  addFailedNote,
   putNoteResult,
   putTasks,
   readNoteEntries,
+  readQueue,
   readTasks,
 } from "../../src/lib/localStore";
 import { t, type NoteResult } from "../../src/ui";
@@ -74,6 +77,14 @@ const fetchMock = vi.fn(async (url: string) => {
       needs_count: 0,
     });
   if (url === "/api/v1/notes/n1") return json(200, note);
+  // A pending note sent after reconnect (NC-6)
+  if (url === "/api/v1/notes") return json(200, note);
+  if (url.startsWith("/api/v1/sync?"))
+    return json(200, {
+      changes: { tasks: [], projects: [], notes: [] },
+      next_cursor: 1,
+      has_more: false,
+    });
   return json(200, {});
 });
 
@@ -231,5 +242,80 @@ describe("Notes on the device (IM-51)", () => {
       );
     });
     expect((await screen.findAllByText("Buy milk")).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Offline notes (NC-6, WF-05)", () => {
+  const writeNote = async (text: string) => {
+    const u = userEvent.setup();
+    await u.click(screen.getByRole("button", { name: t("note.capture_open") }));
+    await u.type(screen.getByRole("textbox", { name: "Your note" }), text);
+    await u.click(screen.getByRole("button", { name: t("note.save_offline") }));
+  };
+  const openNotes = async () => {
+    pathname = "/notes";
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <NotesPage />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+  };
+
+  it("OFF-03, T-NC-40: Save note keeps the note; the Notes tab shows it as Waiting for connection, not as a link", async () => {
+    await openNotes();
+    networkUp = false;
+    setOnline(false);
+    await writeNote("buy milk tomorrow");
+
+    expect(await screen.findByText(t("note.saved_offline"))).toBeTruthy();
+    expect(await readQueue()).toMatchObject([
+      { entry: { kind: "note", body: { text: "buy milk tomorrow" } } },
+    ]);
+    expect(await screen.findByText(t("note.waiting"))).toBeTruthy();
+    expect(
+      screen.queryByRole("link", { name: /buy milk tomorrow/ }),
+    ).toBeNull();
+    await expectAxeCleanInBothThemes();
+  });
+
+  it("OFF-04, T-NC-41: on reconnect the pending notes are sent and one toast reports the totals", async () => {
+    await openNotes();
+    networkUp = false;
+    setOnline(false);
+    await writeNote("buy milk tomorrow");
+    await screen.findByText(t("note.waiting"));
+
+    networkUp = true;
+    await act(async () => setOnline(true));
+
+    expect(
+      await screen.findByText("Back online. 1 note turned into 1 task."),
+    ).toBeTruthy();
+    await waitFor(async () => expect(await readQueue()).toEqual([]));
+  });
+
+  it("NU §3: a refused note shows Couldn't turn this note into tasks; tapping it puts its text back in the editor", async () => {
+    await addFailedNote({
+      client_id: "c-failed",
+      text: "refused text",
+      written_at: "2026-10-23T08:00:00.000Z",
+      timezone: "Asia/Ho_Chi_Minh",
+    });
+    await openNotes();
+    const name = new RegExp(t("note.couldnt_process"));
+    const card = await screen.findByRole("button", { name });
+    await expectAxeCleanInBothThemes();
+
+    await userEvent.setup().click(card);
+
+    const field = await screen.findByRole("textbox", { name: "Your note" });
+    await waitFor(() =>
+      expect((field as HTMLTextAreaElement).value).toBe("refused text"),
+    );
+    expect(screen.queryByRole("button", { name })).toBeNull();
   });
 });

@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "../../../lib/api";
-import { t, type CopyKey } from "../../copy";
-import { Button } from "../../components/Button";
-import { cx } from "../../components/cx";
-import { ChevronRightIcon, EyeIcon, EyeOffIcon } from "../../components/icons";
-import { SelectDropdown } from "../../components/SelectDropdown";
-import { Switch } from "../../components/Switch";
+import { api } from "../../../../lib/api";
+import { t, type CopyKey } from "../../../copy";
+import { Button } from "../../../components/Button";
+import { cx } from "../../../components/cx";
+import {
+  ChevronRightIcon,
+  EyeIcon,
+  EyeOffIcon,
+} from "../../../components/icons";
+import { SelectDropdown } from "../../../components/SelectDropdown";
+import { Switch } from "../../../components/Switch";
 
 interface AiProvider {
   id: string;
@@ -34,7 +38,7 @@ const KEY_ERRORS: CopyKey[] = [
 ];
 
 /** Settings › AI: the AI switch, one key per LLM provider (checked with the provider on Save) and the model. */
-export function AiSettings() {
+export function LlmProviderTab() {
   const [data, setData] = useState<AiSettingsData | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [key, setKey] = useState("");

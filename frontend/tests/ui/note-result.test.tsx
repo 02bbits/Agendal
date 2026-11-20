@@ -209,10 +209,10 @@ describe("Note result (IM-43, RV-1)", () => {
     expect(onSetDue).toHaveBeenCalledWith(expect.anything(), "2026-10-25");
   });
 
-  it("Pick date… opens a date field and hands over what was picked", async () => {
+  it("Custom opens a date field and hands over what was picked", async () => {
     const { onSetDue } = open(resultOf([ink]));
-    await userEvent.click(screen.getByRole("button", { name: "Pick date…" }));
-    fireEvent.change(screen.getByLabelText("Pick date…"), {
+    await userEvent.click(screen.getByRole("button", { name: "Custom" }));
+    fireEvent.change(screen.getByLabelText("Custom"), {
       target: { value: "2026-11-05" },
     });
     expect(onSetDue).toHaveBeenCalledWith(expect.anything(), "2026-11-05");
@@ -448,6 +448,17 @@ describe("Note result (IM-43, RV-1)", () => {
       expect(screen.getByText(t("note.needs_connection"))).toBeTruthy();
     });
 
+    it("offline, an accepted note's task rows are disabled and don't link to the task page", async () => {
+      open(resultOf([sql]), { offline: true });
+      expect(screen.queryByRole("link", { name: /SQL quiz/ })).toBeNull();
+      const row = screen.getByRole("button", {
+        name: new RegExp("SQL quiz"),
+      }) as HTMLButtonElement;
+      expect(row.disabled).toBe(true);
+      expect(screen.queryByText(t("note.result_hint"))).toBeNull();
+      await expectAxeCleanInBothThemes();
+    });
+
     it("conflicts open the dialog: Undo all confirms, Cancel closes", async () => {
       const { onUndo, onCancelUndo } = open(resultOf([sql]), { conflicts: 2 });
       const dialog = screen.getByRole("alertdialog");
@@ -549,6 +560,18 @@ describe("Check this first (IM-45, NU-5)", () => {
       expect(
         (screen.getByRole("button", { name }) as HTMLButtonElement).disabled,
       ).toBe(true);
+  });
+
+  it("offline: a planned task can't be opened to edit, since Apply can't save it", async () => {
+    const onOpenTask = vi.fn();
+    open(confirm([sql]), { offline: true, onOpenTask });
+    const row = screen.getByRole("button", {
+      name: new RegExp("SQL quiz"),
+    }) as HTMLButtonElement;
+    expect(row.disabled).toBe(true);
+    await userEvent.click(row);
+    expect(onOpenTask).not.toHaveBeenCalled();
+    await expectAxeCleanInBothThemes();
   });
 
   it("is axe clean in both themes", async () => {

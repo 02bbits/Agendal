@@ -3,9 +3,9 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { t } from "../../src/ui/copy";
 import {
-  AiSettings,
+  LlmProviderTab as AiSettings,
   type AiSettingsData,
-} from "../../src/ui/features/shell/AiSettings";
+} from "../../src/ui/features/settings/llm/LlmProviderTab";
 
 const settings = (over: Partial<AiSettingsData> = {}): AiSettingsData => ({
   enabled: true,
@@ -92,7 +92,9 @@ describe("Settings › AI", () => {
     expect(JSON.parse(init.body)).toEqual({ key: "AIza-test-only" });
     expect(await screen.findByText("••••Q7xd")).toBeTruthy();
     expect(screen.queryByLabelText(`Gemini ${t("ai.api_key")}`)).toBeNull();
-    expect(screen.getByText("gemini-3.5-flash-lite")).toBeTruthy();
+    expect(screen.getAllByText("gemini-3.5-flash-lite").length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("shows why a key was refused and keeps the field", async () => {
