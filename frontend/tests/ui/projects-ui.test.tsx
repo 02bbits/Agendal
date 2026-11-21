@@ -524,8 +524,8 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
 
     const move = screen.getByRole("checkbox", {
       name: "Move to No project",
-    }) as HTMLInputElement;
-    expect(move.checked).toBe(true);
+    });
+    expect(move.getAttribute("aria-checked")).toBe("true");
     expect(screen.queryByRole("radio")).toBeNull();
     expect(
       within(screen.getByRole("alertdialog"))
@@ -534,9 +534,34 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
     ).toEqual(["Cancel", "Delete"]);
 
     await userEvent.click(move);
-    expect(move.checked).toBe(false);
+    expect(move.getAttribute("aria-checked")).toBe("false");
     await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(chosenAction).toBe("delete");
+  });
+
+  it("#168: every click on the checkbox flips it, fast clicks and double clicks included", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeleteProjectDialog
+        open
+        project={seedProjects[0]!}
+        taskCount={3}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const move = screen.getByRole("checkbox", { name: "Move to No project" });
+    const states: (string | null)[] = [];
+    for (let i = 0; i < 4; i++) {
+      await user.click(move);
+      states.push(move.getAttribute("aria-checked"));
+    }
+    expect(states).toEqual(["false", "true", "false", "true"]);
+    // A double click is two clicks: two flips
+    await user.dblClick(move);
+    expect(move.getAttribute("aria-checked")).toBe("true");
+    await user.tripleClick(move);
+    expect(move.getAttribute("aria-checked")).toBe("false");
   });
 
   it("#168: kept on, Delete moves the tasks to No project", async () => {

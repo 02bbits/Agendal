@@ -186,8 +186,8 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     ).toEqual(["Cancel", "Sign out"]);
     const everywhere = within(dialog).getByRole("checkbox", {
       name: "Sign out on all devices",
-    }) as HTMLInputElement;
-    expect(everywhere.checked).toBe(false);
+    });
+    expect(everywhere.getAttribute("aria-checked")).toBe("false");
     // Cancel has the focus, so Enter never signs out by mistake
     expect(document.activeElement?.textContent).toBe("Cancel");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -216,12 +216,12 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     // Opened again, the checkbox starts unticked
     dialog = await ask();
     expect(
-      (
-        within(dialog).getByRole("checkbox", {
+      within(dialog)
+        .getByRole("checkbox", {
           name: "Sign out on all devices",
-        }) as HTMLInputElement
-      ).checked,
-    ).toBe(false);
+        })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
     await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
     expect(onSignOut).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alertdialog")).toBeNull();
