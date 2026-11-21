@@ -202,6 +202,13 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     await user.click(
       within(dialog).getByRole("checkbox", { name: "Sign out on all devices" }),
     );
+    // The text swaps in place: the other one stays, hidden, so the dialog keeps its size
+    expect(
+      within(dialog).getByText(/You'll need to sign in again/).className,
+    ).toContain("invisible");
+    expect(
+      within(dialog).getByText(/Every device signed in/).className,
+    ).not.toContain("invisible");
     await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
     expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
     expect(onSignOut).not.toHaveBeenCalled();

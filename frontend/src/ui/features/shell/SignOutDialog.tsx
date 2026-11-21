@@ -1,10 +1,12 @@
 import { useRef, useState, type ReactElement } from "react";
 import { Button } from "../../components/Button";
+import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { DialogCheckbox } from "../../components/DialogCheckbox";
 import { t } from "../../copy";
 
 const ACTION = "rounded-2xl! py-3.5 text-base font-semibold";
+const CELL = "[grid-area:1/1]";
 
 /**
  * Sign out asks first (#168), from the account menu and Settings alike: Cancel or Sign out, with
@@ -39,9 +41,18 @@ export function SignOutDialog({
     <Dialog
       open={open}
       title={t("app.sign_out_title")}
-      description={t(
-        everywhere ? "app.sign_out_all_body" : "app.sign_out_body",
-      )}
+      description={
+        // Both texts take the same cell, the other one hidden: ticking all devices swaps the
+        // text without the dialog changing size
+        <span className="grid items-center">
+          <span className={cx(CELL, everywhere && "invisible")}>
+            {t("app.sign_out_body")}
+          </span>
+          <span className={cx(CELL, !everywhere && "invisible")}>
+            {t("app.sign_out_all_body")}
+          </span>
+        </span>
+      }
       onClose={close}
       initialFocusRef={cancelRef}
       actionsLayout="row"
