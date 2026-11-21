@@ -1,8 +1,8 @@
-import { useId, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { t, tc } from "../../copy";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
-import { cx } from "../../components/cx";
+import { DialogCheckbox } from "../../components/DialogCheckbox";
 import type {
   DeleteProjectHandler,
   ProjectTaskAction,
@@ -20,7 +20,7 @@ export interface DeleteProjectDialogProps {
   onCancel: () => void;
 }
 
-/** "Delete “Portfolio”?", with Move to No project (default, safe) or Delete them too when it has tasks (PJ-4). */
+/** "Delete “Portfolio”?", with a Move to No project checkbox (on, the safe default) when it has tasks (PJ-4); off, its tasks go too. */
 export function DeleteProjectDialog({
   open,
   project,
@@ -30,7 +30,6 @@ export function DeleteProjectDialog({
 }: DeleteProjectDialogProps) {
   const [action, setAction] = useState<ProjectTaskAction>("move");
   const cancelRef = useRef<HTMLButtonElement>(null);
-  const name = useId();
 
   return (
     <Dialog
@@ -39,16 +38,9 @@ export function DeleteProjectDialog({
       title={t("project.delete_title", { name: project.name })}
       description={taskCount ? tc("project.delete_body", taskCount) : undefined}
       onClose={onCancel}
+      actionsLayout="row"
       actions={
         <>
-          <Button
-            variant="destructive"
-            fullWidth
-            className="rounded-2xl! py-3.5 text-base font-semibold"
-            onClick={() => onConfirm(taskCount ? action : "move")}
-          >
-            {t("common.delete")}
-          </Button>
           <Button
             ref={cancelRef}
             variant="outline"
@@ -58,63 +50,24 @@ export function DeleteProjectDialog({
           >
             {t("common.cancel")}
           </Button>
+          <Button
+            variant="destructive"
+            fullWidth
+            className="rounded-2xl! py-3.5 text-base font-semibold"
+            onClick={() => onConfirm(taskCount ? action : "move")}
+          >
+            {t("common.delete")}
+          </Button>
         </>
       }
     >
       {taskCount > 0 && (
-        <fieldset className="my-2 flex flex-col border-0 p-0">
-          <legend className="sr-only">
-            {tc("project.delete_body", taskCount)}
-          </legend>
-
-          <label
-            className={cx(
-              "group/choice relative flex cursor-pointer items-center justify-between border-b border-separator/80 py-3.5 transition-colors",
-              "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary",
-            )}
-          >
-            <input
-              type="radio"
-              name={name}
-              checked={action === "move"}
-              onChange={() => setAction("move")}
-              className="sr-only"
-            />
-            <span
-              className={cx(
-                "text-body transition-colors",
-                action === "move" ? "font-semibold text-ink" : "text-ink/80",
-              )}
-            >
-              {t("project.move_tasks")}
-            </span>
-          </label>
-
-          <label
-            className={cx(
-              "group/choice relative flex cursor-pointer items-center justify-between border-b border-separator/80 py-3.5 transition-colors",
-              "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-error",
-            )}
-          >
-            <input
-              type="radio"
-              name={name}
-              checked={action === "delete"}
-              onChange={() => setAction("delete")}
-              className="sr-only"
-            />
-            <span
-              className={cx(
-                "text-body text-error transition-colors",
-                action === "delete"
-                  ? "font-semibold"
-                  : "font-normal opacity-90",
-              )}
-            >
-              {t("project.delete_tasks")}
-            </span>
-          </label>
-        </fieldset>
+        // On by default (the safe choice); off deletes the tasks with the project (#168)
+        <DialogCheckbox
+          label={t("project.move_tasks")}
+          checked={action === "move"}
+          onChange={(move) => setAction(move ? "move" : "delete")}
+        />
       )}
     </Dialog>
   );

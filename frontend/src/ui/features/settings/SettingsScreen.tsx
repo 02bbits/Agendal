@@ -134,8 +134,6 @@ export function SettingsScreen({
             setChangingPassword(true);
           }}
           twoFactor={twoFactor}
-          onSignOut={onSignOut}
-          onSignOutEverywhere={onSignOutEverywhere}
         />
       </SettingsPanel>
       <SettingsPanel active={activeTab === "general"} isDesktop={isDesktop}>
@@ -174,6 +172,8 @@ export function SettingsScreen({
           : undefined
       }
       onClose={close}
+      onSignOut={onSignOut}
+      onSignOutEverywhere={onSignOutEverywhere}
     >
       {content}
     </SettingsDesktop>
@@ -189,6 +189,7 @@ export function SettingsScreen({
       onBackToList={backToList}
       onClose={close}
       onSignOut={onSignOut}
+      onSignOutEverywhere={onSignOutEverywhere}
       onInstall={onInstall}
     >
       {content}

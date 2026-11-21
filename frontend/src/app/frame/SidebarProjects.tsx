@@ -45,7 +45,7 @@ function ProjectRow({
           aria-hidden="true"
         />
         <span className="flex-1 truncate text-callout">{name}</span>
-        {count !== undefined && (
+        {Boolean(count) && (
           <span
             className={cx(
               "text-footnote tabular-nums",

@@ -2,7 +2,20 @@ import type { CopyKey } from "../copy";
 import type { SearchFilter } from "./search";
 import type { Task } from "./types";
 
-export type TaskRequest = () => Promise<{ task: Task; next?: Task }>;
+/** What complete and reopen answer. */
+export interface LifecycleResult {
+  task: Task;
+  /** Complete: the next occurrence. Reopen: the occurrence its completion made, now removed. */
+  next?: Task;
+  /** Reopen: every later open occurrence of the series, removed (one open per series). */
+  withdrawn?: string[];
+  /** Reopen: earlier occurrences that were open, back to done. */
+  closed?: Task[];
+  /** Reopen with `merge`: removed, since its series still has an open occurrence. */
+  merged?: boolean;
+}
+
+export type TaskRequest = () => Promise<LifecycleResult>;
 export type PatchTaskResponse = Promise<Task>;
 export type TaskUpdateErrors = Partial<Record<keyof TaskPatch, CopyKey>>;
 export type TaskUpdateFn = (
@@ -32,8 +45,12 @@ export type DeleteScope = "one" | "future";
 export interface TaskApi {
   /** `POST /tasks/{id}/complete` → the task, and the next occurrence for a repeating task. */
   complete(id: string, at: string): ReturnType<TaskRequest>;
-  /** `POST /tasks/{id}/reopen` → the task, and the generated occurrence removed by Undo. */
-  reopen(id: string, at: string): ReturnType<TaskRequest>;
+  /** `POST /tasks/{id}/reopen` → the task, and the other occurrences of its series that changed. */
+  reopen(
+    id: string,
+    at: string,
+    options?: { merge?: boolean },
+  ): ReturnType<TaskRequest>;
   /** `PATCH /tasks/{id}` → the updated task. */
   patch(id: string, fields: TaskPatch, at: string): PatchTaskResponse;
   /** `DELETE /tasks/{id}?scope=one|future` (soft delete). */

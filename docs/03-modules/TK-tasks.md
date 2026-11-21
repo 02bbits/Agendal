@@ -43,7 +43,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - The progress line updates, and its new value is announced ([UX-62](../01-product/ux-standards.md#ux-62)).
   - The toast `task.completed` offers Undo.
 - **Unticking** a completed task (in Completed, Search or details) reopens it. That doesn't show a toast.
-- **Repeating task:** completing it creates the next occurrence (§2.3). Undo from the toast reopens the task and deletes that occurrence.
+- **Repeating task:** completing it creates the next occurrence (§2.3). Undo from the toast reopens the task and deletes that occurrence. A series has one open occurrence at a time (#168).
+- **Unticking a done repeating task in a Completed list (#168):** the occurrence ticked last (the next one untouched) rolls back: it opens again on its own date and the next one goes, with "Back to {date}" and Undo. An older one (an occurrence after it is done, or the next one was edited) goes back into the repeat: it disappears and the open occurrence stays as it is, with "{date} went back into the repeat" and Undo. Reopening an occurrence withdraws every open one after it, so an occurrence the user undid never comes back as done. Task details' tick always reopens in place.
 
 ### 2.2 Task details and editing (TK-2, TK-3)
 
@@ -147,6 +148,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="tk-e18"></a>TK-E18 | Start after due on the same day (start time later than due time) | Client rejects with task.start_after_due, server returns 422 ([BR-11](../02-domain/business-rules.md#br-11)) | T-TK-118 |
 | <a id="tk-e19"></a>TK-E19 | Due time passed on the due day | Due label turns red, but task stays in Today until the day ends ([LV-E9](LV-lists-search.md#lv-e9)) | T-TK-119 |
 | <a id="tk-e20"></a>TK-E20 | Start-only task with passed start day | Never overdue; rolls into Today as "Planned {date}" with start time greyed ([BR-23](../02-domain/business-rules.md#br-23)) | T-TK-120 |
+| <a id="tk-e21"></a>TK-E21 | A done repeating task unticked in a Completed list (#168) | The one ticked last rolls back to its date; an older one goes back into the repeat and the open occurrence stays; the series never shows two open | RepeatSeriesReopenTest |
 
 ## 5. Copy keys
 

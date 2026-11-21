@@ -508,7 +508,7 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
     expect(confirmed).toBe(true);
   });
 
-  it("shows Move to No project and Delete them too when project has tasks", async () => {
+  it("#168: with tasks, one Move to No project checkbox, on by default; off deletes them; Cancel | Delete on one row", async () => {
     let chosenAction = "";
     render(
       <DeleteProjectDialog
@@ -522,22 +522,63 @@ describe("DeleteProjectDialog (PJ-4, T-PJ-30)", () => {
       />,
     );
 
-    const moveRadio = screen.getByRole("radio", {
+    const move = screen.getByRole("checkbox", {
       name: "Move to No project",
-    }) as HTMLInputElement;
-    const deleteRadio = screen.getByRole("radio", {
-      name: "Delete them too",
-    }) as HTMLInputElement;
+    });
+    expect(move.getAttribute("aria-checked")).toBe("true");
+    expect(screen.queryByRole("radio")).toBeNull();
+    expect(
+      within(screen.getByRole("alertdialog"))
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Cancel", "Delete"]);
 
-    expect(moveRadio.checked).toBe(true);
-    expect(deleteRadio.checked).toBe(false);
-
-    await userEvent.click(deleteRadio);
-    expect(deleteRadio.checked).toBe(true);
-
-    const deleteBtn = screen.getByRole("button", { name: "Delete" });
-    await userEvent.click(deleteBtn);
+    await userEvent.click(move);
+    expect(move.getAttribute("aria-checked")).toBe("false");
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(chosenAction).toBe("delete");
+  });
+
+  it("#168: every click on the checkbox flips it, fast clicks and double clicks included", async () => {
+    const user = userEvent.setup();
+    render(
+      <DeleteProjectDialog
+        open
+        project={seedProjects[0]!}
+        taskCount={3}
+        onConfirm={() => {}}
+        onCancel={() => {}}
+      />,
+    );
+    const move = screen.getByRole("checkbox", { name: "Move to No project" });
+    const states: (string | null)[] = [];
+    for (let i = 0; i < 4; i++) {
+      await user.click(move);
+      states.push(move.getAttribute("aria-checked"));
+    }
+    expect(states).toEqual(["false", "true", "false", "true"]);
+    // A double click is two clicks: two flips
+    await user.dblClick(move);
+    expect(move.getAttribute("aria-checked")).toBe("true");
+    await user.tripleClick(move);
+    expect(move.getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("#168: kept on, Delete moves the tasks to No project", async () => {
+    let chosenAction = "";
+    render(
+      <DeleteProjectDialog
+        open
+        project={seedProjects[0]!}
+        taskCount={3}
+        onConfirm={(action) => {
+          chosenAction = action;
+        }}
+        onCancel={() => {}}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(chosenAction).toBe("move");
   });
 
   it("focuses the Cancel button initially (A11Y-82)", () => {

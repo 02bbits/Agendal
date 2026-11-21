@@ -22,8 +22,8 @@ use Symfony\Component\HttpKernel\Exception\HttpException;
  */
 final class SyncPatches
 {
-    /** TK §8 allow-list, plus completion and deletion as fields. */
-    public const TASK_FIELDS = [...Task::PATCHABLE, 'done', 'deleted'];
+    /** TK §8 allow-list, plus completion and deletion as fields, and `merged`: unticked in Completed (#168). */
+    public const TASK_FIELDS = [...Task::PATCHABLE, 'done', 'deleted', 'merged'];
 
     public function __construct(
         private readonly TaskPatcher $tasks,
@@ -92,6 +92,12 @@ final class SyncPatches
         // An edit to a deleted task: the delete won (TK-E8, OFF-21)
         if ($task->trashed()) {
             return false;
+        }
+        // Unticked offline in a Completed list: back into its series, or reopened (#168)
+        if ($field === 'merged' && $value === true) {
+            $this->lifecycle->reopen($task, $at, merge: true);
+
+            return true;
         }
         if ($field === 'done') {
             $value === true ? $this->lifecycle->complete($task, $at) : $this->lifecycle->reopen($task, $at);

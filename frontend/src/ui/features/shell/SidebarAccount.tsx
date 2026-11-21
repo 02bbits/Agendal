@@ -3,6 +3,7 @@ import { t } from "../../copy";
 import { ChevronDownIcon, ChevronUpIcon } from "../../components/icons";
 import type { SettingsTab, ThemeSetting } from "../settings/types";
 import { AccountMenu } from "./AccountMenu";
+import { SignOutDialog } from "./SignOutDialog";
 
 /**
  * The account row at the foot of the sidebar and the menu it opens above itself. From the
@@ -15,6 +16,7 @@ export function SidebarAccount({
   onThemeChange,
   onAccount,
   onSignOut,
+  onSignOutEverywhere,
   onInstall,
 }: {
   accountName: string;
@@ -23,9 +25,11 @@ export function SidebarAccount({
   onThemeChange?: (theme: ThemeSetting) => void;
   onAccount?: (tab?: SettingsTab) => void;
   onSignOut?: () => void;
+  onSignOutEverywhere?: () => void;
   onInstall?: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [askingSignOut, setAskingSignOut] = useState(false);
   const [fromKeyboard, setFromKeyboard] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -43,7 +47,7 @@ export function SidebarAccount({
           }}
           onSignOut={() => {
             setOpen(false);
-            onSignOut?.();
+            setAskingSignOut(true);
           }}
           onInstall={onInstall}
           onClose={() => {
@@ -91,6 +95,12 @@ export function SidebarAccount({
           {open ? <ChevronUpIcon size={16} /> : <ChevronDownIcon size={16} />}
         </span>
       </button>
+      <SignOutDialog
+        open={askingSignOut}
+        onSignOut={() => onSignOut?.()}
+        onSignOutEverywhere={onSignOutEverywhere}
+        onClose={() => setAskingSignOut(false)}
+      />
     </div>
   );
 }

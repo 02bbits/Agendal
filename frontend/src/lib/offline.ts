@@ -93,9 +93,12 @@ export const offlineTask = {
     },
   }),
 
-  /** Complete or reopen. A repeating task's next occurrence comes from the server on sync (TK-E7). */
-  lifecycle: (id: string, done: boolean, at: string) => ({
-    entries: patchRows("task", id, { done }, at),
+  /**
+   * Complete or reopen. A repeating task's next occurrence comes from the server on sync (TK-E7).
+   * `merge`: unticked in a Completed list, synced as `merged` so the server decides (#168).
+   */
+  lifecycle: (id: string, done: boolean, at: string, merge = false) => ({
+    entries: patchRows("task", id, merge ? { merged: true } : { done }, at),
     local: async () => {
       const task = await editTask(id, { done, done_at: done ? at : null });
       return task && { value: { task } };

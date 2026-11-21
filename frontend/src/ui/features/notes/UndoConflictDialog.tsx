@@ -26,13 +26,14 @@ export function UndoConflictDialog({
       title={t("note.undo_conflict_title")}
       description={t("note.undo_conflict_body", { count })}
       onClose={onCancel}
+      actionsLayout="row"
       actions={
         <>
-          <Button variant="destructive" onClick={onConfirm}>
-            {t("note.undo_all")}
-          </Button>
           <Button variant="outline" onClick={onCancel}>
             {t("common.cancel")}
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            {t("note.undo_all")}
           </Button>
         </>
       }
