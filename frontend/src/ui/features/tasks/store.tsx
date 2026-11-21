@@ -51,6 +51,7 @@ export function TaskStoreProvider({
   initialProjects,
   timeFormat = "24h",
   onToast,
+  mergeMotion = false,
   children,
 }: types.TaskStoreProviderProps) {
   const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
@@ -66,7 +67,7 @@ export function TaskStoreProvider({
   const [toast, setToast] = React.useState<ToastData | null>(null);
   const [settling, setSettling] = React.useState<types.SettleSet>(new Set());
   const toastSeq = React.useRef(0);
-  const merge = useMergeBack();
+  const merge = useMergeBack(mergeMotion);
   // Occurrences withdrawn by a reopen: their series still knows they followed a row
   const withdrawnRows = React.useRef<Map<string, Task>>(new Map());
   const settleTimers = React.useRef<types.SettleTimerMap>(new Map());
@@ -285,7 +286,7 @@ export function TaskStoreProvider({
       // A task that is settling after Complete ignores more clicks on its
       // tick until it moves down; Undo in the toast still reopens it
       if (settleTimers.current.has(task.id)) return;
-      if (merge.leaving.has(task.id)) return;
+      if (merge.isBusy(task.id)) return;
       if (task.done && task.repeat !== "never") untickRepeat(task);
       else mutateLifecycle(task.id, task.done ? "reopen" : "complete");
     },
