@@ -364,7 +364,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 |---|---|
 | Normalise, split, classify, extract (30 items) | ≤ 50 ms |
 | Candidate search and scoring (user with 5,000 open tasks) | ≤ 30 ms. Trigram GIN index on `unaccent(title)` for open tasks |
-| LLM (only low-confidence items, ≤ 20% of notes, [A8](../08-project/project.md#a8)) | 1.5 s hard timeout |
+| LLM (only low-confidence items, ≤ 20% of notes, [A8](../08-project/project.md#a8)) | 20 s timeout per call, one more call for an invalid answer ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) |
 | Validate and apply in one transaction | ≤ 100 ms |
 | **Whole request, 10 items, online** | **[NF-5](../05-quality/nfr.md#nf-5): ≤ 2 s at p90**, including the network |
 

@@ -46,8 +46,9 @@ return [
         ],
     ],
 
-    // Seconds per note; on timeout or error the rules result stands (rules_fallback).
-    'timeout_seconds' => (float) env('NOTE_LLM_TIMEOUT_SECONDS', 1.5),
+    // Seconds per model call; on timeout or error the rules result stands (rules_fallback). Gemini's free tier took
+    // 2–30 s in testing. With one more call for an invalid answer, a note waits at most about twice this.
+    'timeout_seconds' => (float) env('NOTE_LLM_TIMEOUT_SECONDS', 20),
 
     // Relevant open-task titles an uncertain item may show the model.
     'candidate_limit' => (int) env('NOTE_LLM_CANDIDATE_LIMIT', 20),

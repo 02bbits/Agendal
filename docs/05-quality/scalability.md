@@ -36,7 +36,7 @@ Agendal runs on **one Linux server** ([Q14](../08-project/open-questions.md#q14)
 | **Every query is scoped by `user_id`**, and every index leads with `user_id` | Per-user data stays small |
 | **Sync is incremental** by `change_seq` ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)) | Cost grows with changes, not with data size |
 | **Reminders query an indexed `remind_at`** once a minute, claiming rows with `SELECT … FOR UPDATE SKIP LOCKED` | More workers can run in parallel without double-sending |
-| **Slow work runs on the queue:** file extraction and push delivery. The LLM call is the one synchronous outside call, made from the request with a hard 1.5 s timeout ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) | Request latency stays flat. A slow provider costs at most 1.5 s per affected note |
+| **Slow work runs on the queue:** file extraction and push delivery. The LLM call is the one synchronous outside call, made from the request with a 20 s timeout per call ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) | Notes the rules read stay fast. A note the model reads waits for it, about 40 s at worst; the web server's read timeout stays at 60 s or more |
 | **Command matching** uses a trigram index (`pg_trgm` on `unaccent(title)`) to find ≤ 50 candidate open tasks, then scores in memory | O(items × 50), not O(items × all tasks) |
 | **Static assets** have immutable, hashed filenames, served by Nginx with long cache headers. The service worker caches the app shell | First load ≤ 3 s, repeat ≤ 1 s |
 
