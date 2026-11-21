@@ -132,8 +132,6 @@ export const pending = {
   "task.back_to": "Back to {date}",
   "common.none": "None",
   "common.no": "No",
-  "project.delete_with_tasks_one": "Delete project and 1 task",
-  "project.delete_with_tasks_other": "Delete project and {count} tasks",
   "task.created": "Created {date}",
   "task.edited": "Edited {date}",
   "task.saves_as_you_go": "Changes save as you go",

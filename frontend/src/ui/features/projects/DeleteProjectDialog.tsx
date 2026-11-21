@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { t, tc } from "../../copy";
 import { Button } from "../../components/Button";
 import { Dialog } from "../../components/Dialog";
+import { DialogCheckbox } from "../../components/DialogCheckbox";
 import type {
   DeleteProjectHandler,
   ProjectTaskAction,
@@ -37,18 +38,9 @@ export function DeleteProjectDialog({
       title={t("project.delete_title", { name: project.name })}
       description={taskCount ? tc("project.delete_body", taskCount) : undefined}
       onClose={onCancel}
+      actionsLayout="row"
       actions={
         <>
-          <Button
-            variant="destructive"
-            fullWidth
-            className="rounded-2xl! py-3.5 text-base font-semibold"
-            onClick={() => onConfirm(taskCount ? action : "move")}
-          >
-            {taskCount && action === "delete"
-              ? tc("project.delete_with_tasks", taskCount)
-              : t("common.delete")}
-          </Button>
           <Button
             ref={cancelRef}
             variant="outline"
@@ -58,20 +50,24 @@ export function DeleteProjectDialog({
           >
             {t("common.cancel")}
           </Button>
+          <Button
+            variant="destructive"
+            fullWidth
+            className="rounded-2xl! py-3.5 text-base font-semibold"
+            onClick={() => onConfirm(taskCount ? action : "move")}
+          >
+            {t("common.delete")}
+          </Button>
         </>
       }
     >
       {taskCount > 0 && (
-        // One checkbox, on by default (the safe choice); off deletes the tasks with the project (#168)
-        <label className="mt-3 flex cursor-pointer items-center gap-3 has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-primary">
-          <input
-            type="checkbox"
-            checked={action === "move"}
-            onChange={(e) => setAction(e.target.checked ? "move" : "delete")}
-            className="size-5 shrink-0 cursor-pointer accent-[var(--color-primary)]"
-          />
-          <span className="text-body text-ink">{t("project.move_tasks")}</span>
-        </label>
+        // On by default (the safe choice); off deletes the tasks with the project (#168)
+        <DialogCheckbox
+          label={t("project.move_tasks")}
+          checked={action === "move"}
+          onChange={(move) => setAction(move ? "move" : "delete")}
+        />
       )}
     </Dialog>
   );
