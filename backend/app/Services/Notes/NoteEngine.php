@@ -75,9 +75,11 @@ final class NoteEngine
                 $lowConfidence = [...$lowConfidence, ...($planned['uncertain'] ?? [$ref => $item])];
             }
         }
-        // Prose ("mệt quá… à mà mai nộp báo cáo…") splits into fragments that only make sense together:
-        // the model reads every item of the note, in order, so it can join and skip them (ADR-008).
-        if ($this->extractor->chatty($text, $context)) {
+        // Prose ("mệt quá… à mà mai nộp báo cáo…") splits into fragments that only make sense together, and a long
+        // note (a meeting write-up) mixes its to-dos with context: the model reads every item of the note, in order,
+        // so it can join and skip them (ADR-008).
+        $long = $lowConfidence !== [] && count($items) >= (int) config('note_llm.whole_note_items');
+        if ($long || $this->extractor->chatty($text, $context)) {
             $read = array_map(self::itemIndex(...), array_keys($lowConfidence));
             foreach ($items as $ref => $item) {
                 if (! in_array(self::itemIndex($ref), $read, true)) {

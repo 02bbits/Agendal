@@ -76,6 +76,18 @@ it('sends every item of a chatty note to the model, in order (ADR-008)', functio
         ->and($build->lowConfidence['i2'])->toBe('mai nộp báo cáo SQL 5h chiều');
 });
 
+it('sends a long note whole once any item is uncertain, and keeps a short or sure one on the rules (ADR-008)', function (int $sure, bool $uncertain, int $sent) {
+    config(['note_llm.whole_note_items' => 10]);
+    $items = array_map(fn (int $i): string => "call client {$i} tomorrow", range(1, $sure));
+    $text = implode('. ', $uncertain ? [...$items, 'comprar leche'] : $items);
+
+    expect(app(NoteEngine::class)->build($text, engineContext())->lowConfidence)->toHaveCount($sent);
+})->with([
+    '10 items, one uncertain' => [9, true, 10],
+    '9 items, one uncertain' => [8, true, 1],
+    '10 items, all sure' => [10, false, 0],
+]);
+
 it('keeps a plain task list on the rules', function () {
     expect(app(NoteEngine::class)->build('mai nộp báo cáo SQL 5h chiều. tối gọi mẹ', engineContext())->lowConfidence)->toBe([]);
 });

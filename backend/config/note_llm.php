@@ -56,7 +56,12 @@ return [
     'daily_user_calls' => (int) env('NOTE_LLM_DAILY_USER_CALLS', 20),
     'daily_tokens' => (int) env('NOTE_LLM_DAILY_TOKENS', 1000000),
 
-    'max_completion_tokens' => (int) env('NOTE_LLM_MAX_COMPLETION_TOKENS', 2048),
+    // Room for a plan of a long note (a 22-item meeting note took ~2,450 tokens); a cut-off answer is invalid JSON.
+    'max_completion_tokens' => (int) env('NOTE_LLM_MAX_COMPLETION_TOKENS', 8192),
+
+    // A note of at least this many items with any uncertain one goes to the model whole, like a chatty note: in a long
+    // meeting note, sentences the rules read as tasks ("Warehouse stock is a bit messy") are often just context.
+    'whole_note_items' => (int) env('NOTE_LLM_WHOLE_NOTE_ITEMS', 10),
 
     // The versioned prompt in resources/prompts, recorded on each note that used it.
     'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v8'),
