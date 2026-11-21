@@ -72,6 +72,12 @@ export interface TaskStoreProviderProps {
   timeFormat?: TimeFormat;
   /** Sends toasts to the app's toast, for a screen that closes right after one (task details). */
   onToast?: (draft: ToastDraft) => void;
+  /**
+   * Unticking a done repeat plays its rise-and-fade and the open row's swipe (#168): on a
+   * project's page only, where Completed sits right under the open list. Elsewhere the rows just
+   * change, and the toast says what happened.
+   */
+  mergeMotion?: boolean;
   children: ReactNode;
 }
 

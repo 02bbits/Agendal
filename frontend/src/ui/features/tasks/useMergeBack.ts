@@ -18,14 +18,17 @@ const withFlag = (flags: Flags, id: string, on: boolean): Flags => {
 };
 
 /**
- * Unticking a done occurrence of a repeating task in a Completed list (#168): its row rises and
- * fades (`leaving`) while the server answers. `settle` applies the answer and names the open row
- * to light up (`arriving`), if any. With reduced motion the row doesn't wait.
+ * Unticking a done occurrence of a repeating task in a Completed list (#168). With `motion` (a
+ * project's page) its row rises and fades (`leaving`) while the server answers, and the open row
+ * it went back into gets the tick's swipe (`arriving`); elsewhere the rows just change. Either way
+ * `settle` applies the answer, and a second tap waits until it has (`isBusy`). With reduced
+ * motion the row doesn't wait.
  */
-export function useMergeBack() {
+export function useMergeBack(motion: boolean) {
   const [leaving, setLeaving] = useState<Flags>(new Set());
   const [arriving, setArriving] = useState<Flags>(new Set());
   const timers = useRef(new Set<ReturnType<typeof setTimeout>>());
+  const inFlight = useRef(new Set<string>());
 
   useEffect(() => {
     const pending = timers.current;
@@ -47,28 +50,35 @@ export function useMergeBack() {
       settle: (result: R) => string | null,
       fail: (error: unknown) => void,
     ) => {
-      setLeaving((flags) => withFlag(flags, id, true));
+      inFlight.current.add(id);
+      if (motion) setLeaving((flags) => withFlag(flags, id, true));
       const shown = new Promise<void>((done) =>
-        later(reducedMotion() ? 0 : MERGE_OUT_MS, done),
+        later(motion && !reducedMotion() ? MERGE_OUT_MS : 0, done),
       );
+      const finish = () => {
+        inFlight.current.delete(id);
+        if (motion) setLeaving((flags) => withFlag(flags, id, false));
+      };
       Promise.all([request(), shown]).then(
         ([result]) => {
           const lit = settle(result);
-          setLeaving((flags) => withFlag(flags, id, false));
-          if (!lit) return;
+          finish();
+          if (!lit || !motion) return;
           setArriving((flags) => withFlag(flags, lit, true));
           later(MERGE_IN_MS, () =>
             setArriving((flags) => withFlag(flags, lit, false)),
           );
         },
         (error: unknown) => {
-          setLeaving((flags) => withFlag(flags, id, false));
+          finish();
           fail(error);
         },
       );
     },
-    [later],
+    [later, motion],
   );
 
-  return { mergeBack, leaving, arriving };
+  const isBusy = useCallback((id: string) => inFlight.current.has(id), []);
+
+  return { mergeBack, isBusy, leaving, arriving };
 }
