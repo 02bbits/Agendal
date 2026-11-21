@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-21
+
+- **Up to three toasts at once.** [UX-04](01-product/ux-standards.md#ux-04): toasts stack, up to three, the newest on top; a fourth drops the oldest. Each has its own 5 s timer, Undo or Retry and close, and hovering or focusing any of them pauses them all. Before, a new toast replaced the old one, so quick actions in a row lost their Undo.
+
 ## 2026-11-20
 
 - **Loading screen on every reload (Refs #161).** [screens](01-product/screens.md) Loading screen row, [SUMMARY](SUMMARY.md) §6 Platform table: opening or reloading any screen, Sign in, Create account, Verify, Setup and the password screens included, starts behind the full loading screen until the session check answers and the app is on the right screen, so a page about to be redirected never flashes.
