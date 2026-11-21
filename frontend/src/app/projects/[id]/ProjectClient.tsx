@@ -86,6 +86,8 @@ export function ProjectClient({ id }: { id: string }) {
         initialTasks={[...data.open, ...data.completed]}
         initialProjects={isNoProject ? [] : [data.project]}
         timeFormat={settings.timeFormat}
+        // The app's one toast: it stays when the user moves to another tab
+        onToast={showToast}
       >
         <ProjectContent
           project={data.project}

@@ -8,10 +8,8 @@ import {
   ScreenHeader,
   TaskPanel,
   TaskStoreProvider,
-  Toast,
   t,
   useTaskPanel,
-  useTaskStore,
 } from "@/ui";
 import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
@@ -19,11 +17,6 @@ import { httpTaskApi } from "@/lib/taskApi";
 import { appClock } from "./appClock";
 import { useInboxData } from "./useInboxData";
 import { InboxSkeleton } from "./skeletons";
-
-function InboxToast() {
-  const { toast, dismissToast } = useTaskStore();
-  return <Toast toast={toast} onDismiss={dismissToast} />;
-}
 
 export default function Page() {
   return (
@@ -34,7 +27,13 @@ export default function Page() {
 }
 
 function InboxContent() {
-  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const {
+    navigate: rawNav,
+    user,
+    settings,
+    openNewTask,
+    showToast,
+  } = useAppFrame();
   const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
   const {
     status,
@@ -91,6 +90,8 @@ function InboxContent() {
           initialTasks={tasks}
           initialProjects={projectList}
           timeFormat={settings.timeFormat}
+          // The app's one toast: it stays when the user moves to another tab
+          onToast={showToast}
         >
           <InboxScreen
             accountInitial={accountInitial}
@@ -109,7 +110,6 @@ function InboxContent() {
               weekStart={settings.weekStart}
             />
           )}
-          <InboxToast />
         </TaskStoreProvider>
       )}
     </div>

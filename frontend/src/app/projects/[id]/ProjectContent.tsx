@@ -4,7 +4,6 @@ import { useMemo } from "react";
 import {
   ProjectScreen,
   TaskPanel,
-  Toast,
   useTaskPanel,
   useTaskStore,
   type Navigate,
@@ -110,8 +109,6 @@ export function ProjectContent({
           weekStart={weekStart}
         />
       )}
-      {/* "Completed …" with Undo, like the Inbox */}
-      <Toast toast={store.toast} onDismiss={store.dismissToast} />
     </>
   );
 }
