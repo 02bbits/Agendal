@@ -39,6 +39,8 @@ class NoteResultResource extends JsonResource
             'redo_until' => $this->when($this->undo_log !== null, $this->undo_log['redo_until'] ?? null),
             'plan' => $this->status === PlanStatus::Confirm->value ? array_intersect_key($plan, array_flip(['create', 'update', 'delete'])) : null,
             'skipped' => $plan['skipped'] ?? [], 'ambiguous' => $plan['ambiguous'] ?? [],
+            // What the language-model fallback did with each low-confidence item (ADR-008); absent on rules-only notes
+            'processing' => $this->when(($plan['processing'] ?? []) !== [], $plan['processing'] ?? []),
         ];
     }
 }

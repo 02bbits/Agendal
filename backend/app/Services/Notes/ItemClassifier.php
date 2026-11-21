@@ -9,12 +9,15 @@ use App\Enums\CommandAction;
 /** Skip, command or task, first match wins (NU §2.3); every phrase comes from the shared note rules CSV. */
 final class ItemClassifier
 {
-    public function __construct(private RescheduleTarget $target) {}
+    /** Date groups one line may hold ("WED, NOV 25" reads as a weekday, then a month day). */
+    private const DATE_GROUPS = 3;
+
+    public function __construct(private RescheduleTarget $target, private NoteDateParser $dates) {}
 
     public function classify(string $text, NoteContext $context): ItemClassification
     {
         $text = trim($text);
-        if ($this->isNotATask($text)) {
+        if ($this->isNotATask($text) || $this->onlyDates($text, $context)) {
             return ItemClassification::skip();
         }
         $action = $this->commandAction($text, $context);
@@ -32,6 +35,29 @@ final class ItemClassifier
             || $this->onlyFiller($text)
             || $this->isHeading($text)
             || NoteVocabulary::onlyModifiers($text);
+    }
+
+    /**
+     * A line that is only dates ("WED, NOV 25", the date line of a pasted meeting note) is context, not a task.
+     * Each pass blanks the dates read so far, so a weekday and a month day on one line both go.
+     */
+    private function onlyDates(string $text, NoteContext $context): bool
+    {
+        $rest = $text;
+        for ($pass = 0; $pass < self::DATE_GROUPS; $pass++) {
+            $parsed = $this->dates->parse($rest, $context, null);
+            if ($parsed->date === null || $parsed->spans === []) {
+                return false;
+            }
+            foreach ($parsed->spans as [$offset, $length]) {
+                $rest = substr_replace($rest, str_repeat(' ', $length), $offset, $length);
+            }
+            if (NoteVocabulary::onlyModifiers($rest)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** "ok thanks", "cảm ơn!", or symbols alone ("👍"). */

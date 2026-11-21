@@ -421,7 +421,9 @@ export function NoteResultScreen({
                     ? t("note.skip_not_found", { text: item.text })
                     : item.reason === "no_change"
                       ? t("note.skip_no_change", { title: item.text })
-                      : item.text}
+                      : item.reason === "unclear"
+                        ? t("note.skip_unclear", { text: item.text })
+                        : item.text}
               </li>
             ))}
           </ul>

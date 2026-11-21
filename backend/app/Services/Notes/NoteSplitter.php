@@ -30,6 +30,21 @@ final class NoteSplitter
     }
 
     /**
+     * Markdown from a pasted note: "### 7. Title" and a wholly bold line ("**Meeting notes**") are headings, so they
+     * end with the heading suffix and make no task; bold and underline marks elsewhere are dropped.
+     */
+    private function withoutMarkdown(string $line): string
+    {
+        $heading = '~^\s{0,3}(?:'.NoteVocabulary::phrases('markdown_heading').')+\s+~u';
+        $emphasis = '(?:'.NoteVocabulary::phrases('markdown_emphasis').')';
+        $isHeading = preg_match($heading, $line) === 1 || preg_match('~^\s*('.$emphasis.')\S.*\1\s*$~u', $line) === 1;
+        $line = trim((string) preg_replace(['~('.$emphasis.')(\S(?:.*?\S)?)\1~u', $heading], ['$2', ''], $line));
+        $endsAsHeading = preg_match('~(?:'.NoteVocabulary::phrases('heading_suffix').')$~u', $line) === 1;
+
+        return $isHeading && ! $endsAsHeading ? $line.NoteVocabulary::values('heading_suffix')[0] : $line;
+    }
+
+    /**
      * @param  list<string>  $projects
      * @return list<string>
      */
@@ -62,7 +77,7 @@ final class NoteSplitter
         $joiner = NoteVocabulary::phrases('list_joiner');
         $items = [];
         foreach (explode("\n", $text) as $line) {
-            $line = (string) preg_replace($bullets, '', $line);
+            $line = (string) preg_replace($bullets, '', $this->withoutMarkdown($line));
             foreach (preg_split($delimiter, $line) ?: [] as $chunk) {
                 $current = '';
                 $comma = '';

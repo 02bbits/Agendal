@@ -154,6 +154,8 @@ export const catalog = {
   "note.skip_already_done": "Already done: “{title}”",
   "note.skip_not_found": "Couldn't find a task matching “{text}”",
   "note.skip_no_change": "Already set: “{title}”",
+  "note.skip_unclear":
+    "Not clear enough to make a task: “{text}”. Edit the note to add it",
   "note.duplicate_hint": "You already have a task like this",
   "note.processing_failed":
     "I couldn't read this note just now. It's saved, and I'll try again.",

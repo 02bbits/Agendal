@@ -162,7 +162,8 @@ final class CommandMatcher
                     break;
                 }
             }
-            $match = $this->match($command(implode('', array_slice($pieces, $first, $last - $first + 1))), $action, $openTasks, $doneTasks, $context);
+            $source = $command(implode('', array_slice($pieces, $first, $last - $first + 1)));
+            $match = $this->match($source, $action, $openTasks, $doneTasks, $context)->withSourceText($source);
             $matches[$match->change->taskId ?? 'item '.count($matches)] = $match;
         }
 

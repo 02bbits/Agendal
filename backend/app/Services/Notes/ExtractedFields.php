@@ -11,6 +11,7 @@ use App\Enums\Repeat;
 /** Fields read from one task item (NU-2). Empty fields stay null. */
 final readonly class ExtractedFields
 {
+    /** @param array<string, mixed> $trustedFields Explicit fields read independently of title/intent confidence. */
     public function __construct(
         public string $title,
         public ?string $notes,
@@ -24,5 +25,6 @@ final readonly class ExtractedFields
         public bool $lowConfidence,
         public ?string $repeatRule = null,
         public int $copies = 1,
+        public array $trustedFields = [],
     ) {}
 }
