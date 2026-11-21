@@ -7,6 +7,7 @@ import { Link } from "../shell/Link";
 import { AuthLayout } from "./AuthLayout";
 import { CodeEntry, type CodeCheckResult } from "./CodeEntry";
 import { PasswordField } from "./PasswordField";
+import { useResetOnLeave } from "./useResetOnLeave";
 import { useSecondsLeft } from "./useSecondsLeft";
 import type { Navigate } from "../shell/routes";
 import { hasAccentedLetters, normalizeEmail } from "./validation";
@@ -75,6 +76,16 @@ export function SignInScreen({
   // Live countdown from the server's retry_after (AA-3, T-AA-103)
   const locked = useSecondsLeft(lockedUntil);
   const passwordRef = useRef<HTMLInputElement>(null);
+
+  // Back on Sign in later (e.g. after Sign out): an empty form, not the 2FA step that was finished
+  useResetOnLeave(() => {
+    setTwoFactorData(null);
+    setEmail("");
+    setPassword("");
+    setFailure({});
+    setInvalidWithAccents(false);
+    setBusy(false);
+  });
 
   async function submit(event: FormEvent) {
     event.preventDefault();

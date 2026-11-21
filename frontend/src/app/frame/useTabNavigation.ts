@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Navigate, TabId } from "@/ui";
+import { ROUTES, type Navigate, type TabId } from "@/ui";
 import {
   isAuthPath,
   PROJECT_PATH,
@@ -53,8 +53,9 @@ export function useTabNavigation(
 
   const navigate = useCallback<Navigate>(
     (href) => {
-      if (isAuthPath(pathname) && !isAuthPath(href.split(/[?#]/)[0]!))
-        onEnterApp();
+      const entersApp =
+        isAuthPath(pathname) && !isAuthPath(href.split(/[?#]/)[0]!);
+      if (entersApp) onEnterApp();
       const to = TAB_BY_PATH[href];
       if (href !== pathname && to)
         setPendingTab({
@@ -70,7 +71,12 @@ export function useTabNavigation(
           project: true,
           firstVisit: false,
         });
-      if (href in TAB_BY_PATH && pathname in TAB_BY_PATH) router.replace(href);
+      // Tab to tab, into the app, or on from a finished code: Back never returns to Sign in or Verify
+      const replaces =
+        (href in TAB_BY_PATH && pathname in TAB_BY_PATH) ||
+        entersApp ||
+        (pathname === ROUTES.verify && href === ROUTES.welcome);
+      if (replaces) router.replace(href);
       else router.push(href);
       return true;
     },
