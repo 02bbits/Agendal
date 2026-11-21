@@ -30,7 +30,7 @@ describe("Settings on phones (Part D)", () => {
     }));
   };
 
-  it("#168: Settings has Sign out and Sign out on all devices, each with its icon, each asking first", () => {
+  it("#168: Settings has one Sign out with its icon; it asks, with Sign out on all devices as a checkbox", () => {
     for (const wide of [false, true]) {
       mockMatchMedia(wide);
       const onSignOut = vi.fn();
@@ -48,18 +48,18 @@ describe("Settings on phones (Part D)", () => {
         />,
       );
       const signOut = screen.getByRole("button", { name: "Sign out" });
-      const everywhere = screen.getByRole("button", {
-        name: "Sign out on all devices",
-      });
       expect(signOut.querySelector("svg")).toBeTruthy();
-      expect(everywhere.querySelector("svg")).toBeTruthy();
-      fireEvent.click(everywhere);
-      expect(onSignOutEverywhere).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: "Sign out on all devices" }),
+      ).toBeNull();
+      fireEvent.click(signOut);
+      const dialog = screen.getByRole("alertdialog");
       fireEvent.click(
-        within(screen.getByRole("alertdialog")).getByRole("button", {
+        within(dialog).getByRole("checkbox", {
           name: "Sign out on all devices",
         }),
       );
+      fireEvent.click(within(dialog).getByRole("button", { name: "Sign out" }));
       expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
       expect(onSignOut).not.toHaveBeenCalled();
 

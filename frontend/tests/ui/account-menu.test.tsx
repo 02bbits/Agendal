@@ -158,7 +158,7 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("#168: the menu has one Sign out; its dialog offers Sign out, Sign out on all devices and Cancel", async () => {
+  it("#168: the menu has one Sign out; its dialog has Cancel | Sign out and a Sign out on all devices checkbox", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();
     const onSignOutEverywhere = vi.fn();
@@ -171,9 +171,6 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     );
     const ask = async () => {
       await user.click(screen.getByRole("button", { name: /Jane Doe/i }));
-      expect(
-        screen.queryByRole("menuitem", { name: "Sign out on all devices" }),
-      ).toBeNull();
       await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
       return screen.getByRole("alertdialog");
     };
@@ -181,11 +178,16 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     let dialog = await ask();
     expect(screen.queryByRole("menu")).toBeNull();
     expect(within(dialog).getByText("Sign out?")).toBeTruthy();
+    // One row: the safe way out first
     expect(
       within(dialog)
         .getAllByRole("button")
         .map((button) => button.textContent),
-    ).toEqual(["Sign out", "Sign out on all devices", "Cancel"]);
+    ).toEqual(["Cancel", "Sign out"]);
+    const everywhere = within(dialog).getByRole("checkbox", {
+      name: "Sign out on all devices",
+    }) as HTMLInputElement;
+    expect(everywhere.checked).toBe(false);
     // Cancel has the focus, so Enter never signs out by mistake
     expect(document.activeElement?.textContent).toBe("Cancel");
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
@@ -198,11 +200,21 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
 
     dialog = await ask();
     await user.click(
-      within(dialog).getByRole("button", { name: "Sign out on all devices" }),
+      within(dialog).getByRole("checkbox", { name: "Sign out on all devices" }),
     );
+    await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
     expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(onSignOut).not.toHaveBeenCalled();
 
+    // Opened again, the checkbox starts unticked
     dialog = await ask();
+    expect(
+      (
+        within(dialog).getByRole("checkbox", {
+          name: "Sign out on all devices",
+        }) as HTMLInputElement
+      ).checked,
+    ).toBe(false);
     await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
     expect(onSignOut).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("alertdialog")).toBeNull();

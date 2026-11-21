@@ -3,7 +3,7 @@ import { t } from "../../copy";
 import { ChevronDownIcon, ChevronUpIcon } from "../../components/icons";
 import type { SettingsTab, ThemeSetting } from "../settings/types";
 import { AccountMenu } from "./AccountMenu";
-import { SignOutDialog, type SignOutChoice } from "./SignOutDialog";
+import { SignOutDialog } from "./SignOutDialog";
 
 /**
  * The account row at the foot of the sidebar and the menu it opens above itself. From the
@@ -29,9 +29,7 @@ export function SidebarAccount({
   onInstall?: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [askingSignOut, setAskingSignOut] = useState<SignOutChoice | null>(
-    null,
-  );
+  const [askingSignOut, setAskingSignOut] = useState(false);
   const [fromKeyboard, setFromKeyboard] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
@@ -49,8 +47,7 @@ export function SidebarAccount({
           }}
           onSignOut={() => {
             setOpen(false);
-            // One Sign out in the menu: its dialog offers both
-            setAskingSignOut("either");
+            setAskingSignOut(true);
           }}
           onInstall={onInstall}
           onClose={() => {
@@ -99,10 +96,10 @@ export function SidebarAccount({
         </span>
       </button>
       <SignOutDialog
-        choice={askingSignOut}
+        open={askingSignOut}
         onSignOut={() => onSignOut?.()}
         onSignOutEverywhere={onSignOutEverywhere}
-        onClose={() => setAskingSignOut(null)}
+        onClose={() => setAskingSignOut(false)}
       />
     </div>
   );

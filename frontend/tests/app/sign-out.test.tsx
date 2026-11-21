@@ -38,12 +38,15 @@ async function signOutWith(button: string) {
     </AppFrame>,
   );
   await screen.findByText("ann@example.com");
-  // Each sign-out in Settings asks first (#168)
-  await userEvent.click(screen.getByRole("button", { name: button }));
+  // Settings' one Sign out asks first; all devices is a checkbox in the dialog (#168)
+  await userEvent.click(screen.getByRole("button", { name: "Sign out" }));
+  const dialog = screen.getByRole("alertdialog");
+  if (button === "Sign out on all devices")
+    await userEvent.click(
+      within(dialog).getByRole("checkbox", { name: button }),
+    );
   await userEvent.click(
-    within(screen.getByRole("alertdialog")).getByRole("button", {
-      name: button,
-    }),
+    within(dialog).getByRole("button", { name: "Sign out" }),
   );
 }
 
