@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useSyncExternalStore } from "react";
+import { Suspense } from "react";
 import {
   Button,
   InboxScreen,
@@ -8,30 +8,16 @@ import {
   ScreenHeader,
   TaskPanel,
   TaskStoreProvider,
-  Toast,
   t,
   useTaskPanel,
-  useTaskStore,
-  type Clock,
 } from "@/ui";
-import { headerDate, subscribeHeaderDate } from "./headerDate";
+import { LoadError } from "@/ui/components/LoadError";
+import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";
 import { httpTaskApi } from "@/lib/taskApi";
-import { now, timeZone } from "@/lib/clock";
+import { appClock } from "./appClock";
 import { useInboxData } from "./useInboxData";
 import { InboxSkeleton } from "./skeletons";
-
-const clock: Clock = {
-  now,
-  get timeZone() {
-    return timeZone();
-  },
-};
-
-function InboxToast() {
-  const { toast, dismissToast } = useTaskStore();
-  return <Toast toast={toast} onDismiss={dismissToast} />;
-}
 
 export default function Page() {
   return (
@@ -42,7 +28,13 @@ export default function Page() {
 }
 
 function InboxContent() {
-  const { navigate: rawNav, user, settings, openNewTask } = useAppFrame();
+  const {
+    navigate: rawNav,
+    user,
+    settings,
+    openNewTask,
+    showToast,
+  } = useAppFrame();
   const { selectedTaskId, isWide, navigate, closePanel } = useTaskPanel(rawNav);
   const {
     status,
@@ -55,11 +47,7 @@ function InboxContent() {
     handleRetryProjects,
   } = useInboxData();
 
-  const date = useSyncExternalStore(
-    subscribeHeaderDate,
-    () => headerDate(),
-    () => undefined,
-  );
+  const date = useHeaderDate();
   const accountInitial = user?.display_name || user?.email || "";
 
   return (
@@ -89,20 +77,17 @@ function InboxContent() {
       </ScreenHeader>
       {status === "loading" && <InboxSkeleton />}
       {status === "error" && (
-        <div className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-          <p className="text-callout text-ink-secondary">
-            {errorMessage || t("error.generic")}
-          </p>
-          <Button onClick={handleRetry}>{t("common.retry")}</Button>
-        </div>
+        <LoadError message={errorMessage} onRetry={handleRetry} />
       )}
       {status === "ready" && (
         <TaskStoreProvider
           api={httpTaskApi}
-          clock={clock}
+          clock={appClock}
           initialTasks={tasks}
           initialProjects={projectList}
           timeFormat={settings.timeFormat}
+          // The app's one toast: it stays when the user moves to another tab
+          onToast={showToast}
         >
           <InboxScreen
             accountInitial={accountInitial}
@@ -121,7 +106,6 @@ function InboxContent() {
               weekStart={settings.weekStart}
             />
           )}
-          <InboxToast />
         </TaskStoreProvider>
       )}
     </div>

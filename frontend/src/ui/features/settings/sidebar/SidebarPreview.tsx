@@ -3,6 +3,7 @@ import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import type { TabId } from "../../shell/routes";
 import { useFlipChildren } from "../../shell/useFlipChildren";
+import { TAB_ICON } from "../../shell/tabIcons";
 import { SIDEBAR_TAB_META } from "./sidebarTabMeta";
 
 /**
@@ -29,7 +30,8 @@ export function SidebarPreview({
         className="rounded-lg border border-separator/40 bg-surface/70 p-2.5 max-w-[260px] space-y-1 shadow-xs"
       >
         {tabs.map((tab, index) => {
-          const { label, Icon, sampleCount } = SIDEBAR_TAB_META[tab];
+          const { label, sampleCount } = SIDEBAR_TAB_META[tab];
+          const Icon = TAB_ICON[tab];
           const isCurrent = index === 0;
           return (
             <div

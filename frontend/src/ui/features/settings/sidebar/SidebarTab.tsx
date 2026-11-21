@@ -10,6 +10,7 @@ import { Switch } from "../../../components/Switch";
 import { t } from "../../../copy";
 import { SettingsHeading } from "../SettingsSection";
 import { SidebarPreview } from "./SidebarPreview";
+import { TAB_ICON } from "../../shell/tabIcons";
 import { SIDEBAR_TAB_META } from "./sidebarTabMeta";
 import { useSidebarTabs } from "./useSidebarTabs";
 
@@ -59,7 +60,7 @@ export function SidebarTab(): ReactElement {
           aria-label={t("settings.sidebar_nav_heading")}
         >
           {sidebar.order.map((tab, index) => {
-            const { Icon } = SIDEBAR_TAB_META[tab];
+            const Icon = TAB_ICON[tab];
             const label = t(SIDEBAR_TAB_META[tab].label);
             const itemProps = sidebar.getItemProps(tab);
             const handleProps = sidebar.getHandleProps(tab);

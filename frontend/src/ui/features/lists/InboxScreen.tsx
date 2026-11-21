@@ -149,7 +149,7 @@ export function InboxScreen({
 
       {view.empty ? (
         <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
-          <h2 className="m-0 font-serif text-dialog font-semibold text-balance focus:outline-none">
+          <h2 className="m-0 text-dialog font-semibold text-balance focus:outline-none">
             {t("list.first_run")}
           </h2>
         </section>
@@ -175,7 +175,7 @@ export function InboxScreen({
               <h2
                 ref={doneHeading}
                 tabIndex={-1}
-                className="m-0 font-serif text-dialog font-semibold text-balance focus:outline-none"
+                className="m-0 text-dialog font-semibold text-balance focus:outline-none"
               >
                 {t("list.nothing_left")}
               </h2>

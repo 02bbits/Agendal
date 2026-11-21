@@ -1,3 +1,4 @@
+import { useWideScreen } from "../../components/useMediaQuery";
 import {
   useEffect,
   useRef,
@@ -8,7 +9,6 @@ import {
 import { createPortal } from "react-dom";
 import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
 import { t } from "../../copy";
-import { useMediaQuery } from "../tasks/useMediaQuery";
 import { AccountTab } from "./account/AccountTab";
 import { ChangePassword } from "./account/ChangePassword";
 import { TwoFactorOffDialog } from "./account/TwoFactorOffDialog";
@@ -67,8 +67,7 @@ export function SettingsScreen({
 }: SettingsScreenProps): ReactElement | null {
   const mounted = useSyncExternalStore(noSubscription, inBrowser, onServer);
   const isDesktop =
-    useMediaQuery("(min-width: 768px)") ||
-    (typeof window !== "undefined" && !window.matchMedia);
+    useWideScreen() || (typeof window !== "undefined" && !window.matchMedia);
 
   const [tab, setTab] = useState<SettingsTab>(initialTab);
   const [changingPassword, setChangingPassword] = useState(false);
@@ -135,8 +134,6 @@ export function SettingsScreen({
             setChangingPassword(true);
           }}
           twoFactor={twoFactor}
-          onSignOut={onSignOut}
-          onSignOutEverywhere={onSignOutEverywhere}
         />
       </SettingsPanel>
       <SettingsPanel active={activeTab === "general"} isDesktop={isDesktop}>
@@ -175,6 +172,8 @@ export function SettingsScreen({
           : undefined
       }
       onClose={close}
+      onSignOut={onSignOut}
+      onSignOutEverywhere={onSignOutEverywhere}
     >
       {content}
     </SettingsDesktop>
@@ -190,6 +189,7 @@ export function SettingsScreen({
       onBackToList={backToList}
       onClose={close}
       onSignOut={onSignOut}
+      onSignOutEverywhere={onSignOutEverywhere}
       onInstall={onInstall}
     >
       {content}

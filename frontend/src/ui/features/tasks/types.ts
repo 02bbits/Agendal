@@ -44,8 +44,15 @@ export interface TaskStore {
   dismissToast: (id: ToastData["id"]) => void;
   projectOf: (task: Task) => Project | null;
   isSettling: (id: string) => boolean;
+  /** A done repeat unticked in Completed, its row leaving to go back into the series (#168). */
+  isLeaving: (id: string) => boolean;
+  /** The series' open row a done repeat just went back into, lit up for a moment. */
+  isArriving: (id: string) => boolean;
   completedToday: (task: Task) => boolean;
+  /** A row's tick in a list: a done repeat unticked goes back into its series (#168). */
   toggle: (task: Task) => void;
+  /** Task details' tick: reopens or completes this task in place, never removing it. */
+  toggleInPlace: (task: Task) => void;
   /** Adds a task loaded by id, e.g. one opened from Search. */
   ensureTask: (task: Task) => void;
   change: UseTaskSyncReturn["change"];

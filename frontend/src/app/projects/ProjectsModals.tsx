@@ -1,3 +1,4 @@
+import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import {
   DeleteProjectDialog,
   ProjectSheet,
@@ -68,7 +69,7 @@ export function ProjectsModals({
               ),
             );
             if (typeof window !== "undefined") {
-              window.dispatchEvent(new CustomEvent("agendal:projects-changed"));
+              notifyProjectsChanged();
             }
             setEditingProject(null);
           }}
@@ -87,9 +88,7 @@ export function ProjectsModals({
               const res = await deleteProject(target.id, action);
               setProjects((prev) => prev.filter((p) => p.id !== target.id));
               if (typeof window !== "undefined") {
-                window.dispatchEvent(
-                  new CustomEvent("agendal:projects-changed"),
-                );
+                notifyProjectsChanged();
               }
               showToast({
                 message: t("project.deleted", { name: target.name }),
@@ -99,9 +98,7 @@ export function ProjectsModals({
                     await restoreProject(target.id, res.undo);
                     setProjects((prev) => [...prev, target]);
                     if (typeof window !== "undefined") {
-                      window.dispatchEvent(
-                        new CustomEvent("agendal:projects-changed"),
-                      );
+                      notifyProjectsChanged();
                     }
                   } catch {
                     showToast(t("error.save_failed"));

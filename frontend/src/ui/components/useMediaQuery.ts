@@ -24,3 +24,11 @@ export function useMediaQuery(query: string): boolean {
     () => false,
   );
 }
+
+/** From here the app has a sidebar instead of the tab bar, and popups instead of sheets (UX-27). */
+export const WIDE_SCREEN = "(min-width: 768px)";
+/** From here a task opens in a panel beside its list instead of on its own page. */
+export const PANEL_SCREEN = "(min-width: 1280px)";
+
+export const useWideScreen = () => useMediaQuery(WIDE_SCREEN);
+export const usePanelScreen = () => useMediaQuery(PANEL_SCREEN);

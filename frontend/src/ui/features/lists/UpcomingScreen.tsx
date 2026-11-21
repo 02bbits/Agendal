@@ -17,7 +17,7 @@ import { UpcomingDayList } from "./UpcomingDayList";
 import { UpcomingDayStrip } from "./UpcomingDayStrip";
 import { UpcomingViewSwitch } from "./UpcomingViewSwitch";
 import { UpcomingWeekNav } from "./UpcomingWeekNav";
-import { useUpcomingScreenData } from "./useUpcomingListWindow";
+import { useUpcomingScreenData } from "./useUpcomingScreenData";
 
 export type { UpcomingScreenProps, UpcomingViewMode };
 

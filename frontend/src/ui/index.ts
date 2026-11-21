@@ -42,7 +42,6 @@ export {
   type ChipGroupProps,
   type ChipOption,
 } from "./components/ChipGroup";
-export { NavBar, type NavBarProps } from "./components/NavBar";
 export {
   Segmented,
   type SegmentedProps,
@@ -74,6 +73,7 @@ export {
 export { cx } from "./components/cx";
 export {
   t,
+  countText,
   tc,
   quoted,
   isCopyKey,

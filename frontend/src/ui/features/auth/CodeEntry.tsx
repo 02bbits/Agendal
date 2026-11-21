@@ -4,6 +4,7 @@ import CodeSlots, { type CodeSlotsStatus } from "../../components/CodeSlots";
 import { cx } from "../../components/cx";
 import { AlertCircleIcon, CheckCircleIcon } from "../../components/icons";
 import { t } from "../../copy";
+import { useResetOnLeave } from "./useResetOnLeave";
 
 export interface CodeCheckResult {
   ok: boolean;
@@ -88,6 +89,14 @@ export function CodeEntry({
       isMounted.current = false;
     };
   }, []);
+
+  // Back on this screen later (e.g. after Sign out): empty slots, never the last code and its tick
+  useResetOnLeave(() => {
+    setCode("");
+    setStatus("idle");
+    setChecking(false);
+    setNotice(null);
+  });
 
   const handleComplete = async (entered: string) => {
     if (checking || dead) return;

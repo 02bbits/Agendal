@@ -1,4 +1,4 @@
-import { Suspense } from "react";
+import { Activity, Suspense } from "react";
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -150,6 +150,36 @@ describe("Inbox task panel integration", () => {
     });
     await userEvent.click(closeBtn);
     expect(router.back).toHaveBeenCalledOnce();
+  });
+
+  it("the toast belongs to the app: moving to another tab keeps it, and it shows once", async () => {
+    pathname = "/";
+    // Next keeps a left tab alive and hidden; <Activity> does the same here
+    const app = (visible: boolean) => (
+      <AppFrame>
+        <Activity mode={visible ? "visible" : "hidden"}>
+          <Suspense>
+            <InboxPage />
+          </Suspense>
+        </Activity>
+      </AppFrame>
+    );
+    let view: ReturnType<typeof render>;
+    await act(async () => {
+      view = render(app(true));
+    });
+
+    await userEvent.click(
+      await screen.findByRole("checkbox", { name: /Complete Inbox Task 1/ }),
+    );
+    const message = t("task.completed", { title: "Inbox Task 1" });
+    expect(await screen.findAllByText(message)).toHaveLength(1);
+
+    await act(async () => {
+      view.rerender(app(false));
+    });
+    expect(screen.getAllByText(message)).toHaveLength(1);
+    expect(screen.getByRole("button", { name: t("common.undo") })).toBeTruthy();
   });
 
   it("ticking in the panel moves the row in Inbox", async () => {

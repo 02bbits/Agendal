@@ -448,13 +448,14 @@ export function NoteEditor({
         title={t(note ? "note.discard_edit_title" : "note.discard_title")}
         description={t(note ? "note.discard_edit_body" : "note.discard_body")}
         onClose={() => setConfirming(false)}
+        actionsLayout="row"
         actions={
           <>
-            <Button variant="destructive" onClick={discard}>
-              {t("common.discard_action")}
-            </Button>
             <Button onClick={() => setConfirming(false)}>
               {t("common.keep_editing")}
+            </Button>
+            <Button variant="destructive" onClick={discard}>
+              {t("common.discard_action")}
             </Button>
           </>
         }

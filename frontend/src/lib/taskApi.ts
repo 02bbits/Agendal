@@ -8,7 +8,12 @@ import {
   replaceProjects,
 } from "./localStore";
 import { offlineTask, orQueue } from "./offline";
-import type { DeleteScope, TaskApi, TaskPatch } from "../ui/domain/api";
+import type {
+  DeleteScope,
+  LifecycleResult,
+  TaskApi,
+  TaskPatch,
+} from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { SearchFilter } from "../ui/domain/search";
 import type { Project, Task } from "../ui/domain/types";
@@ -60,10 +65,15 @@ export interface SearchData {
   next_cursor: string | null;
 }
 
-function postLifecycle(id: string, action: "complete" | "reopen", at: string) {
-  const offline = offlineTask.lifecycle(id, action === "complete", at);
+function postLifecycle(
+  id: string,
+  action: "complete" | "reopen",
+  at: string,
+  merge = false,
+) {
+  const offline = offlineTask.lifecycle(id, action === "complete", at, merge);
   return orQueue(
-    () => sendLifecycle<{ task: Task; next?: Task }>(id, action, at),
+    () => sendLifecycle<LifecycleResult>(id, action, at, merge),
     offline.entries,
     offline.local,
   );
@@ -73,19 +83,18 @@ async function sendLifecycle<T>(
   id: string,
   action: "complete" | "reopen",
   at: string,
+  merge = false,
 ): Promise<T> {
   const response = await api(`/tasks/${encodeURIComponent(id)}/${action}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ at }),
+    body: JSON.stringify(merge ? { at, merge } : { at }),
   });
 
-  const result = await handleResponse<T & { task: Task; next?: Task }>(
-    response,
-  );
-  void putTasks([result?.task, result?.next]);
+  const result = await handleResponse<T & LifecycleResult>(response);
+  void putTasks([result?.task, result?.next, ...(result?.closed ?? [])]);
   return result;
 }
 
@@ -233,12 +242,16 @@ async function sendRestore(id: string): Promise<Task> {
 }
 
 export const httpTaskApi: TaskApi = {
-  complete(id: string, at: string): Promise<{ task: Task; next?: Task }> {
+  complete(id: string, at: string): Promise<LifecycleResult> {
     return postLifecycle(id, "complete", at);
   },
 
-  reopen(id: string, at: string): Promise<{ task: Task; next?: Task }> {
-    return postLifecycle(id, "reopen", at);
+  reopen(
+    id: string,
+    at: string,
+    options?: { merge?: boolean },
+  ): Promise<LifecycleResult> {
+    return postLifecycle(id, "reopen", at, options?.merge);
   },
 
   patch(id: string, fields: TaskPatch, at: string): Promise<Task> {

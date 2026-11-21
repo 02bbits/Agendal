@@ -60,13 +60,14 @@ export function DeleteTask({
           title={t("task.delete_title", { title: task.title })}
           onClose={() => setAsking(false)}
           initialFocusRef={cancelRef}
+          actionsLayout="row"
           actions={
             <>
-              <Button variant="destructive" onClick={() => confirm()}>
-                {t("common.delete")}
-              </Button>
               <Button ref={cancelRef} onClick={() => setAsking(false)}>
                 {t("common.cancel")}
+              </Button>
+              <Button variant="destructive" onClick={() => confirm()}>
+                {t("common.delete")}
               </Button>
             </>
           }

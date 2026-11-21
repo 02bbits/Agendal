@@ -1,3 +1,4 @@
+import { WIDE_SCREEN } from "./useMediaQuery";
 import {
   useCallback,
   useEffect,
@@ -68,7 +69,7 @@ function ToastAlert({
       typeof window !== "undefined" &&
       typeof window.matchMedia === "function"
     ) {
-      return window.matchMedia("(min-width: 768px)").matches;
+      return window.matchMedia(WIDE_SCREEN).matches;
     }
     return false;
   };

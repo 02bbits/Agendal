@@ -1,62 +1,18 @@
-import {
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
+import { useState, type ReactNode } from "react";
 import { t } from "../../copy";
 import {
-  CalendarIcon,
   CheckIcon,
-  ChevronDownIcon,
   ChevronRightIcon,
-  ChevronUpIcon,
-  FolderIcon,
-  InboxIcon,
-  NotesIcon,
   PlusIcon,
   SearchIcon,
 } from "../../components/icons";
 import { cx } from "../../components/cx";
-import { Link } from "./Link";
-import { AccountMenu } from "./AccountMenu";
 import type { SettingsTab, ThemeSetting } from "../settings/types";
-import {
-  ROUTES,
-  SIDEBAR_TABS_ORDER_KEY,
-  SIDEBAR_TABS_STORAGE_KEY,
-  TABS,
-  parseSidebarTabs,
-  parseSidebarTabsOrder,
-  readStoredSetting,
-  type Navigate,
-  type TabId,
-} from "./routes";
-
-const SIDEBAR_COUNTS_KEY = "agendal.sidebar_task_counts";
-
-const noStoredSetting = () => null;
-
-// Same-tab changes come as these events, other tabs as "storage"
-function subscribeSidebarSettings(onChange: () => void) {
-  const events = [
-    "storage",
-    "agendal:sidebar_counts_changed",
-    "agendal:sidebar_tabs_changed",
-  ];
-  for (const name of events) window.addEventListener(name, onChange);
-  return () => {
-    for (const name of events) window.removeEventListener(name, onChange);
-  };
-}
-
-const ICONS: Record<TabId, ReactNode> = {
-  inbox: <InboxIcon size={20} />,
-  upcoming: <CalendarIcon size={20} />,
-  projects: <FolderIcon size={20} />,
-  notes: <NotesIcon size={20} />,
-};
+import { Link } from "./Link";
+import { ROUTES, type Navigate, type TabId } from "./routes";
+import { SidebarAccount } from "./SidebarAccount";
+import { TAB_ICON } from "./tabIcons";
+import { useSidebarPreferences } from "./useSidebarPreferences";
 
 export interface SidebarProps {
   active?: TabId;
@@ -81,6 +37,8 @@ export interface SidebarProps {
   onThemeChange?: (theme: ThemeSetting) => void;
   /** Callback to sign out. */
   onSignOut?: () => void;
+  /** Sign out on all devices, offered in the Sign out dialog. */
+  onSignOutEverywhere?: () => void;
   /** While this browser can install the app (AP-1): in the account menu above Sign out. */
   onInstall?: () => void;
 }
@@ -99,41 +57,11 @@ export function Sidebar({
   theme,
   onThemeChange,
   onSignOut,
+  onSignOutEverywhere,
   onInstall,
 }: SidebarProps) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [menuFromKeyboard, setMenuFromKeyboard] = useState(false);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const [projectsOpen, setProjectsOpen] = useState(true);
-  // Saved settings are read in the browser only: the server renders the defaults, so the first
-  // render matches and the saved values show right after (no hydration mismatch)
-  const countsRaw = useSyncExternalStore(
-    subscribeSidebarSettings,
-    () => readStoredSetting(SIDEBAR_COUNTS_KEY),
-    noStoredSetting,
-  );
-  const tabsRaw = useSyncExternalStore(
-    subscribeSidebarSettings,
-    () => readStoredSetting(SIDEBAR_TABS_STORAGE_KEY),
-    noStoredSetting,
-  );
-  const orderRaw = useSyncExternalStore(
-    subscribeSidebarSettings,
-    () => readStoredSetting(SIDEBAR_TABS_ORDER_KEY),
-    noStoredSetting,
-  );
-  const showCounts = countsRaw !== "false";
-  const enabledTabs = useMemo(() => parseSidebarTabs(tabsRaw), [tabsRaw]);
-  const tabOrder = useMemo(() => parseSidebarTabsOrder(orderRaw), [orderRaw]);
-
-  const sortedTabs = useMemo(() => {
-    const tabMap = new Map<TabId, (typeof TABS)[number]>(
-      TABS.map((t) => [t.id, t]),
-    );
-    return tabOrder
-      .map((id) => tabMap.get(id))
-      .filter((t): t is (typeof TABS)[number] => Boolean(t));
-  }, [tabOrder]);
+  const { shownTabs, showProjects, showCounts } = useSidebarPreferences();
 
   return (
     // One landmark for the whole sidebar, so the mark, Search and Account are inside it
@@ -166,49 +94,48 @@ export function Sidebar({
       </button>
 
       <ul className="m-0 -mt-1.5 flex list-none flex-col gap-0.5 p-0">
-        {sortedTabs
-          .filter((tab: (typeof TABS)[number]) => enabledTabs[tab.id] !== false)
-          .map((tab: (typeof TABS)[number]) => {
-            const current = tab.id === active;
-            return (
-              <li key={tab.id}>
-                <Link
-                  href={tab.href}
-                  navigate={navigate}
-                  className={cx(
-                    "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body transition-colors",
-                    current
-                      ? "bg-primary/15! text-primary! font-semibold"
-                      : "text-ink-secondary hover:bg-fill/60 hover:text-ink",
-                  )}
-                  aria-current={current ? "page" : undefined}
+        {shownTabs.map((tab) => {
+          const current = tab.id === active;
+          const Icon = TAB_ICON[tab.id];
+          return (
+            <li key={tab.id}>
+              <Link
+                href={tab.href}
+                navigate={navigate}
+                className={cx(
+                  "focus-ring row-hover flex min-h-10 items-center gap-3 rounded-field px-3 text-body transition-colors",
+                  current
+                    ? "bg-primary/15! text-primary! font-semibold"
+                    : "text-ink-secondary hover:bg-fill/60 hover:text-ink",
+                )}
+                aria-current={current ? "page" : undefined}
+              >
+                <span
+                  className={cx("inline-flex", current && "text-primary")}
+                  aria-hidden="true"
                 >
+                  <Icon size={20} />
+                </span>
+                <span className="flex-1">{t(tab.label)}</span>
+                {showCounts && counts?.[tab.id] ? (
                   <span
-                    className={cx("inline-flex", current && "text-primary")}
-                    aria-hidden="true"
+                    className={cx(
+                      "text-footnote tabular-nums",
+                      current
+                        ? "text-primary font-semibold"
+                        : "text-ink-tertiary",
+                    )}
                   >
-                    {ICONS[tab.id]}
+                    {counts[tab.id]}
                   </span>
-                  <span className="flex-1">{t(tab.label)}</span>
-                  {showCounts && counts?.[tab.id] !== undefined && (
-                    <span
-                      className={cx(
-                        "text-footnote tabular-nums",
-                        current
-                          ? "text-primary font-semibold"
-                          : "text-ink-tertiary",
-                      )}
-                    >
-                      {counts[tab.id]}
-                    </span>
-                  )}
-                </Link>
-              </li>
-            );
-          })}
+                ) : null}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
 
-      {projects && enabledTabs.projects !== false && (
+      {projects && showProjects && (
         <section className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
             <h2 className="m-0 text-overline font-semibold uppercase">
@@ -243,72 +170,16 @@ export function Sidebar({
         </section>
       )}
 
-      <div className="relative mt-auto">
-        {menuOpen && (
-          <AccountMenu
-            accountName={accountName}
-            email={email ?? ""}
-            theme={theme ?? "system"}
-            onThemeChange={(newTheme) => onThemeChange?.(newTheme)}
-            onOpenSettings={(tab) => {
-              setMenuOpen(false);
-              onAccount?.(tab);
-            }}
-            onSignOut={() => {
-              setMenuOpen(false);
-              onSignOut?.();
-            }}
-            onInstall={onInstall}
-            onClose={() => {
-              setMenuOpen(false);
-              triggerRef.current?.focus();
-            }}
-            triggerRef={triggerRef}
-            focusFirst={menuFromKeyboard}
-          />
-        )}
-        <button
-          ref={triggerRef}
-          type="button"
-          aria-haspopup="menu"
-          aria-expanded={menuOpen}
-          onClick={(e) => {
-            // detail 0: Enter or Space, so the menu starts on its first item
-            setMenuFromKeyboard(e.detail === 0);
-            setMenuOpen((open) => !open);
-          }}
-          onKeyDown={(e) => {
-            if (!menuOpen && (e.key === "ArrowUp" || e.key === "ArrowDown")) {
-              e.preventDefault();
-              setMenuFromKeyboard(true);
-              setMenuOpen(true);
-            }
-          }}
-          className="focus-ring row-hover flex min-h-14 w-full items-center gap-3 rounded-field px-2 text-ink text-left cursor-pointer border-0 bg-transparent"
-        >
-          <span
-            className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-fill text-footnote font-semibold"
-            aria-hidden="true"
-          >
-            {accountName.slice(0, 1).toUpperCase()}
-          </span>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-callout font-semibold">
-              {accountName}
-            </span>
-            <span className="text-footnote text-ink-secondary">
-              {t("nav.account")}
-            </span>
-          </span>
-          <span className="text-ink-tertiary shrink-0" aria-hidden="true">
-            {menuOpen ? (
-              <ChevronUpIcon size={16} />
-            ) : (
-              <ChevronDownIcon size={16} />
-            )}
-          </span>
-        </button>
-      </div>
+      <SidebarAccount
+        accountName={accountName}
+        email={email}
+        theme={theme}
+        onThemeChange={onThemeChange}
+        onAccount={onAccount}
+        onSignOut={onSignOut}
+        onSignOutEverywhere={onSignOutEverywhere}
+        onInstall={onInstall}
+      />
     </nav>
   );
 }

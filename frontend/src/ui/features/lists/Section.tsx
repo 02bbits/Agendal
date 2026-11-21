@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
-import { tc } from "../../copy";
+import { countText, tc } from "../../copy";
 import { cx } from "../../components/cx";
 import { ChevronRightIcon } from "../../components/icons";
 
@@ -56,7 +56,7 @@ export function Section({
     >
       {icon}
       <span className={cx(tone === "danger" && "text-error")}>{title}</span>
-      <span className="font-normal text-ink-tertiary">{count}</span>
+      <span className="font-normal text-ink-tertiary">{countText(count)}</span>
     </span>
   );
 

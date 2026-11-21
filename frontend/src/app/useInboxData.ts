@@ -1,9 +1,10 @@
+import { TASK_CREATED, PROJECTS_CHANGED } from "@/ui/domain/appEvents";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
-import { buildInbox, t, type Project, type Task } from "@/ui";
+import { buildInbox, countText, t, type Project, type Task } from "@/ui";
 import { SYNCED } from "@/lib/sync";
 
 // Same counts as the server's, from the tasks on the device
@@ -12,8 +13,8 @@ function subtitleOf(tasks: readonly Task[]) {
     completedToday: () => false,
   });
   return t("list.inbox_subtitle", {
-    overdue: view.overdue.length,
-    today: view.today.length,
+    overdue: countText(view.overdue.length, "no"),
+    today: countText(view.today.length),
   });
 }
 
@@ -55,8 +56,8 @@ export function useInboxData() {
         setProjectsStatus("ready");
         setSubtitle(
           t("list.inbox_subtitle", {
-            overdue: inboxData?.overdue?.length ?? 0,
-            today: inboxData?.today?.length ?? 0,
+            overdue: countText(inboxData?.overdue?.length ?? 0, "no"),
+            today: countText(inboxData?.today?.length ?? 0),
           }),
         );
         setStatus("ready");
@@ -104,15 +105,15 @@ export function useInboxData() {
     const onVis = () => {
       if (document.visibilityState === "visible") fetchData();
     };
-    window.addEventListener("agendal:task-created", refresh);
+    window.addEventListener(TASK_CREATED, refresh);
     // Changes pulled by sync (IM-52)
     window.addEventListener(SYNCED, refresh);
-    window.addEventListener("agendal:projects-changed", refresh);
+    window.addEventListener(PROJECTS_CHANGED, refresh);
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      window.removeEventListener("agendal:task-created", refresh);
+      window.removeEventListener(TASK_CREATED, refresh);
       window.removeEventListener(SYNCED, refresh);
-      window.removeEventListener("agendal:projects-changed", refresh);
+      window.removeEventListener(PROJECTS_CHANGED, refresh);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);

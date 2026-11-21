@@ -103,7 +103,7 @@ describe("VerifyPage (/verify)", () => {
 
     await vi.waitFor(
       () => {
-        expect(router.push).toHaveBeenCalledWith("/welcome");
+        expect(router.replace).toHaveBeenCalledWith("/welcome");
       },
       { timeout: 2000 },
     );

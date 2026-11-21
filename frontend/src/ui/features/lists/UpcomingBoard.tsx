@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { cx } from "../../components/cx";
 import { PlusIcon } from "../../components/icons";
-import { t } from "../../copy";
+import { countText, t } from "../../copy";
 import { dayHeading, dayHeadingShort } from "../../domain/week";
 import { EntryBlocks } from "./EntryBlocks";
 import type { UpcomingBoardProps } from "./types";
@@ -120,7 +120,7 @@ export function UpcomingBoard({
                   isToday ? "font-semibold text-ink" : "text-ink-tertiary",
                 )}
               >
-                {count}
+                {countText(count)}
               </span>
             </div>
 

@@ -5,7 +5,8 @@ import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
-import { ChevronLeftIcon, PencilIcon, TrashIcon } from "../../components/icons";
+import { BackBar } from "../../components/BackBar";
+import { PencilIcon, TrashIcon } from "../../components/icons";
 import { t, tc } from "../../copy";
 import {
   addDays,
@@ -209,7 +210,7 @@ export function NoteResultScreen({
   if (note.status === "followup")
     return (
       <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
-        {presentation === "screen" && <BackBar onBack={onDone} />}
+        {presentation === "screen" && <NoteBackBar onBack={onDone} />}
         <div className="mt-1 flex items-start gap-2">
           <Heading
             ref={heading}
@@ -273,7 +274,7 @@ export function NoteResultScreen({
 
   return (
     <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
-      {presentation === "screen" && <BackBar onBack={onDone} />}
+      {presentation === "screen" && <NoteBackBar onBack={onDone} />}
 
       <p
         id={overlineId}
@@ -758,18 +759,9 @@ function WhenChips({
   );
 }
 
-/** The task screen's back bar (TaskHeader), so a note and a task open the same way on a phone. */
-function BackBar({ onBack }: { onBack: () => void }) {
+/** The same Back row as Task details and Settings, so a note and a task open the same way on a phone. */
+function NoteBackBar({ onBack }: { onBack: () => void }) {
   return (
-    <div className="-mx-4 mb-4 flex h-11 items-center border-b border-separator px-4">
-      <button
-        type="button"
-        className="focus-ring inline-flex cursor-pointer items-center gap-1 border-0 bg-transparent p-0 text-callout font-medium text-primary"
-        onClick={onBack}
-      >
-        <ChevronLeftIcon size={18} />
-        <span className="link-swipe">{t("common.back")}</span>
-      </button>
-    </div>
+    <BackBar label={t("common.back")} onBack={onBack} className="-mx-4 mb-4" />
   );
 }

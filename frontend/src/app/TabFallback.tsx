@@ -1,19 +1,14 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { readViewMode } from "@/ui/features/lists/storage";
 import { ScreenHeader, t } from "@/ui";
 import { useAppFrame } from "./AppFrame";
-import { headerDate } from "./headerDate";
+import { useHeaderDate } from "./headerDate";
 import { ProjectsSkeleton, UpcomingSkeleton } from "./skeletons";
 
 const noSubscription = () => () => {};
-const readBoard = () => {
-  try {
-    return localStorage.getItem("agendal.upcoming.view_mode") === "board";
-  } catch {
-    return false;
-  }
-};
+const readBoard = () => readViewMode() === "board";
 
 /**
  * What a tab route shows while its own code loads (its Suspense fallback, #161): the tab's
@@ -22,11 +17,7 @@ const readBoard = () => {
 export function TabFallback({ tab }: { tab: "upcoming" | "projects" }) {
   const { navigate, user } = useAppFrame();
   // Read on the client only: the server can't know the date here or the saved view
-  const date = useSyncExternalStore(
-    noSubscription,
-    headerDate,
-    () => undefined,
-  );
+  const date = useHeaderDate();
   const board = useSyncExternalStore(noSubscription, readBoard, () => false);
   return (
     <>

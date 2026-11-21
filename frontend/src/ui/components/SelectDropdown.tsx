@@ -6,9 +6,11 @@ import {
   type KeyboardEvent,
   type ReactNode,
 } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { CheckIcon, ChevronDownIcon, SearchIcon, XIcon } from "./icons";
+import { useReducedMotion } from "motion/react";
 import { cx } from "./cx";
+import { SearchIcon, XIcon } from "./icons";
+import { SelectOptionRow } from "./select/SelectOptionRow";
+import { SelectTrigger } from "./select/SelectTrigger";
 
 export interface SelectOption<T extends string> {
   value: T;
@@ -23,22 +25,29 @@ export interface SelectDropdownProps<T extends string> {
   options: ReadonlyArray<SelectOption<T>>;
   value: T;
   onChange: (value: T) => void;
-  helperText?: string;
   className?: string;
   roleMode?: "radio" | "option";
   searchable?: boolean;
   searchPlaceholder?: string;
-  indicatorStyle?: "draw" | "pop";
 }
 
-const EASE_SOFT_OUT = [0.215, 0.61, 0.355, 1] as const;
+/** The tick shows on the new choice this long before the list closes. */
+const CLOSE_AFTER_PICK_MS = 200;
+/** The search box takes focus once the list is on screen. */
+const SEARCH_FOCUS_DELAY_MS = 30;
 
+/** Arrow keys step through the list, wrapping round. */
+const wrapIndex = (index: number, length: number) => (index + length) % length;
+
+/**
+ * A labelled select with its own list (Settings): opens on a click or the arrow keys, closes on
+ * Esc or a click outside. With `searchable` a box filters the options as you type.
+ */
 export function SelectDropdown<T extends string>({
   label,
   options,
   value,
   onChange,
-  helperText,
   className,
   roleMode = "option",
   searchable = false,
@@ -47,179 +56,125 @@ export function SelectDropdown<T extends string>({
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [hoveredValue, setHoveredValue] = useState<T | null>(null);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const optionRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const prefersReducedMotion = Boolean(useReducedMotion());
+  const reducedMotion = Boolean(useReducedMotion());
 
   const selectedOption =
     options.find((opt) => opt.value === value) ?? options[0];
-
   const filteredOptions = useMemo(() => {
-    if (!searchable || !searchQuery.trim()) {
-      return options;
-    }
-    const q = searchQuery.trim().toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
+    if (!searchable || !query) return options;
     return options.filter(
       (opt) =>
-        opt.label.toLowerCase().includes(q) ||
-        (typeof opt.value === "string" && opt.value.toLowerCase().includes(q)),
+        opt.label.toLowerCase().includes(query) ||
+        opt.value.toLowerCase().includes(query),
     );
   }, [options, searchable, searchQuery]);
 
-  useEffect(() => {
-    return () => {
-      if (holdTimerRef.current) {
-        clearTimeout(holdTimerRef.current);
-      }
-    };
-  }, []);
+  const stopHold = () => {
+    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
+  };
+
+  useEffect(() => stopHold, []);
 
   useEffect(() => {
+    if (!isOpen) return;
     const onClickOutside = (e: MouseEvent) => {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
-        if (holdTimerRef.current) {
-          clearTimeout(holdTimerRef.current);
-        }
-        setIsOpen(false);
-      }
+      if (containerRef.current?.contains(e.target as Node)) return;
+      stopHold();
+      setIsOpen(false);
     };
-    if (isOpen) {
-      document.addEventListener("mousedown", onClickOutside);
-    }
+    document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, [isOpen]);
 
   useEffect(() => {
-    if (isOpen && searchable) {
-      const timer = setTimeout(() => {
-        searchInputRef.current?.focus();
-      }, 30);
-      return () => clearTimeout(timer);
-    }
+    if (!isOpen || !searchable) return;
+    const timer = setTimeout(
+      () => searchInputRef.current?.focus(),
+      SEARCH_FOCUS_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
   }, [isOpen, searchable]);
 
-  const onTriggerClick = () => {
-    setIsOpen((prev) => {
-      if (!prev) {
-        setSearchQuery("");
-        setHoveredValue(value);
-        return true;
-      }
-      return false;
-    });
+  const openList = () => {
+    setSearchQuery("");
+    setHoveredValue(value);
+    setIsOpen(true);
   };
 
-  const handleSelectOption = (optVal: T) => {
-    if (optVal === value) {
-      setIsOpen(false);
-      triggerRef.current?.focus();
+  const closeList = () => {
+    stopHold();
+    setIsOpen(false);
+    triggerRef.current?.focus();
+  };
+
+  const focusOption = (index: number) => {
+    setHoveredValue(filteredOptions[index]!.value);
+    optionRefs.current[index]?.focus();
+  };
+
+  const select = (next: T) => {
+    if (next === value) {
+      closeList();
       return;
     }
-    onChange(optVal);
-    const holdMs = 200;
-    if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-    holdTimerRef.current = setTimeout(() => {
-      setIsOpen(false);
-      triggerRef.current?.focus();
-    }, holdMs);
+    onChange(next);
+    stopHold();
+    holdTimerRef.current = setTimeout(closeList, CLOSE_AFTER_PICK_MS);
   };
 
-  const onKeyDown = (e: KeyboardEvent) => {
-    if (e.key === "Escape") {
-      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      setIsOpen(false);
-      triggerRef.current?.focus();
-    } else if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") {
-      if (!isOpen) {
-        e.preventDefault();
-        setSearchQuery("");
-        setHoveredValue(value);
-        setIsOpen(true);
-      } else if (!searchable) {
-        e.preventDefault();
-        const currentIndex = filteredOptions.findIndex(
-          (opt) => opt.value === value,
-        );
-        const next = (currentIndex + 1) % filteredOptions.length;
-        const nextOption = filteredOptions[next]!;
-        onChange(nextOption.value);
-        setHoveredValue(nextOption.value);
-        optionRefs.current[next]?.focus();
-      }
-    } else if (e.key === "ArrowUp") {
-      if (!isOpen) {
-        e.preventDefault();
-        setSearchQuery("");
-        setHoveredValue(value);
-        setIsOpen(true);
-      } else if (!searchable) {
-        e.preventDefault();
-        const currentIndex = filteredOptions.findIndex(
-          (opt) => opt.value === value,
-        );
-        const prev =
-          (currentIndex - 1 + filteredOptions.length) % filteredOptions.length;
-        const prevOption = filteredOptions[prev]!;
-        onChange(prevOption.value);
-        setHoveredValue(prevOption.value);
-        optionRefs.current[prev]?.focus();
-      }
+  // On the closed select: open. Open without a search box: step the choice itself
+  const onTriggerKeyDown = (e: KeyboardEvent) => {
+    if (e.key === "Escape") return closeList();
+    const step =
+      e.key === "ArrowDown" || e.key === "Enter" || e.key === " "
+        ? 1
+        : e.key === "ArrowUp"
+          ? -1
+          : 0;
+    if (!step) return;
+    if (!isOpen) {
+      e.preventDefault();
+      openList();
+    } else if (!searchable) {
+      e.preventDefault();
+      const current = filteredOptions.findIndex((opt) => opt.value === value);
+      const next = wrapIndex(current + step, filteredOptions.length);
+      onChange(filteredOptions[next]!.value);
+      focusOption(next);
     }
   };
 
-  const onOptionKeyDown = (e: KeyboardEvent, idx: number) => {
+  const onOptionKeyDown = (e: KeyboardEvent, index: number) => {
     if (e.key === "Escape") {
       e.preventDefault();
-      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      setIsOpen(false);
-      triggerRef.current?.focus();
+      closeList();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      const next = (idx + 1) % filteredOptions.length;
-      setHoveredValue(filteredOptions[next]!.value);
-      optionRefs.current[next]?.focus();
+      focusOption(wrapIndex(index + 1, filteredOptions.length));
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      if (idx === 0 && searchable) {
-        searchInputRef.current?.focus();
-      } else {
-        const prev =
-          (idx - 1 + filteredOptions.length) % filteredOptions.length;
-        setHoveredValue(filteredOptions[prev]!.value);
-        optionRefs.current[prev]?.focus();
-      }
+      if (index === 0 && searchable) searchInputRef.current?.focus();
+      else focusOption(wrapIndex(index - 1, filteredOptions.length));
     }
   };
 
   const onSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const firstEnabled = filteredOptions.findIndex((opt) => !opt.disabled);
     if (e.key === "Escape") {
       e.preventDefault();
-      if (holdTimerRef.current) clearTimeout(holdTimerRef.current);
-      setIsOpen(false);
-      triggerRef.current?.focus();
+      closeList();
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      const firstEnabledIndex = filteredOptions.findIndex(
-        (opt) => !opt.disabled,
-      );
-      if (firstEnabledIndex !== -1) {
-        setHoveredValue(filteredOptions[firstEnabledIndex]!.value);
-        optionRefs.current[firstEnabledIndex]?.focus();
-      }
+      if (firstEnabled !== -1) focusOption(firstEnabled);
     } else if (e.key === "Enter") {
       e.preventDefault();
-      const firstEnabled = filteredOptions.find((opt) => !opt.disabled);
-      if (firstEnabled) {
-        handleSelectOption(firstEnabled.value);
-      }
+      if (firstEnabled !== -1) select(filteredOptions[firstEnabled]!.value);
     }
   };
 
@@ -229,64 +184,16 @@ export function SelectDropdown<T extends string>({
         {label}
       </label>
       <div className="relative">
-        <button
-          ref={triggerRef}
-          type="button"
-          onClick={onTriggerClick}
-          onKeyDown={onKeyDown}
-          aria-haspopup="listbox"
-          aria-expanded={isOpen}
-          className={cx(
-            "focus-ring flex h-10 w-full items-center justify-between rounded-lg border border-separator/60 bg-fill/25 px-3.5 text-callout text-ink transition-colors hover:border-separator hover:bg-fill/40 cursor-pointer",
-            isOpen && "border-primary/80 ring-1 ring-primary/40",
-          )}
-        >
-          <span className="flex items-center gap-2.5 truncate flex-1 min-w-0">
-            {selectedOption?.icon && (
-              <span className="shrink-0 text-ink-secondary" aria-hidden="true">
-                {selectedOption.icon}
-              </span>
-            )}
-            <span className="relative flex-1 min-w-0 h-5 overflow-hidden">
-              <AnimatePresence mode="popLayout" initial={false}>
-                <motion.span
-                  key={selectedOption?.value ?? value}
-                  initial={
-                    prefersReducedMotion
-                      ? { opacity: 0 }
-                      : { y: 6, filter: "blur(4px)", opacity: 0 }
-                  }
-                  animate={
-                    prefersReducedMotion
-                      ? { opacity: 1 }
-                      : { y: 0, filter: "blur(0px)", opacity: 1 }
-                  }
-                  exit={
-                    prefersReducedMotion
-                      ? { opacity: 0 }
-                      : { y: -6, filter: "blur(4px)", opacity: 0 }
-                  }
-                  transition={{
-                    duration: prefersReducedMotion ? 0.2 : 0.4,
-                    ease: EASE_SOFT_OUT,
-                  }}
-                  className="absolute inset-0 block truncate text-left"
-                >
-                  {selectedOption?.label}
-                </motion.span>
-              </AnimatePresence>
-            </span>
-          </span>
-          <span
-            className={cx(
-              "shrink-0 text-ink-tertiary transition-transform duration-200 ml-2",
-              isOpen && "rotate-180",
-            )}
-            aria-hidden="true"
-          >
-            <ChevronDownIcon size={16} />
-          </span>
-        </button>
+        <SelectTrigger
+          buttonRef={triggerRef}
+          open={isOpen}
+          valueKey={selectedOption?.value ?? value}
+          label={selectedOption?.label}
+          icon={selectedOption?.icon}
+          reducedMotion={reducedMotion}
+          onClick={() => (isOpen ? setIsOpen(false) : openList())}
+          onKeyDown={onTriggerKeyDown}
+        />
 
         {/* Options list popup: opens and closes at once, no drop-in motion */}
         <div
@@ -305,9 +212,7 @@ export function SelectDropdown<T extends string>({
                   ref={searchInputRef}
                   type="text"
                   value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                  }}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                   onKeyDown={onSearchKeyDown}
                   placeholder={searchPlaceholder ?? "Search..."}
                   aria-label={`Search ${label}`}
@@ -341,114 +246,30 @@ export function SelectDropdown<T extends string>({
                 No matches found
               </p>
             ) : (
-              filteredOptions.map((option, idx) => {
-                const isSelected = option.value === value;
-                const isDisabled = Boolean(option.disabled);
-                const isHovered = hoveredValue === option.value && !isDisabled;
-                return (
-                  <button
-                    key={option.value}
-                    ref={(el) => {
-                      optionRefs.current[idx] = el;
-                    }}
-                    type="button"
-                    disabled={isDisabled}
-                    role={roleMode === "radio" ? "radio" : "option"}
-                    aria-checked={roleMode === "radio" ? isSelected : undefined}
-                    aria-selected={
-                      roleMode === "option" ? isSelected : undefined
-                    }
-                    aria-disabled={isDisabled ? true : undefined}
-                    tabIndex={isOpen && !isDisabled ? 0 : -1}
-                    onMouseMove={() => {
-                      if (!isDisabled && hoveredValue !== option.value) {
-                        setHoveredValue(option.value);
-                      }
-                    }}
-                    onClick={() => {
-                      if (isDisabled) return;
-                      handleSelectOption(option.value);
-                    }}
-                    onKeyDown={(e) => onOptionKeyDown(e, idx)}
-                    className={cx(
-                      "relative flex w-full items-center justify-between rounded-lg px-3 py-2 text-callout text-left outline-none transition-colors duration-150 z-0",
-                      isDisabled
-                        ? "opacity-40 cursor-not-allowed select-none"
-                        : isSelected
-                          ? "font-semibold text-primary bg-primary/10 hover:bg-primary/15 cursor-pointer"
-                          : isHovered
-                            ? "text-ink bg-fill/50 cursor-pointer"
-                            : "text-ink hover:bg-fill/50 active:bg-fill/70 cursor-pointer",
-                    )}
-                  >
-                    <span className="flex items-center gap-2.5 truncate relative z-10">
-                      {option.icon && (
-                        <span
-                          className="shrink-0 text-ink-secondary"
-                          aria-hidden="true"
-                        >
-                          {option.icon}
-                        </span>
-                      )}
-                      <span>{option.label}</span>
-                    </span>
-                    <span className="flex items-center gap-2 shrink-0 relative z-10 min-w-4 justify-end">
-                      {option.badge && (
-                        <span className="text-caption font-normal text-ink-tertiary">
-                          {option.badge}
-                        </span>
-                      )}
-                      <AnimatePresence>
-                        {isSelected && (
-                          <motion.span
-                            key="check-icon"
-                            initial={
-                              prefersReducedMotion
-                                ? { opacity: 0 }
-                                : {
-                                    opacity: 0,
-                                    scale: 0.6,
-                                    filter: "blur(2px)",
-                                  }
-                            }
-                            animate={
-                              prefersReducedMotion
-                                ? { opacity: 1 }
-                                : { opacity: 1, scale: 1, filter: "blur(0px)" }
-                            }
-                            exit={
-                              prefersReducedMotion
-                                ? { opacity: 0 }
-                                : {
-                                    opacity: 0,
-                                    scale: 0.6,
-                                    filter: "blur(2px)",
-                                  }
-                            }
-                            transition={{
-                              duration: prefersReducedMotion ? 0.15 : 0.25,
-                              ease: EASE_SOFT_OUT,
-                            }}
-                            className="text-primary shrink-0 flex items-center"
-                            aria-hidden="true"
-                          >
-                            <CheckIcon size={16} />
-                          </motion.span>
-                        )}
-                      </AnimatePresence>
-                    </span>
-                  </button>
-                );
-              })
+              filteredOptions.map((option, index) => (
+                <SelectOptionRow
+                  key={option.value}
+                  buttonRef={(el) => {
+                    optionRefs.current[index] = el;
+                  }}
+                  label={option.label}
+                  icon={option.icon}
+                  badge={option.badge}
+                  selected={option.value === value}
+                  hovered={hoveredValue === option.value && !option.disabled}
+                  disabled={Boolean(option.disabled)}
+                  radio={roleMode === "radio"}
+                  open={isOpen}
+                  reducedMotion={reducedMotion}
+                  onHover={() => setHoveredValue(option.value)}
+                  onSelect={() => select(option.value)}
+                  onKeyDown={(e) => onOptionKeyDown(e, index)}
+                />
+              ))
             )}
           </div>
         </div>
       </div>
-      {helperText && (
-        <p className="m-0 mt-1 text-footnote text-ink-secondary lg:text-caption lg:text-ink-tertiary">
-          {helperText}
-        </p>
-      )}
     </div>
   );
 }

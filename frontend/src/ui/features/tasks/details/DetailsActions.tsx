@@ -54,8 +54,12 @@ export function DetailsActions({
         title={t("task.clear_title")}
         description={t("task.clear_body")}
         onClose={() => setConfirming(false)}
+        actionsLayout="row"
         actions={
           <>
+            <Button onClick={() => setConfirming(false)}>
+              {t("common.cancel")}
+            </Button>
             <Button
               variant="destructive"
               onClick={() => {
@@ -64,9 +68,6 @@ export function DetailsActions({
               }}
             >
               {t("common.clear")}
-            </Button>
-            <Button onClick={() => setConfirming(false)}>
-              {t("common.cancel")}
             </Button>
           </>
         }

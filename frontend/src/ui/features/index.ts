@@ -67,7 +67,11 @@ export {
 export { TaskRow, type TaskRowProps } from "./tasks/TaskRow";
 export { TaskStoreProvider, useTaskStore } from "./tasks/store";
 export { useToday } from "./tasks/useToday";
-export { useMediaQuery } from "./tasks/useMediaQuery";
+export {
+  useMediaQuery,
+  usePanelScreen,
+  useWideScreen,
+} from "../components/useMediaQuery";
 export { useTaskPanel, type TaskPanelState } from "./tasks/useTaskPanel";
 export { TASK_COLUMN_CLASS } from "./tasks/layout";
 export {

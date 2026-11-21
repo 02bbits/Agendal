@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { Sidebar } from "../../src/ui/features/shell/Sidebar";
@@ -158,19 +158,73 @@ describe("AccountMenu and Sidebar integration (issue #149 C)", () => {
     expect(screen.queryByRole("menu")).toBeNull();
   });
 
-  it("Sign out calls the handler and closes menu", async () => {
+  it("#168: the menu has one Sign out; its dialog has Cancel | Sign out and a Sign out on all devices checkbox", async () => {
     const user = userEvent.setup();
     const onSignOut = vi.fn();
-    render(<Sidebar {...defaultProps} onSignOut={onSignOut} />);
+    const onSignOutEverywhere = vi.fn();
+    render(
+      <Sidebar
+        {...defaultProps}
+        onSignOut={onSignOut}
+        onSignOutEverywhere={onSignOutEverywhere}
+      />,
+    );
+    const ask = async () => {
+      await user.click(screen.getByRole("button", { name: /Jane Doe/i }));
+      await user.click(screen.getByRole("menuitem", { name: "Sign out" }));
+      return screen.getByRole("alertdialog");
+    };
 
-    const trigger = screen.getByRole("button", { name: /Jane Doe/i });
-    await user.click(trigger);
-
-    const signOutItem = screen.getByRole("menuitem", { name: "Sign out" });
-    await user.click(signOutItem);
-
-    expect(onSignOut).toHaveBeenCalledTimes(1);
+    let dialog = await ask();
     expect(screen.queryByRole("menu")).toBeNull();
+    expect(within(dialog).getByText("Sign out?")).toBeTruthy();
+    // One row: the safe way out first
+    expect(
+      within(dialog)
+        .getAllByRole("button")
+        .map((button) => button.textContent),
+    ).toEqual(["Cancel", "Sign out"]);
+    const everywhere = within(dialog).getByRole("checkbox", {
+      name: "Sign out on all devices",
+    });
+    expect(everywhere.getAttribute("aria-checked")).toBe("false");
+    // Cancel has the focus, so Enter never signs out by mistake
+    expect(document.activeElement?.textContent).toBe("Cancel");
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+
+    await ask();
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("alertdialog")).toBeNull();
+    expect(onSignOut).not.toHaveBeenCalled();
+
+    dialog = await ask();
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Sign out on all devices" }),
+    );
+    // The text swaps in place: the other one stays, hidden, so the dialog keeps its size
+    expect(
+      within(dialog).getByText(/You'll need to sign in again/).className,
+    ).toContain("invisible");
+    expect(
+      within(dialog).getByText(/Every device signed in/).className,
+    ).not.toContain("invisible");
+    await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
+    expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+    expect(onSignOut).not.toHaveBeenCalled();
+
+    // Opened again, the checkbox starts unticked
+    dialog = await ask();
+    expect(
+      within(dialog)
+        .getByRole("checkbox", {
+          name: "Sign out on all devices",
+        })
+        .getAttribute("aria-checked"),
+    ).toBe("false");
+    await user.click(within(dialog).getByRole("button", { name: "Sign out" }));
+    expect(onSignOut).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("alertdialog")).toBeNull();
   });
 
   it("theme switch calls the setter", async () => {

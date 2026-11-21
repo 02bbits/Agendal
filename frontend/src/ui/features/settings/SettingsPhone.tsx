@@ -1,5 +1,5 @@
 import type { ReactElement, ReactNode, RefObject } from "react";
-import { BackButton } from "../../components/BackButton";
+import { BackBar } from "../../components/BackBar";
 import { cx } from "../../components/cx";
 import {
   ChevronRightIcon,
@@ -9,16 +9,10 @@ import {
 import { t } from "../../copy";
 import { ROW_PRESS, SettingsCard, SettingsRow } from "./SettingsRow";
 import type { SettingsTabItem } from "./settingsTabs";
+import { SignOutButtons } from "./SignOutButtons";
 import type { SettingsTab } from "./types";
 
-/** Clear of the notch or punch-hole camera: the safe area plus a gap, never under 0.5rem. */
-const BELOW_CAMERA =
-  "pt-[max(0.5rem,calc(env(safe-area-inset-top,0px)+0.5rem))]";
-/**
- * A tab's page keeps one 24px margin all round, the camera gap's: above the "‹ Settings" text
- * (BELOW_CAMERA's 8px plus half of the 52px row around a 20px line), below it (the other half
- * plus 8px), the content's left and right, and above the content.
- */
+/** A tab's page content keeps a 24px side margin; its Back row lines up with every other one. */
 const PAGE_GUTTER = "px-6";
 /** The account has its own card at the top of the list, not a row under Preferences. */
 const isPreference = (tab: SettingsTabItem) => tab.id !== "account";
@@ -49,7 +43,7 @@ function TabGroup({
 
 /**
  * Settings on a phone: a full-screen list (the account card, Preferences, Install app while the
- * browser can install it, Sign out) with search,
+ * browser can install it, Sign out and Sign out on all devices) with search,
  * and each tab on its own page with "‹ Settings" to go back.
  */
 export function SettingsPhone({
@@ -63,6 +57,7 @@ export function SettingsPhone({
   onBackToList,
   onClose,
   onSignOut,
+  onSignOutEverywhere,
   onInstall,
   children,
 }: {
@@ -78,6 +73,7 @@ export function SettingsPhone({
   onBackToList: () => void;
   onClose: () => void;
   onSignOut: () => void;
+  onSignOutEverywhere?: () => void;
   /** Only while this browser can install the app (AP-1). */
   onInstall?: () => void;
   children: ReactNode;
@@ -99,26 +95,17 @@ export function SettingsPhone({
     >
       {openTab ? (
         <>
-          <div
-            className={cx(
-              "bg-paper/90 backdrop-blur border-b border-separator shrink-0 pb-2",
-              BELOW_CAMERA,
-              PAGE_GUTTER,
-            )}
+          {/* Back and the title share the Back row */}
+          <BackBar
+            label={t("settings.title")}
+            ariaLabel={t("common.back")}
+            onBack={onBackToList}
+            className="bg-paper/90 backdrop-blur"
           >
-            {/* Back and the title share one 52px row under the camera gap */}
-            <div className="relative flex h-13 items-center">
-              <BackButton
-                label={t("settings.title")}
-                ariaLabel={t("common.back")}
-                onClick={onBackToList}
-                className="z-10 h-11 rounded-field text-callout font-medium text-primary"
-              />
-              <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
-                {openTab.label}
-              </h2>
-            </div>
-          </div>
+            <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
+              {openTab.label}
+            </h2>
+          </BackBar>
           <div
             key={openTab.id}
             className={cx(
@@ -132,20 +119,9 @@ export function SettingsPhone({
       ) : (
         <>
           {/* "‹ Back" on the left, like Task details and the other phone screens */}
-          <div
-            className={cx(
-              "flex h-14 box-content items-center justify-start px-2 shrink-0",
-              BELOW_CAMERA,
-            )}
-          >
-            <BackButton
-              label={t("common.back")}
-              onClick={onClose}
-              className="h-11 rounded-field px-2 text-callout font-medium text-primary"
-            />
-          </div>
+          <BackBar label={t("common.back")} onBack={onClose} />
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
-            <h1 className="mt-1 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
+            <h1 className="mt-3 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
               {t("settings.title")}
             </h1>
             <div className="mt-3 flex h-10 items-center gap-2 rounded-field bg-fill px-3">
@@ -211,18 +187,11 @@ export function SettingsPhone({
                     />
                   </SettingsCard>
                 )}
-                <SettingsCard className="mt-6">
-                  <button
-                    type="button"
-                    onClick={onSignOut}
-                    className={cx(
-                      "focus-ring flex min-h-[52px] w-full items-center justify-center text-body font-semibold text-error",
-                      ROW_PRESS,
-                    )}
-                  >
-                    {t("app.sign_out")}
-                  </button>
-                </SettingsCard>
+                <SignOutButtons
+                  variant="phone"
+                  onSignOut={onSignOut}
+                  onSignOutEverywhere={onSignOutEverywhere}
+                />
               </>
             )}
           </div>
