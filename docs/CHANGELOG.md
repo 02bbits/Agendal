@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-21
+
+- **Up to three toasts at once.** [UX-04](01-product/ux-standards.md#ux-04): toasts stack, up to three, the newest on top; a fourth drops the oldest. Each has its own 5 s timer, Undo or Retry and close, and hovering or focusing any of them pauses them all. Before, a new toast replaced the old one, so quick actions in a row lost their Undo.
+
 ## 2026-11-20
 
 - **Undoing a done repeating task (Refs #168).** [TK §2 and TK-E21](03-modules/TK-tasks.md#tk-e21), [api](07-architecture/api.md) reopen: a series keeps one open occurrence. Unticking the occurrence ticked last rolls it back to its own date; unticking an older one (or one whose next occurrence was edited) puts it back into the repeat, which stays as it is. Reopen answers `withdrawn` and `closed`, takes `merge` (also as the sync field `merged`), and task bodies carry `previous_occurrence_id`.

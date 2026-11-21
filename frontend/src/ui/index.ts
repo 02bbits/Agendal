@@ -19,6 +19,9 @@ export {
 export { Dialog, type DialogProps } from "./components/Dialog";
 export {
   Toast,
+  ToastStack,
+  MAX_TOASTS,
+  type ToastStackProps,
   TOAST_DURATION_MS,
   type ToastProps,
   type ToastData,

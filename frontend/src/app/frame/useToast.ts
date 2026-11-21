@@ -1,30 +1,32 @@
-import { useCallback, useState } from "react";
-import type { ToastData } from "@/ui";
+import { useCallback, useRef, useState } from "react";
+import { MAX_TOASTS, type ToastData } from "@/ui";
 
 export type ShowToast = (
   messageOrDraft: string | Omit<ToastData, "id">,
 ) => void;
 
-/** One app-wide toast; a new one replaces the last. It survives navigation (UX-04). */
+/**
+ * The app's toasts (#168): up to three at once, so quick actions one after another each keep
+ * their toast and its Undo; a fourth drops the oldest. They survive navigation (UX-04).
+ */
 export function useToast() {
-  const [toast, setToast] = useState<ToastData | null>(null);
+  const [toasts, setToasts] = useState<ToastData[]>([]);
+  const lastId = useRef(0);
 
-  const showToast = useCallback<ShowToast>(
-    (messageOrDraft) =>
-      setToast((current) => {
-        const id = typeof current?.id === "number" ? current.id + 1 : 1;
-        return typeof messageOrDraft === "string"
-          ? { id, message: messageOrDraft }
-          : { ...messageOrDraft, id };
-      }),
-    [],
-  );
+  const showToast = useCallback<ShowToast>((messageOrDraft) => {
+    const id = ++lastId.current;
+    const toast =
+      typeof messageOrDraft === "string"
+        ? { id, message: messageOrDraft }
+        : { ...messageOrDraft, id };
+    setToasts((current) => [...current, toast].slice(-MAX_TOASTS));
+  }, []);
 
   const dismissToast = useCallback(
     (id: ToastData["id"]) =>
-      setToast((current) => (current?.id === id ? null : current)),
+      setToasts((current) => current.filter((toast) => toast.id !== id)),
     [],
   );
 
-  return { toast, showToast, dismissToast };
+  return { toasts, showToast, dismissToast };
 }
