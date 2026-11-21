@@ -65,6 +65,6 @@ return [
     'whole_note_items' => (int) env('NOTE_LLM_WHOLE_NOTE_ITEMS', 10),
 
     // The versioned prompt in resources/prompts, recorded on each note that used it.
-    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v8'),
+    'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v9'),
 
 ];

@@ -23,7 +23,7 @@ beforeEach(function () {
     $this->keyFile = tempnam(sys_get_temp_dir(), 'llm');
     file_put_contents($this->keyFile, 'test-only');
     config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key_file' => $this->keyFile, 'note_llm.model' => null,
-        'note_llm.prompt_version' => 'note-plan-v2']);
+        'note_llm.prompt_version' => 'note-plan-v9']);
     Cache::flush();
     Http::preventStrayRequests();
     $this->context = new NoteContext(new DateTimeImmutable('2026-10-23T08:12:00+07:00'), 'Asia/Ho_Chi_Minh');
