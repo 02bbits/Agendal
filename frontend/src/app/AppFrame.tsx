@@ -8,7 +8,7 @@ import {
   InstallBanner,
   OfflineBanner,
   ROUTES,
-  Toast,
+  ToastStack,
   type Project,
 } from "@/ui";
 import { useOffline } from "@/lib/online";
@@ -50,7 +50,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const router = useRouter();
   const wide = useWideScreen();
 
-  const { toast, showToast, dismissToast } = useToast();
+  const { toasts, showToast, dismissToast } = useToast();
   const splash = useSplash();
   const { user, userRef, setUser } = useSignedInUser();
   const account = useAccountSettings({ user, userRef, showToast });
@@ -216,7 +216,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   onInstall: install,
                 }
           }
-          toast={<Toast toast={toast} onDismiss={dismissToast} />}
+          toast={<ToastStack toasts={toasts} onDismiss={dismissToast} />}
         >
           {children}
           <AppOverlays
