@@ -10,7 +10,8 @@ return [
     // team turns them on. The team holds the key; users add none.
     'provider' => $provider = env('NOTE_LLM_PROVIDER', 'gemini'),
 
-    // The provider key lives only in a file the app's user alone can read (e.g. a Docker secret), never in .env.
+    // The provider key lives only in a file (e.g. a Docker secret) that only the server account running PHP can read,
+    // such as www-data; no Agendal user ever sees it, and it is never in .env.
     // The file is read on each call, so `config:cache` never copies the key into bootstrap/cache. Without it, rules only.
     'key_file' => env(match ($provider) {
         'deepseek' => 'DEEPSEEK_API_KEY_FILE',
