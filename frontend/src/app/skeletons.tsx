@@ -1,6 +1,7 @@
 "use client";
 
 import { cx, TASK_COLUMN_CLASS } from "@/ui";
+import { BackBarSkeleton } from "@/ui/components/BackBar";
 
 // The skeleton of each list screen (#161), shared by the screen while its data loads and by the
 // app as soon as one is tapped, so a single skeleton runs from the tap to the data.
@@ -164,43 +165,36 @@ export function ProjectsSkeleton() {
   );
 }
 
-/** One project: its header, progress and rows. */
+/** One project: its Back row and name above the column, then progress and rows, as the page lays them out. */
 export function ProjectSkeleton() {
   return (
-    <div
-      role="status"
-      aria-busy="true"
-      className={cx(
-        "flex animate-pulse flex-col gap-4 pb-8",
-        TASK_COLUMN_CLASS,
-      )}
-    >
-      <div className="flex items-center justify-between py-2">
-        <div className="h-8 w-20 rounded-full bg-fill/80" />
-      </div>
-      <div className="mt-2 mb-3 flex items-center gap-3">
+    <div role="status" aria-busy="true" className="animate-pulse pb-8">
+      <BackBarSkeleton actions className="-mx-5" />
+      <div className="mt-2 mb-3 flex h-9 items-center gap-3">
         <div className="size-3 shrink-0 rounded-full bg-fill/80" />
         <div className="h-7 w-48 rounded-xl bg-fill/80" />
       </div>
-      <div className="mb-6 flex flex-col gap-2">
-        <div className="h-1.5 w-full rounded-full bg-fill/80" />
-        <div className="h-3.5 w-28 rounded-lg bg-fill/60" />
-      </div>
-      <div className="rounded-2xl border border-separator/50 bg-surface shadow-xs overflow-hidden">
-        <div className="flex flex-col">
-          {[1, 2, 3].map((i) => (
-            <div
-              key={i}
-              className="flex items-center gap-3 border-b border-separator/40 px-4 py-3.5 last:border-b-0"
-            >
-              <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+      <div className={TASK_COLUMN_CLASS}>
+        <div className="mb-6 flex flex-col gap-2">
+          <div className="h-1.5 w-full rounded-full bg-fill/80" />
+          <div className="h-3.5 w-28 rounded-lg bg-fill/60" />
+        </div>
+        <div className="rounded-2xl border border-separator/50 bg-surface shadow-xs overflow-hidden">
+          <div className="flex flex-col">
+            {[1, 2, 3].map((i) => (
               <div
-                className="h-4 rounded-xl bg-fill/80"
-                style={{ width: i === 1 ? "55%" : i === 2 ? "70%" : "40%" }}
-              />
-              <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60" />
-            </div>
-          ))}
+                key={i}
+                className="flex items-center gap-3 border-b border-separator/40 px-4 py-3.5 last:border-b-0"
+              >
+                <div className="size-5 shrink-0 rounded-full bg-fill/80" />
+                <div
+                  className="h-4 rounded-xl bg-fill/80"
+                  style={{ width: i === 1 ? "55%" : i === 2 ? "70%" : "40%" }}
+                />
+                <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     </div>
