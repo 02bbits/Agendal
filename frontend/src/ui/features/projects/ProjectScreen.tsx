@@ -55,7 +55,7 @@ export function ProjectScreen({
       <BackBar
         label={t("common.back")}
         onBack={onBack}
-        className="-mx-4"
+        className="-mx-5"
         actions={
           <ProjectHeaderMenu
             onRename={onRenameProject}

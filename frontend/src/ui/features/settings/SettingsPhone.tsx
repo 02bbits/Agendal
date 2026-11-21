@@ -12,7 +12,7 @@ import type { SettingsTabItem } from "./settingsTabs";
 import { SignOutButtons } from "./SignOutButtons";
 import type { SettingsTab } from "./types";
 
-/** A tab's page keeps a 24px side margin: its Back row and its content line up. */
+/** A tab's page content keeps a 24px side margin; its Back row lines up with every other one. */
 const PAGE_GUTTER = "px-6";
 /** The account has its own card at the top of the list, not a row under Preferences. */
 const isPreference = (tab: SettingsTabItem) => tab.id !== "account";
@@ -100,7 +100,7 @@ export function SettingsPhone({
             label={t("settings.title")}
             ariaLabel={t("common.back")}
             onBack={onBackToList}
-            className={cx("bg-paper/90 backdrop-blur", PAGE_GUTTER)}
+            className="bg-paper/90 backdrop-blur"
           >
             <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
               {openTab.label}
