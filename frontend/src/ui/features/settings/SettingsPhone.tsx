@@ -12,9 +12,6 @@ import type { SettingsTabItem } from "./settingsTabs";
 import { SignOutButtons } from "./SignOutButtons";
 import type { SettingsTab } from "./types";
 
-/** Clear of the notch or punch-hole camera: the safe area plus a gap, never under 0.5rem. */
-const BELOW_CAMERA =
-  "pt-[max(0.5rem,calc(env(safe-area-inset-top,0px)+0.5rem))]";
 /** A tab's page keeps a 24px side margin: its Back row and its content line up. */
 const PAGE_GUTTER = "px-6";
 /** The account has its own card at the top of the list, not a row under Preferences. */
@@ -98,21 +95,17 @@ export function SettingsPhone({
     >
       {openTab ? (
         <>
-          {/* Back and the title share the Back row under the camera gap */}
-          <div
-            className={cx("bg-paper/90 backdrop-blur shrink-0", BELOW_CAMERA)}
+          {/* Back and the title share the Back row */}
+          <BackBar
+            label={t("settings.title")}
+            ariaLabel={t("common.back")}
+            onBack={onBackToList}
+            className={cx("bg-paper/90 backdrop-blur", PAGE_GUTTER)}
           >
-            <BackBar
-              label={t("settings.title")}
-              ariaLabel={t("common.back")}
-              onBack={onBackToList}
-              className={PAGE_GUTTER}
-            >
-              <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
-                {openTab.label}
-              </h2>
-            </BackBar>
-          </div>
+            <h2 className="pointer-events-none absolute inset-x-24 m-0 text-center text-body font-semibold text-ink truncate">
+              {openTab.label}
+            </h2>
+          </BackBar>
           <div
             key={openTab.id}
             className={cx(
@@ -126,9 +119,7 @@ export function SettingsPhone({
       ) : (
         <>
           {/* "‹ Back" on the left, like Task details and the other phone screens */}
-          <div className={cx("shrink-0", BELOW_CAMERA)}>
-            <BackBar label={t("common.back")} onBack={onClose} />
-          </div>
+          <BackBar label={t("common.back")} onBack={onClose} />
           <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-4 pb-[calc(2rem+env(safe-area-inset-bottom))]">
             <h1 className="mt-3 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
               {t("settings.title")}
