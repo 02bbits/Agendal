@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { t } from "../../copy";
+import { countText, t } from "../../copy";
 import type { Task } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
 import { useTaskStore } from "../tasks/store";
@@ -60,7 +60,9 @@ export function UpcomingOverdue({
           >
             {overdueTitle}
           </h2>
-          <span className="text-footnote font-normal text-error">{count}</span>
+          <span className="text-footnote font-normal text-error">
+            {countText(count)}
+          </span>
         </div>
         {rows}
       </section>
@@ -74,7 +76,9 @@ export function UpcomingOverdue({
         className="scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] border-b border-separator pb-1.5 pt-6 flex items-baseline gap-1.5 text-callout font-semibold text-error"
       >
         <span>{overdueTitle}</span>
-        <span className="font-normal text-ink-tertiary">{count}</span>
+        <span className="font-normal text-ink-tertiary">
+          {countText(count)}
+        </span>
       </h2>
       <div className="mt-2">{rows}</div>
     </section>

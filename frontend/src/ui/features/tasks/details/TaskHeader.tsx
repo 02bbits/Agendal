@@ -1,6 +1,7 @@
 import type { ReactElement } from "react";
 import { cx } from "../../../components/cx";
-import { CheckIcon, ChevronLeftIcon } from "../../../components/icons";
+import { BackBar } from "../../../components/BackBar";
+import { CheckIcon } from "../../../components/icons";
 import { t } from "../../../copy";
 import type { Project, Task } from "../../../domain/types";
 import { useTaskStore } from "../store";
@@ -43,7 +44,7 @@ export function TaskHeader({
         "group/check mt-1 inline-flex size-6 shrink-0 cursor-pointer items-center justify-center border-0 bg-transparent p-0 text-paper focus-visible:outline-none",
         task.done && "is-done",
       )}
-      onClick={() => store.toggle(task)}
+      onClick={() => store.toggleInPlace(task)}
     >
       <span
         className="inline-flex size-[22px] items-center justify-center rounded-full shadow-[inset_0_0_0_2px_var(--color-ink-tertiary)] group-[.is-overdue]/task:shadow-[inset_0_0_0_2px_var(--color-error)] group-aria-checked/check:bg-ink group-aria-checked/check:shadow-none group-focus-visible/check:outline-2 group-focus-visible/check:outline-offset-2 group-focus-visible/check:outline-primary"
@@ -57,16 +58,11 @@ export function TaskHeader({
   return (
     <div>
       {isScreen ? (
-        <div className="flex h-11 items-center justify-between border-b border-separator px-4">
-          <button
-            type="button"
-            className="focus-ring inline-flex items-center gap-1 text-callout font-medium text-primary"
-            onClick={onBack}
-          >
-            <ChevronLeftIcon size={18} />
-            <span className="link-swipe">{backLabel ?? t("common.back")}</span>
-          </button>
-        </div>
+        <BackBar
+          label={backLabel ?? t("common.back")}
+          onBack={onBack}
+          className="-mx-5"
+        />
       ) : (
         <PanelHeader onClose={onClose ?? onBack} />
       )}

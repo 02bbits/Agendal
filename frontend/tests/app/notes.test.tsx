@@ -195,6 +195,29 @@ it("filters saved notes through the API", async () => {
   );
 });
 
+it("#168: a filter's list loading or failing keeps the header and the filter chips in place", async () => {
+  render(<NotesClient />);
+  await screen.findByRole("button", { name: t("notes.needs") });
+
+  // The next list never comes back: still the same header and chips, a list placeholder below
+  fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+  await userEvent.click(screen.getByRole("button", { name: t("notes.made") }));
+  expect(screen.getByRole("heading", { name: t("nav.notes") })).toBeTruthy();
+  expect(screen.getByRole("button", { name: t("notes.all") })).toBeTruthy();
+  expect(screen.getByRole("status", { name: t("nav.notes") })).toBeTruthy();
+
+  // A failed list says so under the header and chips, with Retry, like Inbox and Upcoming
+  fetchMock.mockImplementationOnce(
+    async () => new Response("{}", { status: 500 }),
+  );
+  await userEvent.click(screen.getByRole("button", { name: t("notes.needs") }));
+  expect(
+    await screen.findByRole("button", { name: t("common.retry") }),
+  ).toBeTruthy();
+  expect(screen.getByRole("heading", { name: t("nav.notes") })).toBeTruthy();
+  expect(screen.getByRole("button", { name: t("notes.all") })).toBeTruthy();
+});
+
 it("locks the background and traps focus until the Notes modal closes", async () => {
   const view = render(
     <>

@@ -20,21 +20,22 @@ export function TwoFactorOffDialog({
       onClose={dialog.cancel}
       initialFocusRef={passwordRef}
       history={false}
+      actionsLayout="row"
       actions={
         <>
-          <Button
-            variant="destructive"
-            disabled={dialog.busy}
-            onClick={dialog.confirm}
-          >
-            {t("settings.two_factor_off_confirm")}
-          </Button>
           <Button
             variant="secondary"
             disabled={dialog.busy}
             onClick={dialog.cancel}
           >
             {t("common.cancel")}
+          </Button>
+          <Button
+            variant="destructive"
+            disabled={dialog.busy}
+            onClick={dialog.confirm}
+          >
+            {t("settings.two_factor_off_confirm")}
           </Button>
         </>
       }

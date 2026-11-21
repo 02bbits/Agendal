@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { t } from "../../copy";
 import { EmptyState } from "../../components/EmptyState";
-import { NavBar } from "../../components/NavBar";
+import { BackBar } from "../../components/BackBar";
 import { sortCompleted, sortOpenByDue } from "../../domain/projects";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
@@ -52,9 +52,10 @@ export function ProjectScreen({
 
   return (
     <div className="pb-8">
-      <NavBar
-        backLabel={t("common.back")}
+      <BackBar
+        label={t("common.back")}
         onBack={onBack}
+        className="-mx-5"
         actions={
           <ProjectHeaderMenu
             onRename={onRenameProject}
@@ -63,7 +64,7 @@ export function ProjectScreen({
         }
       />
       <h1
-        className="mt-2 mb-3 flex items-center gap-3 font-serif text-title font-semibold focus:outline-none"
+        className="mt-2 mb-3 flex items-center gap-3 text-title font-semibold focus:outline-none"
         tabIndex={-1}
       >
         <span

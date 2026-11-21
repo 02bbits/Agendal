@@ -1,4 +1,4 @@
-import { t, tc } from "../../copy";
+import { countText, t, tc } from "../../copy";
 import { Button } from "../../components/Button";
 import { EmptyState } from "../../components/EmptyState";
 import { PlusIcon } from "../../components/icons";
@@ -78,7 +78,9 @@ export function ProjectsScreen({
         <p className="m-0 mt-1 text-footnote text-ink-secondary">
           {tc("project.count", sortedProjects.length)}
           {" · "}
-          {tc("project.open_count", totalOpen)}
+          {tc("project.open_count", totalOpen, {
+            count: countText(totalOpen, "no"),
+          })}
         </p>
       </ScreenHeader>
 

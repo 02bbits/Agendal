@@ -11,7 +11,7 @@ import type { DisplayNameField } from "./useDisplayName";
 
 const NAME_ERROR_ID = "settings-name-error";
 
-/** Settings > Account: name, email, password, two-step verification, this device, sign out. */
+/** Settings > Account: name, email, password, two-step verification, this device. Sign out is on Settings itself (#168). */
 export function AccountTab({
   email,
   name,
@@ -19,8 +19,6 @@ export function AccountTab({
   onChange,
   onChangePassword,
   twoFactor,
-  onSignOut,
-  onSignOutEverywhere,
 }: {
   email: string;
   name: DisplayNameField;
@@ -32,8 +30,6 @@ export function AccountTab({
     busy: boolean;
     toggle: (next: boolean) => void;
   };
-  onSignOut: () => void;
-  onSignOutEverywhere?: () => void;
 }): ReactElement {
   return (
     <>
@@ -115,27 +111,6 @@ export function AccountTab({
           divider={false}
           className="py-0"
         />
-      </section>
-
-      <section className="border-t border-separator/40 pt-5 space-y-3">
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-          <Button
-            variant="destructive"
-            className="h-10 px-6 text-callout font-semibold rounded-xl"
-            onClick={onSignOut}
-          >
-            {t("app.sign_out")}
-          </Button>
-          {onSignOutEverywhere && (
-            <Button
-              variant="secondary"
-              className="h-10 px-4 text-callout font-medium rounded-xl"
-              onClick={onSignOutEverywhere}
-            >
-              {t("auth.signout_everywhere")}
-            </Button>
-          )}
-        </div>
       </section>
     </>
   );

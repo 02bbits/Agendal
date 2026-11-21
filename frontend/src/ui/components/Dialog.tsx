@@ -8,8 +8,8 @@ export interface DialogProps {
   open: boolean;
   /** A question naming the item, e.g. Delete “Portfolio”? */
   title: string;
-  /** One line of consequence. */
-  description?: string;
+  /** One line of consequence; a node when it switches between texts in one place. */
+  description?: ReactNode;
   onClose: () => void;
   /** Stacked buttons; the safe exit (Cancel) goes last and destructive buttons are never the default. */
   actions: ReactNode;

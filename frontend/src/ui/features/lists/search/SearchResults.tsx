@@ -146,7 +146,7 @@ export function SearchResults({
             onClick={() => onTab(each)}
           >
             {t(label)}
-            {!pending && ` ${countOf[each]}`}
+            {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
           </Chip>
         ))}
         {variant === "popup" && (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { SettingsScreen, type AccountSettings } from "../../src/ui";
 import { t } from "../../src/ui/copy";
 
@@ -29,6 +29,48 @@ describe("Settings on phones (Part D)", () => {
       dispatchEvent: vi.fn(),
     }));
   };
+
+  it("#168: Settings has one Sign out with its icon; it asks, with Sign out on all devices as a checkbox", () => {
+    for (const wide of [false, true]) {
+      mockMatchMedia(wide);
+      const onSignOut = vi.fn();
+      const onSignOutEverywhere = vi.fn();
+      const { unmount } = render(
+        <SettingsScreen
+          name="Alex River"
+          email="alex@example.com"
+          settings={defaultSettings}
+          onChange={vi.fn()}
+          onBack={vi.fn()}
+          onSignOut={onSignOut}
+          onSignOutEverywhere={onSignOutEverywhere}
+          initialTab="account"
+        />,
+      );
+      const signOut = screen.getByRole("button", { name: "Sign out" });
+      expect(signOut.querySelector("svg")).toBeTruthy();
+      expect(
+        screen.queryByRole("button", { name: "Sign out on all devices" }),
+      ).toBeNull();
+      fireEvent.click(signOut);
+      const dialog = screen.getByRole("alertdialog");
+      fireEvent.click(
+        within(dialog).getByRole("checkbox", {
+          name: "Sign out on all devices",
+        }),
+      );
+      fireEvent.click(within(dialog).getByRole("button", { name: "Sign out" }));
+      expect(onSignOutEverywhere).toHaveBeenCalledTimes(1);
+      expect(onSignOut).not.toHaveBeenCalled();
+
+      // The Account page itself has no sign-out buttons any more
+      if (!wide) {
+        fireEvent.click(screen.getByText("Alex River").closest("button")!);
+        expect(screen.queryByRole("button", { name: "Sign out" })).toBeNull();
+      }
+      unmount();
+    }
+  });
 
   it("profile card shows name and email and opens Account", () => {
     mockMatchMedia(false);
@@ -243,8 +285,14 @@ describe("Settings on phones (Part D)", () => {
     );
 
     const signOutBtn = screen.getByRole("button", { name: t("app.sign_out") });
-    expect(signOutBtn).toBeTruthy();
     fireEvent.click(signOutBtn);
+    // It asks first (#168)
+    expect(onSignOut).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("alertdialog")).getByRole("button", {
+        name: t("app.sign_out"),
+      }),
+    );
     expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 

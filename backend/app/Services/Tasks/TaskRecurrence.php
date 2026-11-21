@@ -16,13 +16,38 @@ final class TaskRecurrence
 {
     public function __construct(private ClockInterface $clock, private ReminderCalculator $reminders) {}
 
+    /** The occurrence completing $task made, deleted or not. */
+    public function following(Task $task): ?Task
+    {
+        return Task::withTrashed()->where('user_id', $task->user_id)->where('previous_occurrence_id', $task->id)->first();
+    }
+
+    /** The occurrence whose completion made $task, deleted or not. */
+    public function preceding(Task $task): ?Task
+    {
+        return $task->previous_occurrence_id === null
+            ? null
+            : Task::withTrashed()->where('user_id', $task->user_id)->whereKey($task->previous_occurrence_id)->first();
+    }
+
+    /** The series' first occurrence: locking it makes completing and reopening in one series take turns. */
+    public function first(Task $task): Task
+    {
+        $node = $task;
+        while (($previous = $this->preceding($node)) !== null) {
+            $node = $previous;
+        }
+
+        return $node;
+    }
+
     public function next(Task $task, bool $restoreDeleted = false): ?Task
     {
         $repeat = Repeat::tryFrom((string) $task->repeat) ?? Repeat::Never;
         if ($repeat === Repeat::Never || ($task->start_date === null && $task->due_date === null)) {
             return null;
         }
-        $existing = Task::withTrashed()->where('user_id', $task->user_id)->where('previous_occurrence_id', $task->id)->first();
+        $existing = $this->following($task);
         if ($existing !== null && (! $restoreDeleted || ! $existing->trashed() || $existing->done)) {
             return $existing;
         }

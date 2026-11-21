@@ -200,6 +200,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   theme: settings.theme,
                   onThemeChange: (theme) => changeSettings({ theme }),
                   onSignOut: () => signOut(),
+                  onSignOutEverywhere: () => signOut(true),
                   counts: sidebar.tabCounts,
                   projects:
                     sidebar.projects.length > 0 ? (
