@@ -11,6 +11,7 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Tests\Support\FrozenClock;
 use Tests\TestCase;
@@ -99,6 +100,22 @@ it('falls back on provider failure or invalid output (T-NU-127)', function (stri
     $result = app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
     expectRulesKept($result, $rules);
 })->with(['timeout', 'down', 'invalid-json', 'invalid-schema']);
+
+it('asks once more when the answer breaks the schema, and logs only the failed check', function (bool $secondValid, string $engine) {
+    Log::spy();
+    $invalid = ['choices' => [['message' => ['content' => '{"items":[{"ref":"i1"}]}']]]];
+    Http::fakeSequence('generativelanguage.googleapis.com/*')->push($invalid)->push($secondValid ? recordedNoteResponse() : $invalid);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    expect(app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1)->engine->value)->toBe($engine);
+    Http::assertSentCount(2);
+    Log::shouldHaveReceived('info')->withArgs(fn (string $message, array $context): bool => $message === 'note_llm'
+        && ($context['outcome'] ?? null) === 'invalid_answer' && $context['attempt'] === 1
+        && str_contains($context['check'], 'items/0') && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'mua sua'));
+})->with([
+    'the second answer is valid' => [true, 'rules_llm'],
+    'both answers break it' => [false, 'rules_fallback'],
+]);
 
 it('enforces per-user and global budgets before dispatch (SEC-42)', function () {
     Http::fake(['generativelanguage.googleapis.com/*' => Http::response(recordedNoteResponse())]);

@@ -344,6 +344,7 @@ abbreviation,a.m
 abbreviation,p.m
 separator,;
 separator,|
+separator,·
 conjunction,then
 following_conjunction,rồi
 following_conjunction,sau đó
@@ -873,6 +874,9 @@ not_command,drop by
 not_command,remove stains
 not_command,remove stain
 heading_suffix,:
+markdown_heading,#
+markdown_emphasis,**
+markdown_emphasis,__
 not_command,bỏ rác
 not_command,bỏ thư
 not_command,bỏ tiền

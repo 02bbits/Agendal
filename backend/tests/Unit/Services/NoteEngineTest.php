@@ -88,6 +88,18 @@ it('sends a long note whole once any item is uncertain, and keeps a short or sur
     '10 items, all sure' => [10, false, 0],
 ]);
 
+it('reads a pasted markdown note: headings, bold labels and date lines make no task', function () {
+    $text = "### 7. Wednesday – Customer complaint\nWED, NOV 25 · 11:15 AM\n\n**Meeting notes**\n\n**Follow-up:**\n- Ask Lisa for the **support** report\n- Contact the affected client";
+    $build = app(NoteEngine::class)->build($text, engineContext());
+
+    expect(array_column($build->plan['create'], 'title'))->toBe(['Ask Lisa for the support report', 'Contact the affected client'])
+        ->and(array_column($build->plan['skipped'], 'text'))->toBe(['Wednesday – Customer complaint:', 'WED, NOV 25', '11:15 AM', 'Meeting notes:', 'Follow-up:']);
+});
+
+it('keeps a task that only mentions a date', function () {
+    expect(array_column(app(NoteEngine::class)->build('meet Nov 25', engineContext())->plan['create'], 'title'))->toBe(['Meet']);
+});
+
 it('keeps a plain task list on the rules', function () {
     expect(app(NoteEngine::class)->build('mai nộp báo cáo SQL 5h chiều. tối gọi mẹ', engineContext())->lowConfidence)->toBe([]);
 });

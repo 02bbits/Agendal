@@ -37,6 +37,9 @@ final class NoteLlmFallback
 {
     private const PLAN_KINDS = ['create', 'update', 'delete', 'skipped', 'ambiguous'];
 
+    /** Calls per note when the model's answer breaks the schema (ADR-008). */
+    private const ANSWER_ATTEMPTS = 2;
+
     private const TIME_PATTERN = '^([01][0-9]|2[0-3]):[0-5][0-9]$';
 
     public function __construct(
@@ -74,15 +77,27 @@ final class NoteLlmFallback
             }
             $schema = $this->schema(array_keys($items), $candidates, array_values($context->projects));
             $body = $this->request($items, $candidates, $schema, $context, $route);
-            // UTF-8 bytes bound the input tokens, schema included; reserve them before sending.
+            // UTF-8 bytes bound the input tokens, schema included; reserve them before each call.
             $reserved = strlen(json_encode($body, JSON_THROW_ON_ERROR)) + (int) config('note_llm.max_completion_tokens');
-            $reservationDay = $this->budget->reserve($userId, $reserved);
-            if ($reservationDay === false) {
-                return $this->failed($rules, 'budget_exhausted');
+            $proposals = null;
+            // A model's answer varies from call to call: one that breaks the schema gets one more call, which the
+            // budget counts too. The log names the failed check, never the note's text.
+            for ($attempt = 1; $proposals === null; $attempt++) {
+                $reservationDay = $this->budget->reserve($userId, $reserved);
+                if ($reservationDay === false) {
+                    return $this->failed($rules, 'budget_exhausted');
+                }
+                $answer = $this->send($body, $route);
+                $this->budget->settle($reserved, max(0, $answer['tokens'] ?? $reserved), $reservationDay);
+                try {
+                    $proposals = $this->proposals($answer['content'], $schema);
+                } catch (UnexpectedValueException|JsonException $invalid) {
+                    Log::info('note_llm', ['outcome' => 'invalid_answer', 'attempt' => $attempt, 'check' => $invalid->getMessage()]);
+                    if ($attempt >= self::ANSWER_ATTEMPTS) {
+                        throw $invalid;
+                    }
+                }
             }
-            $answer = $this->send($body, $route);
-            $this->budget->settle($reserved, max(0, $answer['tokens'] ?? $reserved), $reservationDay);
-            $proposals = $this->proposals($answer['content'], $schema);
             [$plan, $accepted, $outcomes] = $this->merge($rules, $proposals, $candidates, $context);
             Log::info('note_llm', ['elapsed_ms' => $this->elapsedMs($started), 'accepted' => $accepted]);
 
@@ -359,8 +374,13 @@ final class NoteLlmFallback
     private function proposals(string $answer, array $schema): array
     {
         $data = json_decode($answer, flags: JSON_THROW_ON_ERROR);
-        if (! (new Validator)->validate($data, json_decode(json_encode($schema, JSON_THROW_ON_ERROR)))->isValid()) {
-            throw new UnexpectedValueException('The model output breaks the plan schema');
+        $error = (new Validator)->validate($data, json_decode(json_encode($schema, JSON_THROW_ON_ERROR)))->error();
+        if ($error !== null) {
+            while ($error->subErrors() !== []) {
+                $error = $error->subErrors()[0];
+            }
+            // The keyword and where it failed ("enum at items/3/task_id"), never a value from the note.
+            throw new UnexpectedValueException($error->keyword().' at '.implode('/', $error->data()->fullPath()));
         }
         $proposals = [];
         foreach ($data->items as $item) {
