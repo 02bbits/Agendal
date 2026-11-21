@@ -18,12 +18,13 @@ export function DiscardDialog({
       title={title}
       description={description}
       onClose={onKeepEditing}
+      actionsLayout="row"
       actions={
         <>
+          <Button onClick={onKeepEditing}>{t("common.keep_editing")}</Button>
           <Button variant="destructive" onClick={onDiscard}>
             {t("common.discard_action")}
           </Button>
-          <Button onClick={onKeepEditing}>{t("common.keep_editing")}</Button>
         </>
       }
     />
