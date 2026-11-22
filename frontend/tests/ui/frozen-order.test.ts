@@ -60,6 +60,15 @@ describe("freezeLayout (Spec 01 §5)", () => {
     expect(view.completed.map((t) => t.id)).toEqual(["early"]);
   });
 
+  it("moving a frozen task to another project takes it off this project", () => {
+    const moved = { ...early, project_id: "p-other", start_time: "18:00" };
+    const frozen = freezeLayout([moved, late], frozenOn(early));
+    expect(frozen.layout.find((t) => t.id === "early")?.project_id).toBe(
+      "p-other",
+    );
+    expect(todayIds(frozen.layout)).toEqual(["early", "late"]);
+  });
+
   it("a snapshot of a deleted task is ignored", () => {
     const frozen = freezeLayout([late], frozenOn(early));
     expect(frozen.layout).toEqual([late]);

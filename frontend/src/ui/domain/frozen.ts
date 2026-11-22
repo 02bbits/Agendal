@@ -12,8 +12,10 @@ const asIs = (task: Task) => task;
 /**
  * A task opened for editing keeps the section and place it had when it was
  * first opened, so changing a date or time doesn't make it jump away (Spec 01
- * §5). The row still shows the new values. Ticking it done is not frozen: done
- * and done_at come from the live task, so it still settles into Completed.
+ * §5). The row still shows the new values. Two changes are not frozen, so
+ * they come from the live task: ticking it done (done, done_at), which still
+ * settles into Completed, and moving it to another project (project_id), which
+ * takes it off that project's list at once.
  * A snapshot of a task that no longer exists is ignored.
  */
 export function freezeLayout(
@@ -24,7 +26,9 @@ export function freezeLayout(
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const layout = tasks.map((t) => {
     const snapshot = snapshots.get(t.id);
-    return snapshot ? { ...snapshot, done: t.done, done_at: t.done_at } : t;
+    if (!snapshot) return t;
+    const { done, done_at, project_id } = t;
+    return { ...snapshot, done, done_at, project_id };
   });
   return {
     layout,
