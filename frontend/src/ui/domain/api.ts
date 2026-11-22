@@ -1,4 +1,5 @@
 import type { CopyKey } from "../copy";
+import type { OrderField } from "./order";
 import type { SearchFilter } from "./search";
 import type { Task } from "./types";
 
@@ -44,6 +45,13 @@ export type TaskPatch = Partial<
 
 export type DeleteScope = "one" | "future";
 
+/** One manual-order key to write (#178); null takes the task out of manual order. */
+export interface OrderRow {
+  id: string;
+  field: OrderField;
+  value: string | null;
+}
+
 export interface TaskApi {
   /** `POST /tasks/{id}/complete` → the task, and the next occurrence for a repeating task. */
   complete(id: string, at: string): ReturnType<TaskRequest>;
@@ -55,6 +63,8 @@ export interface TaskApi {
   ): ReturnType<TaskRequest>;
   /** `PATCH /tasks/{id}` → the updated task. */
   patch(id: string, fields: TaskPatch, at: string): PatchTaskResponse;
+  /** Manual-order keys (#178), sent together as one `POST /sync/patches` batch. */
+  reorder?(rows: OrderRow[], at: string): Promise<void>;
   /** `DELETE /tasks/{id}?scope=one|future` (soft delete). */
   remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void>;
   /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */

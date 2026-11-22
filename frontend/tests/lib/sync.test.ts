@@ -14,7 +14,7 @@ import {
 } from "../../src/lib/localStore";
 import { api } from "../../src/lib/api";
 import { getProject } from "../../src/lib/projectApi";
-import { createTask, getTask, patch } from "../../src/lib/taskApi";
+import { createTask, getTask, httpTaskApi, patch } from "../../src/lib/taskApi";
 import { retryDelay, startSync, SYNCED, syncNow } from "../../src/lib/sync";
 import { task } from "../ui/fixtures";
 
@@ -428,4 +428,32 @@ it("every call carries this device's id, the same each time (ADR-004 tie-break)"
   expect(ids).toHaveLength(2);
   expect(ids[0]).toMatch(/^[0-9a-f-]{36}$/);
   expect(ids[1]).toBe(ids[0]);
+});
+
+// #178: manual-order keys always go through the queue, so many keys leave as one batch
+describe("manual order keys", () => {
+  it("are kept on the device and sent together in one sync batch", async () => {
+    const bread = task({ id: "t-2", title: "Bread" });
+    await putTasks([bread]);
+    const at = "2026-10-23T01:15:00.000Z";
+
+    await httpTaskApi.reorder!(
+      [
+        { id: "t-1", field: "day_order", value: "a1" },
+        { id: "t-2", field: "day_order", value: "a0" },
+      ],
+      at,
+    );
+    expect(sent("/api/v1/sync/patches")).toHaveLength(0);
+    expect((await readTask("t-2"))?.day_order).toBe("a0");
+
+    await syncNow();
+    const batches = sent("/api/v1/sync/patches");
+    expect(batches).toHaveLength(1);
+    expect(body(batches[0]!)).toEqual([
+      { entity: "task", id: "t-1", field: "day_order", value: "a1", at },
+      { entity: "task", id: "t-2", field: "day_order", value: "a0", at },
+    ]);
+    expect(await readQueue()).toEqual([]);
+  });
 });
