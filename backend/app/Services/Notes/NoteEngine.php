@@ -57,11 +57,13 @@ final class NoteEngine
         $started = hrtime(true);
         $plan = self::EMPTY_PLAN;
         $lowConfidence = [];
+        $items = [];
         foreach ($this->splitter->split($text, array_values($context->projects)) as $index => $item) {
+            $items[self::ITEM_REF_PREFIX.($index + 1)] = $item;
             $ref = self::ITEM_REF_PREFIX.($index + 1);
             $expired = (hrtime(true) - $started) / 1e6 >= $budgetMs;
             $planned = $expired
-                ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'low' => false]
+                ? ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $this->extractor->plain($item), null)]], 'lowConfidence' => false]
                 : $this->planItem($ref, $item, $context, $openTasks, $doneTasks);
             if (count($plan['create']) + count($planned['plan']['create']) > (int) config('notes.max_items')) {
                 throw ValidationException::withMessages(['text' => ['note.too_many_items']]);
@@ -69,9 +71,22 @@ final class NoteEngine
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
-            if ($planned['low']) {
-                $lowConfidence[$ref] = $item;
+            if ($planned['lowConfidence']) {
+                $lowConfidence = [...$lowConfidence, ...($planned['uncertain'] ?? [$ref => $item])];
             }
+        }
+        // Prose ("mệt quá… à mà mai nộp báo cáo…") splits into fragments that only make sense together, and a long
+        // note (a meeting write-up) mixes its to-dos with context: the model reads every item of the note, in order,
+        // so it can join and skip them (ADR-008).
+        $long = $lowConfidence !== [] && count($items) >= (int) config('note_llm.whole_note_items');
+        if ($long || $this->extractor->chatty($text, $context)) {
+            $read = array_map(self::itemIndex(...), array_keys($lowConfidence));
+            foreach ($items as $ref => $item) {
+                if (! in_array(self::itemIndex($ref), $read, true)) {
+                    $lowConfidence[$ref] = $item;
+                }
+            }
+            uksort($lowConfidence, strnatcmp(...));
         }
         $tasksById = array_column($openTasks, null, 'id');
         $validated = $this->validator->validate($plan, $context->projects, $tasksById);
@@ -82,7 +97,7 @@ final class NoteEngine
     /**
      * @param  list<TaskRow>  $openTasks
      * @param  list<TaskRow>  $doneTasks
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool, uncertain?: array<string, string>}
      */
     private function planItem(string $ref, string $item, NoteContext $context, array $openTasks, array $doneTasks): array
     {
@@ -100,24 +115,30 @@ final class NoteEngine
      * others add "-2", "-3", so every entry has its own.
      *
      * @param  list<CommandMatch>  $matches
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool, uncertain: array<string, string>}
      */
     private function commands(string $ref, string $item, array $matches): array
     {
         $plan = self::EMPTY_PLAN;
-        $low = false;
+        $lowConfidence = false;
+        $uncertain = [];
         foreach ($matches as $index => $match) {
-            $planned = $this->command($index === 0 ? $ref : $ref.'-'.($index + 1), $item, $match);
+            $targetRef = $index === 0 ? $ref : $ref.'-'.($index + 1);
+            $source = $match->sourceText ?? $item;
+            $planned = $this->command($targetRef, $source, $match);
+            if ($planned['lowConfidence']) {
+                $uncertain[$targetRef] = $source;
+            }
             foreach ($planned['plan'] as $kind => $entries) {
                 $plan[$kind] = [...$plan[$kind], ...$entries];
             }
-            $low = $low || $planned['low'];
+            $lowConfidence = $lowConfidence || $planned['lowConfidence'];
         }
 
-        return ['plan' => $plan, 'low' => $low];
+        return ['plan' => $plan, 'lowConfidence' => $lowConfidence, 'uncertain' => $uncertain];
     }
 
-    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
+    /** @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool} */
     private function command(string $ref, string $item, CommandMatch $match): array
     {
         if ($match->skip !== null) {
@@ -125,7 +146,7 @@ final class NoteEngine
             return $this->skipped($ref, $item, $match->skip, $match->skip === SkipReason::NotFound);
         }
         if ($match->newTask !== null) {
-            return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'low' => $match->newTask->lowConfidence];
+            return ['plan' => [...self::EMPTY_PLAN, 'create' => [$this->createEntry($ref, $match->newTask, null)]], 'lowConfidence' => $match->newTask->lowConfidence];
         }
         // A change that would leave the task as it is comes back as a no_change skip, never empty.
         $change = $match->change;
@@ -133,12 +154,12 @@ final class NoteEngine
         $entry = ['ref' => $ref, 'task_id' => $change->taskId, 'label' => $change->label, ...$change->fields];
         $tie = $match->isTie() ? [['ref' => $ref, 'candidates' => $match->tiedTaskIds, 'preselected' => $change->taskId]] : [];
 
-        return ['plan' => [...self::EMPTY_PLAN, $change->delete ? 'delete' : 'update' => [$entry], 'ambiguous' => $tie], 'low' => false];
+        return ['plan' => [...self::EMPTY_PLAN, $change->delete ? 'delete' : 'update' => [$entry], 'ambiguous' => $tie], 'lowConfidence' => false];
     }
 
     /**
      * @param  list<TaskRow>  $openTasks
-     * @return array{plan: array<string, list<array<string, mixed>>>, low: bool}
+     * @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool}
      */
     private function task(string $ref, string $item, NoteContext $context, array $openTasks): array
     {
@@ -146,29 +167,28 @@ final class NoteEngine
         if ($fields->title === '') {
             return $this->skipped($ref, $item, SkipReason::Skip);
         }
-        $entries = [];
-        $duplicate = $this->duplicateOf($fields, $openTasks, $context);
-        for ($copy = 1; $copy <= $fields->copies; $copy++) {
-            $entry = $this->createEntry($copy === 1 ? $ref : $ref.'-'.$copy, $fields, $duplicate);
-            if ($fields->copies > 1) {
-                $suffix = ' ('.$copy.'/'.$fields->copies.')';
-                $limit = (int) config('notes.title_limit') - mb_strlen($suffix);
-                $entry['title'] = mb_substr($fields->title, 0, $limit).$suffix;
-                $overflow = mb_substr($fields->title, $limit);
-                if ($overflow !== '') {
-                    $entry['notes'] = trim($overflow.' '.($fields->notes ?? ''));
-                }
-            }
-            $entries[] = $entry;
+        // "xử lý vụ hôm qua nói", "làm cái đó": what it points at isn't in the note, so it is no task (the
+        // follow-up asks when nothing else is left). Not for the model either: with no open task to point at, the
+        // server keeps it unclear whatever the model says. A command naming an open task goes through commands().
+        if ($this->extractor->hasUnresolvedReference($fields->title, $context)) {
+            return $this->skipped($ref, $item, SkipReason::Unclear);
         }
+        // "dời chạy bộ sang hôm khác": a move whose new date the rules can't read is no reschedule and no plain
+        // task either, so it is unclear. The model sees the open tasks and may still move one with a date it
+        // reads, or make the task a move verb can start ("move the boxes to the garage").
+        if (NoteVocabulary::startsWith(NoteVocabulary::withoutLeadIn($item), 'move_command')) {
+            return $this->skipped($ref, $item, SkipReason::Unclear, true);
+        }
+        $entry = $this->createEntry($ref, $fields, $this->duplicateOf($fields, $openTasks, $context));
+        $entries = NoteCopies::expand($entry, $fields->copies);
 
-        return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'low' => $fields->lowConfidence];
+        return ['plan' => [...self::EMPTY_PLAN, 'create' => $entries], 'lowConfidence' => $fields->lowConfidence];
     }
 
-    /** @return array{plan: array<string, list<array<string, mixed>>>, low: bool} */
-    private function skipped(string $ref, string $item, SkipReason $reason, bool $low = false): array
+    /** @return array{plan: array<string, list<array<string, mixed>>>, lowConfidence: bool} */
+    private function skipped(string $ref, string $item, SkipReason $reason, bool $lowConfidence = false): array
     {
-        return ['plan' => [...self::EMPTY_PLAN, 'skipped' => [['ref' => $ref, 'text' => $item, 'reason' => $reason->value]]], 'low' => $low];
+        return ['plan' => [...self::EMPTY_PLAN, 'skipped' => [['ref' => $ref, 'text' => $item, 'reason' => $reason->value]]], 'lowConfidence' => $lowConfidence];
     }
 
     /**

@@ -64,7 +64,23 @@
         "properties": {
           "ref": { "type": "string" },
           "text": { "type": "string" },
-          "reason": { "enum": ["skip", "already_done", "not_found", "no_change"] }
+          "reason": { "enum": ["skip", "unclear", "already_done", "not_found", "no_change"], "description": "`unclear`: the language model found no single reading, so the note waits as a follow-up (ADR-008)" }
+        }
+      }
+    },
+    "processing": {
+      "description": "What the language-model fallback did with each low-confidence item (ADR-008). Absent when no item reached it.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["ref", "source", "status", "reason"],
+        "additionalProperties": false,
+        "properties": {
+          "ref": { "type": "string" },
+          "source": { "enum": ["llm", "mixed", "pending"], "description": "`mixed`: some fields kept from the rules; `pending`: no model result used" },
+          "status": { "enum": ["accepted", "skipped", "unclear", "rejected", "missing", "unavailable"] },
+          "reason": { "type": "string" },
+          "field_sources": { "type": "object", "additionalProperties": { "enum": ["rules", "llm", "server"] } }
         }
       }
     },

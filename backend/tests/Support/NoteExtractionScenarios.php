@@ -19,14 +19,15 @@ final class NoteExtractionScenarios
 
     /** Categories only the field extractor reads; the splitter generator skips them. */
     public const EXTRACTION_ONLY_CATEGORIES = [
-        'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
+        'note_chatter', 'unresolved_reference', 'duration_fraction_suffix', 'repeat_exclusion', 'duration_prefix', 'duration_suffix', 'duration_unit', 'date_separator', 'full_date_separator', 'date_day_word', 'month_word',
         'ordinal_suffix', 'ordinal_day_word', 'month_link', 'year_word', 'vietnamese_unaccented_syllable',
-        'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_next', 'repeat_prefix', 'day_bound',
+        'date_preferred_prefix', 'weekday_this', 'weekday_this_suffix', 'weekday_week_this', 'weekday_next', 'repeat_prefix', 'day_bound',
         'not_time_word', 'period_am', 'period_pm', 'hour_suffix', 'minute_separator', 'hour_prefix', 'range_prefix',
         'range_separator', 'reminder_day_before', 'acronym', 'name_title', 'vietnamese_ascii_word', 'count_word', 'span_lead', 'file_extension',
         'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
         'bound_through_lead', 'bound_approximate', 'bound_approximate_suffix', 'bound_end_word',
         'bound_next_marker', 'copy_unit', 'count_unit', 'count_lead', 'deadline_word', 'repeat_endless', 'priority_negation', 'content_word_exempt', 'weekday_list_separator',
+        'vietnamese_onset', 'vietnamese_nucleus', 'vietnamese_coda',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -71,6 +72,8 @@ final class NoteExtractionScenarios
         [$family, $key] = array_pad(explode(':', $category, 2), 2, '');
 
         return match ($family) {
+            'note_chatter' => [['mua sữa '.$value, ['lowConfidence' => true], self::NOW]],
+            'unresolved_reference' => [['do '.$value.' 9am', ['lowConfidence' => true], self::NOW]],
             'date_offset' => [['đọc sách '.$value, ['dueDate' => self::day((int) $key)], self::NOW]],
             'weekday' => [['đọc sách '.$value, ['dueDate' => self::day(self::daysUntilWeekday((int) $key) ?: 7)], self::NOW]],
             'month' => [['đọc sách 15 '.$value, ['dueDate' => self::yearlessDate(15, (int) $key)], self::NOW]],
@@ -110,6 +113,7 @@ final class NoteExtractionScenarios
             'date_preferred_prefix' => [['học thứ 2 '.$value.' thứ 7', ['dueDate' => '2026-10-24'], self::NOW]],
             'weekday_this' => [['nộp '.$value.' friday', ['dueDate' => '2026-10-23'], self::NOW]],
             'weekday_this_suffix' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23'], self::NOW]],
+            'weekday_week_this' => [['nộp thứ 6 '.$value, ['dueDate' => '2026-10-23', 'title' => 'Nộp'], self::NOW]],
             'weekday_next' => [['nộp '.$value.' monday', ['dueDate' => '2026-10-26'], self::NOW]],
             'repeat_prefix' => [['tập gym '.$value.' monday', ['repeat' => 'weekly', 'dueDate' => '2026-10-26'], self::NOW]],
             'duration_prefix' => [['đọc sách '.$value.' 3 days', ['dueDate' => self::day(3)], self::NOW]],
@@ -121,6 +125,10 @@ final class NoteExtractionScenarios
             'month_link' => [['pay rent 28th '.$value.' October', ['dueDate' => '2026-10-28', 'title' => 'Pay rent'], self::NOW]],
             'year_word' => [['nộp bài 26 tháng 9 '.$value.' 2027', ['dueDate' => '2027-09-26', 'title' => 'Nộp bài'], self::NOW]],
             'vietnamese_unaccented_syllable' => [['toi '.$value, ['lowConfidence' => true], self::NOW]],
+            // Two listed syllables and three unlisted ones: low confidence only through the syllable shape.
+            'vietnamese_onset' => [['toi co '.str_repeat($value.'ang ', 3), ['lowConfidence' => true], self::NOW]],
+            'vietnamese_nucleus' => [['toi co '.str_repeat('b'.$value.'t ', 3), ['lowConfidence' => true], self::NOW]],
+            'vietnamese_coda' => [['toi co '.str_repeat('ba'.$value.' ', 3), ['lowConfidence' => true], self::NOW]],
             'date_separator' => [['đọc sách 26'.$value.'10', ['dueDate' => '2026-10-26'], self::NOW]],
             'date_day_word' => [['đọc sách '.$value.' 26/10', ['dueDate' => '2026-10-26', 'title' => 'Đọc sách'], self::NOW]],
             'month_word' => [['đọc sách 26 '.$value.' 10', ['dueDate' => '2026-10-26'], self::NOW]],

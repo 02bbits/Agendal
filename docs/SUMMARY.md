@@ -249,7 +249,7 @@ flowchart LR
     M[(Email service)]
     P[(Web Push)]
     X[(Google Cloud Vision<br/>OCR for photos and scans)]
-    L[(OpenRouter<br/>low-confidence items only)]
+    L[(LLM provider<br/>low-confidence items only)]
     U -- "notes, task edits" --> A
     A -- "plans, results, lists" --> U
     A -- "password-reset links" --> M
@@ -263,7 +263,7 @@ flowchart LR
 | Email (SMTP)           | Password reset                                                                                   | Reset delayed; sign-in unaffected         |
 | Web Push               | Reminders (Should)                                                                               | No push; Inbox still shows what is due    |
 | Google Cloud Vision    | Photos and scanned PDFs (Should). Text PDFs and Word are read on the server with no outside call | Photos and scans unreadable; typing works |
-| OpenRouter             | Language-model fallback                                                                          | Rules handle notes alone                  |
+| LLM provider           | Language-model fallback                                                                          | Rules handle notes alone                  |
 | Browser speech service | Dictation (Should)                                                                               | Dictation unavailable; typing works       |
 
 ```mermaid
@@ -306,7 +306,7 @@ flowchart TB
 | **ADR-005** | **Sync is cursor pull plus field patches.** Every write gets a sequence number; deletes are tombstones kept 30 days (longer if an undoable note needs them). `GET /sync?cursor=` returns changes; too-old cursors get a full resync. Sync runs on open, reconnect, tab visible and every 60 s. No WebSockets                                                                                                                                                                                                                                                                 | Pull cost grows with changes, not data size. Up to 60 s of staleness between two open devices. Add server push only if two-device editing turns out to be common                                                                      |
 | **ADR-006** | **Time zones: floating local times.** Due dates and times are stored as wall-clock values with no zone ("quiz Monday 09:00" stays 09:00 wherever you are). Reminder instants are stored in UTC and recomputed when the task or zone changes. "Now" for a note is when and where it was _written_                                                                                                                                                                                                                                                                             | Travelling does not move deadlines; an offline "tonight" means the night it was written. DST gaps move to the next valid minute. Every date computation takes (now, zone), which makes tests reproducible                             |
 | **ADR-007** | **Session and auth.** First-party cookie sessions (Laravel Sanctum): HttpOnly, Secure, SameSite=Lax, CSRF header on writes. Argon2id passwords. Lockout keyed by (email, IP). Sign-out wipes device data                                                                                                                                                                                                                                                                                                                                                                     | XSS cannot steal a token; an attacker cannot lock a victim out from another IP; shared phones keep no data after sign-out                                                                                                             |
-| **ADR-008** | **Language-model fallback (OpenRouter).** Called per item, only when the rules flag it low-confidence (an unparsed date-like token, a command with no match, no verb or object, unaccented Vietnamese). The model sees those items, the time and zone, project names and up to 20 candidate task titles with opaque ids; never email, name, other notes or task notes. Structured output against the plan schema, temperature 0. **1.5 s timeout**, then rules win. Caps: **20 per user per day**, a global token budget and a kill switch. Providers must not store prompts | Worst case is a wrong plan that is shown and undoable; deletes always need confirmation. A slow provider lowers accuracy, never speed. The app is fully usable with the model off. Rules are expected to handle at least 80% of items |
+| **ADR-008** | **Language-model fallback (Gemini by default, the team's key).** Called per item, only when the rules flag it low-confidence (an unparsed date-like token, a command with no match, no verb or object, unaccented Vietnamese). The model sees those items, the time and zone, project names and up to 20 candidate task titles with opaque ids; never email, name, other notes or task notes. Structured output against the plan schema, temperature 0. **20 s timeout** per call, then rules win. Caps: **20 per user per day**, a global token budget and a kill switch. The key stays on the server, only in a secret file | Worst case is a wrong plan that is shown and undoable; deletes always need confirmation. A slow provider lowers accuracy, never speed. The app is fully usable with the model off. Rules are expected to handle at least 80% of items |
 
 ---
 
@@ -380,7 +380,7 @@ erDiagram
 | ----------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **02bbits**       | Platform: repo, CI, auth, settings, offline sync, install, deployment (AA, AP)                                                                                                                        |
 | **3HoTuan3**      | Tasks and views: task model, projects, Inbox, Upcoming, Search, design system (TK, PJ, LV)                                                                                                            |
-| **khang-ngo4444** | Note understanding: the rules engine, the OpenRouter fallback, the note corpus (NU)                                                                                                                   |
+| **khang-ngo4444** | Note understanding: the rules engine, the language-model fallback, the note corpus (NU)                                                                                                             |
 | **Unassigned**    | Note flow: the editor, result screen, undo, Notes tab, Edit note (NC, RV). In practice the GitHub issues share it out: mostly 02bbits and 3HoTuan3 on IM-41 to IM-46, khang-ngo4444 on IM-47 to IM-49 |
 
 ```mermaid
@@ -408,7 +408,7 @@ After Foundation, phases 1, 2 and 4 run in parallel; note flow is built against 
 | Offline notes act on changed tasks          | Processed in order, same confirm rules, toast reports what happened              |
 | iOS PWA limits                              | Manual install guidance; reminders are _Should_; Inbox works without push        |
 | Personal data in files                      | Extract and discard; only photos/scans go out, inline; 5 MB limit                |
-| LLM provider retains data or is slow        | Providers that do not store prompts; minimum context; 1.5 s timeout; kill switch |
+| LLM provider retains data or is slow        | Minimum context; 20 s timeout per call; kill switch                              |
 
 **Already decided (all 21 questions are closed).** Editing a note re-plans it (Q1). Rules first with an LLM fallback (Q2, Q19). English and Vietnamese notes, English UI (Q3). Undated tasks get When? chips (Q4). Confirm before applying (Q5 said 5 or more changes; since 2026-11-03 every note with a change confirms, issue #44). Week start and time format are settings (Q6). No account deletion or export in the first release (Q7). No success metrics or analytics (Q8). Undo after a hand edit restores only fields that still hold the note's value (Q9). Undo window 30 days (Q10). Dictation via the Web Speech API with a privacy notice (Q11). Google Cloud Vision for photos and scans (Q12). Next.js plus Laravel on PostgreSQL on one Linux server (Q13, Q14). The badge is "UPDATED" (Q15). ADR-005 to 008 approved (Q16). Edge-case and module decisions approved (Q17, Q20). Password minimum 8 with a breach check (Q18). Two ASVS deviations accepted (Q21).
 
