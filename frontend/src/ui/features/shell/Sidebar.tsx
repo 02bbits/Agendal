@@ -155,11 +155,12 @@ export function Sidebar({
                 />
               </button>
             </h2>
+            {/* -mr-2 puts the cross (narrower than its 14px box) on the rows' count column */}
             {onNewProject && (
               <button
                 type="button"
                 onClick={onNewProject}
-                className="-mr-[5px] inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
+                className="-mr-2 inline-flex size-6 cursor-pointer items-center justify-center rounded-lg border-0 bg-transparent text-ink-tertiary transition-colors hover:bg-fill hover:text-ink focus-visible:outline-2 focus-visible:outline-primary"
                 aria-label={t("project.new")}
               >
                 <PlusIcon size={14} />
