@@ -28,6 +28,7 @@ import {
   replanNote,
   restoreNote,
   undoNote,
+  NOTE_RENAMED,
 } from "../../../lib/noteApi";
 import { readNoteResult } from "../../../lib/localStore";
 import { useOffline } from "../../../lib/online";
@@ -432,7 +433,7 @@ function ResultContainer({
             }
             // Only the name changed: keep this screen (and any planned edits), refresh the list
             setResult((current) => ({ ...current, note: outcome.note }));
-            window.dispatchEvent(new CustomEvent("agendal:note-renamed"));
+            window.dispatchEvent(new Event(NOTE_RENAMED));
             return true;
           }}
           busy={busy}

@@ -36,13 +36,7 @@ final class ProjectTaskLists
             $openCount = (int) $project->getAttribute('open');
             $doneCount = (int) $project->getAttribute('done');
         } else {
-            /** @var Task|null $counts */
-            $counts = Task::query()
-                ->whereNull('project_id')
-                ->selectRaw('count(*) filter (where not done) as open_count, count(*) filter (where done) as done_count')
-                ->first();
-            $openCount = $counts instanceof Task ? (int) $counts->getAttribute('open_count') : 0;
-            $doneCount = $counts instanceof Task ? (int) $counts->getAttribute('done_count') : 0;
+            ['open' => $openCount, 'done' => $doneCount] = $this->projectCounts->withoutProject();
         }
 
         $openQuery = Task::query()

@@ -366,7 +366,8 @@ describe("Project detail page /projects/[id]", () => {
         return json(200, [
           { id: "p-1", name: "Work", colour: "blue", open: 1, done: 0 },
         ]);
-      if (url === "/api/v1/tasks/inbox") return json(200, {});
+      if (url === "/api/v1/counts")
+        return json(200, { inbox: 0, upcoming: 0, no_project: 1, notes: 0 });
       return json(200, []);
     });
 

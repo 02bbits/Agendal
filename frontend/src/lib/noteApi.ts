@@ -166,6 +166,8 @@ export function recallNote(id: string): NoteResult | undefined {
   return recent.get(id);
 }
 
+/** A note was renamed: the Notes list loads again, its open screen keeps what it shows. */
+export const NOTE_RENAMED = "agendal:note-renamed";
 /** A note was made, changed, deleted or restored: the Notes list and an open note load again. */
 export const NOTE_UPDATED = "agendal:note-updated";
 /** `id` names the note that changed: only its open screen loads again, others keep their review. */

@@ -316,6 +316,9 @@ describe("Offline notes (NC-6, WF-05)", () => {
     await waitFor(() =>
       expect((field as HTMLTextAreaElement).value).toBe("refused text"),
     );
-    expect(screen.queryByRole("button", { name })).toBeNull();
+    // The list reloads once its changes settle (AP §10)
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name })).toBeNull(),
+    );
   });
 });

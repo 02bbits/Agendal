@@ -1,5 +1,4 @@
 import type { TimeFormat, WeekStart } from "../../domain/types";
-import type { AccountSettings } from "../settings/types";
 import type { Navigate } from "../shell/routes";
 
 export interface SetupPayload {
@@ -17,5 +16,6 @@ export interface SetupScreenProps {
   onSkip?: () => void;
   navigate?: Navigate;
   showToast?: (message: string) => void;
-  changeSettings?: (patch: Partial<AccountSettings>) => void;
+  /** The account as `PATCH /me` answered it, after any 2FA change: the app takes it as is. */
+  onSaved?: (account: { two_factor_enabled?: boolean }) => void;
 }

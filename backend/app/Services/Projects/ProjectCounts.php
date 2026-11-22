@@ -36,4 +36,23 @@ final class ProjectCounts
             $project->setAttribute('done', $counts instanceof Task ? (int) $counts->getAttribute('done_count') : 0);
         }
     }
+
+    /**
+     * The open and done counts of the tasks in no project.
+     *
+     * @return array{open: int, done: int}
+     */
+    public function withoutProject(): array
+    {
+        /** @var Task|null $counts */
+        $counts = Task::query()
+            ->whereNull('project_id')
+            ->selectRaw('count(*) filter (where not done) as open_count, count(*) filter (where done) as done_count')
+            ->first();
+
+        return [
+            'open' => $counts instanceof Task ? (int) $counts->getAttribute('open_count') : 0,
+            'done' => $counts instanceof Task ? (int) $counts->getAttribute('done_count') : 0,
+        ];
+    }
 }

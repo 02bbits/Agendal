@@ -9,11 +9,10 @@ import {
   type Project,
   type Task,
 } from "@/ui";
-import { PROJECTS_CHANGED, TASK_CREATED } from "@/ui/domain/appEvents";
 import { ApiRequestError } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
-import { SYNCED } from "@/lib/sync";
+import { useDataChanged } from "../useDataChanged";
 import { inbox, projects, upcoming } from "@/lib/taskApi";
 
 /** Upcoming asks for a year ahead: the week strip and board can go that far. */
@@ -111,24 +110,10 @@ export function useUpcomingData() {
       },
     );
     fetchData();
-
-    const onVisible = () => {
-      if (document.visibilityState === "visible") fetchData();
-    };
-    window.addEventListener(TASK_CREATED, fetchData);
-    // Changes pulled by sync (IM-52)
-    window.addEventListener(SYNCED, fetchData);
-    window.addEventListener(PROJECTS_CHANGED, fetchData);
-    document.addEventListener("visibilitychange", onVisible);
-    return () => {
-      window.removeEventListener(TASK_CREATED, fetchData);
-      window.removeEventListener(SYNCED, fetchData);
-      window.removeEventListener(PROJECTS_CHANGED, fetchData);
-      document.removeEventListener("visibilitychange", onVisible);
-    };
-    // Once on mount: the handlers only start fetches
+    // Once on mount: later loads come from useDataChanged
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useDataChanged(fetchData);
 
   const retry = () => {
     setStatus("loading");

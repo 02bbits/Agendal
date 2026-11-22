@@ -1,11 +1,10 @@
-import { TASK_CREATED, PROJECTS_CHANGED } from "@/ui/domain/appEvents";
 import { useEffect, useRef, useState } from "react";
 import { ApiRequestError } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
 import { buildInbox, countText, t, type Project, type Task } from "@/ui";
-import { SYNCED } from "@/lib/sync";
+import { useDataChanged } from "./useDataChanged";
 
 // Same counts as the server's, from the tasks on the device
 function subtitleOf(tasks: readonly Task[]) {
@@ -101,22 +100,8 @@ export function useInboxData() {
       },
     );
     fetchData();
-    const refresh = () => fetchData();
-    const onVis = () => {
-      if (document.visibilityState === "visible") fetchData();
-    };
-    window.addEventListener(TASK_CREATED, refresh);
-    // Changes pulled by sync (IM-52)
-    window.addEventListener(SYNCED, refresh);
-    window.addEventListener(PROJECTS_CHANGED, refresh);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener(TASK_CREATED, refresh);
-      window.removeEventListener(SYNCED, refresh);
-      window.removeEventListener(PROJECTS_CHANGED, refresh);
-      document.removeEventListener("visibilitychange", onVis);
-    };
   }, []);
+  useDataChanged(fetchData);
 
   return {
     status,

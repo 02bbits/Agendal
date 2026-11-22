@@ -13,6 +13,7 @@ use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Auth\TwoFactorChallengeController;
 use App\Http\Controllers\Auth\TwoFactorController;
 use App\Http\Controllers\Auth\TwoFactorResendController;
+use App\Http\Controllers\CountsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteSearchController;
@@ -42,6 +43,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/two-factor', TwoFactorController::class)->middleware('throttle:two-factor-toggle');
         Route::post('auth/change-password', ChangePasswordController::class);
         Route::post('auth/check-password', CheckPasswordController::class);
+        Route::get('counts', CountsController::class);
         Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
         Route::get('notes', [NoteController::class, 'index']);
         Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');

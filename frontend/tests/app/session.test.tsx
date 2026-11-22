@@ -1,12 +1,13 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppFrame, useAppFrame } from "../../src/app/AppFrame";
 import { api } from "../../src/lib/api";
 
 // IM-18: a session that ends elsewhere (AA-E6, UX-44) and a different account on this device (AA-E7)
 const router = { push: vi.fn(), replace: vi.fn(), back: vi.fn() };
+let pathname = "/upcoming";
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/upcoming",
+  usePathname: () => pathname,
   useRouter: () => router,
 }));
 
@@ -31,7 +32,7 @@ function Who() {
 }
 
 function open() {
-  render(
+  return render(
     <AppFrame>
       <Who />
     </AppFrame>,
@@ -39,6 +40,7 @@ function open() {
 }
 
 beforeEach(() => {
+  pathname = "/upcoming";
   router.replace.mockClear();
   indexedDBMock.deleteDatabase.mockClear();
   meReply = () => me(1);
@@ -226,5 +228,66 @@ describe("a different account on this device (AA-E7)", () => {
         "flat",
       );
     });
+  });
+});
+
+describe("request budget (AP §10)", () => {
+  const meCalls = () =>
+    vi.mocked(fetch).mock.calls.filter(([url]) => url === "/api/v1/me").length;
+  const frame = () => (
+    <AppFrame>
+      <Who />
+    </AppFrame>
+  );
+
+  beforeEach(() => {
+    // The screens' own reads answer: only /me says whether the session ended
+    otherReply = () => json(200, {});
+  });
+
+  it("a confirmed session asks /me once across screens, and again when the app comes back", async () => {
+    const { rerender } = open();
+    await screen.findByText("user1@example.com");
+
+    for (const next of ["/", "/projects", "/notes"]) {
+      pathname = next;
+      await act(async () => rerender(frame()));
+    }
+    expect(meCalls()).toBe(1);
+
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() => expect(meCalls()).toBe(2));
+  });
+
+  it("coming back to an ended session opens Sign in", async () => {
+    open();
+    await screen.findByText("user1@example.com");
+
+    meReply = () => json(401, {});
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() =>
+      expect(router.replace).toHaveBeenCalledWith("/sign-in?next=%2Fupcoming"),
+    );
+  });
+
+  it("a signed-in visit to Sign in still goes to Inbox, without asking again", async () => {
+    const { rerender } = open();
+    await screen.findByText("user1@example.com");
+    const asked = meCalls();
+
+    pathname = "/sign-in";
+    await act(async () => rerender(frame()));
+
+    expect(router.replace).toHaveBeenCalledWith("/");
+    expect(meCalls()).toBe(asked);
   });
 });

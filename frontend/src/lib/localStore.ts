@@ -15,8 +15,8 @@ const PROJECTS = "projects";
 const SETTINGS = "settings";
 const NOTES = "notes";
 const QUEUE = "queue";
-/** AP §2.2: the device keeps the last 100 notes. */
-export const KEEP_NOTES = 100;
+/** AP §2.2: the device keeps the last 50 notes. */
+export const KEEP_NOTES = 50;
 const ME = "me";
 
 function open() {
@@ -110,8 +110,8 @@ export const readMe = <T>() =>
 export const saveMe = (me: unknown) =>
   run<void>(SETTINGS, "readwrite", (s) => void s.put(me, ME), undefined);
 
-// A note on the device: its Notes row, and its full result once one was seen (the note screen)
-type StoredNote = NoteListEntry & { result?: NoteResult };
+/** A note on the device: its Notes row, and its full result when sync sent it or it was opened. */
+export type StoredNote = NoteListEntry & { result?: NoteResult };
 
 const newestFirst = (a: StoredNote, b: StoredNote) =>
   b.written_at.localeCompare(a.written_at) || b.id.localeCompare(a.id);
@@ -135,7 +135,7 @@ function entryOf({ note, changes }: NoteResult): NoteListEntry {
   };
 }
 
-// Merges into what's stored (a list row doesn't drop a kept result), then keeps the newest 100
+// Merges into what's stored (a list row doesn't drop a kept result), then keeps the newest ones
 async function putNotes(notes: readonly StoredNote[]) {
   await run<void>(
     NOTES,
@@ -162,19 +162,9 @@ async function putNotes(notes: readonly StoredNote[]) {
   );
 }
 
-export const putNoteEntries = (entries: readonly NoteListEntry[]) =>
+/** Notes rows; a synced row carries its full result and replaces the kept one. */
+export const putNoteEntries = (entries: readonly StoredNote[]) =>
   putNotes(entries);
-
-/** Notes changed elsewhere: their kept result is out of date, so sync fetches it again. */
-export const putChangedNotes = (entries: readonly NoteListEntry[]) =>
-  putNotes(entries.map((entry) => ({ ...entry, result: undefined })));
-
-/** Notes on the device without their full result, newest first. */
-export const notesWithoutResult = async () =>
-  (await run<StoredNote[]>(NOTES, "readonly", (s) => s.getAll(), []))
-    .filter((note) => !note.result)
-    .sort(newestFirst)
-    .map((note) => note.id);
 
 export const putNoteResult = (result: NoteResult) =>
   putNotes([{ ...entryOf(result), result }]);

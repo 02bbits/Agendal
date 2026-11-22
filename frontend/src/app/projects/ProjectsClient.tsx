@@ -1,5 +1,5 @@
 "use client";
-import { PROJECTS_CHANGED, notifyProjectsChanged } from "@/ui/domain/appEvents";
+import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
@@ -13,7 +13,7 @@ import {
 } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 import { readProjects } from "@/lib/localStore";
-import { SYNCED } from "@/lib/sync";
+import { useDataChanged } from "../useDataChanged";
 import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -71,18 +71,7 @@ export function ProjectsClient() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    const handleProjectsChanged = () => {
-      load();
-    };
-    window.addEventListener(PROJECTS_CHANGED, handleProjectsChanged);
-    // Changes pulled by sync (IM-52)
-    window.addEventListener(SYNCED, handleProjectsChanged);
-    return () => {
-      window.removeEventListener(SYNCED, handleProjectsChanged);
-      window.removeEventListener(PROJECTS_CHANGED, handleProjectsChanged);
-    };
-  }, [load]);
+  useDataChanged(load);
 
   const handleCreated = (created: Project) => {
     setProjects((prev) => [...prev, { ...created, open: 0, done: 0 }]);
