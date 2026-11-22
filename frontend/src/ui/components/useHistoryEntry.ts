@@ -42,6 +42,24 @@ function onPop() {
 }
 
 /**
+ * Runs `go` once a sheet or dialog that is closing has taken its history entry off (its
+ * history.back() fires popstate), or after `waitMs` when its entry was not on top and no popstate
+ * comes. Call it right after closing the layer, for a navigation that follows it: a router.push
+ * made before that back would be undone by it, leaving the old URL and the new page stuck loading.
+ */
+export function afterHistoryEntryCloses(go: () => void, waitMs = 250): void {
+  let done = false;
+  const run = () => {
+    if (done) return;
+    done = true;
+    window.removeEventListener("popstate", run);
+    go();
+  };
+  window.addEventListener("popstate", run);
+  setTimeout(run, waitMs);
+}
+
+/**
  * A sheet or dialog takes one history entry while it is open, so Back (the in-app button, the
  * browser's, or the Android gesture) closes it and stays on the screen (AP-4, AP-E9).
  * The entry copies the current state so Next.js still recognises it as its own.

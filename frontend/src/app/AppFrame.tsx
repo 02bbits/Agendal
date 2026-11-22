@@ -1,4 +1,5 @@
 "use client";
+import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import { useWideScreen } from "@/ui/components/useMediaQuery";
 
 import { usePathname, useRouter } from "next/navigation";
@@ -147,7 +148,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
     (created: Project) => {
       addProject(created);
       setCreatingProject(false);
-      navigate(ROUTES.project(created.id));
+      // After the sheet's Back entry is gone, or its back() undoes the push (stuck skeleton)
+      afterHistoryEntryCloses(() => navigate(ROUTES.project(created.id)));
     },
     [addProject, navigate],
   );

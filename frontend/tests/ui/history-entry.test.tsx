@@ -2,7 +2,10 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { useHistoryEntry } from "../../src/ui/components/useHistoryEntry";
+import {
+  afterHistoryEntryCloses,
+  useHistoryEntry,
+} from "../../src/ui/components/useHistoryEntry";
 import { Button, Dialog, Sheet } from "../../src/ui";
 
 // AP-4, AP-E9: Back closes the open sheet or dialog and stays on the screen (T-AP-106)
@@ -211,5 +214,35 @@ describe("history entries for sheets and dialogs", () => {
     expect(window.history.state?.agendalModal).toBeTruthy();
     await goBack();
     expect(refuse).toHaveBeenCalledTimes(2);
+  });
+});
+
+// Navigating after a sheet closes waits for its Back entry to go, or the
+// sheet's history.back() undoes the push (sidebar New project, stuck skeleton)
+describe("afterHistoryEntryCloses", () => {
+  afterEach(() => vi.useRealTimers());
+
+  it("runs once, as soon as the sheet's entry is popped", () => {
+    vi.useFakeTimers();
+    const go = vi.fn();
+    afterHistoryEntryCloses(go);
+    expect(go).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(go).toHaveBeenCalledTimes(1);
+
+    vi.advanceTimersByTime(300);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    expect(go).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs after the wait when no popstate comes (the entry wasn't on top)", () => {
+    vi.useFakeTimers();
+    const go = vi.fn();
+    afterHistoryEntryCloses(go, 250);
+    vi.advanceTimersByTime(249);
+    expect(go).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    expect(go).toHaveBeenCalledTimes(1);
   });
 });
