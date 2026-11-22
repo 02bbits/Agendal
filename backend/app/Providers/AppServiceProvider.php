@@ -47,12 +47,12 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(20)->by('ip-hour:'.$request->ip()),
         ]);
 
-        // Everything else: 300/min plus a 20/s burst cap, per user, or per IP for guests
+        // Everything else: 150/min plus a 20/s burst cap, per user, or per IP for guests
         RateLimiter::for('api', function (Request $request) {
             $key = ($user = $request->user('sanctum')) ? 'user:'.$user->getAuthIdentifier() : 'ip:'.$request->ip();
 
             return [
-                Limit::perMinute(300)->by('api-min:'.$key),
+                Limit::perMinute(150)->by('api-min:'.$key),
                 Limit::perSecond(20)->by('api-sec:'.$key),
             ];
         });

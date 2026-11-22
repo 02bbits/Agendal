@@ -30,11 +30,11 @@ it('SEC-10: every NF-13 limit is defined', function (string $name, array $expect
     'POST /files/extract' => ['files', [[10, 3600], [30, 86400]]],
     'search' => ['search', [[60, 60]]],
     'sync' => ['sync', [[30, 60]]],
-    'everything else, user' => ['api', [[300, 60], [20, 1]]],
+    'everything else, user' => ['api', [[150, 60], [20, 1]]],
 ]);
 
-it('SEC-10: guests get 300 a minute and 20 a second per IP', function () {
-    expect(limitsOf('api'))->toBe([[300, 60], [20, 1]]);
+it('SEC-10: guests get 150 a minute and 20 a second per IP', function () {
+    expect(limitsOf('api'))->toBe([[150, 60], [20, 1]]);
 });
 
 it('SEC-10: past the limit the API answers 429 with Retry-After and the rate-limit code', function () {
@@ -47,5 +47,16 @@ it('SEC-10: past the limit the API answers 429 with Retry-After and the rate-lim
     $this->actingAs($user, 'sanctum')->getJson('/api/v1/_ping')
         ->assertStatus(429)
         ->assertHeader('Retry-After')
+        ->assertJsonPath('error.code', 'error.rate_limited');
+});
+
+it('SEC-10: a guest is counted on signed-in routes too, so flooding them past the limit answers 429', function () {
+    Route::middleware(['api', 'auth:sanctum'])->prefix('api/v1')->get('_mine', fn () => ['ok' => true]);
+    RateLimiter::for('api', fn () => Limit::perMinute(2)->by('test'));
+
+    $this->getJson('/api/v1/_mine')->assertUnauthorized();
+    $this->getJson('/api/v1/_mine')->assertUnauthorized();
+    $this->getJson('/api/v1/_mine')
+        ->assertStatus(429)
         ->assertJsonPath('error.code', 'error.rate_limited');
 });
