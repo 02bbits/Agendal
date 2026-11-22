@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { inboxDropPatch } from "../../src/ui/domain/dropPatch";
 import type { Task } from "../../src/ui/domain/types";
+import type { ProjectDropData } from "../../src/ui/features/lists/dnd/dropTargets";
 import {
   useMoveToProject,
   useReceiveDrop,
@@ -21,17 +22,14 @@ const cross: {
     shown: readonly Task[],
     drop: { id: string; from: string; index: number },
   ) => void;
-  moveToProject?: (
-    id: string,
-    project: { projectId: string; name: string },
-  ) => void;
+  moveToProject?: (id: string, project: ProjectDropData) => void;
 } = {};
 
 function CrossDropper() {
-  const receiveToday = useReceiveDrop("day_order", (t, from) =>
+  const receiveToday = useReceiveDrop("day_order", (t) =>
     inboxDropPatch(t, "today", TODAY),
   );
-  const receiveNoDate = useReceiveDrop("project_order", (t, from) =>
+  const receiveNoDate = useReceiveDrop("project_order", (t) =>
     inboxDropPatch(t, "no_date", TODAY),
   );
   const moveToProject = useMoveToProject();
@@ -117,8 +115,10 @@ describe("cross-section drag and drop (#178)", () => {
 
     act(() => {
       cross.moveToProject!("task-move", {
+        kind: "project",
         projectId: "proj-work",
         name: "Work",
+        title: "Work",
       });
     });
 
