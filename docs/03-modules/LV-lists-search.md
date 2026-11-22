@@ -54,6 +54,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Completing an overdue task counts toward today.
 - **All done:** when nothing is open in Overdue or Today, `list.nothing_left` shows with the link `list.see_upcoming` and `list.encourage_one`.
 - **Sort within Overdue:** oldest due date first. **Within Today:** timed first by start time, then priority (High → Low), then by creation time. **Within No date:** priority, then newest first.
+- **While a task is open in the panel:** the list behind keeps its row in the section and place it had when the panel opened, so changing a date or time doesn't make it jump. The row shows the new values at once; the lists sort again when the panel closes or switches to another task. The same holds in Upcoming and in a project. On phones the task opens as its own screen, so the list is sorted when the user comes back.
 - **Midnight:** the lists recompute at local midnight while the app is open (a timer to the next midnight, re-armed on `visibilitychange`), and whenever the zone changes ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ### 2.2 Upcoming (LV-2)
@@ -69,13 +70,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **Board view:** one week of columns, Overdue column first.
 - **Day groups:** tasks from tomorrow on, grouped by day, with headings Tomorrow, then `Mon 26 Oct` ([UX-32](../01-product/ux-standards.md#ux-32)). Every day is shown with a "+ Add task" action button (empty days are shown; this replaces "Days with nothing due aren't shown").
 - **Task entries:**
-  - A task appears on its **start date** AND on its **due date** (shown once when they are the same day).
-  - On its due date, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue).
+  - A task appears on its **start date** AND on its **due date**. A task that starts and is due the same day is shown once, as a **normal card**.
+  - On the due date of a due-only task, or on the last day of a task that spans several days, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue). This marker says "this is the deadline", so a same-day task never gets it.
   - **List:** normal entries of a day share one card and due entries share one dashed block below it, split by a dashed line. **Board:** one card per entry, normal ones first.
 - **Filters** (chips, remembered per device):
   - **All:** every upcoming entry, start days and due days.
   - **Scheduled:** start-day entries of tasks with a start date, plus repeating tasks with no start date on their due day (`17:00 · Every week`, without the word Due). Only the real next occurrence shows, never a projection. Every entry here is a normal card, also for a task that starts and is due the same day.
-  - **Due only:** due-day entries of tasks with a due date.
+  - **Due only:** due-day entries of tasks with a due date, and same-day tasks (still as normal cards).
 - **Sort within a day:** same as Today (timed first by start time, then priority (High → Low), then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
 - **Empty:** empty days show "+ Add task"; if no tasks exist anywhere in the window, shows `list.upcoming_empty`.
@@ -122,8 +123,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Layout:**
   - Checkbox (44 px hit area)
   - Title (2 lines max, [UX-30](../01-product/ux-standards.md#ux-30))
-  - Meta line:
-    - On its start day: `HH:MM · Due {date}`; same-day block: `HH:MM – HH:MM` (start – due time)
+  - Meta line (date and time are separate layers: the date always shows and a time only adds detail, so clearing a time never empties the line, it falls back to the date-only form):
+    - Start and due on the same day: both times `08:30 – 10:00`; start time only `Start at 08:30 · Due today` (another day: `Due {date}`); due time only `Due today, 17:00` in blue (in Upcoming `Due 17:00`); no time: the day alone, `Today` or `{date}`. Same-day text is in plain ink, and a time range turns red once its due time has passed today
+    - Due today, starting another day or not at all: `Due today` or `Due today, HH:MM` in blue, red from the due time; `Started {date}` follows when it started earlier. In Upcoming a due entry without a time reads `Due {date}`
+    - Starting today in Today: `Start at HH:MM` or `Starts today`, then `Due {date}` when it is due later. On its start day in Upcoming: `HH:MM · Due {date}`
     - In between (in progress): `In progress · Due {when}`
     - On its due day: rendered in a dashed blue card with `Due HH:MM` in blue
     - Overdue rows: red

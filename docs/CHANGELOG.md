@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-22
+
+- **Task card dates and frozen sort (Refs #177).** [LV §2.4](03-modules/LV-lists-search.md#24-task-row-lv-4): the meta line keeps the date when a time is cleared, and spells out each same-day and due-today state (`08:30 – 10:00`, `Start at 08:30 · Due today`, `Due today, 17:00`, `Today`). [LV §2.2](03-modules/LV-lists-search.md#22-upcoming-lv-2): a same-day task is one normal card in Upcoming; the dashed due card is only for a due-only task or the last day of a span, and Due only still lists same-day tasks. [LV §2.1](03-modules/LV-lists-search.md#21-inbox-lv-1): while a task is open in the panel its row keeps its section and place until the panel closes. [SUMMARY](SUMMARY.md) Upcoming and Task row follow. New copy `task.due_today`, `task.due_today_at` and `task.time_range` sits in `pending.ts`.
+
 ## 2026-11-21
 
 - **Up to three toasts at once.** [UX-04](01-product/ux-standards.md#ux-04): toasts stack, up to three, the newest on top; a fourth drops the oldest. Each has its own 5 s timer, Undo or Retry and close, and hovering or focusing any of them pauses them all. Before, a new toast replaced the old one, so quick actions in a row lost their Undo.
