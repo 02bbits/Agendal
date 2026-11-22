@@ -54,6 +54,7 @@ export function UpcomingDayList({
               <div className="mt-2">
                 <EntryBlocks
                   entries={dayEntries}
+                  day={date}
                   variant="list"
                   today={today}
                   selectedTaskId={selectedTaskId ?? undefined}

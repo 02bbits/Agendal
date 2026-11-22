@@ -1,5 +1,7 @@
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
+import { SortableTaskList } from "../lists/dnd/SortableTaskList";
+import { TaskDndScope } from "../lists/dnd/TaskDndScope";
 import { TaskRow } from "../tasks/TaskRow";
 
 export interface ProjectOpenListProps {
@@ -11,6 +13,8 @@ export interface ProjectOpenListProps {
   onToggleTask?: (task: Task) => void;
   isSettling?: (id: string) => boolean;
   navigate?: Navigate;
+  /** Drag to reorder (#178); without it the rows don't move. */
+  onMove?: (shown: Task[], id: string, to: number) => void;
 }
 
 export function ProjectOpenList({
@@ -22,25 +26,34 @@ export function ProjectOpenList({
   onToggleTask,
   isSettling,
   navigate,
+  onMove,
 }: ProjectOpenListProps) {
   if (tasks.length === 0) return null;
-  return (
+  const list = (
     <div className="rounded-2xl border border-separator/50 bg-surface shadow-xs overflow-hidden">
       <ul className="m-0 list-none p-0">
-        {tasks.map((x) => (
-          <TaskRow
-            key={x.id}
-            task={x}
-            project={project}
-            today={today}
-            timeFormat={timeFormat}
-            selected={x.id === selectedTaskId}
-            settling={isSettling?.(x.id) ?? false}
-            onToggle={onToggleTask ?? (() => {})}
-            navigate={navigate}
-          />
-        ))}
+        <SortableTaskList
+          list={`project:${project.id}`}
+          tasks={tasks}
+          onMove={(id, to) => onMove?.(tasks, id, to)}
+        >
+          {(x, drag) => (
+            <TaskRow
+              key={x.id}
+              drag={drag}
+              task={x}
+              project={project}
+              today={today}
+              timeFormat={timeFormat}
+              selected={x.id === selectedTaskId}
+              settling={isSettling?.(x.id) ?? false}
+              onToggle={onToggleTask ?? (() => {})}
+              navigate={navigate}
+            />
+          )}
+        </SortableTaskList>
       </ul>
     </div>
   );
+  return onMove ? <TaskDndScope>{list}</TaskDndScope> : list;
 }

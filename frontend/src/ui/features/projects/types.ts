@@ -27,4 +27,6 @@ export interface ProjectScreenProps {
   liveTask?: (task: Task) => Task;
   /** Sort by rules for this project (#178); without it the sort menu isn't shown. */
   onSortByRules?: () => void;
+  /** A task dropped elsewhere in the open list (#178). */
+  onMove?: (shown: Task[], id: string, to: number) => void;
 }

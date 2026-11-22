@@ -127,6 +127,7 @@ export function UpcomingBoard({
             {dayEntries.length > 0 && (
               <EntryBlocks
                 entries={dayEntries}
+                day={date}
                 variant="board"
                 today={today}
                 selectedTaskId={selectedTaskId ?? undefined}

@@ -41,6 +41,7 @@ export function ProjectScreen({
   selectedTaskId,
   liveTask = (task) => task,
   onSortByRules,
+  onMove,
 }: ProjectScreenProps) {
   const [deleting, setDeleting] = useState(false);
 
@@ -111,6 +112,7 @@ export function ProjectScreen({
               onToggleTask={onToggleTask}
               isSettling={isSettling}
               navigate={navigate}
+              onMove={onMove}
             />
             {completed.length > 0 && (
               <ProjectCompletedList
