@@ -1,11 +1,10 @@
-import { TASK_CREATED, PROJECTS_CHANGED } from "@/ui/domain/appEvents";
 import { useEffect, useRef, useState } from "react";
-import { ApiRequestError } from "@/lib/apiError";
+import { ApiRequestError, rateLimited } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
 import { buildInbox, countText, t, type Project, type Task } from "@/ui";
-import { SYNCED } from "@/lib/sync";
+import { useDataChanged } from "./useDataChanged";
 
 // Same counts as the server's, from the tasks on the device
 function subtitleOf(tasks: readonly Task[]) {
@@ -23,6 +22,8 @@ export function useInboxData() {
     "loading",
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
+  // A 429: the screen shows the rate-limited page instead of the message (UX-43)
+  const [limited, setLimited] = useState<ApiRequestError | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
@@ -66,6 +67,7 @@ export function useInboxData() {
         // Offline with the device copy on screen: keep showing it, the banner says why
         if (!(err instanceof ApiRequestError) && shownFromDevice.current)
           return;
+        setLimited(rateLimited(err));
         if (err instanceof ApiRequestError) {
           setErrorMessage(
             t("error.generic", {
@@ -101,26 +103,13 @@ export function useInboxData() {
       },
     );
     fetchData();
-    const refresh = () => fetchData();
-    const onVis = () => {
-      if (document.visibilityState === "visible") fetchData();
-    };
-    window.addEventListener(TASK_CREATED, refresh);
-    // Changes pulled by sync (IM-52)
-    window.addEventListener(SYNCED, refresh);
-    window.addEventListener(PROJECTS_CHANGED, refresh);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener(TASK_CREATED, refresh);
-      window.removeEventListener(SYNCED, refresh);
-      window.removeEventListener(PROJECTS_CHANGED, refresh);
-      document.removeEventListener("visibilitychange", onVis);
-    };
   }, []);
+  useDataChanged(fetchData);
 
   return {
     status,
     errorMessage,
+    limited,
     tasks,
     projectList,
     projectsStatus,

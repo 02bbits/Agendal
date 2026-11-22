@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agendal.app/schemas/counts.schema.json",
+  "title": "Counts",
+  "description": "GET /counts: the sidebar's numbers in one call (AP §7). Each matches the list it stands for: inbox = Inbox overdue + today, upcoming = Upcoming's total_count over its default 14 days, no_project = open tasks in no project, notes = all notes (GET /notes total).",
+  "type": "object",
+  "required": ["inbox", "upcoming", "no_project", "notes"],
+  "additionalProperties": false,
+  "properties": {
+    "inbox": { "type": "integer", "minimum": 0 },
+    "upcoming": { "type": "integer", "minimum": 0 },
+    "no_project": { "type": "integer", "minimum": 0 },
+    "notes": { "type": "integer", "minimum": 0 }
+  }
+}

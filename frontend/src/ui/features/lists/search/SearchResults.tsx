@@ -1,4 +1,6 @@
 import { Button } from "../../../components/Button";
+import type { ApiRequestError } from "../../../../lib/apiError";
+import { RateLimited } from "../../shell/RateLimited";
 import { Chip } from "../../../components/Chip";
 import { EmptyState } from "../../../components/EmptyState";
 import { XIcon } from "../../../components/icons";
@@ -63,6 +65,7 @@ export function SearchResults({
   onProject,
   pending,
   error,
+  limited,
   onRetry,
   tasks,
   taskCount,
@@ -91,6 +94,8 @@ export function SearchResults({
   onProject: (id: string | null) => void;
   pending: boolean;
   error: boolean;
+  /** A 429: the rate-limited page instead of the error (UX-43). */
+  limited?: ApiRequestError | null;
   onRetry: () => void;
   tasks: Task[];
   taskCount: number;
@@ -174,6 +179,8 @@ export function SearchResults({
 
       {pending ? (
         <ResultsSkeleton />
+      ) : limited ? (
+        <RateLimited error={limited} onRetry={onRetry} />
       ) : error ? (
         <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
           <p className="text-body text-ink-secondary">{t("error.generic")}</p>

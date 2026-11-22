@@ -9,6 +9,7 @@ import {
   type ProjectDetailResponse,
 } from "@/lib/projectApi";
 import { SYNCED } from "@/lib/sync";
+import { rateLimited, type ApiRequestError } from "@/lib/apiError";
 
 /** No project as a project, so the same screen shows it. */
 function noProject(progress: ProjectDetailResponse["progress"]) {
@@ -33,6 +34,9 @@ const belongsTo = (task: Task, id: string) =>
 export function useProjectDetail(id: string) {
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
   const [error, setError] = useState<number | null>(null);
+  // A 429: the rate-limited page, and Try again loads once more (UX-43)
+  const [limited, setLimited] = useState<ApiRequestError | null>(null);
+  const [attempt, setAttempt] = useState(0);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   // Bumped on every load: Next keeps this page hidden while we're on a task and loads again when
@@ -64,12 +68,19 @@ export function useProjectDetail(id: string) {
       .catch((err) => {
         if (!active) return;
         setLoading(false);
+        setLimited(rateLimited(err));
         setError(err?.status ?? 500);
       });
     return () => {
       active = false;
     };
-  }, [id]);
+  }, [id, attempt]);
+
+  const retry = () => {
+    setLimited(null);
+    setLoading(true);
+    setAttempt((n) => n + 1);
+  };
 
   // A task made elsewhere (New task, sync, IM-52) joins Open once
   useEffect(() => {
@@ -140,6 +151,8 @@ export function useProjectDetail(id: string) {
   return {
     data,
     error,
+    limited,
+    retry,
     loading,
     loadingMore,
     loadSeq,

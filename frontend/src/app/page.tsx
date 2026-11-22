@@ -5,6 +5,7 @@ import {
   Button,
   InboxScreen,
   PlusIcon,
+  RateLimited,
   ScreenHeader,
   TaskPanel,
   TaskStoreProvider,
@@ -39,6 +40,7 @@ function InboxContent() {
   const {
     status,
     errorMessage,
+    limited,
     tasks,
     projectList,
     projectsStatus,
@@ -76,7 +78,10 @@ function InboxContent() {
         )}
       </ScreenHeader>
       {status === "loading" && <InboxSkeleton />}
-      {status === "error" && (
+      {status === "error" && limited && (
+        <RateLimited error={limited} onRetry={handleRetry} />
+      )}
+      {status === "error" && !limited && (
         <LoadError message={errorMessage} onRetry={handleRetry} />
       )}
       {status === "ready" && (

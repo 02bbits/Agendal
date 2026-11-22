@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 
 /**
  * @property array<string, mixed>|null $plan
@@ -29,6 +30,16 @@ class Note extends Model
     protected function casts(): array
     {
         return ['plan' => 'array', 'applied' => 'array', 'undo_log' => 'array', 'written_at' => 'immutable_datetime', 'processed_at' => 'immutable_datetime', 'edited_at' => 'immutable_datetime', 'deleted_at' => 'immutable_datetime', 'plan_version' => 'integer'];
+    }
+
+    /**
+     * How many of the user's notes are in each status.
+     *
+     * @return Collection<string, int>
+     */
+    public static function statusCounts(): Collection
+    {
+        return self::query()->selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status')->map(fn ($count): int => (int) $count);
     }
 
     /** The version a plan made now takes: Apply names the plan the user reviewed by it (RV §7). */

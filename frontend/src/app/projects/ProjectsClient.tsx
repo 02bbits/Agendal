@@ -1,19 +1,21 @@
 "use client";
-import { PROJECTS_CHANGED, notifyProjectsChanged } from "@/ui/domain/appEvents";
+import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ProjectsScreen,
   ROUTES,
+  RateLimited,
   ScreenHeader,
   formatLongDate,
   t,
   type Project,
   type ProjectWithCounts,
 } from "@/ui";
+import { rateLimited, type ApiRequestError } from "@/lib/apiError";
 import { useAppFrame } from "../AppFrame";
 import { readProjects } from "@/lib/localStore";
-import { SYNCED } from "@/lib/sync";
+import { useDataChanged } from "../useDataChanged";
 import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -28,6 +30,8 @@ export function ProjectsClient() {
     done: number;
   }>({ open: 0, done: 0 });
   const [loading, setLoading] = useState(true);
+  // A 429 on the list: the rate-limited page instead of the screen (UX-43)
+  const [limited, setLimited] = useState<ApiRequestError | null>(null);
   const [creating, setCreating] = useState(false);
   const [editingProject, setEditingProject] =
     useState<ProjectWithCounts | null>(null);
@@ -43,9 +47,10 @@ export function ProjectsClient() {
       listProjects()
         .then((data) => {
           fresh.current = true;
+          setLimited(null);
           if (Array.isArray(data)) setProjects(data);
         })
-        .catch(() => {}),
+        .catch((error: unknown) => setLimited(rateLimited(error))),
       getProject("none")
         .then((res) => {
           if (res && res.progress) {
@@ -71,18 +76,7 @@ export function ProjectsClient() {
     load();
   }, [load]);
 
-  useEffect(() => {
-    const handleProjectsChanged = () => {
-      load();
-    };
-    window.addEventListener(PROJECTS_CHANGED, handleProjectsChanged);
-    // Changes pulled by sync (IM-52)
-    window.addEventListener(SYNCED, handleProjectsChanged);
-    return () => {
-      window.removeEventListener(SYNCED, handleProjectsChanged);
-      window.removeEventListener(PROJECTS_CHANGED, handleProjectsChanged);
-    };
-  }, [load]);
+  useDataChanged(load);
 
   const handleCreated = (created: Project) => {
     setProjects((prev) => [...prev, { ...created, open: 0, done: 0 }]);
@@ -106,7 +100,17 @@ export function ProjectsClient() {
 
   return (
     <>
-      {loading ? (
+      {limited ? (
+        <div className="pb-8">
+          <ScreenHeader
+            overline={formatLongDate(today)}
+            title={t("nav.projects")}
+            accountInitial={accountInitial}
+            navigate={navigate}
+          />
+          <RateLimited error={limited} onRetry={load} />
+        </div>
+      ) : loading ? (
         <div className="pb-8">
           <ScreenHeader
             overline={formatLongDate(today)}

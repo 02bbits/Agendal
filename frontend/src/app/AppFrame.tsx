@@ -55,7 +55,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const { user, userRef, setUser } = useSignedInUser();
   const account = useAccountSettings({ user, userRef, showToast });
   const { settings, changeSettings } = account;
-  const { sessionChecked, signOut } = useSession({
+  const { sessionChecked, signOut, adopt } = useSession({
     pathname,
     router,
     user,
@@ -119,6 +119,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      adoptUser: adopt,
       setUser,
       signOut,
     }),
@@ -135,6 +136,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
       closeSettings,
       openNewTask,
       user,
+      adopt,
       setUser,
       signOut,
     ],

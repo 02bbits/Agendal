@@ -29,13 +29,13 @@ class NoteController extends Controller
             default => $query,
         };
         $page = $query->orderByDesc('written_at')->orderByDesc('id')->cursorPaginate((int) ($input['limit'] ?? 20));
-        $counts = Note::query()->selectRaw('status, count(*) as count')->groupBy('status')->pluck('count', 'status');
+        $counts = Note::statusCounts();
 
         return response()->json([
             'items' => $page->getCollection()->map(fn (Note $note): array => $note->listRow())->values(),
             'next_cursor' => $page->nextCursor()?->encode(),
-            'total' => (int) $counts->sum(),
-            'needs_count' => (int) $counts->only(PlanStatus::needsLook())->sum(),
+            'total' => $counts->sum(),
+            'needs_count' => $counts->only(PlanStatus::needsLook())->sum(),
         ]);
     }
 

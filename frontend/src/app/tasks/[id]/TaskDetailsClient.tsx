@@ -4,7 +4,7 @@ import { useEffect, useState, type ReactElement } from "react";
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
-import { ApiRequestError } from "../../../lib/apiError";
+import { ApiRequestError, rateLimited } from "../../../lib/apiError";
 import { getTask, httpTaskApi, projects } from "../../../lib/taskApi";
 import {
   DeleteTask,
@@ -18,6 +18,7 @@ import {
 } from "../../../ui";
 import type { Navigate } from "../../../ui/features/shell/routes";
 import { BackBarSkeleton } from "../../../ui/components/BackBar";
+import { RateLimited } from "../../../ui/features/shell/RateLimited";
 
 export const SKELETON_DELAY_MS = 300;
 
@@ -125,6 +126,8 @@ export default function TaskDetailsClient({
   const [errorState, setErrorState] = useState<{
     notFound: boolean;
     message?: string;
+    /** A 429: the rate-limited page instead of the message (UX-43). */
+    limited?: ApiRequestError | null;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
   // Bumped on every load. Next keeps this page mounted but hidden after we
@@ -170,6 +173,7 @@ export default function TaskDetailsClient({
         } else if (err instanceof ApiRequestError) {
           setErrorState({
             notFound: false,
+            limited: rateLimited(err),
             message: t("error.generic", {
               request_id: err.requestId ?? err.code,
             }),
@@ -259,6 +263,9 @@ export default function TaskDetailsClient({
       />
     );
   }
+
+  if (errorState?.limited)
+    return <RateLimited error={errorState.limited} onRetry={retry} />;
 
   if (errorState || !task) {
     return (

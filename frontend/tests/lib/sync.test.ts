@@ -315,7 +315,7 @@ describe("details offline (AP §2.2)", () => {
     skipped: [],
   });
 
-  it("sync fetches each pulled note's full result, again when the note changed, so its screen opens offline", async () => {
+  it("a pulled note brings its full result, replacing the kept one, with no request per note", async () => {
     await putNoteResult(resultOf("n-1", "confirm") as never);
     server = (url, init) => {
       if (url.startsWith("/api/v1/sync?"))
@@ -323,14 +323,17 @@ describe("details offline (AP §2.2)", () => {
           changes: {
             tasks: [],
             projects: [],
-            notes: [entry("n-1", "done"), entry("n-2", "followup")],
+            notes: [
+              { ...entry("n-1", "done"), result: resultOf("n-1", "done") },
+              {
+                ...entry("n-2", "followup"),
+                result: resultOf("n-2", "followup"),
+              },
+            ],
           },
           next_cursor: 9,
           has_more: false,
         });
-      const note = url.match(/^\/api\/v1\/notes\/(n-\d)$/)?.[1];
-      if (note === "n-1") return json(200, resultOf("n-1", "done"));
-      if (note === "n-2") return json(200, resultOf("n-2", "followup"));
       return defaultServer(url, init);
     };
 
@@ -338,10 +341,6 @@ describe("details offline (AP §2.2)", () => {
 
     expect((await readNoteResult("n-1"))?.note.status).toBe("done");
     expect((await readNoteResult("n-2"))?.note.status).toBe("followup");
-    // Kept results aren't asked for again
-    fetchMock.mockClear();
-    server = defaultServer;
-    await syncNow();
     expect(sent("/api/v1/notes/")).toEqual([]);
   });
 

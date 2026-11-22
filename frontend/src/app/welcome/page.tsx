@@ -1,11 +1,11 @@
 "use client";
 
 import { SetupScreen } from "@/ui";
-import { useAppFrame } from "../AppFrame";
+import { useAppFrame, type SignedInUser } from "../AppFrame";
 
 /** Setup step after Create account (issue #149). */
 export default function WelcomePage() {
-  const { navigate, showToast, settings, changeSettings, user } = useAppFrame();
+  const { navigate, showToast, settings, adoptUser, user } = useAppFrame();
 
   return (
     <SetupScreen
@@ -16,7 +16,8 @@ export default function WelcomePage() {
       initialTimeFormat={settings.timeFormat}
       navigate={navigate}
       showToast={showToast}
-      changeSettings={changeSettings}
+      // PATCH /me answers with the whole account, as GET /me would
+      onSaved={(account) => void adoptUser(account as SignedInUser)}
     />
   );
 }
