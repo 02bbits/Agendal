@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import {
   ProjectScreen,
   TaskPanel,
+  useFrozenOrder,
   useTaskPanel,
   useTaskStore,
   type Navigate,
@@ -66,7 +67,8 @@ export function ProjectContent({
   );
 
   const isNoProject = project.id === "none";
-  const tasks = store.tasks.filter((t) =>
+  const frozen = useFrozenOrder(store.tasks, panel.selectedTaskId);
+  const tasks = frozen.layout.filter((t) =>
     isNoProject ? !t.project_id : t.project_id === project.id,
   );
   const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
@@ -99,6 +101,7 @@ export function ProjectContent({
         onDeleteProject={onDeleteProject}
         navigate={panel.navigate}
         selectedTaskId={panel.selectedTaskId}
+        liveTask={frozen.live}
       />
       {panel.isWide && panel.selectedTaskId && (
         <TaskPanel

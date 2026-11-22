@@ -12,7 +12,7 @@ import type { Task } from "../../domain/types";
  * day of the strip. Done tasks drop out once they have settled.
  */
 export function groupUpcomingEntries(
-  tasks: Task[],
+  tasks: readonly Task[],
   renderedDays: string[],
   stripDays: string[],
   filter: UpcomingFilter,

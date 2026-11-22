@@ -149,3 +149,4 @@ export type {
 } from "./lists/types";
 export { useActiveDay, type UseActiveDayOptions } from "./lists/useActiveDay";
 export { useUpcomingListWindow } from "./lists/useUpcomingListWindow";
+export { useFrozenOrder } from "./lists/useFrozenOrder";

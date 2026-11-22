@@ -51,6 +51,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     viewMode,
     filter,
     initialDay: initialViewResolved?.day,
+    selectedTaskId: props.selectedTaskId,
   });
 
   const onViewChange = props.onViewChange;
