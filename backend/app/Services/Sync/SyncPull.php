@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Sync;
 
+use App\Http\Resources\NoteResultResource;
 use App\Http\Resources\ProjectResource;
 use App\Http\Resources\TaskResource;
 use App\Models\Note;
@@ -18,7 +19,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * `GET /sync` (ADR-005): rows changed after the cursor, tombstones included, oldest change first.
  * `full` is the first download or the resync after `410`: only what the device keeps (AP §2.2),
- * no tombstones.
+ * no tombstones. A live note carries its full result, so the device needs no request per note.
  *
  * `change_seq` is taken when a row is written, not when its transaction commits: a write that
  * took seq 10 can commit after one that took 11. So a page stops before the first row whose
@@ -29,7 +30,7 @@ final class SyncPull
 {
     public const KEEP_COMPLETED_DAYS = 90;
 
-    public const KEEP_NOTES = 100;
+    public const KEEP_NOTES = 50;
 
     public function __construct(private readonly ClockInterface $clock) {}
 
@@ -97,7 +98,8 @@ final class SyncPull
     {
         return match (true) {
             $row instanceof Task => (new TaskResource($row))->resolve(),
-            $row instanceof Note => $row->listRow(),
+            // A live note brings its full result, so the note screen opens offline (AP §2.2)
+            $row instanceof Note => $row->trashed() ? $row->listRow() : [...$row->listRow(), 'result' => (new NoteResultResource($row))->resolve()],
             default => array_diff_key((new ProjectResource($row))->resolve(), ['open' => 0, 'done' => 0]),
         };
     }

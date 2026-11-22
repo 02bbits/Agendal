@@ -25,6 +25,8 @@ export interface AppFrameValue {
   openNewTask: OpenNewTaskFn;
   /** Null until the session check answers, or when signed out. */
   user: SignedInUser | null;
+  /** Takes an account the server answered with: claims the device, keeps it, applies its settings. */
+  adoptUser: (user: SignedInUser) => Promise<void>;
   /** Sets or updates the signed-in user in AppFrame state. */
   setUser: (user: SignedInUser | null) => void;
   /** AA-5: ends the session (every session with `everywhere`), wipes the device, opens Sign in. */

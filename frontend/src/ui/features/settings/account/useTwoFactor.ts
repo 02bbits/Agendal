@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../../../../lib/api";
 import { t } from "../../../copy";
 import { formatWait } from "../../auth/CodeEntry";
@@ -41,7 +41,8 @@ function postTwoFactor(body: { enabled: boolean; current_password?: string }) {
 
 /**
  * Two-step verification in Settings: turning it on saves at once; turning it off asks for the
- * current password in a dialog first. The server's answer is the truth, read once on open.
+ * current password in a dialog first. It follows the account the app holds (from `GET /me`), so
+ * opening Settings asks the server nothing.
  */
 export function useTwoFactor({
   enabled: enabledProp,
@@ -64,21 +65,6 @@ export function useTwoFactor({
   const [offError, setOffError] = useState<string | null>(null);
   const [offBusy, setOffBusy] = useState(false);
   const passwordRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    let active = true;
-    api("/me")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (active && typeof data?.two_factor_enabled === "boolean") {
-          setEnabled(data.two_factor_enabled);
-        }
-      })
-      .catch(() => {});
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const saved = (next: boolean) => {
     setEnabled(next);

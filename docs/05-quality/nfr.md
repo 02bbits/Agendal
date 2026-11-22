@@ -49,7 +49,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 | `POST /files/extract` | 10 / hour and 30 / day per user | user |
 | Search | 60 / min per user | user |
 | `/sync` (pull and patches) | 30 / min per user | user |
-| Everything else | 300 / min and 20 / s per user; the same per IP for guests | user, IP |
+| Everything else | 150 / min and 20 / s per user; the same per IP for guests. Counted before sign-in is checked, so a guest's refused (`401`) requests to signed-in routes count too | user, IP |
 
 ### Input limits (NF-14)
 

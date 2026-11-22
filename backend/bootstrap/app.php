@@ -1,19 +1,31 @@
 <?php
 
+use App\Exceptions\RateLimited;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureEmailVerified;
 use App\Http\Middleware\ForgetSessionCookieAfterSignOut;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncTimezone;
 use Illuminate\Auth\AuthenticationException;
+use Illuminate\Auth\Middleware\Authorize;
+use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
+use Illuminate\Contracts\Session\Middleware\AuthenticatesSessions;
+use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
+use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Http\Middleware\HandlePrecognitiveRequests;
 use Illuminate\Http\Request;
+use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Routing\Middleware\ThrottleRequestsWithRedis;
+use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
+use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -31,6 +43,23 @@ return Application::configure(basePath: dirname(__DIR__))
         // Sanctum SPA cookie sessions (ADR-007)
         $middleware->statefulApi();
         $middleware->throttleApi(); // NF-13: the 'api' limiter
+        // SC-11: the limiter counts before authentication. Laravel's default order authenticates
+        // first, so a guest's 401 on a signed-in route was never counted and could flood without
+        // limit. The rest is Laravel's default order; the limiter still keys a signed-in request
+        // by its user, since the session has started by then
+        $middleware->priority([
+            HandlePrecognitiveRequests::class,
+            EncryptCookies::class,
+            AddQueuedCookiesToResponse::class,
+            StartSession::class,
+            ShareErrorsFromSession::class,
+            ThrottleRequests::class,
+            ThrottleRequestsWithRedis::class,
+            AuthenticatesRequests::class,
+            AuthenticatesSessions::class,
+            SubstituteBindings::class,
+            Authorize::class,
+        ]);
         $middleware->appendToGroup('api', SyncTimezone::class);
         $middleware->alias([
             'verified-email' => EnsureEmailVerified::class,
@@ -75,6 +104,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 $retryAfter = $headers['Retry-After'] ?? $headers['retry-after'] ?? null;
                 if ($retryAfter !== null) {
                     $error['retry_after'] = (int) $retryAfter;
+                }
+                // Which limit: `window` 1 is a burst ("too fast"), longer is "too many" (UX-43)
+                if ($e instanceof RateLimited) {
+                    $error['limit'] = ['max' => $e->max, 'window' => $e->window];
                 }
             }
 

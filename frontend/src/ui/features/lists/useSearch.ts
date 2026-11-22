@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { rateLimited, type ApiRequestError } from "../../../lib/apiError";
 import type { Task } from "../../domain/types";
 import {
   searchProjects,
@@ -47,6 +48,8 @@ export interface UseSearchResult<P extends { name: string }> {
   notes: NoteHit[];
   projectHits: P[];
   error: boolean;
+  /** A 429: the rate-limited page instead of the error (UX-43). */
+  limited: ApiRequestError | null;
   retry: () => void;
   runNow: () => void;
   loadMore: () => Promise<void>;
@@ -73,6 +76,7 @@ export function useSearch<P extends { name: string }>({
     nextCursor: string | null;
     notes: NoteHit[];
     error: boolean;
+    limited?: ApiRequestError | null;
   } | null>(null);
 
   const trimmed = input.trim();
@@ -119,7 +123,7 @@ export function useSearch<P extends { name: string }>({
             });
           }
         }, SEARCH_SETTLE_MS);
-      } catch {
+      } catch (err) {
         settleTimer = setTimeout(() => {
           if (!cancelled) {
             setResult({
@@ -129,6 +133,7 @@ export function useSearch<P extends { name: string }>({
               nextCursor: null,
               notes: [],
               error: true,
+              limited: rateLimited(err),
             });
           }
         }, SEARCH_SETTLE_MS);
@@ -181,6 +186,7 @@ export function useSearch<P extends { name: string }>({
     [projects, trimmed, isConstrained],
   );
   const error = currentResult ? currentResult.error : false;
+  const limited = currentResult?.limited ?? null;
 
   const loadMore = useCallback(async () => {
     if (loadingMore || !nextCursor || !currentResult) return;
@@ -235,6 +241,7 @@ export function useSearch<P extends { name: string }>({
     notes,
     projectHits,
     error,
+    limited,
     retry,
     runNow,
     loadMore,

@@ -232,6 +232,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
               onProject={setProjectId}
               pending={search.pending}
               error={Boolean(search.error)}
+              limited={search.limited}
               onRetry={search.retry}
               tasks={search.tasks}
               taskCount={search.counts.all}

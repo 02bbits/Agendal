@@ -37,7 +37,7 @@ export function SetupScreen({
   onSkip,
   navigate,
   showToast,
-  changeSettings,
+  onSaved,
 }: SetupScreenProps): ReactElement {
   const [currentStep, setCurrentStep] = useState(1);
   const [name, setName] = useState(initialName);
@@ -112,6 +112,7 @@ export function SetupScreen({
         setBusy(false);
         return;
       }
+      const saved = await res.json();
 
       // 2. If 2FA enabled: POST /auth/two-factor
       if (twoFactor) {
@@ -128,11 +129,8 @@ export function SetupScreen({
         }
       }
 
-      // 3. Complete
-      changeSettings?.({
-        weekStart: payload.week_start,
-        timeFormat: payload.time_format,
-      });
+      // 3. Complete: the app takes the saved account, no second PATCH or GET /me
+      onSaved?.(twoFactor ? { ...saved, two_factor_enabled: true } : saved);
 
       showToast?.(t("auth.welcome"));
       navigate?.(ROUTES.inbox);

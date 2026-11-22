@@ -38,4 +38,44 @@ describe("api (IM-10)", () => {
     expect(headersOf(1).get("X-XSRF-TOKEN")).toBe("abc=");
     expect(headersOf(2).get("X-XSRF-TOKEN")).toBe("abc=");
   });
+
+  describe("reads in flight (AP §10)", () => {
+    const answer = () => Promise.resolve(new Response('{"ok":true}'));
+
+    it("two identical reads at the same moment share one request, each with its own body", async () => {
+      fetchMock.mockImplementation(answer);
+
+      const [a, b] = await Promise.all([api("/projects"), api("/projects")]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(await a.json()).toEqual({ ok: true });
+      expect(await b.json()).toEqual({ ok: true });
+    });
+
+    it("a read after the shared one answered asks again: nothing is cached", async () => {
+      fetchMock.mockImplementation(answer);
+
+      await api("/projects");
+      await api("/projects");
+
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+    });
+
+    it("never shares writes, other paths or reads with an abort signal", async () => {
+      fetchMock.mockImplementation(answer);
+      document.cookie = "XSRF-TOKEN=abc";
+      const signal = new AbortController().signal;
+
+      await Promise.all([
+        api("/tasks", { method: "POST" }),
+        api("/tasks", { method: "POST" }),
+        api("/projects"),
+        api("/projects/none"),
+        api("/notes", { signal }),
+        api("/notes", { signal }),
+      ]);
+
+      expect(fetchMock).toHaveBeenCalledTimes(6);
+    });
+  });
 });

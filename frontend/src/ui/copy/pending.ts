@@ -3,6 +3,20 @@
 // catalog, delete it here (test/copy.test.ts fails on duplicates).
 
 export const pending = {
+  // The rate-limited page (UX-43): a burst, or the most allowed in a longer window
+  "rate.burst_title": "Slow down a little",
+  "rate.burst_body": "That was a lot at once.",
+  "rate.window_title": "Taking a short break",
+  "rate.window_body":
+    "You've reached {max} requests per {per}, the most Agendal allows.",
+  "rate.wait": "Try again in {seconds} s.",
+  "rate.try_again": "Try again",
+  "rate.try_again_in": "Try again in {seconds} s",
+  "rate.per_minute": "minute",
+  "rate.per_hour": "hour",
+  "rate.per_day": "day",
+  // A limited note action's toast, which has no seconds to show
+  "error.rate_limited_soon": "You're going a bit fast. Try again shortly.",
   "note.edit_task": "Edit task",
   "note.plan_changed":
     "This note changed on another device. Check the new plan before applying.",

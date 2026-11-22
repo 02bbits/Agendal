@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ProjectSheet, ROUTES, TaskStoreProvider, t } from "@/ui";
+import { ProjectSheet, ROUTES, RateLimited, TaskStoreProvider, t } from "@/ui";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -66,6 +66,9 @@ export function ProjectClient({ id }: { id: string }) {
 
   // At once, no delay: the tap that opened this page already showed this same skeleton (#161)
   if (detail.loading) return <ProjectSkeleton />;
+
+  if (detail.limited)
+    return <RateLimited error={detail.limited} onRetry={detail.retry} />;
 
   if (detail.error === 404 || !data) {
     return (

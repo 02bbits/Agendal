@@ -27,6 +27,7 @@ export {
   type ToastData,
 } from "./components/Toast";
 export { EmptyState, type EmptyStateProps } from "./components/EmptyState";
+export { RateLimited } from "./features/shell/RateLimited";
 export * from "./components/icons";
 
 /** The 8 project colours, in picker order (PJ-1). Use as `var(--project-<name>)`. */
