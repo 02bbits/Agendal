@@ -20,14 +20,14 @@ describe("entriesOf", () => {
     ]);
   });
 
-  it("same day → ONE due entry", () => {
+  it("same day → ONE normal entry, not a due marker", () => {
     const t = task({
       title: "Same day",
       start_date: "2026-10-25",
       due_date: "2026-10-25",
     });
     const entries = entriesOf(t);
-    expect(entries).toEqual([{ task: t, kind: "due", date: "2026-10-25" }]);
+    expect(entries).toEqual([{ task: t, kind: "start", date: "2026-10-25" }]);
   });
 
   it("due only → due", () => {
@@ -101,7 +101,7 @@ describe("matchesEntry", () => {
     ).toBe(false);
     expect(
       matchesEntry(
-        { task: sameDayTask, kind: "due", date: "2026-10-25" },
+        { task: sameDayTask, kind: "start", date: "2026-10-25" },
         "scheduled",
       ),
     ).toBe(true);
@@ -133,7 +133,7 @@ describe("matchesEntry", () => {
     ).toBe(true);
   });
 
-  it("due filter matches due entries only", () => {
+  it("due filter matches due entries and same-day tasks", () => {
     expect(
       matchesEntry(
         { task: spanTask, kind: "start", date: "2026-10-25" },
@@ -145,7 +145,7 @@ describe("matchesEntry", () => {
     ).toBe(true);
     expect(
       matchesEntry(
-        { task: sameDayTask, kind: "due", date: "2026-10-25" },
+        { task: sameDayTask, kind: "start", date: "2026-10-25" },
         "due",
       ),
     ).toBe(true);
