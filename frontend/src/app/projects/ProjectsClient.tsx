@@ -1,4 +1,5 @@
 "use client";
+import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -84,16 +85,7 @@ export function ProjectsClient() {
       notifyProjectsChanged();
     }
     setCreating(false);
-
-    let done = false;
-    const go = () => {
-      if (done) return;
-      done = true;
-      window.removeEventListener("popstate", go);
-      navigate(ROUTES.project(created.id));
-    };
-    window.addEventListener("popstate", go);
-    setTimeout(go, 250);
+    afterHistoryEntryCloses(() => navigate(ROUTES.project(created.id)));
   };
 
   const accountInitial = user?.display_name || user?.email || "";
