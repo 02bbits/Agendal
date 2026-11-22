@@ -88,6 +88,8 @@ export function ProjectClient({ id }: { id: string }) {
         timeFormat={settings.timeFormat}
         // The app's one toast: it stays when the user moves to another tab
         onToast={showToast}
+        // Completed sits right under the open list here: unticking a repeat shows where it goes
+        mergeMotion
       >
         <ProjectContent
           project={data.project}

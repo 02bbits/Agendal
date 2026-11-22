@@ -140,6 +140,14 @@ final class NoteSplitterScenarios
             'separator' => [
                 ['buy widget'.$value.'gadget', ['buy widget', 'gadget']],
             ],
+            // A markdown heading or a wholly marked line is a heading ("Weekly sync:"); a mark inside a line just goes.
+            'markdown_heading' => [
+                [$value.' weekly sync'."\n".'read widget', ['weekly sync:', 'read widget']],
+                [$value.$value.$value.' weekly sync:', ['weekly sync:']],
+            ],
+            'markdown_emphasis' => [
+                [$value.'weekly sync'.$value."\n".'read '.$value.'widget'.$value, ['weekly sync:', 'read widget']],
+            ],
             'conjunction' => [
                 ['buy widget '.$value.' call mum', ['buy widget', 'call mum']],
                 ['visit alpha'.$value.'beta', ['visit alpha'.$value.'beta']],

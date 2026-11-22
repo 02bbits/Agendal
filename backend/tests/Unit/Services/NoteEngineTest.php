@@ -67,3 +67,53 @@ it('reads the rules budget from config', function () {
 
     expect(app(NoteEngine::class)->build('call mum tomorrow', engineContext())->plan['create'][0]['title'])->toBe('call mum tomorrow');
 });
+
+it('sends every item of a chatty note to the model, in order (ADR-008)', function () {
+    $text = 'hôm nay mệt quá. mai nộp báo cáo SQL 5h chiều. tối gọi mẹ';
+    $build = app(NoteEngine::class)->build($text, engineContext());
+
+    expect(array_keys($build->lowConfidence))->toBe(['i1', 'i2', 'i3'])
+        ->and($build->lowConfidence['i2'])->toBe('mai nộp báo cáo SQL 5h chiều');
+});
+
+it('sends a long note whole once any item is uncertain, and keeps a short or sure one on the rules (ADR-008)', function (int $sure, bool $uncertain, int $sent) {
+    config(['note_llm.whole_note_items' => 10]);
+    $items = array_map(fn (int $i): string => "call client {$i} tomorrow", range(1, $sure));
+    $text = implode('. ', $uncertain ? [...$items, 'comprar leche'] : $items);
+
+    expect(app(NoteEngine::class)->build($text, engineContext())->lowConfidence)->toHaveCount($sent);
+})->with([
+    '10 items, one uncertain' => [9, true, 10],
+    '9 items, one uncertain' => [8, true, 1],
+    '10 items, all sure' => [10, false, 0],
+]);
+
+it('reads a pasted markdown note: headings, bold labels and date lines make no task', function () {
+    $text = "### 7. Wednesday – Customer complaint\nWED, NOV 25 · 11:15 AM\n\n**Meeting notes**\n\n**Follow-up:**\n- Ask Lisa for the **support** report\n- Contact the affected client";
+    $build = app(NoteEngine::class)->build($text, engineContext());
+
+    expect(array_column($build->plan['create'], 'title'))->toBe(['Ask Lisa for the support report', 'Contact the affected client'])
+        ->and(array_column($build->plan['skipped'], 'text'))->toBe(['Wednesday – Customer complaint:', 'WED, NOV 25', '11:15 AM', 'Meeting notes:', 'Follow-up:']);
+});
+
+it('keeps a task that only mentions a date', function () {
+    expect(array_column(app(NoteEngine::class)->build('meet Nov 25', engineContext())->plan['create'], 'title'))->toBe(['Meet']);
+});
+
+it('keeps a plain task list on the rules', function () {
+    expect(app(NoteEngine::class)->build('mai nộp báo cáo SQL 5h chiều. tối gọi mẹ', engineContext())->lowConfidence)->toBe([]);
+});
+
+it('calls a reference the note does not explain unclear, and a move it cannot date unclear for the model to read', function () {
+    foreach (['xử lý vụ hôm qua nói', 'làm cái đó lúc nào cũng được', 'follow up on what we talked about'] as $note) {
+        $build = app(NoteEngine::class)->build($note, engineContext());
+        expect($build->plan['create'], $note)->toBe([])
+            ->and(array_column($build->plan['skipped'], 'reason'), $note)->toBe(['unclear'])
+            ->and($build->lowConfidence, $note)->toBe([]);
+    }
+    $open = [['id' => 'e0000000-0000-4000-8000-000000000001', 'title' => 'Chạy bộ', 'due_date' => '2026-10-24']];
+    $build = app(NoteEngine::class)->build('dời chạy bộ sang hôm khác', engineContext(), $open);
+    expect($build->lowConfidence)->toBe(['i1' => 'dời chạy bộ sang hôm khác'])
+        ->and($build->plan['update'])->toBe([])->and($build->plan['create'])->toBe([])
+        ->and(array_column($build->plan['skipped'], 'reason'))->toBe(['unclear']);
+});

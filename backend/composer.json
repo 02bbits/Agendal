@@ -11,6 +11,7 @@
     "require": {
         "php": "^8.4",
         "ext-intl": "*",
+        "anthropic-ai/sdk": "^1.10",
         "dedoc/scramble": "^0.13",
         "laravel/framework": "^13.17",
         "laravel/sanctum": "^4.0",

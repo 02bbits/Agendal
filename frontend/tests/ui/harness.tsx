@@ -22,7 +22,11 @@ function StoreToast() {
   return <Toast toast={toast} onDismiss={dismissToast} />;
 }
 
-export function setup(tasks: Task[], customApi?: TaskApi) {
+export function setup(
+  tasks: Task[],
+  customApi?: TaskApi,
+  { mergeMotion = false }: { mergeMotion?: boolean } = {},
+) {
   const memory = createMemoryApi({ tasks, projects });
   const api = customApi ?? memory.api;
   const wrap = (ui: ReactNode) => (
@@ -31,6 +35,7 @@ export function setup(tasks: Task[], customApi?: TaskApi) {
       clock={clock}
       initialTasks={tasks}
       initialProjects={projects}
+      mergeMotion={mergeMotion}
     >
       <main>{ui}</main>
       <StoreToast />

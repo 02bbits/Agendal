@@ -11,6 +11,43 @@
   }
 }
 
+/* A light band sweeping over muted text while a note is read (after React Bits' Shiny Text). The text
+   colour is the last layer: `color` is transparent so the background shows through the letters. */
+.shiny-text {
+  background:
+    linear-gradient(
+        110deg,
+        transparent 35%,
+        var(--color-ink) 50%,
+        transparent 65%
+      )
+      0 0 / 250% 100% no-repeat,
+    var(--color-ink-secondary);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shiny-text 1.8s linear infinite;
+}
+@keyframes shiny-text {
+  from {
+    background-position:
+      100% 0,
+      0 0;
+  }
+  to {
+    background-position:
+      -150% 0,
+      0 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shiny-text {
+    animation: none;
+    background: none;
+    color: inherit;
+  }
+}
+
 @keyframes auth-rise {
   from {
     opacity: 0;

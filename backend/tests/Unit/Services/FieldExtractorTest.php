@@ -10,6 +10,30 @@ use Tests\TestCase;
 
 uses(TestCase::class);
 
+it('keeps only explicitly read calendar fields as trusted for the model', function () {
+    $fields = extractFields('Mai tao phải đi chơi 7 giờ', [], '2026-11-03T10:00:00+07:00');
+    expect($fields->trustedFields)
+        ->toMatchArray(['due_date' => '2026-11-04', 'start_time' => '07:00'])
+        ->not->toHaveKeys(['title', 'priority', 'reminder', 'end_time']);
+    expect(extractFields('toi can mua sua 9am', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('gặp chị Mai', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('doi call mum sang thu tu', [])->trustedFields)->not->toHaveKey('due_date');
+    expect(extractFields('toi muon di cho 7h chieu', [])->trustedFields)->not->toHaveKey('start_time');
+});
+
+it('keeps a priority word of any level as trusted for the model, and no default priority', function (string $text, string $priority) {
+    expect(extractFields($text, [])->trustedFields['priority'] ?? null, $text)->toBe($priority);
+})->with([
+    ['gọi mẹ cái đó, gấp', 'high'],
+    ['gọi mẹ cái đó, không gấp', 'low'],
+    ['gọi mẹ cái đó, ưu tiên trung bình', 'medium'],
+    ['call mum about that thing, normal priority', 'medium'],
+]);
+
+it('leaves a default priority out of the trusted fields', function () {
+    expect(extractFields('gọi mẹ cái đó hôm nay', [])->trustedFields)->not->toHaveKey('priority');
+});
+
 /** Friday 23 Oct 2026, 08:12 in Ho Chi Minh City, as in the note corpus. */
 const EXTRACTOR_NOW = '2026-10-23T08:12:00+07:00';
 
@@ -108,6 +132,14 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'NU-E9 end of the month' => ['pay bills end of the month', ['dueDate' => '2026-10-31']],
     'end of the week (Monday start)' => ['clean room end of the week', ['dueDate' => '2026-10-25']],
     'NU-E10 next week' => ['học bài tuần sau', ['dueDate' => '2026-10-26']],
+    // The number of "thứ 2" names a weekday, not two weeks; the week phrase after it picks the week (Fri 23 Oct).
+    'weekday of next week' => ['họp nhóm thứ 2 tuần sau', ['dueDate' => '2026-10-26', 'title' => 'Họp nhóm']],
+    'weekday word of next week' => ['họp nhóm thứ hai tuần tới', ['dueDate' => '2026-10-26', 'title' => 'Họp nhóm']],
+    'later weekday of next week' => ['họp nhóm thứ 6 tuần sau', ['dueDate' => '2026-10-30', 'title' => 'Họp nhóm']],
+    'English weekday of next week' => ['team sync friday next week', ['dueDate' => '2026-10-30', 'title' => 'Team sync']],
+    'weekday of this week' => ['họp nhóm thứ 7 tuần này', ['dueDate' => '2026-10-24', 'title' => 'Họp nhóm']],
+    'past weekday of this week' => ['họp nhóm thứ 2 tuần này', ['dueDate' => null, 'lowConfidence' => true]],
+    'two weeks from today still' => ['họp nhóm 2 tuần sau', ['dueDate' => '2026-11-06']],
     'NU-E24 high beats low' => ['maybe urgent fix bug', ['priority' => 'high', 'title' => 'Fix bug']],
     'pure priority words leave the title' => ['high priority email boss', ['priority' => 'high', 'title' => 'Email boss']],
     'content priority words stay' => ['deadline report', ['priority' => 'high', 'title' => 'Deadline report']],
@@ -146,6 +178,13 @@ it('follows the NU §2.5 rules and edge cases', function (string $text, array $e
     'a lone verb still has a verb' => ['call tomorrow', ['title' => 'Call', 'lowConfidence' => false]],
     'NU-E28 other language is low' => ['comprar leche', ['lowConfidence' => true]],
     'NU-E40 unaccented Vietnamese is low' => ['toi can mua sua', ['lowConfidence' => true, 'title' => 'Toi can mua sua', 'dueDate' => null]],
+    'NU-E40 unaccented Vietnamese beyond the syllable list' => ['toi co mot cuoc gap voi giang vien luc 11:45 hom nay', ['lowConfidence' => true]],
+    'NU-E40 môn is no English Mon' => ['hoc mon ly', ['title' => 'Hoc mon ly', 'dueDate' => null, 'lowConfidence' => true]],
+    'NU-E40 sát is no English Sat' => ['sat hach lai xe', ['title' => 'Sat hach lai xe', 'dueDate' => null, 'lowConfidence' => true]],
+    'NU-E40 Tuệ is no English Tue' => ['tue chi nhac nop bai', ['dueDate' => null, 'lowConfidence' => true]],
+    'English Mon stays a weekday' => ['sql quiz mon 9am', ['title' => 'SQL quiz', 'dueDate' => '2026-10-26', 'startTime' => '09:00']],
+    'English with Vietnamese-looking words stays English' => ['call me and an ex tomorrow', ['lowConfidence' => false]],
+    'short English stays English' => ['go to the gym', ['lowConfidence' => false]],
 ]);
 
 it('reads real notes the way a person means them', function (string $text, array $expected) {

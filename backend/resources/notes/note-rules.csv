@@ -1,4 +1,39 @@
 category,value
+note_chatter,mệt quá
+note_chatter,muốn xỉu
+note_chatter,toang
+note_chatter,à mà
+note_chatter,lâu rồi
+note_chatter,các thứ
+note_chatter,chắc là
+note_chatter,hôm nay mệt
+note_chatter,i think
+note_chatter,basically
+note_chatter,ok so
+note_chatter,anyway
+note_chatter,oh and
+note_chatter,i was thinking
+note_chatter,not sure when
+note_chatter,to be honest
+unresolved_reference,that thing
+unresolved_reference,this thing
+unresolved_reference,cái đó
+unresolved_reference,cái này
+unresolved_reference,việc đó
+unresolved_reference,việc này
+unresolved_reference,vụ đó
+unresolved_reference,vụ này
+unresolved_reference,vụ kia
+unresolved_reference,vụ hôm qua
+unresolved_reference,chuyện đó
+unresolved_reference,chuyện hôm qua
+unresolved_reference,việc hôm qua
+unresolved_reference,việc kia
+unresolved_reference,cái kia
+unresolved_reference,cái hôm qua
+unresolved_reference,that stuff
+unresolved_reference,the thing we discussed
+unresolved_reference,what we talked about
 task_verb,buy
 task_verb,call
 task_verb,email
@@ -309,6 +344,7 @@ abbreviation,a.m
 abbreviation,p.m
 separator,;
 separator,|
+separator,·
 conjunction,then
 following_conjunction,rồi
 following_conjunction,sau đó
@@ -521,6 +557,8 @@ date_preferred_prefix,vào
 date_preferred_prefix,trước
 weekday_this,this
 weekday_this_suffix,này
+weekday_week_this,tuần này
+weekday_week_this,this week
 weekday_next,next
 repeat_prefix,every
 repeat_prefix,mỗi
@@ -836,6 +874,9 @@ not_command,drop by
 not_command,remove stains
 not_command,remove stain
 heading_suffix,:
+markdown_heading,#
+markdown_emphasis,**
+markdown_emphasis,__
 not_command,bỏ rác
 not_command,bỏ thư
 not_command,bỏ tiền
@@ -959,6 +1000,9 @@ vietnamese_unaccented_syllable,ngay
 vietnamese_unaccented_syllable,mai
 vietnamese_unaccented_syllable,mot
 vietnamese_unaccented_syllable,thu
+vietnamese_unaccented_syllable,mon
+vietnamese_unaccented_syllable,sat
+vietnamese_unaccented_syllable,tue
 vietnamese_unaccented_syllable,tuan
 vietnamese_unaccented_syllable,thang
 vietnamese_unaccented_syllable,nam
@@ -1012,6 +1056,79 @@ vietnamese_unaccented_syllable,giat
 vietnamese_unaccented_syllable,quan
 vietnamese_unaccented_syllable,ao
 vietnamese_unaccented_syllable,nau
+vietnamese_onset,b
+vietnamese_onset,c
+vietnamese_onset,ch
+vietnamese_onset,d
+vietnamese_onset,g
+vietnamese_onset,gh
+vietnamese_onset,gi
+vietnamese_onset,h
+vietnamese_onset,k
+vietnamese_onset,kh
+vietnamese_onset,l
+vietnamese_onset,m
+vietnamese_onset,n
+vietnamese_onset,ng
+vietnamese_onset,ngh
+vietnamese_onset,nh
+vietnamese_onset,p
+vietnamese_onset,ph
+vietnamese_onset,qu
+vietnamese_onset,r
+vietnamese_onset,s
+vietnamese_onset,t
+vietnamese_onset,th
+vietnamese_onset,tr
+vietnamese_onset,v
+vietnamese_onset,x
+vietnamese_nucleus,a
+vietnamese_nucleus,e
+vietnamese_nucleus,i
+vietnamese_nucleus,o
+vietnamese_nucleus,u
+vietnamese_nucleus,y
+vietnamese_nucleus,ai
+vietnamese_nucleus,ao
+vietnamese_nucleus,au
+vietnamese_nucleus,ay
+vietnamese_nucleus,eo
+vietnamese_nucleus,eu
+vietnamese_nucleus,ia
+vietnamese_nucleus,ie
+vietnamese_nucleus,iu
+vietnamese_nucleus,oa
+vietnamese_nucleus,oe
+vietnamese_nucleus,oi
+vietnamese_nucleus,oo
+vietnamese_nucleus,ua
+vietnamese_nucleus,ue
+vietnamese_nucleus,ui
+vietnamese_nucleus,uo
+vietnamese_nucleus,uu
+vietnamese_nucleus,uy
+vietnamese_nucleus,ya
+vietnamese_nucleus,ye
+vietnamese_nucleus,oai
+vietnamese_nucleus,oay
+vietnamese_nucleus,oeo
+vietnamese_nucleus,uai
+vietnamese_nucleus,uay
+vietnamese_nucleus,uoi
+vietnamese_nucleus,uou
+vietnamese_nucleus,uya
+vietnamese_nucleus,uye
+vietnamese_nucleus,uyu
+vietnamese_nucleus,yeu
+vietnamese_nucleus,ieu
+vietnamese_coda,c
+vietnamese_coda,ch
+vietnamese_coda,m
+vietnamese_coda,n
+vietnamese_coda,ng
+vietnamese_coda,nh
+vietnamese_coda,p
+vietnamese_coda,t
 deadline_prefix,by
 deadline_prefix,before
 deadline_prefix,until

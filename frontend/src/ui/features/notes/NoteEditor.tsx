@@ -13,6 +13,7 @@ import {
   loadDraft,
   saveDraft,
 } from "../../../lib/draft";
+import { now } from "../../../lib/clock";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
@@ -62,6 +63,29 @@ export interface NoteEditorProps {
 
 /** The reading line shows only when the answer takes longer than this (NC §2.2). */
 const READING_AFTER_MS = 300;
+
+/** "Reading your note…" with a shine passing over it, and the seconds since Make tasks (the rules and, for
+ * a low-confidence note, the language model). Only the words are announced, not each second. */
+function ReadingStatus() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const start = now().getTime() - READING_AFTER_MS;
+    const id = setInterval(
+      () => setSeconds(Math.floor((now().getTime() - start) / 1000)),
+      1000,
+    );
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <>
+      <span className="shiny-text">{t("note.reading")}</span>
+      <span aria-hidden="true" className="tabular-nums">
+        {" · "}
+        {t("note.reading_seconds", { seconds })}
+      </span>
+    </>
+  );
+}
 
 // NF-14: the client mirrors the server's notes.max_length; the counter shows from 4,500 (NC §2.1)
 const NOTE_MAX = 5000;
@@ -354,7 +378,7 @@ export function NoteEditor({
             {t("note.editor_hint")}
           </p>
           <p role="status" className="m-0 text-footnote text-ink-secondary">
-            {reading ? t("note.reading") : ""}
+            {reading ? <ReadingStatus /> : ""}
           </p>
           {message && (
             <div className="flex items-center justify-between gap-3 pb-2">

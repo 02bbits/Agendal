@@ -29,7 +29,7 @@ final class NoteDateParser
     {
         // No date inside a URL, email, file name or project name ("https://x.com/2026/10/26", project "Friday").
         $text = NoteVocabulary::withoutLiterals($text, array_values($context->projects));
-        if ($this->durations->unreadable($text)) {
+        if ($this->durations->unreadable(self::withoutWeekdays($text))) {
             return new ParsedDate(unreadable: true);
         }
         $unreadable = false;
@@ -80,7 +80,7 @@ final class NoteDateParser
     {
         return [
             ...$this->offsets($text, $context),
-            ...$this->durationsFromToday($text, $context),
+            ...$this->durationsFromToday(self::withoutWeekdays($text), $context),
             ...$this->weekAndMonthEnds($text, $context),
             ...$this->weekdays($text, $context, $startTime),
             ...$this->numericDates($text, $context),
@@ -101,6 +101,21 @@ final class NoteDateParser
             'phrase' => $found['phrase'],
             'offset' => $found['offset'],
         ], NoteVocabulary::findAll('date_offset', $text));
+    }
+
+    /**
+     * Weekday names, with the week after them ("thứ 2 tuần sau", "friday this week"), blanked to spaces with offsets
+     * kept: the 2 of "thứ 2 tuần sau" is a weekday, not two weeks, and that "tuần này" picks a day, not a period.
+     */
+    public static function withoutWeekdays(string $text): string
+    {
+        $week = '(?:\s+(?:'.NoteVocabulary::phrases('week_next').'|'.NoteVocabulary::phrases('weekday_week_this').')(?![\p{L}\p{N}_]))?';
+        foreach (NoteVocabulary::findAll('weekday', $text) as ['phrase' => $phrase, 'offset' => $offset]) {
+            $length = preg_match('~\G'.preg_quote($phrase, '~').$week.'~iu', $text, $m, 0, $offset) === 1 ? strlen($m[0]) : strlen($phrase);
+            $text = substr_replace($text, str_repeat(' ', $length), $offset, $length);
+        }
+
+        return $text;
     }
 
     /**
@@ -166,11 +181,25 @@ final class NoteDateParser
             $thisPrefix = $this->endsWith($before, NoteVocabulary::phrases('weekday_this'));
             $next = $this->endsWith($before, NoteVocabulary::phrases('weekday_next'));
             $thisSuffix = preg_match('~^\s+(?:'.NoteVocabulary::phrases('weekday_this_suffix').')(?![\p{L}\p{N}_])~iu', $after, $suffix) === 1 ? $suffix[0] : '';
+            // "thứ 2 tuần sau", "friday next week": that day of next week; "thứ 2 tuần này": of this week, unreadable once past.
+            $nextWeek = preg_match('~^\s+(?:'.NoteVocabulary::phrases('week_next').')(?![\p{L}\p{N}_])~iu', $after, $week) === 1;
+            $thisWeek = ! $nextWeek && preg_match('~^\s+(?:'.NoteVocabulary::phrases('weekday_week_this').')(?![\p{L}\p{N}_])~iu', $after, $week) === 1;
             $prefix = $repeat ?? $thisPrefix ?? $next ?? '';
             $dayWord = $this->endsWith(substr($before, 0, strlen($before) - strlen($prefix)), NoteVocabulary::phrases('date_day_word')) ?? '';
             $prefix = $dayWord.$prefix;
             $days = $this->daysUntil($today, (int) $day);
             $todayAllowed = $thisPrefix !== null || $thisSuffix !== '' || ($repeat !== null && ($startTime === null || $startTime > $context->clock()));
+            if ($nextWeek || $thisWeek) {
+                $firstDay = $context->weekStart->firstDay();
+                $fromToday = ($this->daysUntil($today, $firstDay) ?: self::DAYS_PER_WEEK) - ($thisWeek ? self::DAYS_PER_WEEK : 0) + $this->daysUntil($firstDay, (int) $day);
+                $found[] = [
+                    'date' => $fromToday < 0 ? null : $this->daysFromToday($context, $fromToday),
+                    'phrase' => $prefix.$phrase.$week[0],
+                    'offset' => $offset - strlen($prefix),
+                ];
+
+                continue;
+            }
             $found[] = [
                 'date' => $this->daysFromToday($context, $days === 0 && ! $todayAllowed ? self::DAYS_PER_WEEK : $days),
                 'phrase' => $prefix.$phrase.$thisSuffix,

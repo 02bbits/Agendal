@@ -16,6 +16,7 @@ use App\Services\Notes\CommandMatcher;
 use App\Services\Notes\NoteApplier;
 use App\Services\Notes\NoteContext;
 use App\Services\Notes\NoteEngine;
+use App\Services\Notes\NoteLlmFallback;
 use App\Services\Notes\NoteSplitter;
 use App\Services\Notes\NoteUndo;
 use App\Services\Notes\PlanValidator;
@@ -38,6 +39,7 @@ class ProcessNote
         private TaskCandidates $candidates,
         private NoteApplier $applier,
         private NoteUndo $undo,
+        private NoteLlmFallback $fallback,
     ) {}
 
     /**
@@ -138,15 +140,22 @@ class ProcessNote
         }
         $remainingMs = max(0.0, $budgetMs - (hrtime(true) - $started) / 1e6);
         $build = $this->engine->build($text, $context, array_values($open), array_values($done), $remainingMs);
+        // Low-confidence items only; off, failing or over budget, the rules result stands (ADR-008)
+        $build = $this->fallback->improve($build, $text, $context, array_values($open), $user->id);
         if ($build->plan['dropped'] > 0) {
             Log::info('note_plan_validation', ['dropped' => $build->plan['dropped'], 'at' => 'plan']);
         }
         $note ??= new Note;
-        $plan = $note->exists ? [...$build->plan, 'edit_timezone' => $zone] : $build->plan;
+        $plan = $build->plan;
+        if ($build->itemOutcomes !== []) {
+            $plan['processing'] = array_map(fn (string $ref, array $outcome): array => ['ref' => $ref, ...$outcome],
+                array_keys($build->itemOutcomes), array_values($build->itemOutcomes));
+        }
+        $plan = $note->exists ? [...$plan, 'edit_timezone' => $zone] : $plan;
         $file = $note->exists ? $note->source_file_name : (isset($input['source_file_name']) ? basename(str_replace('\\', '/', $input['source_file_name'])) : null);
         $note->forceFill([
             'user_id' => $user->id, 'client_id' => $note->exists ? $note->client_id : $input['client_id'], 'text' => $text, 'name' => $build->name,
-            'status' => $build->status->value, 'engine' => $build->engine->value,
+            'status' => $build->status->value, 'engine' => $build->engine->value, 'prompt_version' => $build->promptVersion,
             'source_file_name' => $file === null ? null : preg_replace('/[\p{C}]/u', '', $file),
             'written_at' => $note->exists ? $note->written_at : $clientClock->now(), 'written_tz' => $note->exists ? $note->written_tz : $zone, 'processed_at' => $this->clock->now(),
             'edited_at' => $note->exists ? $this->clock->now() : null,
