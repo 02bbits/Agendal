@@ -12,7 +12,7 @@ import {
 import { appClock } from "../../appClock";
 import { useAppFrame } from "../../AppFrame";
 import { PageMessage } from "../../PageMessage";
-import { ApiRequestError } from "../../../lib/apiError";
+import { ApiRequestError, rateLimited } from "../../../lib/apiError";
 import {
   confirmNote,
   deleteNote,
@@ -48,6 +48,7 @@ import {
   nameOf,
 } from "../../../ui/features/notes/NoteResultScreen";
 import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
+import { RateLimited } from "../../../ui/features/shell/RateLimited";
 import { useMediaQuery } from "../../../ui/components/useMediaQuery";
 import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
 import { useHistoryEntry } from "../../../ui/components/useHistoryEntry";
@@ -515,6 +516,8 @@ export default function NoteResultClient({
   const [errorState, setErrorState] = useState<{
     notFound: boolean;
     message?: string;
+    /** A 429: the rate-limited page instead of the message (UX-43). */
+    limited?: ApiRequestError | null;
   } | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -542,6 +545,7 @@ export default function NoteResultClient({
         else if (error instanceof ApiRequestError)
           setErrorState({
             notFound: false,
+            limited: rateLimited(error),
             message: t("error.generic", {
               request_id: error.requestId ?? error.code,
             }),
@@ -586,6 +590,8 @@ export default function NoteResultClient({
         onAction={back}
       />
     );
+  if (errorState?.limited)
+    return <RateLimited error={errorState.limited} onRetry={retry} />;
   if (errorState)
     return (
       <PageMessage

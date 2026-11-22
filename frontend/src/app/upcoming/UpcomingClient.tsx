@@ -13,6 +13,7 @@ import {
   useTaskPanel,
   type UpcomingFilter,
   type UpcomingViewMode,
+  RateLimited,
 } from "@/ui";
 import { LoadError } from "@/ui/components/LoadError";
 import {
@@ -143,7 +144,10 @@ export function UpcomingClient() {
       {data.status === "loading" && (
         <UpcomingSkeleton board={viewMode === "board"} />
       )}
-      {data.status === "error" && (
+      {data.status === "error" && data.limited && (
+        <RateLimited error={data.limited} onRetry={data.retry} />
+      )}
+      {data.status === "error" && !data.limited && (
         <LoadError message={data.errorMessage} onRetry={data.retry} />
       )}
       {data.status === "ready" && (

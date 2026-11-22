@@ -333,6 +333,56 @@ describe("Project detail page /projects/[id]", () => {
     expect(contentCol.contains(rowsWrapper)).toBe(true);
   });
 
+  it("UX-43: a load that was too fast shows the rate-limited page; Try again loads it after the wait (Refs #169)", async () => {
+    pathname = "/projects/none";
+    let limited = true;
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/none") {
+        if (limited)
+          return json(429, {
+            error: {
+              code: "error.rate_limited",
+              retry_after: 1,
+              limit: { max: 20, window: 1 },
+            },
+          });
+        return json(200, {
+          project: null,
+          progress: { done: 0, total: 1 },
+          open: [task({ id: "t-1", title: "Back again", project_id: null })],
+          completed: [],
+          next_cursor: null,
+        });
+      }
+      return json(200, []);
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "none" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: t("rate.burst_title") }),
+    ).toBeTruthy();
+    limited = false;
+    const again = await screen.findByRole(
+      "button",
+      { name: t("rate.try_again") },
+      { timeout: 2500 },
+    );
+    await userEvent.click(again);
+
+    expect(await screen.findByText("Back again")).toBeTruthy();
+  });
+
   it("No project screen /projects/none lists open and completed tasks with no menu", async () => {
     pathname = "/projects/none";
     const noneProjectData = {

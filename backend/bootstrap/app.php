@@ -1,5 +1,6 @@
 <?php
 
+use App\Exceptions\RateLimited;
 use App\Http\Middleware\AssignRequestId;
 use App\Http\Middleware\EnsureEmailVerified;
 use App\Http\Middleware\ForgetSessionCookieAfterSignOut;
@@ -103,6 +104,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 $retryAfter = $headers['Retry-After'] ?? $headers['retry-after'] ?? null;
                 if ($retryAfter !== null) {
                     $error['retry_after'] = (int) $retryAfter;
+                }
+                // Which limit: `window` 1 is a burst ("too fast"), longer is "too many" (UX-43)
+                if ($e instanceof RateLimited) {
+                    $error['limit'] = ['max' => $e->max, 'window' => $e->window];
                 }
             }
 

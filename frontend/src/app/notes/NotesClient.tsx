@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
 import { useToday } from "../../ui/features/tasks/useToday";
-import { ApiRequestError } from "../../lib/apiError";
+import { ApiRequestError, rateLimited } from "../../lib/apiError";
 import {
   deviceNotes,
   listNotes,
@@ -46,6 +46,8 @@ function NotesContent({ noteId }: { noteId?: string }) {
     key: string;
     page: NoteListPage | null;
     error: boolean;
+    /** A 429: the rate-limited page instead of the message (UX-43). */
+    limited?: ApiRequestError | null;
   } | null>(null);
   const [revision, setRevision] = useState(0);
   const requestKey = `${filter}:${revision}`;
@@ -56,6 +58,8 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const error = loaded?.key === requestKey && loaded.error;
   // The summary stays from the last list while another filter loads
   const summary = loaded?.page;
+  const limited = (error && loaded.limited) || null;
+  const retry = () => setRevision((value) => value + 1);
   const pushed = useRef(false);
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -77,7 +81,12 @@ function NotesContent({ noteId }: { noteId?: string }) {
         const kept =
           error instanceof ApiRequestError ? null : await deviceNotes(filter);
         if (current)
-          setLoaded({ key: requestKey, page: kept, error: kept === null });
+          setLoaded({
+            key: requestKey,
+            page: kept,
+            error: kept === null,
+            limited: rateLimited(error),
+          });
       });
     return () => {
       current = false;
@@ -182,7 +191,8 @@ function NotesContent({ noteId }: { noteId?: string }) {
       <div hidden={!!selected && !wide} inert={!!selected}>
         <NotesScreen
           status={data ? "ready" : error ? "error" : "loading"}
-          onRetry={() => setRevision((value) => value + 1)}
+          onRetry={retry}
+          limited={limited}
           notes={data?.items ?? []}
           total={summary?.total}
           needs={summary?.needs_count}

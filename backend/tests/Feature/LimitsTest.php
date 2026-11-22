@@ -60,3 +60,29 @@ it('SEC-10: a guest is counted on signed-in routes too, so flooding them past th
         ->assertStatus(429)
         ->assertJsonPath('error.code', 'error.rate_limited');
 });
+
+it('UX-43: a 429 names the limit it hit: 20 at once is a burst, 150 in a minute is the window', function () {
+    Route::middleware('api')->prefix('api/v1')->get('_ping', fn () => ['ok' => true]);
+    $this->freezeTime();
+
+    // 21 in one second: the burst cap
+    foreach (range(1, 20) as $ignored) {
+        $this->getJson('/api/v1/_ping')->assertOk();
+    }
+    $this->getJson('/api/v1/_ping')->assertStatus(429)
+        ->assertJsonPath('error.code', 'error.rate_limited')
+        ->assertJsonPath('error.limit', ['max' => 20, 'window' => 1]);
+
+    // 20 a second after that, under the burst cap, until the minute's 150 are used
+    $sent = 20;
+    while ($sent < 150) {
+        $this->travel(1)->seconds();
+        foreach (range(1, min(20, 150 - $sent)) as $ignored) {
+            $this->getJson('/api/v1/_ping')->assertOk();
+            $sent++;
+        }
+    }
+    $this->travel(1)->seconds();
+    $this->getJson('/api/v1/_ping')->assertStatus(429)
+        ->assertJsonPath('error.limit', ['max' => 150, 'window' => 60]);
+});

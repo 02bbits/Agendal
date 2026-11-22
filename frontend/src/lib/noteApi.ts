@@ -103,10 +103,19 @@ export type NoteActionOutcome =
   { result: NoteResult } | { conflicts: number } | { error: CopyKey };
 
 /** A note action's failure as copy: the server's code when it has copy, "needs a connection" offline. */
+/**
+ * A server refusal as copy for a toast. A 429 has no seconds to fill in there, so it says
+ * "shortly" rather than showing a bare {seconds} (UX-43).
+ */
+function errorCopy(error: ApiRequestError, fallback: CopyKey): CopyKey {
+  if (error.status === 429) return "error.rate_limited_soon";
+  return isCopyKey(error.code) ? error.code : fallback;
+}
+
 function actionError(error: unknown): { error: CopyKey } {
   if (!(error instanceof ApiRequestError))
     return { error: "note.needs_connection" };
-  return { error: isCopyKey(error.code) ? error.code : "error.generic" };
+  return { error: errorCopy(error, "error.generic") };
 }
 
 /** How many tasks a `409 note.undo_conflicts` names (RV §2.4), or 0 for any other answer. */
@@ -312,8 +321,8 @@ export async function makeFollowupTask(
   } catch (error) {
     return {
       error:
-        error instanceof ApiRequestError && isCopyKey(error.code)
-          ? error.code
+        error instanceof ApiRequestError
+          ? errorCopy(error, "note.needs_connection")
           : "note.needs_connection",
     };
   }
@@ -337,8 +346,8 @@ export async function renameNote(
   } catch (error) {
     return {
       error:
-        error instanceof ApiRequestError && isCopyKey(error.code)
-          ? error.code
+        error instanceof ApiRequestError
+          ? errorCopy(error, "error.save_failed")
           : "error.save_failed",
     };
   }

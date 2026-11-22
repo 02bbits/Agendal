@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ApiRequestError } from "@/lib/apiError";
+import { ApiRequestError, rateLimited } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
@@ -22,6 +22,8 @@ export function useInboxData() {
     "loading",
   );
   const [errorMessage, setErrorMessage] = useState<string>("");
+  // A 429: the screen shows the rate-limited page instead of the message (UX-43)
+  const [limited, setLimited] = useState<ApiRequestError | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectList, setProjectList] = useState<Project[]>([]);
   const [projectsStatus, setProjectsStatus] = useState<"ready" | "failed">(
@@ -65,6 +67,7 @@ export function useInboxData() {
         // Offline with the device copy on screen: keep showing it, the banner says why
         if (!(err instanceof ApiRequestError) && shownFromDevice.current)
           return;
+        setLimited(rateLimited(err));
         if (err instanceof ApiRequestError) {
           setErrorMessage(
             t("error.generic", {
@@ -106,6 +109,7 @@ export function useInboxData() {
   return {
     status,
     errorMessage,
+    limited,
     tasks,
     projectList,
     projectsStatus,

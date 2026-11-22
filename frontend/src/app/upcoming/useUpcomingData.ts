@@ -9,7 +9,7 @@ import {
   type Project,
   type Task,
 } from "@/ui";
-import { ApiRequestError } from "@/lib/apiError";
+import { ApiRequestError, rateLimited } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { useDataChanged } from "../useDataChanged";
@@ -50,6 +50,8 @@ export function useUpcomingData() {
     "loading",
   );
   const [errorMessage, setErrorMessage] = useState("");
+  // A 429: the screen shows the rate-limited page instead of the message (UX-43)
+  const [limited, setLimited] = useState<ApiRequestError | null>(null);
   // Bumped on every load: Next keeps this page mounted but hidden after we leave
   // (cacheComponents), and the load runs again when we come back; a new store key makes fresh
   // tasks replace the store's old copy
@@ -87,6 +89,7 @@ export function useUpcomingData() {
       .catch((err: unknown) => {
         const apiError = err instanceof ApiRequestError;
         if (!apiError && shownFromDevice.current) return;
+        setLimited(rateLimited(err));
         setErrorMessage(
           apiError
             ? t("error.generic", { request_id: err.requestId ?? err.code })
@@ -132,6 +135,7 @@ export function useUpcomingData() {
   return {
     status,
     errorMessage,
+    limited,
     loadSeq,
     tasks,
     projectList,

@@ -75,6 +75,48 @@ describe("Upcoming page /upcoming (Refs #28)", () => {
     expect(screen.queryByText(/\{request_id\}/)).toBeNull();
   });
 
+  it("UX-43: a load past the limit shows the rate-limited page, naming the limit (Refs #169)", async () => {
+    fetchMock.mockImplementation(async (url: string) => {
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects") return json(200, []);
+      if (url === "/api/v1/tasks?view=inbox")
+        return json(200, { overdue: [], today: [] });
+      if (url.includes("view=upcoming"))
+        return json(429, {
+          error: {
+            code: "error.rate_limited",
+            retry_after: 40,
+            limit: { max: 150, window: 60 },
+          },
+        });
+      return json(404, {});
+    });
+
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <UpcomingPage />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    expect(
+      await screen.findByRole("heading", { name: t("rate.window_title") }),
+    ).toBeTruthy();
+    expect(
+      screen.getByText(/You've reached 150 requests per minute/),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: t("rate.try_again_in", { seconds: 40 }),
+      }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Something went wrong/)).toBeNull();
+  });
+
   it("shows fresh rows after agendal:task-created event", async () => {
     const task1 = task({
       id: "t-1",
