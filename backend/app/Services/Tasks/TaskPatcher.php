@@ -273,13 +273,17 @@ class TaskPatcher
         return $this->resolveEffectiveAt(null);
     }
 
+    /**
+     * The write's time from a client's `at` or a server stamp. A stamp made in a request carries the calling
+     * device (`…Z~<device>`, ADR-004), as `afterLastWrite()` does for a note's changes: only its time counts here.
+     */
     public function resolveEffectiveAt(?string $at): DateTimeImmutable
     {
         $now = $this->clock->now()->setTimezone(new DateTimeZone('UTC'));
         $maxAhead = $now->modify('+5 minutes');
 
         if ($at !== null && $at !== '') {
-            $parsedAt = (new DateTimeImmutable($at))->setTimezone(new DateTimeZone('UTC'));
+            $parsedAt = Stamp::time($at);
 
             return $parsedAt > $maxAhead ? $maxAhead : $parsedAt;
         }
