@@ -1,4 +1,12 @@
-import { Fragment, useEffect, useRef, type ReactNode } from "react";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useRef,
+  type CSSProperties,
+  type DOMAttributes,
+  type ReactNode,
+} from "react";
 import { localTime, now, timeZone } from "../../../lib/clock";
 import { useConflicted } from "../../../lib/conflicts";
 import { t } from "../../copy";
@@ -33,6 +41,19 @@ export interface TaskRowProps {
   settling?: boolean;
   /** Search highlights matched words in the title (LV-3). */
   renderTitle?: (title: string) => ReactNode;
+  /** Drag and drop (#178): set by a sortable list. */
+  drag?: RowDrag;
+}
+
+/** What a sortable list gives its row (#178). */
+export interface RowDrag {
+  setNodeRef: (node: HTMLElement | null) => void;
+  style: CSSProperties;
+  /** Mouse and touch start a drag anywhere on the row. */
+  rowListeners: DOMAttributes<HTMLElement>;
+  /** The keyboard's way to pick the row up. */
+  handle: ReactNode;
+  dragging: boolean;
 }
 
 function metaToneClass(tone: MetaTone): string | undefined {
@@ -56,6 +77,7 @@ export function TaskRow({
   onToggle,
   navigate,
   renderTitle,
+  drag,
 }: TaskRowProps) {
   const nowTime = localTime(timeZone(), now());
   // Undoing a done repeat: this row leaves to join its series' open row, which lights up (#168)
@@ -63,6 +85,14 @@ export function TaskRow({
   const leaving = store?.isLeaving(task.id) ?? false;
   const arriving = store?.isArriving(task.id) ?? false;
   const rowRef = useRef<HTMLLIElement>(null);
+  const setDragNode = drag?.setNodeRef;
+  const setRow = useCallback(
+    (node: HTMLLIElement | null) => {
+      rowRef.current = node;
+      setDragNode?.(node);
+    },
+    [setDragNode],
+  );
   // Out of sight (a long Completed list): brought into view, so the change is seen
   useEffect(() => {
     if (!arriving) return;
@@ -98,7 +128,9 @@ export function TaskRow({
 
   return (
     <li
-      ref={rowRef}
+      ref={setRow}
+      style={drag?.style}
+      {...drag?.rowListeners}
       className={cx(
         "group/task relative flex min-h-[56px] items-center gap-3 border-b px-4 py-3 transition-colors last:border-b-0 cursor-pointer",
         tone === "due"
@@ -111,8 +143,12 @@ export function TaskRow({
         task.done && "is-done",
         overdue && !task.done && "is-overdue",
         leaving && "pointer-events-none motion-safe:animate-merge-out",
+        drag && "touch-manipulation",
+        drag?.dragging &&
+          "z-10 rounded-tile bg-surface shadow-lg ring-1 ring-separator",
       )}
     >
+      {drag?.handle}
       {/* A done repeat went back into this row (#168): the tick's tint wipes across, then fades */}
       {arriving && (
         <span

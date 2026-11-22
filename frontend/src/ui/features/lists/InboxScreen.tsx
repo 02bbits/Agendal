@@ -5,7 +5,10 @@ import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox, sortNoDate, sortTodayTasks } from "../../domain/lists";
 import { useFrozenOrder } from "./useFrozenOrder";
+import { SortableTaskList } from "./dnd/SortableTaskList";
+import { TaskDndScope } from "./dnd/TaskDndScope";
 import { SortMenu } from "./SortMenu";
+import { useDropReorder } from "./useDropReorder";
 import { useSortByRules } from "./useSortByRules";
 import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
@@ -15,7 +18,7 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { ProgressSummary } from "../tasks/ProgressSummary";
 import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
+import { TaskRow, type RowDrag } from "../tasks/TaskRow";
 import { Section } from "./Section";
 
 export const INBOX_COMPLETED_PAGE = 5;
@@ -105,6 +108,8 @@ export function InboxScreen({
   const [noDateMode] = useSortMode("no_date");
   const sortTodayByRules = useSortByRules("today", "day_order");
   const sortNoDateByRules = useSortByRules("no_date", "project_order");
+  const moveInToday = useDropReorder("today", "day_order");
+  const moveInNoDate = useDropReorder("no_date", "project_order");
   const view = buildInbox(frozen.layout, store.today, {
     sort: { today: todayMode, noDate: noDateMode },
     completedToday: store.completedToday,
@@ -130,7 +135,7 @@ export function InboxScreen({
 
   const row = (
     task: (typeof view.today)[number],
-    opts: { overdue?: boolean } = {},
+    opts: { overdue?: boolean; drag?: RowDrag } = {},
   ) => (
     <TaskRow
       key={task.id}
@@ -147,154 +152,168 @@ export function InboxScreen({
   );
 
   return (
-    <div className="pb-8">
-      {showHeader && (
-        <ScreenHeader
-          overline={formatLongDate(store.today)}
-          title={t("nav.inbox")}
-          accountInitial={accountInitial}
-          navigate={navigate}
-        />
-      )}
+    <TaskDndScope>
+      <div className="pb-8">
+        {showHeader && (
+          <ScreenHeader
+            overline={formatLongDate(store.today)}
+            title={t("nav.inbox")}
+            accountInitial={accountInitial}
+            navigate={navigate}
+          />
+        )}
 
-      {view.empty ? (
-        <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
-          <h2 className="m-0 text-dialog font-semibold text-balance focus:outline-none">
-            {t("list.first_run")}
-          </h2>
-        </section>
-      ) : (
-        <div className="w-full">
-          {!allDone && (
-            <div className={TASK_COLUMN_CLASS}>
-              <ProgressSummary
-                progress={view.progress}
-                next={nextUp(
-                  [...view.today, ...view.overdue].filter((x) => !x.done),
-                  store.today,
+        {view.empty ? (
+          <section className="flex flex-col items-center gap-2 px-5 py-8 text-center">
+            <h2 className="m-0 text-dialog font-semibold text-balance focus:outline-none">
+              {t("list.first_run")}
+            </h2>
+          </section>
+        ) : (
+          <div className="w-full">
+            {!allDone && (
+              <div className={TASK_COLUMN_CLASS}>
+                <ProgressSummary
+                  progress={view.progress}
+                  next={nextUp(
+                    [...view.today, ...view.overdue].filter((x) => !x.done),
+                    store.today,
+                  )}
+                  timeFormat={store.timeFormat}
+                />
+              </div>
+            )}
+            {allDone && (
+              <section className="flex w-full flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+                <span className="text-ink-tertiary" aria-hidden="true">
+                  <CheckIcon size={28} />
+                </span>
+                <h2
+                  ref={doneHeading}
+                  tabIndex={-1}
+                  className="m-0 text-dialog font-semibold text-balance focus:outline-none"
+                >
+                  {t("list.nothing_left")}
+                </h2>
+                {view.progress.total > 0 && (
+                  <p className="m-0 max-w-[300px] text-callout text-ink-secondary">
+                    {t("list.encourage_one")}
+                  </p>
                 )}
-                timeFormat={store.timeFormat}
-              />
-            </div>
-          )}
-          {allDone && (
-            <section className="flex w-full flex-col items-center justify-center gap-2 px-5 py-8 text-center">
-              <span className="text-ink-tertiary" aria-hidden="true">
-                <CheckIcon size={28} />
-              </span>
-              <h2
-                ref={doneHeading}
-                tabIndex={-1}
-                className="m-0 text-dialog font-semibold text-balance focus:outline-none"
-              >
-                {t("list.nothing_left")}
-              </h2>
-              {view.progress.total > 0 && (
-                <p className="m-0 max-w-[300px] text-callout text-ink-secondary">
-                  {t("list.encourage_one")}
-                </p>
+                <Link
+                  href={ROUTES.upcoming}
+                  navigate={navigate}
+                  className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
+                >
+                  <span className="link-swipe">{t("list.see_upcoming")}</span>
+                </Link>
+              </section>
+            )}
+            <div className={TASK_COLUMN_CLASS}>
+              {view.overdue.length > 0 && (
+                <Section
+                  title={t("list.overdue")}
+                  count={view.overdue.length}
+                  tone="danger"
+                  collapsible
+                  open={openOverdue}
+                  onToggle={handleToggleOverdue}
+                >
+                  {view.overdue.map((x) => row(x, { overdue: true }))}
+                </Section>
               )}
-              <Link
-                href={ROUTES.upcoming}
-                navigate={navigate}
-                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
-              >
-                <span className="link-swipe">{t("list.see_upcoming")}</span>
-              </Link>
-            </section>
-          )}
-          <div className={TASK_COLUMN_CLASS}>
-            {view.overdue.length > 0 && (
-              <Section
-                title={t("list.overdue")}
-                count={view.overdue.length}
-                tone="danger"
-                collapsible
-                open={openOverdue}
-                onToggle={handleToggleOverdue}
-              >
-                {view.overdue.map((x) => row(x, { overdue: true }))}
-              </Section>
-            )}
-            {view.today.length > 0 && (
-              <Section
-                title={t("list.today")}
-                count={view.today.length}
-                action={
-                  <SortMenu
+              {view.today.length > 0 && (
+                <Section
+                  title={t("list.today")}
+                  count={view.today.length}
+                  action={
+                    <SortMenu
+                      list="today"
+                      listName={t("list.today")}
+                      onSortByRules={() =>
+                        sortTodayByRules(
+                          sortTodayTasks(
+                            view.today.filter((x) => !x.done),
+                            store.today,
+                          ),
+                        )
+                      }
+                    />
+                  }
+                  collapsible
+                  open={openToday}
+                  onToggle={handleToggleToday}
+                >
+                  <SortableTaskList
                     list="today"
-                    listName={t("list.today")}
-                    onSortByRules={() =>
-                      sortTodayByRules(
-                        sortTodayTasks(
-                          view.today.filter((x) => !x.done),
-                          store.today,
-                        ),
-                      )
-                    }
-                  />
-                }
-                collapsible
-                open={openToday}
-                onToggle={handleToggleToday}
-              >
-                {view.today.map((x) => row(x))}
-              </Section>
-            )}
-            {view.noDate.length > 0 && (
-              <Section
-                title={t("list.no_date")}
-                count={view.noDate.length}
-                action={
-                  <SortMenu
+                    tasks={view.today}
+                    onMove={(id, to) => moveInToday(view.today, id, to)}
+                  >
+                    {(x, drag) => row(x, { drag })}
+                  </SortableTaskList>
+                </Section>
+              )}
+              {view.noDate.length > 0 && (
+                <Section
+                  title={t("list.no_date")}
+                  count={view.noDate.length}
+                  action={
+                    <SortMenu
+                      list="no_date"
+                      listName={t("list.no_date")}
+                      onSortByRules={() =>
+                        sortNoDateByRules(
+                          sortNoDate(view.noDate.filter((x) => !x.done)),
+                        )
+                      }
+                    />
+                  }
+                  collapsible
+                  open={openNoDate}
+                  onToggle={handleToggleNoDate}
+                >
+                  <SortableTaskList
                     list="no_date"
-                    listName={t("list.no_date")}
-                    onSortByRules={() =>
-                      sortNoDateByRules(
-                        sortNoDate(view.noDate.filter((x) => !x.done)),
-                      )
-                    }
-                  />
-                }
-                collapsible
-                open={openNoDate}
-                onToggle={handleToggleNoDate}
-              >
-                {view.noDate.map((x) => row(x))}
-              </Section>
-            )}
-            {view.completed.length > 0 && (
-              <Section
-                title={t("list.completed")}
-                count={view.completed.length}
-                collapsible
-                open={openCompleted}
-                onToggle={handleToggleCompleted}
-                footer={
-                  hasHiddenCompleted ? (
-                    <TextButton
-                      className="mt-1 w-full"
-                      onClick={() => setShowAllCompleted(true)}
-                    >
-                      {t("list.show_all")}
-                    </TextButton>
-                  ) : showAllCompleted &&
-                    INBOX_COMPLETED_PAGE < totalCompleted ? (
-                    <TextButton
-                      className="mt-1 w-full"
-                      onClick={() => setShowAllCompleted(false)}
-                    >
-                      {t("list.show_less")}
-                    </TextButton>
-                  ) : null
-                }
-              >
-                {visibleCompleted.map((x) => row(x))}
-              </Section>
-            )}
+                    tasks={view.noDate}
+                    onMove={(id, to) => moveInNoDate(view.noDate, id, to)}
+                  >
+                    {(x, drag) => row(x, { drag })}
+                  </SortableTaskList>
+                </Section>
+              )}
+              {view.completed.length > 0 && (
+                <Section
+                  title={t("list.completed")}
+                  count={view.completed.length}
+                  collapsible
+                  open={openCompleted}
+                  onToggle={handleToggleCompleted}
+                  footer={
+                    hasHiddenCompleted ? (
+                      <TextButton
+                        className="mt-1 w-full"
+                        onClick={() => setShowAllCompleted(true)}
+                      >
+                        {t("list.show_all")}
+                      </TextButton>
+                    ) : showAllCompleted &&
+                      INBOX_COMPLETED_PAGE < totalCompleted ? (
+                      <TextButton
+                        className="mt-1 w-full"
+                        onClick={() => setShowAllCompleted(false)}
+                      >
+                        {t("list.show_less")}
+                      </TextButton>
+                    ) : null
+                  }
+                >
+                  {visibleCompleted.map((x) => row(x))}
+                </Section>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TaskDndScope>
   );
 }
