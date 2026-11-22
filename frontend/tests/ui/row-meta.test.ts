@@ -184,7 +184,7 @@ describe("rowMeta", () => {
       ]);
     });
 
-    it("case 3: start_date === due_date === today with no times → Today", () => {
+    it("case 3: start_date === due_date === today with no times → Starts today", () => {
       const t = task({
         title: "Same day today untimed",
         start_date: TODAY_WED_18_NOV,
@@ -192,7 +192,7 @@ describe("rowMeta", () => {
       });
       expect(
         rowMeta(t, { today: TODAY_WED_18_NOV, timeFormat: "24h" }),
-      ).toEqual([{ text: "Today", tone: "plain" }]);
+      ).toEqual([{ text: "Starts today", tone: "plain" }]);
     });
 
     it("case 3: start_date === due_date with start_time and no due_time → Start at {time} · Due {day}", () => {
@@ -432,7 +432,7 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
       { ...same, due_time: "17:00" },
       [{ text: "Due today, 17:00", tone: "due" }],
     ],
-    ["1.4 same day, no time", same, [{ text: "Today", tone: "plain" }]],
+    ["1.4 same day, no time", same, [{ text: "Starts today", tone: "plain" }]],
     [
       "1.5 starts today with start time, no due",
       { start_date: TODAY, start_time: "09:00" },

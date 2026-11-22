@@ -131,6 +131,9 @@ function sameDayParts(task: Task, f: MetaFormat): MetaPart[] {
         : f.dueOn(date, dueTime);
     return [{ text, tone: f.dueTone(task, "due") }];
   }
+  if (!entry && date === f.today) {
+    return [plain(t("task.starts_today"))];
+  }
   return [plain(f.day(date))];
 }
 
