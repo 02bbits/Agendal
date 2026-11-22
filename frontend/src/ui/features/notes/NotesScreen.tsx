@@ -137,18 +137,18 @@ export function NotesScreen({
       )}
       {status === "error" && <LoadError onRetry={onRetry} />}
       {status === "ready" && notes.length === 0 && (
-  <EmptyState
-    title={t("note.list_empty")}
-    icon={<EmptyStateIllustration type="notes" />}
-    action={
-      filter === "all" ? (
-        <Button variant="primary" onClick={onWriteNote}>
-          {t("note.capture_open")}
-        </Button>
-      ) : undefined
-    }
-  />
-)}
+        <EmptyState
+          title={t("note.list_empty")}
+          icon={<EmptyStateIllustration type="notes" />}
+          action={
+            filter === "all" ? (
+              <Button variant="primary" onClick={onWriteNote}>
+                {t("note.capture_open")}
+              </Button>
+            ) : undefined
+          }
+        />
+      )}
       {status === "ready" &&
         [...days].map(([day, rows]) => (
           <section key={day} className="mb-5">

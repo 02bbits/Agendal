@@ -86,11 +86,11 @@ export function ProjectsScreen({
       </ScreenHeader>
 
       {sortedProjects.length === 0 ? (
-  <EmptyState
-    title={t("project.list_empty")}
-    icon={<EmptyStateIllustration type="projects" />}
-  />
-) : (
+        <EmptyState
+          title={t("project.list_empty")}
+          icon={<EmptyStateIllustration type="projects" />}
+        />
+      ) : (
         <>
           <ProjectMobileList
             projects={sortedProjects}

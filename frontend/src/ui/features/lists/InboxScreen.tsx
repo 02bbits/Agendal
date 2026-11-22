@@ -150,11 +150,11 @@ export function InboxScreen({
       )}
 
       {view.empty ? (
-  <EmptyState
-    title={t("list.first_run")}
-    icon={<EmptyStateIllustration type="inbox" />}
-  />
-) : (
+        <EmptyState
+          title={t("list.first_run")}
+          icon={<EmptyStateIllustration type="inbox" />}
+        />
+      ) : (
         <div className="w-full">
           {!allDone && (
             <div className={TASK_COLUMN_CLASS}>
