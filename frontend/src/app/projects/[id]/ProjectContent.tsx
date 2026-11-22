@@ -4,7 +4,9 @@ import { useMemo } from "react";
 import {
   ProjectScreen,
   TaskPanel,
+  sortOpenByDue,
   useFrozenOrder,
+  useSortByRules,
   useTaskPanel,
   useTaskStore,
   type Navigate,
@@ -73,6 +75,7 @@ export function ProjectContent({
   );
   const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
   const completedTasks = tasks.filter((t) => t.done && !store.isSettling(t.id));
+  const sortByRules = useSortByRules(`project:${project.id}`, "project_order");
   const progress = liveProgress({
     initial: initialProgress,
     initialOpenIds,
@@ -102,6 +105,9 @@ export function ProjectContent({
         navigate={panel.navigate}
         selectedTaskId={panel.selectedTaskId}
         liveTask={frozen.live}
+        onSortByRules={() =>
+          sortByRules(sortOpenByDue(openTasks.filter((t) => !t.done)))
+        }
       />
       {panel.isWide && panel.selectedTaskId && (
         <TaskPanel

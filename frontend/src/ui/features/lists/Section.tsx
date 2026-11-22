@@ -18,6 +18,8 @@ export interface SectionProps {
   children: ReactNode;
   className?: string;
   rawChildren?: boolean;
+  /** A control beside the heading, e.g. the sort menu (#178); never inside the toggle. */
+  action?: ReactNode;
 }
 
 /** A list section: heading with its count ("Overdue, 2 tasks" to screen readers, A11Y-50), then the list. */
@@ -34,6 +36,7 @@ export function Section({
   children,
   className,
   rawChildren = false,
+  action,
 }: SectionProps) {
   const [internalOpen, setInternalOpen] = useState(
     defaultOpen !== undefined ? defaultOpen : !collapsible,
@@ -66,7 +69,7 @@ export function Section({
         {collapsible ? (
           <button
             type="button"
-            className="focus-ring flex min-h-11 w-full cursor-pointer items-center gap-2 border-0 border-b border-separator bg-transparent p-0 text-left text-ink"
+            className="focus-ring flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 border-b border-separator bg-transparent p-0 text-left text-ink"
             aria-expanded={open}
             aria-controls={listId}
             onClick={handleToggle}
@@ -86,6 +89,16 @@ export function Section({
             {visible}
             <span className="sr-only">{label}</span>
           </>
+        )}
+        {action && (
+          <span
+            className={cx(
+              "flex items-center self-stretch",
+              collapsible && "border-b border-separator",
+            )}
+          >
+            {action}
+          </span>
         )}
       </h2>
       <div id={listId} hidden={!open}>

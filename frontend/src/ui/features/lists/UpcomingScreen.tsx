@@ -10,7 +10,10 @@ import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { useTaskStore } from "../tasks/store";
+import { sortEntries } from "../../domain/entries";
+import { SortMenu } from "./SortMenu";
 import { useUpcomingPreferences } from "./storage";
+import { useSortByRules } from "./useSortByRules";
 import type { UpcomingScreenProps, UpcomingViewMode } from "./types";
 import { UpcomingBoard } from "./UpcomingBoard";
 import { UpcomingDayList } from "./UpcomingDayList";
@@ -86,6 +89,23 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
       props.onAddTask ? props.onAddTask(d) : props.onNewTask?.(),
   };
 
+  // Sort by rules: every day shown, normal entries in rule order; one rising run of keys
+  // keeps each day in order (a task's day_order only meets other tasks of its own day)
+  const sortUpcomingByRules = useSortByRules("upcoming", "day_order");
+  const sortMenu = (
+    <SortMenu
+      list="upcoming"
+      listName={t("nav.upcoming")}
+      onSortByRules={() =>
+        sortUpcomingByRules(
+          renderedDays.flatMap((day) =>
+            sortEntries(entriesByDay[day] ?? []).normal.map((e) => e.task),
+          ),
+        )
+      }
+    />
+  );
+
   const filterChips = (
     <ChipGroup
       label={t("list.filter_label")}
@@ -130,6 +150,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
           action={
             <div className="flex items-center gap-3">
               <div className="hidden md:block">{filterChips}</div>
+              {sortMenu}
               <UpcomingViewSwitch
                 viewMode={viewMode}
                 onChange={chooseViewMode}

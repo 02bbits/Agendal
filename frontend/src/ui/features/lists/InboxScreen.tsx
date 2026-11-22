@@ -3,8 +3,10 @@ import { t } from "../../copy";
 import { TextButton } from "../../components/TextButton";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
-import { buildInbox } from "../../domain/lists";
+import { buildInbox, sortNoDate, sortTodayTasks } from "../../domain/lists";
 import { useFrozenOrder } from "./useFrozenOrder";
+import { SortMenu } from "./SortMenu";
+import { useSortByRules } from "./useSortByRules";
 import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
@@ -101,6 +103,8 @@ export function InboxScreen({
   const frozen = useFrozenOrder(store.tasks, selectedTaskId);
   const [todayMode] = useSortMode("today");
   const [noDateMode] = useSortMode("no_date");
+  const sortTodayByRules = useSortByRules("today", "day_order");
+  const sortNoDateByRules = useSortByRules("no_date", "project_order");
   const view = buildInbox(frozen.layout, store.today, {
     sort: { today: todayMode, noDate: noDateMode },
     completedToday: store.completedToday,
@@ -216,6 +220,20 @@ export function InboxScreen({
               <Section
                 title={t("list.today")}
                 count={view.today.length}
+                action={
+                  <SortMenu
+                    list="today"
+                    listName={t("list.today")}
+                    onSortByRules={() =>
+                      sortTodayByRules(
+                        sortTodayTasks(
+                          view.today.filter((x) => !x.done),
+                          store.today,
+                        ),
+                      )
+                    }
+                  />
+                }
                 collapsible
                 open={openToday}
                 onToggle={handleToggleToday}
@@ -227,6 +245,17 @@ export function InboxScreen({
               <Section
                 title={t("list.no_date")}
                 count={view.noDate.length}
+                action={
+                  <SortMenu
+                    list="no_date"
+                    listName={t("list.no_date")}
+                    onSortByRules={() =>
+                      sortNoDateByRules(
+                        sortNoDate(view.noDate.filter((x) => !x.done)),
+                      )
+                    }
+                  />
+                }
                 collapsible
                 open={openNoDate}
                 onToggle={handleToggleNoDate}

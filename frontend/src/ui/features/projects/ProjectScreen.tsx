@@ -4,6 +4,7 @@ import { EmptyState } from "../../components/EmptyState";
 import { BackBar } from "../../components/BackBar";
 import { orderList } from "../../domain/order";
 import { sortCompleted, sortOpenByDue } from "../../domain/projects";
+import { SortMenu } from "../lists/SortMenu";
 import { useSortMode } from "../lists/useSortMode";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
@@ -39,6 +40,7 @@ export function ProjectScreen({
   navigate,
   selectedTaskId,
   liveTask = (task) => task,
+  onSortByRules,
 }: ProjectScreenProps) {
   const [deleting, setDeleting] = useState(false);
 
@@ -63,10 +65,19 @@ export function ProjectScreen({
         onBack={onBack}
         className="-mx-5"
         actions={
-          <ProjectHeaderMenu
-            onRename={onRenameProject}
-            onDelete={onDeleteProject ? () => setDeleting(true) : undefined}
-          />
+          <div className="flex items-center gap-1">
+            {onSortByRules && (
+              <SortMenu
+                list={`project:${project.id}`}
+                listName={project.name}
+                onSortByRules={onSortByRules}
+              />
+            )}
+            <ProjectHeaderMenu
+              onRename={onRenameProject}
+              onDelete={onDeleteProject ? () => setDeleting(true) : undefined}
+            />
+          </div>
         }
       />
       <h1
