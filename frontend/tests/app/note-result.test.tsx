@@ -138,6 +138,8 @@ async function open() {
 }
 
 beforeEach(() => {
+  vi.setSystemTime(new Date("2026-10-23T01:12:00Z"));
+
   forgetNotes();
 
   router.replace.mockClear();
@@ -187,6 +189,7 @@ describe("Note result page /notes/[id] (IM-43)", () => {
   });
 
   it("shows the skeleton only after 300 ms on a slow load", async () => {
+    vi.useRealTimers();
     vi.useFakeTimers();
 
     serve({ "t-sql": sql, "t-ink": ink }, () => json(200, result));

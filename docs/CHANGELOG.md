@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-21
+
+- **Up to three toasts at once.** [UX-04](01-product/ux-standards.md#ux-04): toasts stack, up to three, the newest on top; a fourth drops the oldest. Each has its own 5 s timer, Undo or Retry and close, and hovering or focusing any of them pauses them all. Before, a new toast replaced the old one, so quick actions in a row lost their Undo.
+
 ## 2026-11-20
 
 - **LLM provider (Refs #37, IM-38).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md) status, provider and privacy, [Q19](08-project/open-questions.md#q19), [architecture overview](07-architecture/overview.md) diagram, external services and secrets, [SC-20](07-architecture/security.md#sc-20), [NF-9](05-quality/nfr.md#nf-9), [overview](01-product/overview.md) actors, [glossary](08-project/glossary.md), [project](08-project/project.md) risk, [IM-38, IM-65](08-project/tasks.md#im-38), [SUMMARY](SUMMARY.md), [HANDOVER](HANDOVER.md): the LLM runs on Gemini (`gemini-3.5-flash-lite`, its most stable model) with the team's key; DeepSeek and Claude stay in the code, off for now; the key only comes from a secret file (`*_API_KEY_FILE`), never `.env`; users add no keys. A change the model proposes to an existing task always waits for review ([SC-13](07-architecture/security.md#sc-13)), and `NotePromptInjectionTest` is the fixed injection set. [SC-20](07-architecture/security.md#sc-20) and SEC-43 no longer mention OpenRouter routing.

@@ -12,7 +12,7 @@ import { XIcon } from "./icons";
 export const TOAST_DURATION_MS = 5000;
 
 export interface ToastData {
-  /** A new id replaces the current toast (one toast at a time, UX-04). */
+  /** Each toast has its own id; up to three show at once (UX-04, #168). */
   id: string | number;
   message: string;
   /** Leading icon, e.g. a check for "Completed …". Decorative. */
@@ -34,16 +34,20 @@ interface ToastAlertProps {
   toast: ToastData;
   duration: number;
   onDismiss: (id: ToastData["id"]) => void;
-  regionRef: React.RefObject<HTMLDivElement | null>;
+  /** The stack's one pause: hover, focus or a touch on any toast holds every timer. */
+  paused: boolean;
+  pause: () => void;
+  resume: () => void;
 }
 
 function ToastAlert({
   toast,
   duration,
   onDismiss,
-  regionRef,
+  paused,
+  pause,
+  resume,
 }: ToastAlertProps) {
-  const [paused, setPaused] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragOffsetRef = useRef(0);
   const dragStartRef = useRef<number | null>(null);
@@ -54,11 +58,6 @@ function ToastAlert({
     const timer = setTimeout(() => onDismiss(toast.id), duration);
     return () => clearTimeout(timer);
   }, [toast.id, paused, duration, onDismiss]);
-
-  const pause = useCallback(() => setPaused(true), []);
-  const resume = useCallback(() => {
-    if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
-  }, [regionRef]);
 
   // A press on Undo/Retry is a tap, not a drag: capturing it would send the click to the toast, not the button
   const onAction = (e: React.SyntheticEvent) =>
@@ -156,7 +155,7 @@ function ToastAlert({
 
   return (
     <div
-      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:pr-2 motion-safe:animate-slide-up md:motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
+      className="alert pointer-events-auto flex min-h-11 w-full max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:w-[380px] md:pr-2 motion-safe:animate-slide-up md:motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
       style={{
         transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
         opacity: dragOffset
@@ -179,7 +178,7 @@ function ToastAlert({
       onFocus={pause}
       onBlur={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null))
-          setPaused(false);
+          resume();
       }}
     >
       {toast.icon && (
@@ -187,7 +186,9 @@ function ToastAlert({
           {toast.icon}
         </span>
       )}
-      <span className="min-w-0 [overflow-wrap:anywhere]">{toast.message}</span>
+      <span className="min-w-0 flex-1 truncate" title={toast.message}>
+        {toast.message}
+      </span>
       {toast.actionLabel && toast.onAction && (
         <button
           type="button"
@@ -209,17 +210,37 @@ function ToastAlert({
   );
 }
 
+/** How many toasts show at once (#168): a fourth drops the oldest. */
+export const MAX_TOASTS = 3;
+
+export interface ToastStackProps {
+  /** Oldest first, as they were shown; at most MAX_TOASTS are drawn. */
+  toasts: readonly ToastData[];
+  onDismiss: (id: ToastData["id"]) => void;
+  /** Errors that block an action are assertive; everything else is polite (UX-60). */
+  assertive?: boolean;
+  duration?: number;
+}
+
 /**
- * Always-mounted live region with at most one toast. Shows for 5 s; hover, focus
- * or touch pauses the timer, which restarts when it leaves (UX-04, WCAG 2.2.1).
+ * Always-mounted live region with up to three toasts (#168): the newest on top, where it is seen
+ * first, the oldest at the bottom. Each shows for 5 s; hover, focus or touch on any of them pauses
+ * them all, and they start again when it leaves (UX-04, WCAG 2.2.1). Screen readers hear each new
+ * toast once, not the whole stack again.
  */
-export function Toast({
-  toast,
+export function ToastStack({
+  toasts,
   onDismiss,
   assertive = false,
   duration = TOAST_DURATION_MS,
-}: ToastProps) {
+}: ToastStackProps) {
   const regionRef = useRef<HTMLDivElement>(null);
+  const [paused, setPaused] = useState(false);
+  const pause = useCallback(() => setPaused(true), []);
+  const resume = useCallback(() => {
+    if (!regionRef.current?.contains(document.activeElement)) setPaused(false);
+  }, []);
+  const newestFirst = toasts.slice(-MAX_TOASTS).reverse();
 
   return (
     <div
@@ -227,17 +248,24 @@ export function Toast({
       className="toast toast-bottom toast-center md:[--toast-x:0px] md:[inset-inline:1rem_auto] items-center md:items-start bottom-[calc(1.75rem+env(safe-area-inset-bottom,0px))] md:bottom-4 pointer-events-none z-[110] w-full max-w-[600px] whitespace-normal px-gutter"
       role={assertive ? "alert" : "status"}
       aria-live={assertive ? "assertive" : "polite"}
-      aria-atomic="true"
+      aria-atomic="false"
     >
-      {toast && (
+      {newestFirst.map((toast) => (
         <ToastAlert
           key={toast.id}
           toast={toast}
           duration={duration}
           onDismiss={onDismiss}
-          regionRef={regionRef}
+          paused={paused}
+          pause={pause}
+          resume={resume}
         />
-      )}
+      ))}
     </div>
   );
+}
+
+/** One toast at a time: the stack with a single toast, for screens that keep their own. */
+export function Toast({ toast, ...rest }: ToastProps) {
+  return <ToastStack toasts={toast ? [toast] : []} {...rest} />;
 }
