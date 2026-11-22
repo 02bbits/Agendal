@@ -81,7 +81,7 @@ final class NoteSplitterScenarios
                     // Read only by the item classifier; NoteClassifierScenarios covers them.
                     in_array($category, NoteClassifierScenarios::CLASSIFIER_ONLY_CATEGORIES, true) => [],
                     // Read only by the command matcher (stop and shift words) or the date parser (deadline words).
-                    in_array($family, ['stop_word', 'deadline_prefix', 'shift_prefix', 'shift_later', 'shift_earlier', 'shift_unit', 'amount', 'amount_one', 'amount_half', 'command_joiner'], true) => [],
+                    in_array($family, ['stop_word', 'deadline_prefix', 'shift_prefix', 'shift_later', 'shift_earlier', 'shift_unit', 'amount', 'amount_one', 'amount_half', 'command_joiner', 'hedge_exempt'], true) => [],
                     default => self::splitterExamples($category, $value),
                 };
                 foreach ($examples as $index => $example) {
@@ -181,6 +181,36 @@ final class NoteSplitterScenarios
                 ['buy widget, '.$value.' gadget', ['buy widget, '.$value.' gadget']],
                 ['buy widget, '.$value.' call gadget', ['buy widget', 'call gadget']],
                 ['buy widget '.$value.' then call gadget', ['buy widget', 'call gadget']],
+            ],
+            // "and" ends an item only before a task of its own, after more than a bare verb (#156).
+            'task_joiner' => [
+                ['buy widget '.$value.' gadget', ['buy widget '.$value.' gadget']],
+                ['buy widget '.$value.' call gadget', ['buy widget', 'call gadget']],
+                ['read '.$value.' call gadget', ['read '.$value.' call gadget']],
+            ],
+            // "but" splits like "and" before a task of its own and is dropped when it opens an item.
+            'contrast_joiner' => [
+                ['buy widget '.$value.' call gadget', ['buy widget', 'call gadget']],
+                ['buy widget '.$value.' gadget', ['buy widget '.$value.' gadget']],
+                [$value.' call gadget', ['call gadget']],
+            ],
+            // A hedge stays in its item, for the fallback to read.
+            'clause_hedge' => [
+                ['buy widget '.$value.' gadget', ['buy widget '.$value.' gadget']],
+            ],
+            // A pronoun that opens the object points back to the task before ("send it to Mark"); "this gadget" doesn't.
+            'object_pronoun' => [
+                ['buy widget and submit '.$value, ['buy widget and submit '.$value]],
+                in_array($value, NoteVocabulary::values('object_pronoun_lead'), true)
+                    ? ['buy widget and submit '.$value.' to gadget', ['buy widget and submit '.$value.' to gadget']]
+                    : ['buy widget and submit '.$value.' gadget', ['buy widget', 'submit '.$value.' gadget']],
+            ],
+            'object_pronoun_lead' => [
+                ['buy widget and submit '.$value.' to gadget', ['buy widget and submit '.$value.' to gadget']],
+            ],
+            // A task that needs no object ("đi chợ") is a task of its own after another task, not after a command.
+            'standalone_task' => [
+                ['buy widget and '.$value, ['buy widget', $value]],
             ],
             'number_suffix' => [
                 ['3'.$value.' read widget'."\n".'12'.$value.' call mum', ['read widget', 'call mum']],

@@ -123,6 +123,27 @@ final class NoteVocabulary
     }
 
     /**
+     * "pay rent", "gửi email cho sếp": after any lead-in and leading date, the text opens with one of the phrases
+     * and names an object of its own, beyond dates, times and pronouns ("submit it", "reply tomorrow" don't). An
+     * object that opens with a pronoun points back to the task before ("send it to Mark", "gửi nó cho sếp").
+     *
+     * @param  list<string>  $names
+     */
+    public static function opensWithObject(string $text, string $openers, array $names = []): bool
+    {
+        $text = self::withoutLeadingModifiers(self::withoutLeadIn(trim($text)), $names);
+        if (preg_match('~^(?:'.$openers.')(?![\p{L}\p{N}_])~iu', $text, $opener) !== 1) {
+            return false;
+        }
+        $object = trim(self::withoutModifiers(substr($text, strlen($opener[0])), $names));
+        if (preg_match('~^(?:'.self::phrases('object_pronoun_lead').')(?![\p{L}\p{N}_])~iu', $object) === 1) {
+            return false;
+        }
+
+        return preg_match('/[\p{L}\p{N}\p{So}]/u', (string) preg_replace(self::pattern(self::phrases('object_pronoun')), ' ', $object)) === 1;
+    }
+
+    /**
      * CSV cells are literal phrases, never executable regex fragments. A space matches any run of whitespace,
      * an apostrophe matches a straight or curly one, and longer phrases are tried first ("rồi thì" before "rồi").
      */
@@ -319,6 +340,15 @@ final class NoteVocabulary
     public static function contains(string $category, string $text): bool
     {
         return preg_match(self::pattern(self::phrases($category)), $text) === 1;
+    }
+
+    /**
+     * A clause that changes what the rest means: "but not today", "unless it rains", "nếu mẹ rảnh", "because …".
+     * The rules can't read it, so the item is the fallback's (#156). "check if the server is up" is a plain task.
+     */
+    public static function hedged(string $text): bool
+    {
+        return self::contains('clause_hedge', (string) preg_replace(self::pattern(self::phrases('hedge_exempt')), ' ', $text));
     }
 
     /** @return list<string> */

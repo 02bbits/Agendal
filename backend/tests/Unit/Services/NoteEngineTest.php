@@ -56,6 +56,25 @@ it('flags a new task that looks like an open one but still creates it (NU-E13)',
     expect($build->plan['create'][0]['duplicate_of'])->toBe('c0000000-0000-4000-8000-000000000001');
 });
 
+it('splits "and" around a command by the open tasks, and leaves a hedged command unchanged (#156)', function () {
+    $open = [['id' => 'd0000000-0000-4000-8000-000000000001', 'title' => 'Email group'], ['id' => 'd0000000-0000-4000-8000-000000000002', 'title' => 'Report', 'due_date' => '2026-10-26']];
+    $engine = app(NoteEngine::class);
+
+    $build = $engine->build('done email group and call mum', engineContext(), $open);
+    expect(array_column($build->plan['update'], 'task_id'))->toBe(['d0000000-0000-4000-8000-000000000001'])
+        ->and(array_column($build->plan['create'], 'title'))->toBe(['Call mum'])
+        ->and($build->lowConfidence)->toBe([]);
+
+    $build = $engine->build('done email group and report', engineContext(), $open);
+    expect(array_column($build->plan['update'], 'task_id'))->toBe(['d0000000-0000-4000-8000-000000000001', 'd0000000-0000-4000-8000-000000000002'])
+        ->and($build->plan['create'])->toBe([]);
+
+    foreach (['move report to friday but keep it high priority', 'done email group but not report', 'if it rains, delete report'] as $note) {
+        $build = $engine->build($note, engineContext(), $open);
+        expect($build->plan['update'])->toBe([])->and($build->plan['delete'])->toBe([])->and($build->lowConfidence)->toBe(['i1' => $note]);
+    }
+});
+
 it('collects low-confidence items for the LLM fallback (ADR-008)', function () {
     $build = app(NoteEngine::class)->build('comprar leche; call mum tomorrow', engineContext());
 
