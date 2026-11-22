@@ -56,7 +56,7 @@ it('flags a new task that looks like an open one but still creates it (NU-E13)',
     expect($build->plan['create'][0]['duplicate_of'])->toBe('c0000000-0000-4000-8000-000000000001');
 });
 
-it('splits "and" around a command by the open tasks, and leaves a hedged command unchanged (#156)', function () {
+it('splits "and" around a command by the open tasks, and leaves a hedged command unchanged (#156, T-NU-143)', function () {
     $open = [['id' => 'd0000000-0000-4000-8000-000000000001', 'title' => 'Email group'], ['id' => 'd0000000-0000-4000-8000-000000000002', 'title' => 'Report', 'due_date' => '2026-10-26']];
     $engine = app(NoteEngine::class);
 

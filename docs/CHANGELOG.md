@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-22
+
+- **Connectors split two tasks (Refs #156).** [NU §2.2](03-modules/NU-note-understanding.md#22-splitting-nu-1): "and", "và" and the other joiners end an item before a task of its own (no longer "never split"); pronoun objects, lists, shared verbs and "or" stay one task; a closing phrase covers earlier parts. NU §2.5 Title: closing particles leave the title. Low confidence: a closing "đi", and "next" / "later" / "roi" before a task verb. New [NU-E43](03-modules/NU-note-understanding.md#nu-e43) and its [traceability](06-testing/traceability-matrix.md) row.
+
 ## 2026-11-21
 
 - **Up to three toasts at once.** [UX-04](01-product/ux-standards.md#ux-04): toasts stack, up to three, the newest on top; a fourth drops the oldest. Each has its own 5 s timer, Undo or Retry and close, and hovering or focusing any of them pauses them all. Before, a new toast replaced the old one, so quick actions in a row lost their Undo.
