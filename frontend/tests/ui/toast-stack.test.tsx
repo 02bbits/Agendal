@@ -111,4 +111,27 @@ describe("#168: up to three toasts at once", () => {
     act(() => vi.advanceTimersByTime(5000));
     expect(onDismiss.mock.calls).toEqual(expect.arrayContaining([[1], [2]]));
   });
+
+  it("renders toasts with uniform full width on mobile, fixed width on desktop, and truncates long titles", () => {
+    const longTitle =
+      "Completed “Họp nhóm đồ án Web Nâng Cao và Báo cáo cuối kỳ môn học”";
+    render(
+      <ToastStack
+        toasts={[
+          { id: 1, message: "Completed “Short”" },
+          { id: 2, message: longTitle },
+        ]}
+        onDismiss={() => {}}
+      />,
+    );
+    const alerts = screen.getByRole("status").querySelectorAll(".alert");
+    expect(alerts).toHaveLength(2);
+    for (const alert of alerts) {
+      expect(alert.className).toContain("w-full");
+      expect(alert.className).toContain("md:w-[380px]");
+    }
+    const longMsgSpan = screen.getByTitle(longTitle);
+    expect(longMsgSpan).toBeTruthy();
+    expect(longMsgSpan.className).toContain("truncate");
+  });
 });

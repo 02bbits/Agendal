@@ -155,7 +155,7 @@ function ToastAlert({
 
   return (
     <div
-      className="alert pointer-events-auto flex min-h-11 w-fit max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:pr-2 motion-safe:animate-slide-up md:motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
+      className="alert pointer-events-auto flex min-h-11 w-full max-w-full touch-pan-y select-none items-center gap-3 rounded-field border-0 bg-neutral py-2 pl-4 pr-4 text-callout text-neutral-content shadow-md md:w-[380px] md:pr-2 motion-safe:animate-slide-up md:motion-safe:animate-slide-in-left motion-reduce:animate-fade-quick"
       style={{
         transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
         opacity: dragOffset
@@ -186,7 +186,9 @@ function ToastAlert({
           {toast.icon}
         </span>
       )}
-      <span className="min-w-0 [overflow-wrap:anywhere]">{toast.message}</span>
+      <span className="min-w-0 flex-1 truncate" title={toast.message}>
+        {toast.message}
+      </span>
       {toast.actionLabel && toast.onAction && (
         <button
           type="button"
