@@ -5,6 +5,7 @@ import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox } from "../../domain/lists";
 import { useFrozenOrder } from "./useFrozenOrder";
+import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -98,7 +99,10 @@ export function InboxScreen({
     } catch {}
   };
   const frozen = useFrozenOrder(store.tasks, selectedTaskId);
+  const [todayMode] = useSortMode("today");
+  const [noDateMode] = useSortMode("no_date");
   const view = buildInbox(frozen.layout, store.today, {
+    sort: { today: todayMode, noDate: noDateMode },
     completedToday: store.completedToday,
     isSettling: store.isSettling,
   });

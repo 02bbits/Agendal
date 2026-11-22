@@ -13,5 +13,6 @@ export * from "./week";
 export * from "./newTask";
 export * from "./theme";
 export * from "./entries";
+export * from "./order";
 export * from "./rowMeta";
 export * from "./passwordStrength";

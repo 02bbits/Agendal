@@ -3,6 +3,7 @@ import { sortEntries, type DayEntry } from "../../domain/entries";
 import type { Navigate } from "../shell/routes";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
+import { useSortMode } from "./useSortMode";
 
 export interface EntryBlocksProps {
   entries: DayEntry[];
@@ -20,7 +21,8 @@ export function EntryBlocks({
   navigate,
 }: EntryBlocksProps): ReactElement | null {
   const store = useTaskStore();
-  const { normal, due } = sortEntries(entries);
+  const [mode] = useSortMode("upcoming");
+  const { normal, due } = sortEntries(entries, mode);
 
   if (normal.length === 0 && due.length === 0) {
     return null;

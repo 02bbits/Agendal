@@ -37,6 +37,8 @@ export type TaskPatch = Partial<
     | "repeat_rule"
     | "notes"
     | "project_id"
+    | "project_order"
+    | "day_order"
   >
 >;
 
