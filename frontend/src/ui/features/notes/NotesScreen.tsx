@@ -9,6 +9,8 @@ import type { NoteFilter, NoteListEntry, TimeFormat } from "../../domain/types";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
+import { EmptyState } from "../../components/EmptyState";
+import { EmptyStateIllustration } from "../../components/EmptyStateIllustration";
 
 // What a done note did: tasks made, else tasks changed (RV-4)
 function taskCount({ counts }: NoteListEntry): {
@@ -135,15 +137,18 @@ export function NotesScreen({
       )}
       {status === "error" && <LoadError onRetry={onRetry} />}
       {status === "ready" && notes.length === 0 && (
-        <div className="flex flex-col items-start gap-4 py-8">
-          <p className="text-body text-ink-secondary">{t("note.list_empty")}</p>
-          {filter === "all" && (
-            <Button variant="primary" onClick={onWriteNote}>
-              {t("note.capture_open")}
-            </Button>
-          )}
-        </div>
-      )}
+  <EmptyState
+    title={t("note.list_empty")}
+    icon={<EmptyStateIllustration type="notes" />}
+    action={
+      filter === "all" ? (
+        <Button variant="primary" onClick={onWriteNote}>
+          {t("note.capture_open")}
+        </Button>
+      ) : undefined
+    }
+  />
+)}
       {status === "ready" &&
         [...days].map(([day, rows]) => (
           <section key={day} className="mb-5">
