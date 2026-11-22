@@ -1,25 +1,31 @@
-import { useMemo, useState } from "react";
+import { useLayoutEffect, useMemo, useState } from "react";
 import { freezeLayout, type FrozenLayout } from "../../domain/frozen";
 import type { Task } from "../../domain/types";
 
 /**
- * Freezes the list order around the task open in the panel (`editingId`):
- * the task is snapshotted when it opens and the snapshot is used for layout
- * until the panel closes or switches task (Spec 01 §5).
+ * Freezes the list order around every task opened in the panel (`editingId`)
+ * on this screen: each one is snapshotted the first time it opens, and the
+ * snapshots lay out the list until the user leaves the screen (Spec 01 §5).
+ * Closing the panel keeps them. Next keeps a page it navigates away from
+ * hidden in React's <Activity> instead of unmounting it, so the snapshots are
+ * dropped in a layout-effect cleanup, which runs when the page is hidden
+ * (see Next's "Preserving UI state" guide). Coming back sorts the list again.
  */
 export function useFrozenOrder(
   tasks: readonly Task[],
   editingId: string | null | undefined,
 ): FrozenLayout {
-  const id = editingId ?? null;
-  const [snapshot, setSnapshot] = useState<Task | null>(null);
+  const [snapshots, setSnapshots] = useState<ReadonlyMap<string, Task>>(
+    () => new Map(),
+  );
 
   // Adjust state while rendering, so the first frame after opening is already frozen
-  if ((snapshot?.id ?? null) !== id) {
-    const opened = id ? (tasks.find((t) => t.id === id) ?? null) : null;
-    if (opened !== snapshot) setSnapshot(opened);
+  if (editingId && !snapshots.has(editingId)) {
+    const opened = tasks.find((t) => t.id === editingId);
+    if (opened) setSnapshots(new Map(snapshots).set(editingId, opened));
   }
 
-  const frozen = snapshot?.id === id ? snapshot : null;
-  return useMemo(() => freezeLayout(tasks, frozen), [tasks, frozen]);
+  useLayoutEffect(() => () => setSnapshots(new Map()), []);
+
+  return useMemo(() => freezeLayout(tasks, snapshots), [tasks, snapshots]);
 }
