@@ -286,7 +286,10 @@ describe("Complete a task (TK-1, WF-06)", () => {
       repeat: "monthly",
       previous_occurrence_id: "m-1",
     });
-    const { wrap, memory } = setup([done, open]);
+    // A project's page plays the motion
+    const { wrap, memory } = setup([done, open], undefined, {
+      mergeMotion: true,
+    });
     const reopen = vi
       .spyOn(memory.api, "reopen")
       .mockResolvedValueOnce({ task: done, merged: true });
@@ -359,6 +362,41 @@ describe("Complete a task (TK-1, WF-06)", () => {
     expect(screen.getByText("Back to Yesterday")).toBeTruthy();
   });
 
+  it("#168: elsewhere (Inbox, Upcoming) unticking a repeat has no motion, only its toast", async () => {
+    const done = task({
+      id: "i-1",
+      title: "Retro Nov",
+      due_date: "2026-10-22",
+      repeat: "monthly",
+      done: true,
+      done_at: "2026-10-22T01:12:00Z",
+    });
+    const open = task({
+      id: "i-2",
+      title: "Retro Dec",
+      due_date: TODAY,
+      repeat: "monthly",
+      previous_occurrence_id: "i-1",
+    });
+    const { wrap, memory } = setup([done, open]);
+    vi.spyOn(memory.api, "reopen").mockResolvedValueOnce({
+      task: done,
+      merged: true,
+    });
+
+    render(wrap(<TodayList />));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Reopen Retro Nov" }),
+    );
+    // The row just goes, with no rise-and-fade first
+    expect(document.querySelector(".animate-merge-out")).toBeNull();
+    await waitFor(() => expect(screen.queryByText("Retro Nov")).toBeNull());
+    expect(screen.queryByTestId("merge-swipe")).toBeNull();
+    expect(
+      screen.getByText("Yesterday went back into the repeat"),
+    ).toBeTruthy();
+  });
+
   it("#168: unticking a done repeat with no open occurrence left reopens it, lit up", async () => {
     const done = task({
       id: "e-1",
@@ -368,7 +406,7 @@ describe("Complete a task (TK-1, WF-06)", () => {
       done: true,
       done_at: "2026-10-22T01:12:00Z",
     });
-    const { wrap, memory } = setup([done]);
+    const { wrap, memory } = setup([done], undefined, { mergeMotion: true });
     vi.spyOn(memory.api, "reopen").mockResolvedValueOnce({
       task: { ...done, done: false, done_at: null },
     });
