@@ -8,7 +8,7 @@
 ## Decision
 - **Change sequence.** Every write to `tasks`, `projects` and `notes` sets `change_seq` from one database sequence. A per-user index on `(user_id, change_seq)` makes pulls cheap.
 - **Tombstones.** Deletes set `deleted_at` and bump `change_seq`. Rows are purged 30 days after deletion, unless an undoable note still needs them ([ADR-002](ADR-002-undo-change-log.md)).
-- **Pull.** `GET /sync?cursor=<seq>&limit=500` returns changed rows (tombstones included) after the cursor, plus `next_cursor` and `has_more`. A cursor older than the purge horizon gets `410 Gone`, and the client does a full resync.
+- **Pull.** `GET /sync?cursor=<seq>&limit=500` returns changed rows (tombstones included) after the cursor, plus `next_cursor` and `has_more`. A live note's row carries its full result, so the device never fetches notes one by one. A cursor older than the purge horizon gets `410 Gone`, and the client does a full resync.
 - **Commit order.** `change_seq` is taken when a row is written, not when its transaction commits, so a lower seq can commit after a higher one. A page stops before the first row whose transaction isn't older than every transaction still running (`pg_snapshot_xmin`); the next sync picks it up, and the cursor never passes a change that could still commit below it.
 - **Push.** Before pulling, the client sends queued edits as one batch, `POST /sync/patches` (per-field LWW, [ADR-004](ADR-004-offline-sync-field-level-lww.md)). It then sends pending notes ([ADR-003](ADR-003-offline-note-queue-and-idempotency.md)).
 - **When to sync:** on app open, on reconnect, when the tab becomes visible, and every 60 s while visible. No WebSockets.

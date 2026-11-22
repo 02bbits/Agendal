@@ -54,7 +54,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - All open tasks
   - Tasks completed in the last 90 days
   - All projects
-  - The last 100 notes
+  - The last 50 notes, each with its full result, so the note screen opens offline. Older notes load from the Notes list as it scrolls (online); opening one fetches its result
   - The edit queue, pending notes and the draft
   - The first sync downloads the device copy in full (`GET /sync?full=1`); later syncs pull changes. List answers and this device's own writes also land in it. Lists and the note screen show it first, then the network replaces it.
   - A write that gets no answer is queued and applied to the device copy, so the screen keeps it. A server refusal still shows its error. While edits wait, new ones queue behind them.
@@ -173,9 +173,10 @@ The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one fil
 
 | Endpoint | Request | Success | Errors |
 |---|---|---|---|
-| `GET /sync?cursor=&limit=500&full=` | — | `200 {changes: {tasks[], projects[], notes[]}, next_cursor, has_more}` (tombstones have `deleted_at`). Notes come as Notes-list rows (the `GET /notes` item shape). `full=1` (first download, or after `410`): no tombstones, only what the device keeps (§2.2) | `410` cursor too old, `401`, `429` (30/min) |
+| `GET /sync?cursor=&limit=500&full=` | — | `200 {changes: {tasks[], projects[], notes[]}, next_cursor, has_more}` (tombstones have `deleted_at`). Notes come as Notes-list rows (the `GET /notes` item shape); a live note's row adds `result`, its full note result ([note-result.schema.json](../07-architecture/contracts/schemas/note-result.schema.json)), so the device needs no request per note. `full=1` (first download, or after `410`): no tombstones, only what the device keeps (§2.2) | `410` cursor too old, `401`, `429` (30/min) |
 | `POST /sync/patches` | `[{entity, id, field, value, at}]`, up to 500 per batch | `200 {results: [{index, status: applied\|stale\|rejected, current?}]}`. `stale` returns the server's current value, for the conflict notice | `401`, `422` (batch shape), `429` |
 | `PATCH /me` | `{theme?, week_start?, time_format?}` | `200` | `422` |
+| `GET /counts` | — | `200 {inbox, upcoming, no_project, notes}` ([counts.schema.json](../07-architecture/contracts/schemas/counts.schema.json)): the sidebar's numbers in one call, by the same rules as Inbox (overdue + today), Upcoming (its default 14 days), No project (open tasks) and Notes (all) | `401`, `429` |
 
 - Patch rows are judged one by one. A rejected row (not the user's, a field not on the allow-list) never fails the batch.
 
@@ -203,6 +204,11 @@ The Settings dialog (`src/ui/features/settings/SettingsScreen.tsx`, with one fil
 
 - [NF-4](../05-quality/nfr.md#nf-4): interactive in ≤ 3 s on first load (4G, mid-range phone), ≤ 1 s from cache. Checked by Lighthouse CI.
 - App shell budget: ≤ 170 KB JS gzipped for the first route. Fonts are subset and preloaded.
+- **Request budget** (the per-user API limit, [SEC](../07-architecture/security.md)):
+  - The session (`GET /me`) is checked when the app opens and when it becomes visible again, not on every screen change. Sign in, Verify and Setup hand over the account they get back.
+  - The sidebar loads its projects and `GET /counts`, when it first shows and after a change, not on every screen change.
+  - Reloads after a change (a task or project saved, a note updated, a sync that brought changes) are merged: one reload per screen, 300 ms after the last change. Coming back to the app reloads a list only when the day changed; otherwise the sync that runs then says whether anything changed.
+  - Identical reads in flight at the same moment share one request.
 - Sync pull uses `(user_id, change_seq)`. A no-change pull is about 1 ms on the database. 60-second polling × 5k users ≈ 15 req/s peak, which is inside PERF-01.
 
 ## 11. Acceptance criteria → tests

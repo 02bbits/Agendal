@@ -2,10 +2,12 @@
 
 use App\Models\Task;
 use App\Models\User;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Log\Events\MessageLogged;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
 use Opis\JsonSchema\Validator;
 
@@ -61,6 +63,9 @@ it('SC-10: someone else\'s task is a 404, your own is found', function () {
 });
 
 it('SEC-12: every API route needs a session unless it is public', function () {
+    // Every route as a guest within a second: past the 20/s cap now that guests are counted on
+    // signed-in routes. The limits have their own tests (LimitsTest)
+    RateLimiter::for('api', fn () => Limit::none());
     // The two-step code and pending sign-up codes are entered before there is a signed-in session:
     // their routes read from the session cookie instead, and refuse without one (AA §2.8, §2.9)
     $public = [

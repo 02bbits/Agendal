@@ -7,7 +7,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Base path `/api/v1`. JSON only, including errors, with correct status codes.
 - Every resource is scoped to the signed-in user. Someone else's resource returns 404, so its existence isn't revealed ([NF-9](../05-quality/nfr.md#nf-9)).
 - Every list is cursor-paginated: `?cursor=&limit=` (max 100), returning `next_cursor`.
-- Rate limits and input limits: [security.md](../05-quality/nfr.md#rate-limits-nf-13). `429` carries `Retry-After`.
+- Rate limits and input limits: [security.md](../05-quality/nfr.md#rate-limits-nf-13). `429` carries `Retry-After`, and its error names the limit it hit: `limit: {max, window}`, `max` requests per `window` seconds; a 1-second window is a burst ([UX-43](../01-product/ux-standards.md#ux-43), [error.schema.json](contracts/schemas/error.schema.json)).
 - Errors use one shape: `{"error": {"code": "note.too_many_items", "message": "…", "fields": {…}}}`. `code` is a [copy-catalog](../01-product/copy-catalog.md) key.
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
@@ -44,7 +44,8 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}?tasks=move\|delete` | Projects | [PJ-1](../03-modules/PJ-projects.md#pj-1)–4 |
 | `POST /projects/{id}/restore` | Toast Undo after deleting a project | [PJ-4](../03-modules/PJ-projects.md#pj-4) |
 | `POST /push-subscriptions`, `DELETE /push-subscriptions` | Register or remove a device for reminders | [TK-6](../03-modules/TK-tasks.md#tk-6) |
-| `GET /sync?cursor=&limit=` | Pull changes since a cursor. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
+| `GET /counts` | The sidebar's counts in one call: Inbox, Upcoming, No project, Notes | [AP §7](../03-modules/AP-app-platform.md#7-api-contract) |
+| `GET /sync?cursor=&limit=` | Pull changes since a cursor; a live note comes with its full result. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
 | `POST /auth/logout-everywhere` | End all sessions (Should) | [ADR-007](decisions/ADR-007-session-and-auth.md) |
 

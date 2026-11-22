@@ -6,9 +6,11 @@ use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
+use App\Support\Stamp;
 use DateTimeImmutable;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class DatabaseSeeder extends Seeder
@@ -52,6 +54,14 @@ class DatabaseSeeder extends Seeder
                     'updated_at' => $clock->now(),
                 ]
             );
+            // Deleted since the last seed: bring it back, as Restore does, or the demo tasks below
+            // would point at a project no list shows ("Couldn't load your projects")
+            if ($p->deleted_at !== null) {
+                $p->deleted_at = null;
+                $p->updated_at = Carbon::instance($clock->now());
+                $p->field_updated_at = [...($p->field_updated_at ?? []), 'deleted' => Stamp::of($clock->now())];
+                $p->save();
+            }
             $projects[$name] = $p->id;
         }
 

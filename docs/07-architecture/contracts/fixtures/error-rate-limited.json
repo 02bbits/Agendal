@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "error.rate_limited",
+    "message": "You're going a bit fast. Try again shortly.",
+    "request_id": "req_2GxoIUZ4hKdoX397",
+    "retry_after": 42,
+    "limit": { "max": 150, "window": 60 }
+  }
+}

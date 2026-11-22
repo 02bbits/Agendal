@@ -1,6 +1,8 @@
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { LoadError } from "../../components/LoadError";
+import type { ApiRequestError } from "../../../lib/apiError";
+import { RateLimited } from "../shell/RateLimited";
 import { NotesIcon, SparklesIcon, PaperclipIcon } from "../../components/icons";
 import { countText, t, tc } from "../../copy";
 import { formatDay, formatLongDate, formatTime } from "../../domain/dates";
@@ -50,6 +52,7 @@ const ROW = "flex min-h-16 items-center gap-3 px-4 py-3 text-ink";
 export function NotesScreen({
   status,
   onRetry,
+  limited,
   notes,
   total,
   needs,
@@ -66,6 +69,8 @@ export function NotesScreen({
 }: {
   status: "loading" | "error" | "ready";
   onRetry: () => void;
+  /** The list's load got a 429: the rate-limited page in its place (UX-43). */
+  limited?: ApiRequestError | null;
   notes: NoteListEntry[];
   /** The summary line, from the last list that came; none before the first. */
   total?: number;
@@ -133,7 +138,12 @@ export function NotesScreen({
           className="h-80 w-full animate-pulse rounded-box bg-surface"
         />
       )}
-      {status === "error" && <LoadError onRetry={onRetry} />}
+      {status === "error" &&
+        (limited ? (
+          <RateLimited error={limited} onRetry={onRetry} />
+        ) : (
+          <LoadError onRetry={onRetry} />
+        ))}
       {status === "ready" && notes.length === 0 && (
         <div className="flex flex-col items-start gap-4 py-8">
           <p className="text-body text-ink-secondary">{t("note.list_empty")}</p>

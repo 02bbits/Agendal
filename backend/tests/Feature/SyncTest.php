@@ -2,14 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Models\Note;
 use App\Models\Project;
 use App\Models\Task;
 use App\Models\User;
 use App\Services\Clock\ClockInterface;
+use App\Services\Sync\SyncPull;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\DatabaseTruncation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Opis\JsonSchema\Errors\ErrorFormatter;
+use Opis\JsonSchema\Validator;
 use Tests\Support\FrozenClock;
 
 // IM-52: GET /sync and POST /sync/patches (ADR-004, ADR-005, AP §7-8). Truncation, not a wrapping
@@ -39,6 +43,12 @@ function newProject(string $name = 'Home'): string
     test()->postJson('/api/v1/projects', ['id' => $id, 'name' => $name, 'colour' => 'blue'])->assertCreated();
 
     return $id;
+}
+
+function newNote(): string
+{
+    return test()->postJson('/api/v1/notes', ['client_id' => (string) Str::uuid(), 'text' => 'call mum tomorrow', 'written_at' => at(0), 'timezone' => 'Asia/Ho_Chi_Minh'])
+        ->assertCreated()->json('note.id');
 }
 
 /** The time `seconds` after the frozen now, as a device would stamp a patch. */
@@ -122,6 +132,35 @@ describe('GET /sync', function () {
         $this->actingAs(User::factory()->create());
 
         expect($this->getJson('/api/v1/sync')->json('changes.tasks'))->toBe([]);
+    });
+
+    it('sends each live note with its full result, so the device needs no request per note', function () {
+        $id = newNote();
+
+        $row = $this->getJson('/api/v1/sync?full=1')->json('changes.notes.0');
+        expect($row)->toMatchArray(['id' => $id, 'deleted_at' => null])
+            ->and($row['result'])->toBe($this->getJson("/api/v1/notes/{$id}")->json());
+        $validator = new Validator;
+        $validator->resolver()->registerPrefix('https://agendal.app/schemas/', base_path('../docs/07-architecture/contracts/schemas/'));
+        $valid = $validator->validate(json_decode((string) json_encode($row['result'])), 'https://agendal.app/schemas/note-result.schema.json');
+        expect($valid->isValid())->toBeTrue($valid->isValid() ? '' : json_encode((new ErrorFormatter)->format($valid->error())));
+
+        $cursor = $this->getJson('/api/v1/sync')->json('next_cursor');
+        $this->deleteJson("/api/v1/notes/{$id}")->assertNoContent();
+        expect($this->getJson("/api/v1/sync?cursor={$cursor}")->json('changes.notes.0'))
+            ->toMatchArray(['id' => $id])->not->toHaveKey('result');
+    });
+
+    it('a full download keeps the newest notes only (AP §2.2)', function () {
+        $first = Note::query()->findOrFail(newNote());
+        foreach (range(1, SyncPull::KEEP_NOTES) as $minutes) {
+            $older = $first->replicate();
+            $older->forceFill(['client_id' => (string) Str::uuid(), 'written_at' => $this->clock->now()->modify("-{$minutes} minutes")])->save();
+        }
+
+        $notes = $this->getJson('/api/v1/sync?full=1')->json('changes.notes');
+        expect($notes)->toHaveCount(SyncPull::KEEP_NOTES)
+            ->and(array_column($notes, 'id'))->toContain($first->id);
     });
 });
 
