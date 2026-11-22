@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useState } from "react";
+import { useCallback, useLayoutEffect, useMemo, useState } from "react";
 import { freezeLayout, type FrozenLayout } from "../../domain/frozen";
 import type { Task } from "../../domain/types";
 
@@ -14,7 +14,7 @@ import type { Task } from "../../domain/types";
 export function useFrozenOrder(
   tasks: readonly Task[],
   editingId: string | null | undefined,
-): FrozenLayout {
+): FrozenLayout & { release: (id: string) => void } {
   const [snapshots, setSnapshots] = useState<ReadonlyMap<string, Task>>(
     () => new Map(),
   );
@@ -27,5 +27,21 @@ export function useFrozenOrder(
 
   useLayoutEffect(() => () => setSnapshots(new Map()), []);
 
-  return useMemo(() => freezeLayout(tasks, snapshots), [tasks, snapshots]);
+  // A drag is the user placing the task on purpose (#178): it is never held
+  const release = useCallback(
+    (id: string) =>
+      setSnapshots((held) => {
+        if (!held.has(id)) return held;
+        const next = new Map(held);
+        next.delete(id);
+        return next;
+      }),
+    [],
+  );
+
+  const frozen = useMemo(
+    () => freezeLayout(tasks, snapshots),
+    [tasks, snapshots],
+  );
+  return useMemo(() => ({ ...frozen, release }), [frozen, release]);
 }

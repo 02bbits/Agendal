@@ -77,6 +77,7 @@ export const pending = {
   "task.starts_at": "Start at {time}",
   "task.starts_today": "Starts today",
   "list.move_task": "Move {title}",
+  "task.moved_to": "Moved to {project}",
   "dnd.instructions":
     "To move a task, press Space on its move button. Use the arrow keys to move it, Space to drop it, or Escape to cancel.",
   "dnd.picked": "Picked up {title}.",

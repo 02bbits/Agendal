@@ -30,6 +30,18 @@ export function inboxDropPatch(
   return null;
 }
 
+/** The patch rule for drops into one Inbox section, ready for a list. */
+export const dropIntoSection =
+  (to: InboxSection, today: string) =>
+  (task: Task): TaskPatch | null =>
+    inboxDropPatch(task, to, today);
+
+/** The patch rule for drops onto one Upcoming day (from another day's list, `day:{date}`). */
+export const dropOntoDay =
+  (day: string) =>
+  (task: Task, from: string): TaskPatch | null =>
+    from.startsWith("day:") ? dayDropPatch(task, from.slice(4), day) : null;
+
 /**
  * What dropping a task's entry from one Upcoming day onto another changes (Spec 02 §3):
  * its start day moves, or its due day for a task with no start. A due day the new start

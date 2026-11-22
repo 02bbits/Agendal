@@ -108,5 +108,6 @@ export function useUpcomingScreenData({
     navProps,
     barRef: listWindow.barRef,
     barHeight: listWindow.barHeight,
+    releaseFrozen: frozen.release,
   };
 }

@@ -3,11 +3,14 @@ import { t } from "../../copy";
 import { TextButton } from "../../components/TextButton";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
+import { dropIntoSection } from "../../domain/dropPatch";
 import { buildInbox, sortNoDate, sortTodayTasks } from "../../domain/lists";
 import { useFrozenOrder } from "./useFrozenOrder";
+import { ShownWhileDragging } from "./dnd/ShownWhileDragging";
 import { SortableTaskList } from "./dnd/SortableTaskList";
 import { TaskDndScope } from "./dnd/TaskDndScope";
 import { SortMenu } from "./SortMenu";
+import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
 import { useDropReorder } from "./useDropReorder";
 import { useSortByRules } from "./useSortByRules";
 import { useSortMode } from "./useSortMode";
@@ -110,6 +113,18 @@ export function InboxScreen({
   const sortNoDateByRules = useSortByRules("no_date", "project_order");
   const moveInToday = useDropReorder("today", "day_order");
   const moveInNoDate = useDropReorder("no_date", "project_order");
+  // Into another section (Spec 02 §3): the dates change, and a frozen row is let go
+  const receiveInToday = useReceiveDrop(
+    "day_order",
+    dropIntoSection("today", store.today),
+    frozen.release,
+  );
+  const receiveInNoDate = useReceiveDrop(
+    "project_order",
+    dropIntoSection("no_date", store.today),
+    frozen.release,
+  );
+  const moveToProject = useMoveToProject();
   const view = buildInbox(frozen.layout, store.today, {
     sort: { today: todayMode, noDate: noDateMode },
     completedToday: store.completedToday,
@@ -219,10 +234,18 @@ export function InboxScreen({
                   open={openOverdue}
                   onToggle={handleToggleOverdue}
                 >
-                  {view.overdue.map((x) => row(x, { overdue: true }))}
+                  {/* A source only: Overdue keeps its date order and takes no drops */}
+                  <SortableTaskList
+                    list="overdue"
+                    tasks={view.overdue}
+                    onMove={() => {}}
+                    onToProject={moveToProject}
+                  >
+                    {(x, drag) => row(x, { overdue: true, drag })}
+                  </SortableTaskList>
                 </Section>
               )}
-              {view.today.length > 0 && (
+              <ShownWhileDragging shown={view.today.length > 0}>
                 <Section
                   title={t("list.today")}
                   count={view.today.length}
@@ -248,12 +271,14 @@ export function InboxScreen({
                     list="today"
                     tasks={view.today}
                     onMove={(id, to) => moveInToday(view.today, id, to)}
+                    onReceive={(drop) => receiveInToday(view.today, drop)}
+                    onToProject={moveToProject}
                   >
                     {(x, drag) => row(x, { drag })}
                   </SortableTaskList>
                 </Section>
-              )}
-              {view.noDate.length > 0 && (
+              </ShownWhileDragging>
+              <ShownWhileDragging shown={view.noDate.length > 0}>
                 <Section
                   title={t("list.no_date")}
                   count={view.noDate.length}
@@ -276,11 +301,13 @@ export function InboxScreen({
                     list="no_date"
                     tasks={view.noDate}
                     onMove={(id, to) => moveInNoDate(view.noDate, id, to)}
+                    onReceive={(drop) => receiveInNoDate(view.noDate, drop)}
+                    onToProject={moveToProject}
                   >
                     {(x, drag) => row(x, { drag })}
                   </SortableTaskList>
                 </Section>
-              )}
+              </ShownWhileDragging>
               {view.completed.length > 0 && (
                 <Section
                   title={t("list.completed")}

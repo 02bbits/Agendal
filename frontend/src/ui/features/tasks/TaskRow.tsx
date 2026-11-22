@@ -3,8 +3,6 @@ import {
   useCallback,
   useEffect,
   useRef,
-  type CSSProperties,
-  type DOMAttributes,
   type ReactNode,
 } from "react";
 import { localTime, now, timeZone } from "../../../lib/clock";
@@ -23,7 +21,10 @@ import { repeatLabel, rowMeta, type MetaTone } from "../../domain/rowMeta";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
+import type { RowDrag } from "./rowDrag";
 import { useOptionalTaskStore } from "./store";
+
+export type { RowDrag };
 
 export interface TaskRowProps {
   task: Task;
@@ -43,17 +44,6 @@ export interface TaskRowProps {
   renderTitle?: (title: string) => ReactNode;
   /** Drag and drop (#178): set by a sortable list. */
   drag?: RowDrag;
-}
-
-/** What a sortable list gives its row (#178). */
-export interface RowDrag {
-  setNodeRef: (node: HTMLElement | null) => void;
-  style: CSSProperties;
-  /** Mouse and touch start a drag anywhere on the row. */
-  rowListeners: DOMAttributes<HTMLElement>;
-  /** The keyboard's way to pick the row up. */
-  handle: ReactNode;
-  dragging: boolean;
 }
 
 function metaToneClass(tone: MetaTone): string | undefined {
@@ -144,8 +134,8 @@ export function TaskRow({
         overdue && !task.done && "is-overdue",
         leaving && "pointer-events-none motion-safe:animate-merge-out",
         drag && "touch-manipulation",
-        drag?.dragging &&
-          "z-10 rounded-tile bg-surface shadow-lg ring-1 ring-separator",
+        // The moving card floats in an overlay; the row stays behind as its place
+        drag?.dragging && "opacity-40",
       )}
     >
       {drag?.handle}

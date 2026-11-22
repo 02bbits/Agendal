@@ -1,50 +1,59 @@
 import {
   closestCenter,
   DndContext,
+  DragOverlay,
   KeyboardSensor,
   MouseSensor,
+  pointerWithin,
   TouchSensor,
   useSensor,
   useSensors,
   type Announcements,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { createContext, useContext, useState, type ReactNode } from "react";
 import { t } from "../../../copy";
+import { PROJECT_DROP, type ProjectDropData } from "./dropTargets";
 
-/** A drop into another list of the same screen (#178, cross-section and cross-day). */
-export interface CrossDrop {
+/** A drop into another list of the screen (#178): Inbox sections, Upcoming days. */
+export interface Receive {
   id: string;
+  /** The list the task came from. */
   from: string;
-  to: string;
-  /** Where in the target list, as shown. */
+  /** Where in this list, as shown. */
   index: number;
 }
 
-interface ListEntry {
+export interface ListEntry {
   ids: () => readonly string[];
   onMove: (id: string, to: number) => void;
+  /** What a drop from another list means here; without it the list takes no drops. */
+  onReceive?: (drop: Receive) => void;
+  /** A row of this list dropped on a project in the sidebar. */
+  onToProject?: (id: string, project: ProjectDropData) => void;
 }
 
 interface Scope {
   register: (list: string, entry: ListEntry) => () => void;
-  list: (list: string) => ListEntry | undefined;
   /** True right after a drag, so the click that ends it doesn't open the row. */
   justDragged: () => boolean;
-  markDropped: () => void;
 }
 
-function createScope(): Scope {
+function createScope() {
   const lists = new Map<string, ListEntry>();
   // The click that ends a drag fires before the next tick: held until then
   let dropped = false;
   return {
-    register: (list, entry) => {
+    register: (list: string, entry: ListEntry) => {
       lists.set(list, entry);
-      return () => lists.delete(list);
+      return () => {
+        if (lists.get(list) === entry) lists.delete(list);
+      };
     },
-    list: (list) => lists.get(list),
+    list: (list: string) => lists.get(list),
     justDragged: () => dropped,
     markDropped: () => {
       dropped = true;
@@ -67,6 +76,20 @@ const announcements: Announcements = {
   onDragCancel: ({ active }) => t("dnd.cancelled", { title: titleOf(active) }),
 };
 
+/** A sidebar project is hit only under the pointer; rows go to the closest one. */
+const collision: CollisionDetection = (args) => {
+  const projects = pointerWithin(args).filter(
+    (c) => c.data?.droppableContainer.data.current?.kind === PROJECT_DROP,
+  );
+  if (projects.length) return projects;
+  return closestCenter({
+    ...args,
+    droppableContainers: args.droppableContainers.filter(
+      (c) => c.data.current?.kind !== PROJECT_DROP,
+    ),
+  });
+};
+
 const ScopeContext = createContext<Scope | null>(null);
 
 export function useDndScope(): Scope | null {
@@ -74,18 +97,20 @@ export function useDndScope(): Scope | null {
 }
 
 /**
- * One drag-and-drop area per screen (Spec 02 §3). Mouse: a drag starts after 6 px, so a click
- * still opens the task. Touch: press and hold 250 ms, so the page still scrolls (#178).
- * Keyboard: the row's move handle, Space to pick up, arrows, Space to drop, Escape to cancel.
+ * The drag-and-drop area (Spec 02 §3). One for the app, around the sidebar too; one opened
+ * inside another adds nothing. Mouse: a drag starts after 6 px, so a click still opens the
+ * task. Touch: press and hold 250 ms, so the page still scrolls (#178). Keyboard: the row's
+ * move handle, Space to pick up, arrows, Space to drop, Escape to cancel.
  */
-export function TaskDndScope({
-  onCrossDrop,
-  children,
-}: {
-  onCrossDrop?: (drop: CrossDrop) => void;
-  children: ReactNode;
-}) {
+export function TaskDndScope({ children }: { children: ReactNode }) {
+  const parent = useDndScope();
+  if (parent) return <>{children}</>;
+  return <RootScope>{children}</RootScope>;
+}
+
+function RootScope({ children }: { children: ReactNode }) {
   const [scope] = useState(createScope);
+  const [dragging, setDragging] = useState<string | null>(null);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, {
@@ -98,39 +123,61 @@ export function TaskDndScope({
     }),
   );
 
+  const onDragStart = ({ active }: DragStartEvent) =>
+    setDragging(titleOf(active));
+
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     scope.markDropped();
+    setDragging(null);
     if (!over) return;
     const id = String(active.id);
     const from = active.data.current?.sortable?.containerId as string;
+    const source = scope.list(from);
+    if (over.data.current?.kind === PROJECT_DROP) {
+      source?.onToProject?.(id, over.data.current as ProjectDropData);
+      return;
+    }
     const to =
       (over.data.current?.sortable?.containerId as string | undefined) ??
       String(over.id);
     const target = scope.list(to);
     if (!target) return;
-    const shown = target.ids();
     const overIndex = over.data.current?.sortable?.index as number | undefined;
-    const index = overIndex ?? shown.length;
+    const index = overIndex ?? target.ids().length;
     if (from === to) {
       if (String(over.id) !== id) target.onMove(id, index);
       return;
     }
-    onCrossDrop?.({ id, from, to, index });
+    target.onReceive?.({ id, from, index });
+  };
+
+  const cancel = () => {
+    scope.markDropped();
+    setDragging(null);
   };
 
   return (
     <ScopeContext.Provider value={scope}>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={collision}
         accessibility={{
           announcements,
           screenReaderInstructions: { draggable: t("dnd.instructions") },
         }}
+        onDragStart={onDragStart}
         onDragEnd={onDragEnd}
-        onDragCancel={scope.markDropped}
+        onDragCancel={cancel}
       >
         {children}
+        {/* Rows sit in clipped cards: the moving card floats above everything instead */}
+        <DragOverlay dropAnimation={null}>
+          {dragging !== null && (
+            <div className="cursor-grabbing rounded-tile border border-separator bg-surface px-4 py-3 text-body font-medium text-ink shadow-lg">
+              {dragging}
+            </div>
+          )}
+        </DragOverlay>
       </DndContext>
     </ScopeContext.Provider>
   );

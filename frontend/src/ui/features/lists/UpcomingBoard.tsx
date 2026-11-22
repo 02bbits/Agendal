@@ -15,6 +15,7 @@ export function UpcomingBoard({
   selectedTaskId,
   navigate,
   onAddTask,
+  onPlaced,
 }: UpcomingBoardProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -124,7 +125,7 @@ export function UpcomingBoard({
               </span>
             </div>
 
-            {dayEntries.length > 0 && (
+            {
               <EntryBlocks
                 entries={dayEntries}
                 day={date}
@@ -132,8 +133,9 @@ export function UpcomingBoard({
                 today={today}
                 selectedTaskId={selectedTaskId ?? undefined}
                 navigate={navigate}
+                onPlaced={onPlaced}
               />
-            )}
+            }
 
             <button
               type="button"

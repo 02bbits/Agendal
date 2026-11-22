@@ -16,6 +16,7 @@ export function UpcomingDayList({
   selectedTaskId,
   navigate,
   onAddTask,
+  onPlaced,
 }: UpcomingDayListProps): ReactElement {
   return (
     <div className={cx("space-y-6", TASK_COLUMN_CLASS)}>
@@ -50,8 +51,9 @@ export function UpcomingDayList({
               {heading}
             </h2>
 
-            {dayEntries.length > 0 && (
-              <div className="mt-2">
+            {/* Empty when the day has nothing and no task is being dragged */}
+            {
+              <div className="mt-2 empty:hidden">
                 <EntryBlocks
                   entries={dayEntries}
                   day={date}
@@ -59,9 +61,10 @@ export function UpcomingDayList({
                   today={today}
                   selectedTaskId={selectedTaskId ?? undefined}
                   navigate={navigate}
+                  onPlaced={onPlaced}
                 />
               </div>
-            )}
+            }
 
             <button
               type="button"
