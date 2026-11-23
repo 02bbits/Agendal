@@ -1,0 +1,14 @@
+# Production builds (IM-65): keep secrets, local builds and dependencies out of the context
+.git
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+!**/.env.production.example
+backend/vendor
+backend/storage/logs
+backend/storage/secrets
+backend/storage/framework/*/*
+backend/bootstrap/cache/*.php
+frontend/.next
+secrets

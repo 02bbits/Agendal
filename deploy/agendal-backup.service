@@ -1,0 +1,10 @@
+[Unit]
+Description=Agendal nightly database backup
+Wants=network-online.target
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+# The deploy user (in the docker group, owns the rclone config)
+User=agendal
+ExecStart=/opt/agendal/deploy/backup.sh

@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureEmailVerified;
 use App\Http\Middleware\ForgetSessionCookieAfterSignOut;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncTimezone;
+use App\Http\Middleware\TrustCloudflareIp;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -38,6 +39,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prepend(AssignRequestId::class);
+        $middleware->prepend(TrustCloudflareIp::class);
         $middleware->append(SecurityHeaders::class);
         $middleware->append(ForgetSessionCookieAfterSignOut::class);
         // Sanctum SPA cookie sessions (ADR-007)

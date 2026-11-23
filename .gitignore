@@ -33,6 +33,7 @@ auth.json
 # Agendal
 .env.*
 !.env.example
+!.env.production.example
 backend/database/database.sqlite
 frontend/.next/
 frontend/next-env.d.ts
@@ -50,3 +51,4 @@ frontend/AGENTS.md
 # Design handoff (kept local; see docs/01-product/theme-guide.md)
 docs/DESIGN_V2.1.md
 docs/agendal-v2.1/
+/secrets/

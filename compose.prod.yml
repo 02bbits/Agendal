@@ -1,0 +1,93 @@
+# Production on the Linux server (IM-65, docs/07-architecture/overview.md#deployment).
+#   docker compose -f compose.prod.yml up -d --build
+# The only port is the web app on 127.0.0.1:3000, for cloudflared on the host. Docker-published
+# ports skip the host firewall, so nothing else is published. Runbook: deploy/README.md.
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt: ["no-new-privileges:true"]
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "5" }
+
+x-api: &api
+  <<: *hardening
+  build: { context: ., dockerfile: docker/prod/api.Dockerfile }
+  image: agendal-api
+  env_file: backend/.env.production
+  cap_drop: [ALL]
+  volumes:
+    - api-storage:/app/storage
+  secrets:
+    - source: gemini_api_key
+      target: gemini_api_key
+  networks: [internal, egress]
+
+services:
+  db:
+    <<: *hardening
+    image: postgres:18
+    environment:
+      POSTGRES_DB: agendal
+      POSTGRES_USER: agendal
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - db-data:/var/lib/postgresql
+    networks: [internal]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agendal -d agendal"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  api:
+    <<: *api
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(@file_get_contents('http://localhost:8000/api/v1/health') === false ? 1 : 0);"]
+      interval: 30s
+      timeout: 3s
+      start_period: 60s
+      start_interval: 3s
+
+  # Mail and other queued jobs. Scale with --scale queue=N
+  queue:
+    <<: *api
+    command: ["php", "artisan", "queue:work", "--tries=1", "--max-time=3600"]
+    healthcheck: { disable: true } # the image's check probes the web server, which this doesn't run
+    depends_on:
+      api: { condition: service_healthy }
+
+  # Runs routes/console.php every minute (the nightly purges); replaces cron
+  scheduler:
+    <<: *api
+    command: ["php", "artisan", "schedule:work"]
+    healthcheck: { disable: true }
+    depends_on:
+      api: { condition: service_healthy }
+
+  web:
+    <<: *hardening
+    build: { context: ., dockerfile: docker/prod/web.Dockerfile }
+    image: agendal-web
+    cap_drop: [ALL]
+    ports:
+      - "127.0.0.1:3000:3000"
+    networks: [egress]
+    depends_on:
+      api: { condition: service_healthy }
+
+networks:
+  # The database has no route out
+  internal: { internal: true }
+  egress: {}
+
+secrets:
+  db_password: { file: ./secrets/db_password }
+  gemini_api_key: { file: ./secrets/gemini_api_key }
+
+volumes:
+  db-data:
+  api-storage:
