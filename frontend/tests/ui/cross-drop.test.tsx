@@ -22,6 +22,10 @@ const cross: {
     shown: readonly Task[],
     drop: { id: string; from: string; index: number },
   ) => void;
+  receiveCompleted?: (
+    shown: readonly Task[],
+    drop: { id: string; from: string; index: number },
+  ) => void;
   moveToProject?: (id: string, project: ProjectDropData) => void;
 } = {};
 
@@ -32,11 +36,15 @@ function CrossDropper() {
   const receiveNoDate = useReceiveDrop("project_order", (t) =>
     inboxDropPatch(t, "no_date", TODAY),
   );
+  const receiveCompleted = useReceiveDrop("project_order", (t) =>
+    inboxDropPatch(t, "completed", TODAY),
+  );
   const moveToProject = useMoveToProject();
 
   useEffect(() => {
     cross.receiveToday = receiveToday;
     cross.receiveNoDate = receiveNoDate;
+    cross.receiveCompleted = receiveCompleted;
     cross.moveToProject = moveToProject;
   });
   return null;
@@ -134,6 +142,57 @@ describe("cross-section drag and drop (#178)", () => {
     await waitFor(() => {
       const saved = memory.db.tasks.find((x) => x.id === "task-move");
       expect(saved?.project_id).toBeNull();
+    });
+  });
+
+  it("dropping an open task into Completed marks it done", async () => {
+    const openTask = task({
+      id: "open-1",
+      title: "Open Task",
+      done: false,
+      due_date: TODAY,
+    });
+    const { wrap, memory } = setup([openTask]);
+
+    render(wrap(<CrossDropper />));
+
+    act(() => {
+      cross.receiveCompleted!([], {
+        id: "open-1",
+        from: "today",
+        index: 0,
+      });
+    });
+
+    await waitFor(() => {
+      const saved = memory.db.tasks.find((t) => t.id === "open-1");
+      expect(saved?.done).toBe(true);
+    });
+  });
+
+  it("dropping a completed task into Today reopens it and sets due date", async () => {
+    const doneTask = task({
+      id: "done-1",
+      title: "Done Task",
+      done: true,
+      due_date: null,
+    });
+    const { wrap, memory } = setup([doneTask]);
+
+    render(wrap(<CrossDropper />));
+
+    act(() => {
+      cross.receiveToday!([], {
+        id: "done-1",
+        from: "completed",
+        index: 0,
+      });
+    });
+
+    await waitFor(() => {
+      const saved = memory.db.tasks.find((t) => t.id === "done-1");
+      expect(saved?.done).toBe(false);
+      expect(saved?.due_date).toBe(TODAY);
     });
   });
 });

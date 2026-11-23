@@ -58,11 +58,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Lists support drag-and-drop reordering via pointer (6px activation threshold to preserve click-to-open), touch (250ms press-and-hold), and keyboard (`⋮⋮` "Move {task}" handle with Space/Enter and Arrow keys).
   - **Sort modes (per list on device):** `Smart` (rule-based) vs `Manual` (ordered by fractional index string `day_order` or `project_order`). Today and Upcoming default to Smart; Projects and No date default to Manual.
   - **Auto-switch on drag:** dragging a task in a Smart list places the item, switches the list to Manual, and shows a toast: `"Switched to manual order · Undo"`.
-  - **Sort menu `⇅`:** provides options to switch between Smart, Manual, and run **"Sort by rules"** (re-evaluates rules, generates sequential fractional keys, and applies them in a single batch with Undo).
+  - **Sort menu `⇅`:** positioned centrally in the screen header toolbar (e.g. Inbox header action and Upcoming header toolbar) to control the view's mode without cluttering individual list section headings. Provides options to switch between Smart, Manual, and run **"Sort by rules"** (re-evaluates rules, generates sequential fractional keys, and applies them in a single batch with Undo).
+  - **Fluid multi-container preview & displacement:** dragging across sections (e.g. Today ↔ No date ↔ Completed, between Upcoming days, or within Projects) dynamically opens a live drop placeholder slot at the exact insertion index, smoothly displacing existing cards.
   - **Cross-section drops:**
     - `No date` → `Today`: assigns `due_date = today` and inserts with a `day_order` key.
     - `Overdue` → `Today`: shifts deadline to today while preserving span length.
     - `Today` → `No date`: clears `start_date` and `due_date`, with Undo toast.
+    - `Today` / `No date` → `Completed`: marks task completed (`done: true`) and places it into the completed list.
+    - `Completed` → `Today` / `No date`: reopens the task (`done: false`), applies target section date rules, and places it with an order key.
+    - `Project view`: supports reordering inside open tasks, completed tasks, moving between open and completed, and dropping onto sidebar projects.
     - Sidebar drop: dropping a task onto a sidebar project moves its `project_id` with toast `"Moved to {project} · Undo"`.
 - **A task edited in the panel keeps its place:** once a task has been opened in the panel, its row stays in the section and place it had when it was first opened, so changing a date or time doesn't make it jump. The row shows the new values at once. It keeps that place after the panel closes, and for every task opened on the screen, until the user leaves the screen (another tab or page) or reloads; coming back sorts the list again. Two changes are not held: ticking a task done (it still settles into Completed) and moving it to another project (it leaves that project's list at once). The same holds in Upcoming and in a project. On phones the task opens as its own screen, so the list is sorted when the user comes back.
 - **Midnight:** the lists recompute at local midnight while the app is open (a timer to the next midnight, re-armed on `visibilitychange`), and whenever the zone changes ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).

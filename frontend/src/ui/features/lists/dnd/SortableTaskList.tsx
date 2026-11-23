@@ -5,13 +5,13 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { GripVerticalIcon } from "../../../components/icons";
 import { t } from "../../../copy";
 import type { Task } from "../../../domain/types";
 import type { RowDrag } from "../../tasks/TaskRow";
 import { splitListeners } from "./splitListeners";
-import { useDndScope, type ListEntry } from "./TaskDndScope";
+import { useDndDragState, useDndScope, type ListEntry } from "./TaskDndScope";
 
 type Handlers = Pick<ListEntry, "onMove" | "onReceive" | "onToProject">;
 
@@ -31,7 +31,37 @@ export function SortableTaskList({
   children: (task: Task, drag?: RowDrag) => ReactNode;
 }) {
   const scope = useDndScope();
-  const ids = tasks.map((task) => task.id);
+  const dragState = useDndDragState();
+
+  const isTargetingThis =
+    dragState.activeId !== null &&
+    dragState.overContainer === list &&
+    dragState.fromContainer !== list &&
+    dragState.activeTask !== null;
+
+  const displayTasks = useMemo(() => {
+    if (!isTargetingThis || !dragState.activeTask) {
+      return tasks;
+    }
+    if (tasks.some((t) => t.id === dragState.activeTask!.id)) {
+      return tasks;
+    }
+    const idx =
+      dragState.overIndex !== null &&
+      dragState.overIndex >= 0 &&
+      dragState.overIndex <= tasks.length
+        ? dragState.overIndex
+        : tasks.length;
+    const next = [...tasks];
+    next.splice(idx, 0, dragState.activeTask);
+    return next;
+  }, [tasks, isTargetingThis, dragState.activeTask, dragState.overIndex]);
+
+  const ids = useMemo(
+    () => displayTasks.map((task) => task.id),
+    [displayTasks],
+  );
+
   const latest = useRef({ ids, handlers });
   useEffect(() => {
     latest.current = { ids, handlers };
@@ -57,24 +87,42 @@ export function SortableTaskList({
       items={ids}
       strategy={verticalListSortingStrategy}
     >
-      {/* An empty list still takes drops: a line shows where while a task is dragged */}
-      {tasks.length === 0 && (
+      {/* An empty list still takes drops: shows clean drop zone only when dragged over */}
+      {displayTasks.length === 0 && (
         <li
           ref={setNodeRef}
           aria-hidden="true"
           className={
-            active
-              ? `m-1 min-h-11 rounded-tile border border-dashed ${isOver ? "border-primary bg-primary/10" : "border-separator"}`
-              : "h-0"
+            isOver
+              ? "m-1 min-h-12 rounded-tile border border-dashed border-primary bg-primary/10 transition-all duration-200 list-none"
+              : active
+                ? "min-h-10 w-full list-none"
+                : "h-0"
           }
         />
       )}
-      {tasks.map((task) => (
-        <SortableRow key={task.id} task={task}>
-          {(drag) => children(task, drag)}
-        </SortableRow>
-      ))}
+      {displayTasks.map((task) => {
+        if (isTargetingThis && task.id === dragState.activeId) {
+          return <SortablePlaceholder key={task.id} id={task.id} />;
+        }
+        return (
+          <SortableRow key={task.id} task={task}>
+            {(drag) => children(task, drag)}
+          </SortableRow>
+        );
+      })}
     </SortableContext>
+  );
+}
+
+function SortablePlaceholder({ id }: { id: string }) {
+  const { setNodeRef } = useSortable({ id });
+  return (
+    <li
+      ref={setNodeRef}
+      className="m-1 min-h-[56px] rounded-tile border border-dashed border-primary/60 bg-primary/10 transition-all duration-200 list-none"
+      aria-hidden="true"
+    />
   );
 }
 
@@ -94,7 +142,7 @@ function SortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { title: task.title } });
+  } = useSortable({ id: task.id, data: { title: task.title, task } });
   // Mouse and touch pick up the whole row; the keyboard uses the handle
   const { pointer, keyboard } = splitListeners(listeners);
 
@@ -102,8 +150,8 @@ function SortableRow({
     setNodeRef,
     dragging: isDragging,
     style: {
-      transform: CSS.Translate.toString(transform),
-      transition,
+      transform: isDragging ? undefined : CSS.Translate.toString(transform),
+      transition: isDragging ? undefined : transition,
     },
     rowListeners: {
       ...pointer,

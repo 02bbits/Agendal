@@ -6,6 +6,7 @@ import type { Navigate } from "../shell/routes";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
 import { SortableTaskList } from "./dnd/SortableTaskList";
+import { useDndDragState } from "./dnd/TaskDndScope";
 import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
 import { useDropReorder } from "./useDropReorder";
 import { useSortMode } from "./useSortMode";
@@ -40,6 +41,8 @@ export function EntryBlocks({
   const moveToProject = useMoveToProject();
   // An empty day still takes a dragged task (Spec 02 §3, reschedule)
   const { active } = useDndContext();
+  const dragState = useDndDragState();
+  const isTargeted = dragState.overContainer === `day:${day}`;
 
   if (normal.length === 0 && due.length === 0 && !active) {
     return null;
@@ -47,7 +50,7 @@ export function EntryBlocks({
 
   return (
     <div className="space-y-2">
-      {(normal.length > 0 || active) && (
+      {normal.length > 0 || isTargeted ? (
         <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
           <ul className="m-0 list-none p-0">
             <SortableTaskList
@@ -75,7 +78,19 @@ export function EntryBlocks({
             </SortableTaskList>
           </ul>
         </div>
-      )}
+      ) : active ? (
+        <ul className="m-0 list-none p-0">
+          <SortableTaskList
+            list={`day:${day}`}
+            tasks={normalTasks}
+            onMove={(id, to) => move(normalTasks, id, to)}
+            onReceive={(drop) => receive(normalTasks, drop)}
+            onToProject={moveToProject}
+          >
+            {() => null}
+          </SortableTaskList>
+        </ul>
+      ) : null}
 
       {due.length > 0 &&
         (variant === "list" ? (

@@ -7,8 +7,10 @@ import { cx } from "../../components/cx";
 import { useSortMode, type SortList } from "./useSortMode";
 
 export interface SortMenuProps {
-  list: SortList;
-  /** The list's name for the button's label: "Sort Today". */
+  list?: SortList;
+  mode?: SortMode;
+  onModeChange?: (mode: SortMode) => void;
+  /** The list's name for the button's label: "Sort Today" or "Sort Inbox". */
   listName: string;
   /** Writes keys in rule order and switches to manual (Spec 02 §2.1, "Sort by rules"). */
   onSortByRules: () => void;
@@ -18,8 +20,16 @@ const ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-footnote font-medium text-ink transition-colors hover:bg-fill";
 
 /** Smart or manual order for one list, and Sort by rules (#178). */
-export function SortMenu({ list, listName, onSortByRules }: SortMenuProps) {
-  const [mode, setMode] = useSortMode(list);
+export function SortMenu({
+  list = "today",
+  mode: propMode,
+  onModeChange,
+  listName,
+  onSortByRules,
+}: SortMenuProps) {
+  const [hookMode, setHookMode] = useSortMode(list);
+  const mode = propMode ?? hookMode;
+  const setMode = onModeChange ?? setHookMode;
   const [open, setOpen] = useState(false);
   const menu = useRef<HTMLDivElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);

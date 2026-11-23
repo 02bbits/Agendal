@@ -2,7 +2,13 @@ import { useCallback, useSyncExternalStore } from "react";
 import type { SortMode } from "../../domain/order";
 
 /** The lists that can be sorted by hand (#178). */
-export type SortList = "today" | "no_date" | "upcoming" | `project:${string}`;
+export type SortList =
+  | "inbox"
+  | "today"
+  | "no_date"
+  | "upcoming"
+  | "completed"
+  | `project:${string}`;
 
 const KEY = "agendal.sort_modes";
 const CHANGED = "agendal:sort-modes";

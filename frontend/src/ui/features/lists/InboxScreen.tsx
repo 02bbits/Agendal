@@ -13,6 +13,7 @@ import { SortMenu } from "./SortMenu";
 import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
 import { useDropReorder } from "./useDropReorder";
 import { useSortByRules } from "./useSortByRules";
+import type { SortMode } from "../../domain/order";
 import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
@@ -107,12 +108,27 @@ export function InboxScreen({
     } catch {}
   };
   const frozen = useFrozenOrder(store.tasks, selectedTaskId);
-  const [todayMode] = useSortMode("today");
-  const [noDateMode] = useSortMode("no_date");
+  const [todayMode, setTodayMode] = useSortMode("today");
+  const [noDateMode, setNoDateMode] = useSortMode("no_date");
+  const inboxMode: SortMode = todayMode;
+  const setInboxMode = (next: SortMode) => {
+    setTodayMode(next);
+    setNoDateMode(next);
+  };
   const sortTodayByRules = useSortByRules("today", "day_order");
   const sortNoDateByRules = useSortByRules("no_date", "project_order");
+  const sortInboxByRules = () => {
+    sortTodayByRules(
+      sortTodayTasks(
+        view.today.filter((x) => !x.done),
+        store.today,
+      ),
+    );
+    sortNoDateByRules(sortNoDate(view.noDate.filter((x) => !x.done)));
+  };
   const moveInToday = useDropReorder("today", "day_order");
   const moveInNoDate = useDropReorder("no_date", "project_order");
+  const moveInCompleted = useDropReorder("completed", "project_order");
   // Into another section (Spec 02 §3): the dates change, and a frozen row is let go
   const receiveInToday = useReceiveDrop(
     "day_order",
@@ -122,6 +138,11 @@ export function InboxScreen({
   const receiveInNoDate = useReceiveDrop(
     "project_order",
     dropIntoSection("no_date", store.today),
+    frozen.release,
+  );
+  const receiveInCompleted = useReceiveDrop(
+    "project_order",
+    dropIntoSection("completed", store.today),
     frozen.release,
   );
   const moveToProject = useMoveToProject();
@@ -175,6 +196,14 @@ export function InboxScreen({
             title={t("nav.inbox")}
             accountInitial={accountInitial}
             navigate={navigate}
+            action={
+              <SortMenu
+                mode={inboxMode}
+                onModeChange={setInboxMode}
+                listName={t("nav.inbox")}
+                onSortByRules={sortInboxByRules}
+              />
+            }
           />
         )}
 
@@ -249,20 +278,6 @@ export function InboxScreen({
                 <Section
                   title={t("list.today")}
                   count={view.today.length}
-                  action={
-                    <SortMenu
-                      list="today"
-                      listName={t("list.today")}
-                      onSortByRules={() =>
-                        sortTodayByRules(
-                          sortTodayTasks(
-                            view.today.filter((x) => !x.done),
-                            store.today,
-                          ),
-                        )
-                      }
-                    />
-                  }
                   collapsible
                   open={openToday}
                   onToggle={handleToggleToday}
@@ -282,17 +297,6 @@ export function InboxScreen({
                 <Section
                   title={t("list.no_date")}
                   count={view.noDate.length}
-                  action={
-                    <SortMenu
-                      list="no_date"
-                      listName={t("list.no_date")}
-                      onSortByRules={() =>
-                        sortNoDateByRules(
-                          sortNoDate(view.noDate.filter((x) => !x.done)),
-                        )
-                      }
-                    />
-                  }
                   collapsible
                   open={openNoDate}
                   onToggle={handleToggleNoDate}
@@ -334,7 +338,17 @@ export function InboxScreen({
                     ) : null
                   }
                 >
-                  {visibleCompleted.map((x) => row(x))}
+                  {visibleCompleted.length > 0 && (
+                    <SortableTaskList
+                      list="completed"
+                      tasks={visibleCompleted}
+                      onMove={(id, to) => moveInCompleted(visibleCompleted, id, to)}
+                      onReceive={(drop) => receiveInCompleted(visibleCompleted, drop)}
+                      onToProject={moveToProject}
+                    >
+                      {(x, drag) => row(x, { drag })}
+                    </SortableTaskList>
+                  )}
                 </Section>
               )}
             </div>

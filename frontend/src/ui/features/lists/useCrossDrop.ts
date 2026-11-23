@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { t } from "../../copy";
 import type { TaskPatch } from "../../domain/api";
+import type { ReceivePatch } from "../../domain/dropPatch";
 import { placeAt, type OrderField } from "../../domain/order";
 import type { Task } from "../../domain/types";
 import { useTaskStore } from "../tasks/store";
@@ -14,24 +15,28 @@ import type { Receive } from "./dnd/TaskDndScope";
  */
 export function useReceiveDrop(
   field: OrderField,
-  patchFor: (task: Task, from: string) => TaskPatch | null,
+  patchFor: (task: Task, from: string) => ReceivePatch | null,
   onPlaced?: (id: string) => void,
 ): (shown: readonly Task[], drop: Receive) => void {
-  const { tasks, update, reorder } = useTaskStore();
+  const { tasks, update, reorder, toggle } = useTaskStore();
   return useCallback(
     (shown, { id, from, index }) => {
       const task = tasks.find((x) => x.id === id);
       const patch = task && patchFor(task, from);
       if (!task || !patch) return;
+      const { done: targetDone, ...fieldPatch } = patch;
       const withIt = [...shown.slice(0, index), task, ...shown.slice(index)];
       const keys = placeAt(withIt, id, index, field);
       const own = keys.get(id) ?? null;
       keys.delete(id);
       onPlaced?.(id);
-      update(task, { ...patch, [field]: own });
+      if (targetDone !== undefined && targetDone !== task.done) {
+        toggle(task);
+      }
+      update(task, { ...fieldPatch, [field]: own });
       if (keys.size) reorder(keys, field);
     },
-    [field, onPlaced, patchFor, reorder, tasks, update],
+    [field, onPlaced, patchFor, reorder, tasks, toggle, update],
   );
 }
 

@@ -3,7 +3,9 @@ import { addDays, daysBetween } from "./dates";
 import type { Task } from "./types";
 
 /** The Inbox sections a task can be dropped into (Spec 02 §3). */
-export type InboxSection = "overdue" | "today" | "no_date";
+export type InboxSection = "overdue" | "today" | "no_date" | "completed";
+
+export type ReceivePatch = TaskPatch & { done?: boolean };
 
 /**
  * What dropping a task into an Inbox section changes (Spec 02 §3), or null when the drop
@@ -14,12 +16,20 @@ export function inboxDropPatch(
   task: Task,
   to: InboxSection,
   today: string,
-): TaskPatch | null {
-  const { start_date: start, due_date: due } = task;
+): ReceivePatch | null {
+  const { start_date: start, due_date: due, done } = task;
+  if (to === "completed") {
+    return done ? null : { done: true };
+  }
+  const uncompletePatch: ReceivePatch = done ? { done: false } : {};
   if (to === "no_date") {
+    if (done) return { ...uncompletePatch, start_date: null, due_date: null };
     return start || due ? { start_date: null, due_date: null } : null;
   }
   if (to !== "today") return null;
+  if (done) {
+    return { ...uncompletePatch, due_date: due && due >= today ? due : today };
+  }
   if (!start && !due) return { due_date: today };
   if (due && due < today) {
     const shift = daysBetween(due, today);

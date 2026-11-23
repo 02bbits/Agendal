@@ -7,6 +7,8 @@ import {
   sortOpenByDue,
   useFrozenOrder,
   useDropReorder,
+  useMoveToProject,
+  useReceiveDrop,
   useSortByRules,
   useTaskPanel,
   useTaskStore,
@@ -81,6 +83,32 @@ export function ProjectContent({
     `project:${project.id}`,
     "project_order",
   );
+  const moveInCompleted = useDropReorder(
+    `project:${project.id}:completed`,
+    "project_order",
+  );
+  const targetProjectId = isNoProject ? null : project.id;
+  const receiveInOpen = useReceiveDrop(
+    "project_order",
+    (task: Task) => {
+      const patch: { done?: boolean; project_id?: string | null } = {};
+      if (task.done) patch.done = false;
+      if (task.project_id !== targetProjectId) patch.project_id = targetProjectId;
+      return patch;
+    },
+    frozen.release,
+  );
+  const receiveInCompleted = useReceiveDrop(
+    "project_order",
+    (task: Task) => {
+      const patch: { done?: boolean; project_id?: string | null } = {};
+      if (!task.done) patch.done = true;
+      if (task.project_id !== targetProjectId) patch.project_id = targetProjectId;
+      return patch;
+    },
+    frozen.release,
+  );
+  const moveToProject = useMoveToProject();
   const progress = liveProgress({
     initial: initialProgress,
     initialOpenIds,
@@ -111,6 +139,10 @@ export function ProjectContent({
         selectedTaskId={panel.selectedTaskId}
         liveTask={frozen.live}
         onMove={moveInProject}
+        onReceiveOpen={receiveInOpen}
+        onMoveCompleted={moveInCompleted}
+        onReceiveCompleted={receiveInCompleted}
+        onToProject={moveToProject}
         onSortByRules={() =>
           sortByRules(sortOpenByDue(openTasks.filter((t) => !t.done)))
         }

@@ -1,7 +1,8 @@
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
 import { SortableTaskList } from "../lists/dnd/SortableTaskList";
-import { TaskDndScope } from "../lists/dnd/TaskDndScope";
+import { TaskDndScope, type Receive } from "../lists/dnd/TaskDndScope";
+import type { ProjectDropData } from "../lists/dnd/dropTargets";
 import { TaskRow } from "../tasks/TaskRow";
 
 export interface ProjectOpenListProps {
@@ -15,6 +16,8 @@ export interface ProjectOpenListProps {
   navigate?: Navigate;
   /** Drag to reorder (#178); without it the rows don't move. */
   onMove?: (shown: Task[], id: string, to: number) => void;
+  onReceive?: (shown: Task[], drop: Receive) => void;
+  onToProject?: (id: string, project: ProjectDropData) => void;
 }
 
 export function ProjectOpenList({
@@ -27,6 +30,8 @@ export function ProjectOpenList({
   isSettling,
   navigate,
   onMove,
+  onReceive,
+  onToProject,
 }: ProjectOpenListProps) {
   if (tasks.length === 0) return null;
   const list = (
@@ -36,6 +41,8 @@ export function ProjectOpenList({
           list={`project:${project.id}`}
           tasks={tasks}
           onMove={(id, to) => onMove?.(tasks, id, to)}
+          onReceive={onReceive ? (drop) => onReceive(tasks, drop) : undefined}
+          onToProject={onToProject}
         >
           {(x, drag) => (
             <TaskRow

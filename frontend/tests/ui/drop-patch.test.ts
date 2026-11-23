@@ -43,6 +43,27 @@ describe("inboxDropPatch", () => {
     ).toEqual({ start_date: null, due_date: null });
   });
 
+  it("Active task → Completed marks it done", () => {
+    expect(
+      inboxDropPatch(task({ title: "T", due_date: TODAY, done: false }), "completed", TODAY),
+    ).toEqual({ done: true });
+    expect(
+      inboxDropPatch(task({ title: "T", due_date: TODAY, done: true }), "completed", TODAY),
+    ).toBeNull();
+  });
+
+  it("Completed task → Today uncompletes it and sets due date", () => {
+    expect(
+      inboxDropPatch(task({ title: "T", done: true }), "today", TODAY),
+    ).toEqual({ done: false, due_date: TODAY });
+  });
+
+  it("Completed task → No date uncompletes it and clears dates", () => {
+    expect(
+      inboxDropPatch(task({ title: "T", done: true, due_date: TODAY }), "no_date", TODAY),
+    ).toEqual({ done: false, start_date: null, due_date: null });
+  });
+
   it("means nothing when the task is already there, or for Overdue", () => {
     expect(
       inboxDropPatch(task({ title: "T", due_date: TODAY }), "today", TODAY),
