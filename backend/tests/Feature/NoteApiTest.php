@@ -179,3 +179,11 @@ it('validates notes the language model read, accepted or unclear, against the sh
     'accepted' => ['create', 'toi can mua sua', 'done', 'accepted'],
     'unclear' => ['unclear', 'toi can mua cai do', 'followup', 'unclear'],
 ]);
+
+it('uses the week start set when the note is processed, not when it was written offline (AP-E13, T-AP-110)', function () {
+    // Written on Friday 2026-10-23 while the week started on Monday, then the user switched to Sunday
+    $this->noteUser->forceFill(['week_start' => 'sun'])->save();
+    $this->actingAs($this->noteUser)->postJson('/api/v1/notes', notePayload('call mum next week'))->assertCreated();
+
+    expect(Task::firstOrFail()->due_date)->toBe('2026-10-25');
+});

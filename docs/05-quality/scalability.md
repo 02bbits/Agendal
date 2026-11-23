@@ -47,7 +47,7 @@ Agendal runs on **one Linux server** ([Q14](../08-project/open-questions.md#q14)
 | Item | Target |
 |---|---|
 | Backups | Nightly `pg_dump`, kept 7 days and copied off the server. Restore tested before the demo |
-| Retention | Tombstones purged after 30 days ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). Audit log 90 days. App logs 14 days |
+| Retention | Daily jobs (T-AP-41). Tombstones purged after 30 days ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). Audit log 90 days. Password reset tokens once expired (60 min). Email and sign-in codes 1 day after they expire. Reminder send records 30 days after sending. App logs 14 days (daily log files). Sessions are cleared by Laravel itself |
 | Migrations | Expand → migrate → contract. No destructive migration in the same release as the code that stops using a column |
 
 ## Load-test plan
