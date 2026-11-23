@@ -5,5 +5,5 @@ credentials-file: /home/<user>/.cloudflared/<tunnel id>.json
 
 ingress:
   - hostname: <domain>
-    service: http://localhost:3000
+    service: http://localhost:3000 # or WEB_PORT from the root .env
   - service: http_status:404
