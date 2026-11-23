@@ -132,3 +132,60 @@ self.addEventListener("fetch", (event) => {
       }),
   );
 });
+
+// TK-6 reminders (#186): the server's push becomes a notification. Only a same-origin path from
+// the payload is kept, so a push can never send the user to another site.
+const appPath = (value) =>
+  typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
+    ? value
+    : "/";
+
+self.addEventListener("push", (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // Not JSON: show the app's name rather than nothing
+  }
+  const title =
+    typeof data.title === "string" && data.title ? data.title : "Agendal";
+  event.waitUntil(
+    self.registration.showNotification(title, {
+      body: typeof data.body === "string" ? data.body : "",
+      // One per task: a repeat replaces it instead of stacking
+      tag: typeof data.tag === "string" ? data.tag : undefined,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: appPath(data.url) },
+    }),
+  );
+});
+
+// Tapping it opens Task details: in a window of the app already open, else a new one
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(
+    appPath(event.notification.data?.url),
+    self.location.origin,
+  );
+  event.waitUntil(
+    (async () => {
+      const windows = await self.clients.matchAll({
+        type: "window",
+        includeUncontrolled: true,
+      });
+      const open = windows.find(
+        (client) => new URL(client.url).origin === url.origin,
+      );
+      if (open) {
+        await open.focus();
+        try {
+          if (open.navigate) return await open.navigate(url.href);
+        } catch {
+          // A window this worker doesn't control can't be moved: open the task instead
+        }
+      }
+      return self.clients.openWindow(url.href);
+    })(),
+  );
+});
