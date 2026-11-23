@@ -30,7 +30,15 @@ self.addEventListener("install", (event) => {
   // No skipWaiting here: the page offers Reload instead (UX-42)
   event.waitUntil(
     caches.open(CACHE).then(async (cache) => {
-      await cache.addAll([...PAGES, "/theme.js"]);
+      await cache.addAll([
+        ...PAGES,
+        "/theme.js",
+        // Empty states show offline too, before any screen was empty online
+        ...["inbox", "projects", "notes"].flatMap((name) => [
+          `/illustrations/empty-${name}-light.svg`,
+          `/illustrations/empty-${name}-dark.svg`,
+        ]),
+      ]);
       // And the scripts and styles those pages load
       const assets = new Set();
       for (const page of PAGES) {
