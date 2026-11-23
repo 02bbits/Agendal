@@ -19,7 +19,7 @@ browser ─TLS─> Cloudflare ─tunnel─> cloudflared (host) ─> web :3000 (1
 
 ## 2. Cloudflare (dashboard)
 
-- Tunnel: route `<domain>` to `http://localhost:3000`; config in [cloudflared.example.yml](cloudflared.example.yml).
+- Tunnel: route `<domain>` to `http://localhost:3000` (or `WEB_PORT`, see First deploy); config in [cloudflared.example.yml](cloudflared.example.yml).
 - SSL/TLS: Always Use HTTPS on, minimum TLS 1.2. The app sends HSTS itself.
 - Security: WAF managed rules on. One rate-limiting rule on `/api/v1/auth/*` (the app's own limits stay the real
   ones). Leave Bot Fight Mode off: it challenges the app's API calls.
@@ -35,6 +35,8 @@ browser ─TLS─> Cloudflare ─tunnel─> cloudflared (host) ─> web :3000 (1
 
 ```sh
 cd /srv/services/agendal
+# Only if 127.0.0.1:3000 is taken on the host: publish the web app on another loopback port
+# echo WEB_PORT=9010 > .env
 mkdir -m 700 secrets
 openssl rand -base64 32 | tr -d '\n' > secrets/db_password
 printf '%s' '<gemini key>' > secrets/gemini_api_key
@@ -48,7 +50,7 @@ docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml exec api php artisan db:seed --force                      # demo account, once
 ```
 
-Check: `ss -tlnp` lists only `127.0.0.1:3000` for the app; `curl -I https://<domain>` shows HSTS and CSP;
+Check: `ss -tlnp` lists only `127.0.0.1:3000` (or `WEB_PORT`) for the app; `curl -I https://<domain>` shows HSTS and CSP;
 sign in as the demo account; ask for a password reset and check the mail shows SPF and DKIM pass.
 
 ## 5. Update

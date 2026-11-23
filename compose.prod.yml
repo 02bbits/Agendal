@@ -1,6 +1,7 @@
 # Production on the Linux server (IM-65, docs/07-architecture/overview.md#deployment).
 #   docker compose -f compose.prod.yml up -d --build
-# The only port is the web app on 127.0.0.1:3000, for cloudflared on the host. Docker-published
+# The only port is the web app on 127.0.0.1:${WEB_PORT:-3000}, for cloudflared on the host (WEB_PORT in a
+# root .env when 3000 is taken). Docker-published
 # ports skip the host firewall, so nothing else is published. Runbook: deploy/README.md.
 
 x-hardening: &hardening
@@ -74,7 +75,7 @@ services:
     image: agendal-web
     cap_drop: [ALL]
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${WEB_PORT:-3000}:3000"
     networks: [egress]
     depends_on:
       api: { condition: service_healthy }
