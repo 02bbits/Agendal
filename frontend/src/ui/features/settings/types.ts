@@ -2,7 +2,8 @@ import type { TimeFormat, WeekStart } from "../../domain/types";
 
 export type ThemeSetting = "system" | "light" | "dark";
 export type PageViewMode = "flat" | "full";
-export type SettingsTab = "account" | "general" | "theme" | "sidebar";
+export type SettingsTab =
+  "account" | "general" | "theme" | "reminders" | "sidebar";
 
 /** The settings the app keeps for the signed-in user (synced through `PATCH /me` or this browser). */
 export interface AccountSettings {

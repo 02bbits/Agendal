@@ -286,6 +286,13 @@ export const pending = {
   "settings.tab_quick_add": "Quick Add",
   "settings.tab_productivity": "Productivity",
   "settings.tab_reminders": "Reminders",
+  "settings.reminders_switch": "Reminders on this device",
+  "settings.push_test": "Send a test notification",
+  "settings.push_test_sent": "Sent. It should show in a few seconds.",
+  "settings.push_test_gone":
+    "This device was unsubscribed. Turn reminders on again.",
+  "settings.push_test_failed": "Couldn't reach the push service. Try again.",
+  "settings.push_test_wait": "Wait a minute before sending another.",
   "settings.tab_backups": "Backups",
   "settings.tab_integrations": "Integrations",
   "settings.tab_calendars": "Calendars",

@@ -131,3 +131,63 @@ export async function forgetPush(): Promise<void> {
     await (await reg?.pushManager.getSubscription())?.unsubscribe();
   } catch {}
 }
+
+/** Whether the server has reminder keys (Settings > Reminders says why the switch is off). */
+export async function pushReady(): Promise<boolean> {
+  try {
+    const answer = await api("/push-subscriptions/key");
+    if (!answer.ok) return false;
+    const { public_key: publicKey } = (await answer.json()) as {
+      public_key: string | null;
+    };
+    return Boolean(publicKey);
+  } catch {
+    return false;
+  }
+}
+
+/** True when this browser has a subscription (the switch in Settings > Reminders). */
+export async function pushSubscribed(): Promise<boolean> {
+  return (await pushEndpoint()) !== null;
+}
+
+/** The switch turned off: the server forgets this device, then the browser drops it. */
+export async function turnOffPush(): Promise<void> {
+  const endpoint = await pushEndpoint();
+  if (endpoint)
+    await api("/push-subscriptions", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint }),
+    }).catch(() => null);
+  await forgetPush();
+}
+
+export type TestPushResult =
+  | { sent: number; gone: number; failed: number }
+  | { error: "not_configured" | "no_devices" | "too_many" | "failed" };
+
+/** Settings > Reminders: a test notification to this device, sent the way reminders are. */
+export async function sendTestPush(): Promise<TestPushResult> {
+  const endpoint = await pushEndpoint();
+  if (!endpoint) return { error: "no_devices" };
+  try {
+    const answer = await api("/push-subscriptions/test", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ endpoint }),
+    });
+    if (answer.ok)
+      return (await answer.json()) as {
+        sent: number;
+        gone: number;
+        failed: number;
+      };
+    if (answer.status === 429) return { error: "too_many" };
+    if (answer.status === 503) return { error: "not_configured" };
+    if (answer.status === 409) return { error: "no_devices" };
+    return { error: "failed" };
+  } catch {
+    return { error: "failed" };
+  }
+}
