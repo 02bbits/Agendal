@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { t } from "../../copy";
 import type { TaskApi, TaskPatch, TaskUpdateErrors } from "../../domain/api";
+import { notifyReminderSet } from "../../domain/appEvents";
 import { normalizePatch, patchErrors } from "../../domain/edit";
 import type { Task } from "../../domain/types";
 import type { Clock, TaskUpdateFn, ToastDraft } from "./types";
@@ -41,6 +42,7 @@ export function useTaskEdit({
       }
 
       const at = clock.now().toISOString();
+      if (patch.reminder && patch.reminder !== "none") notifyReminderSet();
 
       const clearsDate =
         ("due_date" in raw && !raw.due_date && Boolean(row.due_date)) ||

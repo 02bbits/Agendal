@@ -18,6 +18,7 @@ import { useNewTask } from "./useNewTask";
 import { useUpdateToast } from "./useUpdateToast";
 import { TabLoading } from "./TabLoading";
 import { AppFrameContext, type AppFrameValue } from "./frame/AppFrameContext";
+import { PushPrompt } from "@/ui/features/tasks/PushPrompt";
 import { AppOverlays } from "./frame/AppOverlays";
 import { isAuthPath, TAB_BY_PATH } from "./frame/frameRoutes";
 import { PendingScreen } from "./frame/PendingScreen";
@@ -237,6 +238,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onCloseProjectSheet={() => setCreatingProject(false)}
             onProjectCreated={projectCreated}
           />
+          {/* Reminders (TK-6): asks for notifications when a reminder is first set */}
+          <PushPrompt signedIn={user !== null} />
         </AppShell>
       </TabLoading>
     </AppFrameContext.Provider>

@@ -14,6 +14,7 @@ import {
 } from "../../../domain/types";
 import type { Clock } from "../types";
 import { RepeatPicker } from "../repeat/RepeatPicker";
+import { usePushState } from "../usePushState";
 import { DateTimeFields } from "./DateTimeFields";
 import { ProjectField } from "./ProjectField";
 import { SettingsRow } from "./SettingsRow";
@@ -45,6 +46,7 @@ export function SettingsRows({
   variant = "panel",
 }: SettingsRowsProps): ReactElement {
   const hasDate = Boolean(task.start_date || task.due_date);
+  const blocked = usePushState() === "denied";
 
   // The series starts on the start date, the task's main date (#154)
   const repeatAnchor =
@@ -79,6 +81,13 @@ export function SettingsRows({
         variant={variant}
         icon={<BellIcon size={18} />}
         label={t("task.reminder")}
+        // TK §3: a reminder that can't arrive says why, and where to turn it back on
+        helper={
+          blocked && task.reminder !== "none"
+            ? t("task.push_denied")
+            : undefined
+        }
+        helperId="task-reminder-helper"
         control={
           <Picker<Reminder>
             id="task-reminder"
