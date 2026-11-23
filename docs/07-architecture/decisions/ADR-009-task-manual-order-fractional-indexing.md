@@ -20,9 +20,10 @@ Naively using sequential integer positions (`1, 2, 3...`) requires re-numbering 
   - Changing a task's project clears `project_order`.
 - **Dual sort modes (Smart vs Manual):**
   - Each list remembers its preferred sort mode (`smart` or `manual`) in local storage.
-  - **Defaults:** Today and Upcoming default to `smart`. Projects and No date default to `manual`.
-  - **Drag interaction in Smart mode:** Dragging a task automatically switches the list to `manual` and surfaces a Toast (`"Switched to manual order · Undo"`).
-  - **Sort by rules:** A toolbar action re-evaluates the smart rules for the current list, generates evenly-spaced fractional keys, and applies them in a single batch request (`/sync/patches`) while remaining in manual mode.
+  - **Defaults:** Today defaults to `smart`. Projects and No date default to `manual`. Upcoming follows grouped chronological order without manual sort toggle.
+  - **Drag interaction in Smart mode:** Dragging a task within a Smart list, or dropping a task from another section/list (e.g. Overdue, No date, or Completed into Today), automatically switches the destination list to `manual` and surfaces a Toast (`"Switched to manual order · Undo"`). This guarantees that the user-assigned drop position is strictly respected and not overridden by smart sorting rules.
+  - **Undo behavior:** Clicking Undo in the Toast restores the task's original properties and dates, reverts sibling order keys, and returns the destination list to `smart` mode.
+  - **Sort by rules:** A toolbar action in the Inbox header re-evaluates the smart rules for the current list, generates evenly-spaced fractional keys, and applies them in a single batch request (`/sync/patches`) while remaining in manual mode.
 
 ## Consequences
 - Every manual reorder operation is $O(1)$ database writes and requires no table-wide re-indexing or background re-balancing.
