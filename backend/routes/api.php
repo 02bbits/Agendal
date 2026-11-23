@@ -79,5 +79,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('push-subscriptions/key', [PushSubscriptionController::class, 'key']);
         Route::post('push-subscriptions', [PushSubscriptionController::class, 'store']);
         Route::delete('push-subscriptions', [PushSubscriptionController::class, 'destroy']);
+        Route::post('push-subscriptions/test', [PushSubscriptionController::class, 'test'])->middleware('throttle:push-test');
     });
 });

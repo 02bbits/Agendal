@@ -264,3 +264,50 @@ describe('the notification text', function () {
             ->and(ReminderMessage::for($dueOnly, null, '24h')['body'])->toBe('Tue');
     });
 });
+
+describe('test push from Settings', function () {
+    it('goes to this device only, through the same sending, and says how it went', function () {
+        device($this->user, 'https://fcm.googleapis.com/fcm/send/this');
+        device($this->user, 'https://fcm.googleapis.com/fcm/send/other');
+
+        $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/this'])
+            ->assertOk()->assertExactJson(['sent' => 1, 'gone' => 0, 'failed' => 0]);
+
+        expect($this->push->sent)->toHaveCount(1)
+            ->and((string) $this->push->sent[0]->getUri())->toBe('https://fcm.googleapis.com/fcm/send/this')
+            ->and($this->push->sent[0]->getHeaderLine('Urgency'))->toBe('high');
+    });
+
+    it('reports a device that is gone and forgets it', function () {
+        device($this->user, 'https://fcm.googleapis.com/fcm/send/gone');
+        $this->push->answers['https://fcm.googleapis.com/fcm/send/gone'] = 410;
+
+        $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/gone'])
+            ->assertOk()->assertExactJson(['sent' => 0, 'gone' => 1, 'failed' => 0]);
+        expect(PushSubscription::count())->toBe(0);
+    });
+
+    it('needs this device to be subscribed, and someone else\'s device never counts', function () {
+        device(User::factory()->create(), 'https://fcm.googleapis.com/fcm/send/theirs');
+
+        $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test', ['endpoint' => 'https://fcm.googleapis.com/fcm/send/theirs'])
+            ->assertStatus(409)->assertJsonPath('error.code', 'push.no_devices');
+        expect($this->push->sent)->toBe([]);
+    });
+
+    it('says when reminders are not set up on the server', function () {
+        config(['push.vapid.private_key_file' => null]);
+        $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test')
+            ->assertStatus(503)->assertJsonPath('error.code', 'push.not_configured');
+    });
+
+    it('needs sign-in, and allows 3 a minute', function () {
+        $this->postJson('/api/v1/push-subscriptions/test')->assertStatus(401);
+
+        device($this->user, 'https://fcm.googleapis.com/fcm/send/this');
+        foreach (range(1, 3) as $i) {
+            $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test')->assertOk();
+        }
+        $this->actingAs($this->user)->postJson('/api/v1/push-subscriptions/test')->assertStatus(429);
+    });
+});

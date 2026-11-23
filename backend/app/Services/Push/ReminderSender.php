@@ -12,11 +12,7 @@ use App\Models\User;
 use App\Services\Clock\ClockInterface;
 use DateTimeImmutable;
 use DateTimeZone;
-use GuzzleHttp\Psr7\HttpFactory;
 use Illuminate\Support\Facades\Log;
-use Minishlink\WebPush\Subscription;
-use Psr\Http\Message\RequestInterface;
-use Psr\Http\Message\ResponseInterface;
 
 /**
  * Sends claimed reminders to every device of their users (TK §2.5).
@@ -24,14 +20,14 @@ use Psr\Http\Message\ResponseInterface;
  *   not sent.
  * - Each push says how long it may wait (TTL, to the end of the late window), that it's urgent,
  *   and its task (Topic), so a push service holding a stale one replaces it rather than adding.
- * - 404/410: the device unsubscribed, so its subscription goes. 429, 5xx and network errors are
- *   tried again for those devices only, `retries` times; other answers are logged, not retried.
+ * - Gone devices are removed by PushSending. 429, 5xx and network errors are tried again for
+ *   those devices only, `retries` times; other answers are logged, not retried.
  */
 class ReminderSender
 {
     public function __construct(
         private readonly VapidKeys $keys,
-        private readonly PushClient $client,
+        private readonly PushSending $pushes,
         private readonly ClockInterface $clock,
     ) {}
 
@@ -55,9 +51,10 @@ class ReminderSender
             ->when($onlyEndpoints !== null, fn ($q) => $q->whereIn('endpoint', $onlyEndpoints ?? []))
             ->get()->groupBy('user_id');
 
-        $encoder = new PushEncoder($this->keys->auth(), [], $this->client->client(), new HttpFactory, new HttpFactory);
-        /** @var list<array{delivery: array{task_id: string, remind_at: string}, endpoint: string, request: RequestInterface}> $outgoing */
+        /** @var list<array{device: PushSubscription, payload: string, options: array<string, mixed>}> $outgoing */
         $outgoing = [];
+        /** @var list<array{task_id: string, remind_at: string}> $forDelivery */
+        $forDelivery = [];
         foreach ($deliveries as $delivery) {
             $task = $tasks->get($delivery['task_id']);
             $remindAt = new DateTimeImmutable($delivery['remind_at']);
@@ -71,15 +68,13 @@ class ReminderSender
                 'topic' => substr(hash('sha256', (string) $task->id), 0, 32),
             ];
             foreach ($devices->get($task->user_id, collect()) as $device) {
-                $request = $this->encrypt($encoder, $device, (string) json_encode($message), $options);
-                if ($request !== null) {
-                    $outgoing[] = ['delivery' => $delivery, 'endpoint' => $device->endpoint, 'request' => $request];
-                }
+                $outgoing[] = ['device' => $device, 'payload' => (string) json_encode($message), 'options' => $options];
+                $forDelivery[] = $delivery;
             }
         }
 
-        $results = $this->client->sendAll(array_column($outgoing, 'request'));
-        $this->settle($encoder, $outgoing, $results, $attempt);
+        $outcomes = $this->pushes->send($outgoing);
+        $this->retryTemporary($outgoing, $forDelivery, $outcomes, $attempt);
     }
 
     private function stillDue(Task $task, DateTimeImmutable $remindAt): bool
@@ -90,55 +85,22 @@ class ReminderSender
     }
 
     /**
-     * One notification at a time, so one broken subscription can't stop the others.
-     *
-     * @param  array<string, mixed>  $options
+     * @param  list<array{device: PushSubscription, payload: string, options: array<string, mixed>}>  $outgoing
+     * @param  list<array{task_id: string, remind_at: string}>  $forDelivery
+     * @param  list<string>  $outcomes
      */
-    private function encrypt(PushEncoder $encoder, PushSubscription $device, string $payload, array $options): ?RequestInterface
+    private function retryTemporary(array $outgoing, array $forDelivery, array $outcomes, int $attempt): void
     {
-        try {
-            $encoder->queueNotification(Subscription::create([
-                'endpoint' => $device->endpoint,
-                'publicKey' => $device->keys['p256dh'] ?? '',
-                'authToken' => $device->keys['auth'] ?? '',
-                'contentEncoding' => 'aes128gcm',
-            ]), $payload, $options);
-
-            return $encoder->takeRequests()[0] ?? null;
-        } catch (\Throwable $e) {
-            Log::warning('reminders.encrypt_failed', ['subscription' => $device->id, 'error' => $e->getMessage()]);
-
-            return null;
-        }
-    }
-
-    /**
-     * @param  list<array{delivery: array{task_id: string, remind_at: string}, endpoint: string, request: RequestInterface}>  $outgoing
-     * @param  list<ResponseInterface|\Throwable>  $results
-     */
-    private function settle(PushEncoder $encoder, array $outgoing, array $results, int $attempt): void
-    {
-        $sent = 0;
-        $gone = [];
         /** @var array<string, array{delivery: array{task_id: string, remind_at: string}, endpoints: list<string>}> $again */
         $again = [];
-        foreach ($outgoing as $i => $item) {
-            $result = $results[$i] ?? new \RuntimeException('No response');
-            $report = $encoder->report($item['request'], $result);
-            if ($report->isSuccess()) {
-                $sent++;
-            } elseif ($report->isSubscriptionExpired()) {
-                $gone[] = $item['endpoint'];
-            } elseif (self::temporary($result)) {
-                $key = $item['delivery']['task_id'].'|'.$item['delivery']['remind_at'];
-                $again[$key] ??= ['delivery' => $item['delivery'], 'endpoints' => []];
-                $again[$key]['endpoints'][] = $item['endpoint'];
-            } else {
-                Log::warning('reminders.refused', ['status' => $result instanceof ResponseInterface ? $result->getStatusCode() : null]);
+        foreach ($outcomes as $i => $outcome) {
+            if ($outcome !== PushSending::TEMPORARY) {
+                continue;
             }
-        }
-        if ($gone !== []) {
-            PushSubscription::query()->whereIn('endpoint', $gone)->delete();
+            $delivery = $forDelivery[$i];
+            $key = $delivery['task_id'].'|'.$delivery['remind_at'];
+            $again[$key] ??= ['delivery' => $delivery, 'endpoints' => []];
+            $again[$key]['endpoints'][] = $outgoing[$i]['device']->endpoint;
         }
         if ($again !== [] && $attempt < (int) config('push.retries')) {
             SendReminderPushes::dispatch(
@@ -147,16 +109,12 @@ class ReminderSender
                 array_values(array_unique(array_merge(...array_column($again, 'endpoints')))),
             )->delay(now()->addSeconds((int) config('push.retry_seconds') * ($attempt + 1)));
         }
-        Log::info('reminders.sent', ['sent' => $sent, 'gone' => count($gone), 'again' => count($again), 'attempt' => $attempt]);
-    }
-
-    private static function temporary(ResponseInterface|\Throwable $result): bool
-    {
-        if ($result instanceof \Throwable) {
-            return true;
-        }
-        $status = $result->getStatusCode();
-
-        return $status === 429 || $status >= 500;
+        $counts = array_count_values($outcomes);
+        Log::info('reminders.sent', [
+            'sent' => $counts[PushSending::SENT] ?? 0,
+            'gone' => $counts[PushSending::GONE] ?? 0,
+            'again' => count($again),
+            'attempt' => $attempt,
+        ]);
     }
 }

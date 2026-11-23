@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\ApiError;
 use App\Http\Requests\StorePushSubscriptionRequest;
 use App\Models\PushSubscription;
 use App\Models\User;
+use App\Services\Push\PushSending;
 use App\Services\Push\VapidKeys;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +42,45 @@ class PushSubscriptionController extends Controller
         );
 
         return response()->noContent(201);
+    }
+
+    /**
+     * Settings > Notifications: a test push to this device (the endpoint the browser sends), or
+     * to every device of the account without one. It goes the same way reminders do and answers
+     * at once with how it went. Rate-limited, so it can't be used to flood a device.
+     */
+    public function test(Request $request, VapidKeys $keys, PushSending $pushes): JsonResponse
+    {
+        if (! $keys->configured()) {
+            throw new ApiError('push.not_configured', __('push.not_configured'), 503);
+        }
+        /** @var User $user */
+        $user = $request->user();
+        $endpoint = $request->input('endpoint');
+        $devices = PushSubscription::query()->where('user_id', $user->id)
+            ->when(is_string($endpoint), fn ($q) => $q->where('endpoint', $endpoint))
+            ->get();
+        if ($devices->isEmpty()) {
+            throw new ApiError('push.no_devices', __('push.no_devices'), 409);
+        }
+        $payload = (string) json_encode([
+            'title' => __('push.test_title'),
+            'body' => __('push.test_body'),
+            'url' => '/',
+            'tag' => 'agendal-test',
+        ]);
+        $outcomes = $pushes->send($devices->map(fn (PushSubscription $device) => [
+            'device' => $device,
+            'payload' => $payload,
+            'options' => ['TTL' => 60, 'urgency' => 'high', 'topic' => 'agendal-test'],
+        ])->values()->all());
+        $counts = array_count_values($outcomes);
+
+        return response()->json([
+            'sent' => $counts[PushSending::SENT] ?? 0,
+            'gone' => $counts[PushSending::GONE] ?? 0,
+            'failed' => ($counts[PushSending::TEMPORARY] ?? 0) + ($counts[PushSending::REFUSED] ?? 0),
+        ]);
     }
 
     /** Removes this device's subscription (sign-out, or permission turned off). Always 204. */
