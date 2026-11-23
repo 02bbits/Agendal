@@ -130,7 +130,7 @@ The ASVS 4.0.3 Level 2 requirements that apply to Agendal, with how each is met 
 | ASVS | Requirement (short) | How Agendal meets it | Test | Status |
 |---|---|---|---|---|
 | 14.2.1 | Components up to date, no known vulnerabilities | Audits in CI ([NF-21](../05-quality/nfr.md#nf-21)) | SEC-70 | Planned |
-| 14.3.2 | Debug mode off in production | `APP_DEBUG=false` checked at deploy | SEC-71 | Planned |
+| 14.3.2 | Debug mode off in production | `APP_DEBUG=false` in `backend/.env.production.example`, checked at deploy | SEC-71 | Planned |
 | 14.3.3 | Headers don't leak versions | `X-Powered-By` and `Server` versions removed | SEC-20 | Planned |
 | 14.4.1–14.4.7 | Security headers (content type, CSP, nosniff, referrer, frame-ancestors) | [NF-16](../05-quality/nfr.md#nf-16) | SEC-20 | Planned |
 | 14.5.3 | CORS allow-list | Same origin only. No CORS headers on `/api` | SEC-20 | Planned |

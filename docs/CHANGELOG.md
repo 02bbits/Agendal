@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-23
 
+- **Deployment matches the real server (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Deployment table rewritten: Cloudflare DNS and TLS with a non-root Cloudflare Tunnel as the only way in (replaces Nginx and Let's Encrypt), Docker Compose with FrankenPHP, a queue worker and `schedule:work` (replaces PHP-FPM, Supervisor and cron), Resend for mail, client IP from `CF-Connecting-IP`, age-encrypted backups in Cloudflare R2, secrets as server files and Docker secrets. External systems table names Resend. [scalability.md](05-quality/scalability.md) Backups row and static assets: R2, encrypted; Next.js and Cloudflare instead of Nginx. [security.md](07-architecture/security.md#sc-03) SC-03: the IP is the client's. [asvs-checklist.md](06-testing/asvs-checklist.md) 14.3.2: where `APP_DEBUG=false` is set.
 - **Retention covers expired data (Refs #54).** [scalability.md](05-quality/scalability.md) Retention row: besides tombstones (30 days) and the audit log (90 days), daily jobs now remove expired password reset tokens, email and sign-in codes a day after they expire, and reminder send records 30 days after sending. App logs are daily files so the 14-day limit applies. Tested as T-AP-41.
 
 ## 2026-11-22

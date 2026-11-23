@@ -1,0 +1,9 @@
+# ~/.cloudflared/config.yml for the non-root cloudflared on the host (IM-65).
+# Only the app's hostname goes to the web container; anything else gets 404.
+tunnel: <tunnel id>
+credentials-file: /home/<user>/.cloudflared/<tunnel id>.json
+
+ingress:
+  - hostname: <domain>
+    service: http://localhost:3000
+  - service: http_status:404
