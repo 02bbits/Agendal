@@ -230,7 +230,8 @@ describe("service worker (SEC-51)", () => {
 // #186, TK-6: a reminder push shows as a notification, and tapping it opens the task
 describe("service worker reminders (TK-6)", () => {
   const push = (worker: ReturnType<typeof loadWorker>, payload: unknown) => {
-    const showNotification = vi.fn(async () => {});
+    const showNotification =
+      vi.fn<(title: string, options?: NotificationOptions) => Promise<void>>();
     Object.assign(worker.self, { registration: { showNotification } });
     let pending: Promise<unknown> = Promise.resolve();
     worker.listeners.push({
