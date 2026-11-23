@@ -278,6 +278,13 @@ export function InboxScreen({
                 <Section
                   title={t("list.today")}
                   count={view.today.length}
+                  action={
+                    <SortMenu
+                      list="today"
+                      listName={t("list.today")}
+                      onSortByRules={sortInboxByRules}
+                    />
+                  }
                   collapsible
                   open={openToday}
                   onToggle={handleToggleToday}
@@ -297,6 +304,13 @@ export function InboxScreen({
                 <Section
                   title={t("list.no_date")}
                   count={view.noDate.length}
+                  action={
+                    <SortMenu
+                      list="no_date"
+                      listName={t("list.no_date")}
+                      onSortByRules={sortInboxByRules}
+                    />
+                  }
                   collapsible
                   open={openNoDate}
                   onToggle={handleToggleNoDate}

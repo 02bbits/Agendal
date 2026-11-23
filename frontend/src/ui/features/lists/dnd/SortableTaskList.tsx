@@ -101,28 +101,19 @@ export function SortableTaskList({
           }
         />
       )}
-      {displayTasks.map((task) => {
-        if (isTargetingThis && task.id === dragState.activeId) {
-          return <SortablePlaceholder key={task.id} id={task.id} />;
-        }
-        return (
-          <SortableRow key={task.id} task={task}>
-            {(drag) => children(task, drag)}
-          </SortableRow>
-        );
-      })}
+      {displayTasks.map((task) => (
+        <SortableRow key={task.id} task={task}>
+          {(drag) =>
+            children(task, {
+              ...drag,
+              dragging:
+                drag?.dragging ||
+                (isTargetingThis && task.id === dragState.activeId),
+            })
+          }
+        </SortableRow>
+      ))}
     </SortableContext>
-  );
-}
-
-function SortablePlaceholder({ id }: { id: string }) {
-  const { setNodeRef } = useSortable({ id });
-  return (
-    <li
-      ref={setNodeRef}
-      className="m-1 min-h-[56px] rounded-tile border border-dashed border-primary/60 bg-primary/10 transition-all duration-200 list-none"
-      aria-hidden="true"
-    />
   );
 }
 
@@ -142,7 +133,14 @@ function SortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task.id, data: { title: task.title, task } });
+  } = useSortable({
+    id: task.id,
+    data: { title: task.title, task },
+    transition: {
+      duration: 200,
+      easing: "cubic-bezier(0.25, 1, 0.5, 1)",
+    },
+  });
   // Mouse and touch pick up the whole row; the keyboard uses the handle
   const { pointer, keyboard } = splitListeners(listeners);
 
@@ -150,8 +148,12 @@ function SortableRow({
     setNodeRef,
     dragging: isDragging,
     style: {
-      transform: isDragging ? undefined : CSS.Translate.toString(transform),
-      transition: isDragging ? undefined : transition,
+      transform: CSS.Translate.toString(transform),
+      transition:
+        transition ||
+        (isDragging
+          ? undefined
+          : "transform 200ms cubic-bezier(0.25, 1, 0.5, 1)"),
     },
     rowListeners: {
       ...pointer,

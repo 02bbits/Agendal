@@ -41,7 +41,7 @@ describe("Sort menu (#178)", () => {
     render(wrap(<InboxScreen accountInitial="e" />));
     expect(todayTitles()).toEqual(["Complete Early", "Complete Late"]);
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sort Today" }));
     const smart = screen.getByRole("menuitemradio", { name: "Smart order" });
     expect(smart.getAttribute("aria-checked")).toBe("true");
     await expectAxeCleanInBothThemes(document.body);
@@ -52,7 +52,7 @@ describe("Sort menu (#178)", () => {
     expect(screen.queryByRole("menu")).toBeNull();
     expect(todayTitles()).toEqual(["Complete Late", "Complete Early"]);
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sort Today" }));
     await userEvent.click(
       screen.getByRole("menuitemradio", { name: "Smart order" }),
     );
@@ -63,7 +63,7 @@ describe("Sort menu (#178)", () => {
     const { wrap, memory } = setup([early, late]);
     render(wrap(<InboxScreen accountInitial="e" />));
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sort Today" }));
     await userEvent.click(
       screen.getByRole("menuitem", { name: "Sort by rules" }),
     );
@@ -75,7 +75,7 @@ describe("Sort menu (#178)", () => {
       expect(e < l).toBe(true);
     });
 
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
+    await userEvent.click(screen.getByRole("button", { name: "Sort Today" }));
     expect(
       screen
         .getByRole("menuitemradio", { name: "Manual order" })
@@ -93,7 +93,7 @@ describe("Sort menu (#178)", () => {
   it("Escape closes the menu and gives focus back to its button", async () => {
     const { wrap } = setup([early, late]);
     render(wrap(<InboxScreen accountInitial="e" />));
-    const button = screen.getByRole("button", { name: "Sort Inbox" });
+    const button = screen.getByRole("button", { name: "Sort Today" });
     await userEvent.click(button);
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
