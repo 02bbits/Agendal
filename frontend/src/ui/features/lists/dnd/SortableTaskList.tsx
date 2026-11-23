@@ -147,13 +147,6 @@ export function SortableTaskList({
           }
         </SortableRow>
       ))}
-      {displayTasks.length > 0 && active && (
-        <li
-          ref={setNodeRef}
-          aria-hidden="true"
-          className="h-2 w-full list-none pointer-events-auto"
-        />
-      )}
     </SortableContext>
   );
 }

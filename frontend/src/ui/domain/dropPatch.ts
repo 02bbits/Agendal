@@ -46,11 +46,24 @@ export const dropIntoSection =
   (task: Task): TaskPatch | null =>
     inboxDropPatch(task, to, today);
 
-/** The patch rule for drops onto one Upcoming day (from another day's list, `day:{date}`). */
+/** The patch rule for drops onto one Upcoming day (from another day's list, `day:{date}`, or `overdue`). */
 export const dropOntoDay =
   (day: string) =>
-  (task: Task, from: string): TaskPatch | null =>
-    from.startsWith("day:") ? dayDropPatch(task, from.slice(4), day) : null;
+  (task: Task, from: string): TaskPatch | null => {
+    if (from.startsWith("day:")) {
+      return dayDropPatch(task, from.slice(4), day);
+    }
+    if (from === "overdue") {
+      const fromDay = task.start_date ?? task.due_date;
+      if (fromDay && fromDay !== day) {
+        return dayDropPatch(task, fromDay, day);
+      }
+      return task.start_date
+        ? { start_date: day, due_date: day }
+        : { due_date: day };
+    }
+    return null;
+  };
 
 /**
  * What dropping a task's entry from one Upcoming day onto another changes (Spec 02 §3):

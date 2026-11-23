@@ -228,4 +228,31 @@ describe("cross-section drag and drop (#178)", () => {
       expect(saved?.day_order).toBeTruthy();
     });
   });
+
+  it("dropping an overdue task onto an Upcoming day reschedules it and assigns day_order", async () => {
+    const overdueTask = task({
+      id: "overdue-1",
+      title: "Overdue Task",
+      start_date: "2026-11-18",
+      due_date: "2026-11-20",
+    });
+    const { wrap, memory } = setup([overdueTask]);
+
+    render(wrap(<CrossDropper />));
+
+    act(() => {
+      cross.receiveDay!([], {
+        id: "overdue-1",
+        from: "overdue",
+        index: 0,
+      });
+    });
+
+    await waitFor(() => {
+      const saved = memory.db.tasks.find((t) => t.id === "overdue-1");
+      expect(saved?.start_date).toBe("2026-11-25");
+      expect(saved?.due_date).toBe("2026-11-27");
+      expect(saved?.day_order).toBeTruthy();
+    });
+  });
 });

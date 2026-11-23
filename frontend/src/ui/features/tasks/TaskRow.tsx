@@ -134,8 +134,8 @@ export function TaskRow({
         overdue && !task.done && "is-overdue",
         leaving && "pointer-events-none motion-safe:animate-merge-out",
         drag && "touch-manipulation",
-        // The moving card floats in an overlay; the row stays behind as its place
-        drag?.dragging && "opacity-40",
+        // The moving card floats in an overlay; the row stays behind as an invisible spacer
+        drag?.dragging && "opacity-0 pointer-events-none",
       )}
     >
       {drag?.handle}

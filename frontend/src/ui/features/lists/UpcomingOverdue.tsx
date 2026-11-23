@@ -4,6 +4,8 @@ import type { Task } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
 import { useTaskStore } from "../tasks/store";
 import { TaskRow } from "../tasks/TaskRow";
+import { SortableTaskList } from "./dnd/SortableTaskList";
+import { useMoveToProject } from "./useCrossDrop";
 
 export interface UpcomingOverdueProps {
   variant: "list" | "board";
@@ -21,6 +23,7 @@ export function UpcomingOverdue({
   navigate,
 }: UpcomingOverdueProps): ReactElement | null {
   const store = useTaskStore();
+  const moveToProject = useMoveToProject();
   if (tasks.length === 0) return null;
 
   const count = tasks.length;
@@ -29,20 +32,28 @@ export function UpcomingOverdue({
   const rows = (
     <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
       <ul className="m-0 list-none p-0">
-        {tasks.map((task) => (
-          <TaskRow
-            key={task.id}
-            task={task}
-            project={store.projectOf(task)}
-            today={today}
-            timeFormat={store.timeFormat}
-            onToggle={store.toggle}
-            navigate={navigate}
-            selected={task.id === selectedTaskId}
-            settling={store.isSettling(task.id)}
-            overdue
-          />
-        ))}
+        <SortableTaskList
+          list="overdue"
+          tasks={tasks}
+          onMove={() => {}}
+          onToProject={moveToProject}
+        >
+          {(task, drag) => (
+            <TaskRow
+              key={task.id}
+              task={task}
+              drag={drag}
+              project={store.projectOf(task)}
+              today={today}
+              timeFormat={store.timeFormat}
+              onToggle={store.toggle}
+              navigate={navigate}
+              selected={task.id === selectedTaskId}
+              settling={store.isSettling(task.id)}
+              overdue
+            />
+          )}
+        </SortableTaskList>
       </ul>
     </div>
   );
