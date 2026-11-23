@@ -75,6 +75,7 @@ The service worker registers only in a production build, so all of this is check
 | **Notes offline** | Offline, the note button reads **Save note** and the note waits in the Notes tab as "Waiting for connection". Back online it is sent, and one toast reports "Back online. N notes turned into M tasks" |
 | **Two windows** | Open :3001 in two windows on the same account. A change in one shows in the other within about a minute, or at once when the window is focused. If both edit the same field offline, the losing side shows "Changed on another device" |
 | **Install** | The Inbox shows an **Install** banner (also the install icon in the address bar, or Settings → Install app). Installed, Agendal opens in its own window with its icon. Not now hides the banner on this device |
+| **Reminders** | Needs VAPID keys (`php artisan push:vapid storage/app/vapid_private_key`, then `VAPID_PUBLIC_KEY` in `backend/.env`) and the `scheduler` and `queue` services. Set a reminder on a task due a few minutes from now: the app asks to send notifications; Allow. When it is due, a notification shows the title and `Mon 09:00 · Project`; tapping it opens the task. Notifications need Chrome, Edge or Firefox (Safari: the installed app) |
 | **Update toast** | With the app open, rebuild it with `docker compose restart web-prod`, wait for the build, then return to the tab: "A new version is ready" appears with **Reload** (never while a sheet is open) |
 | **Sign out clears the device** | Sign out: the on-device copy and the offline queue are cleared, so the next account starts clean |
 
@@ -119,7 +120,6 @@ Each area links to its module spec, which has the requirements, the edge cases a
 
 ## Not built yet
 
-- **Reminder notifications:** a reminder is saved with the task, but no push notification is sent yet.
 - **Voice and file notes:** notes are typed only.
 - **Release work:** deploy to the Linux server (IM-65), the end-to-end test suite (IM-61), the security, performance and manual accessibility passes (IM-62 to IM-64), and the retention purge job for old data (IM-55).
 - Out of scope for v1: shared lists, calendar sync, a Vietnamese interface, account deletion and export.
