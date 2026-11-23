@@ -413,3 +413,20 @@
     transition: none !important;
   }
 }
+
+/* Empty-state art: one static SVG per theme, the other is hidden (see EmptyStateIllustration) */
+.empty-illustration-dark,
+[data-theme="agendal-dark"] .empty-illustration-light {
+  display: none;
+}
+[data-theme="agendal-dark"] .empty-illustration-dark {
+  display: block;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) .empty-illustration-light {
+    display: none;
+  }
+  :root:not([data-theme]) .empty-illustration-dark {
+    display: block;
+  }
+}
