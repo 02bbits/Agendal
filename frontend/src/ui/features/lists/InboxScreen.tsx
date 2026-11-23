@@ -172,16 +172,22 @@ export function InboxScreen({
     "day_order",
     dropIntoSection("today", store.today),
     frozen.release,
+    undefined,
+    "today",
   );
   const receiveInNoDate = useReceiveDrop(
     "project_order",
     dropIntoSection("no_date", store.today),
     frozen.release,
+    undefined,
+    "no_date",
   );
   const receiveInCompleted = useReceiveDrop(
     "project_order",
     dropIntoSection("completed", store.today),
     frozen.release,
+    undefined,
+    "completed",
   );
   const moveToProject = useMoveToProject();
   const openCount = view.overdue.length + view.today.length;

@@ -9,6 +9,7 @@ import {
   useMoveToProject,
   useReceiveDrop,
 } from "../../src/ui/features/lists/useCrossDrop";
+import { readSortMode } from "../../src/ui/features/lists/useSortMode";
 import { task } from "./fixtures";
 import { TODAY, setup } from "./harness";
 
@@ -34,8 +35,12 @@ const cross: {
 } = {};
 
 function CrossDropper() {
-  const receiveToday = useReceiveDrop("day_order", (t) =>
-    inboxDropPatch(t, "today", TODAY),
+  const receiveToday = useReceiveDrop(
+    "day_order",
+    (t) => inboxDropPatch(t, "today", TODAY),
+    undefined,
+    undefined,
+    "today",
   );
   const receiveNoDate = useReceiveDrop("project_order", (t) =>
     inboxDropPatch(t, "no_date", TODAY),
@@ -270,5 +275,44 @@ describe("cross-section drag and drop (#178)", () => {
       expect(saved?.due_date).toBe("2026-11-27");
       expect(saved?.day_order).toBeTruthy();
     });
+  });
+
+  it("dropping a task into Today in smart mode switches to manual order with toast and undo", async () => {
+    expect(readSortMode("today")).toBe("smart");
+    const completedTask = task({
+      id: "comp-1",
+      title: "Completed Task",
+      done: true,
+      start_date: TODAY,
+      due_date: TODAY,
+    });
+    const { wrap, memory } = setup([completedTask]);
+
+    render(wrap(<CrossDropper />));
+
+    act(() => {
+      cross.receiveToday!([], {
+        id: "comp-1",
+        from: "completed",
+        index: 0,
+      });
+    });
+
+    await waitFor(() => {
+      const saved = memory.db.tasks.find((t) => t.id === "comp-1");
+      expect(saved?.done).toBe(false);
+      expect(saved?.day_order).toBeTruthy();
+    });
+
+    expect(readSortMode("today")).toBe("manual");
+    expect(screen.getByText("Switched to manual order")).toBeTruthy();
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() => {
+      const restored = memory.db.tasks.find((t) => t.id === "comp-1");
+      expect(restored?.done).toBe(true);
+    });
+    expect(readSortMode("today")).toBe("smart");
   });
 });

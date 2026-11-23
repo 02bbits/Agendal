@@ -7,19 +7,23 @@ import type { Task } from "../../domain/types";
 import { useTaskStore } from "../tasks/store";
 import type { ProjectDropData } from "./dnd/dropTargets";
 import type { Receive } from "./dnd/TaskDndScope";
+import { useSortMode, type SortList } from "./useSortMode";
 
 /**
  * A task dropped into this list from another one (Spec 02 §3): `patchFor` says what the move
  * changes (dates), and the task takes its place where it was dropped. The dates and its own
  * key go in one PATCH, so the server never sees the dates alone (which would drop the key).
+ * Dropping into a smart-ordered list switches it to manual order (#178).
  */
 export function useReceiveDrop(
   field: OrderField,
   patchFor: (task: Task, from: string) => ReceivePatch | null,
   onPlaced?: (id: string) => void,
   getToast?: (task: Task, patch: ReceivePatch) => { message: string } | null,
+  list?: SortList,
 ): (shown: readonly Task[], drop: Receive) => void {
   const { tasks, update, reorder, toggle, showToast } = useTaskStore();
+  const [mode, setMode] = useSortMode(list ?? "today");
   return useCallback(
     (shown, { id, from, index }) => {
       const task = tasks.find((x) => x.id === id);
@@ -37,22 +41,42 @@ export function useReceiveDrop(
       const before: TaskPatch = {
         start_date: task.start_date,
         due_date: task.due_date,
-        [field]: (task as unknown as Record<string, unknown>)[field] as string | null ?? null,
+        [field]: ((task as unknown as Record<string, unknown>)[field] as string | null) ?? null,
       };
       update(task, { ...fieldPatch, [field]: own });
-      if (keys.size) reorder(keys, field);
+      const undoKeys = keys.size ? reorder(keys, field) : undefined;
+      const shouldSwitchManual = Boolean(list && mode !== "manual");
+      if (shouldSwitchManual) {
+        setMode("manual");
+      }
+      const undoReceive = () => {
+        update(task.id, before);
+        if (targetDone !== undefined && targetDone !== task.done) {
+          toggle({ ...task, done: targetDone });
+        }
+        undoKeys?.();
+        if (shouldSwitchManual) {
+          setMode("smart");
+        }
+      };
       if (getToast) {
         const toast = getToast(task, patch);
         if (toast) {
           showToast({
             message: toast.message,
             actionLabel: t("common.undo"),
-            onAction: () => update(task.id, before),
+            onAction: undoReceive,
           });
         }
+      } else if (shouldSwitchManual) {
+        showToast({
+          message: t("list.switched_manual"),
+          actionLabel: t("common.undo"),
+          onAction: undoReceive,
+        });
       }
     },
-    [field, getToast, onPlaced, patchFor, reorder, showToast, tasks, toggle, update],
+    [field, getToast, list, mode, onPlaced, patchFor, reorder, setMode, showToast, tasks, toggle, update],
   );
 }
 
