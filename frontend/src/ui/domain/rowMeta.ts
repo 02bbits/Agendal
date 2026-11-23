@@ -121,7 +121,7 @@ function sameDayParts(task: Task, f: MetaFormat): MetaPart[] {
   if (startTime) {
     return [
       plain(t("task.starts_at", { time: f.time(startTime) })),
-      plain(f.dueOn(date, null)),
+      { text: f.dueOn(date, null), tone: f.dueTone(task, "due") },
     ];
   }
   if (dueTime) {
@@ -144,10 +144,11 @@ function dueDayParts(task: Task, f: MetaFormat): MetaPart[] {
     f.opts.entry && task.due_time
       ? t("task.due_at", { time: f.time(task.due_time) })
       : f.dueOn(date, task.due_time);
-  const parts: MetaPart[] = [{ text, tone: f.dueTone(task, "due") }];
+  const parts: MetaPart[] = [];
   if (task.start_date) {
     parts.push(plain(t("task.started_on", { date: f.day(task.start_date) })));
   }
+  parts.push({ text, tone: f.dueTone(task, "due") });
   return parts;
 }
 

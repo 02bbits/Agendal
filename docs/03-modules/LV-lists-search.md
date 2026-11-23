@@ -138,8 +138,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Checkbox (44 px hit area)
   - Title (2 lines max, [UX-30](../01-product/ux-standards.md#ux-30))
   - Meta line (date and time are separate layers: the date always shows and a time only adds detail, so clearing a time never empties the line, it falls back to the date-only form):
-    - Start and due on the same day: both times `08:30 – 10:00`; start time only `Start at 08:30 · Due today` (another day: `Due {date}`); due time only `Due today, 17:00` in blue (in Upcoming `Due 17:00`); no time: `Starts today` (in Today) or `{date}` (another day). Same-day text is in plain ink, and a time range turns red once its due time has passed today
-    - Due today, starting another day or not at all: `Due today` or `Due today, HH:MM` in blue, red from the due time; `Started {date}` follows when it started earlier. In Upcoming a due entry without a time reads `Due {date}`
+    - Start and due on the same day: both times `08:30 – 10:00`; start time only `Start at 08:30 · Due today` (`Start at` in plain ink, `Due today` in blue; another day: `Due {date}`); due time only `Due today, 17:00` in blue (in Upcoming `Due 17:00`); no time: `Starts today` (in Today) or `{date}` (another day). Same-day time range is in plain ink, turning red once its due time has passed today
+    - Due today, starting another day or not at all: when started earlier, `Started {date}` comes first (plain ink) followed by `Due today` or `Due today, HH:MM` in blue (red from the due time); when no start date, `Due today` or `Due today, HH:MM` in blue. In Upcoming a due entry without a time reads `Started {date} · Due {date}`
     - Starting today in Today: `Start at HH:MM` or `Starts today`, then `Due {date}` when it is due later. On its start day in Upcoming: `HH:MM · Due {date}`
     - In between (in progress): `In progress · Due {when}`
     - On its due day: rendered in a dashed blue card with `Due HH:MM` in blue
@@ -153,7 +153,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | # | State | Start / Due Date | Start / Due Time | Meta Text (Today view) | Tone / Color | Notes |
 |---|---|---|---|---|---|---|
 | **1.1** | Same day, both times | `start === due === today` | `08:30` & `10:00` | `08:30 – 10:00` | Plain (turns red when due time passed) | Fixed time range |
-| **1.2** | Same day, start time only | `start === due === today` | `start: 08:30`, no due time | `Start at 08:30 · Due today` | Plain | Clearly shows start time & deadline |
+| **1.2** | Same day, start time only | `start === due === today` | `start: 08:30`, no due time | `Start at 08:30 · Due today` | `Start at` plain · `Due today` blue (`due`) | Clearly shows start time & deadline with blue due emphasis |
 | **1.3** | Same day, due time only | `start === due === today` | no start time, `due: 17:00` | `Due today, 17:00` | Blue `due` (Red `late` if past due time) | Deadline emphasis |
 | **1.4** | Same day, untimed | `start === due === today` | no times | `Starts today` | Plain | Untimed same-day task |
 | **1.5** | Starts today, start time only | `start === today`, no due | `start: 09:00` | `Start at 09:00` | Plain | Starts today with time |
@@ -161,7 +161,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | **1.7** | Due today, due time only | `due === today`, no start | `due: 18:00` | `Due today, 18:00` | Blue `due` (Red `late` if past time) | Deadline today |
 | **1.8** | Due today, untimed | `due === today`, no start | no times | `Due today` | Blue `due` | Deadline today |
 | **1.9** | In progress | `start < today`, `due > today` | optional times | `In progress · Due {when}` | `In progress` plain · `Due {when}` blue | Multi-day running task |
-| **1.10** | Started earlier, due today | `start < today`, `due === today` | `due: 16:00` | `Due today, 16:00 · Started {date}` | `Due today` blue · `Started` plain | Deadline is today |
+| **1.10** | Started earlier, due today | `start < today`, `due === today` | `due: 16:00` | `Started {date} · Due today, 16:00` | `Started` plain · `Due today` blue (`due`) | Start precedes due date chronologically; deadline today |
 | **1.11** | Planned, timed | `start < today`, no due | `start: 09:00` | `Planned {date} · 09:00` | Muted (`text-content-subtle`) | Ongoing plan |
 | **1.12** | Planned, untimed | `start < today`, no due | no times | `Planned {date}` | Muted (`text-content-subtle`) | Ongoing plan without deadline |
 | **Overdue** | Overdue | `due < today`, uncompleted | any | `Due {date}[, HH:MM]` | Red `late` | Past deadline |
