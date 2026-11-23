@@ -69,11 +69,11 @@ class PushSubscriptionController extends Controller
             'url' => '/',
             'tag' => 'agendal-test',
         ]);
-        $outcomes = $pushes->send($devices->map(fn (PushSubscription $device) => [
-            'device' => $device,
-            'payload' => $payload,
-            'options' => ['TTL' => 60, 'urgency' => 'high', 'topic' => 'agendal-test'],
-        ])->values()->all());
+        $outgoing = [];
+        foreach ($devices as $device) {
+            $outgoing[] = ['device' => $device, 'payload' => $payload, 'options' => ['TTL' => 60, 'urgency' => 'high', 'topic' => 'agendal-test']];
+        }
+        $outcomes = $pushes->send($outgoing);
         $counts = array_count_values($outcomes);
 
         return response()->json([

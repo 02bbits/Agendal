@@ -83,7 +83,7 @@ class PushSending
             PushSubscription::query()->whereIn('endpoint', $gone)->delete();
         }
 
-        return $outcomes;
+        return array_values($outcomes);
     }
 
     private static function temporary(ResponseInterface|\Throwable $result): bool
