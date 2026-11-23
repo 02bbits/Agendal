@@ -13,6 +13,7 @@ import {
   readQueue,
   readSetting,
   readTask,
+  readTasks,
   removeNotes,
   removeProjects,
   removeTasks,
@@ -259,7 +260,14 @@ async function apply({ tasks, projects, notes }: PullPage["changes"]) {
   const gone = (task: Task & Tombstone) =>
     !!task.deleted_at || (task.done && (task.done_at ?? "") < oldest);
   await removeTasks(tasks.filter(gone).map((task) => task.id));
-  await putTasks(tasks.filter((task) => !gone(task)).map(strip));
+  const kept = tasks.filter((task) => !gone(task)).map(strip);
+  // AP-E12: storage full. Completed tasks go first; the queue and pending notes are never dropped
+  // ponytail: drops every completed task at once, evict oldest-first if a partial cache matters
+  if (!(await putTasks(kept))) {
+    const done = (await readTasks()).filter((task) => task.done);
+    await removeTasks(done.map((task) => task.id));
+    await putTasks(kept.filter((task) => !task.done));
+  }
   await removeProjects(projects.filter((p) => p.deleted_at).map((p) => p.id));
   for (const project of projects.filter((p) => !p.deleted_at))
     await putProject(strip(project));

@@ -70,9 +70,9 @@ describe("device store (IM-51)", () => {
         throw new DOMException("blocked", "SecurityError");
       },
     });
-    await expect(
-      putTasks([task({ id: "a", title: "One" })]),
-    ).resolves.toBeUndefined();
+    await expect(putTasks([task({ id: "a", title: "One" })])).resolves.toBe(
+      false,
+    );
     expect(await readTasks()).toEqual([]);
     expect(await readMe()).toBeUndefined();
   });
