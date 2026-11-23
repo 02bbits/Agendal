@@ -7,10 +7,13 @@ import {
   PlusIcon,
   RateLimited,
   ScreenHeader,
+  SortMenu,
   TaskPanel,
   TaskStoreProvider,
   t,
+  useSortMode,
   useTaskPanel,
+  type SortMode,
 } from "@/ui";
 import { LoadError } from "@/ui/components/LoadError";
 import { useHeaderDate } from "./headerDate";
@@ -54,31 +57,19 @@ function InboxContent() {
 
   return (
     <div className="pb-8">
-      {status !== "ready" && (
-        <ScreenHeader
-          overline={date}
-          title={t("nav.inbox")}
-          accountInitial={accountInitial}
-          navigate={navigate}
-          action={
-            <Button
-              variant="primary"
-              pill
-              className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
-              onClick={openNewTask}
-            >
-              <PlusIcon size={16} />
-              {t("task.new")}
-            </Button>
-          }
-        >
-          {subtitle && (
-            <p className="m-0 mt-1 text-footnote text-ink-secondary">
-              {subtitle}
-            </p>
-          )}
-        </ScreenHeader>
-      )}
+      <ScreenHeader
+        overline={date}
+        title={t("nav.inbox")}
+        accountInitial={accountInitial}
+        navigate={navigate}
+        action={<InboxHeaderAction openNewTask={openNewTask} />}
+      >
+        {subtitle && (
+          <p className="m-0 mt-1 text-footnote text-ink-secondary">
+            {subtitle}
+          </p>
+        )}
+      </ScreenHeader>
       {status === "loading" && <InboxSkeleton />}
       {status === "error" && limited && (
         <RateLimited error={limited} onRetry={handleRetry} />
@@ -99,7 +90,7 @@ function InboxContent() {
           <InboxScreen
             accountInitial={accountInitial}
             navigate={navigate}
-            showHeader={true}
+            showHeader={false}
             onNewTask={openNewTask}
             subtitle={subtitle}
             selectedTaskId={selectedTaskId}
@@ -116,6 +107,46 @@ function InboxContent() {
             />
           )}
         </TaskStoreProvider>
+      )}
+    </div>
+  );
+}
+
+function InboxHeaderAction({
+  openNewTask,
+}: {
+  openNewTask?: () => void;
+}) {
+  const [todayMode, setTodayMode] = useSortMode("today");
+  const [, setNoDateMode] = useSortMode("no_date");
+  const setInboxMode = (next: SortMode) => {
+    setTodayMode(next);
+    setNoDateMode(next);
+  };
+  const onSortByRules = () => {
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("agendal:sort-inbox-rules"));
+    }
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <SortMenu
+        mode={todayMode}
+        onModeChange={setInboxMode}
+        listName={t("nav.inbox")}
+        onSortByRules={onSortByRules}
+      />
+      {openNewTask && (
+        <Button
+          variant="primary"
+          pill
+          className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+          onClick={openNewTask}
+        >
+          <PlusIcon size={16} />
+          {t("task.new")}
+        </Button>
       )}
     </div>
   );

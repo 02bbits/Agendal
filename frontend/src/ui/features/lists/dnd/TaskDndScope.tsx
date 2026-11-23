@@ -145,6 +145,7 @@ export function TaskDndScope({ children }: { children: ReactNode }) {
 
 function RootScope({ children }: { children: ReactNode }) {
   const initialContainerRef = useRef<string | null>(null);
+  const initialIndexRef = useRef<number | null>(null);
   const [scope] = useState(createScope);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DndDragState>({
@@ -176,14 +177,18 @@ function RootScope({ children }: { children: ReactNode }) {
     const fromContainer =
       (active.data.current?.sortable?.containerId as string | undefined) ?? null;
     initialContainerRef.current = fromContainer;
+    const source = fromContainer ? scope.list(fromContainer) : undefined;
+    const initialIndex = source
+      ? source.ids().indexOf(String(active.id))
+      : ((active.data.current?.sortable?.index as number | undefined) ?? null);
+    initialIndexRef.current = initialIndex;
     setDragging(titleOf(active));
     setDragState({
       activeId: String(active.id),
       activeTask: task,
       fromContainer,
       overContainer: fromContainer,
-      overIndex:
-        (active.data.current?.sortable?.index as number | undefined) ?? null,
+      overIndex: initialIndex,
     });
   };
 
@@ -208,8 +213,11 @@ function RootScope({ children }: { children: ReactNode }) {
       (over.data.current?.sortable?.containerId as string | undefined) ??
       String(over.id);
     const targetContainer = normalizeContainer(rawContainer);
-    const targetIndex =
-      (over.data.current?.sortable?.index as number | undefined) ?? null;
+    const isBottom = String(over.id).endsWith(":bottom");
+    const containerEntry = scope.list(targetContainer);
+    const targetIndex = isBottom
+      ? (containerEntry?.ids().length ?? 0)
+      : ((over.data.current?.sortable?.index as number | undefined) ?? null);
     setDragState((prev) => {
       if (
         prev.overContainer === targetContainer &&
@@ -230,7 +238,9 @@ function RootScope({ children }: { children: ReactNode }) {
     const from =
       initialContainerRef.current ??
       (active.data.current?.sortable?.containerId as string);
+    const initialIndex = initialIndexRef.current;
     initialContainerRef.current = null;
+    initialIndexRef.current = null;
     setDragging(null);
     setDragState({
       activeId: null,
@@ -252,17 +262,30 @@ function RootScope({ children }: { children: ReactNode }) {
     const to = normalizeContainer(rawTo);
     const target = scope.list(to);
     if (!target) return;
-    const overIndex = over.data.current?.sortable?.index as number | undefined;
-    const index = overIndex ?? target.ids().length;
+
+    const targetIds = target.ids();
+    const targetIndex = targetIds.indexOf(id);
+
     if (from === to) {
-      if (String(over.id) !== id) target.onMove(id, index);
+      const overIndex = over.data.current?.sortable?.index as number | undefined;
+      const finalIndex = targetIndex !== -1 ? targetIndex : (overIndex ?? -1);
+      if (
+        initialIndex !== null &&
+        finalIndex !== -1 &&
+        finalIndex !== initialIndex
+      ) {
+        target.onMove(id, finalIndex);
+      }
       return;
     }
+
+    const index = targetIndex !== -1 ? targetIndex : targetIds.length;
     target.onReceive?.({ id, from, index });
   };
 
   const cancel = () => {
     initialContainerRef.current = null;
+    initialIndexRef.current = null;
     scope.markDropped();
     setDragging(null);
     setDragState({

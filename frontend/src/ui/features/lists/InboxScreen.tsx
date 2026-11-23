@@ -119,6 +119,11 @@ export function InboxScreen({
     setTodayMode(next);
     setNoDateMode(next);
   };
+  const view = buildInbox(frozen.layout, store.today, {
+    sort: { today: todayMode, noDate: noDateMode },
+    completedToday: store.completedToday,
+    isSettling: store.isSettling,
+  });
   const sortInboxByRules = () => {
     const todayTasks = sortTodayTasks(
       view.today.filter((x) => !x.done),
@@ -153,6 +158,12 @@ export function InboxScreen({
       },
     });
   };
+  useEffect(() => {
+    const onSortRules = () => sortInboxByRules();
+    window.addEventListener("agendal:sort-inbox-rules", onSortRules);
+    return () =>
+      window.removeEventListener("agendal:sort-inbox-rules", onSortRules);
+  });
   const moveInToday = useDropReorder("today", "day_order");
   const moveInNoDate = useDropReorder("no_date", "project_order");
   const moveInCompleted = useDropReorder("completed", "project_order");
@@ -173,11 +184,6 @@ export function InboxScreen({
     frozen.release,
   );
   const moveToProject = useMoveToProject();
-  const view = buildInbox(frozen.layout, store.today, {
-    sort: { today: todayMode, noDate: noDateMode },
-    completedToday: store.completedToday,
-    isSettling: store.isSettling,
-  });
   const openCount = view.overdue.length + view.today.length;
   const allDone = !view.empty && openCount === 0;
   const doneHeading = useRef<HTMLHeadingElement>(null);
@@ -331,7 +337,10 @@ export function InboxScreen({
                   <SortableTaskList
                     list="today"
                     tasks={view.today}
-                    onMove={(id, to) => moveInToday(view.today, id, to)}
+                    onMove={(id, to) => {
+                      frozen.release(id);
+                      moveInToday(view.today, id, to);
+                    }}
                     onReceive={(drop) => receiveInToday(view.today, drop)}
                     onToProject={moveToProject}
                   >
@@ -350,7 +359,10 @@ export function InboxScreen({
                   <SortableTaskList
                     list="no_date"
                     tasks={view.noDate}
-                    onMove={(id, to) => moveInNoDate(view.noDate, id, to)}
+                    onMove={(id, to) => {
+                      frozen.release(id);
+                      moveInNoDate(view.noDate, id, to);
+                    }}
                     onReceive={(drop) => receiveInNoDate(view.noDate, drop)}
                     onToProject={moveToProject}
                   >
@@ -388,7 +400,10 @@ export function InboxScreen({
                     <SortableTaskList
                       list="completed"
                       tasks={visibleCompleted}
-                      onMove={(id, to) => moveInCompleted(visibleCompleted, id, to)}
+                      onMove={(id, to) => {
+                        frozen.release(id);
+                        moveInCompleted(visibleCompleted, id, to);
+                      }}
                       onReceive={(drop) => receiveInCompleted(visibleCompleted, drop)}
                       onToProject={moveToProject}
                     >

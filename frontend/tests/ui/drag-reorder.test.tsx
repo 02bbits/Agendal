@@ -88,6 +88,40 @@ describe("dropping a row in its own list (#178)", () => {
     ).toEqual(["Move B", "Move C", "Move A"]);
   });
 
+  it("in manual mode: dragging a task from top to middle preserves position and does not revert", async () => {
+    localStorage.setItem("agendal.sort_modes", '{"today":"manual"}');
+    const { wrap, memory } = setup([a, b, c]);
+    render(
+      wrap(
+        <>
+          <InboxScreen accountInitial="e" />
+          <Dropper />
+        </>,
+      ),
+    );
+    act(() => drop.move!([a, b, c], "a", 1));
+    const titles = () =>
+      screen
+        .getAllByRole("button", { name: /^Move / })
+        .map((h) => h.getAttribute("aria-label"));
+    expect(titles()).toEqual(["Move B", "Move A", "Move C"]);
+    await waitFor(() =>
+      expect(
+        memory.db.tasks.filter((t) => t.day_order).map((t) => t.id),
+      ).toContain("a"),
+    );
+
+    act(() => {
+      const currentTasks = [
+        memory.db.tasks.find((t) => t.id === "b")!,
+        memory.db.tasks.find((t) => t.id === "a")!,
+        memory.db.tasks.find((t) => t.id === "c")!,
+      ];
+      drop.move!(currentTasks, "c", 0);
+    });
+    expect(titles()).toEqual(["Move C", "Move B", "Move A"]);
+  });
+
   it("every row has a labelled move handle that explains the keys, and the list stays accessible", async () => {
     const { wrap } = setup([a, b]);
     render(wrap(<InboxScreen accountInitial="e" />));
