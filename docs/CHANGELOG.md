@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-23
+
+- **Retention covers expired data (Refs #54).** [scalability.md](05-quality/scalability.md) Retention row: besides tombstones (30 days) and the audit log (90 days), daily jobs now remove expired password reset tokens, email and sign-in codes a day after they expire, and reminder send records 30 days after sending. App logs are daily files so the 14-day limit applies. Tested as T-AP-41.
+
 ## 2026-11-22
 
 - **Rate-limited page (Refs #169).** [UX-43](01-product/ux-standards.md#ux-43): a screen whose load gets a `429` shows a page in its content (flat illustration, then the limit it hit: a burst, "Slow down a little", or a window, "You've reached {max} requests per {per}"), with a countdown and Try again after `Retry-After`; a limited note action toasts `error.rate_limited_soon`. [api.md](07-architecture/api.md) conventions and [error.schema.json](07-architecture/contracts/schemas/error.schema.json) (new `error-rate-limited.json` fixture): a `429` names its limit, `limit: {max, window}`. New strings `rate.*` and `error.rate_limited_soon` wait in `src/ui/copy/pending.ts` for the copy catalog.
