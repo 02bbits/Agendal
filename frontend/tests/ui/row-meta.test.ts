@@ -25,7 +25,7 @@ describe("rowMeta", () => {
       ]);
     });
 
-    it("start 15, due 19, 14:00, entry: 'due' → Due 14:00 · Started Sun 15", () => {
+    it("start 15, due 19, 14:00, entry: 'due' → Started Sun 15 · Due 14:00", () => {
       const t = task({
         title: "Task 1",
         start_date: "2026-11-15",
@@ -39,8 +39,8 @@ describe("rowMeta", () => {
       });
       const expectedDay15 = formatDay("2026-11-15", TODAY_WED_18_NOV);
       expect(parts).toEqual([
-        { text: "Due 14:00", tone: "due" },
         { text: `Started ${expectedDay15}`, tone: "plain" },
+        { text: "Due 14:00", tone: "due" },
       ]);
     });
 
@@ -208,7 +208,7 @@ describe("rowMeta", () => {
         { text: "Start at 17:00", tone: "plain" },
         {
           text: `Due ${formatDay("2026-11-20", TODAY_WED_18_NOV)}`,
-          tone: "plain",
+          tone: "due",
         },
       ]);
     });
@@ -424,7 +424,7 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
       { ...same, start_time: "08:30" },
       [
         { text: "Start at 08:30", tone: "plain" },
-        { text: "Due today", tone: "plain" },
+        { text: "Due today", tone: "due" },
       ],
     ],
     [
@@ -465,8 +465,8 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
       "1.10 started earlier, due today at 16:00",
       { start_date: "2026-11-16", due_date: TODAY, due_time: "16:00" },
       [
-        { text: "Due today, 16:00", tone: "due" },
         { text: `Started ${formatDay("2026-11-16", TODAY)}`, tone: "plain" },
+        { text: "Due today, 16:00", tone: "due" },
       ],
     ],
     [
@@ -512,7 +512,7 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
       task({ title: "T", start_date: "2026-11-16", due_date: "2026-11-20" }),
       { ...opts, entry: "due" },
     );
-    expect(parts[0]).toEqual({
+    expect(parts).toContainEqual({
       text: `Due ${formatDay("2026-11-20", TODAY)}`,
       tone: "due",
     });
