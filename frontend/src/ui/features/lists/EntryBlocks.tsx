@@ -1,5 +1,7 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import type { ReactElement } from "react";
+import { t } from "../../copy";
+import { formatDay } from "../../domain/dates";
 import { dropOntoDay } from "../../domain/dropPatch";
 import { sortEntries, type DayEntry } from "../../domain/entries";
 import type { Navigate } from "../shell/routes";
@@ -37,7 +39,18 @@ export function EntryBlocks({
   const { normal, due } = sortEntries(entries, mode);
   const move = useDropReorder("upcoming", "day_order");
   const normalTasks = normal.map((e) => e.task);
-  const receive = useReceiveDrop("day_order", dropOntoDay(day), onPlaced);
+  const receive = useReceiveDrop(
+    "day_order",
+    dropOntoDay(day),
+    onPlaced,
+    (_task, patch) => {
+      const targetDate = patch.start_date ?? patch.due_date ?? day;
+      const formatted = formatDay(targetDate, today);
+      return {
+        message: t("task.rescheduled_to", { day: formatted }),
+      };
+    },
+  );
   const moveToProject = useMoveToProject();
   // An empty day still takes a dragged task (Spec 02 §3, reschedule)
   const { active } = useDndContext();

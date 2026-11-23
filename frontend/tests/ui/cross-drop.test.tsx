@@ -43,7 +43,14 @@ function CrossDropper() {
   const receiveCompleted = useReceiveDrop("project_order", (t) =>
     inboxDropPatch(t, "completed", TODAY),
   );
-  const receiveDay = useReceiveDrop("day_order", dropOntoDay("2026-11-25"));
+  const receiveDay = useReceiveDrop(
+    "day_order",
+    dropOntoDay("2026-11-25"),
+    undefined,
+    (_t, patch) => ({
+      message: `Rescheduled to ${patch.start_date ?? "2026-11-25"}`,
+    }),
+  );
   const moveToProject = useMoveToProject();
 
   useEffect(() => {
@@ -226,6 +233,15 @@ describe("cross-section drag and drop (#178)", () => {
       expect(saved?.start_date).toBe("2026-11-25");
       expect(saved?.due_date).toBe("2026-11-25");
       expect(saved?.day_order).toBeTruthy();
+    });
+
+    expect(screen.getByText("Rescheduled to 2026-11-25")).toBeTruthy();
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    await waitFor(() => {
+      const restored = memory.db.tasks.find((t) => t.id === "upcoming-1");
+      expect(restored?.start_date).toBe("2026-11-24");
+      expect(restored?.due_date).toBe("2026-11-24");
     });
   });
 

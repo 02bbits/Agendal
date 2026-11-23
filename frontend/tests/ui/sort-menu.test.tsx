@@ -2,9 +2,10 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InboxScreen } from "../../src/ui/features/lists/InboxScreen";
+import { TaskStoreProvider } from "../../src/ui/features/tasks/store";
 import { expectAxeCleanInBothThemes } from "./axe";
-import { task } from "./fixtures";
-import { TODAY, setup } from "./harness";
+import { projects, task } from "./fixtures";
+import { TODAY, clock, setup } from "./harness";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -98,5 +99,33 @@ describe("Sort menu (#178)", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(button);
+  });
+
+  it("Sort by rules fires exactly one toast even with both today and no-date tasks", async () => {
+    const onToast = vi.fn();
+    const noDateTask = task({ id: "nd1", title: "No date 1" });
+    const { memory } = setup([early, late, noDateTask]);
+    render(
+      <TaskStoreProvider
+        api={memory.api}
+        clock={clock}
+        initialTasks={[early, late, noDateTask]}
+        initialProjects={projects}
+        onToast={onToast}
+      >
+        <InboxScreen accountInitial="e" />
+      </TaskStoreProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
+    await userEvent.click(
+      screen.getByRole("menuitem", { name: "Sort by rules" }),
+    );
+    expect(onToast).toHaveBeenCalledTimes(1);
+    expect(onToast).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "Sorted by the rules. Drag to fine-tune.",
+      }),
+    );
   });
 });

@@ -17,8 +17,9 @@ export function useReceiveDrop(
   field: OrderField,
   patchFor: (task: Task, from: string) => ReceivePatch | null,
   onPlaced?: (id: string) => void,
+  getToast?: (task: Task, patch: ReceivePatch) => { message: string } | null,
 ): (shown: readonly Task[], drop: Receive) => void {
-  const { tasks, update, reorder, toggle } = useTaskStore();
+  const { tasks, update, reorder, toggle, showToast } = useTaskStore();
   return useCallback(
     (shown, { id, from, index }) => {
       const task = tasks.find((x) => x.id === id);
@@ -33,10 +34,25 @@ export function useReceiveDrop(
       if (targetDone !== undefined && targetDone !== task.done) {
         toggle(task);
       }
+      const before: TaskPatch = {
+        start_date: task.start_date,
+        due_date: task.due_date,
+        [field]: (task as unknown as Record<string, unknown>)[field] as string | null ?? null,
+      };
       update(task, { ...fieldPatch, [field]: own });
       if (keys.size) reorder(keys, field);
+      if (getToast) {
+        const toast = getToast(task, patch);
+        if (toast) {
+          showToast({
+            message: toast.message,
+            actionLabel: t("common.undo"),
+            onAction: () => update(task.id, before),
+          });
+        }
+      }
     },
-    [field, onPlaced, patchFor, reorder, tasks, toggle, update],
+    [field, getToast, onPlaced, patchFor, reorder, showToast, tasks, toggle, update],
   );
 }
 

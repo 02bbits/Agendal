@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { cx } from "../../components/cx";
 import { t } from "../../copy";
+import { Button } from "../../components/Button";
 import { TextButton } from "../../components/TextButton";
-import { CheckIcon } from "../../components/icons";
+import { CheckIcon, PlusIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { dropIntoSection } from "../../domain/dropPatch";
 import { buildInbox, sortNoDate, sortTodayTasks } from "../../domain/lists";
@@ -13,8 +13,7 @@ import { TaskDndScope } from "./dnd/TaskDndScope";
 import { SortMenu } from "./SortMenu";
 import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
 import { useDropReorder } from "./useDropReorder";
-import { useSortByRules } from "./useSortByRules";
-import type { SortMode } from "../../domain/order";
+import { rulesKeys, type SortMode } from "../../domain/order";
 import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
@@ -33,6 +32,8 @@ export interface InboxScreenProps {
   navigate?: Navigate;
   showHeader?: boolean;
   selectedTaskId?: string | null;
+  onNewTask?: () => void;
+  subtitle?: string;
 }
 
 /** Inbox (LV-1): today's progress, Overdue before Today, No date and Completed collapsed. */
@@ -41,6 +42,8 @@ export function InboxScreen({
   navigate,
   showHeader = true,
   selectedTaskId,
+  onNewTask,
+  subtitle,
 }: InboxScreenProps) {
   const store = useTaskStore();
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -116,16 +119,39 @@ export function InboxScreen({
     setTodayMode(next);
     setNoDateMode(next);
   };
-  const sortTodayByRules = useSortByRules("today", "day_order");
-  const sortNoDateByRules = useSortByRules("no_date", "project_order");
   const sortInboxByRules = () => {
-    sortTodayByRules(
-      sortTodayTasks(
-        view.today.filter((x) => !x.done),
-        store.today,
-      ),
+    const todayTasks = sortTodayTasks(
+      view.today.filter((x) => !x.done),
+      store.today,
     );
-    sortNoDateByRules(sortNoDate(view.noDate.filter((x) => !x.done)));
+    const noDateTasks = sortNoDate(view.noDate.filter((x) => !x.done));
+    if (todayTasks.length === 0 && noDateTasks.length === 0) return;
+
+    const prevTodayMode = todayMode;
+    const prevNoDateMode = noDateMode;
+
+    const undoToday =
+      todayTasks.length > 0
+        ? store.reorder(rulesKeys(todayTasks), "day_order")
+        : undefined;
+    const undoNoDate =
+      noDateTasks.length > 0
+        ? store.reorder(rulesKeys(noDateTasks), "project_order")
+        : undefined;
+
+    setTodayMode("manual");
+    setNoDateMode("manual");
+
+    store.showToast({
+      message: t("list.sorted_by_rules"),
+      actionLabel: t("common.undo"),
+      onAction: () => {
+        undoToday?.();
+        undoNoDate?.();
+        setTodayMode(prevTodayMode);
+        setNoDateMode(prevNoDateMode);
+      },
+    });
   };
   const moveInToday = useDropReorder("today", "day_order");
   const moveInNoDate = useDropReorder("no_date", "project_order");
@@ -198,14 +224,33 @@ export function InboxScreen({
             accountInitial={accountInitial}
             navigate={navigate}
             action={
-              <SortMenu
-                mode={inboxMode}
-                onModeChange={setInboxMode}
-                listName={t("nav.inbox")}
-                onSortByRules={sortInboxByRules}
-              />
+              <div className="flex items-center gap-2">
+                <SortMenu
+                  mode={inboxMode}
+                  onModeChange={setInboxMode}
+                  listName={t("nav.inbox")}
+                  onSortByRules={sortInboxByRules}
+                />
+                {onNewTask && (
+                  <Button
+                    variant="primary"
+                    pill
+                    className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+                    onClick={onNewTask}
+                  >
+                    <PlusIcon size={16} />
+                    {t("task.new")}
+                  </Button>
+                )}
+              </div>
             }
-          />
+          >
+            {subtitle && (
+              <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                {subtitle}
+              </p>
+            )}
+          </ScreenHeader>
         )}
 
         {view.empty ? (
@@ -216,21 +261,6 @@ export function InboxScreen({
           </section>
         ) : (
           <div className="w-full">
-            {!showHeader && !view.empty && (
-              <div
-                className={cx(
-                  TASK_COLUMN_CLASS,
-                  "mb-4 flex items-center justify-end",
-                )}
-              >
-                <SortMenu
-                  mode={inboxMode}
-                  onModeChange={setInboxMode}
-                  listName={t("nav.inbox")}
-                  onSortByRules={sortInboxByRules}
-                />
-              </div>
-            )}
             {!allDone && (
               <div className={TASK_COLUMN_CLASS}>
                 <ProgressSummary
