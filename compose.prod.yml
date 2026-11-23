@@ -21,6 +21,8 @@ x-api: &api
   secrets:
     - source: gemini_api_key
       target: gemini_api_key
+    - source: vapid_private_key
+      target: vapid_private_key
   networks: [internal, egress]
 
 services:
@@ -52,7 +54,7 @@ services:
       start_period: 60s
       start_interval: 3s
 
-  # Mail and other queued jobs. Scale with --scale queue=N
+  # Mail, reminder pushes and other queued jobs. Scale with --scale queue=N
   queue:
     <<: *api
     command: ["php", "artisan", "queue:work", "--tries=1", "--max-time=3600"]
@@ -60,7 +62,7 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
-  # Runs routes/console.php every minute (the nightly purges); replaces cron
+  # Runs routes/console.php every minute (reminders, the nightly purges); replaces cron
   scheduler:
     <<: *api
     command: ["php", "artisan", "schedule:work"]
@@ -87,6 +89,7 @@ networks:
 secrets:
   db_password: { file: ./secrets/db_password }
   gemini_api_key: { file: ./secrets/gemini_api_key }
+  vapid_private_key: { file: ./secrets/vapid_private_key }
 
 volumes:
   db-data:

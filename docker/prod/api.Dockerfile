@@ -8,7 +8,8 @@ COPY backend/ ./
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
 FROM dunglas/frankenphp:1-php8.4
-RUN install-php-extensions pdo_pgsql intl pcntl
+# bcmath: faster VAPID signing and payload encryption for reminders (TK-6)
+RUN install-php-extensions pdo_pgsql intl pcntl bcmath
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/zz-agendal.ini
 # Non-root (no port below 1024 needed): the fixed uid lets the host chown the LLM key secret to it
 RUN useradd --uid 10001 --no-create-home agendal \
