@@ -11,7 +11,7 @@ browser ─TLS─> Cloudflare ─tunnel─> cloudflared (host) ─> web :3000 (1
 
 ## 1. Host (once)
 
-- Deploy user `agendal` (in the `docker` group: that is root-equivalent, so nobody else is). Repo at `/opt/agendal`.
+- Deploy user `agendal` (in the `docker` group: that is root-equivalent, so nobody else is). Repo at `/srv/services/agendal` (any folder works: set it as `AGENDAL_DIR` below).
 - SSH: keys only (`PasswordAuthentication no`, `PermitRootLogin no`).
 - Firewall: deny all inbound except SSH. Optional: SSH through Cloudflare Access too, then close 22.
 - Automatic security updates (`unattended-upgrades` or `dnf-automatic`).
@@ -34,7 +34,7 @@ browser ─TLS─> Cloudflare ─tunnel─> cloudflared (host) ─> web :3000 (1
 ## 4. First deploy
 
 ```sh
-cd /opt/agendal
+cd /srv/services/agendal
 mkdir -m 700 secrets
 openssl rand -base64 32 | tr -d '\n' > secrets/db_password
 printf '%s' '<gemini key>' > secrets/gemini_api_key
@@ -54,7 +54,7 @@ sign in as the demo account; ask for a password reset and check the mail shows S
 ## 5. Update
 
 ```sh
-cd /opt/agendal && git pull && docker compose -f compose.prod.yml up -d --build
+cd /srv/services/agendal && git pull && docker compose -f compose.prod.yml up -d --build
 ```
 
 The api container migrates on start; queue and scheduler wait for it.
@@ -69,7 +69,7 @@ Nightly encrypted `pg_dump`, 7 days on the server and in R2 ([backup.sh](backup.
   on the server, so a leaked server or R2 token can't read the dumps.
 - `/etc/agendal/backup.env`:
   ```sh
-  AGENDAL_DIR=/opt/agendal
+  AGENDAL_DIR=/srv/services/agendal
   AGE_RECIPIENT=age1...
   R2_BUCKET=agendal-backups
   ```
