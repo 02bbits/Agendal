@@ -15,7 +15,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import { t } from "../../../copy";
 import type { Task } from "../../../domain/types";
 import { PROJECT_DROP, type ProjectDropData } from "./dropTargets";
@@ -144,6 +144,7 @@ export function TaskDndScope({ children }: { children: ReactNode }) {
 }
 
 function RootScope({ children }: { children: ReactNode }) {
+  const initialContainerRef = useRef<string | null>(null);
   const [scope] = useState(createScope);
   const [dragging, setDragging] = useState<string | null>(null);
   const [dragState, setDragState] = useState<DndDragState>({
@@ -166,10 +167,15 @@ function RootScope({ children }: { children: ReactNode }) {
     }),
   );
 
+  function normalizeContainer(id: string): string {
+    return id.replace(/:(bottom|due)$/, "");
+  }
+
   const onDragStart = ({ active }: DragStartEvent) => {
     const task = (active.data.current?.task as Task | undefined) ?? null;
     const fromContainer =
       (active.data.current?.sortable?.containerId as string | undefined) ?? null;
+    initialContainerRef.current = fromContainer;
     setDragging(titleOf(active));
     setDragState({
       activeId: String(active.id),
@@ -198,9 +204,10 @@ function RootScope({ children }: { children: ReactNode }) {
       }));
       return;
     }
-    const targetContainer =
+    const rawContainer =
       (over.data.current?.sortable?.containerId as string | undefined) ??
       String(over.id);
+    const targetContainer = normalizeContainer(rawContainer);
     const targetIndex =
       (over.data.current?.sortable?.index as number | undefined) ?? null;
     setDragState((prev) => {
@@ -220,6 +227,10 @@ function RootScope({ children }: { children: ReactNode }) {
 
   const onDragEnd = ({ active, over }: DragEndEvent) => {
     scope.markDropped();
+    const from =
+      initialContainerRef.current ??
+      (active.data.current?.sortable?.containerId as string);
+    initialContainerRef.current = null;
     setDragging(null);
     setDragState({
       activeId: null,
@@ -230,15 +241,15 @@ function RootScope({ children }: { children: ReactNode }) {
     });
     if (!over) return;
     const id = String(active.id);
-    const from = active.data.current?.sortable?.containerId as string;
     const source = scope.list(from);
     if (over.data.current?.kind === PROJECT_DROP) {
       source?.onToProject?.(id, over.data.current as ProjectDropData);
       return;
     }
-    const to =
+    const rawTo =
       (over.data.current?.sortable?.containerId as string | undefined) ??
       String(over.id);
+    const to = normalizeContainer(rawTo);
     const target = scope.list(to);
     if (!target) return;
     const overIndex = over.data.current?.sortable?.index as number | undefined;
@@ -251,6 +262,7 @@ function RootScope({ children }: { children: ReactNode }) {
   };
 
   const cancel = () => {
+    initialContainerRef.current = null;
     scope.markDropped();
     setDragging(null);
     setDragState({
@@ -280,9 +292,14 @@ function RootScope({ children }: { children: ReactNode }) {
           {children}
           {/* Rows sit in clipped cards: the moving card floats above everything instead */}
           <DragOverlay dropAnimation={null}>
-            {dragging !== null && (
-              <div className="cursor-grabbing rounded-tile border border-separator bg-surface px-4 py-3 text-body font-medium text-ink shadow-lg">
-                {dragging}
+            {(dragState.activeTask || dragging) && (
+              <div className="cursor-grabbing rounded-2xl border border-separator/80 bg-surface px-4 py-3 shadow-2xl ring-1 ring-primary/20 max-w-lg min-w-[280px]">
+                <div className="flex items-center gap-3">
+                  <span className="h-4 w-4 shrink-0 rounded-full border-2 border-separator" />
+                  <span className="text-body font-medium text-ink truncate">
+                    {dragState.activeTask?.title ?? dragging}
+                  </span>
+                </div>
               </div>
             )}
           </DragOverlay>

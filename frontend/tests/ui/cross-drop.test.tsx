@@ -2,7 +2,7 @@ import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it } from "vitest";
-import { inboxDropPatch } from "../../src/ui/domain/dropPatch";
+import { dropOntoDay, inboxDropPatch } from "../../src/ui/domain/dropPatch";
 import type { Task } from "../../src/ui/domain/types";
 import type { ProjectDropData } from "../../src/ui/features/lists/dnd/dropTargets";
 import {
@@ -26,6 +26,10 @@ const cross: {
     shown: readonly Task[],
     drop: { id: string; from: string; index: number },
   ) => void;
+  receiveDay?: (
+    shown: readonly Task[],
+    drop: { id: string; from: string; index: number },
+  ) => void;
   moveToProject?: (id: string, project: ProjectDropData) => void;
 } = {};
 
@@ -39,12 +43,14 @@ function CrossDropper() {
   const receiveCompleted = useReceiveDrop("project_order", (t) =>
     inboxDropPatch(t, "completed", TODAY),
   );
+  const receiveDay = useReceiveDrop("day_order", dropOntoDay("2026-11-25"));
   const moveToProject = useMoveToProject();
 
   useEffect(() => {
     cross.receiveToday = receiveToday;
     cross.receiveNoDate = receiveNoDate;
     cross.receiveCompleted = receiveCompleted;
+    cross.receiveDay = receiveDay;
     cross.moveToProject = moveToProject;
   });
   return null;
@@ -193,6 +199,33 @@ describe("cross-section drag and drop (#178)", () => {
       const saved = memory.db.tasks.find((t) => t.id === "done-1");
       expect(saved?.done).toBe(false);
       expect(saved?.due_date).toBe(TODAY);
+    });
+  });
+
+  it("dropping a task from one Upcoming day onto another reschedules it and assigns day_order", async () => {
+    const upcomingTask = task({
+      id: "upcoming-1",
+      title: "Scheduled Task",
+      start_date: "2026-11-24",
+      due_date: "2026-11-24",
+    });
+    const { wrap, memory } = setup([upcomingTask]);
+
+    render(wrap(<CrossDropper />));
+
+    act(() => {
+      cross.receiveDay!([], {
+        id: "upcoming-1",
+        from: "day:2026-11-24",
+        index: 0,
+      });
+    });
+
+    await waitFor(() => {
+      const saved = memory.db.tasks.find((t) => t.id === "upcoming-1");
+      expect(saved?.start_date).toBe("2026-11-25");
+      expect(saved?.due_date).toBe("2026-11-25");
+      expect(saved?.day_order).toBeTruthy();
     });
   });
 });

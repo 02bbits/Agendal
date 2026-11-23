@@ -1,5 +1,6 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import {
+  arrayMove,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -33,29 +34,62 @@ export function SortableTaskList({
   const scope = useDndScope();
   const dragState = useDndDragState();
 
+  const isDraggingInThis =
+    dragState.activeId !== null &&
+    dragState.fromContainer === list &&
+    dragState.overContainer === list;
+
   const isTargetingThis =
     dragState.activeId !== null &&
     dragState.overContainer === list &&
     dragState.fromContainer !== list &&
     dragState.activeTask !== null;
 
+  const isLeavingThis =
+    dragState.activeId !== null &&
+    dragState.fromContainer === list &&
+    dragState.overContainer !== null &&
+    dragState.overContainer !== list;
+
   const displayTasks = useMemo(() => {
-    if (!isTargetingThis || !dragState.activeTask) {
-      return tasks;
+    if (isLeavingThis) {
+      return tasks.filter((t) => t.id !== dragState.activeId);
     }
-    if (tasks.some((t) => t.id === dragState.activeTask!.id)) {
-      return tasks;
+    if (isTargetingThis && dragState.activeTask) {
+      if (tasks.some((t) => t.id === dragState.activeTask!.id)) {
+        return tasks;
+      }
+      const idx =
+        dragState.overIndex !== null &&
+        dragState.overIndex >= 0 &&
+        dragState.overIndex <= tasks.length
+          ? dragState.overIndex
+          : tasks.length;
+      const next = [...tasks];
+      next.splice(idx, 0, dragState.activeTask);
+      return next;
     }
-    const idx =
-      dragState.overIndex !== null &&
-      dragState.overIndex >= 0 &&
-      dragState.overIndex <= tasks.length
-        ? dragState.overIndex
-        : tasks.length;
-    const next = [...tasks];
-    next.splice(idx, 0, dragState.activeTask);
-    return next;
-  }, [tasks, isTargetingThis, dragState.activeTask, dragState.overIndex]);
+    if (isDraggingInThis && dragState.overIndex !== null) {
+      const activeIdx = tasks.findIndex((t) => t.id === dragState.activeId);
+      if (
+        activeIdx !== -1 &&
+        dragState.overIndex >= 0 &&
+        dragState.overIndex < tasks.length &&
+        activeIdx !== dragState.overIndex
+      ) {
+        return arrayMove(tasks as Task[], activeIdx, dragState.overIndex);
+      }
+    }
+    return tasks;
+  }, [
+    tasks,
+    isLeavingThis,
+    isTargetingThis,
+    isDraggingInThis,
+    dragState.activeId,
+    dragState.activeTask,
+    dragState.overIndex,
+  ]);
 
   const ids = useMemo(
     () => displayTasks.map((task) => task.id),
@@ -113,6 +147,13 @@ export function SortableTaskList({
           }
         </SortableRow>
       ))}
+      {displayTasks.length > 0 && active && (
+        <li
+          ref={setNodeRef}
+          aria-hidden="true"
+          className="h-2 w-full list-none pointer-events-auto"
+        />
+      )}
     </SortableContext>
   );
 }
@@ -148,12 +189,8 @@ function SortableRow({
     setNodeRef,
     dragging: isDragging,
     style: {
-      transform: CSS.Translate.toString(transform),
-      transition:
-        transition ||
-        (isDragging
-          ? undefined
-          : "transform 200ms cubic-bezier(0.25, 1, 0.5, 1)"),
+      transform: isDragging ? undefined : CSS.Translate.toString(transform),
+      transition: isDragging ? undefined : transition,
     },
     rowListeners: {
       ...pointer,

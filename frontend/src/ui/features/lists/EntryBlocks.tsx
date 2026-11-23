@@ -1,4 +1,4 @@
-import { useDndContext } from "@dnd-kit/core";
+import { useDndContext, useDroppable } from "@dnd-kit/core";
 import type { ReactElement } from "react";
 import { dropOntoDay } from "../../domain/dropPatch";
 import { sortEntries, type DayEntry } from "../../domain/entries";
@@ -43,6 +43,11 @@ export function EntryBlocks({
   const { active } = useDndContext();
   const dragState = useDndDragState();
   const isTargeted = dragState.overContainer === `day:${day}`;
+
+  const { setNodeRef: setBottomDroppableRef } = useDroppable({
+    id: `day:${day}:bottom`,
+    disabled: !active,
+  });
 
   if (normal.length === 0 && due.length === 0 && !active) {
     return null;
@@ -92,9 +97,16 @@ export function EntryBlocks({
         </ul>
       ) : null}
 
-      {due.length > 0 &&
-        (variant === "list" ? (
-          <div className="overflow-hidden rounded-2xl border-[1.5px] border-dashed border-due bg-due-tint">
+      {due.length > 0 ? (
+        <div
+          ref={setBottomDroppableRef}
+          className={
+            variant === "list"
+              ? "overflow-hidden rounded-2xl border-[1.5px] border-dashed border-due bg-due-tint"
+              : "space-y-2"
+          }
+        >
+          {variant === "list" ? (
             <ul className="m-0 list-none p-0">
               {due.map(({ task, kind }) => (
                 <TaskRow
@@ -112,30 +124,37 @@ export function EntryBlocks({
                 />
               ))}
             </ul>
-          </div>
-        ) : (
-          due.map(({ task, kind }) => (
-            <div
-              key={`${task.id}:${kind}`}
-              className="overflow-hidden rounded-2xl border-[1.5px] border-dashed border-due bg-due-tint"
-            >
-              <ul className="m-0 list-none p-0">
-                <TaskRow
-                  task={task}
-                  entry={kind}
-                  tone="due"
-                  project={store.projectOf(task)}
-                  today={today}
-                  timeFormat={store.timeFormat}
-                  onToggle={store.toggle}
-                  navigate={navigate}
-                  selected={task.id === selectedTaskId}
-                  settling={store.isSettling(task.id)}
-                />
-              </ul>
-            </div>
-          ))
-        ))}
+          ) : (
+            due.map(({ task, kind }) => (
+              <div
+                key={`${task.id}:${kind}`}
+                className="overflow-hidden rounded-2xl border-[1.5px] border-dashed border-due bg-due-tint"
+              >
+                <ul className="m-0 list-none p-0">
+                  <TaskRow
+                    task={task}
+                    entry={kind}
+                    tone="due"
+                    project={store.projectOf(task)}
+                    today={today}
+                    timeFormat={store.timeFormat}
+                    onToggle={store.toggle}
+                    navigate={navigate}
+                    selected={task.id === selectedTaskId}
+                    settling={store.isSettling(task.id)}
+                  />
+                </ul>
+              </div>
+            ))
+          )}
+        </div>
+      ) : active ? (
+        <div
+          ref={setBottomDroppableRef}
+          aria-hidden="true"
+          className="h-3 w-full"
+        />
+      ) : null}
     </div>
   );
 }
