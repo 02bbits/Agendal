@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { cx } from "../../components/cx";
 import { t } from "../../copy";
 import { TextButton } from "../../components/TextButton";
 import { CheckIcon } from "../../components/icons";
@@ -215,6 +216,21 @@ export function InboxScreen({
           </section>
         ) : (
           <div className="w-full">
+            {!showHeader && !view.empty && (
+              <div
+                className={cx(
+                  TASK_COLUMN_CLASS,
+                  "mb-4 flex items-center justify-end",
+                )}
+              >
+                <SortMenu
+                  mode={inboxMode}
+                  onModeChange={setInboxMode}
+                  listName={t("nav.inbox")}
+                  onSortByRules={sortInboxByRules}
+                />
+              </div>
+            )}
             {!allDone && (
               <div className={TASK_COLUMN_CLASS}>
                 <ProgressSummary

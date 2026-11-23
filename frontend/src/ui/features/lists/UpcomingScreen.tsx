@@ -182,7 +182,12 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
           </ScreenHeader>
         )}
 
-        {showFilter && !showHeader && <div className="mb-4">{filterChips}</div>}
+        {!showHeader && (
+          <div className="mb-4 flex items-center justify-between gap-3">
+            {showFilter ? <div>{filterChips}</div> : <div />}
+            <div>{sortMenu}</div>
+          </div>
+        )}
 
         <div
           ref={barRef}
