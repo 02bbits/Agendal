@@ -19,8 +19,8 @@ class SecurityHeaders
             'Referrer-Policy' => 'strict-origin-when-cross-origin',
             'Permissions-Policy' => 'microphone=(self), camera=(), geolocation=(), payment=(), usb=()',
         ]);
-        // The local API docs page loads its viewer script, so it is left out
-        if (! $request->is('docs/*')) {
+        // The local API docs page and Telescope load their own scripts and styles, so they are left out
+        if (! $request->is('docs/*', 'telescope', 'telescope/*')) {
             $response->headers->set('Content-Security-Policy', "default-src 'none'; frame-ancestors 'none'");
             // NF-19, SEC-51: no browser, proxy or service worker keeps an API response
             $response->headers->set('Cache-Control', 'no-store, private');

@@ -42,7 +42,7 @@ Browser (untrusted) → API (trusted) → database. API → email, Web Push, Goo
 | Device | **I** Next user on a shared phone sees data | <a id="sc-19"></a>SC-19 sign-out wipes IndexedDB, `localStorage` and caches. No API responses in the HTTP cache ([NF-19](../05-quality/nfr.md#nf-19)) | SEC-50, SEC-51 |
 | LLM provider | **I** Data retained or used for training | <a id="sc-20"></a>SC-20 minimum context: low-confidence items only, no identifiers or task notes. One team key, kept only in a server secret file (never in `.env`), never returned or logged ([ADR-008](decisions/ADR-008-llm-fallback.md)) | SEC-43 (the request holds only allowed fields) |
 | Google Cloud Vision | **I** Photo or scan retained | <a id="sc-25"></a>SC-25 inline requests only (no Cloud Storage), EXIF stripped ([NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) | SEC-35 |
-| Logs | **I** Note text leaks | <a id="sc-21"></a>SC-21 metadata-only logging: counts, durations and IDs, never free text | SEC-44, SEC-61 |
+| Logs | **I** Note text leaks | <a id="sc-21"></a>SC-21 metadata-only logging: counts, durations and IDs, never free text. Failed and slow queries log the SQL without its values. Telescope keeps no request or response bodies, session, query bindings, cache values, emails or mail, opens outside local only for allow-listed emails, and prunes after 48 hours | SEC-44, SEC-61 |
 | Dependencies | **T** Vulnerable or compromised package | <a id="sc-22"></a>SC-22 audit and lockfile in CI ([NF-21](../05-quality/nfr.md#nf-21)) | SEC-70 |
 | Everything | **R** Can't investigate an account takeover | <a id="sc-23"></a>SC-23 audit log ([NF-20](../05-quality/nfr.md#nf-20)) | SEC-60 |
 

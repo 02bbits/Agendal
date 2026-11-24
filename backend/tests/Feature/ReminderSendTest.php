@@ -12,39 +12,17 @@ use App\Services\Push\DueReminders;
 use App\Services\Push\PushClient;
 use App\Services\Push\ReminderMessage;
 use App\Services\Push\ReminderSender;
-use GuzzleHttp\Psr7\Response;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Minishlink\WebPush\VAPID;
-use Psr\Http\Message\RequestInterface;
+use Tests\Support\FakePushClient;
 use Tests\Support\FrozenClock;
 
 // #186, TK-6, TK §2.5: claiming due reminders and sending them (T-TK-51, PERF-03)
 uses(RefreshDatabase::class);
-
-/** Records what would go to the push services and answers with a status per endpoint. */
-class FakePushClient extends PushClient
-{
-    /** @var list<RequestInterface> */
-    public array $sent = [];
-
-    /** @var array<string, int|Throwable> */
-    public array $answers = [];
-
-    public function sendAll(array $requests): array
-    {
-        $this->sent = [...$this->sent, ...$requests];
-
-        return array_map(function ($request) {
-            $answer = $this->answers[(string) $request->getUri()] ?? 201;
-
-            return $answer instanceof Throwable ? $answer : new Response($answer);
-        }, $requests);
-    }
-}
 
 /** A browser's subscription keys: a real P-256 public key and a 16-byte secret. */
 function browserKeys(): array

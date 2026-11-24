@@ -28,3 +28,6 @@ Schedule::call(fn () => DB::table('reminder_deliveries')->where('sent_at', '<', 
 // TK-6 reminders: claim what is due and queue the pushes. withoutOverlapping: a slow run never
 // stacks; the claim itself is safe with several workers (FOR UPDATE SKIP LOCKED).
 Schedule::command('reminders:send')->everyMinute()->withoutOverlapping(5);
+
+// #192: Telescope keeps 48 hours
+Schedule::command('telescope:prune --hours=48')->daily();

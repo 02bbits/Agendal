@@ -10,9 +10,13 @@ use App\Support\EmailInput;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,6 +35,18 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // #192 slow-query alert, at error so the alert channel picks it up. SQL only: the bindings
+        // carry note and task text (SC-21). request_id comes from Context, like every log line
+        DB::listen(function (QueryExecuted $query) {
+            if ($query->time >= config('database.slow_query_ms')) {
+                Log::error('Slow query', ['sql' => $query->sql, 'ms' => $query->time]);
+            }
+        });
+        // ponytail: fires once per connection; a long-lived queue worker needs a per-job reset if it matters
+        DB::whenQueryingForLongerThan(config('database.slow_request_ms'), function (Connection $connection) {
+            Log::error('Slow request queries', ['ms' => $connection->totalQueryDuration()]);
+        });
+
         // NF-13 rate limits. Each 429 names the limit it hit, so the app can tell "too fast" from
         // "too many" (UX-43)
         $limiter = fn (string $name, Closure $limits) => RateLimiter::for($name, fn (Request $request) => array_map(
