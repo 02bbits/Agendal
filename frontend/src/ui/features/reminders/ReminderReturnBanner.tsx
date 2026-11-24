@@ -45,6 +45,9 @@ export function ReminderReturnBanner({
   onDismiss,
   onAutoDismiss,
 }: ReminderReturnBannerProps): ReactElement | null {
+  const [prevAlertId, setPrevAlertId] = useState<string | null>(
+    alert?.id ?? null,
+  );
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
@@ -53,10 +56,22 @@ export function ReminderReturnBanner({
   const isDraggingRef = useRef(false);
   const containerRef = useRef<HTMLElement>(null);
 
+  // Idiomatic React pattern for resetting state when alert prop/identity changes without triggering an extra effect render
+  const currentAlertId = alert?.id ?? null;
+  if (currentAlertId !== prevAlertId) {
+    setPrevAlertId(currentAlertId);
+    setIsOpen(false);
+  }
+
   const activeAlerts =
     alerts && alerts.length !== 0 ? alerts : alert ? [alert] : [];
   const handleSelect = onSelectAlert || onView;
   const handleAutoDismiss = onAutoDismiss || onDismiss;
+
+  const handleDismissBanner = useCallback(() => {
+    setIsOpen(false);
+    onDismiss();
+  }, [onDismiss]);
 
   // Auto-dismiss timer (paused when hovered, dragged or when expanded)
   useEffect(() => {
@@ -64,6 +79,7 @@ export function ReminderReturnBanner({
       return;
 
     const timer = setTimeout(() => {
+      setIsOpen(false);
       handleAutoDismiss();
     }, duration);
 
@@ -96,6 +112,7 @@ export function ReminderReturnBanner({
     isDraggingRef.current = false;
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
+      setIsOpen(false);
       onDismiss();
     } else {
       dragOffsetRef.current = 0;
@@ -141,6 +158,7 @@ export function ReminderReturnBanner({
     }
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
+      setIsOpen(false);
       onDismiss();
     } else {
       dragOffsetRef.current = 0;
@@ -225,7 +243,7 @@ export function ReminderReturnBanner({
               <button
                 type="button"
                 aria-label={t("reminders.dismiss")}
-                onClick={onDismiss}
+                onClick={handleDismissBanner}
                 className="focus-ring hidden size-8 cursor-pointer items-center justify-center rounded-full text-ink-secondary hover:bg-fill hover:text-ink transition-colors sm:inline-flex"
               >
                 <XIcon size={16} />

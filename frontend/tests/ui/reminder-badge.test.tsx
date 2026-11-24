@@ -149,5 +149,17 @@ describe("Reminder Badge & Return Banner (#186)", () => {
       />,
     );
     expect(screen.queryByRole("alert")).toBeNull();
+
+    // Re-appearing with a new alert starts in collapsed state (not expanded)
+    rerender(
+      <ReminderReturnBanner
+        alert={{ id: "t-3", title: "New Task Alert", timestamp: Date.now() }}
+        count={1}
+        onView={onView}
+        onDismiss={onDismiss}
+      />,
+    );
+    const viewButton = screen.getByRole("button", { name: /View/i });
+    expect(viewButton.getAttribute("aria-expanded")).toBe("false");
   });
 });
