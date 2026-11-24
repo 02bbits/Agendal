@@ -11,6 +11,7 @@ import * as types from "./types";
 import { useMergeBack } from "./useMergeBack";
 import { useTaskEdit } from "./useTaskEdit";
 import { useTaskSync } from "./useTaskSync";
+import { useTaskReminders } from "./useTaskReminders";
 import { createZoneFormatter, useToday } from "./useToday";
 
 export * from "./types";
@@ -56,6 +57,7 @@ export function TaskStoreProvider({
 }: types.TaskStoreProviderProps) {
   const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
     useTaskSync(initialTasks);
+  useTaskReminders(tasks);
   const [projects, setProjects] = React.useState(initialProjects);
   // A project made from a picker reaches the rows when the screen refetches
   const projectsKey = JSON.stringify(initialProjects);

@@ -103,6 +103,7 @@ export function ReminderReturnBanner({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDraggingRef.current || dragStartRef.current === null) return;
+    e.stopPropagation();
     const diff = e.touches[0].clientX - dragStartRef.current;
     dragOffsetRef.current = diff;
     setDragOffset(diff);
@@ -113,17 +114,23 @@ export function ReminderReturnBanner({
     isDraggingRef.current = false;
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
-      const exitTarget = (finalOffset > 0 ? 1 : -1) * 360;
+      const exitTarget = (finalOffset > 0 ? 1 : -1) * 160;
       setIsExiting(true);
       setDragOffset(exitTarget);
       setTimeout(() => {
         setIsOpen(false);
         onDismiss();
+        if (typeof window !== "undefined" && window.scrollX !== 0) {
+          window.scrollTo({ left: 0 });
+        }
       }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
       setIsHovered(false);
+    }
+    if (typeof window !== "undefined" && window.scrollX !== 0) {
+      window.scrollTo({ left: 0 });
     }
   };
 
@@ -164,17 +171,23 @@ export function ReminderReturnBanner({
     }
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
-      const exitTarget = (finalOffset > 0 ? 1 : -1) * 360;
+      const exitTarget = (finalOffset > 0 ? 1 : -1) * 160;
       setIsExiting(true);
       setDragOffset(exitTarget);
       setTimeout(() => {
         setIsOpen(false);
         onDismiss();
+        if (typeof window !== "undefined" && window.scrollX !== 0) {
+          window.scrollTo({ left: 0 });
+        }
       }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
       setIsHovered(false);
+    }
+    if (typeof window !== "undefined" && window.scrollX !== 0) {
+      window.scrollTo({ left: 0 });
     }
   };
 
@@ -183,8 +196,8 @@ export function ReminderReturnBanner({
   }
 
   return (
-    <div className="sticky top-3 z-40 h-0 w-full overflow-visible pointer-events-none">
-      <div className="flex justify-center px-2 sm:px-0 pointer-events-none">
+    <div className="sticky top-3 z-40 h-0 w-full max-w-full [overflow-x:clip] overflow-y-visible pointer-events-none">
+      <div className="flex justify-center px-2 sm:px-0 pointer-events-none w-full max-w-full [overflow-x:clip]">
         <aside
           ref={containerRef}
           role="alert"

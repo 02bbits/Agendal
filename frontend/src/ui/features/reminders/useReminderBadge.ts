@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   clearReminderAlerts,
   dismissReminderAlert,
@@ -44,6 +50,7 @@ export function useReminderBadge() {
     () => EMPTY_ALERTS,
   );
   const [returnAlert, setReturnAlert] = useState<ReminderAlert | null>(null);
+  const prevAlertIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     updateFavicon(alerts.length > 0);
@@ -52,6 +59,22 @@ export function useReminderBadge() {
 
   useEffect(() => {
     const teardownListeners = setupReminderListeners();
+
+    const onAlertChange = () => {
+      const current = getReminderAlerts();
+      if (current.length > 0) {
+        const newest = current[0];
+        if (newest && newest.id !== prevAlertIdRef.current) {
+          prevAlertIdRef.current = newest.id;
+          setReturnAlert(newest);
+        }
+      } else {
+        prevAlertIdRef.current = null;
+        setReturnAlert(null);
+      }
+    };
+
+    const unsubscribe = subscribeReminderAlerts(onAlertChange);
 
     const onReturn = () => {
       if (document.visibilityState === "visible") {
@@ -67,6 +90,7 @@ export function useReminderBadge() {
 
     return () => {
       teardownListeners();
+      unsubscribe();
       document.removeEventListener("visibilitychange", onReturn);
       window.removeEventListener("focus", onReturn);
     };
