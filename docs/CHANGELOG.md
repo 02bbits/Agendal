@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-24
+
+- **The app stays inside the deploy user (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS and Backups rows: the tunnel and the nightly backup are systemd user units of the deploy user, started at boot through linger; the backup settings and dumps live in its home, nothing under `/etc` or `/var`.
+
 ## 2026-11-23
 
 - **Web port can move (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS row: the web app's loopback port is `WEB_PORT` (default 3000), set in the root `.env` when the host already uses 3000.
