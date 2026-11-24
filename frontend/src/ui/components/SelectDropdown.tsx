@@ -29,6 +29,9 @@ export interface SelectDropdownProps<T extends string> {
   roleMode?: "radio" | "option";
   searchable?: boolean;
   searchPlaceholder?: string;
+  hideLabel?: boolean;
+  size?: "sm" | "md";
+  disabled?: boolean;
 }
 
 /** The tick shows on the new choice this long before the list closes. */
@@ -52,6 +55,9 @@ export function SelectDropdown<T extends string>({
   roleMode = "option",
   searchable = false,
   searchPlaceholder,
+  hideLabel = false,
+  size = "md",
+  disabled = false,
 }: SelectDropdownProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -102,6 +108,7 @@ export function SelectDropdown<T extends string>({
   }, [isOpen, searchable]);
 
   const openList = () => {
+    if (disabled) return;
     setSearchQuery("");
     setHoveredValue(value);
     setIsOpen(true);
@@ -179,8 +186,17 @@ export function SelectDropdown<T extends string>({
   };
 
   return (
-    <div ref={containerRef} className={cx("relative space-y-1.5", className)}>
-      <label className="block text-body font-normal text-ink lg:text-callout lg:font-semibold">
+    <div
+      ref={containerRef}
+      className={cx("relative", !hideLabel && "space-y-1.5", className)}
+    >
+      <label
+        className={cx(
+          hideLabel
+            ? "sr-only"
+            : "block text-body font-normal text-ink lg:text-callout lg:font-semibold",
+        )}
+      >
         {label}
       </label>
       <div className="relative">
@@ -191,6 +207,8 @@ export function SelectDropdown<T extends string>({
           label={selectedOption?.label}
           icon={selectedOption?.icon}
           reducedMotion={reducedMotion}
+          size={size}
+          disabled={disabled}
           onClick={() => (isOpen ? setIsOpen(false) : openList())}
           onKeyDown={onTriggerKeyDown}
         />

@@ -33,6 +33,7 @@ export type TaskPatch = Partial<
     | "due_time"
     | "priority"
     | "reminder"
+    | "due_reminder"
     | "repeat"
     | "repeat_rule"
     | "notes"

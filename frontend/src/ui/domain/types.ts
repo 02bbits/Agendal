@@ -4,6 +4,8 @@
 
 export type Priority = "low" | "medium" | "high";
 export type Repeat = "never" | "daily" | "weekly" | "monthly" | "yearly";
+export type ReminderUnit = "m" | "h" | "d" | "w";
+
 export type Reminder =
   | "none"
   | "0m"
@@ -15,7 +17,8 @@ export type Reminder =
   | "2h"
   | "1d"
   | "2d"
-  | "1w";
+  | "1w"
+  | (string & {});
 
 export const PRIORITIES: readonly Priority[] = ["low", "medium", "high"];
 export const REPEATS: readonly Repeat[] = [
@@ -55,6 +58,7 @@ export interface Task {
   repeat: Repeat;
   repeat_rule?: string | null;
   reminder: Reminder;
+  due_reminder?: Reminder | null;
   notes: string | null;
   done: boolean;
   done_at: string | null;

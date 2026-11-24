@@ -69,6 +69,13 @@ export const GripVerticalIcon = icon(
 
 export const XIcon = icon(<path d="M18 6 6 18M6 6l12 12" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
+export const MinusIcon = icon(<path d="M5 12h14" />);
+export const CornerDownRightIcon = icon(
+  <>
+    <polyline points="15 10 20 15 15 20" />
+    <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+  </>,
+);
 export const CheckIcon = icon(<path d="M20 6 9 17l-5-5" />);
 export const CheckCircleIcon = icon(
   <>

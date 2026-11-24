@@ -80,8 +80,13 @@ class ReminderSender
     private function stillDue(Task $task, DateTimeImmutable $remindAt): bool
     {
         $current = $task->getAttribute('remind_at');
+        if ($current instanceof \DateTimeInterface && $current->getTimestamp() === $remindAt->getTimestamp()) {
+            return true;
+        }
 
-        return $current instanceof \DateTimeInterface && $current->getTimestamp() === $remindAt->getTimestamp();
+        $dueCurrent = $task->getAttribute('due_remind_at');
+
+        return $dueCurrent instanceof \DateTimeInterface && $dueCurrent->getTimestamp() === $remindAt->getTimestamp();
     }
 
     /**

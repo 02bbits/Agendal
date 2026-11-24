@@ -163,3 +163,7 @@ export {
   ReminderReturnBanner,
   type ReminderReturnBannerProps,
 } from "./reminders/ReminderReturnBanner";
+export {
+  CalendarReminderControl,
+  type CalendarReminderControlProps,
+} from "./tasks/details/CalendarReminderControl";

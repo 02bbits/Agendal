@@ -513,6 +513,17 @@ export const pending = {
   "reminders.active_list": "Reminders",
   "reminders.dismiss_item": "Dismiss reminder",
   "reminders.dismiss_all": "Dismiss all",
+  "task.add_notification": "Add notification",
+  "task.notification_type": "Notification",
+  "task.unit_minutes": "minutes",
+  "task.unit_hours": "hours",
+  "task.unit_days": "days",
+  "task.unit_weeks": "weeks",
+  "task.anchor_start": "before start date",
+  "task.anchor_due": "before due date",
+  "task.reminder_value": "Reminder value",
+  "task.remove_reminder": "Remove reminder",
+  "task.remind_at_preview": "Reminds at {time}",
 } as const;
 
 export type PendingKey = keyof typeof pending;

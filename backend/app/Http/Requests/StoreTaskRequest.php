@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace App\Http\Requests;
 
-use App\Enums\Reminder;
 use App\Services\Tasks\DueDateFallback;
 use App\Services\Tasks\RepeatSchedule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StoreTaskRequest extends FormRequest
@@ -26,6 +24,9 @@ class StoreTaskRequest extends FormRequest
         }
         if (! $this->has('reminder') || $this->input('reminder') === null) {
             $merges['reminder'] = 'none';
+        }
+        if (! $this->has('due_reminder') || $this->input('due_reminder') === null) {
+            $merges['due_reminder'] = 'none';
         }
         if (! $this->has('repeat') || $this->input('repeat') === null) {
             $merges['repeat'] = 'never';
@@ -47,7 +48,8 @@ class StoreTaskRequest extends FormRequest
             'start_time' => ['nullable', 'date_format:H:i'],
             'due_time' => ['nullable', 'date_format:H:i'],
             'priority' => ['nullable', 'in:low,medium,high'],
-            'reminder' => ['nullable', Rule::enum(Reminder::class)],
+            'reminder' => ['nullable', 'string', 'max:16', 'regex:/^(\d+[mhdw]|none)$/'],
+            'due_reminder' => ['nullable', 'string', 'max:16', 'regex:/^(\d+[mhdw]|none)$/'],
             'repeat' => ['nullable', 'in:never,daily,weekly,monthly,yearly'],
             'repeat_rule' => ['nullable', 'string', 'max:300'],
             'notes' => ['nullable', 'string', 'max:5000'],
@@ -77,6 +79,7 @@ class StoreTaskRequest extends FormRequest
                 $dueDate = $this->input('due_date');
                 $dueTime = $this->input('due_time');
                 $reminder = $this->input('reminder', 'none') ?? 'none';
+                $dueReminder = $this->input('due_reminder', 'none') ?? 'none';
                 $repeat = $this->input('repeat', 'never') ?? 'never';
 
                 $startDateStr = is_string($startDate) ? $startDate : null;
@@ -101,6 +104,14 @@ class StoreTaskRequest extends FormRequest
                     if (! DueDateFallback::needed($dueDateStr, $startDateStr, $repeatStr)) {
                         $validator->errors()->add('reminder', 'Add a date to set a reminder.');
                     }
+                }
+
+                if (! $validator->errors()->has('due_reminder') && $dueReminder !== 'none' && empty($dueDate)) {
+                    $validator->errors()->add('due_reminder', 'Add a due date to set a due reminder.');
+                }
+
+                if (! $validator->errors()->has('due_reminder') && empty($startDate) && $reminder !== 'none' && $dueReminder !== 'none') {
+                    $validator->errors()->add('due_reminder', 'Cannot set multiple reminders for the due date.');
                 }
             },
         ];

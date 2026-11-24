@@ -27,6 +27,7 @@ class Task extends Model
         'due_time',
         'priority',
         'reminder',
+        'due_reminder',
         'repeat',
         'repeat_rule',
         'notes',
@@ -47,6 +48,7 @@ class Task extends Model
         'due_time',
         'priority',
         'reminder',
+        'due_reminder',
         'repeat',
         'repeat_rule',
         'notes',
@@ -63,6 +65,7 @@ class Task extends Model
             'field_updated_at' => 'array',
             'done_at' => 'immutable_datetime',
             'remind_at' => 'immutable_datetime',
+            'due_remind_at' => 'immutable_datetime',
             'deleted_at' => 'immutable_datetime',
         ];
     }

@@ -9,14 +9,42 @@ use InvalidArgumentException;
 
 final class ReminderCalculator
 {
+    /** Parse any offset like 10m, 2h, 3d, 1w into minutes. */
+    public static function parseMinutes(string $reminder): ?int
+    {
+        if ($reminder === 'none' || $reminder === '') {
+            return null;
+        }
+
+        $legacy = Reminder::tryFrom($reminder);
+        if ($legacy !== null) {
+            return $legacy->minutes();
+        }
+
+        if (preg_match('/^(\d+)([mhdw])$/', $reminder, $matches)) {
+            $value = (int) $matches[1];
+
+            return match ($matches[2]) {
+                'm' => $value,
+                'h' => $value * 60,
+                'd' => $value * 1440,
+                'w' => $value * 10080,
+            };
+        }
+
+        return null;
+    }
+
     public function compute(string $dueDate, ?string $startTime, string $reminder, string $timezone): ?string
     {
         if ($reminder === 'none' || $reminder === '') {
             return null;
         }
 
-        $offset = Reminder::tryFrom($reminder) ?? throw new InvalidArgumentException("Unknown reminder offset: {$reminder}");
-        $minutes = $offset->minutes();
+        $minutes = self::parseMinutes($reminder);
+        if ($minutes === null) {
+            throw new InvalidArgumentException("Unknown reminder offset: {$reminder}");
+        }
 
         $dueAt = WallTime::toUtc($dueDate, $startTime ?: '09:00', $timezone);
 
@@ -36,5 +64,15 @@ final class ReminderCalculator
         }
 
         return null;
+    }
+
+    /** Explicit offset from the due date/time. */
+    public function forDueDate(?string $dueDate, ?string $dueTime, string $dueReminder, string $timezone): ?string
+    {
+        if (empty($dueDate) || $dueReminder === 'none' || $dueReminder === '') {
+            return null;
+        }
+
+        return $this->compute($dueDate, $dueTime, $dueReminder, $timezone);
     }
 }

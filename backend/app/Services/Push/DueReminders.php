@@ -25,7 +25,7 @@ final class DueReminders
         $oldest = $now->modify('-'.(int) config('push.late_minutes').' minutes');
 
         $rows = DB::select(<<<'SQL'
-            WITH due AS (
+            WITH candidates AS (
                 SELECT t.id, t.remind_at
                 FROM tasks t
                 WHERE t.remind_at IS NOT NULL AND NOT t.done AND t.deleted_at IS NULL
@@ -34,15 +34,34 @@ final class DueReminders
                       SELECT 1 FROM reminder_deliveries d
                       WHERE d.task_id = t.id AND d.remind_at = t.remind_at
                   )
-                ORDER BY t.remind_at
+                UNION ALL
+                SELECT t.id, t.due_remind_at AS remind_at
+                FROM tasks t
+                WHERE t.due_remind_at IS NOT NULL AND NOT t.done AND t.deleted_at IS NULL
+                  AND t.due_remind_at <= ? AND t.due_remind_at > ?
+                  AND NOT EXISTS (
+                      SELECT 1 FROM reminder_deliveries d
+                      WHERE d.task_id = t.id AND d.remind_at = t.due_remind_at
+                  )
+            ),
+            due AS (
+                SELECT c.id, c.remind_at
+                FROM candidates c
+                ORDER BY c.remind_at
                 LIMIT ?
-                FOR UPDATE OF t SKIP LOCKED
             )
             INSERT INTO reminder_deliveries (task_id, remind_at, sent_at)
             SELECT id, remind_at, ? FROM due
             ON CONFLICT DO NOTHING
             RETURNING task_id, remind_at
-            SQL, [$now->format(DATE_ATOM), $oldest->format(DATE_ATOM), $limit, $now->format(DATE_ATOM)]);
+            SQL, [
+            $now->format(DATE_ATOM),
+            $oldest->format(DATE_ATOM),
+            $now->format(DATE_ATOM),
+            $oldest->format(DATE_ATOM),
+            $limit,
+            $now->format(DATE_ATOM),
+        ]);
 
         $claimed = [];
         foreach ($rows as $row) {
