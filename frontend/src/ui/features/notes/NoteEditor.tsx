@@ -488,6 +488,9 @@ export function NoteEditor({
               t("note.listening")
             ) : dictation === "writing" ? (
               <span className="shiny-text">{t("note.reading")}</span>
+            ) : offline && canDictate() ? (
+              // Why the mic is disabled (NC §2.3)
+              t("note.dictation_offline")
             ) : dictationNote ? (
               t(dictationNote, { seconds: dictationWait })
             ) : (
