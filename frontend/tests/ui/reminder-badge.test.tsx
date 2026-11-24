@@ -51,8 +51,9 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     expect(getReminderAlertCount()).toBe(0);
   });
 
-  it("formats document title as '(1) Agendal' when an alert is active, and 'Agendal' otherwise", () => {
+  it("formats document title as '(1) Agendal' when an alert is active, and preserves heading otherwise", () => {
     expect(formatDocumentTitle()).toBe("Agendal");
+    expect(formatDocumentTitle("Inbox")).toBe("Inbox · Agendal");
 
     addReminderAlert({
       id: "rem-1",
@@ -61,7 +62,7 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     });
 
     // Specifically '(1) Agendal' as requested
-    expect(formatDocumentTitle()).toBe("(1) Agendal");
+    expect(formatDocumentTitle("Inbox")).toBe("(1) Agendal");
 
     // Multiple alerts
     addReminderAlert({
@@ -69,11 +70,11 @@ describe("Reminder Badge & Return Banner (#186)", () => {
       title: "Submit report",
       url: "/tasks/rem-2",
     });
-    expect(formatDocumentTitle()).toBe("(2) Agendal");
+    expect(formatDocumentTitle("Upcoming")).toBe("(2) Agendal");
 
-    // Clearing reverts title back to 'Agendal'
+    // Clearing reverts title back to heading · Agendal
     clearReminderAlerts();
-    expect(formatDocumentTitle()).toBe("Agendal");
+    expect(formatDocumentTitle("Upcoming")).toBe("Upcoming · Agendal");
   });
 
   it("renders ReminderReturnBanner with motion animation classes, flat view alignment, and expandable card", async () => {
