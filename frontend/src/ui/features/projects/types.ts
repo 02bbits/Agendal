@@ -23,4 +23,6 @@ export interface ProjectScreenProps {
   onRenameProject?: () => void;
   navigate?: Navigate;
   selectedTaskId?: string | null;
+  /** Rows are sorted as given but drawn with this task's latest data (frozen sort, Spec 01 §5). */
+  liveTask?: (task: Task) => Task;
 }

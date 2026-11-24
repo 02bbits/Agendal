@@ -84,7 +84,7 @@ describe("TaskRow (LV-4)", () => {
     });
     const { container } = renderRow(t);
     const meta = container.querySelector('[data-slot="meta"]')!;
-    expect(meta.textContent).toBe("HCI·Start at 16:00·Due at 17:00·Every week");
+    expect(meta.textContent).toBe("HCI·Start 16:00·Due 17:00·Every week");
     expect(meta.querySelectorAll("svg")).toHaveLength(2);
     expect(
       (container.querySelector('[data-slot="dot"]') as HTMLElement).style
