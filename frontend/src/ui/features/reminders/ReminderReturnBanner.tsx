@@ -271,7 +271,7 @@ export function ReminderReturnBanner({
   }
 
   return createPortal(
-    <div className="fixed top-3 inset-x-0 z-[120] pointer-events-none flex justify-center px-3 sm:px-0 overflow-x-clip max-w-[100vw]">
+    <div className="fixed top-3 inset-x-0 md:left-[248px] xl:[html[data-task-panel=aside]_&]:right-[400px] xl:[html[data-note-panel]_&]:right-[400px] z-[120] pointer-events-none flex justify-center px-3 sm:px-0 overflow-x-clip max-w-[100vw]">
       <aside
         ref={containerRef}
         role="alert"
