@@ -267,14 +267,17 @@ function RootScope({ children }: { children: ReactNode }) {
     const targetIndex = targetIds.indexOf(id);
 
     if (from === to) {
-      const overIndex = over.data.current?.sortable?.index as number | undefined;
-      const finalIndex = targetIndex !== -1 ? targetIndex : (overIndex ?? -1);
+      const isBottom = String(over.id).endsWith(":bottom");
+      const overIndex = isBottom
+        ? targetIds.length
+        : (over.data.current?.sortable?.index as number | undefined);
       if (
         initialIndex !== null &&
-        finalIndex !== -1 &&
-        finalIndex !== initialIndex
+        overIndex !== undefined &&
+        overIndex !== -1 &&
+        overIndex !== initialIndex
       ) {
-        target.onMove(id, finalIndex);
+        target.onMove(id, overIndex);
       }
       return;
     }

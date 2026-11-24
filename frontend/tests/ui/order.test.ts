@@ -107,6 +107,22 @@ describe("placeAt", () => {
     expect(ids(sorted(shown, keys))).toEqual(["a", "c", "b"]);
   });
 
+  it("when tasks have disordered keys (e.g. from smart order), places whole list to prevent scrambling", () => {
+    // 6 tasks shown in smart order, but carrying old keys that don't match screen order
+    const shown = [
+      keyed("1", "a5"),
+      keyed("2", "a3"),
+      keyed("3", "a4"),
+      keyed("4", "a0"),
+      keyed("5", "a1"),
+      keyed("6", "a2"),
+    ];
+    // Drag task '2' from position 1 down to bottom (position 5)
+    const keys = placeAt(shown, "2", 5, "day_order");
+    expect(keys.size).toBe(6);
+    expect(ids(sorted(shown, keys))).toEqual(["1", "3", "4", "5", "6", "2"]);
+  });
+
   it("an unknown task changes nothing", () => {
     expect(placeAt([keyed("a", "a0")], "zz", 0, "day_order").size).toBe(0);
   });

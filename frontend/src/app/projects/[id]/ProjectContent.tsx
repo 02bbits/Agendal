@@ -4,12 +4,10 @@ import { useMemo } from "react";
 import {
   ProjectScreen,
   TaskPanel,
-  sortOpenByDue,
   useFrozenOrder,
   useDropReorder,
   useMoveToProject,
   useReceiveDrop,
-  useSortByRules,
   useTaskPanel,
   useTaskStore,
   type Navigate,
@@ -78,7 +76,6 @@ export function ProjectContent({
   );
   const openTasks = tasks.filter((t) => !t.done || store.isSettling(t.id));
   const completedTasks = tasks.filter((t) => t.done && !store.isSettling(t.id));
-  const sortByRules = useSortByRules(`project:${project.id}`, "project_order");
   const moveInProject = useDropReorder(
     `project:${project.id}`,
     "project_order",
@@ -143,9 +140,6 @@ export function ProjectContent({
         onMoveCompleted={moveInCompleted}
         onReceiveCompleted={receiveInCompleted}
         onToProject={moveToProject}
-        onSortByRules={() =>
-          sortByRules(sortOpenByDue(openTasks.filter((t) => !t.done)))
-        }
       />
       {panel.isWide && panel.selectedTaskId && (
         <TaskPanel

@@ -61,29 +61,65 @@ export function placeAt(
   const index = Math.max(0, Math.min(to, rest.length));
   const above = rest.slice(0, index);
   const below = rest.slice(index);
+  const targetOrder = [...above, moved, ...below];
+
+  const isAscending = (tasks: readonly Task[]) => {
+    for (let i = 1; i < tasks.length; i++) {
+      const prev = keyOf(tasks[i - 1]!, field);
+      const curr = keyOf(tasks[i]!, field);
+      if (!prev || !curr || !(prev < curr)) return false;
+    }
+    return true;
+  };
+
+  const allPlaced = rest.every((t) => Boolean(keyOf(t, field)));
+  if (allPlaced) {
+    if (isAscending(rest)) {
+      const before = above.length
+        ? keyOf(above[above.length - 1]!, field)
+        : null;
+      const after = below.length ? keyOf(below[0]!, field) : null;
+      try {
+        const keys = new Map<string, string>();
+        keys.set(movedId, generateKeyBetween(before, after));
+        return keys;
+      } catch {
+        return rulesKeys(targetOrder);
+      }
+    }
+    return rulesKeys(targetOrder);
+  }
 
   const firstUnplaced = above.findIndex((t) => !keyOf(t, field));
   const keys = new Map<string, string>();
   try {
     if (firstUnplaced === -1) {
-      const before = above.length
-        ? keyOf(above[above.length - 1]!, field)
-        : null;
-      const after = below.length ? keyOf(below[0]!, field) : null;
-      keys.set(movedId, generateKeyBetween(before, after));
-      return keys;
+      if (isAscending(above)) {
+        const before = above.length
+          ? keyOf(above[above.length - 1]!, field)
+          : null;
+        const after = below.length ? keyOf(below[0]!, field) : null;
+        keys.set(movedId, generateKeyBetween(before, after));
+        return keys;
+      }
+      return rulesKeys(targetOrder);
+    }
+    const placedPrefix = above.slice(0, firstUnplaced);
+    if (!isAscending(placedPrefix)) {
+      return rulesKeys(targetOrder);
     }
     // Place the unplaced run above the drop point, then the moved task, after the last placed one
     const lastPlaced = firstUnplaced
       ? keyOf(above[firstUnplaced - 1]!, field)
       : null;
+    const after = below.length ? keyOf(below[0]!, field) : null;
     const run = [...above.slice(firstUnplaced), moved];
-    const runKeys = generateNKeysBetween(lastPlaced, null, run.length);
+    const runKeys = generateNKeysBetween(lastPlaced, after, run.length);
     run.forEach((t, i) => keys.set(t.id, runKeys[i]!));
     return keys;
   } catch {
     // Two devices made the same key (the neighbours tie): place the whole list again, once
-    return rulesKeys([...above, moved, ...below]);
+    return rulesKeys(targetOrder);
   }
 }
 

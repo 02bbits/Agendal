@@ -1,6 +1,5 @@
 import { useDndContext, useDroppable } from "@dnd-kit/core";
 import {
-  arrayMove,
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
@@ -34,11 +33,6 @@ export function SortableTaskList({
   const scope = useDndScope();
   const dragState = useDndDragState();
 
-  const isDraggingInThis =
-    dragState.activeId !== null &&
-    dragState.fromContainer === list &&
-    dragState.overContainer === list;
-
   const isTargetingThis =
     dragState.activeId !== null &&
     dragState.overContainer === list &&
@@ -69,23 +63,11 @@ export function SortableTaskList({
       next.splice(idx, 0, dragState.activeTask);
       return next;
     }
-    if (isDraggingInThis && dragState.overIndex !== null) {
-      const activeIdx = tasks.findIndex((t) => t.id === dragState.activeId);
-      if (
-        activeIdx !== -1 &&
-        dragState.overIndex >= 0 &&
-        dragState.overIndex < tasks.length &&
-        activeIdx !== dragState.overIndex
-      ) {
-        return arrayMove(tasks as Task[], activeIdx, dragState.overIndex);
-      }
-    }
     return tasks;
   }, [
     tasks,
     isLeavingThis,
     isTargetingThis,
-    isDraggingInThis,
     dragState.activeId,
     dragState.activeTask,
     dragState.overIndex,

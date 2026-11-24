@@ -123,19 +123,12 @@ function InboxHeaderAction({
     setTodayMode(next);
     setNoDateMode(next);
   };
-  const onSortByRules = () => {
-    if (typeof window !== "undefined") {
-      window.dispatchEvent(new CustomEvent("agendal:sort-inbox-rules"));
-    }
-  };
-
   return (
     <div className="flex items-center gap-2">
       <SortMenu
         mode={todayMode}
         onModeChange={setInboxMode}
         listName={t("nav.inbox")}
-        onSortByRules={onSortByRules}
       />
       {openNewTask && (
         <Button

@@ -1,11 +1,10 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InboxScreen } from "../../src/ui/features/lists/InboxScreen";
-import { TaskStoreProvider } from "../../src/ui/features/tasks/store";
 import { expectAxeCleanInBothThemes } from "./axe";
-import { projects, task } from "./fixtures";
-import { TODAY, clock, setup } from "./harness";
+import { task } from "./fixtures";
+import { TODAY, setup } from "./harness";
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/",
@@ -60,35 +59,14 @@ describe("Sort menu (#178)", () => {
     expect(todayTitles()).toEqual(["Complete Early", "Complete Late"]);
   });
 
-  it("Sort by rules places the list in rule order, stays manual, and Undo puts it back", async () => {
-    const { wrap, memory } = setup([early, late]);
+  it("does not offer Sort by rules (dragging in smart order automatically switches to manual)", async () => {
+    const { wrap } = setup([early, late]);
     render(wrap(<InboxScreen accountInitial="e" />));
 
     await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
-    await userEvent.click(
-      screen.getByRole("menuitem", { name: "Sort by rules" }),
-    );
-    expect(todayTitles()).toEqual(["Complete Early", "Complete Late"]);
-    await waitFor(() => {
-      const [e, l] = ["early", "late"].map(
-        (id) => memory.db.tasks.find((t) => t.id === id)!.day_order!,
-      );
-      expect(e < l).toBe(true);
-    });
-
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
-    expect(
-      screen
-        .getByRole("menuitemradio", { name: "Manual order" })
-        .getAttribute("aria-checked"),
-    ).toBe("true");
-    await userEvent.keyboard("{Escape}");
-
-    await userEvent.click(await screen.findByRole("button", { name: "Undo" }));
-    expect(todayTitles()).toEqual(["Complete Early", "Complete Late"]);
-    await waitFor(() =>
-      expect(memory.db.tasks.map((t) => t.day_order)).toEqual(["a1", "a0"]),
-    );
+    expect(screen.queryByRole("menuitem", { name: "Sort by rules" })).toBeNull();
+    expect(screen.getByRole("menuitemradio", { name: "Smart order" })).toBeDefined();
+    expect(screen.getByRole("menuitemradio", { name: "Manual order" })).toBeDefined();
   });
 
   it("Escape closes the menu and gives focus back to its button", async () => {
@@ -99,33 +77,5 @@ describe("Sort menu (#178)", () => {
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("menu")).toBeNull();
     expect(document.activeElement).toBe(button);
-  });
-
-  it("Sort by rules fires exactly one toast even with both today and no-date tasks", async () => {
-    const onToast = vi.fn();
-    const noDateTask = task({ id: "nd1", title: "No date 1" });
-    const { memory } = setup([early, late, noDateTask]);
-    render(
-      <TaskStoreProvider
-        api={memory.api}
-        clock={clock}
-        initialTasks={[early, late, noDateTask]}
-        initialProjects={projects}
-        onToast={onToast}
-      >
-        <InboxScreen accountInitial="e" />
-      </TaskStoreProvider>,
-    );
-
-    await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
-    await userEvent.click(
-      screen.getByRole("menuitem", { name: "Sort by rules" }),
-    );
-    expect(onToast).toHaveBeenCalledTimes(1);
-    expect(onToast).toHaveBeenCalledWith(
-      expect.objectContaining({
-        message: "Sorted by the rules. Drag to fine-tune.",
-      }),
-    );
   });
 });

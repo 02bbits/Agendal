@@ -12,20 +12,18 @@ export interface SortMenuProps {
   onModeChange?: (mode: SortMode) => void;
   /** The list's name for the button's label: "Sort Today" or "Sort Inbox". */
   listName: string;
-  /** Writes keys in rule order and switches to manual (Spec 02 §2.1, "Sort by rules"). */
-  onSortByRules: () => void;
+  onSortByRules?: () => void;
 }
 
 const ITEM =
   "flex w-full cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-footnote font-medium text-ink transition-colors hover:bg-fill";
 
-/** Smart or manual order for one list, and Sort by rules (#178). */
+/** Smart or manual order for one list (#178). */
 export function SortMenu({
   list = "today",
   mode: propMode,
   onModeChange,
   listName,
-  onSortByRules,
 }: SortMenuProps) {
   const [hookMode, setHookMode] = useSortMode(list);
   const mode = propMode ?? hookMode;
@@ -77,15 +75,6 @@ export function SortMenu({
         >
           {modeItem("smart", t("list.sort_smart"))}
           {modeItem("manual", t("list.sort_manual"))}
-          <div className="my-1 h-px bg-separator" role="separator" />
-          <button
-            type="button"
-            role="menuitem"
-            className={ITEM}
-            onClick={() => choose(onSortByRules)}
-          >
-            {t("list.sort_by_rules")}
-          </button>
         </div>
       )}
     </div>

@@ -5,7 +5,7 @@ import { TextButton } from "../../components/TextButton";
 import { CheckIcon, PlusIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { dropIntoSection } from "../../domain/dropPatch";
-import { buildInbox, sortNoDate, sortTodayTasks } from "../../domain/lists";
+import { buildInbox } from "../../domain/lists";
 import { useFrozenOrder } from "./useFrozenOrder";
 import { ShownWhileDragging } from "./dnd/ShownWhileDragging";
 import { SortableTaskList } from "./dnd/SortableTaskList";
@@ -13,7 +13,7 @@ import { TaskDndScope } from "./dnd/TaskDndScope";
 import { SortMenu } from "./SortMenu";
 import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
 import { useDropReorder } from "./useDropReorder";
-import { rulesKeys, type SortMode } from "../../domain/order";
+import { type SortMode } from "../../domain/order";
 import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
@@ -124,46 +124,6 @@ export function InboxScreen({
     completedToday: store.completedToday,
     isSettling: store.isSettling,
   });
-  const sortInboxByRules = () => {
-    const todayTasks = sortTodayTasks(
-      view.today.filter((x) => !x.done),
-      store.today,
-    );
-    const noDateTasks = sortNoDate(view.noDate.filter((x) => !x.done));
-    if (todayTasks.length === 0 && noDateTasks.length === 0) return;
-
-    const prevTodayMode = todayMode;
-    const prevNoDateMode = noDateMode;
-
-    const undoToday =
-      todayTasks.length > 0
-        ? store.reorder(rulesKeys(todayTasks), "day_order")
-        : undefined;
-    const undoNoDate =
-      noDateTasks.length > 0
-        ? store.reorder(rulesKeys(noDateTasks), "project_order")
-        : undefined;
-
-    setTodayMode("manual");
-    setNoDateMode("manual");
-
-    store.showToast({
-      message: t("list.sorted_by_rules"),
-      actionLabel: t("common.undo"),
-      onAction: () => {
-        undoToday?.();
-        undoNoDate?.();
-        setTodayMode(prevTodayMode);
-        setNoDateMode(prevNoDateMode);
-      },
-    });
-  };
-  useEffect(() => {
-    const onSortRules = () => sortInboxByRules();
-    window.addEventListener("agendal:sort-inbox-rules", onSortRules);
-    return () =>
-      window.removeEventListener("agendal:sort-inbox-rules", onSortRules);
-  });
   const moveInToday = useDropReorder("today", "day_order");
   const moveInNoDate = useDropReorder("no_date", "project_order");
   const moveInCompleted = useDropReorder("completed", "project_order");
@@ -241,7 +201,6 @@ export function InboxScreen({
                   mode={inboxMode}
                   onModeChange={setInboxMode}
                   listName={t("nav.inbox")}
-                  onSortByRules={sortInboxByRules}
                 />
                 {onNewTask && (
                   <Button
