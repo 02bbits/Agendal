@@ -223,4 +223,76 @@ describe("CalendarReminderControl (Google Calendar style)", () => {
     expect(startAnchor.hasAttribute("disabled")).toBe(true);
     expect(dueAnchor.hasAttribute("disabled")).toBe(true);
   });
+
+  it("renders disabled dropdown (not plain text) when task only has one date", () => {
+    const onSave = vi.fn();
+    render(
+      <CalendarReminderControl
+        task={mockTask({
+          reminder: "10m",
+          start_date: "2026-11-24",
+          due_date: null,
+        })}
+        onSave={onSave}
+      />,
+    );
+
+    // Anchor is rendered as a disabled button/dropdown
+    const anchorBtn = screen.getByRole("button", {
+      name: /before start date/i,
+    });
+    expect(anchorBtn).toBeDefined();
+    expect(anchorBtn.hasAttribute("disabled")).toBe(true);
+  });
+
+  it("defaults due date reminder time to 21:00 when due_time is null", () => {
+    const onSave = vi.fn();
+    render(
+      <CalendarReminderControl
+        task={mockTask({
+          start_date: null,
+          due_date: "2026-11-24",
+          due_time: null,
+          due_reminder: "10m",
+        })}
+        onSave={onSave}
+      />,
+    );
+
+    // 21:00 minus 10 minutes = 20:50
+    expect(screen.getByText(/20:50/)).toBeDefined();
+  });
+
+  it("keeps due date notification in first slot when adding start date notification second", () => {
+    const onSave = vi.fn();
+    const { rerender } = render(
+      <CalendarReminderControl
+        task={mockTask({
+          reminder: "none",
+          due_reminder: "15m",
+          start_date: "2026-11-24",
+          due_date: "2026-11-25",
+        })}
+        onSave={onSave}
+      />,
+    );
+
+    // Re-render with both active (simulating user adding the start notification)
+    rerender(
+      <CalendarReminderControl
+        task={mockTask({
+          reminder: "10m",
+          due_reminder: "15m",
+          start_date: "2026-11-24",
+          due_date: "2026-11-25",
+        })}
+        onSave={onSave}
+      />,
+    );
+
+    const inputs = screen.getAllByLabelText(t("task.reminder_value"));
+    // First slot should remain the due notification (15m), and second slot is newly added start notification (10m)
+    expect((inputs[0] as HTMLInputElement).value).toBe("15");
+    expect((inputs[1] as HTMLInputElement).value).toBe("10");
+  });
 });

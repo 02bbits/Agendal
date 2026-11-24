@@ -35,7 +35,7 @@ final class ReminderCalculator
         return null;
     }
 
-    public function compute(string $dueDate, ?string $startTime, string $reminder, string $timezone): ?string
+    public function compute(string $dueDate, ?string $startTime, string $reminder, string $timezone, string $defaultTime = '09:00'): ?string
     {
         if ($reminder === 'none' || $reminder === '') {
             return null;
@@ -46,21 +46,21 @@ final class ReminderCalculator
             throw new InvalidArgumentException("Unknown reminder offset: {$reminder}");
         }
 
-        $dueAt = WallTime::toUtc($dueDate, $startTime ?: '09:00', $timezone);
+        $dueAt = WallTime::toUtc($dueDate, $startTime ?: $defaultTime, $timezone);
 
         // Subtract elapsed time in UTC, including when the interval crosses DST.
         return $dueAt->setTimestamp($dueAt->getTimestamp() - $minutes * 60)->format('Y-m-d\TH:i:s\Z');
     }
 
-    /** Offset from the start (time, else 09:00), else from the due (time, else 09:00) (BR-12). */
+    /** Offset from the start (time, else 09:00), else from the due (time, else 21:00) (BR-12). */
     public function forDates(?string $startDate, ?string $startTime, ?string $dueDate, ?string $dueTime, string $reminder, string $timezone): ?string
     {
         if (! empty($startDate)) {
-            return $this->compute($startDate, $startTime, $reminder, $timezone);
+            return $this->compute($startDate, $startTime, $reminder, $timezone, '09:00');
         }
 
         if (! empty($dueDate)) {
-            return $this->compute($dueDate, $dueTime, $reminder, $timezone);
+            return $this->compute($dueDate, $dueTime, $reminder, $timezone, '21:00');
         }
 
         return null;
@@ -73,6 +73,6 @@ final class ReminderCalculator
             return null;
         }
 
-        return $this->compute($dueDate, $dueTime, $dueReminder, $timezone);
+        return $this->compute($dueDate, $dueTime, $dueReminder, $timezone, '21:00');
     }
 }

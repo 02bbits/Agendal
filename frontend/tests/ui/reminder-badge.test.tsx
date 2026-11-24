@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   addReminderAlert,
@@ -76,7 +76,7 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     expect(formatDocumentTitle()).toBe("Agendal");
   });
 
-  it("renders ReminderReturnBanner with motion animation classes, flat view alignment, and expandable card", () => {
+  it("renders ReminderReturnBanner with motion animation classes, flat view alignment, and expandable card", async () => {
     const onView = vi.fn();
     const onDismiss = vi.fn();
     const onDismissAlert = vi.fn();
@@ -118,14 +118,14 @@ describe("Reminder Badge & Return Banner (#186)", () => {
       name: "Dismiss reminder alert",
     });
     fireEvent.click(dismissBtn);
-    expect(onDismiss).toHaveBeenCalled();
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
 
     // Swipe to dismiss on mobile (#186)
     onDismiss.mockClear();
     fireEvent.touchStart(banner, { touches: [{ clientX: 200 }] });
     fireEvent.touchMove(banner, { touches: [{ clientX: 300 }] });
     fireEvent.touchEnd(banner);
-    expect(onDismiss).toHaveBeenCalled();
+    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
 
     // With count > 1
     rerender(

@@ -50,6 +50,7 @@ export function ReminderReturnBanner({
   );
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
   const [dragOffset, setDragOffset] = useState(0);
   const dragOffsetRef = useRef(0);
   const dragStartRef = useRef<number | null>(null);
@@ -112,8 +113,13 @@ export function ReminderReturnBanner({
     isDraggingRef.current = false;
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
-      setIsOpen(false);
-      onDismiss();
+      const exitTarget = (finalOffset > 0 ? 1 : -1) * 360;
+      setIsExiting(true);
+      setDragOffset(exitTarget);
+      setTimeout(() => {
+        setIsOpen(false);
+        onDismiss();
+      }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
@@ -158,8 +164,13 @@ export function ReminderReturnBanner({
     }
     const finalOffset = dragOffsetRef.current;
     if (Math.abs(finalOffset) > 70) {
-      setIsOpen(false);
-      onDismiss();
+      const exitTarget = (finalOffset > 0 ? 1 : -1) * 360;
+      setIsExiting(true);
+      setDragOffset(exitTarget);
+      setTimeout(() => {
+        setIsOpen(false);
+        onDismiss();
+      }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
@@ -191,13 +202,15 @@ export function ReminderReturnBanner({
           style={{
             transform: dragOffset ? `translateX(${dragOffset}px)` : undefined,
             opacity: dragOffset
-              ? Math.max(0.1, 1 - Math.abs(dragOffset) / 180)
+              ? Math.max(0, 1 - Math.abs(dragOffset) / 160)
               : undefined,
-            transition: dragOffset
-              ? "none"
-              : "transform 250ms ease-out, opacity 250ms ease-out",
+            transition: isExiting
+              ? "transform 180ms ease-out, opacity 180ms ease-out"
+              : dragOffset
+                ? "none"
+                : "transform 180ms ease-out, opacity 180ms ease-out",
           }}
-          className="animate-reminder-drop pointer-events-auto touch-pan-y select-none mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-separator/90 bg-surface/98 p-3 shadow-xl backdrop-blur-md transition-all duration-300 ease-out"
+          className="animate-reminder-drop pointer-events-auto touch-pan-y select-none mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-separator/90 bg-surface/98 p-3 shadow-xl backdrop-blur-md"
         >
           {/* Top collapsed header bar */}
           <div className="flex w-full items-center gap-3">

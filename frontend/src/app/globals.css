@@ -470,7 +470,7 @@
 }
 
 .animate-reminder-drop {
-  animation: reminder-drop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: reminder-drop 420ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .animate-bell-ring {

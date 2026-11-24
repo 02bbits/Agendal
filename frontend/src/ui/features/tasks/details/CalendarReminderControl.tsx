@@ -64,9 +64,10 @@ export function computeReminderPreview(
   value: number,
   unit: ReminderUnitName,
   timeFormat: TimeFormat = "24h",
+  defaultTime: string = "09:00",
 ): string | null {
   if (!dateStr) return null;
-  const time = timeStr || "09:00";
+  const time = timeStr || defaultTime;
   const [year, month, day] = dateStr.split("-").map(Number);
   const [hour, min] = time.split(":").map(Number);
   if (!year || !month || !day) return null;
@@ -144,14 +145,12 @@ function ReminderCard({
   unitOptions,
   anchorOptions,
   canChooseAnchor,
-  hasStart,
 }: {
   id: string;
   card: ActiveReminderCardData;
   unitOptions: ReadonlyArray<SelectOption<ReminderUnitName>>;
   anchorOptions: ReadonlyArray<SelectOption<"start" | "due">>;
   canChooseAnchor: boolean;
-  hasStart: boolean;
 }) {
   const [prevVal, setPrevVal] = useState(card.value);
   const [val, setVal] = useState(card.value);
@@ -208,23 +207,17 @@ function ReminderCard({
           className="w-28 sm:w-32 shrink-0"
         />
 
-        {/* Anchor selector using system SelectDropdown */}
-        {canChooseAnchor ? (
-          <SelectDropdown<"start" | "due">
-            label={t("task.anchor_start")}
-            hideLabel
-            size="sm"
-            options={anchorOptions}
-            value={card.anchor}
-            disabled={card.anchorDisabled}
-            onChange={handleAnchorChange}
-            className="flex-1 min-w-[150px] sm:max-w-[200px]"
-          />
-        ) : (
-          <span className="text-footnote text-ink-secondary whitespace-nowrap px-1">
-            {hasStart ? t("task.anchor_start") : t("task.anchor_due")}
-          </span>
-        )}
+        {/* Anchor selector using system SelectDropdown (always rendered as dropdown, disabled if anchor cannot be changed) */}
+        <SelectDropdown<"start" | "due">
+          label={t("task.anchor_start")}
+          hideLabel
+          size="sm"
+          options={anchorOptions}
+          value={card.anchor}
+          disabled={card.anchorDisabled || !canChooseAnchor}
+          onChange={handleAnchorChange}
+          className="flex-1 min-w-[150px] sm:max-w-[200px]"
+        />
 
         {/* Delete button */}
         <button
@@ -289,6 +282,21 @@ export function CalendarReminderControl({
     (startReminderActive ? 1 : 0) + (dueReminderActive ? 1 : 0);
   const bothActive = startReminderActive && dueReminderActive;
 
+  const [prevTaskKey, setPrevTaskKey] = useState(
+    () => `${task.id}:${task.reminder}:${task.due_reminder}`,
+  );
+  const [primaryAnchor, setPrimaryAnchor] = useState<"start" | "due">(() =>
+    dueReminderActive && !startReminderActive ? "due" : "start",
+  );
+
+  const currentTaskKey = `${task.id}:${task.reminder}:${task.due_reminder}`;
+  if (currentTaskKey !== prevTaskKey) {
+    setPrevTaskKey(currentTaskKey);
+    if (activeCount === 1) {
+      setPrimaryAnchor(dueReminderActive ? "due" : "start");
+    }
+  }
+
   // Timestamps
   const startPreview = startReminderActive
     ? computeReminderPreview(
@@ -297,6 +305,7 @@ export function CalendarReminderControl({
         parsedStart.value,
         parsedStart.unit,
         timeFormat,
+        task.start_date ? "09:00" : "21:00",
       )
     : null;
 
@@ -307,6 +316,7 @@ export function CalendarReminderControl({
         parsedDue.value,
         parsedDue.unit,
         timeFormat,
+        "21:00",
       )
     : null;
 
@@ -346,7 +356,7 @@ export function CalendarReminderControl({
   const cards: ActiveReminderCardData[] = [];
 
   if (bothActive) {
-    cards.push({
+    const startCard: ActiveReminderCardData = {
       key: "card-start",
       anchor: "start",
       value: parsedStart.value,
@@ -357,9 +367,9 @@ export function CalendarReminderControl({
         onSave({ reminder: formatReminderString(val, unit) }),
       onAnchorChange: () => {},
       onRemove: () => onSave({ reminder: "none" }),
-    });
+    };
 
-    cards.push({
+    const dueCard: ActiveReminderCardData = {
       key: "card-due",
       anchor: "due",
       value: parsedDue.value,
@@ -370,7 +380,13 @@ export function CalendarReminderControl({
         onSave({ due_reminder: formatReminderString(val, unit) }),
       onAnchorChange: () => {},
       onRemove: () => onSave({ due_reminder: "none" }),
-    });
+    };
+
+    if (primaryAnchor === "due") {
+      cards.push(dueCard, startCard);
+    } else {
+      cards.push(startCard, dueCard);
+    }
   } else if (activeCount === 1) {
     const isDue = dueReminderActive;
     const currentParsed = isDue ? parsedDue : parsedStart;
@@ -478,7 +494,6 @@ export function CalendarReminderControl({
             unitOptions={unitOptions}
             anchorOptions={anchorOptions}
             canChooseAnchor={canChooseAnchor}
-            hasStart={hasStart}
           />
         ))}
       </div>
