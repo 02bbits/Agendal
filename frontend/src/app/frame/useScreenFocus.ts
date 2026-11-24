@@ -6,18 +6,19 @@ import {
 
 export const APP_NAME = "Agendal";
 
-/** Formats the document title with `(1) Agendal` when reminders exist, else `${headingName} · Agendal`. */
+/** Formats the document title as `(1) Inbox · Agendal` when reminders exist, else `Inbox · Agendal`. */
 export function formatDocumentTitle(headingName?: string): string {
+  const base = headingName ? `${headingName} · ${APP_NAME}` : APP_NAME;
   const count = getReminderAlertCount();
   if (count > 0) {
-    return `(${count}) ${APP_NAME}`;
+    return `(${count}) ${base}`;
   }
-  return headingName ? `${headingName} · ${APP_NAME}` : APP_NAME;
+  return base;
 }
 
 /**
  * A11Y-72: each screen names the browser tab after its heading ("Inbox · Agendal"),
- * or shows `(1) Agendal` when a reminder is active (#186). A route change moves
+ * prefixed with `(1)` when a reminder is active (#186). A route change moves
  * focus to that heading, unless the new screen focused a field of its own.
  */
 export function useScreenFocus(pathname: string) {
