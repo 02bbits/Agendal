@@ -423,6 +423,21 @@ final class NoteRepeatParser
     }
 
     /**
+     * Whether $text only goes on with a schedule: "for 2 weeks", "until Friday", "Wednesday and Friday for 2 weeks".
+     * After a series, a line break or full stop before it does not end the schedule (#156).
+     */
+    public static function continuesSchedule(string $text): bool
+    {
+        return self::startsQualifier($text) || self::onlyDurationAndModifiers($text);
+    }
+
+    /** Whether $text names a repeat ("every day", "mỗi thứ 3", "weekly"). */
+    public static function hasRepeat(string $text): bool
+    {
+        return NoteVocabulary::findAll('repeat', $text) !== [] || NoteVocabulary::contains('repeat_prefix', $text);
+    }
+
+    /**
      * Nothing but amounts of time, periods, ends, date and repeat words, and joiners: "for 2 weeks and 3 days",
      * "for 2 weeks never ends". Whatever this lets through, the extractor reads or keeps for review.
      */

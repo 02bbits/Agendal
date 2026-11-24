@@ -36,11 +36,12 @@ export function ProjectScreen({
   onRenameProject,
   navigate,
   selectedTaskId,
+  liveTask = (task) => task,
 }: ProjectScreenProps) {
   const [deleting, setDeleting] = useState(false);
 
-  const open = dedupeTasks(sortOpenByDue(openTasks));
-  const completed = dedupeTasks(sortCompleted(completedTasks));
+  const open = dedupeTasks(sortOpenByDue(openTasks)).map(liveTask);
+  const completed = dedupeTasks(sortCompleted(completedTasks)).map(liveTask);
   const totalTasks = openTasks.length + completedTasks.length;
   const progress = explicitProgress ?? {
     done: completedTasks.length,

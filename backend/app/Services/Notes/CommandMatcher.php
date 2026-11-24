@@ -164,6 +164,12 @@ final class CommandMatcher
             }
             $source = $command(implode('', array_slice($pieces, $first, $last - $first + 1)));
             $match = $this->match($source, $action, $openTasks, $doneTasks, $context)->withSourceText($source);
+            // A later name that opens a task of its own and finds no open task is that new task, without the
+            // command's when (#156): "done email group and call mum" also makes "Call mum".
+            if ($first > 0 && $first === $last && ($match->skip === SkipReason::NotFound || $match->newTask !== null)
+                && NoteVocabulary::opensWithObject($pieces[$first], NoteVocabulary::phrases('task_verb'), array_values($context->projects))) {
+                $match = CommandMatch::newTask($this->extractor->extract(trim($pieces[$first]), $context))->withSourceText(trim($pieces[$first]));
+            }
             $matches[$match->change->taskId ?? 'item '.count($matches)] = $match;
         }
 

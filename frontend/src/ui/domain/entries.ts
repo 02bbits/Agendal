@@ -17,8 +17,10 @@ export function entriesOf(task: Task): DayEntry[] {
     return [];
   }
   if (hasStart && hasDue) {
+    // A same-day task is one normal card; the dashed due marker is only for
+    // a due-only task or the last day of a span (LV §2.2).
     if (task.start_date === task.due_date) {
-      return [{ task, kind: "due", date: task.due_date! }];
+      return [{ task, kind: "start", date: task.due_date! }];
     }
     return [
       { task, kind: "start", date: task.start_date! },
@@ -41,15 +43,16 @@ export function matchesEntry(entry: DayEntry, filter: UpcomingFilter): boolean {
     ) {
       return true;
     }
-    return (
-      Boolean(entry.task.start_date) &&
-      (entry.kind === "start" || entry.task.start_date === entry.task.due_date)
-    );
+    return Boolean(entry.task.start_date) && entry.kind === "start";
   }
   if (filter === "due") {
-    return entry.kind === "due";
+    return entry.kind === "due" || isSameDay(entry.task);
   }
   return true;
+}
+
+function isSameDay(task: Task): boolean {
+  return Boolean(task.due_date) && task.start_date === task.due_date;
 }
 
 /** Scheduled is about starts, so a same-day task is a normal card there, not a due one. */

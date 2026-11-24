@@ -54,6 +54,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Completing an overdue task counts toward today.
 - **All done:** when nothing is open in Overdue or Today, `list.nothing_left` shows with the link `list.see_upcoming` and `list.encourage_one`.
 - **Sort within Overdue:** oldest due date first. **Within Today:** timed first by start time, then priority (High → Low), then by creation time. **Within No date:** priority, then newest first.
+- **A task edited in the panel keeps its place:** once a task has been opened in the panel, its row stays in the section and place it had when it was first opened, so changing a date or time doesn't make it jump. The row shows the new values at once. It keeps that place after the panel closes, and for every task opened on the screen, until the user leaves the screen (another tab or page) or reloads; coming back sorts the list again. Two changes are not held: ticking a task done (it still settles into Completed) and moving it to another project (it leaves that project's list at once). The same holds in Upcoming and in a project. On phones the task opens as its own screen, so the list is sorted when the user comes back.
 - **Midnight:** the lists recompute at local midnight while the app is open (a timer to the next midnight, re-armed on `visibilitychange`), and whenever the zone changes ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)).
 
 ### 2.2 Upcoming (LV-2)
@@ -69,13 +70,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - **Board view:** one week of columns, Overdue column first.
 - **Day groups:** tasks from tomorrow on, grouped by day, with headings Tomorrow, then `Mon 26 Oct` ([UX-32](../01-product/ux-standards.md#ux-32)). Every day is shown with a "+ Add task" action button (empty days are shown; this replaces "Days with nothing due aren't shown").
 - **Task entries:**
-  - A task appears on its **start date** AND on its **due date** (shown once when they are the same day).
-  - On its due date, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue).
+  - A task appears on its **start date** AND on its **due date**. A task that starts and is due the same day is shown once, as a **normal card**.
+  - On the due date of a due-only task, or on the last day of a task that spans several days, it is shown in a **dashed blue card** (1.5 px dashed border in the project blue, very light blue fill, "Due HH:MM" in blue). This marker says "this is the deadline", so a same-day task never gets it.
   - **List:** normal entries of a day share one card and due entries share one dashed block below it, split by a dashed line. **Board:** one card per entry, normal ones first.
 - **Filters** (chips, remembered per device):
   - **All:** every upcoming entry, start days and due days.
   - **Scheduled:** start-day entries of tasks with a start date, plus repeating tasks with no start date on their due day (`17:00 · Every week`, without the word Due). Only the real next occurrence shows, never a projection. Every entry here is a normal card, also for a task that starts and is due the same day.
-  - **Due only:** due-day entries of tasks with a due date.
+  - **Due only:** due-day entries of tasks with a due date, and same-day tasks (still as normal cards).
 - **Sort within a day:** same as Today (timed first by start time, then priority (High → Low), then created). Completed tasks aren't shown.
 - **Repeating tasks** show only their existing next occurrence. Future occurrences aren't projected ([TK §2.3](TK-tasks.md#23-repeating-tasks-tk-4)).
 - **Empty:** empty days show "+ Add task"; if no tasks exist anywhere in the window, shows `list.upcoming_empty`.
@@ -122,14 +123,35 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Layout:**
   - Checkbox (44 px hit area)
   - Title (2 lines max, [UX-30](../01-product/ux-standards.md#ux-30))
-  - Meta line:
-    - On its start day: `HH:MM · Due {date}`; same-day block: `HH:MM – HH:MM` (start – due time)
+  - Meta line (date and time are separate layers: the date always shows and a time only adds detail, so clearing a time never empties the line, it falls back to the date-only form):
+    - Start and due on the same day: both times `Start 08:30 · Due 10:00` (`Start` in plain ink, `Due 10:00` in blue, turning red once its due time has passed today); start time only `Start at 08:30 · Due today` (`Start at` in plain ink, `Due today` in blue; another day: `Due {date}`); due time only `Due today, 17:00` in blue (in Upcoming `Due 17:00`); no time: `Starts today` (in Today) or `{date}` (another day).
+    - Due today, starting another day or not at all: when started earlier, `Started {date}` comes first (plain ink) followed by `Due today` or `Due today, HH:MM` in blue (red from the due time); when no start date, `Due today` or `Due today, HH:MM` in blue. In Upcoming a due entry without a time reads `Started {date} · Due {date}`
+    - Starting today in Today: `Start at HH:MM` or `Starts today`, then `Due {date}` when it is due later. On its start day in Upcoming: `HH:MM · Due {date}`
     - In between (in progress): `In progress · Due {when}`
     - On its due day: rendered in a dashed blue card with `Due HH:MM` in blue
     - Overdue rows: red
     - Start-only passed: `Planned {date} · HH:MM` in tertiary ink
     - In Overdue, Search and No date, the meta line starts with the due date (`Wed 21 Oct`)
     - Project dot and name · reminder icon · repeat icon. An open repeating task shows the icon with its text in blue (`Every week`, or the calendar rule's description). A completed one keeps the plain icon.
+
+#### Task Card Date/Time Display Matrix (Today & Upcoming)
+
+| # | State | Start / Due Date | Start / Due Time | Meta Text (Today view) | Tone / Color | Notes |
+|---|---|---|---|---|---|---|
+| **1.1** | Same day, both times | `start === due === today` | `08:30` & `10:00` | `Start 08:30 · Due 10:00` | `Start` plain · `Due` blue (turns red when due time passed) | Fixed start and deadline |
+| **1.2** | Same day, start time only | `start === due === today` | `start: 08:30`, no due time | `Start at 08:30 · Due today` | `Start at` plain · `Due today` blue (`due`) | Clearly shows start time & deadline with blue due emphasis |
+| **1.3** | Same day, due time only | `start === due === today` | no start time, `due: 17:00` | `Due today, 17:00` | Blue `due` (Red `late` if past due time) | Deadline emphasis |
+| **1.4** | Same day, untimed | `start === due === today` | no times | `Starts today` | Plain | Untimed same-day task |
+| **1.5** | Starts today, start time only | `start === today`, no due | `start: 09:00` | `Start at 09:00` | Plain | Starts today with time |
+| **1.6** | Starts today, untimed | `start === today`, no due | no times | `Starts today` | Plain | Starts today without deadline |
+| **1.7** | Due today, due time only | `due === today`, no start | `due: 18:00` | `Due today, 18:00` | Blue `due` (Red `late` if past time) | Deadline today |
+| **1.8** | Due today, untimed | `due === today`, no start | no times | `Due today` | Blue `due` | Deadline today |
+| **1.9** | In progress | `start < today`, `due > today` | optional times | `In progress · Due {when}` | `In progress` plain · `Due {when}` blue | Multi-day running task |
+| **1.10** | Started earlier, due today | `start < today`, `due === today` | `due: 16:00` | `Started {date} · Due today, 16:00` | `Started` plain · `Due today` blue (`due`) | Start precedes due date chronologically; deadline today |
+| **1.11** | Planned, timed | `start < today`, no due | `start: 09:00` | `Planned {date} · 09:00` | Muted (`text-content-subtle`) | Ongoing plan |
+| **1.12** | Planned, untimed | `start < today`, no due | no times | `Planned {date}` | Muted (`text-content-subtle`) | Ongoing plan without deadline |
+| **Overdue** | Overdue | `due < today`, uncompleted | any | `Due {date}[, HH:MM]` | Red `late` | Past deadline |
+
   - Priority flag for High (danger) and Medium (warning). Low gets no flag
 - **Interaction:** tapping the row opens details. Tapping the checkbox completes it (TK). There are no swipe gestures, which avoids conflicts with the browser's back gesture.
 - **A row with a sync conflict** shows a small "Changed on another device" marker until opened (AP).

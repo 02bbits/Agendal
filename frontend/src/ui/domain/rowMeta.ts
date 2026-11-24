@@ -20,227 +20,184 @@ export interface MetaPart {
   tone: MetaTone;
 }
 
-export function rowMeta(
-  task: Task,
-  opts: {
-    today: string;
-    timeFormat: TimeFormat;
-    nowTime?: string;
-    entry?: EntryKind;
-  },
-): MetaPart[] {
-  const day = (d: string) => formatDay(d, opts.today);
-  const time = (tm: string) => formatTime(tm, opts.timeFormat);
+export interface RowMetaOptions {
+  today: string;
+  timeFormat: TimeFormat;
+  nowTime?: string;
+  entry?: EntryKind;
+}
 
-  const getParts = (): MetaPart[] => {
-    // 1. No dates
-    if (!task.start_date && !task.due_date) {
-      return [];
-    }
+/**
+ * The meta line of a task row (LV §2.4). Date and time are separate layers:
+ * the date always shows, a time only adds detail, so clearing a time never
+ * empties the line. Without `entry` the row sits in Inbox, a project or
+ * Search; with it, in an Upcoming day group.
+ */
+export function rowMeta(task: Task, opts: RowMetaOptions): MetaPart[] {
+  const parts = metaParts(task, new MetaFormat(opts));
+  return task.done ? parts.map((p) => ({ ...p, tone: "plain" })) : parts;
+}
 
-    // 2. Open, due_date < today
-    if (task.due_date && task.due_date < opts.today) {
-      const dayStr = day(task.due_date);
-      const text = task.due_time
-        ? t("task.due_on", { date: `${dayStr}, ${time(task.due_time)}` })
-        : t("task.due_on", { date: dayStr });
-      return [{ text, tone: task.done ? "plain" : "late" }];
-    }
+class MetaFormat {
+  constructor(readonly opts: RowMetaOptions) {}
 
-    // 3. start_date === due_date
-    if (task.start_date && task.due_date && task.start_date === task.due_date) {
-      const parts: MetaPart[] = [];
-      if (task.start_time) {
-        parts.push({
-          text: t("task.starts_at", { time: time(task.start_time) }),
-          tone: "plain",
-        });
-      }
-      if (task.due_time) {
-        const text = task.start_time
-          ? t("task.due_at_time", { time: time(task.due_time) })
-          : t("task.due_at", { time: time(task.due_time) });
-        parts.push({
-          text,
-          tone: task.done ? "plain" : opts.entry !== "start" ? "due" : "plain",
-        });
-      } else if (
-        !task.start_time &&
-        !opts.entry &&
-        task.start_date === opts.today
-      ) {
-        parts.push({
-          text: t("task.starts_today"),
-          tone: "plain",
-        });
-      }
-      return parts;
-    }
-
-    // 4. entry === "due", or no entry and due_date === today
-    if (opts.entry === "due" || (!opts.entry && task.due_date === opts.today)) {
-      let tone: MetaTone = "due";
-      if (
-        task.due_date === opts.today &&
-        task.due_time &&
-        opts.nowTime &&
-        opts.nowTime >= task.due_time
-      ) {
-        tone = "late";
-      }
-      if (task.done) {
-        tone = "plain";
-      }
-
-      const parts: MetaPart[] = [];
-      if (task.due_time) {
-        parts.push({
-          text: t("task.due_at", { time: time(task.due_time) }),
-          tone,
-        });
-      }
-      if (task.start_date) {
-        parts.push({
-          text: t("task.started_on", { date: day(task.start_date) }),
-          tone: "plain",
-        });
-      }
-      return parts;
-    }
-
-    // 4b. Repeating task with no start_date on Scheduled (entry === "start")
-    if (
-      opts.entry === "start" &&
-      !task.start_date &&
-      task.repeat !== "never" &&
-      task.due_date
-    ) {
-      if (task.due_time) {
-        return [{ text: time(task.due_time), tone: "plain" }];
-      }
-      return [];
-    }
-
-    // 5. entry === "start", or no entry and start_date === today
-    if (
-      opts.entry === "start" ||
-      (!opts.entry && task.start_date === opts.today)
-    ) {
-      const parts: MetaPart[] = [];
-      if (task.start_time) {
-        const timeStr = time(task.start_time);
-        const text =
-          !opts.entry && task.start_date === opts.today
-            ? t("task.starts_at", { time: timeStr })
-            : timeStr;
-        parts.push({
-          text,
-          tone: "plain",
-        });
-      } else if (!opts.entry && task.start_date === opts.today) {
-        parts.push({
-          text: t("task.starts_today"),
-          tone: "plain",
-        });
-      }
-      if (task.due_date) {
-        const dayStr = day(task.due_date);
-        const text = task.due_time
-          ? t("task.due_on", { date: `${dayStr}, ${time(task.due_time)}` })
-          : t("task.due_on", { date: dayStr });
-        parts.push({
-          text,
-          tone: "plain",
-        });
-      }
-      return parts;
-    }
-
-    // 6. start_date < today and due_date > today
-    if (
-      task.start_date &&
-      task.due_date &&
-      task.start_date < opts.today &&
-      task.due_date > opts.today
-    ) {
-      let dayStr = day(task.due_date);
-      if (task.due_date === addDays(opts.today, 1)) {
-        dayStr = dayStr.toLowerCase();
-      }
-      const when = task.due_time ? `${dayStr}, ${time(task.due_time)}` : dayStr;
-      return [
-        { text: t("task.in_progress"), tone: "plain" },
-        {
-          text: t("task.due_on", { date: when }),
-          tone: task.done ? "plain" : "due",
-        },
-      ];
-    }
-
-    // 7. start_date < today and no due_date
-    if (task.start_date && task.start_date < opts.today && !task.due_date) {
-      const parts: MetaPart[] = [
-        {
-          text: t("task.planned", { date: day(task.start_date) }),
-          tone: task.done ? "plain" : "muted",
-        },
-      ];
-      if (task.start_time) {
-        parts.push({
-          text: time(task.start_time),
-          tone: task.done ? "plain" : "muted",
-        });
-      }
-      return parts;
-    }
-
-    // 8. Future start_date
-    if (task.start_date && task.start_date > opts.today) {
-      const parts: MetaPart[] = [
-        {
-          text: day(task.start_date),
-          tone: "plain",
-        },
-      ];
-      if (task.start_time) {
-        parts.push({
-          text: time(task.start_time),
-          tone: "plain",
-        });
-      }
-      if (task.due_date) {
-        const dayStr = day(task.due_date);
-        const text = task.due_time
-          ? t("task.due_on", { date: `${dayStr}, ${time(task.due_time)}` })
-          : t("task.due_on", { date: dayStr });
-        parts.push({
-          text,
-          tone: "plain",
-        });
-      }
-      return parts;
-    }
-
-    // 9. Future due_date only
-    if (task.due_date && task.due_date > opts.today) {
-      const dayStr = day(task.due_date);
-      const text = task.due_time
-        ? t("task.due_on", { date: `${dayStr}, ${time(task.due_time)}` })
-        : t("task.due_on", { date: dayStr });
-      return [
-        {
-          text,
-          tone: task.done ? "plain" : "due",
-        },
-      ];
-    }
-
-    return [];
-  };
-
-  const parts = getParts();
-  if (task.done) {
-    return parts.map((p) => ({ ...p, tone: "plain" as const }));
+  get today() {
+    return this.opts.today;
   }
+
+  day(date: string) {
+    return formatDay(date, this.opts.today);
+  }
+
+  time(time: string) {
+    return formatTime(time, this.opts.timeFormat);
+  }
+
+  /** `Due today`, `Due today, 17:00`, `Due Mon 23 Nov`, `Due Mon 23 Nov, 17:00`. */
+  dueOn(date: string, time: string | null) {
+    if (date === this.today) {
+      return time
+        ? t("task.due_today_at", { time: this.time(time) })
+        : t("task.due_today");
+    }
+    const day = this.day(date);
+    return t("task.due_on", {
+      date: time ? `${day}, ${this.time(time)}` : day,
+    });
+  }
+
+  /** Red once the due time has passed today (LV-E9), else the given tone. */
+  dueTone(task: Task, tone: MetaTone): MetaTone {
+    const passed =
+      task.due_date === this.today &&
+      !!task.due_time &&
+      !!this.opts.nowTime &&
+      this.opts.nowTime >= task.due_time;
+    return passed ? "late" : tone;
+  }
+}
+
+function metaParts(task: Task, f: MetaFormat): MetaPart[] {
+  const { start_date: start, due_date: due } = task;
+  const entry = f.opts.entry;
+
+  if (!start && !due) return [];
+  if (due && due < f.today) return overdueParts(task, f);
+  if (start && start === due) return sameDayParts(task, f);
+  if (due && (entry === "due" || (!entry && due === f.today)))
+    return dueDayParts(task, f);
+  if (entry === "start" && !start && task.repeat !== "never" && due)
+    return task.due_time ? [plain(f.time(task.due_time))] : [];
+  if (start && (entry === "start" || (!entry && start === f.today)))
+    return startDayParts(task, f);
+  if (start && start < f.today)
+    return due ? inProgressParts(task, f) : plannedParts(task, f);
+  if (start) return futureStartParts(task, f);
+  return [{ text: f.dueOn(due!, task.due_time), tone: "due" }];
+}
+
+function plain(text: string): MetaPart {
+  return { text, tone: "plain" };
+}
+
+/** Overdue: `Due {day}[, HH:MM]` in red. */
+function overdueParts(task: Task, f: MetaFormat): MetaPart[] {
+  return [{ text: f.dueOn(task.due_date!, task.due_time), tone: "late" }];
+}
+
+/** Start and due on one day (Today 1.1–1.4, and a normal card in Upcoming). */
+function sameDayParts(task: Task, f: MetaFormat): MetaPart[] {
+  const date = task.due_date!;
+  const { start_time: startTime, due_time: dueTime } = task;
+  const entry = f.opts.entry;
+
+  if (startTime && dueTime) {
+    return [
+      plain(t("task.start_at", { time: f.time(startTime) })),
+      {
+        text: t("task.due_at", { time: f.time(dueTime) }),
+        tone: f.dueTone(task, "due"),
+      },
+    ];
+  }
+  if (startTime) {
+    return [
+      plain(t("task.starts_at", { time: f.time(startTime) })),
+      { text: f.dueOn(date, null), tone: f.dueTone(task, "due") },
+    ];
+  }
+  if (dueTime) {
+    const text =
+      entry || date !== f.today
+        ? t("task.due_at", { time: f.time(dueTime) })
+        : f.dueOn(date, dueTime);
+    return [{ text, tone: f.dueTone(task, "due") }];
+  }
+  if (!entry && date === f.today) {
+    return [plain(t("task.starts_today"))];
+  }
+  return [plain(f.day(date))];
+}
+
+/** The due day of a task that started earlier, or has no start (1.7, 1.8, 1.10). */
+function dueDayParts(task: Task, f: MetaFormat): MetaPart[] {
+  const date = task.due_date!;
+  const text =
+    f.opts.entry && task.due_time
+      ? t("task.due_at", { time: f.time(task.due_time) })
+      : f.dueOn(date, task.due_time);
+  const parts: MetaPart[] = [];
+  if (task.start_date) {
+    parts.push(plain(t("task.started_on", { date: f.day(task.start_date) })));
+  }
+  parts.push({ text, tone: f.dueTone(task, "due") });
+  return parts;
+}
+
+/** The start day: `Start at 09:00` / `Starts today` (1.5, 1.6), or `09:00` in Upcoming. */
+function startDayParts(task: Task, f: MetaFormat): MetaPart[] {
+  const parts: MetaPart[] = [];
+  const inToday = !f.opts.entry;
+  if (task.start_time) {
+    const time = f.time(task.start_time);
+    parts.push(plain(inToday ? t("task.starts_at", { time }) : time));
+  } else if (inToday) {
+    parts.push(plain(t("task.starts_today")));
+  }
+  if (task.due_date) parts.push(plain(f.dueOn(task.due_date, task.due_time)));
+  return parts;
+}
+
+/** Started before today, due later (1.9): `In progress · Due {when}`. */
+function inProgressParts(task: Task, f: MetaFormat): MetaPart[] {
+  const date = task.due_date!;
+  let day = f.day(date);
+  if (date === addDays(f.today, 1)) day = day.toLowerCase();
+  const when = task.due_time ? `${day}, ${f.time(task.due_time)}` : day;
+  return [
+    plain(t("task.in_progress")),
+    { text: t("task.due_on", { date: when }), tone: "due" },
+  ];
+}
+
+/** Start-only, start passed (1.11, 1.12): `Planned {day}[ · HH:MM]` in tertiary ink. */
+function plannedParts(task: Task, f: MetaFormat): MetaPart[] {
+  const parts: MetaPart[] = [
+    {
+      text: t("task.planned", { date: f.day(task.start_date!) }),
+      tone: "muted",
+    },
+  ];
+  if (task.start_time) {
+    parts.push({ text: f.time(task.start_time), tone: "muted" });
+  }
+  return parts;
+}
+
+/** Starts after today, seen outside Upcoming (Search, a project). */
+function futureStartParts(task: Task, f: MetaFormat): MetaPart[] {
+  const parts: MetaPart[] = [plain(f.day(task.start_date!))];
+  if (task.start_time) parts.push(plain(f.time(task.start_time)));
+  if (task.due_date) parts.push(plain(f.dueOn(task.due_date, task.due_time)));
   return parts;
 }

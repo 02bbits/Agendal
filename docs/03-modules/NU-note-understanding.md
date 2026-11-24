@@ -61,7 +61,13 @@ Every note goes through the same steps, on the server, in one request:
 ### 2.2 Splitting (NU-1)
 
 - Split on newlines, `;`, `,` (not between digits, [NU-E18](#nu-e18)), and `. ` or a full stop at the end of the text (not after a known abbreviation, [NU-E19](#nu-e19)). A dot followed by anything other than a space or the end (`9.30`, `report.pdf`, `a.b@x.com`) never splits.
-- Split on the **whole word** "then", in any case ([NU-E17](#nu-e17)), and on "sau đó" or "rồi" when words follow them ([NU-E41](#nu-e41)). "and" and "và" never split.
+- Split on the **whole word** "then", in any case ([NU-E17](#nu-e17)), and on "sau đó", "rồi", "after that", "xong thì" and the like when words follow them ([NU-E41](#nu-e41)).
+- **Split two tasks joined by a connector ([NU-E43](#nu-e43), #156).** "and", "và", "&", "plus", "also", "as well as", "cũng như", "với" and the other joiners in the rules end an item when both of these hold:
+  - the part after it starts a task of its own: a task verb or a command followed by an object that isn't a pronoun ("call mum and email boss"), or a task that needs no object ("gọi mẹ và đi chợ");
+  - the part before it is more than a bare verb.
+
+  So "buy milk and eggs", "call mum and dad", "read and summarize chapter 3", "check email and reply", "finish report & submit it" and "send it to Mark" stay one task, and "or" / "hoặc" never splits. After a command, the open tasks decide: "done email group and report" completes both. A date, time, priority or repeat phrase that closes the last part also covers the earlier parts joined by a connector that have none of their own ("clean room and do laundry tomorrow"); a part with its own phrase keeps it.
+- Words that may join a second task or belong to a time or name ("next", "later", unaccented "roi" before a task verb) don't split; the item is low confidence ([NU-E43](#nu-e43)).
 - **Merge comma lists ([NU-E33](#nu-e33), [Q17](../08-project/open-questions.md#q17)).** A fragment after a comma joins the item before it when both of these hold:
   - After leading date/time/priority phrases and lead-ins, the item before it starts with a **task verb**: a list of about 150 common verbs (buy, call, email, finish, read, submit, write …), plus about 100 Vietnamese ones (mua, gọi, gửi, làm, học, nộp, đọc, viết …), kept with the engine and guarded by the corpus.
   - The fragment **starts no task of its own**: it doesn't open with a task verb, command verb, skip prefix, or a date, time, priority or repeat phrase ("mai gọi mẹ", "26 Oct meeting"), and it names no project, project keyword the user has, or task word (*exam, quiz, deadline, submit* …). Date, time, priority and repeat phrases that **close** the fragment describe the whole list: "mua sữa, trứng và bánh mì sáng mai" is one task for tomorrow morning.
@@ -107,7 +113,7 @@ The business-rules table is the phrase list. The precise semantics:
 | Project | A project name in the item (whole words, any case) wins over a keyword ([NU-E22](#nu-e22)). Keywords map only to projects the user has ([NU-E34](#nu-e34)). Unknown names → no project ([NU-E23](#nu-e23)). Project names stay in the title in their own casing ([NU-E21](#nu-e21)) |
 | Repeat | Extract the frequency into `repeat` and the calendar configuration into optional `repeat_rule`. Supported forms and examples follow below. Unresolved or contradictory patterns remain low confidence with their wording preserved. |
 | Reminder | *exam* or *quiz* → 1 day before. Otherwise, any task with a time → 15 min before. Otherwise none. A reminder that would fall before `now` → none ([NU-E25](#nu-e25)) |
-| Title | Remove the chosen date phrase, time, pure priority and repeat phrases, and lead-ins. With several dates, keep the other date phrases per [NU-E6](#nu-e6). Collapse spaces and strip trailing punctuation. Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
+| Title | Remove the chosen date phrase, time, pure priority and repeat phrases, and lead-ins. With several dates, keep the other date phrases per [NU-E6](#nu-e6). Collapse spaces, strip trailing punctuation and closing particles ("nhé", "nha", "ạ", "luôn", "thôi", "giúp mình với", "pls", "ok"; the title never becomes empty). Upper-case the first letter, keep the rest as typed, and upper-case the known acronyms (SQL, HCI, CV, UI, API, PDF). Over 200 characters follows [NU-E16](#nu-e16) |
 
 **Low confidence** (sent to the LLM when it's enabled, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)):
 - A date- or time-like token the rules couldn't parse (`31/2`, `3pmish`)
@@ -115,6 +121,7 @@ The business-rules table is the phrase list. The precise semantics:
 - No verb and no object left in the title (single-word titles from the keyword list, such as "Gym", are fine)
 - Text in a language other than English or Vietnamese ([NU-E28](#nu-e28))
 - Vietnamese typed without diacritics ([NU-E40](#nu-e40))
+- A closing word that may be a particle or part of the task ("gọi mẹ đi", "tập đi"), or "next" / "later" / unaccented "roi" before a task verb ([NU-E43](#nu-e43))
 
 #### Relative time
 
@@ -239,6 +246,7 @@ Decisions use the default seed context: Friday 23 Oct 2026, 08:12, Asia/Ho_Chi_M
 | <a id="nu-e40"></a>NU-E40 | Vietnamese typed without diacritics ("mai hop nhom 9h", "toi can mua sua") | Vietnamese is expected with diacritics, so no Vietnamese phrase matches. It is recognised when no letter has an accent, at least two words are Vietnamese syllables from the rules, and either most words are, or every word has the shape of a Vietnamese syllable (onset, vowel, final from the rules): "toi co mot cuoc gap voi giang vien" counts, "call me and an ex" doesn't. Handled like [NU-E28](#nu-e28): the title is kept as written, only numeric dates and times ("9h") are extracted, and the item is low confidence, so the LLM may read it | T-NU-140 · C-050 |
 | <a id="nu-e41"></a>NU-E41 | "rồi" at the end of an item ("bài tập xong rồi") | No split: "rồi" splits only when words follow it. "X xong rồi" is a complete command | T-NU-141 · C-046 |
 | <a id="nu-e42"></a>NU-E42 | Date range ("study Mon to Fri", "từ thứ 2 đến thứ 6") | Sets start date (Mon) and due date (Fri) | T-NU-142 |
+| <a id="nu-e43"></a>NU-E43 | Connector between two tasks ("call mum and email boss", "gọi mẹ rồi đi chợ", "delete old list and buy milk") | Two items, each with its own date or the shared closing one. Stays one task for lists, a shared verb, a second verb without its own object, a pronoun object ("write report and send it to Mark") and "or". "next", "later", "roi" before a task verb and a closing "đi" keep the item whole and low confidence | T-NU-143 |
 
 ## 5. Copy keys
 

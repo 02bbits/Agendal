@@ -102,6 +102,10 @@ final class NoteEngine
     private function planItem(string $ref, string $item, NoteContext $context, array $openTasks, array $doneTasks): array
     {
         $classification = $this->classifier->classify($item, $context);
+        if ($classification->kind === ItemKind::Command && NoteVocabulary::hedged(NoteVocabulary::withoutLiterals($item, array_values($context->projects)))) {
+            // "move report to friday but keep it high", "done email group but not report": no change on a guess (#156).
+            return $this->skipped($ref, $item, SkipReason::Skip, true);
+        }
 
         return match ($classification->kind) {
             ItemKind::Skip => $this->skipped($ref, $item, SkipReason::Skip),

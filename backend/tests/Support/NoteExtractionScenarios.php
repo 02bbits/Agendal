@@ -27,7 +27,7 @@ final class NoteExtractionScenarios
         'bound_lead', 'bound_lead_next', 'bound_more', 'bound_trail', 'bound_fortnight', 'bound_start_lead', 'bound_until_lead', 'bound_period',
         'bound_through_lead', 'bound_approximate', 'bound_approximate_suffix', 'bound_end_word',
         'bound_next_marker', 'copy_unit', 'count_unit', 'count_lead', 'deadline_word', 'repeat_endless', 'priority_negation', 'content_word_exempt', 'weekday_list_separator',
-        'vietnamese_onset', 'vietnamese_nucleus', 'vietnamese_coda',
+        'vietnamese_onset', 'vietnamese_nucleus', 'vietnamese_coda', 'trailing_particle', 'trailing_hedge', 'uncertain_joiner',
     ];
 
     /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string}> note, expected fields, now */
@@ -91,6 +91,10 @@ final class NoteExtractionScenarios
             'priority_high_content' => [['đọc sách '.$value, ['priority' => 'high'], self::NOW]],
             // "thi công" holds "thi" but is no exam: no High, no day-before reminder.
             'content_word_exempt' => [['đi '.$value.' ngày mai', ['priority' => 'low', 'reminder' => 'none'], self::NOW]],
+            // A closing particle leaves the title ("gọi mẹ nhé"); a word that may be one ("đi") is left to the fallback.
+            'trailing_particle' => [['đọc sách '.$value, ['title' => 'Đọc sách'], self::NOW]],
+            'trailing_hedge' => [['đọc sách '.$value, ['lowConfidence' => true], self::NOW]],
+            'uncertain_joiner' => [['call mum '.$value.' email boss', ['lowConfidence' => true], self::NOW], ['call mum '.$value, ['lowConfidence' => false], self::NOW]],
             'priority_low' => [['đọc sách '.$value, ['priority' => 'low', 'title' => 'Đọc sách'], self::NOW]],
             'priority_medium' => [['đọc sách '.$value, ['priority' => 'medium', 'title' => 'Đọc sách'], self::NOW]],
             // "không gấp", "not urgent": a negated High word is a Low one, and leaves the title whole.

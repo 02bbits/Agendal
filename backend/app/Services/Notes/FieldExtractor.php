@@ -40,6 +40,10 @@ final class FieldExtractor
         // Literals (URLs, emails, file and project names) hold no field: project "Daily" repeats nothing.
         $readable = $this->withoutUnaccentedVietnamese(NoteVocabulary::withoutLiterals($text, array_values($context->projects)));
         $repeat = $this->repeats->parse($readable, $context);
+        if (NoteVocabulary::hedged($readable)) {
+            // "call mum but not today" must not be due today: the whole item stays as written for the fallback (#156).
+            $repeat = ['repeat' => Repeat::Never, 'spans' => [], 'unreadable' => true, 'rule' => null, 'copies' => 1];
+        }
         // An unsupported recurrence must not become a one-off date from a weekday inside it.
         $timeText = $readable;
         foreach ($repeat['boundSpans'] ?? [] as [$offset, $length]) {
@@ -119,7 +123,8 @@ final class FieldExtractor
             reminder: $this->reminder($readable, $dueDate, $time->start, $context),
             lowConfidence: $date->unreadable || $time->unreadable || $repeat['unreadable'] || $this->unactionable($title, $context)
                 || $this->unaccentedVietnamese($text) || $this->unknownLanguage($readable, $dueDate !== null || $time->start !== null)
-                || $this->hasUnresolvedReference($title, $context) || $this->chatty($text, $context),
+                || $this->hasUnresolvedReference($title, $context) || $this->chatty($text, $context)
+                || $this->endsWithHedge($title) || $this->hasUncertainJoiner($text),
             repeatRule: $repeat['rule'],
             copies: $repeat['copies'] ?? 1,
             trustedFields: $this->trusted($text, $readable, $date, $time, $repeat, $dueDate, $project, $context),
@@ -446,13 +451,37 @@ final class FieldExtractor
         return (NoteVocabulary::literals($title)[0][0] ?? null) === 0 ? $title : mb_strtoupper(mb_substr($title, 0, 1)).mb_substr($title, 1);
     }
 
-    /** Spaces, dashes, colons, commas, semicolons, full stops and joiners ("8am and 8pm" read) left at either end. */
+    /**
+     * Spaces, dashes, colons, commas, semicolons, full stops and joiners ("8am and 8pm" read) left at either end, and
+     * particles closing the title ("gọi mẹ nhé", "call mum pls"), as long as words remain.
+     */
     private function tidy(string $title): string
     {
         $joiner = '(?<![\p{L}\p{N}])(?:'.NoteVocabulary::phrases('list_joiner').')(?![\p{L}\p{N}])';
         $edge = '(?:\s|\p{Pd}|:|'.NoteVocabulary::phrases('comma').'|'.NoteVocabulary::phrases('separator').'|'.NoteVocabulary::phrases('full_stop').')+';
+        $particle = '~(?<=\S)\s+(?:'.NoteVocabulary::phrases('trailing_particle').')[\p{P}\s]*$~iu';
+        do {
+            $before = $title;
+            $title = (string) preg_replace('~^(?:'.$edge.'|'.$joiner.')+|(?:'.$edge.'|'.$joiner.')+$~iu', '', $title);
+            $title = (string) preg_replace($particle, '', $title);
+        } while ($title !== $before);
 
-        return (string) preg_replace('~^(?:'.$edge.'|'.$joiner.')+|(?:'.$edge.'|'.$joiner.')+$~iu', '', $title);
+        return $title;
+    }
+
+    /**
+     * "call mum, next email boss", "goi me roi di cho": a word that may join a second task or be a time ("next week",
+     * "ROI") stays unsplit, and the item goes to the fallback when a task verb follows it.
+     */
+    private function hasUncertainJoiner(string $text): bool
+    {
+        return preg_match('~(?<![\p{L}\p{N}_])(?:'.NoteVocabulary::phrases('uncertain_joiner').')\s+(?:'.NoteVocabulary::phrases('task_verb').')(?![\p{L}\p{N}_])~iu', $text) === 1;
+    }
+
+    /** "gọi mẹ đi": a closing word that may be a particle or part of the task ("tập đi") is left to the fallback. */
+    private function endsWithHedge(string $title): bool
+    {
+        return preg_match('~(?<=\S)\s+(?:'.NoteVocabulary::phrases('trailing_hedge').')[\p{P}\s]*$~iu', $title) === 1;
     }
 
     /**

@@ -4,6 +4,7 @@ import { TextButton } from "../../components/TextButton";
 import { CheckIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
 import { buildInbox } from "../../domain/lists";
+import { useFrozenOrder } from "./useFrozenOrder";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -98,7 +99,8 @@ export function InboxScreen({
       sessionStorage.setItem("agendal:inbox:open:completed", String(next));
     } catch {}
   };
-  const view = buildInbox(store.tasks, store.today, {
+  const frozen = useFrozenOrder(store.tasks, selectedTaskId);
+  const view = buildInbox(frozen.layout, store.today, {
     completedToday: store.completedToday,
     isSettling: store.isSettling,
   });
@@ -126,8 +128,8 @@ export function InboxScreen({
   ) => (
     <TaskRow
       key={task.id}
-      task={task}
-      project={store.projectOf(task)}
+      task={frozen.live(task)}
+      project={store.projectOf(frozen.live(task))}
       today={store.today}
       timeFormat={store.timeFormat}
       onToggle={store.toggle}
