@@ -42,7 +42,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Editor (NC-1, NC-2, NC-5)
 
-- **Layout:** full screen. A nav bar with Cancel on the left and "✦ New note" in the centre; the "Your note" card (429px minimum, text on ruled lines); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with Make tasks, full width (with the mic and the paperclip beside it once they exist). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
+- **Layout:** full screen. A nav bar with Cancel on the left and "✦ New note" in the centre; the "Your note" card (429px minimum, text on ruled lines); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with Make tasks, full width (with the paperclip beside it once it exists). The mic sits at the right of the "Your note" label. The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
 - **Focus:** the text area is focused inside the tap handler, so iOS opens the keyboard (focusing after an `await` doesn't).
 - **Examples** show while the text is empty: 3 chips ("sql quiz monday 9am, email the group tonight", "done email the group", "move gym to sunday"). A chip replaces the empty text and keeps focus at the end ([NC-5](#nc-5)).
 - **Make tasks** is enabled when the text has a visible character ([NU-E15](NU-note-understanding.md#nu-e15)), and not while listening or reading a file. Ctrl/Cmd+Enter submits ([UX-12](../01-product/ux-standards.md#ux-12)).
@@ -75,15 +75,17 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ### 2.3 Dictation (NC-3, Should)
 
 - **Engine ([Q11](../08-project/open-questions.md#q11)):** the device records the audio and the server has the app's language model ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) write it down word for word, in the languages spoken: a note often mixes Vietnamese and English. The browser's own speech service is not used: it is unreliable on iPhone and missing in Firefox. Where the browser can't record audio, the mic button is hidden, not disabled.
-- **Recording:** 16 kHz mono WAV, made on the device and sent inline to `POST /notes/dictation`. The audio is never stored or logged.
+- **Recording:** 16 kHz mono WAV, made on the device and sent inline to `POST /notes/dictation`. A recording with less than 300 ms of loud sound (a click, a cough) is not sent and ends with `note.no_speech`. The audio is never stored or logged.
+- **Writing down:** the model first says whether it heard clear speech, so silence or noise gives no words instead of made-up ones. It writes what was said as a note would be typed: English words inside Vietnamese speech stay in English (call mum, ROI), numbers and times are digits ("5 giờ chiều", "9am"), and a comma goes only between tasks, since the rules split on it ([NU §2.2](NU-note-understanding.md)).
 - **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, a one-time notice shows (`note.mic_notice`) with Continue / Cancel; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
 - **While listening:**
   - The mic button becomes Stop, and `note.listening` is announced.
   - Make tasks is disabled.
-- **Stopping:** Stop, 8 s of silence, or 60 s total. The words show once the model has written them down (a few seconds), not while speaking. They are inserted at the cursor, never replacing existing text (a selection is replaced, [NC-E17](#nc-e17)). Then `note.heard` shows, and the cursor goes to the end of the inserted text.
+- **Stopping:** Stop, 8 s of silence, or 60 s total. `note.reading` shows while the model writes the words down (a few seconds), and Make tasks stays disabled. The words show then, not while speaking. They are inserted at the cursor, never replacing existing text (a selection is replaced, [NC-E17](#nc-e17)). Then `note.heard` shows, and the cursor goes to the end of the inserted text.
 - **Errors:**
   - Permission denied → `note.mic_denied`, and the mic stays visible so the user can retry.
   - No speech → `note.no_speech`.
+  - The dictation limit (`429`) → `error.rate_limited` with the seconds to wait from `retry_after`, as for Make tasks.
   - Network error, the model off or failing → `note.dictation_failed`.
 - **Offline:** the mic is disabled with `note.dictation_offline` (the model is on the server).
 
@@ -143,7 +145,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|---|---|---|---|
 | Capture bar | Placeholder `note.placeholder` | — | — | — | Same (still opens the editor) | Mic hidden if unsupported |
 | Editor | Examples, Make tasks disabled | `note.reading` after 300 ms, read-only | → RV screen, draft cleared | `422`: inline error under the text. `5xx` / network: queued, `note.processing_failed` | `note.save_offline`, paperclip and mic disabled | — |
-| Dictation | — | `note.listening` with Stop | `note.heard` | `note.no_speech`, `note.dictation_failed` | Disabled, `note.dictation_offline` | `note.mic_denied` |
+| Dictation | — | `note.listening` with Stop, then `note.reading` | `note.heard` | `note.no_speech`, `note.dictation_failed`, `error.rate_limited` | Disabled, `note.dictation_offline` | `note.mic_denied` |
 | File | — | `note.reading_file` with Cancel | Chip plus text | Typed file errors (§2.4) | Disabled, `note.file_offline` | — |
 | New task sheet | Add disabled | Busy button ([UX-06](../01-product/ux-standards.md#ux-06)) | Toast `task.added` | `422`: field error. `task.limit` | Works. The task syncs later | — |
 
@@ -154,7 +156,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e1"></a>NC-E1 | The app is closed mid-note (tab killed, phone locked) | The draft from the last 500 ms debounce or `pagehide` is restored next time | T-NC-101, OFF-01 |
 | <a id="nc-e2"></a>NC-E2 | A paste pushes the note over 5,000 characters | Kept in full. Red counter, Make tasks disabled until trimmed | T-NC-102 |
 | <a id="nc-e3"></a>NC-E3 | Microphone permission denied | `note.mic_denied`. The mic stays, so a retry re-asks or explains | T-NC-103 |
-| <a id="nc-e4"></a>NC-E4 | The browser doesn't support speech recognition | The mic is hidden, in the editor and on the capture bar | T-NC-104 |
+| <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | The mic is hidden, in the editor and on the capture bar | T-NC-104 |
 | <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
 | <a id="nc-e6"></a>NC-E6 | Password-protected PDF | `note.file_locked` | T-NC-106, SEC-32 |
 | <a id="nc-e7"></a>NC-E7 | Renamed file (an `.exe` saved as `.pdf`) | Magic bytes don't match → `note.file_type` | T-NC-107, SEC-30 |
@@ -176,7 +178,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ## 6. Accessibility
 
 - The text area has the label "Note". Its placeholder isn't its only label. A11Y-30
-- The mic button's accessible name changes: "Dictate" → "Stop dictating". Its state is announced ([UX-60](../01-product/ux-standards.md#ux-60)). A11Y-31
+- The mic button is labelled "Dictate a note" (`note.mic`); while recording it becomes the Stop button (`note.stop`). Its state is announced ([UX-60](../01-product/ux-standards.md#ux-60)). A11Y-31
 - The counter is linked with `aria-describedby`. It's announced politely once, at 4,500 and at 5,000. A11Y-32
 - The file chip's remove button is labelled "Remove {file name}". A11Y-33
 - Due and priority chips are radio groups with labels. The sheet's focus is trapped ([UX-10](../01-product/ux-standards.md#ux-10)), and focus returns to `+` on close ([UX-11](../01-product/ux-standards.md#ux-11)). A11Y-34
@@ -239,7 +241,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | [NC-1](#nc-1) | The capture bar and the Notes tab open a full-screen editor with the cursor in the text | T-NC-01 (E2E, both entries, focus asserted), T-NC-02 (iOS WebKit keyboard focus) |
 | [NC-1](#nc-1) | Examples show while the text is empty | T-NC-03 |
 | [NC-2](#nc-2) | No fields are required. Make tasks is enabled as soon as there is text | T-NC-04, T-NC-115 |
-| [NC-3](#nc-3) | "Listening…" with Stop. The text lands in the editor with "Here's what I heard." Make tasks disabled while listening | T-NC-10 (component with a mocked SpeechRecognition), T-NC-11, T-NC-12 |
+| [NC-3](#nc-3) | "Listening…" with Stop. The text lands in the editor with "Here's what I heard." Make tasks disabled while listening | T-NC-10 (component with a mocked recorder and `POST /notes/dictation`), T-NC-11, T-NC-12 |
 | [NC-4](#nc-4) | Accepts the listed types up to 5 MB, and the text lands in the editor to check | T-NC-20 (one per type), T-NC-21 |
 | [NC-4](#nc-4) | A removable file chip | T-NC-22 (unchanged → text removed), T-NC-23 (edited → dialog) |
 | [NC-4](#nc-4) | Unsupported or oversized files get a specific error | T-NC-24 (client checks), T-NC-25 (server codes) |

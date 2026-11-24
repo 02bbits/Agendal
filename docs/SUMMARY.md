@@ -234,7 +234,7 @@ The point of this module is trust: the user can always see what the assistant di
 | **Updates**   | "A new version is ready" with Reload, never automatic while the user is typing                                                                                                                                                                                                                                                                           |
 | **Draft**     | An unsent note is saved to the device 500 ms after typing stops and restored if the app closes; closing the editor with text asks "Discard this note?"                                                                                                                                                                                                   |
 
-**Capture options.** _Dictation_ (Should) uses the browser's Web Speech API with a one-time notice that Chrome sends audio to its vendor; the mic is hidden where unsupported. _File to note_ (Should) accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB, shows the extracted text for checking, and discards the file afterwards.
+**Capture options.** _Dictation_ (Should) records on the device and has the app's language model write it down, with a one-time notice that the recording goes to the model and isn't kept; the mic is hidden where the browser can't record. _File to note_ (Should) accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB, shows the extracted text for checking, and discards the file afterwards.
 
 ---
 
@@ -263,8 +263,7 @@ flowchart LR
 | Email (SMTP)           | Password reset                                                                                   | Reset delayed; sign-in unaffected         |
 | Web Push               | Reminders (Should)                                                                               | No push; Inbox still shows what is due    |
 | Google Cloud Vision    | Photos and scanned PDFs (Should). Text PDFs and Word are read on the server with no outside call | Photos and scans unreadable; typing works |
-| LLM provider           | Language-model fallback                                                                          | Rules handle notes alone                  |
-| Browser speech service | Dictation (Should)                                                                               | Dictation unavailable; typing works       |
+| LLM provider           | Language-model fallback, and dictation (Should)                                                  | Rules handle notes alone; dictation unavailable, typing works |
 
 ```mermaid
 flowchart TB
@@ -410,7 +409,7 @@ After Foundation, phases 1, 2 and 4 run in parallel; note flow is built against 
 | Personal data in files                      | Extract and discard; only photos/scans go out, inline; 5 MB limit                |
 | LLM provider retains data or is slow        | Minimum context; 20 s timeout per call; kill switch                              |
 
-**Already decided (all 21 questions are closed).** Editing a note re-plans it (Q1). Rules first with an LLM fallback (Q2, Q19). English and Vietnamese notes, English UI (Q3). Undated tasks get When? chips (Q4). Confirm before applying (Q5 said 5 or more changes; since 2026-11-03 every note with a change confirms, issue #44). Week start and time format are settings (Q6). No account deletion or export in the first release (Q7). No success metrics or analytics (Q8). Undo after a hand edit restores only fields that still hold the note's value (Q9). Undo window 30 days (Q10). Dictation via the Web Speech API with a privacy notice (Q11). Google Cloud Vision for photos and scans (Q12). Next.js plus Laravel on PostgreSQL on one Linux server (Q13, Q14). The badge is "UPDATED" (Q15). ADR-005 to 008 approved (Q16). Edge-case and module decisions approved (Q17, Q20). Password minimum 8 with a breach check (Q18). Two ASVS deviations accepted (Q21).
+**Already decided (all 21 questions are closed).** Editing a note re-plans it (Q1). Rules first with an LLM fallback (Q2, Q19). English and Vietnamese notes, English UI (Q3). Undated tasks get When? chips (Q4). Confirm before applying (Q5 said 5 or more changes; since 2026-11-03 every note with a change confirms, issue #44). Week start and time format are settings (Q6). No account deletion or export in the first release (Q7). No success metrics or analytics (Q8). Undo after a hand edit restores only fields that still hold the note's value (Q9). Undo window 30 days (Q10). Dictation written down by the app's language model, with a privacy notice (Q11; changed from the Web Speech API in #166). Google Cloud Vision for photos and scans (Q12). Next.js plus Laravel on PostgreSQL on one Linux server (Q13, Q14). The badge is "UPDATED" (Q15). ADR-005 to 008 approved (Q16). Edge-case and module decisions approved (Q17, Q20). Password minimum 8 with a breach check (Q18). Two ASVS deviations accepted (Q21).
 
 ---
 
