@@ -161,11 +161,7 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
           </ScreenHeader>
         )}
 
-        {!showHeader && showFilter && (
-          <div className="mb-4">
-            {filterChips}
-          </div>
-        )}
+        {!showHeader && showFilter && <div className="mb-4">{filterChips}</div>}
 
         <div
           ref={barRef}

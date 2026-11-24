@@ -15,7 +15,13 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
-import { createContext, useContext, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { t } from "../../../copy";
 import type { Task } from "../../../domain/types";
 import { PROJECT_DROP, type ProjectDropData } from "./dropTargets";
@@ -117,8 +123,12 @@ const collision: CollisionDetection = (args) => {
   const pointerCollisions = pointerWithin(args);
   if (pointerCollisions.length > 0) {
     return pointerCollisions.slice().sort((a, b) => {
-      const aSortable = Boolean(a.data?.droppableContainer.data.current?.sortable);
-      const bSortable = Boolean(b.data?.droppableContainer.data.current?.sortable);
+      const aSortable = Boolean(
+        a.data?.droppableContainer.data.current?.sortable,
+      );
+      const bSortable = Boolean(
+        b.data?.droppableContainer.data.current?.sortable,
+      );
       return (bSortable ? 1 : 0) - (aSortable ? 1 : 0);
     });
   }
@@ -175,7 +185,8 @@ function RootScope({ children }: { children: ReactNode }) {
   const onDragStart = ({ active }: DragStartEvent) => {
     const task = (active.data.current?.task as Task | undefined) ?? null;
     const fromContainer =
-      (active.data.current?.sortable?.containerId as string | undefined) ?? null;
+      (active.data.current?.sortable?.containerId as string | undefined) ??
+      null;
     initialContainerRef.current = fromContainer;
     const source = fromContainer ? scope.list(fromContainer) : undefined;
     const initialIndex = source

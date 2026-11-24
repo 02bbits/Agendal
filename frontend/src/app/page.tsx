@@ -112,11 +112,7 @@ function InboxContent() {
   );
 }
 
-function InboxHeaderAction({
-  openNewTask,
-}: {
-  openNewTask?: () => void;
-}) {
+function InboxHeaderAction({ openNewTask }: { openNewTask?: () => void }) {
   const [todayMode, setTodayMode] = useSortMode("today");
   const [, setNoDateMode] = useSortMode("no_date");
   const setInboxMode = (next: SortMode) => {

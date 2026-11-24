@@ -68,7 +68,11 @@ export function ProjectCompletedList({
             list={`project:${project.id}:completed`}
             tasks={visibleCompleted}
             onMove={(id, to) => onMove?.(visibleCompleted, id, to)}
-            onReceive={onReceive ? (drop) => onReceive(visibleCompleted, drop) : undefined}
+            onReceive={
+              onReceive
+                ? (drop) => onReceive(visibleCompleted, drop)
+                : undefined
+            }
             onToProject={onToProject}
           >
             {(x, drag) => (

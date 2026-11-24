@@ -64,9 +64,15 @@ describe("Sort menu (#178)", () => {
     render(wrap(<InboxScreen accountInitial="e" />));
 
     await userEvent.click(screen.getByRole("button", { name: "Sort Inbox" }));
-    expect(screen.queryByRole("menuitem", { name: "Sort by rules" })).toBeNull();
-    expect(screen.getByRole("menuitemradio", { name: "Smart order" })).toBeDefined();
-    expect(screen.getByRole("menuitemradio", { name: "Manual order" })).toBeDefined();
+    expect(
+      screen.queryByRole("menuitem", { name: "Sort by rules" }),
+    ).toBeNull();
+    expect(
+      screen.getByRole("menuitemradio", { name: "Smart order" }),
+    ).toBeDefined();
+    expect(
+      screen.getByRole("menuitemradio", { name: "Manual order" }),
+    ).toBeDefined();
   });
 
   it("Escape closes the menu and gives focus back to its button", async () => {

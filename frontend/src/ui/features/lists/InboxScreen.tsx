@@ -370,7 +370,9 @@ export function InboxScreen({
                         frozen.release(id);
                         moveInCompleted(visibleCompleted, id, to);
                       }}
-                      onReceive={(drop) => receiveInCompleted(visibleCompleted, drop)}
+                      onReceive={(drop) =>
+                        receiveInCompleted(visibleCompleted, drop)
+                      }
                       onToProject={moveToProject}
                     >
                       {(x, drag) => row(x, { drag })}

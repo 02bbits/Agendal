@@ -90,7 +90,8 @@ export function ProjectContent({
     (task: Task) => {
       const patch: { done?: boolean; project_id?: string | null } = {};
       if (task.done) patch.done = false;
-      if (task.project_id !== targetProjectId) patch.project_id = targetProjectId;
+      if (task.project_id !== targetProjectId)
+        patch.project_id = targetProjectId;
       return patch;
     },
     frozen.release,
@@ -100,7 +101,8 @@ export function ProjectContent({
     (task: Task) => {
       const patch: { done?: boolean; project_id?: string | null } = {};
       if (!task.done) patch.done = true;
-      if (task.project_id !== targetProjectId) patch.project_id = targetProjectId;
+      if (task.project_id !== targetProjectId)
+        patch.project_id = targetProjectId;
       return patch;
     },
     frozen.release,

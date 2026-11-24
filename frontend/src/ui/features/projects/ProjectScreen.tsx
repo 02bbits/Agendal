@@ -70,10 +70,7 @@ export function ProjectScreen({
         className="-mx-5"
         actions={
           <div className="flex items-center gap-1">
-            <SortMenu
-              list={`project:${project.id}`}
-              listName={project.name}
-            />
+            <SortMenu list={`project:${project.id}`} listName={project.name} />
             <ProjectHeaderMenu
               onRename={onRenameProject}
               onDelete={onDeleteProject ? () => setDeleting(true) : undefined}

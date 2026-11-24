@@ -41,7 +41,9 @@ export function useReceiveDrop(
       const before: TaskPatch = {
         start_date: task.start_date,
         due_date: task.due_date,
-        [field]: ((task as unknown as Record<string, unknown>)[field] as string | null) ?? null,
+        [field]:
+          ((task as unknown as Record<string, unknown>)[field] as
+            string | null) ?? null,
       };
       update(task, { ...fieldPatch, [field]: own });
       const undoKeys = keys.size ? reorder(keys, field) : undefined;
@@ -76,7 +78,20 @@ export function useReceiveDrop(
         });
       }
     },
-    [field, getToast, list, mode, onPlaced, patchFor, reorder, setMode, showToast, tasks, toggle, update],
+    [
+      field,
+      getToast,
+      list,
+      mode,
+      onPlaced,
+      patchFor,
+      reorder,
+      setMode,
+      showToast,
+      tasks,
+      toggle,
+      update,
+    ],
   );
 }
 
