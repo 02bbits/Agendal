@@ -41,6 +41,9 @@ return [
 
     'debug' => (bool) env('APP_DEBUG', false),
 
+    // Behind the Cloudflare tunnel only: take the client IP from CF-Connecting-IP (TrustCloudflareIp)
+    'trust_cf_connecting_ip' => (bool) env('TRUST_CF_CONNECTING_IP', false),
+
     /*
     |--------------------------------------------------------------------------
     | Application URL

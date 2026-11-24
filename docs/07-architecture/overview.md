@@ -23,7 +23,7 @@ flowchart LR
 
 | External system | Needed for | Failure impact |
 |---|---|---|
-| Email service (SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
+| Email service (Resend, SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
 | Web Push | [TK-6](../03-modules/TK-tasks.md#tk-6) (Should) | No push reminders. Inbox still shows what is due |
 | Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)) | [NC-4](../03-modules/NC-note-capture.md#nc-4) (Should): photos and PDFs without a text layer. Text PDFs and Word files are read on the server, with no outside call | Photos and scanned PDFs can't be read. Typing still works |
 | LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
@@ -76,12 +76,15 @@ Everything except note processing works on the device. Edits are queued as per-f
 
 ## Deployment
 
-One Linux server ([Q14](../08-project/open-questions.md#q14)). It's a demo, so there's no cluster or managed cloud.
+One Linux server ([Q14](../08-project/open-questions.md#q14)). It's a demo, so there's no cluster or managed cloud. Runbook and files: `deploy/README.md`, `compose.prod.yml`.
 
 | Item | Plan |
 |---|---|
-| Environments | Local development and the server. HTTPS everywhere (service worker, push, [NF-10](../05-quality/nfr.md#nf-10)), with a Let's Encrypt certificate |
-| Processes | Nginx (TLS, static files, reverse proxy), the Next.js server (Node), PHP-FPM for Laravel, one queue worker under Supervisor, the scheduler (cron every minute), PostgreSQL |
-| Backups | Nightly `pg_dump`, kept 7 days, copied off the server ([scalability](../05-quality/scalability.md#data-protection-and-operations)) |
+| Environments | Local development and the server. HTTPS everywhere (service worker, push, [NF-10](../05-quality/nfr.md#nf-10)) |
+| Ingress and TLS | Cloudflare holds DNS and the certificate. A Cloudflare Tunnel (`cloudflared` on the host as a systemd user unit of the deploy user, outbound only) is the only way in: it sends the app's hostname to the web app on `127.0.0.1:3000` (`WEB_PORT` in the root `.env` moves it when the host already uses 3000). No web ports are open on the server; only the web app's port is published, on loopback. Cloudflare's WAF managed rules and one rate-limiting rule on `/api/v1/auth/*` sit in front; the app's own limits ([NF-13](../05-quality/nfr.md#nf-13)) stay the real ones |
+| Client IP | Every request reaches the API from the web container, so the API takes the client IP from `CF-Connecting-IP` (`TRUST_CF_CONNECTING_IP=true`, set only on the server). Lockout and per-IP limits ([SC-01](security.md#sc-01), [SC-03](security.md#sc-03)) key on it |
+| Processes | Docker Compose (`compose.prod.yml`), every container restarted on failure, logs rotated: the Next.js server (`next start`, serves static files and forwards `/api` and `/sanctum`), the Laravel API on FrankenPHP (migrates on start), one queue worker (`queue:work`), the scheduler (`schedule:work`, runs the daily jobs), PostgreSQL on a network with no route out. App containers run as non-root users with no Linux capabilities |
+| Email | Resend over SMTP (`smtp.resend.com`, TLS), from `no-reply@` the app's domain, with SPF, DKIM and DMARC records in Cloudflare DNS |
+| Backups | Nightly `pg_dump` from a systemd user timer of the deploy user, which also holds the repo, secrets and dumps (nothing under `/etc` or `/var`), encrypted with `age` (the private key is off the server), kept 7 days on the server and in a Cloudflare R2 bucket ([scalability](../05-quality/scalability.md#data-protection-and-operations)) |
 | CI | Lint, type-check and tests on every pull request (GitHub Actions). The note corpus runs on any change to the rules |
-| Secrets | Server `.env` and CI secrets only: email, push keys, the LLM provider key (only as a secret file, `*_API_KEY_FILE`), and the Google Cloud service-account key |
+| Secrets | Server-only files: `backend/.env.production` (mode 600: app key, database password, Resend key) and Docker secrets for the database password and the LLM provider key (`GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key`, readable only by the API's user). CI secrets for CI only. Later: push keys and the Google Cloud service-account key |

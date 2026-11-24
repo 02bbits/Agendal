@@ -17,6 +17,7 @@ import { getProject } from "../../src/lib/projectApi";
 import { createTask, getTask, httpTaskApi, patch } from "../../src/lib/taskApi";
 import { retryDelay, startSync, SYNCED, syncNow } from "../../src/lib/sync";
 import { task } from "../ui/fixtures";
+import type { Task } from "../../src/ui/domain/types";
 
 // IM-52: offline edits queue and sync (ADR-004, ADR-005, AP §2.2)
 
@@ -131,7 +132,7 @@ describe("offline edits (AP-2)", () => {
 });
 
 describe("sync (ADR-005)", () => {
-  it("OFF-10, OFF-13: 100 queued edits go in order in one batch, then leave the queue; creates go first", async () => {
+  it("OFF-10, OFF-13, T-AP-102: 100 queued edits go in order in one batch, then leave the queue; creates go first", async () => {
     networkUp = false;
     await createTask({ id: "t-new", title: "New offline" });
     for (let i = 0; i < 100; i++)
@@ -255,6 +256,53 @@ describe("sync (ADR-005)", () => {
     expect(await readSetting("cursor")).toBe(5);
   });
 
+  it("AP-E12, T-AP-109: storage full during sync drops completed tasks first and keeps open ones", async () => {
+    const old = task({
+      id: "t-old",
+      title: "Old",
+      done: true,
+      done_at: "2099-01-01T00:00:00Z",
+    });
+    await putTasks([old]);
+    server = (url, init) =>
+      url.startsWith("/api/v1/sync?")
+        ? json(200, {
+            changes: {
+              tasks: [
+                task({ id: "t-open", title: "Open" }),
+                task({
+                  id: "t-done",
+                  title: "Done",
+                  done: true,
+                  done_at: "2099-01-01T00:00:00Z",
+                }),
+              ],
+              projects: [],
+              notes: [],
+            },
+            next_cursor: 9,
+            has_more: false,
+          })
+        : defaultServer(url, init);
+    // A completed task no longer fits
+    const put = IDBObjectStore.prototype.put;
+    const full = vi
+      .spyOn(IDBObjectStore.prototype, "put")
+      .mockImplementation(function (this: IDBObjectStore, value, key) {
+        if ((value as Task).done)
+          throw new DOMException("full", "QuotaExceededError");
+        return put.call(this, value, key);
+      });
+
+    expect(await syncNow()).toBe(true);
+    full.mockRestore();
+
+    expect((await readTasks()).map((t) => t.id).sort()).toEqual([
+      "t-1",
+      "t-open",
+    ]);
+  });
+
   it("OFF-15: 410 pushes the queue first, then drops the device copy and downloads it again", async () => {
     await saveSetting("cursor", 3);
     networkUp = false;
@@ -374,7 +422,7 @@ describe("details offline (AP §2.2)", () => {
   });
 });
 
-describe("two tabs (AP-E3, OFF-11)", () => {
+describe("two tabs (AP-E3, OFF-11, T-AP-103)", () => {
   it("only the tab holding the lock syncs", async () => {
     vi.stubGlobal("navigator", {
       ...navigator,

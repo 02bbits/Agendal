@@ -19,9 +19,10 @@ describe("rowMeta", () => {
       const opts = { today: TODAY_WED_18_NOV, timeFormat: "24h" } as const;
       expect(
         rowMeta(t, { ...opts, entry: "start" }).map((p) => p.text),
-      ).toEqual(["10:00 – 11:00"]);
+      ).toEqual(["Start 10:00", "Due 11:00"]);
       expect(rowMeta(t, { ...opts, entry: "due" }).map((p) => p.text)).toEqual([
-        "10:00 – 11:00",
+        "Start 10:00",
+        "Due 11:00",
       ]);
     });
 
@@ -96,7 +97,7 @@ describe("rowMeta", () => {
       ]);
     });
 
-    it("start 20 10:00, due 20 11:00 → 10:00 – 11:00", () => {
+    it("start 20 10:00, due 20 11:00 → Start 10:00 · Due 11:00", () => {
       const t = task({
         title: "Task 5",
         start_date: "2026-11-20",
@@ -108,7 +109,10 @@ describe("rowMeta", () => {
         today: TODAY_WED_18_NOV,
         timeFormat: "24h",
       });
-      expect(parts).toEqual([{ text: "10:00 – 11:00", tone: "plain" }]);
+      expect(parts).toEqual([
+        { text: "Start 10:00", tone: "plain" },
+        { text: "Due 11:00", tone: "due" },
+      ]);
     });
 
     it("start 15 18:00, no due → Planned Sun 15 · 18:00", () => {
@@ -417,7 +421,10 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
     [
       "1.1 same day, both times",
       { ...same, start_time: "08:30", due_time: "10:00" },
-      [{ text: "08:30 – 10:00", tone: "plain" }],
+      [
+        { text: "Start 08:30", tone: "plain" },
+        { text: "Due 10:00", tone: "due" },
+      ],
     ],
     [
       "1.2 same day, start time only",
@@ -491,7 +498,10 @@ describe("rowMeta: Today card matrix 1.1–1.12 (today Wed 18 Nov 2026)", () => 
       task({ title: "T", ...same, start_time: "08:30", due_time: "10:00" }),
       { ...opts, nowTime: "10:30" },
     );
-    expect(parts).toEqual([{ text: "08:30 – 10:00", tone: "late" }]);
+    expect(parts).toEqual([
+      { text: "Start 08:30", tone: "plain" },
+      { text: "Due 10:00", tone: "late" },
+    ]);
   });
 
   it("clearing both times keeps the dates on the card", () => {

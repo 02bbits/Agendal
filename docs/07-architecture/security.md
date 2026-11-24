@@ -20,7 +20,7 @@ Browser (untrusted) → API (trusted) → database. API → email, Web Push, Goo
 | Entry point | Threat (STRIDE) | Control | Test |
 |---|---|---|---|
 | Sign-in | **S** Credential stuffing, guessing | <a id="sc-01"></a>SC-01 lockout per (email, IP) plus per-IP and per-email limits ([ADR-007](decisions/ADR-007-session-and-auth.md)). <a id="sc-02"></a>SC-02 breached-password check at sign-up and reset | SEC-05, SEC-06 |
-| Sign-in | **D** Lockout used to deny a victim access | <a id="sc-03"></a>SC-03 lock keyed by (email, IP), so the victim's own IP isn't locked | SEC-07 |
+| Sign-in | **D** Lockout used to deny a victim access | <a id="sc-03"></a>SC-03 lock keyed by (email, IP), so the victim's own IP isn't locked. On the server the IP is the client's, from `CF-Connecting-IP` ([deployment](overview.md#deployment)) | SEC-07 |
 | Sign-in / reset | **I** Account enumeration | <a id="sc-04"></a>SC-04 same message and timing for existing and unknown emails | SEC-08 |
 | Reset link | **S** Token guessing or reuse | <a id="sc-05"></a>SC-05 32-byte random, hashed, single use, 60 min, all sessions ended on use | SEC-09 |
 | Every request | **S** Session theft through XSS | <a id="sc-06"></a>SC-06 HttpOnly cookie (no token in JS). <a id="sc-07"></a>SC-07 CSP blocks framing and plugins ([NF-16](../05-quality/nfr.md#nf-16)). <a id="sc-08"></a>SC-08 note and task text rendered as text only | SEC-01, SEC-20, SEC-21 |

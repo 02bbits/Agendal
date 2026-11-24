@@ -33,6 +33,7 @@ import { useSignedInUser } from "./frame/useSignedInUser";
 import { splashReady, useSplash } from "./frame/useSplash";
 import { useSyncToasts } from "./frame/useSyncToasts";
 import { useTabNavigation } from "./frame/useTabNavigation";
+import { useScreenFocus } from "./frame/useScreenFocus";
 import { useToast } from "./frame/useToast";
 
 export { useAppFrame } from "./frame/AppFrameContext";
@@ -69,6 +70,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   });
   useSyncToasts(user !== null, showToast);
   useUpdateToast(showToast);
+  useScreenFocus(pathname);
   usePageFlags(pathname);
 
   const { tab, navigate, back, pendingTab, shownTab, shownPath } =

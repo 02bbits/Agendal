@@ -379,3 +379,26 @@ it('keeps a half-written, vague or two-choice duration for review, and splits a 
     $build = app(NoteEngine::class)->build(app(NoteSplitter::class)->normalize("gym every day\nbuy milk"), boundContext(), budgetMs: 60000);
     expect(array_column($build->plan['create'], 'title'))->toBe(['Gym', 'Buy milk']);
 });
+
+it('keeps what only goes on with a series across a line break or full stop (#156)', function (string $text, ?string $days) {
+    $task = boundTask($text);
+    expectUntil($task, $text, '2026-11-02', '2026-11-15');
+    if ($days !== null) {
+        expect($task['repeat_rule'], $text)->toContain(';BYDAY='.$days.';');
+    }
+})->with([
+    ["gym every day\nfor 2 weeks", null],
+    ['gym every day. for 2 weeks', null],
+    ['gym every day; for 2 weeks', null],
+    ['gym every day… for 2 weeks', null],
+    ["gym every Monday,\nWednesday and Friday for 2 weeks", 'MO,WE,FR'],
+    ['gym every Mon. for 2 wks', 'MO'],
+]);
+
+it('keeps a conflicting end after a full stop for review, and still splits a new task there (#156)', function () {
+    expectPreserved('gym every Mon for 2 wks. until Friday');
+    foreach (["gym every day\nbuy milk", 'gym every day. tomorrow 9am buy milk', 'call mum Mon. buy milk'] as $note) {
+        $build = app(NoteEngine::class)->build(app(NoteSplitter::class)->normalize($note), boundContext(), budgetMs: 60000);
+        expect($build->plan['create'], $note)->toHaveCount(2);
+    }
+});

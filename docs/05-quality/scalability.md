@@ -38,16 +38,16 @@ Agendal runs on **one Linux server** ([Q14](../08-project/open-questions.md#q14)
 | **Reminders query an indexed `remind_at`** once a minute, claiming rows with `SELECT … FOR UPDATE SKIP LOCKED` | More workers can run in parallel without double-sending |
 | **Slow work runs on the queue:** file extraction and push delivery. The LLM call is the one synchronous outside call, made from the request with a 20 s timeout per call ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) | Notes the rules read stay fast. A note the model reads waits for it, about 40 s at worst; the web server's read timeout stays at 60 s or more |
 | **Command matching** uses a trigram index (`pg_trgm` on `unaccent(title)`) to find ≤ 50 candidate open tasks, then scores in memory | O(items × 50), not O(items × all tasks) |
-| **Static assets** have immutable, hashed filenames, served by Nginx with long cache headers. The service worker caches the app shell | First load ≤ 3 s, repeat ≤ 1 s |
+| **Static assets** have immutable, hashed filenames, served by Next.js with long cache headers and cached at Cloudflare. The service worker caches the app shell | First load ≤ 3 s, repeat ≤ 1 s |
 
-**Beyond one server:** a second API server behind Nginx, a read replica for search and lists, then Redis for sessions and Inbox counts. None of this is needed for the demo.
+**Beyond one server:** a second API server behind the web app, a read replica for search and lists, then Redis for sessions and Inbox counts. None of this is needed for the demo.
 
 ## Data protection and operations
 
 | Item | Target |
 |---|---|
-| Backups | Nightly `pg_dump`, kept 7 days and copied off the server. Restore tested before the demo |
-| Retention | Tombstones purged after 30 days ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). Audit log 90 days. App logs 14 days |
+| Backups | Nightly `pg_dump`, encrypted with `age`, kept 7 days on the server and in Cloudflare R2 ([deployment](../07-architecture/overview.md#deployment)). Restore tested before the demo |
+| Retention | Daily jobs (T-AP-41). Tombstones purged after 30 days ([ADR-005](../07-architecture/decisions/ADR-005-sync-protocol.md)). Audit log 90 days. Password reset tokens once expired (60 min). Email and sign-in codes 1 day after they expire. Reminder send records 30 days after sending. App logs 14 days (daily log files). Sessions are cleared by Laravel itself |
 | Migrations | Expand → migrate → contract. No destructive migration in the same release as the code that stops using a column |
 
 ## Load-test plan

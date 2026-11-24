@@ -11,6 +11,7 @@ import { ROUTES, type Navigate } from "../shell/routes";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { ProjectCard } from "./ProjectCard";
 import { ProjectMobileList } from "./ProjectMobileList";
+import { EmptyStateIllustration } from "../../components/EmptyStateIllustration";
 
 export interface ProjectWithCounts extends Project {
   open?: number;
@@ -85,7 +86,10 @@ export function ProjectsScreen({
       </ScreenHeader>
 
       {sortedProjects.length === 0 ? (
-        <EmptyState title={t("project.list_empty")} />
+        <EmptyState
+          title={t("project.list_empty")}
+          icon={<EmptyStateIllustration type="projects" />}
+        />
       ) : (
         <>
           <ProjectMobileList
