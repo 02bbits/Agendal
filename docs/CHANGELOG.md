@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-24
 
+- **Telescope and slow-query alert (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: failed and slow queries log SQL only; Telescope stores no bodies, session, bindings, cache values, emails or mail, is allow-listed outside local and pruned after 48 hours. Slow query: 500 ms per query, 2 s of queries per request, logged at `error` for the alert channel (#198).
 - **The app stays inside the deploy user (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS and Backups rows: the tunnel and the nightly backup are systemd user units of the deploy user, started at boot through linger; the backup settings and dumps live in its home, nothing under `/etc` or `/var`.
 
 ## 2026-11-23
