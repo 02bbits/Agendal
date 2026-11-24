@@ -226,3 +226,26 @@ describe("Auth gate (AA §1)", () => {
     expect(within(screen.getByRole("main")).getByText("Mai")).toBeTruthy();
   });
 });
+
+describe("Route changes (A11Y-72)", () => {
+  it("name the browser tab after the screen and move focus to its heading", async () => {
+    const view = renderAt("/", InboxPage);
+    await screen.findByRole("heading", { level: 1, name: "Inbox" });
+    expect(document.title).toBe("Inbox · Agendal");
+    expect(document.activeElement).toBe(document.body);
+
+    pathname = "/upcoming";
+    view.rerender(
+      <AppFrame>
+        <UpcomingPage />
+      </AppFrame>,
+    );
+
+    const heading = await screen.findByRole("heading", {
+      level: 1,
+      name: "Upcoming",
+    });
+    expect(document.title).toBe("Upcoming · Agendal");
+    expect(document.activeElement).toBe(heading);
+  });
+});

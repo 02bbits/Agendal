@@ -265,6 +265,24 @@ describe("request budget (AP §10)", () => {
     await waitFor(() => expect(meCalls()).toBe(2));
   });
 
+  it("AP-E10, T-AP-107: a theme changed on another device applies when the app is visible again", async () => {
+    open();
+    await screen.findByText("user1@example.com");
+    expect(document.documentElement.getAttribute("data-theme")).toBeNull();
+
+    meReply = () =>
+      json(200, { id: 1, email: "user1@example.com", theme: "dark" });
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+
+    await waitFor(() =>
+      expect(document.documentElement.getAttribute("data-theme")).toBe(
+        "agendal-dark",
+      ),
+    );
+  });
+
   it("coming back to an ended session opens Sign in", async () => {
     open();
     await screen.findByText("user1@example.com");

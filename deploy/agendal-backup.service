@@ -1,0 +1,12 @@
+[Unit]
+Description=Agendal nightly database backup
+Wants=network-online.target
+After=network-online.target
+
+# A user unit of the deploy user (in the docker group, owns the rclone config), so nothing lives outside
+# its home: ~/.config/systemd/user/, started at boot through linger (deploy/README.md)
+[Service]
+Type=oneshot
+# AGENDAL_DIR (where the repo is cloned) comes from here, so the unit has no path of its own
+EnvironmentFile=%h/.config/agendal/backup.env
+ExecStart=/usr/bin/env bash ${AGENDAL_DIR}/deploy/backup.sh

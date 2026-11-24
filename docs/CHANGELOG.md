@@ -2,6 +2,16 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-24
+
+- **The app stays inside the deploy user (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS and Backups rows: the tunnel and the nightly backup are systemd user units of the deploy user, started at boot through linger; the backup settings and dumps live in its home, nothing under `/etc` or `/var`.
+
+## 2026-11-23
+
+- **Web port can move (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS row: the web app's loopback port is `WEB_PORT` (default 3000), set in the root `.env` when the host already uses 3000.
+- **Deployment matches the real server (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Deployment table rewritten: Cloudflare DNS and TLS with a non-root Cloudflare Tunnel as the only way in (replaces Nginx and Let's Encrypt), Docker Compose with FrankenPHP, a queue worker and `schedule:work` (replaces PHP-FPM, Supervisor and cron), Resend for mail, client IP from `CF-Connecting-IP`, age-encrypted backups in Cloudflare R2, secrets as server files and Docker secrets. External systems table names Resend. [scalability.md](05-quality/scalability.md) Backups row and static assets: R2, encrypted; Next.js and Cloudflare instead of Nginx. [security.md](07-architecture/security.md#sc-03) SC-03: the IP is the client's. [asvs-checklist.md](06-testing/asvs-checklist.md) 14.3.2: where `APP_DEBUG=false` is set.
+- **Retention covers expired data (Refs #54).** [scalability.md](05-quality/scalability.md) Retention row: besides tombstones (30 days) and the audit log (90 days), daily jobs now remove expired password reset tokens, email and sign-in codes a day after they expire, and reminder send records 30 days after sending. App logs are daily files so the 14-day limit applies. Tested as T-AP-41.
+
 ## 2026-11-22
 
 - **Connectors split two tasks (Refs #156).** [NU §2.2](03-modules/NU-note-understanding.md#22-splitting-nu-1): "and", "và" and the other joiners end an item before a task of its own (no longer "never split"); pronoun objects, lists, shared verbs and "or" stay one task; a closing phrase covers earlier parts. NU §2.5 Title: closing particles leave the title. Low confidence: a closing "đi", and "next" / "later" / "roi" before a task verb. New [NU-E43](03-modules/NU-note-understanding.md#nu-e43) and its [traceability](06-testing/traceability-matrix.md) row.

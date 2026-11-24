@@ -1,7 +1,11 @@
+import { offlineUnavailable } from "@/lib/serviceWorker";
 import { t } from "../../copy";
 import { CloudIcon } from "../../components/icons";
 
-/** "You're offline" on the list screens (AP-2, UX-40). Nothing turns read-only. */
+/**
+ * "You're offline" on the list screens (AP-2, UX-40). Nothing turns read-only. Without a service
+ * worker it warns that offline use isn't available (AP-E11).
+ */
 export function OfflineBanner() {
   return (
     <div
@@ -11,7 +15,9 @@ export function OfflineBanner() {
       <CloudIcon size={17} className="mt-0.5 shrink-0 text-ink-secondary" />
       <p className="m-0 text-callout text-ink">
         <span className="font-semibold">{t("app.offline")}</span>{" "}
-        <span className="text-ink-secondary">{t("app.offline_body")}</span>
+        <span className="text-ink-secondary">
+          {t(offlineUnavailable() ? "app.no_offline" : "app.offline_body")}
+        </span>
       </p>
     </div>
   );

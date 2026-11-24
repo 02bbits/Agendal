@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\PurgeTombstones;
 use App\Support\Audit;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -16,3 +17,10 @@ Schedule::call(fn () => DB::table('audit_events')->where('created_at', '<', now(
 
 // ADR-005: tombstones are kept 30 days, then purged; older cursors get 410
 Schedule::command('sync:purge')->daily();
+
+// Retention (scalability.md): expired one-time codes and old reminder sends
+Schedule::command('auth:clear-resets')->daily();
+Schedule::call(fn () => DB::table('email_verification_codes')->where('expires_at', '<', now()->subDay())->delete())
+    ->daily()->name('purge-email-codes');
+Schedule::call(fn () => DB::table('reminder_deliveries')->where('sent_at', '<', now()->subDays(PurgeTombstones::KEEP_DAYS))->delete())
+    ->daily()->name('purge-reminder-deliveries');

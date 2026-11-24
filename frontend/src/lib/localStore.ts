@@ -40,12 +40,14 @@ function open() {
 }
 
 // One transaction per call. Storage blocked or full (private mode, AP-E11): the app keeps
-// working online, so a failure resolves with `fallback` instead of throwing.
+// working online, so a failure resolves with `fallback` instead of throwing. A write with no
+// result of its own resolves with `done`, so a caller can tell it from a failure.
 async function run<T>(
   store: string,
   mode: IDBTransactionMode,
   work: (store: IDBObjectStore) => IDBRequest<T> | void,
   fallback: T,
+  done: T = fallback,
 ): Promise<T> {
   try {
     const db = await open();
@@ -53,7 +55,7 @@ async function run<T>(
       return await new Promise<T>((resolve, reject) => {
         const tx = db.transaction(store, mode);
         const request = work(tx.objectStore(store));
-        tx.oncomplete = () => resolve(request ? request.result : fallback);
+        tx.oncomplete = () => resolve(request ? request.result : done);
         tx.onerror = tx.onabort = () => reject(tx.error);
       });
     } finally {
@@ -67,12 +69,14 @@ async function run<T>(
 export const readTasks = () =>
   run<Task[]>(TASKS, "readonly", (s) => s.getAll(), []);
 
+/** Resolves false when the write failed (storage full, AP-E12). */
 export const putTasks = (tasks: readonly (Task | undefined)[]) =>
-  run<void>(
+  run<boolean>(
     TASKS,
     "readwrite",
     (s) => tasks.forEach((task) => task && s.put(task)),
-    undefined,
+    false,
+    true,
   );
 
 export const removeTasks = (ids: readonly string[]) =>

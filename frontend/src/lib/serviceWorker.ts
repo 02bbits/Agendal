@@ -1,12 +1,19 @@
 // IM-50: registers /sw.js and reports a new version waiting to take over (UX-42).
 // The build id in the URL makes every deploy a new worker script.
 
+let unavailable = false;
+/** AP-E11: no service worker (private mode, storage blocked), so the app can't open offline. */
+export const offlineUnavailable = () => unavailable;
+
 /** Calls `onWaiting` when a new version is installed and an older one is in control. */
 export function registerServiceWorker(
   onWaiting: (worker: ServiceWorker) => void,
 ) {
-  if (process.env.NODE_ENV !== "production" || !("serviceWorker" in navigator))
+  if (process.env.NODE_ENV !== "production") return;
+  if (!("serviceWorker" in navigator)) {
+    unavailable = true;
     return;
+  }
   const { serviceWorker } = navigator;
   const report = (worker: ServiceWorker | null) => {
     // Without a controller this is the first install: nothing is being replaced
@@ -36,8 +43,10 @@ export function registerServiceWorker(
         });
       });
     })
-    // AP-E11: the app works online without it. The "offline isn't available" notice is IM-51.
-    .catch(() => {});
+    // AP-E11: the app works online without it; the offline banner says offline isn't available
+    .catch(() => {
+      unavailable = true;
+    });
 }
 
 /** Lets the waiting version take over, then reloads onto it. */
