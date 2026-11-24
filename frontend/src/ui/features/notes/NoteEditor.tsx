@@ -23,6 +23,7 @@ import {
   type DictationError,
   type Recording,
 } from "../../../lib/dictation";
+import { ApiRequestError } from "../../../lib/apiError";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
@@ -276,6 +277,8 @@ export function NoteEditor({
     "idle",
   );
   const [dictationNote, setDictationNote] = useState<CopyKey | null>(null);
+  // Seconds until dictation may be tried again after a 429, for `error.rate_limited`
+  const [dictationWait, setDictationWait] = useState(0);
   const recording = useRef<Recording | null>(null);
   // The one-time notice before the first recording (NC §2.3); Continue starts it, in that tap
   const [micNotice, setMicNotice] = useState(
@@ -313,11 +316,16 @@ export function NoteEditor({
           field?.setSelectionRange(end, end);
         });
       })
-      .catch((error: DictationError | unknown) =>
+      .catch((error: DictationError | unknown) => {
+        // Agendal's own limit: the connection is fine, so say how long to wait, as Make tasks does
+        if (error instanceof ApiRequestError && error.status === 429) {
+          setDictationWait(error.retryAfter ?? 60);
+          return setDictationNote("error.rate_limited");
+        }
         setDictationNote(
           error === "denied" ? "note.mic_denied" : "note.dictation_failed",
-        ),
-      )
+        );
+      })
       .finally(() => {
         recording.current = null;
         setDictation("idle");
@@ -481,7 +489,7 @@ export function NoteEditor({
             ) : dictation === "writing" ? (
               <span className="shiny-text">{t("note.reading")}</span>
             ) : dictationNote ? (
-              t(dictationNote)
+              t(dictationNote, { seconds: dictationWait })
             ) : (
               ""
             )}
