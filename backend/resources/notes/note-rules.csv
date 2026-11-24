@@ -297,6 +297,22 @@ task_verb,chuyển khoản
 task_verb,đổ xăng
 task_verb,cắt tóc
 task_verb,khám
+task_verb,goi
+task_verb,gui
+task_verb,nop
+task_verb,viet
+task_verb,nau
+task_verb,giat
+task_verb,hoc
+task_verb,sua
+task_verb,kiem tra
+task_verb,chuan bi
+task_verb,hoan thanh
+task_verb,lien he
+task_verb,thanh toan
+task_verb,gia han
+task_verb,dang ky
+task_verb,dat lich
 signal,every
 signal,priority
 signal,mỗi
@@ -357,6 +373,16 @@ following_conjunction,tiếp đến
 following_conjunction,kế đó
 following_conjunction,kế đến
 following_conjunction,xong thì
+following_conjunction,xong rồi
+following_conjunction,roi thi
+following_conjunction,sau do
+following_conjunction,sau day
+following_conjunction,tiep do
+following_conjunction,tiep den
+following_conjunction,ke do
+following_conjunction,ke den
+following_conjunction,xong thi
+following_conjunction,xong roi
 bullet,-
 bullet,*
 bullet,+
@@ -460,6 +486,154 @@ list_joiner,&
 list_joiner,và
 list_joiner,hoặc
 list_joiner,plus
+list_joiner,va
+list_joiner,hoac
+task_joiner,and
+task_joiner,&
+task_joiner,và
+task_joiner,plus
+task_joiner,also
+task_joiner,as well as
+task_joiner,cũng như
+task_joiner,với
+task_joiner,besides
+task_joiner,in addition
+task_joiner,additionally
+task_joiner,tiếp theo
+task_joiner,ngoài ra
+task_joiner,đồng thời
+task_joiner,thêm nữa
+task_joiner,va
+task_joiner,voi
+task_joiner,cung nhu
+task_joiner,tiep theo
+task_joiner,ngoai ra
+task_joiner,dong thoi
+task_joiner,them nua
+contrast_joiner,but
+contrast_joiner,however
+contrast_joiner,nhưng
+contrast_joiner,nhưng mà
+contrast_joiner,tuy nhiên
+contrast_joiner,nhung
+contrast_joiner,nhung ma
+contrast_joiner,tuy nhien
+clause_hedge,but
+clause_hedge,however
+clause_hedge,although
+clause_hedge,though
+clause_hedge,even though
+clause_hedge,unless
+clause_hedge,if
+clause_hedge,because
+clause_hedge,instead of
+clause_hedge,otherwise
+clause_hedge,or else
+clause_hedge,except
+clause_hedge,so that
+clause_hedge,nhưng
+clause_hedge,tuy nhiên
+clause_hedge,mặc dù
+clause_hedge,dù cho
+clause_hedge,trừ khi
+clause_hedge,ngoại trừ
+clause_hedge,nếu
+clause_hedge,vì
+clause_hedge,bởi vì
+clause_hedge,thay vì
+clause_hedge,nếu không
+hedge_exempt,check if
+hedge_exempt,ask if
+hedge_exempt,see if
+hedge_exempt,find out if
+hedge_exempt,check whether
+hedge_exempt,kiểm tra xem
+hedge_exempt,hỏi xem
+trailing_particle,nhé
+trailing_particle,nhe
+trailing_particle,nha
+trailing_particle,nhá
+trailing_particle,ạ
+trailing_particle,à
+trailing_particle,ha
+trailing_particle,nhỉ
+trailing_particle,nào
+trailing_particle,luôn
+trailing_particle,thôi
+trailing_particle,giúp mình với
+trailing_particle,giúp tôi với
+trailing_particle,giùm mình
+trailing_particle,dùm mình
+trailing_particle,hộ mình
+trailing_particle,nhi
+trailing_particle,luon
+trailing_particle,thoi
+trailing_particle,giup minh voi
+trailing_particle,pls
+trailing_particle,plz
+trailing_particle,please
+trailing_particle,ok
+trailing_particle,okay
+trailing_particle,thanks
+trailing_particle,thx
+trailing_hedge,đi
+trailing_hedge,di
+uncertain_joiner,next
+uncertain_joiner,later
+uncertain_joiner,roi
+object_pronoun,it
+object_pronoun,them
+object_pronoun,this
+object_pronoun,that
+object_pronoun,nó
+object_pronoun,chúng
+object_pronoun,cái đó
+object_pronoun,cái này
+object_pronoun,việc đó
+object_pronoun,her
+object_pronoun,him
+object_pronoun,me
+object_pronoun,us
+object_pronoun,you
+object_pronoun,họ
+object_pronoun,anh ấy
+object_pronoun,chị ấy
+object_pronoun,cô ấy
+object_pronoun,ông ấy
+object_pronoun,bà ấy
+object_pronoun_lead,it
+object_pronoun_lead,them
+object_pronoun_lead,her
+object_pronoun_lead,him
+object_pronoun_lead,me
+object_pronoun_lead,us
+object_pronoun_lead,you
+object_pronoun_lead,nó
+object_pronoun_lead,chúng
+object_pronoun_lead,họ
+object_pronoun_lead,anh ấy
+object_pronoun_lead,chị ấy
+object_pronoun_lead,cô ấy
+object_pronoun_lead,ông ấy
+object_pronoun_lead,bà ấy
+standalone_task,đi chợ
+standalone_task,đi siêu thị
+standalone_task,chạy bộ
+standalone_task,đi bộ
+standalone_task,tập thể dục
+standalone_task,đi học
+standalone_task,đi làm
+standalone_task,nấu ăn
+standalone_task,dọn dẹp
+standalone_task,di cho
+standalone_task,di sieu thi
+standalone_task,chay bo
+standalone_task,di bo
+standalone_task,tap the duc
+standalone_task,di hoc
+standalone_task,di lam
+standalone_task,nau an
+standalone_task,don dep
 number_suffix,.
 number_suffix,)
 number_suffix,-
@@ -944,6 +1118,7 @@ lead_in,remind me to
 lead_in,nhắc tôi
 lead_in,nhắc mình
 lead_in,nhắc em
+lead_in,just
 vietnamese_unaccented_syllable,toi
 vietnamese_unaccented_syllable,minh
 vietnamese_unaccented_syllable,ban
@@ -1202,6 +1377,7 @@ command_joiner,and
 command_joiner,&
 command_joiner,và
 command_joiner,plus
+command_joiner,va
 file_extension,pdf
 file_extension,doc
 file_extension,docx
