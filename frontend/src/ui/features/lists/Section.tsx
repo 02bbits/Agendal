@@ -1,4 +1,5 @@
-import { useId, useState, type ReactNode } from "react";
+import { useDroppable } from "@dnd-kit/core";
+import { useEffect, useId, useState, type ReactNode } from "react";
 import { countText, tc } from "../../copy";
 import { cx } from "../../components/cx";
 import { ChevronRightIcon } from "../../components/icons";
@@ -13,6 +14,9 @@ export interface SectionProps {
   defaultOpen?: boolean;
   open?: boolean;
   onToggle?: (open: boolean) => void;
+  /** Called when a dragged task hovers over the collapsed section header. */
+  onDragExpand?: () => void;
+  expandDropId?: string;
   icon?: ReactNode;
   footer?: ReactNode;
   children: ReactNode;
@@ -31,6 +35,8 @@ export function Section({
   defaultOpen,
   open: controlledOpen,
   onToggle,
+  onDragExpand,
+  expandDropId,
   icon,
   footer,
   children,
@@ -44,6 +50,21 @@ export function Section({
   const open = controlledOpen !== undefined ? controlledOpen : internalOpen;
   const listId = useId();
   const label = tc("list.section_count", count, { section: title });
+
+  const canDragExpand = collapsible && !open && Boolean(onDragExpand);
+  const { setNodeRef: setExpandRef, isOver: isExpandOver } = useDroppable({
+    id: expandDropId ?? `section-expand:${listId}`,
+    disabled: !canDragExpand,
+    data: { kind: "section-expand" },
+  });
+
+  useEffect(() => {
+    if (!isExpandOver || !canDragExpand || !onDragExpand) return;
+    const timer = setTimeout(() => {
+      onDragExpand();
+    }, 220);
+    return () => clearTimeout(timer);
+  }, [isExpandOver, canDragExpand, onDragExpand]);
 
   const handleToggle = () => {
     const next = !open;
@@ -64,12 +85,20 @@ export function Section({
   );
 
   return (
-    <section className={cx("mb-6 [&>h2]:mt-0 [&>h2]:mb-2.5", className)}>
+    <section
+      ref={canDragExpand ? setExpandRef : undefined}
+      className={cx("mb-6 [&>h2]:mt-0 [&>h2]:mb-2.5", className)}
+    >
       <h2 className="mt-6 mb-2 flex items-baseline gap-1.5 text-heading font-semibold">
         {collapsible ? (
           <button
             type="button"
-            className="focus-ring flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 border-b border-separator bg-transparent p-0 text-left text-ink"
+            className={cx(
+              "focus-ring flex min-h-11 min-w-0 flex-1 cursor-pointer items-center gap-2 border-0 border-b border-separator bg-transparent p-0 text-left text-ink transition-colors",
+              isExpandOver &&
+                canDragExpand &&
+                "rounded-lg bg-primary/10 px-2 -mx-2 ring-1 ring-primary/40 border-b-transparent",
+            )}
             aria-expanded={open}
             aria-controls={listId}
             onClick={handleToggle}

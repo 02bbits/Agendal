@@ -88,7 +88,7 @@ describe("inboxDropPatch", () => {
 });
 
 describe("dayDropPatch", () => {
-  it("moves a start day, and the due day when the start would pass it", () => {
+  it("moves both start and due days together to preserve the span length", () => {
     const span = task({
       title: "T",
       start_date: "2026-11-20",
@@ -96,10 +96,15 @@ describe("dayDropPatch", () => {
     });
     expect(dayDropPatch(span, "2026-11-20", "2026-11-21")).toEqual({
       start_date: "2026-11-21",
+      due_date: "2026-11-23",
     });
     expect(dayDropPatch(span, "2026-11-20", "2026-11-24")).toEqual({
       start_date: "2026-11-24",
       due_date: "2026-11-26",
+    });
+    expect(dayDropPatch(span, "2026-11-20", "2026-11-18")).toEqual({
+      start_date: "2026-11-18",
+      due_date: "2026-11-20",
     });
   });
 

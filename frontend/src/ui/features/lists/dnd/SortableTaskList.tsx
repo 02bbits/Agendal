@@ -1,4 +1,4 @@
-import { useDndContext, useDroppable } from "@dnd-kit/core";
+import { useDroppable } from "@dnd-kit/core";
 import {
   SortableContext,
   useSortable,
@@ -23,17 +23,20 @@ type Handlers = Pick<ListEntry, "onMove" | "onReceive" | "onToProject">;
 export function SortableTaskList({
   list,
   tasks,
+  acceptsCrossDrop = true,
   children,
   ...handlers
 }: Handlers & {
   list: string;
   tasks: readonly Task[];
+  acceptsCrossDrop?: boolean;
   children: (task: Task, drag?: RowDrag) => ReactNode;
 }) {
   const scope = useDndScope();
   const dragState = useDndDragState();
 
   const isTargetingThis =
+    acceptsCrossDrop &&
     dragState.activeId !== null &&
     dragState.overContainer === list &&
     dragState.fromContainer !== list &&
@@ -86,15 +89,19 @@ export function SortableTaskList({
     () =>
       scope?.register(list, {
         ids: () => latest.current.ids,
+        acceptsCrossDrop,
         onMove: (id, to) => latest.current.handlers.onMove(id, to),
         onReceive: (drop) => latest.current.handlers.onReceive?.(drop),
         onToProject: (id, project) =>
           latest.current.handlers.onToProject?.(id, project),
       }),
-    [scope, list],
+    [scope, list, acceptsCrossDrop],
   );
-  const { setNodeRef, isOver } = useDroppable({ id: list, disabled: !scope });
-  const { active } = useDndContext();
+  const canDropHere = acceptsCrossDrop || dragState.fromContainer === list;
+  const { setNodeRef, isOver } = useDroppable({
+    id: list,
+    disabled: !scope || !canDropHere,
+  });
 
   if (!scope) return <>{tasks.map((task) => children(task))}</>;
   return (
@@ -103,7 +110,7 @@ export function SortableTaskList({
       items={ids}
       strategy={verticalListSortingStrategy}
     >
-      {/* An empty list still takes drops: shows clean drop zone only when dragged over */}
+      {/* An empty list still takes drops: shows clean drop zone only when hovered */}
       {displayTasks.length === 0 && (
         <li
           ref={setNodeRef}
@@ -111,14 +118,17 @@ export function SortableTaskList({
           className={
             isOver
               ? "m-1 min-h-12 rounded-tile border border-dashed border-primary bg-primary/10 transition-all duration-200 list-none"
-              : active
-                ? "min-h-10 w-full list-none"
-                : "h-0"
+              : "h-0 list-none"
           }
         />
       )}
       {displayTasks.map((task) => (
-        <SortableRow key={task.id} task={task}>
+        <SortableRow
+          key={task.id}
+          task={task}
+          droppable={canDropHere}
+          suppressTransform={!acceptsCrossDrop}
+        >
           {(drag) =>
             children(task, {
               ...drag,
@@ -135,9 +145,13 @@ export function SortableTaskList({
 
 function SortableRow({
   task,
+  droppable,
+  suppressTransform,
   children,
 }: {
   task: Task;
+  droppable: boolean;
+  suppressTransform: boolean;
   children: (drag: RowDrag) => ReactNode;
 }) {
   const scope = useDndScope();
@@ -151,6 +165,7 @@ function SortableRow({
     isDragging,
   } = useSortable({
     id: task.id,
+    disabled: droppable ? false : { droppable: true },
     data: { title: task.title, task },
     transition: {
       duration: 200,
@@ -164,8 +179,10 @@ function SortableRow({
     setNodeRef,
     dragging: isDragging,
     style: {
-      transform: isDragging ? undefined : CSS.Translate.toString(transform),
-      transition: isDragging ? undefined : transition,
+      transform: suppressTransform
+        ? undefined
+        : CSS.Translate.toString(transform),
+      transition: suppressTransform ? undefined : transition,
     },
     rowListeners: {
       ...pointer,

@@ -35,6 +35,7 @@ export function UpcomingOverdue({
         <SortableTaskList
           list="overdue"
           tasks={tasks}
+          acceptsCrossDrop={false}
           onMove={() => {}}
           onToProject={moveToProject}
         >

@@ -67,8 +67,8 @@ export const dropOntoDay =
 
 /**
  * What dropping a task's entry from one Upcoming day onto another changes (Spec 02 §3):
- * its start day moves, or its due day for a task with no start. A due day the new start
- * would pass moves by the same number of days, so the span keeps its length.
+ * its start day moves, or its due day for a task with no start. When both start and due
+ * exist, both move by the same number of days so the span keeps its length.
  */
 export function dayDropPatch(
   task: Task,
@@ -80,7 +80,7 @@ export function dayDropPatch(
   const { start_date: start, due_date: due } = task;
   if (start === from) {
     const patch: TaskPatch = { start_date: to };
-    if (due && (due === from || to > due)) patch.due_date = addDays(due, shift);
+    if (due) patch.due_date = addDays(due, shift);
     return patch;
   }
   if (!start && due === from) return { due_date: to };

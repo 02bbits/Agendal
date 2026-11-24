@@ -285,6 +285,7 @@ export function InboxScreen({
                   <SortableTaskList
                     list="overdue"
                     tasks={view.overdue}
+                    acceptsCrossDrop={false}
                     onMove={() => {}}
                     onToProject={moveToProject}
                   >
@@ -299,6 +300,8 @@ export function InboxScreen({
                   collapsible
                   open={openToday}
                   onToggle={handleToggleToday}
+                  expandDropId="section-expand:today"
+                  onDragExpand={() => handleToggleToday(true)}
                 >
                   <SortableTaskList
                     list="today"
@@ -321,6 +324,8 @@ export function InboxScreen({
                   collapsible
                   open={openNoDate}
                   onToggle={handleToggleNoDate}
+                  expandDropId="section-expand:no_date"
+                  onDragExpand={() => handleToggleNoDate(true)}
                 >
                   <SortableTaskList
                     list="no_date"
@@ -343,6 +348,8 @@ export function InboxScreen({
                   collapsible
                   open={openCompleted}
                   onToggle={handleToggleCompleted}
+                  expandDropId="section-expand:completed"
+                  onDragExpand={() => handleToggleCompleted(true)}
                   footer={
                     hasHiddenCompleted ? (
                       <TextButton

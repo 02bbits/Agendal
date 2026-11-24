@@ -37,6 +37,8 @@ export interface Receive {
 
 export interface ListEntry {
   ids: () => readonly string[];
+  /** Whether this list accepts drops from other lists; false for read-only sources like Overdue. */
+  acceptsCrossDrop?: boolean;
   onMove: (id: string, to: number) => void;
   /** What a drop from another list means here; without it the list takes no drops. */
   onReceive?: (drop: Receive) => void;
@@ -136,7 +138,9 @@ const collision: CollisionDetection = (args) => {
   return closestCenter({
     ...args,
     droppableContainers: args.droppableContainers.filter(
-      (c) => c.data.current?.kind !== PROJECT_DROP,
+      (c) =>
+        c.data.current?.kind !== PROJECT_DROP &&
+        c.data.current?.kind !== "section-expand",
     ),
   });
 };
@@ -179,7 +183,7 @@ function RootScope({ children }: { children: ReactNode }) {
   );
 
   function normalizeContainer(id: string): string {
-    return id.replace(/:(bottom|due)$/, "");
+    return id.replace(/:(bottom|due|empty)$/, "");
   }
 
   const onDragStart = ({ active }: DragStartEvent) => {
@@ -212,12 +216,15 @@ function RootScope({ children }: { children: ReactNode }) {
       );
       return;
     }
-    if (over.data.current?.kind === PROJECT_DROP) {
-      setDragState((prev) => ({
-        ...prev,
-        overContainer: null,
-        overIndex: null,
-      }));
+    if (
+      over.data.current?.kind === PROJECT_DROP ||
+      over.data.current?.kind === "section-expand"
+    ) {
+      setDragState((prev) =>
+        prev.overContainer === null
+          ? prev
+          : { ...prev, overContainer: null, overIndex: null },
+      );
       return;
     }
     const rawContainer =
@@ -226,6 +233,18 @@ function RootScope({ children }: { children: ReactNode }) {
     const targetContainer = normalizeContainer(rawContainer);
     const isBottom = String(over.id).endsWith(":bottom");
     const containerEntry = scope.list(targetContainer);
+    const fromContainer = initialContainerRef.current;
+    if (
+      fromContainer !== targetContainer &&
+      containerEntry?.acceptsCrossDrop === false
+    ) {
+      setDragState((prev) =>
+        prev.overContainer === null
+          ? prev
+          : { ...prev, overContainer: null, overIndex: null },
+      );
+      return;
+    }
     const targetIndex = isBottom
       ? (containerEntry?.ids().length ?? 0)
       : ((over.data.current?.sortable?.index as number | undefined) ?? null);
@@ -272,7 +291,7 @@ function RootScope({ children }: { children: ReactNode }) {
       String(over.id);
     const to = normalizeContainer(rawTo);
     const target = scope.list(to);
-    if (!target) return;
+    if (!target || (from !== to && target.acceptsCrossDrop === false)) return;
 
     const targetIds = target.ids();
     const targetIndex = targetIds.indexOf(id);

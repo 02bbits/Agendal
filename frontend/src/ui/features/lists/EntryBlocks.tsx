@@ -66,9 +66,11 @@ export function EntryBlocks({
     return null;
   }
 
+  const hasNormalBox = normal.length > 0 || isTargeted;
+
   return (
-    <div className="space-y-2">
-      {normal.length > 0 || isTargeted ? (
+    <div className={hasNormalBox && due.length > 0 ? "space-y-2" : undefined}>
+      {hasNormalBox ? (
         <div className="overflow-hidden rounded-2xl border border-separator/50 bg-surface shadow-xs">
           <ul className="m-0 list-none p-0">
             <SortableTaskList
@@ -97,7 +99,7 @@ export function EntryBlocks({
           </ul>
         </div>
       ) : active ? (
-        <ul className="m-0 list-none p-0">
+        <ul className="m-0 list-none p-0 h-0 overflow-hidden">
           <SortableTaskList
             list={`day:${day}`}
             tasks={normalTasks}
@@ -161,12 +163,6 @@ export function EntryBlocks({
             ))
           )}
         </div>
-      ) : active ? (
-        <div
-          ref={setBottomDroppableRef}
-          aria-hidden="true"
-          className="h-3 w-full"
-        />
       ) : null}
     </div>
   );

@@ -44,7 +44,6 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     navProps,
     barRef,
     barHeight,
-    releaseFrozen,
   } = useUpcomingScreenData({
     store,
     anchor,
@@ -53,7 +52,6 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     viewMode,
     filter,
     initialDay: initialViewResolved?.day,
-    selectedTaskId: props.selectedTaskId,
   });
 
   const onViewChange = props.onViewChange;
@@ -83,7 +81,6 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
     overdueTasks,
     today: store.today,
     selectedTaskId: props.selectedTaskId,
-    onPlaced: releaseFrozen,
     navigate: props.navigate,
     onAddTask: (d: string) =>
       props.onAddTask ? props.onAddTask(d) : props.onNewTask?.(),

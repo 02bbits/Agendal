@@ -4,7 +4,6 @@ import type { Task, WeekStart } from "../../domain/types";
 import { daysAfter, isCurrentWeek, shiftWeek, weekOf } from "../../domain/week";
 import type { UpcomingViewMode } from "./types";
 import { groupUpcomingEntries } from "./upcomingEntries";
-import { useFrozenOrder } from "./useFrozenOrder";
 import { getUpcomingNavProps } from "./upcomingNav";
 import { useUpcomingListWindow } from "./useUpcomingListWindow";
 
@@ -17,7 +16,6 @@ export function useUpcomingScreenData({
   viewMode,
   filter,
   initialDay,
-  selectedTaskId,
 }: {
   store: {
     tasks: Task[];
@@ -30,10 +28,7 @@ export function useUpcomingScreenData({
   viewMode: UpcomingViewMode;
   filter: UpcomingFilter;
   initialDay?: string;
-  /** The task open in the panel keeps its place until the panel closes. */
-  selectedTaskId?: string | null;
 }) {
-  const frozen = useFrozenOrder(store.tasks, selectedTaskId);
   const isBoard = viewMode === "board";
   const listWindow = useUpcomingListWindow({
     today: store.today,
@@ -51,23 +46,16 @@ export function useUpcomingScreenData({
 
   const renderedDays = isBoard ? boardDays : listWindow.windowDays;
   const stripDays = isBoard ? weekOf(anchor, weekStart) : listWindow.stripWeek;
-  const grouped = groupUpcomingEntries(
-    frozen.layout,
+  const { entriesByDay, countsByDay } = groupUpcomingEntries(
+    store.tasks,
     renderedDays,
     stripDays,
     filter,
     store.isSettling,
   );
-  const { countsByDay } = grouped;
-  const entriesByDay = Object.fromEntries(
-    Object.entries(grouped.entriesByDay).map(([day, entries]) => [
-      day,
-      entries.map((e) => ({ ...e, task: frozen.live(e.task) })),
-    ]),
-  );
 
   const overdueTasks = useMemo(() => {
-    return frozen.layout
+    return store.tasks
       .filter(
         (t) =>
           (!t.done || store.isSettling(t.id)) &&
@@ -78,9 +66,8 @@ export function useUpcomingScreenData({
         (a, b) =>
           a.due_date!.localeCompare(b.due_date!) ||
           a.created_at.localeCompare(b.created_at),
-      )
-      .map(frozen.live);
-  }, [frozen, store]);
+      );
+  }, [store]);
 
   // By the anchor, not the strip: scrolling into next week must not remove the section
   const isCurrent = isCurrentWeek(weekOf(anchor, weekStart), store.today);
@@ -108,6 +95,5 @@ export function useUpcomingScreenData({
     navProps,
     barRef: listWindow.barRef,
     barHeight: listWindow.barHeight,
-    releaseFrozen: frozen.release,
   };
 }
