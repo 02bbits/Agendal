@@ -2,10 +2,11 @@
 # Nightly database backup (IM-65, scalability.md "Data protection and operations"):
 # pg_dump, encrypted with age, kept 7 days here and copied to Cloudflare R2.
 # Needs on the host: docker, age, rclone with a remote named "r2" (see deploy/README.md).
-# Settings come from /etc/agendal/backup.env (AGENDAL_DIR, AGE_RECIPIENT, R2_BUCKET).
+# Runs as the deploy user: settings come from ~/.config/agendal/backup.env (AGENDAL_DIR, AGE_RECIPIENT,
+# R2_BUCKET, optional BACKUP_DIR), loaded by agendal-backup.service.
 set -euo pipefail
-. /etc/agendal/backup.env
-out=/var/backups/agendal
+: "${AGENDAL_DIR:?}" "${AGE_RECIPIENT:?}" "${R2_BUCKET:?}"
+out=${BACKUP_DIR:-$HOME/backups}
 mkdir -p "$out"
 umask 077
 file="$out/agendal-$(date -u +%Y%m%dT%H%M%SZ).dump.age"

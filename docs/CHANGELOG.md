@@ -2,10 +2,14 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-24
+
+- **The app stays inside the deploy user (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS and Backups rows: the tunnel and the nightly backup are systemd user units of the deploy user, started at boot through linger; the backup settings and dumps live in its home, nothing under `/etc` or `/var`.
+
 ## 2026-11-23
 
 - **Reminders are sent (Refs #186).** [TK §2.5](03-modules/TK-tasks.md#25-reminders-tk-6-should): how `reminders:send` claims due reminders once (`SKIP LOCKED`, the delivery row written first), queues them in batches, sends to every device at once with `TTL`, `Urgency` and `Topic`, retries temporary failures for the failed devices only, and the push-service allow-list; sign-out sends this device's endpoint, sign-out everywhere removes all; the VAPID private key is a secret file made with `push:vapid`. [SC-18](07-architecture/security.md#sc-18): the allow-list, no redirects, the secret file. [api.md](07-architecture/api.md): `GET /push-subscriptions/key`, the subscription bodies, `push_endpoint` on logout. [SUMMARY](SUMMARY.md) Reminders, [README](../README.md) Tour 2 and Not built yet, [deploy/README](../deploy/README.md) Reminder keys.
-
+- **Web port can move (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Ingress and TLS row: the web app's loopback port is `WEB_PORT` (default 3000), set in the root `.env` when the host already uses 3000.
 - **Deployment matches the real server (Refs #60).** [overview.md](07-architecture/overview.md#deployment) Deployment table rewritten: Cloudflare DNS and TLS with a non-root Cloudflare Tunnel as the only way in (replaces Nginx and Let's Encrypt), Docker Compose with FrankenPHP, a queue worker and `schedule:work` (replaces PHP-FPM, Supervisor and cron), Resend for mail, client IP from `CF-Connecting-IP`, age-encrypted backups in Cloudflare R2, secrets as server files and Docker secrets. External systems table names Resend. [scalability.md](05-quality/scalability.md) Backups row and static assets: R2, encrypted; Next.js and Cloudflare instead of Nginx. [security.md](07-architecture/security.md#sc-03) SC-03: the IP is the client's. [asvs-checklist.md](06-testing/asvs-checklist.md) 14.3.2: where `APP_DEBUG=false` is set.
 - **Retention covers expired data (Refs #54).** [scalability.md](05-quality/scalability.md) Retention row: besides tombstones (30 days) and the audit log (90 days), daily jobs now remove expired password reset tokens, email and sign-in codes a day after they expire, and reminder send records 30 days after sending. App logs are daily files so the 14-day limit applies. Tested as T-AP-41.
 
