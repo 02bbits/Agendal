@@ -53,7 +53,10 @@ function browserKeys(): array
     $ec = openssl_pkey_get_details($key)['ec'];
     $b64 = fn (string $bytes) => rtrim(strtr(base64_encode($bytes), '+/', '-_'), '=');
 
-    return ['p256dh' => $b64("\x04".$ec['x'].$ec['y']), 'auth' => $b64(random_bytes(16))];
+    return [
+        'p256dh' => $b64("\x04".str_pad($ec['x'], 32, "\0", STR_PAD_LEFT).str_pad($ec['y'], 32, "\0", STR_PAD_LEFT)),
+        'auth' => $b64(random_bytes(16)),
+    ];
 }
 
 function device(User $user, string $endpoint): PushSubscription

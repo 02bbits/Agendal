@@ -60,14 +60,18 @@ export function addReminderAlert(
   draft: Omit<ReminderAlert, "id" | "timestamp"> & { id?: string },
 ): ReminderAlert {
   initIfNeeded();
-  const id = draft.id || `alert-${now().getTime()}-${Math.random().toString(36).slice(2, 7)}`;
+  const id =
+    draft.id ||
+    `alert-${now().getTime()}-${Math.random().toString(36).slice(2, 7)}`;
   const alert: ReminderAlert = {
     ...draft,
     id,
     timestamp: now().getTime(),
   };
   // Avoid duplicate alerts for the same id or task
-  const existing = memoryAlerts.filter((a) => a.id !== id && (!draft.url || a.url !== draft.url));
+  const existing = memoryAlerts.filter(
+    (a) => a.id !== id && (!draft.url || a.url !== draft.url),
+  );
   const next = [alert, ...existing];
   saveAlerts(next);
   return alert;

@@ -1,0 +1,2 @@
+# Gitleaks ignore file
+3fe65200394bffc50083ce364de61a945e72a28f:frontend/tests/lib/push.test.ts:generic-api-key:15

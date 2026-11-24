@@ -12,6 +12,7 @@ import {
 
 // #186, TK §2.5: this device's Web Push subscription
 
+// gitleaks:allow
 const SERVER_KEY =
   "BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U";
 const keyBytes = (b64: string) => {

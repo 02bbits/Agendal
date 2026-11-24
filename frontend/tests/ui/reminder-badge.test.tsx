@@ -120,6 +120,13 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     fireEvent.click(dismissBtn);
     expect(onDismiss).toHaveBeenCalled();
 
+    // Swipe to dismiss on mobile (#186)
+    onDismiss.mockClear();
+    fireEvent.touchStart(banner, { touches: [{ clientX: 200 }] });
+    fireEvent.touchMove(banner, { touches: [{ clientX: 300 }] });
+    fireEvent.touchEnd(banner);
+    expect(onDismiss).toHaveBeenCalled();
+
     // With count > 1
     rerender(
       <ReminderReturnBanner
