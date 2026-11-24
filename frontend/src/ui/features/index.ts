@@ -149,3 +149,17 @@ export type {
 } from "./lists/types";
 export { useActiveDay, type UseActiveDayOptions } from "./lists/useActiveDay";
 export { useUpcomingListWindow } from "./lists/useUpcomingListWindow";
+export {
+  addReminderAlert,
+  clearReminderAlerts,
+  dismissReminderAlert,
+  getReminderAlertCount,
+  getReminderAlerts,
+  type ReminderAlert,
+} from "./reminders/reminderAlertStore";
+export { useReminderBadge } from "./reminders/useReminderBadge";
+export {
+  ReminderReturnBanner,
+  type ReminderReturnBannerProps,
+} from "./reminders/ReminderReturnBanner";
+

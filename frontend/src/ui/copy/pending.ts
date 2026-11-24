@@ -503,6 +503,13 @@ export const pending = {
   "time.am": "AM",
   "time.pm": "PM",
   "app.loading": "Loading",
+  "reminders.alert_one": "Reminder",
+  "reminders.alert_many": "Reminders ({count})",
+  "reminders.view": "View",
+  "reminders.dismiss": "Dismiss reminder alert",
+  "reminders.active_list": "Reminders",
+  "reminders.dismiss_item": "Dismiss reminder",
+  "reminders.dismiss_all": "Dismiss all",
 } as const;
 
 export type PendingKey = keyof typeof pending;

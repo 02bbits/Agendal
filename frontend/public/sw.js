@@ -149,15 +149,37 @@ self.addEventListener("push", (event) => {
   }
   const title =
     typeof data.title === "string" && data.title ? data.title : "Agendal";
+  const url = appPath(data.url);
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: typeof data.body === "string" ? data.body : "",
-      // One per task: a repeat replaces it instead of stacking
-      tag: typeof data.tag === "string" ? data.tag : undefined,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/icon-192.png",
-      data: { url: appPath(data.url) },
-    }),
+    (async () => {
+      await self.registration.showNotification(title, {
+        body: typeof data.body === "string" ? data.body : "",
+        // One per task: a repeat replaces it instead of stacking
+        tag: typeof data.tag === "string" ? data.tag : undefined,
+        icon: "/icons/icon-192.png",
+        badge: "/icons/icon-192.png",
+        data: { url },
+      });
+      if (self.clients && typeof self.clients.matchAll === "function") {
+        try {
+          const windows = await self.clients.matchAll({
+            type: "window",
+            includeUncontrolled: true,
+          });
+          for (const client of windows) {
+            client.postMessage({
+              type: "AGENDAL_REMINDER_TRIGGER",
+              data: {
+                title,
+                body: typeof data.body === "string" ? data.body : "",
+                url,
+                tag: typeof data.tag === "string" ? data.tag : undefined,
+              },
+            });
+          }
+        } catch {}
+      }
+    })(),
   );
 });
 

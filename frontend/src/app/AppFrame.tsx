@@ -8,8 +8,10 @@ import {
   AppShell,
   InstallBanner,
   OfflineBanner,
+  ReminderReturnBanner,
   ROUTES,
   ToastStack,
+  useReminderBadge,
   type Project,
 } from "@/ui";
 import { useOffline } from "@/lib/online";
@@ -72,6 +74,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   useUpdateToast(showToast);
   useScreenFocus(pathname);
   usePageFlags(pathname);
+  const reminderBadge = useReminderBadge();
 
   const { tab, navigate, back, pendingTab, shownTab, shownPath } =
     useTabNavigation(pathname, router, splash.enterApp);
@@ -167,6 +170,21 @@ export function AppFrame({ children }: { children: ReactNode }) {
     />
   );
   const offlineBanner = tab && offline && <OfflineBanner />;
+  const reminderBanner = (
+    <ReminderReturnBanner
+      alert={reminderBadge.returnAlert}
+      alerts={reminderBadge.alerts}
+      count={reminderBadge.count}
+      onSelectAlert={(alert) => {
+        reminderBadge.dismissAlert(alert.id);
+        if (alert.url) router.push(alert.url);
+      }}
+      onDismissAlert={reminderBadge.dismissAlert}
+      onClearAll={reminderBadge.clearAll}
+      onDismiss={reminderBadge.dismissReturnBanner}
+      onAutoDismiss={reminderBadge.autoDismissReturnBanner}
+    />
+  );
 
   return (
     <AppFrameContext.Provider value={value}>
@@ -188,10 +206,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
             ) : undefined
           }
           banner={
-            offlineBanner || installBanner ? (
+            offlineBanner || installBanner || reminderBanner ? (
               <>
                 {offlineBanner}
                 {installBanner}
+                {reminderBanner}
               </>
             ) : undefined
           }

@@ -430,3 +430,62 @@
     display: block;
   }
 }
+
+/* Reminder return-to-app animations (#186) */
+@keyframes reminder-drop {
+  0% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.96);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(3px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes bell-ring {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  15% {
+    transform: rotate(-18deg);
+  }
+  30% {
+    transform: rotate(16deg);
+  }
+  45% {
+    transform: rotate(-12deg);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+  75% {
+    transform: rotate(-4deg);
+  }
+}
+
+.animate-reminder-drop {
+  animation: reminder-drop 420ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-bell-ring {
+  animation: bell-ring 900ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+  transform-origin: top center;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-reminder-drop {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  .animate-bell-ring {
+    animation: none;
+    transform: none;
+  }
+}
+

@@ -64,8 +64,11 @@ export function useDeviceReminders() {
       if (result.error === "no_devices") setSubscribed(false);
       return;
     }
-    if (result.sent > 0) setMessage("settings.push_test_sent");
-    else if (result.gone > 0) {
+    if (result.sent > 0) {
+      setMessage("settings.push_test_sent");
+      // The Service Worker receives the Web Push event from backend and broadcasts
+      // AGENDAL_REMINDER_TRIGGER with tag "agendal-test". No duplicate alert needed.
+    } else if (result.gone > 0) {
       setMessage("settings.push_test_gone");
       setSubscribed(false);
     } else setMessage("settings.push_test_failed");
