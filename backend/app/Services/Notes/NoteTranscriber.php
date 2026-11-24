@@ -16,13 +16,21 @@ use Throwable;
  */
 final class NoteTranscriber
 {
+    /** The model says whether it heard speech at all: asked only for text, it makes up words for silence or noise. */
+    private const SCHEMA = [
+        'type' => 'object',
+        'properties' => ['speech' => ['type' => 'boolean'], 'text' => ['type' => 'string']],
+        'required' => ['speech', 'text'],
+        'additionalProperties' => false,
+    ];
+
     public function __construct(private NoteLlmFallback $llm) {}
 
     /** The words heard; empty when there was no speech. */
     public function transcribe(string $wav): string
     {
         $route = $this->llm->route();
-        if ($route === null || $route['sdk']) {
+        if ($route === null || $route['sdk'] || $route['output'] !== 'json_schema') {
             throw new ApiError('note.dictation_failed', 'Dictation is not available.', 503);
         }
         $timeout = (float) config('note_llm.timeout_seconds');
@@ -33,16 +41,19 @@ final class NoteTranscriber
                 ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
                 ->post($route['url'], [
                     'model' => $route['model'],
+                    'temperature' => 0,
+                    'response_format' => ['type' => 'json_schema', 'json_schema' => ['name' => 'dictation', 'strict' => true, 'schema' => self::SCHEMA]],
                     'messages' => [['role' => 'user', 'content' => [
                         ['type' => 'text', 'text' => $prompt],
                         ['type' => 'input_audio', 'input_audio' => ['data' => base64_encode($wav), 'format' => 'wav']],
                     ]]],
                 ])->throw();
+            $answer = json_decode((string) $response->json('choices.0.message.content'), true, 4, JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
             Log::warning('note_dictation', ['outcome' => 'failed', 'error' => $e::class]);
             throw new ApiError('note.dictation_failed', 'Dictation stopped.', 502);
         }
 
-        return trim((string) $response->json('choices.0.message.content'));
+        return is_array($answer) && ($answer['speech'] ?? false) === true ? trim((string) ($answer['text'] ?? '')) : '';
     }
 }

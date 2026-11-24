@@ -8,6 +8,8 @@ const SILENCE_MS = 8000;
 const MAX_MS = 60000;
 // ponytail: a fixed loudness gate for "someone is speaking"; tune it on real phones if quiet voices are cut off
 const SPEECH_RMS = 0.015;
+// A click or a cough isn't speech: the recording is sent only with this much loud sound in it
+const SPEECH_MIN_MS = 300;
 
 type AudioContextClass = typeof AudioContext;
 const audioContext = (): AudioContextClass | undefined =>
@@ -60,7 +62,7 @@ export function record(): Recording {
         const chunks: Float32Array[] = [];
         const started = performance.now();
         let lastSound = started;
-        let heard = false;
+        let loudMs = 0;
         let finished = false;
         const finish = () => {
           if (finished) return;
@@ -70,7 +72,9 @@ export function record(): Recording {
           stream.getTracks().forEach((track) => track.stop());
           const rate = context.sampleRate;
           void context.close();
-          resolve(heard ? wav(downsample(chunks, rate)) : null);
+          resolve(
+            loudMs >= SPEECH_MIN_MS ? wav(downsample(chunks, rate)) : null,
+          );
         };
         processor.onaudioprocess = (event) => {
           const input = event.inputBuffer.getChannelData(0);
@@ -79,7 +83,7 @@ export function record(): Recording {
           for (const sample of input) sum += sample * sample;
           const time = performance.now();
           if (Math.sqrt(sum / input.length) > SPEECH_RMS) {
-            heard = true;
+            loudMs += (input.length / context.sampleRate) * 1000;
             lastSound = time;
           }
           if (time - lastSound > SILENCE_MS || time - started > MAX_MS)
