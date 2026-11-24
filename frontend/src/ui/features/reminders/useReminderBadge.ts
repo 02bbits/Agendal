@@ -64,7 +64,7 @@ export function useReminderBadge() {
       const current = getReminderAlerts();
       if (current.length > 0) {
         const newest = current[0];
-        if (newest && newest.id !== prevAlertIdRef.current) {
+        if (newest) {
           prevAlertIdRef.current = newest.id;
           setReturnAlert(newest);
         }
@@ -78,6 +78,9 @@ export function useReminderBadge() {
 
     const onReturn = () => {
       if (document.visibilityState === "visible") {
+        if (typeof window !== "undefined" && window.scrollX !== 0) {
+          window.scrollTo({ left: 0 });
+        }
         const current = getReminderAlerts();
         if (current.length > 0) {
           setReturnAlert(current[0] ?? null);
@@ -100,8 +103,10 @@ export function useReminderBadge() {
     dismissReminderAlert(id);
     const remaining = getReminderAlerts();
     if (remaining.length === 0) {
+      prevAlertIdRef.current = null;
       setReturnAlert(null);
     } else {
+      prevAlertIdRef.current = remaining[0]?.id ?? null;
       setReturnAlert(remaining[0] ?? null);
     }
   }, []);
@@ -109,16 +114,19 @@ export function useReminderBadge() {
   /** Clicking X on the return banner clears active alerts so the tab badge is also cleared. */
   const dismissReturnBanner = useCallback(() => {
     clearReminderAlerts();
+    prevAlertIdRef.current = null;
     setReturnAlert(null);
   }, []);
 
   /** Timer auto-dismiss hides the banner but keeps the unread badge on tab. */
   const autoDismissReturnBanner = useCallback(() => {
+    prevAlertIdRef.current = null;
     setReturnAlert(null);
   }, []);
 
   const clearAll = useCallback(() => {
     clearReminderAlerts();
+    prevAlertIdRef.current = null;
     setReturnAlert(null);
   }, []);
 

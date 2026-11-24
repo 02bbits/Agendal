@@ -379,6 +379,8 @@
 @layer base {
   html {
     -webkit-tap-highlight-color: transparent;
+    overflow-x: hidden;
+    max-width: 100%;
   }
   body {
     background: var(--color-base-100);
@@ -386,6 +388,8 @@
     font-family: var(--font-sans);
     font-size: 15px;
     line-height: 20px;
+    overflow-x: hidden;
+    max-width: 100%;
   }
 }
 

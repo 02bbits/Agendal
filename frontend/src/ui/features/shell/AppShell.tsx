@@ -47,6 +47,21 @@ export function AppShell({
   useKeyboardInset();
 
   useEffect(() => {
+    const resetScrollX = () => {
+      if (typeof window !== "undefined" && window.scrollX !== 0) {
+        window.scrollTo({ left: 0 });
+      }
+    };
+    window.addEventListener("resize", resetScrollX);
+    window.addEventListener("orientationchange", resetScrollX);
+    resetScrollX();
+    return () => {
+      window.removeEventListener("resize", resetScrollX);
+      window.removeEventListener("orientationchange", resetScrollX);
+    };
+  }, []);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const isSlash =
         event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey;
@@ -96,10 +111,10 @@ export function AppShell({
           <Sidebar active={tab} navigate={navigate} {...sidebar} />
         </div>
       )}
-      <div className="relative mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1 [html[data-board-view]_&]:md:max-w-none [overflow-x:clip]">
+      <div className="relative mx-auto flex min-h-dvh w-full max-w-[600px] min-w-0 flex-col bg-paper md:max-w-[792px] lg:mx-0 lg:max-w-none lg:flex-1 [html[data-board-view]_&]:md:max-w-none overflow-x-clip">
         <main
           className={
-            "flex-1 [overflow-x:clip] px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
+            "flex-1 overflow-x-clip px-gutter [overflow-wrap:anywhere] md:px-gutter-wide md:pb-6 " +
             "[html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:mx-auto [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:w-full [html:not([data-page-view='full']):not([data-board-view]):not([data-account-page]):not([data-auth-page])_&]:max-w-[800px] [html[data-board-view]_&]:max-w-none [html[data-auth-page]_&]:p-0 [html[data-auth-page]_&]:max-w-none " +
             (tab ? "pb-[calc(160px+env(safe-area-inset-bottom))]" : "pb-0")
           }

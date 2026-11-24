@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { Button } from "../../../components/Button";
 import { BellIcon } from "../../../components/icons";
 import { Switch } from "../../../components/Switch";
+import { cx } from "../../../components/cx";
 import { t } from "../../../copy";
 import { useDeviceReminders } from "./useDeviceReminders";
 
@@ -28,6 +29,8 @@ export function RemindersTab(): ReactElement {
               ? t("app.perm_desc_unsupported")
               : t("app.notification_diag_desc");
 
+  const isSuccess = message === "settings.push_test_sent";
+
   return (
     <div className="space-y-4">
       <Switch
@@ -50,7 +53,14 @@ export function RemindersTab(): ReactElement {
         </Button>
         <p
           role="status"
-          className="m-0 min-h-5 text-footnote text-ink-secondary"
+          className={cx(
+            "m-0 min-h-5 text-footnote transition-colors",
+            isSuccess
+              ? "text-emerald-500 font-medium"
+              : message
+                ? "text-error"
+                : "text-ink-secondary",
+          )}
         >
           {message ? t(message) : null}
         </p>

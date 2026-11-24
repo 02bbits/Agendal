@@ -10,6 +10,8 @@ import {
 } from "../../../../lib/push";
 import type { CopyKey } from "../../../copy";
 import { notifyPushState, usePushState } from "../../tasks/usePushState";
+import { addReminderAlert } from "../../reminders/reminderAlertStore";
+import { now } from "@/lib/clock";
 
 /** Settings > Reminders (TK-6, #186): this device's reminders, on or off, and a test push. */
 export function useDeviceReminders() {
@@ -66,8 +68,12 @@ export function useDeviceReminders() {
     }
     if (result.sent > 0) {
       setMessage("settings.push_test_sent");
-      // The Service Worker receives the Web Push event from backend and broadcasts
-      // AGENDAL_REMINDER_TRIGGER with tag "agendal-test". No duplicate alert needed.
+      addReminderAlert({
+        id: `test-${now().getTime()}`,
+        title: "Agendal",
+        body: "Test reminder",
+        url: "/settings",
+      });
     } else if (result.gone > 0) {
       setMessage("settings.push_test_gone");
       setSubscribed(false);

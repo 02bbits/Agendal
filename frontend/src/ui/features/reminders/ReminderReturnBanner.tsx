@@ -103,6 +103,9 @@ export function ReminderReturnBanner({
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDraggingRef.current || dragStartRef.current === null) return;
+    if (e.cancelable) {
+      e.preventDefault();
+    }
     e.stopPropagation();
     const diff = e.touches[0].clientX - dragStartRef.current;
     dragOffsetRef.current = diff;
@@ -137,6 +140,7 @@ export function ReminderReturnBanner({
   const handlePointerDown = (e: React.PointerEvent) => {
     if (
       e.pointerType === "mouse" ||
+      e.pointerType === "touch" ||
       (e.button !== undefined && e.button !== 0) ||
       isButtonAction(e)
     ) {
@@ -196,8 +200,8 @@ export function ReminderReturnBanner({
   }
 
   return (
-    <div className="sticky top-3 z-40 h-0 w-full max-w-full [overflow-x:clip] overflow-y-visible pointer-events-none">
-      <div className="flex justify-center px-2 sm:px-0 pointer-events-none w-full max-w-full [overflow-x:clip]">
+    <div className="sticky top-3 z-40 h-0 w-full max-w-full overflow-x-clip overflow-y-visible pointer-events-none">
+      <div className="flex justify-center px-2 sm:px-0 pointer-events-none w-full max-w-full overflow-x-clip">
         <aside
           ref={containerRef}
           role="alert"
@@ -223,7 +227,7 @@ export function ReminderReturnBanner({
                 ? "none"
                 : "transform 180ms ease-out, opacity 180ms ease-out",
           }}
-          className="animate-reminder-drop pointer-events-auto touch-pan-y select-none mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-separator/90 bg-surface/98 p-3 shadow-xl backdrop-blur-md"
+          className="animate-reminder-drop pointer-events-auto touch-none select-none mx-auto flex w-full max-w-md flex-col overflow-hidden rounded-2xl border border-separator/90 bg-surface/98 p-3 shadow-xl backdrop-blur-md"
         >
           {/* Top collapsed header bar */}
           <div className="flex w-full items-center gap-3">
