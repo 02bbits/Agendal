@@ -79,7 +79,6 @@ export const pending = {
   "task.starts_today": "Starts today",
   "list.move_task": "Move {title}",
   "task.moved_to": "Moved to {project}",
-  "task.rescheduled_to": "Rescheduled to {day}",
   "dnd.instructions":
     "To move a task, press Space on its move button. Use the arrow keys to move it, Space to drop it, or Escape to cancel.",
   "dnd.picked": "Picked up {title}.",
@@ -90,8 +89,6 @@ export const pending = {
   "list.sort_smart": "Smart order",
   "list.sort_manual": "Manual order",
   "list.sort_by_rules": "Sort by rules",
-  "list.sorted_by_rules": "Sorted by the rules. Drag to fine-tune.",
-  "list.switched_manual": "Switched to manual order",
   "task.due_today": "Due today",
   "task.due_today_at": "Due today, {time}",
   "task.time_range": "{start} – {end}",
