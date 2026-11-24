@@ -24,3 +24,6 @@ Schedule::call(fn () => DB::table('email_verification_codes')->where('expires_at
     ->daily()->name('purge-email-codes');
 Schedule::call(fn () => DB::table('reminder_deliveries')->where('sent_at', '<', now()->subDays(PurgeTombstones::KEEP_DAYS))->delete())
     ->daily()->name('purge-reminder-deliveries');
+
+// #192: Telescope keeps 48 hours
+Schedule::command('telescope:prune --hours=48')->daily();
