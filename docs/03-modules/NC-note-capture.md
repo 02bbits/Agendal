@@ -74,18 +74,18 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.3 Dictation (NC-3, Should)
 
-- **Engine:** the browser's Web Speech API (decided in [Q11](../08-project/open-questions.md#q11)). Where it isn't supported, the mic button is hidden, not disabled. That includes Firefox, and iOS before 14.5.
-- **Disclosure ([Q20](../08-project/open-questions.md#q20)):** in Chrome, the audio is sent to the browser vendor's speech service. The first time the mic is used, a one-time notice shows (`note.mic_notice`) with Continue / Cancel. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
+- **Engine ([Q11](../08-project/open-questions.md#q11)):** the device records the audio and the server has the app's language model ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) write it down word for word, in the languages spoken: a note often mixes Vietnamese and English. The browser's own speech service is not used: it is unreliable on iPhone and missing in Firefox. Where the browser can't record audio, the mic button is hidden, not disabled.
+- **Recording:** 16 kHz mono WAV, made on the device and sent inline to `POST /notes/dictation`. The audio is never stored or logged.
+- **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, a one-time notice shows (`note.mic_notice`) with Continue / Cancel; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
 - **While listening:**
   - The mic button becomes Stop, and `note.listening` is announced.
-  - Interim words show in muted text at the cursor. Final words are inserted at the cursor, never replacing existing text.
   - Make tasks is disabled.
-- **Stopping:** Stop, 8 s of silence, or 60 s total. Then `note.heard` shows above the text, and the cursor goes to the end of the inserted text.
+- **Stopping:** Stop, 8 s of silence, or 60 s total. The words show once the model has written them down (a few seconds), not while speaking. They are inserted at the cursor, never replacing existing text (a selection is replaced, [NC-E17](#nc-e17)). Then `note.heard` shows, and the cursor goes to the end of the inserted text.
 - **Errors:**
   - Permission denied → `note.mic_denied`, and the mic stays visible so the user can retry.
   - No speech → `note.no_speech`.
-  - Network error → `note.dictation_failed`.
-- **Offline:** the mic is disabled with `note.dictation_offline` (Chrome's engine needs the network).
+  - Network error, the model off or failing → `note.dictation_failed`.
+- **Offline:** the mic is disabled with `note.dictation_offline` (the model is on the server).
 
 ### 2.4 File to note (NC-4, Should)
 
@@ -195,6 +195,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `504` | `note.file_failed` (the 10 s sandbox timeout) |
 | `429` | `error.rate_limited` (10/hour, 30/day) |
 
+- `POST /notes/dictation` (multipart `audio`, WAV, ≤ 2 MB):
+
+| Status | Body |
+|---|---|
+| `200` | `{text}`. Empty when no speech was heard |
+| `422` | `error.invalid` (no audio, not WAV, or too large) |
+| `502` · `503` | `note.dictation_failed` (the model failed, or is off) |
+| `429` | `error.rate_limited` (10/minute, 100/day) |
+
 - `POST /tasks`: [TK module §7](TK-tasks.md#7-api-contract).
 
 ## 8. Data, validation and authorization
@@ -204,7 +213,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Streamed to a temporary file, given to the sandboxed worker, and deleted in a `finally` step ([SC-16](../07-architecture/security.md#sc-16)).
   - Never stored or logged.
   - `file_name` is reduced to its base name.
-- **Authorization:** both endpoints need a session. There are no resource IDs, so IDOR doesn't apply.
+- **Dictation audio:** read in memory, sent to the model and dropped. Never stored or logged.
+- **Authorization:** all three endpoints need a session. There are no resource IDs, so IDOR doesn't apply.
 
 ## 9. Abuse cases
 
@@ -212,6 +222,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|
 | Malicious file (parser exploit, zip or XML bomb, polyglot) | [SC-15](../07-architecture/security.md#sc-15) magic bytes, sandbox, 10 s and 50 MB caps | SEC-30–33 |
 | Using extraction as free OCR at scale (Google Cloud Vision is billed per image) | 10/hour, 30/day per user. A monthly Vision quota set in Google Cloud | SEC-10 |
+| Using dictation as free speech-to-text at scale (the model is billed per token) | 10/minute, 100/day per user; 60 s and 2 MB per recording | SEC-10 |
 | Files kept with personal data | [SC-16](../07-architecture/security.md#sc-16) deleted in `finally` | SEC-34 |
 | A draft left on a shared device | Wiped on sign-out ([SC-19](../07-architecture/security.md#sc-19)) | SEC-50 |
 

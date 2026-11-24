@@ -11,7 +11,7 @@ flowchart LR
     M[(Email service)]
     P[(Web Push service)]
     X[(Google Cloud Vision<br/>OCR for photos and scanned PDFs)]
-    L[(LLM provider<br/>low-confidence items only)]
+    L[(LLM provider<br/>low-confidence items, dictation)]
 
     U -- "notes, task edits" --> A
     A -- "plans, results, lists" --> U
@@ -19,6 +19,7 @@ flowchart LR
     A -- "reminders (TK-6)" --> P --> U
     A -- "image or scanned PDF (not kept)" --> X
     A -. "low-confidence items (ADR-008)" .-> L
+    A -. "dictation audio (not kept)" .-> L
 ```
 
 | External system | Needed for | Failure impact |
@@ -26,8 +27,7 @@ flowchart LR
 | Email service (Resend, SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
 | Web Push | [TK-6](../03-modules/TK-tasks.md#tk-6) (Should) | No push reminders. Inbox still shows what is due |
 | Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)) | [NC-4](../03-modules/NC-note-capture.md#nc-4) (Should): photos and PDFs without a text layer. Text PDFs and Word files are read on the server, with no outside call | Photos and scanned PDFs can't be read. Typing still works |
-| LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
-| Browser speech service | [NC-3](../03-modules/NC-note-capture.md#nc-3) (Should), through the Web Speech API | Dictation unavailable. Typing still works |
+| LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)), and dictation ([NC-3](../03-modules/NC-note-capture.md#nc-3), Should) | Rules handle notes alone. Dictation unavailable; typing still works |
 
 ## Containers
 

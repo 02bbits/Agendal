@@ -94,6 +94,7 @@ export const pending = {
   "common.show_less": "Show less",
   "note.capture_open": "Write a note",
   "note.mic": "Dictate a note",
+  "common.continue": "Continue",
   "note.text_label": "Your note",
   "note.new_title": "New note",
   "note.editor_hint":

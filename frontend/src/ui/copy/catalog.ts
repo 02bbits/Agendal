@@ -70,7 +70,7 @@ export const catalog = {
   "note.mic_denied":
     "Microphone access is off. Turn it on in your browser settings to dictate.",
   "note.mic_notice":
-    "Your browser turns speech into text using its own online service.",
+    "Your recording is sent to Agendal's language model to turn it into text. It isn't kept.",
   "note.no_speech": "I didn't hear anything. Try again.",
   "note.dictation_failed":
     "Dictation stopped. Check your connection and try again.",

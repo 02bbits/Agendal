@@ -16,6 +16,8 @@ import {
 import { now } from "../../../lib/clock";
 import {
   canDictate,
+  markMicNoticeSeen,
+  micNoticeSeen,
   record,
   transcribe,
   type DictationError,
@@ -275,11 +277,17 @@ export function NoteEditor({
   );
   const [dictationNote, setDictationNote] = useState<CopyKey | null>(null);
   const recording = useRef<Recording | null>(null);
+  // The one-time notice before the first recording (NC §2.3); Continue starts it, in that tap
+  const [micNotice, setMicNotice] = useState(
+    () => !!dictate && !micNoticeSeen(),
+  );
   const startDictation = () => {
     if (recording.current || offline) return;
+    if (!micNoticeSeen()) return setMicNotice(true);
     const field = textRef.current;
-    // Words go in at the cursor, never over the text (NC §2.3)
-    const at = field?.selectionEnd ?? latest.current.length;
+    // Words go in at the cursor; a selection is replaced, as typing would (NC-E17)
+    const from = field?.selectionStart ?? latest.current.length;
+    const to = field?.selectionEnd ?? from;
     const current = record();
     recording.current = current;
     setDictation("listening");
@@ -292,8 +300,8 @@ export function NoteEditor({
       })
       .then((words) => {
         if (!words) return setDictationNote("note.no_speech");
-        const before = latest.current.slice(0, at);
-        const after = latest.current.slice(at);
+        const before = latest.current.slice(0, from);
+        const after = latest.current.slice(to);
         const lead = before && !/\s$/.test(before) ? " " : "";
         const tail = after && !/^\s/.test(after) ? " " : "";
         const next = before + lead + words + tail + after;
@@ -317,7 +325,9 @@ export function NoteEditor({
   };
   // The capture bar's mic: started in the opening tap, which iOS needs for audio
   useLayoutEffect(() => {
-    if (dictate) startDictation();
+    // Starts the recorder (an outside system) inside the tap; its state follows from that
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (dictate && micNoticeSeen()) startDictation();
     return () => recording.current?.stop();
     // Once, when the editor opens
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -537,6 +547,31 @@ export function NoteEditor({
           void submit(true);
         }}
         onCancel={() => setConflicts(0)}
+      />
+      <Dialog
+        open={micNotice}
+        history={false}
+        title={t("note.mic")}
+        description={t("note.mic_notice")}
+        onClose={() => setMicNotice(false)}
+        actionsLayout="row"
+        actions={
+          <>
+            <Button onClick={() => setMicNotice(false)}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                setMicNotice(false);
+                markMicNoticeSeen();
+                startDictation();
+              }}
+            >
+              {t("common.continue")}
+            </Button>
+          </>
+        }
       />
       <Dialog
         open={confirming}

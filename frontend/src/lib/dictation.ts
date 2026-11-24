@@ -162,3 +162,22 @@ function wav(samples: Float32Array): Blob {
   });
   return new Blob([view], { type: "audio/wav" });
 }
+
+const MIC_NOTICE_KEY = "agendal.mic_notice_seen";
+
+/** The notice before the first recording shows once per device (NC §2.3). */
+export const micNoticeSeen = () => {
+  try {
+    return localStorage.getItem(MIC_NOTICE_KEY) === "1";
+  } catch {
+    return false;
+  }
+};
+
+export const markMicNoticeSeen = () => {
+  try {
+    localStorage.setItem(MIC_NOTICE_KEY, "1");
+  } catch {
+    // Private mode: the notice shows again next time
+  }
+};

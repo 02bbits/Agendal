@@ -81,7 +81,7 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.stop` | Stop | Mic state |
 | `note.heard` | Here's what I heard. | After dictation |
 | `note.mic_denied` † | Microphone access is off. Turn it on in your browser settings to dictate. | Mic permission denied |
-| `note.mic_notice` † | Your browser turns speech into text using its own online service. | First mic use, Continue / Cancel (NC) |
+| `note.mic_notice` † | Your recording is sent to Agendal's language model to turn it into text. It isn't kept. | First mic use, Continue / Cancel (NC) |
 | `note.no_speech` † | I didn't hear anything. Try again. | Dictation ended with no words |
 | `note.dictation_failed` † | Dictation stopped. Check your connection and try again. | Dictation network error |
 | `note.dictation_offline` † | Dictation needs a connection. | Mic disabled while offline |
