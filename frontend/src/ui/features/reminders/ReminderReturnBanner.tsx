@@ -14,6 +14,20 @@ import type { ReminderAlert } from "./reminderAlertStore";
 
 export const REMINDER_BANNER_DURATION_MS = 8000;
 
+function safeResetScrollX() {
+  if (typeof window !== "undefined") {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.userAgent &&
+      !navigator.userAgent.includes("jsdom")
+    ) {
+      window.scrollTo({ left: 0 });
+    }
+    if (document.documentElement) document.documentElement.scrollLeft = 0;
+    if (document.body) document.body.scrollLeft = 0;
+  }
+}
+
 export interface ReminderReturnBannerProps {
   alert: ReminderAlert | null;
   alerts?: readonly ReminderAlert[];
@@ -94,10 +108,70 @@ export function ReminderReturnBanner({
   const isButtonAction = (e: React.SyntheticEvent) =>
     (e.target as Element).closest?.("button, [role='button']") !== null;
 
+  // Active non-passive native touch listener to prevent mobile browser horizontal pan gestures
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const onNativeTouchStart = (e: TouchEvent) => {
+      const target = e.target as Element | null;
+      if (target?.closest?.("button, [role='button']")) return;
+      setIsHovered(true);
+      dragStartRef.current = e.touches[0]?.clientX ?? 0;
+      dragOffsetRef.current = 0;
+      isDraggingRef.current = true;
+    };
+
+    const onNativeTouchMove = (e: TouchEvent) => {
+      if (!isDraggingRef.current || dragStartRef.current === null) return;
+      if (e.cancelable) {
+        e.preventDefault();
+      }
+      e.stopPropagation();
+      const clientX = e.touches[0]?.clientX ?? 0;
+      const diff = clientX - dragStartRef.current;
+      dragOffsetRef.current = diff;
+      setDragOffset(diff);
+    };
+
+    const onNativeTouchEnd = () => {
+      if (!isDraggingRef.current) return;
+      isDraggingRef.current = false;
+      const finalOffset = dragOffsetRef.current;
+      if (Math.abs(finalOffset) > 70) {
+        const exitTarget = (finalOffset > 0 ? 1 : -1) * 160;
+        setIsExiting(true);
+        setDragOffset(exitTarget);
+        setTimeout(() => {
+          setIsOpen(false);
+          onDismiss();
+          safeResetScrollX();
+        }, 180);
+      } else {
+        dragOffsetRef.current = 0;
+        setDragOffset(0);
+        setIsHovered(false);
+      }
+      safeResetScrollX();
+    };
+
+    el.addEventListener("touchstart", onNativeTouchStart, { passive: true });
+    el.addEventListener("touchmove", onNativeTouchMove, { passive: false });
+    el.addEventListener("touchend", onNativeTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onNativeTouchEnd, { passive: true });
+
+    return () => {
+      el.removeEventListener("touchstart", onNativeTouchStart);
+      el.removeEventListener("touchmove", onNativeTouchMove);
+      el.removeEventListener("touchend", onNativeTouchEnd);
+      el.removeEventListener("touchcancel", onNativeTouchEnd);
+    };
+  }, [onDismiss]);
+
   const handleTouchStart = (e: React.TouchEvent) => {
     if (isButtonAction(e)) return;
     setIsHovered(true);
-    dragStartRef.current = e.touches[0].clientX;
+    dragStartRef.current = e.touches[0]?.clientX ?? 0;
     dragOffsetRef.current = 0;
     isDraggingRef.current = true;
   };
@@ -108,7 +182,7 @@ export function ReminderReturnBanner({
       e.preventDefault();
     }
     e.stopPropagation();
-    const diff = e.touches[0].clientX - dragStartRef.current;
+    const diff = (e.touches[0]?.clientX ?? 0) - dragStartRef.current;
     dragOffsetRef.current = diff;
     setDragOffset(diff);
   };
@@ -124,18 +198,14 @@ export function ReminderReturnBanner({
       setTimeout(() => {
         setIsOpen(false);
         onDismiss();
-        if (typeof window !== "undefined" && window.scrollX !== 0) {
-          window.scrollTo({ left: 0 });
-        }
+        safeResetScrollX();
       }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
       setIsHovered(false);
     }
-    if (typeof window !== "undefined" && window.scrollX !== 0) {
-      window.scrollTo({ left: 0 });
-    }
+    safeResetScrollX();
   };
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -182,18 +252,14 @@ export function ReminderReturnBanner({
       setTimeout(() => {
         setIsOpen(false);
         onDismiss();
-        if (typeof window !== "undefined" && window.scrollX !== 0) {
-          window.scrollTo({ left: 0 });
-        }
+        safeResetScrollX();
       }, 180);
     } else {
       dragOffsetRef.current = 0;
       setDragOffset(0);
       setIsHovered(false);
     }
-    if (typeof window !== "undefined" && window.scrollX !== 0) {
-      window.scrollTo({ left: 0 });
-    }
+    safeResetScrollX();
   };
 
   if (!alert || activeAlerts.length === 0) {
@@ -205,7 +271,7 @@ export function ReminderReturnBanner({
   }
 
   return createPortal(
-    <div className="fixed top-3 inset-x-0 z-[120] pointer-events-none flex justify-center px-3 sm:px-0">
+    <div className="fixed top-3 inset-x-0 z-[120] pointer-events-none flex justify-center px-3 sm:px-0 overflow-x-clip max-w-[100vw]">
       <aside
         ref={containerRef}
         role="alert"
