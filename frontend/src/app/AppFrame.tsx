@@ -10,6 +10,7 @@ import {
   OfflineBanner,
   ReminderReturnBanner,
   ROUTES,
+  t,
   ToastStack,
   useReminderBadge,
   type Project,
@@ -177,7 +178,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
       count={reminderBadge.count}
       onSelectAlert={(alert) => {
         reminderBadge.dismissAlert(alert.id);
-        if (alert.url) router.push(alert.url);
+        if (alert.id === "agendal-test") {
+          showToast(t("settings.push_test_sent"));
+        } else if (alert.url) {
+          router.push(alert.url);
+        }
       }}
       onDismissAlert={reminderBadge.dismissAlert}
       onClearAll={reminderBadge.clearAll}

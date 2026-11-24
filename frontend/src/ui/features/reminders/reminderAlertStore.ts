@@ -68,11 +68,14 @@ export function addReminderAlert(
     id,
     timestamp: now().getTime(),
   };
-  // Avoid duplicate alerts for the same id or task
+  // Avoid duplicate alerts for the same id, task, or test notification
   const existing = memoryAlerts.filter(
-    (a) => a.id !== id && (!draft.url || a.url !== draft.url),
+    (a) =>
+      a.id !== id &&
+      (id !== "agendal-test" || a.id !== "agendal-test") &&
+      (!draft.url || a.url !== draft.url || id === "agendal-test"),
   );
-  const next = [alert, ...existing];
+  const next = [alert, ...existing.filter((a) => a.id !== "agendal-test")];
   saveAlerts(next);
   return alert;
 }
@@ -103,9 +106,10 @@ export function setupReminderListeners(): () => void {
   const handleSwMessage = (event: MessageEvent) => {
     if (event.data?.type === "AGENDAL_REMINDER_TRIGGER") {
       const data = event.data.data;
+      const isTest = data.tag === "agendal-test";
       addReminderAlert({
-        id: data.tag,
-        title: data.title || "Agendal",
+        id: data.tag || (isTest ? "agendal-test" : undefined),
+        title: isTest ? data.body || "Test reminder" : data.title || "Agendal",
         body: data.body,
         url: data.url,
       });
