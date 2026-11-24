@@ -112,11 +112,13 @@ function sameDayParts(task: Task, f: MetaFormat): MetaPart[] {
   const entry = f.opts.entry;
 
   if (startTime && dueTime) {
-    const range = t("task.time_range", {
-      start: f.time(startTime),
-      end: f.time(dueTime),
-    });
-    return [{ text: range, tone: f.dueTone(task, "plain") }];
+    return [
+      plain(t("task.start_at", { time: f.time(startTime) })),
+      {
+        text: t("task.due_at", { time: f.time(dueTime) }),
+        tone: f.dueTone(task, "due"),
+      },
+    ];
   }
   if (startTime) {
     return [

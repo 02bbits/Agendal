@@ -74,6 +74,7 @@ export const pending = {
   "app.vapid_desc_ready": "Ready to send.",
   "app.vapid_desc_missing": "Push isn't set up on the server.",
   "app.vapid_desc_checking": "Checking…",
+  "task.start_at": "Start {time}",
   "task.starts_at": "Start at {time}",
   "task.starts_today": "Starts today",
   "task.due_today": "Due today",
