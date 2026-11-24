@@ -16,6 +16,7 @@ use App\Http\Controllers\Auth\TwoFactorResendController;
 use App\Http\Controllers\CountsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NoteDictationController;
 use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SyncController;
@@ -46,6 +47,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('counts', CountsController::class);
         Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
         Route::get('notes', [NoteController::class, 'index']);
+        Route::post('notes/dictation', NoteDictationController::class)->middleware('throttle:dictation');
         Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');
         Route::get('notes/{note}', [NoteController::class, 'show']);
         Route::put('notes/{note}', [NoteController::class, 'update'])->middleware('throttle:notes');

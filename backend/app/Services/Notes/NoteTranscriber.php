@@ -1,0 +1,48 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Services\Notes;
+
+use App\Exceptions\ApiError;
+use Illuminate\Http\Client\RequestException;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
+/**
+ * Dictation (NC-3): the app's language model writes down a short WAV recording, word for word. The audio is sent
+ * inline and never stored. Only a provider with audio input (Gemini, in the OpenAI chat format) can do it.
+ */
+final class NoteTranscriber
+{
+    public function __construct(private NoteLlmFallback $llm) {}
+
+    /** The words heard; empty when there was no speech. */
+    public function transcribe(string $wav): string
+    {
+        $route = $this->llm->route();
+        if ($route === null || $route['sdk']) {
+            throw new ApiError('note.dictation_failed', 'Dictation is not available.', 503);
+        }
+        $timeout = (float) config('note_llm.timeout_seconds');
+        $prompt = (string) file_get_contents(resource_path('prompts/'.config('note_llm.dictation_prompt_version').'.txt'));
+
+        try {
+            $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
+                ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
+                ->post($route['url'], [
+                    'model' => $route['model'],
+                    'messages' => [['role' => 'user', 'content' => [
+                        ['type' => 'text', 'text' => $prompt],
+                        ['type' => 'input_audio', 'input_audio' => ['data' => base64_encode($wav), 'format' => 'wav']],
+                    ]]],
+                ])->throw();
+        } catch (Throwable $e) {
+            Log::warning('note_dictation', ['outcome' => 'failed', 'error' => $e::class]);
+            throw new ApiError('note.dictation_failed', 'Dictation stopped.', 502);
+        }
+
+        return trim((string) $response->json('choices.0.message.content'));
+    }
+}

@@ -122,7 +122,7 @@ final class NoteLlmFallback
      *
      * @return Route|null
      */
-    private function route(): ?array
+    public function route(): ?array
     {
         $config = config('note_llm.providers')[(string) config('note_llm.provider')] ?? null;
         if (! config('note_llm.enabled') || ! is_array($config) || ($config['enabled'] ?? false) !== true) {

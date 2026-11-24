@@ -67,4 +67,9 @@ return [
     // The versioned prompt in resources/prompts, recorded on each note that used it.
     'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v9'),
 
+    // Dictation (NC-3): the model writes down a recording. Its prompt, and the largest WAV accepted (60 s at 16 kHz
+    // mono is about 1.9 MB).
+    'dictation_prompt_version' => env('NOTE_DICTATION_PROMPT_VERSION', 'note-dictation-v1'),
+    'dictation_max_kb' => (int) env('NOTE_DICTATION_MAX_KB', 2048),
+
 ];

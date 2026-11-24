@@ -88,6 +88,7 @@ export function AppOverlays({
       {note.editing && (
         <NoteEditor
           note={editingNote ?? undefined}
+          dictate={note.dictating}
           onClose={note.closeNoteEditor}
           onDraftRestored={() => showToast(t("note.draft_restored"))}
           offline={offline}
