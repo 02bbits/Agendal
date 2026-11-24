@@ -19,6 +19,7 @@
     "repeat_rule": { "$ref": "#/$defs/repeat_rule" },
     "repeat_anchor": { "$ref": "#/$defs/date", "readOnly": true, "description": "Original local date of the series, maintained by the server. Moving one occurrence preserves it. Current task responses include it; older embedded note snapshots may omit it." },
     "reminder": { "$ref": "#/$defs/reminder" },
+    "due_reminder": { "$ref": "#/$defs/reminder", "description": "Optional reminder offset before due date (ADR-006, #186)." },
     "notes": { "$ref": "#/$defs/notes" },
     "done": { "type": "boolean" },
     "done_at": { "type": ["string", "null"], "format": "date-time" },
@@ -37,7 +38,7 @@
     "priority": { "enum": ["low", "medium", "high", null] },
     "repeat": { "enum": ["never", "daily", "weekly", "monthly", "yearly"] },
     "repeat_rule": { "type": ["string", "null"], "maxLength": 300, "pattern": "^FREQ=(DAILY|WEEKLY|MONTHLY|YEARLY)(;[A-Z]+=[A-Z0-9,+-]+)*$", "description": "Nullable calendar RRULE. FREQ is first and matches repeat. Supported parts: FREQ, INTERVAL (1-999), BYDAY, BYMONTHDAY, BYMONTH, WKST, COUNT (1-10000) and UNTIL; COUNT and UNTIL are exclusive. Backend validation checks full rule semantics. Null uses legacy enum-only recurrence. Human-readable descriptions are formatted by the frontend, not returned by the API." },
-    "reminder": { "enum": ["none", "0m", "5m", "10m", "15m", "30m", "1h", "2h", "1d", "2d", "1w"] },
+    "reminder": { "type": "string", "pattern": "^(\\d+[mhdw]|none)$", "description": "Reminder offset string: 'none', or non-negative integer followed by m (minutes), h (hours), d (days), w (weeks) e.g. '10m', '1h', '2d'." },
     "notes": { "type": ["string", "null"], "maxLength": 5000 }
   }
 }
