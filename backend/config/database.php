@@ -19,6 +19,10 @@ return [
 
     'default' => env('DB_CONNECTION', 'sqlite'),
 
+    // #192 slow-query alert: one query over slow_query_ms, or a request's queries over slow_request_ms
+    'slow_query_ms' => (int) env('DB_SLOW_QUERY_MS', 500),
+    'slow_request_ms' => (int) env('DB_SLOW_REQUEST_MS', 2000),
+
     /*
     |--------------------------------------------------------------------------
     | Database Connections
