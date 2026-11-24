@@ -16,10 +16,15 @@ browser ─TLS─> Cloudflare ─tunnel─> cloudflared (host) ─> web :3000 (1
 - Firewall: deny all inbound except SSH. Optional: SSH through Cloudflare Access too, then close 22.
 - Automatic security updates (`unattended-upgrades` or `dnf-automatic`).
 - Packages: Docker with the compose plugin, `age`, `rclone`, `cloudflared`.
+- Everything of the app's lives with the deploy user: the repo, secrets, the tunnel and the backups. Its
+  services are systemd user units in `~/.config/systemd/user/`; `sudo loginctl enable-linger agendal`
+  (once) starts them at boot without a login.
 
 ## 2. Cloudflare (dashboard)
 
-- Tunnel: route `<domain>` to `http://localhost:3000` (or `WEB_PORT`, see First deploy); config in [cloudflared.example.yml](cloudflared.example.yml).
+- Tunnel: route `<domain>` to `http://localhost:3000` (or `WEB_PORT`, see First deploy); config in [cloudflared.example.yml](cloudflared.example.yml). As `agendal`: `cloudflared tunnel login`,
+  `cloudflared tunnel create <name>`, `cloudflared tunnel route dns <name> <domain>`, then
+  `cp deploy/cloudflared.service ~/.config/systemd/user/ && systemctl --user enable --now cloudflared`.
 - SSL/TLS: Always Use HTTPS on, minimum TLS 1.2. The app sends HSTS itself.
 - Security: WAF managed rules on. One rate-limiting rule on `/api/v1/auth/*` (the app's own limits stay the real
   ones). Leave Bot Fight Mode off: it challenges the app's API calls.
@@ -69,14 +74,14 @@ Nightly encrypted `pg_dump`, 7 days on the server and in R2 ([backup.sh](backup.
   & Write on that bucket only. `rclone config`: remote `r2`, type S3, provider Cloudflare.
 - `age-keygen -o agendal-backup.key` on a team member's machine, **not** the server. Only the public key goes
   on the server, so a leaked server or R2 token can't read the dumps.
-- `/etc/agendal/backup.env`:
+- `~/.config/agendal/backup.env` of `agendal` (dumps go to `~/backups` unless `BACKUP_DIR` is set):
   ```sh
   AGENDAL_DIR=/srv/services/agendal
   AGE_RECIPIENT=age1...
   R2_BUCKET=agendal-backups
   ```
-- `sudo cp deploy/agendal-backup.* /etc/systemd/system/ && sudo systemctl enable --now agendal-backup.timer`
-- Run once: `sudo systemctl start agendal-backup`, then `journalctl -u agendal-backup`.
+- `cp deploy/agendal-backup.* ~/.config/systemd/user/ && systemctl --user enable --now agendal-backup.timer`
+- Run once: `systemctl --user start agendal-backup`, then `journalctl --user -u agendal-backup`.
 
 **Restore drill** (before the demo, scalability.md): on the machine with the private key,
 
