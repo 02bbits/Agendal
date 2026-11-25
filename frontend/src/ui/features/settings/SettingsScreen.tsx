@@ -19,6 +19,7 @@ import { SettingsDesktop } from "./SettingsDesktop";
 import { SettingsPanel } from "./SettingsSection";
 import { SettingsPhone } from "./SettingsPhone";
 import { filterSettingsTabs, settingsTabs } from "./settingsTabs";
+import { RemindersTab } from "./reminders/RemindersTab";
 import { SidebarTab } from "./sidebar/SidebarTab";
 import { ThemeTab } from "./theme/ThemeTab";
 import type { AccountSettings, ChangeSettings, SettingsTab } from "./types";
@@ -145,6 +146,9 @@ export function SettingsScreen({
       </SettingsPanel>
       <SettingsPanel active={activeTab === "theme"} isDesktop={isDesktop}>
         <ThemeTab settings={settings} onChange={onChange} />
+      </SettingsPanel>
+      <SettingsPanel active={activeTab === "reminders"} isDesktop={isDesktop}>
+        <RemindersTab />
       </SettingsPanel>
       {activeTab === "sidebar" && (
         <div className="space-y-6 max-w-[620px]">

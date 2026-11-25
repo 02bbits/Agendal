@@ -41,6 +41,10 @@ test('reminder calculator matches ADR-006 expectations', function () {
     $remind2 = $calculator->compute('2026-10-26', null, '1d', 'Asia/Ho_Chi_Minh');
     expect($remind2)->toBe('2026-10-25T02:00:00Z');
 
+    // Due date without time defaults to 21:00 (Asia/Ho_Chi_Minh +07:00 = 14:00 UTC, -10m = 13:50 UTC)
+    $dueRemind = $calculator->forDueDate('2026-10-26', null, '10m', 'Asia/Ho_Chi_Minh');
+    expect($dueRemind)->toBe('2026-10-26T13:50:00Z');
+
     // 'none' returns null
     $remind3 = $calculator->compute('2026-10-26', null, 'none', 'Asia/Ho_Chi_Minh');
     expect($remind3)->toBeNull();

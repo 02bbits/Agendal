@@ -51,12 +51,29 @@ cp backend/.env.production.example backend/.env.production && chmod 600 backend/
 # Fill backend/.env.production: domain, DB_PASSWORD (= secrets/db_password), MAIL_PASSWORD, then:
 docker compose -f compose.prod.yml build
 docker compose -f compose.prod.yml run --rm --no-deps api php artisan key:generate --show   # paste into APP_KEY
+# Reminder keys (TK-6, see below), then:
 docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml exec api php artisan db:seed --force                      # demo account, once
 ```
 
 Check: `ss -tlnp` lists only `127.0.0.1:3000` (or `WEB_PORT`) for the app; `curl -I https://<domain>` shows HSTS and CSP;
 sign in as the demo account; ask for a password reset and check the mail shows SPF and DKIM pass.
+
+### Reminder keys (TK-6)
+
+Web Push needs a VAPID key pair. The private key goes straight into a secret file and is never printed;
+the command prints the public key for `VAPID_PUBLIC_KEY` in `backend/.env.production`.
+
+```sh
+touch secrets/vapid_private_key   # compose wants every secret file to exist before any api container runs
+docker compose -f compose.prod.yml run --rm --no-deps --user "$(id -u)" -v "$PWD/secrets:/out" api php artisan push:vapid /out/vapid_new
+mv secrets/vapid_new secrets/vapid_private_key
+sudo chown 10001 secrets/vapid_private_key && chmod 400 secrets/vapid_private_key
+```
+
+Keep the pair: a new one makes every device subscribe again (they do, quietly, next time the app opens).
+Without the keys reminders are simply off. Check: the `scheduler` logs show `reminders:send` each minute,
+and `docker compose -f compose.prod.yml logs queue` shows `reminders.sent` after one is due.
 
 ## 5. Update
 
@@ -65,6 +82,10 @@ cd /srv/services/agendal && git pull && docker compose -f compose.prod.yml up -d
 ```
 
 The api container migrates on start; queue and scheduler wait for it.
+
+**Since reminders (#186):** `compose.prod.yml` needs `secrets/vapid_private_key`. Make the keys once
+([Reminder keys](#reminder-keys-tk-6)) before the first `up` after that pull, or compose stops on the
+missing secret.
 
 ## 6. Backups
 

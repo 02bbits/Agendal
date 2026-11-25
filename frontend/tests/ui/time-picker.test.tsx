@@ -136,6 +136,20 @@ describe("TimePicker on a wide screen: fixed HH : MM field (#154)", () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
+  it("typing odd minutes like 01:07 and clicking OK or outside saves 01:07", async () => {
+    useWideScreen();
+    const onChange = vi.fn();
+    render(<Harness onChange={onChange} />);
+    const { hour, minute } = await open();
+    await userEvent.type(hour, "01");
+    await userEvent.type(minute, "07");
+    await userEvent.click(screen.getByRole("button", { name: t("common.ok") }));
+    expect(onChange).toHaveBeenLastCalledWith("01:07");
+    expect(screen.getByRole("button", { name: "Start time" }).textContent).toBe(
+      "01:07",
+    );
+  });
+
   it("arrows walk the list and fill the boxes, and a picked time is set", async () => {
     useWideScreen();
     const onChange = vi.fn();
@@ -191,11 +205,11 @@ describe("ClockPicker on phones (#154)", () => {
     const hour = screen.getByRole("textbox", { name: t("time.hour") });
     const minute = screen.getByRole("textbox", { name: t("time.minute") });
     await userEvent.clear(hour);
-    await userEvent.type(hour, "21");
+    await userEvent.type(hour, "1");
     await userEvent.clear(minute);
-    await userEvent.type(minute, "45");
+    await userEvent.type(minute, "7");
     await userEvent.click(screen.getByRole("button", { name: t("common.ok") }));
-    expect(onDone).toHaveBeenCalledWith("21:45");
+    expect(onDone).toHaveBeenCalledWith("01:07");
   });
 
   it("12-hour shows AM/PM and keeps the half of the day", async () => {

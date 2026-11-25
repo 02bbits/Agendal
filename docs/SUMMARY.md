@@ -192,7 +192,7 @@ The point of this module is trust: the user can always see what the assistant di
 
 **Deleting.** Always confirmed, always undoable from the toast. A repeating task asks "This task only" (the series continues) or "This and all future" (the series ends). Deleted rows are soft-deleted.
 
-**Reminders** (Should). A web push at the chosen offset from the start time; else 09:00 on the start date; else the due time; else 09:00 on the due date. Permission is asked in context, never at sign-in; on iPhone push works only in the installed app.
+**Reminders** (Should). A web push at the chosen offset from the start time; else 09:00 on the start date; else the due time; else 09:00 on the due date. Permission is asked in context, never at sign-in; on iPhone push works only in the installed app. Each reminder is sent once (claimed with `SKIP LOCKED`, delivery written first), at most 10 minutes late, to every device of the account; devices must be on a known push service, and the VAPID private key is a server secret.
 
 **Lists**
 

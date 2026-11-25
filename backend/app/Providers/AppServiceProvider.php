@@ -77,6 +77,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Two-factor toggle: 5 per 2 minutes per user
         $limiter('two-factor-toggle', fn (Request $request) => Limit::perMinutes(2, 5)->by('two-factor-toggle:'.$request->user()?->id));
+        // Settings > Notifications test push (TK-6): enough to try, not enough to flood a device
+        $limiter('push-test', fn (Request $request) => Limit::perMinute(3)->by('push-test:'.$request->user()?->id));
 
         $limiter('forgot-password', fn (Request $request) => [
             Limit::perHour(3)->by('email:'.EmailInput::key($request)),
