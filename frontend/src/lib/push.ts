@@ -48,7 +48,14 @@ export function pushSnoozed(): boolean {
 /** The worker's registration, if this build has one (production builds only). */
 async function registration(): Promise<ServiceWorkerRegistration | null> {
   if (!("serviceWorker" in navigator)) return null;
-  return (await navigator.serviceWorker.getRegistration()) ?? null;
+  const existing = (await navigator.serviceWorker.getRegistration()) ?? null;
+  if (existing?.active) return existing;
+  // In an installed PWA just opened, wait briefly for the active service worker
+  const ready = await Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+  ]);
+  return ready ?? existing;
 }
 
 function keyBytes(base64url: string): Uint8Array<ArrayBuffer> {

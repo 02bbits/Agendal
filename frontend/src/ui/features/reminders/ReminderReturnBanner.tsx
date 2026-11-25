@@ -70,6 +70,7 @@ export function ReminderReturnBanner({
   const dragOffsetRef = useRef(0);
   const dragStartRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
+  const exitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const containerRef = useRef<HTMLElement>(null);
 
   // Idiomatic React pattern for resetting state when alert prop/identity changes without triggering an extra effect render
@@ -77,7 +78,20 @@ export function ReminderReturnBanner({
   if (currentAlertId !== prevAlertId) {
     setPrevAlertId(currentAlertId);
     setIsOpen(false);
+    setIsExiting(false);
+    setDragOffset(0);
+    setIsHovered(false);
   }
+
+  useEffect(() => {
+    if (exitTimerRef.current) {
+      clearTimeout(exitTimerRef.current);
+      exitTimerRef.current = null;
+    }
+    dragOffsetRef.current = 0;
+    dragStartRef.current = null;
+    isDraggingRef.current = false;
+  }, [currentAlertId]);
 
   const activeAlerts =
     alerts && alerts.length !== 0 ? alerts : alert ? [alert] : [];
@@ -142,7 +156,12 @@ export function ReminderReturnBanner({
         const exitTarget = (finalOffset > 0 ? 1 : -1) * 160;
         setIsExiting(true);
         setDragOffset(exitTarget);
-        setTimeout(() => {
+        if (exitTimerRef.current) clearTimeout(exitTimerRef.current);
+        exitTimerRef.current = setTimeout(() => {
+          exitTimerRef.current = null;
+          dragOffsetRef.current = 0;
+          setIsExiting(false);
+          setDragOffset(0);
           setIsOpen(false);
           onDismiss();
           safeResetScrollX();

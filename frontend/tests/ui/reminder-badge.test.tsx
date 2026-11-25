@@ -51,9 +51,8 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     expect(getReminderAlertCount()).toBe(0);
   });
 
-  it("formats document title with alert count and screen heading", () => {
+  it("formats document title as Agendal or (count) Agendal", () => {
     expect(formatDocumentTitle()).toBe("Agendal");
-    expect(formatDocumentTitle("Inbox")).toBe("Inbox · Agendal");
 
     addReminderAlert({
       id: "rem-1",
@@ -61,7 +60,6 @@ describe("Reminder Badge & Return Banner (#186)", () => {
       url: "/tasks/rem-1",
     });
 
-    expect(formatDocumentTitle("Inbox")).toBe("(1) Inbox · Agendal");
     expect(formatDocumentTitle()).toBe("(1) Agendal");
 
     // Multiple alerts
@@ -70,11 +68,11 @@ describe("Reminder Badge & Return Banner (#186)", () => {
       title: "Submit report",
       url: "/tasks/rem-2",
     });
-    expect(formatDocumentTitle("Upcoming")).toBe("(2) Upcoming · Agendal");
+    expect(formatDocumentTitle()).toBe("(2) Agendal");
 
-    // Clearing reverts title back to heading · Agendal
+    // Clearing reverts title back to Agendal
     clearReminderAlerts();
-    expect(formatDocumentTitle("Upcoming")).toBe("Upcoming · Agendal");
+    expect(formatDocumentTitle()).toBe("Agendal");
   });
 
   it("renders ReminderReturnBanner with motion animation classes, flat view alignment, and expandable card", async () => {
@@ -151,7 +149,7 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     );
     expect(screen.queryByRole("alert")).toBeNull();
 
-    // Re-appearing with a new alert starts in collapsed state (not expanded)
+    // Re-appearing with a new alert starts in collapsed state (not expanded) and resets swipe transform/opacity
     rerender(
       <ReminderReturnBanner
         alert={{ id: "t-3", title: "New Task Alert", timestamp: Date.now() }}
@@ -160,6 +158,9 @@ describe("Reminder Badge & Return Banner (#186)", () => {
         onDismiss={onDismiss}
       />,
     );
+    const reopenedBanner = screen.getByRole("alert");
+    expect(reopenedBanner.style.transform).toBe("");
+    expect(reopenedBanner.style.opacity).toBe("");
     const viewButton = screen.getByRole("button", { name: /View/i });
     expect(viewButton.getAttribute("aria-expanded")).toBe("false");
   });

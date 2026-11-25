@@ -37,10 +37,26 @@ export function useDeviceReminders() {
     setBusy(true);
     setMessage(null);
     try {
-      if (!on) await turnOffPush();
-      else if (pushState() === "granted") await subscribePush();
-      else await askForPush();
-      setSubscribed(await pushSubscribed());
+      if (!on) {
+        await turnOffPush();
+      } else if (pushState() === "granted") {
+        const ok = await subscribePush();
+        if (!ok) setMessage("settings.push_enable_failed");
+      } else {
+        const permission = await askForPush();
+        if (permission !== "granted") {
+          setMessage("settings.push_enable_failed");
+        }
+      }
+      const isNowSubscribed = await pushSubscribed();
+      setSubscribed(isNowSubscribed);
+      if (on && !isNowSubscribed) {
+        setMessage("settings.push_enable_failed");
+      }
+      notifyPushState();
+    } catch {
+      setMessage("settings.push_enable_failed");
+      setSubscribed(await pushSubscribed().catch(() => false));
       notifyPushState();
     } finally {
       setBusy(false);

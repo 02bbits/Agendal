@@ -308,6 +308,8 @@ export const pending = {
     "This device was unsubscribed. Turn reminders on again.",
   "settings.push_test_failed": "Couldn't reach the push service. Try again.",
   "settings.push_test_wait": "Wait a minute before sending another.",
+  "settings.push_enable_failed":
+    "Couldn't turn on reminders. Check notification and push settings in this browser.",
   "settings.tab_backups": "Backups",
   "settings.tab_integrations": "Integrations",
   "settings.tab_calendars": "Calendars",

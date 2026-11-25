@@ -6,14 +6,13 @@ import {
 
 export const APP_NAME = "Agendal";
 
-/** Formats the document title as `(1) Inbox · Agendal` when reminders exist, else `Inbox · Agendal`. */
-export function formatDocumentTitle(headingName?: string): string {
-  const base = headingName ? `${headingName} · ${APP_NAME}` : APP_NAME;
+/** Formats the document title as `(count) Agendal` when reminders exist, else `Agendal`. */
+export function formatDocumentTitle(): string {
   const count = getReminderAlertCount();
   if (count > 0) {
-    return `(${count}) ${base}`;
+    return `(${count}) ${APP_NAME}`;
   }
-  return base;
+  return APP_NAME;
 }
 
 /**
@@ -29,10 +28,9 @@ export function useScreenFocus(pathname: string) {
     const heading =
       main?.querySelector<HTMLElement>("h1") ??
       document.querySelector<HTMLElement>("h1");
-    const name = heading?.textContent?.trim();
 
     const updateTitle = () => {
-      document.title = formatDocumentTitle(name);
+      document.title = formatDocumentTitle();
     };
 
     updateTitle();
