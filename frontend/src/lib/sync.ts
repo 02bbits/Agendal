@@ -301,10 +301,13 @@ function announce() {
  * visible, when an edit is queued, and every 60 s while visible. A failure retries with backoff.
  * Returns the stop function (sign-out).
  */
-export function startSync(): () => void {
+export function startSync({
+  initialDelayMs = 0,
+}: { initialDelayMs?: number } = {}): () => void {
   let timer: ReturnType<typeof setTimeout> | undefined;
   let failures = 0;
   let stopped = false;
+  let triggered = false;
 
   const schedule = (ms: number) => {
     clearTimeout(timer);
@@ -316,7 +319,10 @@ export function startSync(): () => void {
     failures = ok ? 0 : failures + 1;
     schedule(ok ? EVERY_MS : retryDelay(failures));
   }
-  const soon = () => schedule(0);
+  const soon = () => {
+    triggered = true;
+    schedule(0);
+  };
   const onVisible = () => {
     if (document.visibilityState === "visible") soon();
   };
@@ -328,7 +334,15 @@ export function startSync(): () => void {
   window.addEventListener("online", soon);
   window.addEventListener(SYNC_REQUEST, soon);
   document.addEventListener("visibilitychange", onVisible);
-  soon();
+  if (initialDelayMs > 0) {
+    schedule(initialDelayMs);
+    // Any edits already waiting on this device still go out as soon as the app opens
+    void readQueue().then((queue) => {
+      if (!stopped && !triggered && queue.length > 0) soon();
+    });
+  } else {
+    soon();
+  }
 
   return () => {
     stopped = true;

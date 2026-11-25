@@ -5,12 +5,20 @@ import { backOnlineText } from "@/lib/noteApi";
 import { NOTES_REPLAYED, startSync, type Replayed } from "@/lib/sync";
 import type { ShowToast } from "./useToast";
 
+const INITIAL_SYNC_DELAY_MS = 5000;
+
 /**
  * Syncs while signed in (IM-52, ADR-005). A change lost in a conflict says so (AP-E7), and notes
  * sent after a reconnect say so (NC-6); only the latest toast shows.
  */
 export function useSyncToasts(signedIn: boolean, showToast: ShowToast) {
-  useEffect(() => (signedIn ? startSync() : undefined), [signedIn]);
+  useEffect(
+    () =>
+      signedIn
+        ? startSync({ initialDelayMs: INITIAL_SYNC_DELAY_MS })
+        : undefined,
+    [signedIn],
+  );
 
   useEffect(() => {
     const onConflict = (event: Event) =>
