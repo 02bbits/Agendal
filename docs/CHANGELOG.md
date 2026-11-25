@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-25
+
+- **Server monitoring on Pulse (Refs #199).** [overview.md](07-architecture/overview.md#deployment) Processes row: a `pulse:check` container reads the host every 15 s for Pulse's Servers card and a Server health card (CPU, load, memory, swap, disk, Postgres connections, last backup, API and web app up). Rows turn red at CPU over 85% for 5 min, memory over 90%, disk over 80%, the API or web app down 2 min, no backup in 26 h; nobody is notified (as #198). Network traffic stays on the Cloudflare dashboard, per-container use in `docker stats`. Runbook: deploy/README.md.
+
 ## 2026-11-24
 
 - **Pulse error dashboard instead of alerts (Refs #198).** [security.md](07-architecture/security.md#sc-21) SC-21: Pulse at `/pulse`, behind Telescope's allow-list, keeps exception class and line without the message, SQL without values, users by id, no cache keys, 7 days. It shows 5xx errors, failed jobs and scheduled tasks, language-model call failures, slow requests, jobs and queries (500 ms, as #192); nothing is sent to Slack, Discord or mail. Non-API error pages (403, 404, 500, 503) are a plain Graphite page; [NF-16](05-quality/nfr.md#nf-16): the API's CSP allows inline styles for them, still no scripts. Runbook: README Monitoring, deploy/README.md.
