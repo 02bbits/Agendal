@@ -105,14 +105,18 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
   - Not now is remembered for 14 days.
 - **iOS:** push works only in the installed app (iOS 16.4+). In Safari, the explainer becomes `app.install_for_reminders`.
 - **Scheduler ([ADR-006](../07-architecture/decisions/ADR-006-time-zones.md)):**
-  - Runs every minute. It claims due `remind_at` rows with `FOR UPDATE SKIP LOCKED`.
-  - Writes `reminder_deliveries (task_id, remind_at)` (unique) before sending, so a reminder is never sent twice.
-  - Sends to every subscription the user has.
-  - Skips done or deleted tasks, and reminders more than 10 minutes late (after downtime, a burst of stale reminders helps nobody).
+  - `reminders:send` runs every minute. One statement claims what is due: `remind_at` reached, at most 10 minutes late, open, not deleted and never sent, locked with `FOR UPDATE SKIP LOCKED`.
+  - The same statement writes `reminder_deliveries (task_id, remind_at)` (unique) with `ON CONFLICT DO NOTHING` before anything is sent, so however many workers run, a reminder is sent once.
+  - The claimed reminders go to the queue in batches (`SendReminderPushes`), so a slow push service never holds up the next minute.
+  - Sends to every subscription the user has, many at once ([PERF-03](../05-quality/scalability.md)). A task done, deleted or moved since the claim is not sent.
+  - Skips reminders more than 10 minutes late (after downtime, a burst of stale reminders helps nobody).
+  - Each push carries `TTL` (to the end of that 10-minute window), `Urgency: high` and a `Topic` per task, so a push service holding a stale one replaces it rather than adding another.
 - **Notification:** the title is the task title. The body is `Mon 09:00 · SQL Course`. Tapping it opens Task details.
 - **Dead subscriptions:** a push service answering `404`/`410` deletes that subscription.
-- **Devices:** a subscription belongs to the signed-in user, and an endpoint signing in to another account moves to it. Sign-out removes this device's subscription. A signed-in device that already has permission subscribes again when the app loads, with no prompt.
-- **Setup:** sending needs `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY` on the server, and the scheduler running (`reminders:send` every minute). Without the keys the job claims nothing, so no reminder is lost. The public key reaches the browser from `GET /push-subscriptions/key`.
+- **Temporary failures:** `429`, `5xx` and network errors are tried again for those devices only, at most twice, 30 s then 60 s later, while still within the 10-minute window. Other answers are logged and not retried.
+- **Devices:** a subscription belongs to the signed-in user, and an endpoint signing in to another account moves to it. Sign-out sends this device's endpoint, so the server removes its subscription, and the browser drops it; Sign out on all devices removes all of the account's. A signed-in device that already has permission subscribes again when the app loads, with no prompt; one made with an older server key is replaced.
+- **Endpoints ([SC-18](../07-architecture/security.md#sc-18)):** HTTPS on a known push service only (`fcm.googleapis.com`, `updates.push.services.mozilla.com`, `push.apple.com`, `notify.windows.com` and their subdomains), with no port or credentials. Anything else is `422`, so the server can't be made to post elsewhere.
+- **Setup:** sending needs `VAPID_PUBLIC_KEY`, the private key in a secret file (`VAPID_PRIVATE_KEY_FILE`, never in `.env`), and the scheduler and a queue worker running. `php artisan push:vapid <file>` makes a pair, writing the private key to the file without printing it ([deploy/README.md](../../deploy/README.md#reminder-keys-tk-6)). Without the keys the job claims nothing, so no reminder is lost. The public key reaches the browser from `GET /push-subscriptions/key` (`null` while reminders are off).
 - **Recomputing `remind_at`:** whenever the due date, start time, reminder or the user's time zone changes, and for each new occurrence.
 
 ## 3. State matrix

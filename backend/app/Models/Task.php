@@ -6,7 +6,9 @@ namespace App\Models;
 
 use App\Models\Concerns\OwnedByUser;
 use App\Services\Clock\ClockInterface;
+use Database\Factories\TaskFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -17,7 +19,8 @@ use Illuminate\Support\Carbon;
  */
 class Task extends Model
 {
-    use HasUuids, OwnedByUser, SoftDeletes;
+    /** @use HasFactory<TaskFactory> */
+    use HasFactory, HasUuids, OwnedByUser, SoftDeletes;
 
     public const PATCHABLE = [
         'title',
@@ -27,6 +30,7 @@ class Task extends Model
         'due_time',
         'priority',
         'reminder',
+        'due_reminder',
         'repeat',
         'repeat_rule',
         'notes',
@@ -49,6 +53,7 @@ class Task extends Model
         'due_time',
         'priority',
         'reminder',
+        'due_reminder',
         'repeat',
         'repeat_rule',
         'notes',
@@ -67,6 +72,7 @@ class Task extends Model
             'field_updated_at' => 'array',
             'done_at' => 'immutable_datetime',
             'remind_at' => 'immutable_datetime',
+            'due_remind_at' => 'immutable_datetime',
             'deleted_at' => 'immutable_datetime',
         ];
     }

@@ -226,3 +226,111 @@ describe("service worker (SEC-51)", () => {
     expect(worker.self.skipWaiting).toHaveBeenCalled();
   });
 });
+
+// #186, TK-6: a reminder push shows as a notification, and tapping it opens the task
+describe("service worker reminders (TK-6)", () => {
+  const push = (worker: ReturnType<typeof loadWorker>, payload: unknown) => {
+    const showNotification =
+      vi.fn<(title: string, options?: NotificationOptions) => Promise<void>>();
+    Object.assign(worker.self, { registration: { showNotification } });
+    let pending: Promise<unknown> = Promise.resolve();
+    worker.listeners.push({
+      data: {
+        json: () => {
+          if (typeof payload === "string") throw new SyntaxError("not json");
+          return payload;
+        },
+      },
+      waitUntil: (p: Promise<unknown>) => (pending = p),
+    });
+    return { showNotification, done: pending };
+  };
+
+  it("shows the reminder with its title, time, one-per-task tag and the task's link", async () => {
+    const { showNotification, done } = push(loadWorker(), {
+      title: "SQL quiz",
+      body: "Mon 09:00 · SQL Course",
+      url: "/tasks/t-1",
+      tag: "task-t-1",
+    });
+    await done;
+    expect(showNotification).toHaveBeenCalledWith("SQL quiz", {
+      body: "Mon 09:00 · SQL Course",
+      tag: "task-t-1",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: "/tasks/t-1" },
+    });
+  });
+
+  it("never keeps a link to another site, and still shows something for a broken payload", async () => {
+    const off = push(loadWorker(), {
+      title: "x",
+      url: "https://evil.example/phish",
+    });
+    await off.done;
+    expect(off.showNotification.mock.calls[0]![1]).toMatchObject({
+      data: { url: "/" },
+    });
+
+    const protocolRelative = push(loadWorker(), { url: "//evil.example" });
+    await protocolRelative.done;
+    expect(protocolRelative.showNotification.mock.calls[0]![1]).toMatchObject({
+      data: { url: "/" },
+    });
+
+    const broken = push(loadWorker(), "garbage");
+    await broken.done;
+    expect(broken.showNotification).toHaveBeenCalledWith(
+      "Agendal",
+      expect.objectContaining({ body: "" }),
+    );
+  });
+
+  const click = async (
+    worker: ReturnType<typeof loadWorker>,
+    windows: Array<Record<string, unknown>>,
+  ) => {
+    const openWindow = vi.fn(async () => null);
+    Object.assign(worker.self.clients, {
+      matchAll: vi.fn(async () => windows),
+      openWindow,
+    });
+    const close = vi.fn();
+    let pending: Promise<unknown> = Promise.resolve();
+    worker.listeners.notificationclick({
+      notification: { close, data: { url: "/tasks/t-1" } },
+      waitUntil: (p: Promise<unknown>) => (pending = p),
+    });
+    await pending;
+    return { openWindow, close };
+  };
+
+  it("tapping it focuses an open window of the app and takes it to the task", async () => {
+    const focus = vi.fn(async () => {});
+    const navigate = vi.fn(async () => {});
+    const { openWindow, close } = await click(loadWorker(), [
+      { url: `${ORIGIN}/upcoming`, focus, navigate },
+    ]);
+    expect(close).toHaveBeenCalled();
+    expect(focus).toHaveBeenCalled();
+    expect(navigate).toHaveBeenCalledWith(`${ORIGIN}/tasks/t-1`);
+    expect(openWindow).not.toHaveBeenCalled();
+  });
+
+  it("with no window open, or one it can't move, it opens the task", async () => {
+    expect((await click(loadWorker(), [])).openWindow).toHaveBeenCalledWith(
+      `${ORIGIN}/tasks/t-1`,
+    );
+    const stuck = await click(loadWorker(), [
+      {
+        url: `${ORIGIN}/`,
+        focus: vi.fn(async () => {}),
+        navigate: vi.fn(async () => {
+          throw new TypeError("not controlled");
+        }),
+      },
+    ]);
+    expect(stuck.openWindow).toHaveBeenCalledWith(`${ORIGIN}/tasks/t-1`);
+  });
+});

@@ -13,7 +13,10 @@ export interface NumberStepperProps {
   onChange: (value: number) => void;
   decreaseLabel: string;
   increaseLabel: string;
+  placeholder?: string;
+  inputClassName?: string;
   className?: string;
+  size?: "sm" | "md";
 }
 
 /** A whole-number field between − and + buttons, replacing the browser's own spinner arrows. */
@@ -26,8 +29,12 @@ export function NumberStepper({
   onChange,
   decreaseLabel,
   increaseLabel,
+  placeholder,
+  inputClassName,
   className,
+  size = "md",
 }: NumberStepperProps): ReactElement {
+  const isSm = size === "sm";
   const clamp = (n: number) => Math.min(max, Math.max(min, n));
   const step = (by: number) => onChange(clamp((value || min) + by));
 
@@ -38,13 +45,16 @@ export function NumberStepper({
     }
   };
 
-  const button =
-    "focus-ring inline-flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-ink-secondary hover:bg-fill hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent";
+  const button = cx(
+    "focus-ring inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-transparent text-ink-secondary hover:bg-fill hover:text-ink disabled:cursor-default disabled:opacity-35 disabled:hover:bg-transparent",
+    isSm ? "size-7" : "size-9",
+  );
 
   return (
     <div
       className={cx(
-        "inline-flex h-11 items-center gap-0.5 rounded-field border border-control bg-surface px-1",
+        "inline-flex items-center gap-0.5 rounded-field border border-control bg-surface px-1",
+        isSm ? "h-9" : "h-11",
         className,
       )}
     >
@@ -57,7 +67,10 @@ export function NumberStepper({
       >
         <span
           aria-hidden="true"
-          className="block h-[2px] w-3.5 rounded bg-current"
+          className={cx(
+            "block h-[2px] rounded bg-current",
+            isSm ? "w-2.5" : "w-3.5",
+          )}
         />
       </button>
       <input
@@ -67,13 +80,18 @@ export function NumberStepper({
         inputMode="numeric"
         pattern="[0-9]*"
         autoComplete="off"
+        placeholder={placeholder}
         value={value || ""}
         onChange={(event) => {
           const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
           onChange(digits ? Math.min(max, Number(digits)) : 0);
         }}
         onKeyDown={onKeyDown}
-        className="h-full w-11 min-w-0 border-0 bg-transparent text-center text-body font-semibold tabular-nums text-ink outline-none"
+        className={cx(
+          "h-full min-w-0 border-0 bg-transparent text-center font-semibold tabular-nums text-ink outline-none placeholder:text-[11px] placeholder:font-normal placeholder:text-ink-tertiary focus:placeholder:text-transparent",
+          isSm ? "w-9 text-footnote" : "w-11 text-body",
+          inputClassName,
+        )}
       />
       <button
         type="button"
@@ -82,7 +100,7 @@ export function NumberStepper({
         disabled={value >= max}
         onClick={() => step(1)}
       >
-        <PlusIcon size={16} />
+        <PlusIcon size={isSm ? 14 : 16} />
       </button>
     </div>
   );

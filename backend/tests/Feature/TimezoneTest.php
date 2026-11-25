@@ -159,7 +159,7 @@ it('recalculates date-only reminders and skips completed, deleted, and unschedul
     $this->getJson('/api/v1/me', ['X-Timezone' => 'Asia/Tokyo'])->assertOk();
 
     $readReminder = fn (string $name) => DB::table('tasks')->where('id', $ids[$name])->value('remind_at');
-    expect((new DateTimeImmutable($readReminder('date-only')))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-25T23:00:00Z')
+    expect((new DateTimeImmutable($readReminder('date-only')))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-26T11:00:00Z')
         ->and((new DateTimeImmutable($readReminder('completed')))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-26T01:00:00Z')
         ->and((new DateTimeImmutable($readReminder('deleted')))->format('Y-m-d\TH:i:s\Z'))->toBe('2026-10-26T01:00:00Z')
         ->and($readReminder('unscheduled'))->toBeNull()
