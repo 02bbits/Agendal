@@ -165,10 +165,11 @@ export function DictationSheet({
           {t("note.mic_notice")}
         </p>
       ) : (
-        <>
+        // One 16px rhythm between every row, and the status row keeps its height when empty, so nothing jumps
+        <div className="flex flex-col gap-4">
           <p
             role="status"
-            className="m-0 flex items-center justify-center gap-2 text-footnote font-semibold tabular-nums"
+            className="m-0 flex min-h-5 items-center justify-center gap-2 text-footnote font-semibold tabular-nums"
           >
             {listening && (
               <span
@@ -184,7 +185,7 @@ export function DictationSheet({
           </p>
           <div
             aria-hidden="true"
-            className="mt-3 flex h-16 items-center justify-center gap-1"
+            className="flex h-16 items-center justify-center gap-1"
           >
             {levels.map((level, i) => (
               <span
@@ -198,7 +199,7 @@ export function DictationSheet({
               />
             ))}
           </div>
-          <div className="mt-4 min-h-[88px] rounded-box bg-fill px-3.5 py-3">
+          <div className="min-h-[88px] rounded-box bg-fill px-3.5 py-3">
             {phase.kind === "writing" ? (
               <p className="m-0 text-body">
                 <span className="shiny-text">{t("note.reading")}</span>
@@ -211,14 +212,14 @@ export function DictationSheet({
               </p>
             ) : null}
           </div>
-          <div className="mt-5 flex items-center justify-center gap-3">
+          <div className="flex items-center justify-center">
             {phase.kind === "heard" ? (
               <div className="flex w-full flex-col items-center gap-4">
                 {/* Say it again, where Stop was: records afresh, and the new words replace these */}
                 <IconButton
-                  className="size-16! bg-fill!"
+                  className="size-[70px]! bg-fill!"
                   label={t("note.mic")}
-                  icon={<MicIcon size={26} />}
+                  icon={<MicIcon size={28} />}
                   disabled={sending}
                   onClick={start}
                 />
@@ -245,22 +246,22 @@ export function DictationSheet({
               <button
                 type="button"
                 aria-label={t("note.stop")}
-                className="focus-ring grid size-16 cursor-pointer place-items-center rounded-full border-0 bg-error shadow-md ring-8 ring-error/20"
+                className="focus-ring grid size-[70px] cursor-pointer place-items-center rounded-full border-0 bg-error shadow-md ring-8 ring-error/20"
                 onClick={() => recording.current?.stop()}
               >
                 <span className="size-5 rounded-[5px] bg-error-content" />
               </button>
             ) : (
               <IconButton
-                className="size-16! bg-primary! text-primary-content!"
+                className="size-[70px]! bg-primary! text-primary-content!"
                 label={t("note.mic")}
-                icon={<MicIcon size={26} />}
+                icon={<MicIcon size={28} />}
                 disabled={phase.kind === "writing" || offline}
                 onClick={start}
               />
             )}
           </div>
-        </>
+        </div>
       )}
     </Sheet>
   );
