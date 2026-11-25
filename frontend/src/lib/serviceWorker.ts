@@ -5,7 +5,7 @@ let unavailable = false;
 /** AP-E11: no service worker (private mode, storage blocked), so the app can't open offline. */
 export const offlineUnavailable = () => unavailable;
 
-const UPDATE_CHECK_INTERVAL_MS = 60_000;
+const UPDATE_CHECK_INTERVAL_MS = 15_000;
 
 /** Calls `onWaiting` when a new version is installed and an older one is in control. */
 export function registerServiceWorker(
@@ -94,6 +94,7 @@ export function registerServiceWorker(
   };
   document.addEventListener("visibilitychange", onVisibleOrFocus);
   window.addEventListener("focus", onVisibleOrFocus);
+  window.addEventListener("online", onVisibleOrFocus);
   const intervalId = window.setInterval(() => {
     if (document.visibilityState === "visible") {
       void checkForUpdate();
@@ -103,6 +104,7 @@ export function registerServiceWorker(
   return () => {
     document.removeEventListener("visibilitychange", onVisibleOrFocus);
     window.removeEventListener("focus", onVisibleOrFocus);
+    window.removeEventListener("online", onVisibleOrFocus);
     window.clearInterval(intervalId);
   };
 }

@@ -121,4 +121,39 @@ describe("update toast", () => {
 
     fetchMock.mockRestore();
   });
+
+  it("polls /app-version every 15s while visible without requiring tab focus", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BUILD_ID", "build-1");
+    const newWorker = { postMessage: vi.fn() };
+    const registerMock = vi.fn(async (url: string) => {
+      if (url.includes("build-3")) {
+        return { waiting: newWorker, addEventListener: vi.fn() };
+      }
+      return { waiting: null, addEventListener: vi.fn() };
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        controller: {},
+        ready: new Promise(() => {}),
+        register: registerMock,
+        addEventListener: vi.fn(),
+      },
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ buildId: "build-3" }), { status: 200 }),
+      );
+
+    render(<Host />);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(15_000);
+    });
+
+    expect(registerMock).toHaveBeenCalledWith("/sw.js?v=build-3");
+    expect(await screen.findByText("A new version is ready.")).toBeTruthy();
+
+    fetchMock.mockRestore();
+  });
 });
