@@ -20,11 +20,11 @@ export interface DictationSheetProps {
   /** Offline the mic can't work: the sheet only says so (NC §2.3). */
   offline?: boolean;
   /** ×, Escape, Back or a tap on the scrim: the recording, if any, is dropped. */
-  onClose: () => void;
+  onClose(): void;
   /** Edit note: the words go to the note editor to check first. */
-  onEdit: (text: string) => void;
+  onEdit(text: string): void;
   /** Make tasks: the words are sent as a note at once. Resolves once the caller has moved on. */
-  onMakeTasks: (text: string) => Promise<void>;
+  onMakeTasks(text: string): Promise<void>;
 }
 
 type Phase =
@@ -37,6 +37,9 @@ type Phase =
 const BARS = 28;
 // RMS of normal speech is about 0.02–0.2: this gain fills the bar height without clipping most of it
 const LEVEL_GAIN = 8;
+
+const nowMs = () => performance.now();
+const silentBars = (): number[] => new Array(BARS).fill(0);
 
 const clock = (ms: number) => {
   const seconds = Math.floor(ms / 1000);
@@ -60,8 +63,8 @@ export function DictationSheet({
         ? { kind: "listening", started: performance.now() }
         : { kind: "notice" },
   );
-  const [levels, setLevels] = useState<number[]>(() => Array(BARS).fill(0));
-  const [now, setNow] = useState(() => performance.now());
+  const [levels, setLevels] = useState(silentBars);
+  const [now, setNow] = useState(nowMs);
   const [sending, setSending] = useState(false);
   const recording = useRef<Recording | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -77,7 +80,7 @@ export function DictationSheet({
 
   const start = () => {
     if (recording.current) return;
-    setLevels(Array(BARS).fill(0));
+    setLevels(silentBars());
     const current = record((level) =>
       setLevels((previous) => [
         ...previous.slice(1),
