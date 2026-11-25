@@ -213,32 +213,34 @@ export function DictationSheet({
           </div>
           <div className="mt-5 flex items-center justify-center gap-3">
             {phase.kind === "heard" ? (
-              <>
-                {/* Say it again: records afresh, and the new words replace these */}
+              <div className="flex w-full flex-col items-center gap-4">
+                {/* Say it again, where Stop was: records afresh, and the new words replace these */}
                 <IconButton
-                  className="size-11! shrink-0 bg-fill!"
+                  className="size-12! bg-fill!"
                   label={t("note.mic")}
-                  icon={<MicIcon size={20} />}
+                  icon={<MicIcon size={22} />}
                   disabled={sending}
                   onClick={start}
                 />
-                <Button
-                  className="flex-1 whitespace-nowrap"
-                  disabled={sending}
-                  onClick={() => onEdit(phase.text)}
-                >
-                  {t("note.edit")}
-                </Button>
-                <Button
-                  variant="primary"
-                  className="flex-1 whitespace-nowrap"
-                  busy={sending}
-                  onClick={() => void makeTasks(phase.text)}
-                >
-                  <SparklesIcon size={18} />
-                  {t("note.make_tasks")}
-                </Button>
-              </>
+                <div className="flex w-full gap-3">
+                  <Button
+                    className="flex-1 whitespace-nowrap"
+                    disabled={sending}
+                    onClick={() => onEdit(phase.text)}
+                  >
+                    {t("note.edit")}
+                  </Button>
+                  <Button
+                    variant="primary"
+                    className="flex-1 whitespace-nowrap"
+                    busy={sending}
+                    onClick={() => void makeTasks(phase.text)}
+                  >
+                    <SparklesIcon size={18} />
+                    {t("note.make_tasks")}
+                  </Button>
+                </div>
+              </div>
             ) : listening ? (
               <button
                 type="button"

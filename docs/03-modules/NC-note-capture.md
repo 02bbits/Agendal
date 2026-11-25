@@ -81,7 +81,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, the sheet first shows `note.mic_notice`, with Continue as the header's confirm button and × to cancel; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
 - **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), an empty words card and a round red Stop. `note.listening` is announced.
 - **Stopping:** Stop, 8 s of silence, or 60 s total. `note.reading` shows in the words card while the model writes the words down (a few seconds). The words show then, not while speaking.
-- **The words heard:** `note.heard` above the words. A small mic records again, and the new words replace these. Then two ways on:
+- **The words heard:** `note.heard` above the words. A mic on its own row, where Stop was, records again, and the new words replace these. Then two ways on:
   - **Edit note** (`note.edit`): the note editor opens with the words, after any unsent draft so neither is lost ([NC-E17](#nc-e17)), to check and change before Make tasks.
   - **Make tasks** (`note.make_tasks`): the words are sent as a note at once, as from the editor, and its result opens. Kept offline: queued with its toast. Not made (too long, rate limited): the words go to the editor, where Make tasks says why.
 - **Errors:**
