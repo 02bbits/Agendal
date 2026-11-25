@@ -7,10 +7,11 @@ import {
   removeTasks,
   replaceProjects,
 } from "./localStore";
-import { offlineTask, orQueue } from "./offline";
+import { offlineTask, orQueue, queueOrder } from "./offline";
 import type {
   DeleteScope,
   LifecycleResult,
+  OrderRow,
   TaskApi,
   TaskPatch,
 } from "../ui/domain/api";
@@ -256,6 +257,25 @@ export const httpTaskApi: TaskApi = {
 
   patch(id: string, fields: TaskPatch, at: string): Promise<Task> {
     return patch(id, fields, at);
+  },
+
+  async reorder(rows: OrderRow[], at: string): Promise<void> {
+    if (await queueOrder(rows, at)) return;
+    await handleResponse(
+      await api("/sync/patches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(
+          rows.map(({ id, field, value }) => ({
+            entity: "task",
+            id,
+            field,
+            value,
+            at,
+          })),
+        ),
+      }),
+    );
   },
 
   remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void> {

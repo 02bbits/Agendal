@@ -1,6 +1,8 @@
+import { useDroppable } from "@dnd-kit/core";
 import type { ReactElement } from "react";
 import {
   Link,
+  PROJECT_DROP,
   ROUTES,
   sortProjects,
   t,
@@ -10,6 +12,7 @@ import {
 import { cx } from "@/ui/components/cx";
 
 function ProjectRow({
+  projectId,
   href,
   name,
   dot,
@@ -17,6 +20,8 @@ function ProjectRow({
   current,
   navigate,
 }: {
+  /** The project a task dropped here moves to (#178); null: No project. */
+  projectId: string | null;
   href: string;
   name: string;
   /** The colour dot's own classes or style. */
@@ -25,14 +30,19 @@ function ProjectRow({
   current: boolean;
   navigate: Navigate;
 }) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `project-drop:${projectId ?? "none"}`,
+    data: { kind: PROJECT_DROP, projectId, name, title: name },
+  });
   return (
-    <li>
+    <li ref={setNodeRef}>
       <Link
         href={href}
         navigate={navigate}
         className={cx(
           "focus-ring row-hover flex min-h-9 items-center gap-2.5 rounded-field px-3 text-body text-ink-secondary transition-colors",
           current && "bg-primary/15! text-primary! font-medium",
+          isOver && "bg-primary/15 ring-1 ring-inset ring-primary/60",
         )}
         aria-current={current ? "page" : undefined}
       >
@@ -77,6 +87,7 @@ export function SidebarProjects({
       {sortProjects(projects).map((project) => (
         <ProjectRow
           key={project.id}
+          projectId={project.id}
           href={ROUTES.project(project.id)}
           name={project.name}
           dot={{
@@ -88,6 +99,7 @@ export function SidebarProjects({
         />
       ))}
       <ProjectRow
+        projectId={null}
         href={ROUTES.noProject}
         name={t("project.none")}
         dot={{ className: "bg-neutral-content/60" }}

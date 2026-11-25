@@ -20,6 +20,8 @@
     "repeat_anchor": { "$ref": "#/$defs/date", "readOnly": true, "description": "Original local date of the series, maintained by the server. Moving one occurrence preserves it. Current task responses include it; older embedded note snapshots may omit it." },
     "reminder": { "$ref": "#/$defs/reminder" },
     "notes": { "$ref": "#/$defs/notes" },
+    "project_order": { "$ref": "#/$defs/order", "description": "Manual place in its project's list and in Inbox No date (#178, ADR-009). Null: ordered by the list's rules." },
+    "day_order": { "$ref": "#/$defs/order", "description": "Manual place within its day: Today or an Upcoming day (#178, ADR-009). Cleared by the server when the dates change without a new place." },
     "done": { "type": "boolean" },
     "done_at": { "type": ["string", "null"], "format": "date-time" },
     "created_by": { "enum": ["user", "assistant"] },
@@ -30,6 +32,7 @@
   },
   "$defs": {
     "uuid": { "type": "string", "format": "uuid" },
+    "order": { "type": ["string", "null"], "maxLength": 64, "pattern": "^[0-9A-Za-z]+$", "description": "Fractional-index key; tasks sort by plain byte order of the key." },
     "uuid_or_null": { "type": ["string", "null"], "format": "uuid" },
     "title": { "type": "string", "minLength": 1, "maxLength": 200 },
     "date": { "type": ["string", "null"], "format": "date" },

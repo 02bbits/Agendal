@@ -43,6 +43,12 @@ export function createMemoryApi(seed: Partial<MemoryDb> = {}) {
       Object.assign(task, { done: false, done_at: null, updated_at: at });
       return { task: { ...task } };
     },
+    async reorder(rows, at) {
+      await guard();
+      for (const { id, field, value } of rows) {
+        Object.assign(find(id), { [field]: value, updated_at: at });
+      }
+    },
     async patch(id, fields, at) {
       await guard();
       const task = find(id);

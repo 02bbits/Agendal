@@ -43,6 +43,8 @@ class TaskResource extends JsonResource
             'repeat_anchor' => $this->repeat_anchor ? substr((string) $this->repeat_anchor, 0, 10) : null,
             'reminder' => $this->reminder ?? 'none',
             'notes' => $this->notes,
+            'project_order' => $this->project_order,
+            'day_order' => $this->day_order,
             'done' => (bool) $this->done,
             'done_at' => $this->formatIso($this->done_at),
             'created_by' => $this->created_by,

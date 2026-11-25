@@ -150,3 +150,10 @@ export type {
 export { useActiveDay, type UseActiveDayOptions } from "./lists/useActiveDay";
 export { useUpcomingListWindow } from "./lists/useUpcomingListWindow";
 export { useFrozenOrder } from "./lists/useFrozenOrder";
+export { useSortByRules } from "./lists/useSortByRules";
+export { useDropReorder } from "./lists/useDropReorder";
+export { useMoveToProject, useReceiveDrop } from "./lists/useCrossDrop";
+export { SortMenu, type SortMenuProps } from "./lists/SortMenu";
+export { useSortMode, type SortList } from "./lists/useSortMode";
+export { TaskDndScope } from "./lists/dnd/TaskDndScope";
+export { PROJECT_DROP, type ProjectDropData } from "./lists/dnd/dropTargets";

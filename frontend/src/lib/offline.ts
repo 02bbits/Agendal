@@ -12,7 +12,7 @@ import {
   removeTasks,
   type QueueEntry,
 } from "./localStore";
-import type { TaskPatch } from "../ui/domain/api";
+import type { OrderRow, TaskPatch } from "../ui/domain/api";
 import type { CreateTaskBody } from "../ui/domain/newTask";
 import type { Project, ProjectColor, Task } from "../ui/domain/types";
 
@@ -82,6 +82,23 @@ async function editTask(id: string, change: Partial<Task>) {
   const edited = { ...task, ...change, updated_at: nowIso() };
   await putTasks([edited]);
   return edited;
+}
+
+/**
+ * Manual-order keys (#178) always go through the queue: a drop never waits on the network, and
+ * however many keys a Sort by rules writes, sync sends them as one batch. False when the device
+ * can't store the queue (private mode): the caller sends them itself.
+ */
+export async function queueOrder(rows: OrderRow[], at: string) {
+  const entries = rows.flatMap(({ id, field, value }) =>
+    patchRows("task", id, { [field]: value }, at),
+  );
+  if (!(await enqueue(entries))) return false;
+  await Promise.all(
+    rows.map(({ id, field, value }) => editTask(id, { [field]: value })),
+  );
+  window.dispatchEvent(new Event(SYNC_REQUEST));
+  return true;
 }
 
 export const offlineTask = {

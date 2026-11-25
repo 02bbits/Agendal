@@ -56,6 +56,10 @@ export interface Task {
   repeat_rule?: string | null;
   reminder: Reminder;
   notes: string | null;
+  /** Manual place in its project and in Inbox No date (#178); null: ordered by rules. */
+  project_order?: string | null;
+  /** Manual place within its day: Today, an Upcoming day (#178); null: ordered by rules. */
+  day_order?: string | null;
   done: boolean;
   done_at: string | null;
   created_by: "user" | "assistant";

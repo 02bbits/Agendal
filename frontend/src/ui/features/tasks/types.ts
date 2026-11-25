@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { today } from "../../../lib/clock";
 import type { ToastData } from "../../components/Toast";
+import type { ReorderFn } from "./useTaskOrder";
 import { t } from "../../copy";
 import type { DeleteScope, TaskApi, TaskUpdateFn } from "../../domain/api";
 import type { Project, Task, TimeFormat } from "../../domain/types";
@@ -57,6 +58,8 @@ export interface TaskStore {
   ensureTask: (task: Task) => void;
   change: UseTaskSyncReturn["change"];
   update: TaskUpdateFn;
+  /** Writes manual-order keys (#178); returns an Undo. */
+  reorder: ReorderFn;
   /** Soft-deletes a task with a toast offering Undo (TK-5). Repeating tasks need a scope (TK-4). */
   remove: (task: Task, scope?: DeleteScope) => void;
   /** Restores a deleted task (Undo action) */

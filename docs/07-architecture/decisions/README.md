@@ -12,5 +12,6 @@ One file per significant decision: `ADR-nnn-short-title.md`, with sections *Stat
 | [ADR-006](ADR-006-time-zones.md) | Time zones: floating local dates and times | Accepted |
 | [ADR-007](ADR-007-session-and-auth.md) | Session and authentication model | Accepted |
 | [ADR-008](ADR-008-llm-fallback.md) | Language-model fallback for note understanding | Accepted |
+| [ADR-009](ADR-009-task-manual-order-fractional-indexing.md) | Task manual order via fractional indexing and dual sort modes | Accepted |
 
-[ADR-005](ADR-005-sync-protocol.md) to [ADR-008](ADR-008-llm-fallback.md) were approved on 2026-10-26 ([Q16](../../08-project/open-questions.md#q16)).
+[ADR-005](ADR-005-sync-protocol.md) to [ADR-008](ADR-008-llm-fallback.md) were approved on 2026-10-26 ([Q16](../../08-project/open-questions.md#q16)). [ADR-009](ADR-009-task-manual-order-fractional-indexing.md) was accepted for issue #178.
