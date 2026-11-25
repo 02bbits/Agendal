@@ -9,6 +9,12 @@ on:
     # 02:00 UTC daily (09:00 Asia/Ho_Chi_Minh)
     - cron: "0 2 * * *"
   workflow_dispatch:
+  pull_request:
+    paths:
+      - "perf/**"
+      - "lighthouserc.json"
+      - ".github/workflows/nightly-perf.yml"
+      - "backend/database/seeders/PerfSeeder.php"
 
 permissions:
   contents: read
