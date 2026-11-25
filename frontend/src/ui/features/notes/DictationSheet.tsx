@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { ApiRequestError } from "../../../lib/apiError";
 import {
   markMicNoticeSeen,
@@ -12,9 +11,8 @@ import {
 import { t, type CopyKey } from "../../copy";
 import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
-import { MicIcon, SparklesIcon, XIcon } from "../../components/icons";
-import { useHistoryEntry } from "../../components/useHistoryEntry";
-import { useModalFocus } from "../../components/useModalFocus";
+import { MicIcon, SparklesIcon } from "../../components/icons";
+import { Sheet } from "../../components/Sheet";
 
 export interface DictationSheetProps {
   /** Offline the mic can't work: the sheet only says so (NC §2.3). */
@@ -67,16 +65,13 @@ export function DictationSheet({
   const [now, setNow] = useState(nowMs);
   const [sending, setSending] = useState(false);
   const recording = useRef<Recording | null>(null);
-  const sheetRef = useRef<HTMLDivElement>(null);
-  const statusRef = useRef<HTMLParagraphElement>(null);
 
+  // ×, Escape, Back or the scrim: the recording, if any, is dropped. Not while the note is sent.
   const close = () => {
-    if (sending) return false;
+    if (sending) return;
     recording.current?.cancel();
     onClose();
   };
-  useModalFocus(sheetRef, statusRef, true, close);
-  useHistoryEntry(true, close);
 
   const start = () => {
     if (recording.current) return;
@@ -153,160 +148,109 @@ export function DictationSheet({
     setSending(false);
   };
 
-  if (typeof document === "undefined") return null;
-
-  const status =
-    phase.kind === "listening"
-      ? `${t("note.listening")} ${clock(Math.max(0, now - phase.started))}`
-      : phase.kind === "heard"
-        ? t("note.heard")
-        : t("note.mic");
-
-  return createPortal(
-    <div
-      className="modal modal-open modal-bottom bg-scrim motion-safe:animate-fade-in md:modal-middle"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget) close();
+  return (
+    <Sheet
+      open
+      title={t("note.mic")}
+      closeLabel={t("common.cancel")}
+      onClose={close}
+      confirmLabel={phase.kind === "notice" ? t("common.continue") : undefined}
+      onConfirm={() => {
+        markMicNoticeSeen();
+        start();
       }}
     >
-      <div
-        ref={sheetRef}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t("note.mic")}
-        className="modal-box motion-safe:animate-slide-up mx-auto w-full max-w-[600px] rounded-t-sheet rounded-b-none bg-surface px-gutter pt-2 pb-[calc(20px+env(safe-area-inset-bottom))] text-ink shadow-lg md:max-w-[480px] md:rounded-dialog md:pb-6"
-      >
-        <div
-          aria-hidden="true"
-          className="mx-auto mb-4 h-1 w-9 rounded-full bg-fill-2 md:hidden"
-        />
-        <p
-          ref={statusRef}
-          tabIndex={-1}
-          role="status"
-          className="m-0 flex items-center justify-center gap-2 text-footnote font-semibold tabular-nums focus:outline-none"
-        >
-          {listening && (
-            <span
-              aria-hidden="true"
-              className="size-2 rounded-full bg-error motion-safe:animate-pulse"
-            />
-          )}
-          {status}
+      {phase.kind === "notice" ? (
+        <p className="m-0 pt-2 pb-4 text-center text-body text-ink-secondary">
+          {t("note.mic_notice")}
         </p>
-
-        {phase.kind === "notice" ? (
-          <p className="m-0 mt-4 text-center text-body text-ink-secondary">
-            {t("note.mic_notice")}
+      ) : (
+        <>
+          <p
+            role="status"
+            className="m-0 flex items-center justify-center gap-2 text-footnote font-semibold tabular-nums"
+          >
+            {listening && (
+              <span
+                aria-hidden="true"
+                className="size-2 rounded-full bg-error motion-safe:animate-pulse"
+              />
+            )}
+            {listening
+              ? `${t("note.listening")} ${clock(Math.max(0, now - phase.started))}`
+              : phase.kind === "heard"
+                ? t("note.heard")
+                : null}
           </p>
-        ) : (
-          <>
-            <div
-              aria-hidden="true"
-              className="mt-4 flex h-10 items-center justify-center gap-[3px]"
-            >
-              {levels.map((level, i) => (
-                <span
-                  key={i}
-                  className="w-[3px] rounded-full bg-ink transition-[height] duration-100"
-                  style={{
-                    height: `${4 + level * 36}px`,
-                    opacity: listening ? 1 : 0.35,
-                  }}
-                />
-              ))}
-            </div>
-            <div className="mt-4 min-h-[88px] rounded-box bg-fill px-3.5 py-3">
-              {phase.kind === "writing" ? (
-                <p className="m-0 text-body">
-                  <span className="shiny-text">{t("note.reading")}</span>
-                </p>
-              ) : phase.kind === "heard" ? (
-                <p className="m-0 text-body whitespace-pre-wrap">
-                  {phase.text}
-                </p>
-              ) : phase.kind === "message" ? (
-                <p role="alert" className="m-0 text-body text-ink-secondary">
-                  {t(phase.key, { seconds: phase.seconds ?? 0 })}
-                </p>
-              ) : null}
-            </div>
-          </>
-        )}
-
-        <div className="mt-5 flex items-center justify-center gap-4">
-          {phase.kind === "notice" ? (
-            <>
-              <Button onClick={close}>{t("common.cancel")}</Button>
-              <Button
-                variant="primary"
-                onClick={() => {
-                  markMicNoticeSeen();
-                  start();
+          <div
+            aria-hidden="true"
+            className="mt-3 flex h-10 items-center justify-center gap-[3px]"
+          >
+            {levels.map((level, i) => (
+              <span
+                key={i}
+                className="w-[3px] rounded-full bg-primary transition-[height] duration-100"
+                style={{
+                  height: `${4 + level * 36}px`,
+                  opacity: listening ? 1 : 0.35,
                 }}
-              >
-                {t("common.continue")}
-              </Button>
-            </>
-          ) : phase.kind === "heard" ? (
-            <>
-              <IconButton
-                plain
-                label={t("common.cancel")}
-                icon={<XIcon />}
-                disabled={sending}
-                onClick={close}
               />
-              <Button
-                className="flex-1 whitespace-nowrap"
-                disabled={sending}
-                onClick={() => onEdit(phase.text)}
-              >
-                {t("note.edit")}
-              </Button>
-              <Button
-                variant="primary"
-                className="flex-1 whitespace-nowrap"
-                busy={sending}
-                onClick={() => void makeTasks(phase.text)}
-              >
-                <SparklesIcon size={18} />
-                {t("note.make_tasks")}
-              </Button>
-            </>
-          ) : (
-            <>
-              <IconButton
-                className="size-11! bg-fill!"
-                label={t("common.cancel")}
-                icon={<XIcon />}
-                onClick={close}
-              />
-              {listening ? (
-                <button
-                  type="button"
-                  aria-label={t("note.stop")}
-                  className="focus-ring grid size-16 cursor-pointer place-items-center rounded-full border-0 bg-error shadow-md"
-                  onClick={() => recording.current?.stop()}
+            ))}
+          </div>
+          <div className="mt-4 min-h-[88px] rounded-box bg-fill px-3.5 py-3">
+            {phase.kind === "writing" ? (
+              <p className="m-0 text-body">
+                <span className="shiny-text">{t("note.reading")}</span>
+              </p>
+            ) : phase.kind === "heard" ? (
+              <p className="m-0 text-body whitespace-pre-wrap">{phase.text}</p>
+            ) : phase.kind === "message" ? (
+              <p role="alert" className="m-0 text-body text-ink-secondary">
+                {t(phase.key, { seconds: phase.seconds ?? 0 })}
+              </p>
+            ) : null}
+          </div>
+          <div className="mt-5 flex items-center justify-center gap-3">
+            {phase.kind === "heard" ? (
+              <>
+                <Button
+                  className="flex-1 whitespace-nowrap"
+                  disabled={sending}
+                  onClick={() => onEdit(phase.text)}
                 >
-                  <span className="size-5 rounded-[5px] bg-error-content" />
-                </button>
-              ) : (
-                <IconButton
-                  className="size-16! bg-primary! text-primary-content!"
-                  label={t("note.mic")}
-                  icon={<MicIcon size={26} />}
-                  disabled={phase.kind === "writing" || offline}
-                  onClick={start}
-                />
-              )}
-              {/* Balances the × so the round button stays centred */}
-              <span aria-hidden="true" className="size-11" />
-            </>
-          )}
-        </div>
-      </div>
-    </div>,
-    document.body,
+                  {t("note.edit")}
+                </Button>
+                <Button
+                  variant="primary"
+                  className="flex-1 whitespace-nowrap"
+                  busy={sending}
+                  onClick={() => void makeTasks(phase.text)}
+                >
+                  <SparklesIcon size={18} />
+                  {t("note.make_tasks")}
+                </Button>
+              </>
+            ) : listening ? (
+              <button
+                type="button"
+                aria-label={t("note.stop")}
+                className="focus-ring grid size-16 cursor-pointer place-items-center rounded-full border-0 bg-error shadow-md ring-8 ring-error/20"
+                onClick={() => recording.current?.stop()}
+              >
+                <span className="size-5 rounded-[5px] bg-error-content" />
+              </button>
+            ) : (
+              <IconButton
+                className="size-16! bg-primary! text-primary-content!"
+                label={t("note.mic")}
+                icon={<MicIcon size={26} />}
+                disabled={phase.kind === "writing" || offline}
+                onClick={start}
+              />
+            )}
+          </div>
+        </>
+      )}
+    </Sheet>
   );
 }
