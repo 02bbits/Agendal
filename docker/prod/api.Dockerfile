@@ -16,6 +16,8 @@ RUN useradd --uid 10001 --no-create-home agendal \
     && chown -R agendal:agendal /config/caddy /data/caddy
 WORKDIR /app
 COPY --from=vendor --chown=agendal:agendal /app /app
+# PlanValidator checks every note plan against the contract schemas (config/notes.php schema_path, ../docs from /app)
+COPY docs/07-architecture/contracts/schemas /docs/07-architecture/contracts/schemas
 RUN php artisan package:discover --ansi
 COPY docker/prod/api-start.sh /usr/local/bin/api-start
 USER agendal
