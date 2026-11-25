@@ -228,10 +228,10 @@ describe("Auth gate (AA §1)", () => {
 });
 
 describe("Route changes (A11Y-72)", () => {
-  it("names the browser tab after the screen heading and moves focus to it", async () => {
+  it("sets the browser tab title to Agendal and moves focus to the screen heading", async () => {
     const view = renderAt("/", InboxPage);
     await screen.findByRole("heading", { level: 1, name: "Inbox" });
-    expect(document.title).toBe("Inbox · Agendal");
+    expect(document.title).toBe("Agendal");
     expect(document.activeElement).toBe(document.body);
 
     pathname = "/upcoming";
@@ -245,7 +245,7 @@ describe("Route changes (A11Y-72)", () => {
       level: 1,
       name: "Upcoming",
     });
-    expect(document.title).toBe("Upcoming · Agendal");
+    expect(document.title).toBe("Agendal");
     expect(document.activeElement).toBe(heading);
   });
 });
