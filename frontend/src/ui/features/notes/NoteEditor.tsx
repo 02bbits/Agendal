@@ -349,12 +349,12 @@ export function NoteEditor({
       });
 
       const result: {
-  text?: unknown;
-  error?: {
-    code?: string;
-    fields?: { file?: string[] };
-  };
-} = await response.json();
+        text?: unknown;
+        error?: {
+          code?: string;
+          fields?: { file?: string[] };
+        };
+      } = await response.json();
 
       if (!response.ok) {
         throw new Error(

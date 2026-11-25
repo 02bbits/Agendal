@@ -16,12 +16,12 @@ use App\Http\Controllers\Auth\TwoFactorResendController;
 use App\Http\Controllers\CountsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
+use App\Http\Controllers\NoteExtractController;
 use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TaskController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\NoteExtractController;
 
 Route::post('/auth/register', RegisterController::class)->middleware('throttle:register');
 Route::post('/auth/login', LoginController::class);
