@@ -15,29 +15,33 @@ export function useOverlays(pathname: string, router: Router) {
   const notePanelWide = usePanelScreen();
 
   const [editing, setEditing] = useState(false);
-  // Opened from the capture bar's mic: the editor starts recording (NC §2.3)
+  // The dictation sheet, from the capture bar's mic (NC §2.3), and the words it hands the editor
   const [dictating, setDictating] = useState(false);
+  const [dictatedText, setDictatedText] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<NoteResult["note"] | null>(
     null,
   );
   const openNoteEditor = useCallback(() => {
     setEditingNote(null);
-    setDictating(false);
+    setDictatedText(null);
     setEditing(true);
   }, []);
-  const openDictation = useCallback(() => {
+  const openDictation = useCallback(() => setDictating(true), []);
+  const closeDictation = useCallback(() => setDictating(false), []);
+  const editDictated = useCallback((text: string) => {
     setEditingNote(null);
-    setDictating(true);
+    setDictatedText(text);
     setEditing(true);
   }, []);
   const editFollowupNote = useCallback((note: NoteResult["note"]) => {
     setEditingNote(note);
-    setDictating(false);
+    setDictatedText(null);
     setEditing(true);
   }, []);
   const closeNoteEditor = useCallback(() => {
     setEditing(false);
     setEditingNote(null);
+    setDictatedText(null);
   }, []);
 
   // Closing the editor takes its history entry off with history.back(), which is only done a
@@ -86,8 +90,11 @@ export function useOverlays(pathname: string, router: Router) {
       editing,
       editingNote,
       dictating,
+      dictatedText,
       openNoteEditor,
       openDictation,
+      closeDictation,
+      editDictated,
       editFollowupNote,
       closeNoteEditor,
       openResult,

@@ -14,16 +14,6 @@ import {
   saveDraft,
 } from "../../../lib/draft";
 import { now } from "../../../lib/clock";
-import {
-  canDictate,
-  markMicNoticeSeen,
-  micNoticeSeen,
-  record,
-  transcribe,
-  type DictationError,
-  type Recording,
-} from "../../../lib/dictation";
-import { ApiRequestError } from "../../../lib/apiError";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
@@ -31,8 +21,7 @@ import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
-import { IconButton } from "../../components/IconButton";
-import { MicIcon, SparklesIcon } from "../../components/icons";
+import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
 import { UndoConflictDialog } from "./UndoConflictDialog";
@@ -70,8 +59,8 @@ export interface NoteEditorProps {
   offline?: boolean;
   /** The note was kept on the device to be sent later (NC-6): the toast to show. The draft is cleared. */
   onQueued?: (toast: CopyKey) => void;
-  /** Opened from the mic on the capture bar: recording starts at once (NC §2.3). */
-  dictate?: boolean;
+  /** Words from dictation's Edit (NC §2.3): the editor opens with them, after any unsent draft. */
+  initialText?: string;
 }
 
 /** The reading line shows only when the answer takes longer than this (NC §2.2). */
@@ -137,11 +126,12 @@ export function NoteEditor({
   onSubmitted,
   offline,
   onQueued,
-  dictate,
+  initialText,
 }: NoteEditorProps) {
-  const [text, setText] = useState(note?.text ?? "");
+  const [text, setText] = useState(note?.text ?? initialText ?? "");
   const latest = useRef(text);
-  const dirty = useRef(false);
+  // Dictated words are new text: saved as the draft like typing
+  const dirty = useRef(!!initialText);
   const clientId = useRef(crypto.randomUUID());
   const sending = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -201,12 +191,20 @@ export function NoteEditor({
     let current = true;
     loadDraft()
       .then((draft) => {
-        if (!current || !draft || latest.current) return;
-        edit(draft, true);
+        if (!current || !draft) return;
+        // Dictated words go after the unsent draft, so neither is lost
+        const dictated = initialText && latest.current === initialText;
+        if (latest.current && !dictated) return;
+        // Already saved as the draft (a remount saves on its way out): nothing older to keep
+        if (dictated && draft.trimEnd().endsWith(initialText.trim())) return;
+        const restored = dictated
+          ? `${draft.trimEnd()}\n${initialText}`
+          : draft;
+        edit(restored, !dictated);
         onDraftRestored?.();
         const field = textRef.current;
         requestAnimationFrame(() =>
-          field?.setSelectionRange(draft.length, draft.length),
+          field?.setSelectionRange(restored.length, restored.length),
         );
       })
       .catch(() => {});
@@ -272,77 +270,7 @@ export function NoteEditor({
       text: stage === "over" ? tooLong : stage === "hidden" ? "" : counter,
     });
 
-  // Dictation (NC §2.3): idle, recording, or waiting for the words
-  const [dictation, setDictation] = useState<"idle" | "listening" | "writing">(
-    "idle",
-  );
-  const [dictationNote, setDictationNote] = useState<CopyKey | null>(null);
-  // Seconds until dictation may be tried again after a 429, for `error.rate_limited`
-  const [dictationWait, setDictationWait] = useState(0);
-  const recording = useRef<Recording | null>(null);
-  // The one-time notice before the first recording (NC §2.3); Continue starts it, in that tap
-  const [micNotice, setMicNotice] = useState(
-    () => !!dictate && !micNoticeSeen(),
-  );
-  const startDictation = () => {
-    if (recording.current || offline) return;
-    if (!micNoticeSeen()) return setMicNotice(true);
-    const field = textRef.current;
-    // Words go in at the cursor; a selection is replaced, as typing would (NC-E17)
-    const from = field?.selectionStart ?? latest.current.length;
-    const to = field?.selectionEnd ?? from;
-    const current = record();
-    recording.current = current;
-    setDictation("listening");
-    setDictationNote(null);
-    current.done
-      .then((audio) => {
-        if (!audio) return "";
-        setDictation("writing");
-        return transcribe(audio);
-      })
-      .then((words) => {
-        if (!words) return setDictationNote("note.no_speech");
-        const before = latest.current.slice(0, from);
-        const after = latest.current.slice(to);
-        const lead = before && !/\s$/.test(before) ? " " : "";
-        const tail = after && !/^\s/.test(after) ? " " : "";
-        const next = before + lead + words + tail + after;
-        edit(next);
-        setDictationNote("note.heard");
-        const end = (before + lead + words).length;
-        requestAnimationFrame(() => {
-          field?.focus();
-          field?.setSelectionRange(end, end);
-        });
-      })
-      .catch((error: DictationError | unknown) => {
-        // Agendal's own limit: the connection is fine, so say how long to wait, as Make tasks does
-        if (error instanceof ApiRequestError && error.status === 429) {
-          setDictationWait(error.retryAfter ?? 60);
-          return setDictationNote("error.rate_limited");
-        }
-        setDictationNote(
-          error === "denied" ? "note.mic_denied" : "note.dictation_failed",
-        );
-      })
-      .finally(() => {
-        recording.current = null;
-        setDictation("idle");
-      });
-  };
-  // The capture bar's mic: started in the opening tap, which iOS needs for audio
-  useLayoutEffect(() => {
-    // Starts the recorder (an outside system) inside the tap; its state follows from that
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (dictate && micNoticeSeen()) startDictation();
-    return () => recording.current?.stop();
-    // Once, when the editor opens
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const canSubmit =
-    VISIBLE.test(text) && stage !== "over" && wait <= 0 && dictation === "idle";
+  const canSubmit = VISIBLE.test(text) && stage !== "over" && wait <= 0;
   const submit = async (confirmConflicts = false) => {
     // The ref, not `busy`: a second tap lands before React has re-rendered
     if (!canSubmit || !onSubmit || sending.current) return;
@@ -420,32 +348,12 @@ export function NoteEditor({
         </div>
         <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide">
           <div className="flex min-h-[429px] flex-col rounded-box bg-surface p-3.5 pb-[18px]">
-            <div className="mb-1.5 flex min-h-9 items-center justify-between gap-2">
-              <label
-                htmlFor={fieldId}
-                className="text-footnote font-medium text-ink-secondary"
-              >
-                {t("note.text_label")}
-              </label>
-              {canDictate() &&
-                (dictation === "listening" ? (
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => recording.current?.stop()}
-                  >
-                    {t("note.stop")}
-                  </Button>
-                ) : (
-                  <IconButton
-                    className="size-9! min-h-9! bg-primary-tint!"
-                    label={t("note.mic")}
-                    icon={<MicIcon size={18} />}
-                    disabled={offline || busy || dictation !== "idle"}
-                    onClick={startDictation}
-                  />
-                ))}
-            </div>
+            <label
+              htmlFor={fieldId}
+              className="mb-1.5 text-footnote font-medium text-ink-secondary"
+            >
+              {t("note.text_label")}
+            </label>
             <textarea
               id={fieldId}
               ref={textRef}
@@ -482,20 +390,7 @@ export function NoteEditor({
             {t("note.editor_hint")}
           </p>
           <p role="status" className="m-0 text-footnote text-ink-secondary">
-            {reading ? (
-              <ReadingStatus />
-            ) : dictation === "listening" ? (
-              t("note.listening")
-            ) : dictation === "writing" ? (
-              <span className="shiny-text">{t("note.reading")}</span>
-            ) : offline && canDictate() ? (
-              // Why the mic is disabled (NC §2.3)
-              t("note.dictation_offline")
-            ) : dictationNote ? (
-              t(dictationNote, { seconds: dictationWait })
-            ) : (
-              ""
-            )}
+            {reading ? <ReadingStatus /> : ""}
           </p>
           {message && (
             <div className="flex items-center justify-between gap-3 pb-2">
@@ -558,31 +453,6 @@ export function NoteEditor({
           void submit(true);
         }}
         onCancel={() => setConflicts(0)}
-      />
-      <Dialog
-        open={micNotice}
-        history={false}
-        title={t("note.mic")}
-        description={t("note.mic_notice")}
-        onClose={() => setMicNotice(false)}
-        actionsLayout="row"
-        actions={
-          <>
-            <Button onClick={() => setMicNotice(false)}>
-              {t("common.cancel")}
-            </Button>
-            <Button
-              variant="primary"
-              onClick={() => {
-                setMicNotice(false);
-                markMicNoticeSeen();
-                startDictation();
-              }}
-            >
-              {t("common.continue")}
-            </Button>
-          </>
-        }
       />
       <Dialog
         open={confirming}

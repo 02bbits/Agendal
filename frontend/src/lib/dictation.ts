@@ -27,6 +27,8 @@ export type DictationError = "denied" | "failed";
 
 export interface Recording {
   stop: () => void;
+  /** Stops and drops the recording: `done` resolves null and nothing is sent. */
+  cancel: () => void;
   /** The WAV, or null when nothing was said. Rejects with a DictationError. */
   done: Promise<Blob | null>;
 }
@@ -34,12 +36,13 @@ export interface Recording {
 /**
  * Starts recording now. Call it inside the tap: iOS only lets audio start in a gesture, so the
  * AudioContext is made before the mic permission is awaited. Stops on stop(), after 8 s of
- * silence, or at 60 s.
+ * silence, or at 60 s. `onLevel` gets the loudness (RMS, 0–1) of each slice, for the waveform.
  */
-export function record(): Recording {
+export function record(onLevel?: (level: number) => void): Recording {
   const Context = audioContext();
   const context = Context ? new Context() : null;
   let stopRequested = false;
+  let cancelled = false;
   let stopNow = () => {
     stopRequested = true;
   };
@@ -73,7 +76,9 @@ export function record(): Recording {
           const rate = context.sampleRate;
           void context.close();
           resolve(
-            loudMs >= SPEECH_MIN_MS ? wav(downsample(chunks, rate)) : null,
+            !cancelled && loudMs >= SPEECH_MIN_MS
+              ? wav(downsample(chunks, rate))
+              : null,
           );
         };
         processor.onaudioprocess = (event) => {
@@ -82,7 +87,9 @@ export function record(): Recording {
           let sum = 0;
           for (const sample of input) sum += sample * sample;
           const time = performance.now();
-          if (Math.sqrt(sum / input.length) > SPEECH_RMS) {
+          const level = Math.sqrt(sum / input.length);
+          onLevel?.(level);
+          if (level > SPEECH_RMS) {
             loudMs += (input.length / context.sampleRate) * 1000;
             lastSound = time;
           }
@@ -104,7 +111,14 @@ export function record(): Recording {
       });
   });
 
-  return { stop: () => stopNow(), done };
+  return {
+    stop: () => stopNow(),
+    cancel: () => {
+      cancelled = true;
+      stopNow();
+    },
+    done,
+  };
 }
 
 /** `POST /notes/dictation`: the words heard, empty when the model heard none. */

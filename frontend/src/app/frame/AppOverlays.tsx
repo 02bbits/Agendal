@@ -1,7 +1,9 @@
 "use client";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
+import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import {
+  DictationSheet,
   NewTaskSheet,
   NoteEditor,
   ProjectSheet,
@@ -88,7 +90,7 @@ export function AppOverlays({
       {note.editing && (
         <NoteEditor
           note={editingNote ?? undefined}
-          dictate={note.dictating}
+          initialText={note.dictatedText ?? undefined}
           onClose={note.closeNoteEditor}
           onDraftRestored={() => showToast(t("note.draft_restored"))}
           offline={offline}
@@ -104,6 +106,31 @@ export function AppOverlays({
               : submitNote
           }
           onSubmitted={(result) => {
+            rememberNote(result);
+            notesChanged(result.note.id);
+            note.openResult(result.note.id);
+          }}
+        />
+      )}
+      {note.dictating && (
+        <DictationSheet
+          offline={offline}
+          onClose={note.closeDictation}
+          onEdit={(text) => {
+            note.closeDictation();
+            afterHistoryEntryCloses(() => note.editDictated(text));
+          }}
+          onMakeTasks={async (text) => {
+            const result = await submitNote(text, crypto.randomUUID());
+            note.closeDictation();
+            // Not made (too long, rate limited…): the words go to the editor, where Make tasks says why
+            if ("error" in result)
+              return afterHistoryEntryCloses(() => note.editDictated(text));
+            if ("queued" in result) {
+              notesChanged();
+              showToast(t(result.queued));
+              return;
+            }
             rememberNote(result);
             notesChanged(result.note.id);
             note.openResult(result.note.id);
