@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers;
 
 use App\Exceptions\ApiError;
+use App\Http\Resources\ProjectResource;
+use App\Http\Resources\TaskResource;
 use App\Services\Sync\SyncPatches;
 use App\Services\Sync\SyncPull;
+use Dedoc\Scramble\Attributes\BodyParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
@@ -16,6 +19,7 @@ class SyncController extends Controller
 {
     public const MAX_BATCH = 500;
 
+    /** @response array{changes: array{tasks: list<TaskResource>, projects: list<ProjectResource>, notes: list<array<string, mixed>>}, next_cursor: int, has_more: bool} */
     public function pull(Request $request, SyncPull $sync): JsonResponse
     {
         $input = $request->validate([
@@ -31,6 +35,7 @@ class SyncController extends Controller
         return response()->json($sync->pull($cursor, (int) ($input['limit'] ?? self::MAX_BATCH), (bool) ($input['full'] ?? false)));
     }
 
+    #[BodyParameter('*', 'The batch itself, a JSON array.', required: true, type: 'list<array{entity: "task"|"project", id: string, field: string, value: mixed, at: string}>')]
     public function patches(Request $request, SyncPatches $patches): JsonResponse
     {
         // The body is the batch itself: `[{entity, id, field, value, at}]`
