@@ -1,7 +1,11 @@
 <x-pulse>
-    <livewire:pulse.exceptions cols="6" />
+    <livewire:pulse.servers cols="full" />
 
-    <livewire:pulse.queues cols="6" />
+    <livewire:pulse.server-health cols="4" rows="2" expand />
+
+    <livewire:pulse.exceptions cols="8" />
+
+    <livewire:pulse.queues cols="8" />
 
     <livewire:pulse.slow-requests cols="6" />
 
