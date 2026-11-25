@@ -216,9 +216,9 @@ export function DictationSheet({
               <div className="flex w-full flex-col items-center gap-4">
                 {/* Say it again, where Stop was: records afresh, and the new words replace these */}
                 <IconButton
-                  className="size-12! bg-fill!"
+                  className="size-16! bg-fill!"
                   label={t("note.mic")}
-                  icon={<MicIcon size={22} />}
+                  icon={<MicIcon size={26} />}
                   disabled={sending}
                   onClick={start}
                 />
