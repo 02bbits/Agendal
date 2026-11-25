@@ -107,7 +107,9 @@ return [
     |
     */
 
-    'cache' => env('PULSE_CACHE_DRIVER'),
+    // #198: cards cache Collections, which cache.serializable_classes (false) won't unserialize from a
+    // shared store; the in-memory store keeps them per request
+    'cache' => env('PULSE_CACHE_DRIVER', 'array'),
 
     /*
     |--------------------------------------------------------------------------

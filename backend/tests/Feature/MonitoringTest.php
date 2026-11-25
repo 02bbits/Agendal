@@ -15,9 +15,11 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Schedule as ScheduleFacade;
 use Illuminate\Support\Str;
 use Laravel\Pulse\Facades\Pulse;
+use Laravel\Pulse\Livewire\Queues;
 use Laravel\Pulse\PulseServiceProvider;
 use Laravel\Telescope\Telescope;
 use Laravel\Telescope\TelescopeServiceProvider;
+use Livewire\Livewire;
 
 // #192: Telescope behind its allow-list, keeping no user content; the slow-query alert
 // #198: the Pulse dashboard, same allow-list, and the plain error pages
@@ -188,4 +190,15 @@ it('#198: an error page outside the API is the plain Agendal page, styled despit
     $response = $this->get('/no-such-page')->assertNotFound()->assertSee('Not Found')->assertSee('· Agendal', false);
 
     expect($response->headers->get('Content-Security-Policy'))->toContain("style-src 'unsafe-inline'")->not->toContain('script-src');
+});
+
+it('#198: Pulse cards render twice under the shared database cache, which unserializes no classes', function () {
+    config(['cache.default' => 'database']);
+    bootPulse();
+    Pulse::record('failed', 'database:default')->count()->onlyBuckets();
+    Pulse::ingest();
+
+    // The second render reads the card's cached query result
+    Livewire::withoutLazyLoading()->test(Queues::class)->assertOk();
+    Livewire::withoutLazyLoading()->test(Queues::class)->assertOk()->assertSee('default');
 });
