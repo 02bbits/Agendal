@@ -48,6 +48,11 @@ class NoteExtractController extends Controller
 
         $signature = fread($handle, 8);
         fclose($handle);
+        if ($signature === false) {
+            throw ValidationException::withMessages([
+                'file' => 'Could not read the uploaded file.',
+            ]);
+        }
 
         $validSignature = match ($extension) {
             'pdf' => str_starts_with($signature, '%PDF-'),
@@ -98,6 +103,9 @@ class NoteExtractController extends Controller
         ]);
     }
 
+    /**
+     * @param  list<string>  $command
+     */
     private function extractWithCommand(array $command): string
     {
         $process = new Process([
@@ -201,11 +209,27 @@ class NoteExtractController extends Controller
 
         $paragraphs = [];
 
-        foreach ($xpath->query('//w:body//w:p') as $paragraph) {
+        $paragraphNodes = $xpath->query('//w:body//w:p');
+
+        if ($paragraphNodes === false) {
+            throw ValidationException::withMessages([
+                'file' => 'Could not read Word document paragraphs.',
+            ]);
+        }
+
+        foreach ($paragraphNodes as $paragraph) {
             $parts = [];
 
-            foreach ($xpath->query('.//w:t', $paragraph) as $node) {
-                $parts[] = $node->textContent;
+            $textNodes = $xpath->query('.//w:t', $paragraph);
+
+            if ($textNodes === false) {
+                throw ValidationException::withMessages([
+                    'file' => 'Could not read Word document text.',
+                ]);
+            }
+
+            foreach ($textNodes as $node) {
+                $parts[] = $node->nodeValue ?? '';
             }
 
             $line = trim(implode('', $parts));
@@ -213,6 +237,7 @@ class NoteExtractController extends Controller
             if ($line !== '') {
                 $paragraphs[] = $line;
             }
+
         }
 
         return implode("\n", $paragraphs);
