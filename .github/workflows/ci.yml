@@ -49,6 +49,10 @@ jobs:
         run: vendor/bin/pint --test
       - name: Type check (Larastan)
         run: composer analyse
+              - name: Install document extraction tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils antiword util-linux
       - name: Tests (Pest, Postgres)
         run: vendor/bin/pest
       - name: Dependency audit
