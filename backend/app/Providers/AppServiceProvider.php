@@ -16,9 +16,12 @@ use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Pulse\Facades\Pulse;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -46,6 +49,14 @@ class AppServiceProvider extends ServiceProvider
         DB::whenQueryingForLongerThan(config('database.slow_request_ms'), function (Connection $connection) {
             Log::error('Slow request queries', ['ms' => $connection->totalQueryDuration()]);
         });
+
+        // #198 /pulse: open locally, elsewhere for Telescope's allow-list. Users show by id only (SC-21)
+        Gate::define('viewPulse', fn (?User $user = null) => $this->app->environment('local')
+            || in_array($user?->email, config('telescope.allowed_emails'), true));
+        Pulse::user(fn (User $user) => ['name' => 'User '.$user->id]);
+        // Behind the Next.js rewrite the Host is the API container, so links (Livewire's update URL) use APP_URL
+        URL::forceRootUrl(config('app.url'));
+        URL::forceScheme((string) parse_url(config('app.url'), PHP_URL_SCHEME));
 
         // NF-13 rate limits. Each 429 names the limit it hit, so the app can tell "too fast" from
         // "too many" (UX-43)

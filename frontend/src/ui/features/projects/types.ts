@@ -4,6 +4,8 @@ import type {
 } from "../../domain/projects";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { Navigate } from "../shell/routes";
+import type { ProjectDropData } from "../lists/dnd/dropTargets";
+import type { Receive } from "../lists/dnd/TaskDndScope";
 
 export interface ProjectScreenProps {
   project: Project;
@@ -25,4 +27,10 @@ export interface ProjectScreenProps {
   selectedTaskId?: string | null;
   /** Rows are sorted as given but drawn with this task's latest data (frozen sort, Spec 01 §5). */
   liveTask?: (task: Task) => Task;
+  /** A task dropped elsewhere in the open list (#178). */
+  onMove?: (shown: Task[], id: string, to: number) => void;
+  onReceiveOpen?: (shown: Task[], drop: Receive) => void;
+  onMoveCompleted?: (shown: Task[], id: string, to: number) => void;
+  onReceiveCompleted?: (shown: Task[], drop: Receive) => void;
+  onToProject?: (id: string, project: ProjectDropData) => void;
 }

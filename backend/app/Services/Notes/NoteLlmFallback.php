@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use JsonException;
+use Laravel\Pulse\Facades\Pulse;
 use Opis\JsonSchema\Validator;
 use SensitiveParameter;
 use Throwable;
@@ -104,6 +105,8 @@ final class NoteLlmFallback
             return $this->finish($rules, $plan, $outcomes, $text, $context, $openTasks, $accepted);
         } catch (Throwable $exception) {
             Log::info('note_llm', ['elapsed_ms' => $this->elapsedMs($started), 'outcome' => 'fallback']);
+            // #198: counted on Pulse's exceptions card (class and line only, never the message)
+            Pulse::report($exception);
 
             $reason = match (true) {
                 $exception instanceof ConnectionException => 'connection_failed_or_timeout',

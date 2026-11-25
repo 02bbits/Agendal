@@ -61,6 +61,12 @@ const nextConfig: NextConfig = {
         source: "/telescope/:path*",
         destination: `${apiUrl}/telescope/:path*`,
       },
+      // Pulse (#198) and its Livewire scripts and updates, same allow-list
+      { source: "/pulse", destination: `${apiUrl}/pulse` },
+      {
+        source: "/:lw(livewire-[0-9a-f]+)/:path*",
+        destination: `${apiUrl}/:lw/:path*`,
+      },
     ];
   },
 };

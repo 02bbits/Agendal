@@ -231,6 +231,10 @@ export const ShareIcon = icon(
   </>,
 );
 export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
+/** Sort order (#178). */
+export const ArrowUpDownIcon = icon(
+  <path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16" />,
+);
 export const ArrowLeftIcon = icon(<path d="m12 19-7-7 7-7M19 12H5" />);
 export const RotateCcwIcon = icon(
   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5" />,

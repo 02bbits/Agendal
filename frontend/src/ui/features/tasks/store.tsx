@@ -10,6 +10,7 @@ import type { DeleteScope } from "../../domain/api";
 import * as types from "./types";
 import { useMergeBack } from "./useMergeBack";
 import { useTaskEdit } from "./useTaskEdit";
+import { useTaskOrder } from "./useTaskOrder";
 import { useTaskSync } from "./useTaskSync";
 import { useTaskReminders } from "./useTaskReminders";
 import { createZoneFormatter, useToday } from "./useToday";
@@ -55,8 +56,15 @@ export function TaskStoreProvider({
   mergeMotion = false,
   children,
 }: types.TaskStoreProviderProps) {
-  const { tasks, change, getTask, acceptOccurrence, removeRow, insertRow } =
-    useTaskSync(initialTasks);
+  const {
+    tasks,
+    change,
+    getTask,
+    acceptOccurrence,
+    removeRow,
+    insertRow,
+    replaceRows,
+  } = useTaskSync(initialTasks);
   useTaskReminders(tasks);
   const [projects, setProjects] = React.useState(initialProjects);
   // A project made from a picker reaches the rows when the screen refetches
@@ -316,6 +324,13 @@ export function TaskStoreProvider({
     showToast,
     handleSaveError,
   });
+  const reorder = useTaskOrder({
+    api,
+    clock,
+    getTask,
+    replaceRows,
+    showToast,
+  });
 
   const restore = React.useCallback(
     (task: Task, madeNextId?: string) => {
@@ -396,6 +411,7 @@ export function TaskStoreProvider({
       toggleInPlace,
       change,
       update,
+      reorder,
       remove,
       restore,
       ensureTask: insertRow,
@@ -419,6 +435,7 @@ export function TaskStoreProvider({
       toggleInPlace,
       change,
       update,
+      reorder,
       remove,
       restore,
       insertRow,

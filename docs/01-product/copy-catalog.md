@@ -237,6 +237,12 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `list.filter_scheduled` | Scheduled | Chip |
 | `list.filter_due` | Due only | Chip |
 | `list.upcoming_empty` † | Nothing coming up. Write a note to plan ahead. | Upcoming empty state |
+| `list.switched_manual` † | Switched to manual order | Toast when drag reordering in Smart list or dropping into Smart list (#178) |
+| `list.sorted_by_rules` † | Sorted by the rules. Drag to fine-tune. | Toast after running Sort by rules (#178) |
+| `list.smart_order` † | Smart order | Sort menu item (#178) |
+| `list.manual_order` † | Manual order | Sort menu item (#178) |
+| `list.sort_rules` † | Sort by rules | Sort menu item (#178) |
+| `task.rescheduled_to` † | Rescheduled to {day} | Toast with Undo when dropping onto an Upcoming day (#178) |
 | `search.placeholder` † | Search tasks and notes | Search field |
 | `search.filter_open` | Open | Chip |
 | `search.filter_completed` | Completed | Chip |

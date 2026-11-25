@@ -24,6 +24,8 @@ export interface UseTaskSyncReturn {
   acceptOccurrence: (task: Task, remove: boolean) => void;
   removeRow: (id: string) => void;
   insertRow: (task: Task) => void;
+  /** Puts rows in place on screen without a request of their own (manual order, #178). */
+  replaceRows: (rows: Task[]) => void;
 }
 
 export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
@@ -80,6 +82,12 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
 
   const replaceRow = useCallback((id: string, row: Task) => {
     rowsRef.current = rowsRef.current.map((t) => (t.id === id ? row : t));
+    setTasks(rowsRef.current);
+  }, []);
+
+  const replaceRows = useCallback((rows: Task[]) => {
+    const byId = new Map(rows.map((row) => [row.id, row]));
+    rowsRef.current = rowsRef.current.map((t) => byId.get(t.id) ?? t);
     setTasks(rowsRef.current);
   }, []);
 
@@ -182,5 +190,13 @@ export function useTaskSync(initialTasks: Task[]): UseTaskSyncReturn {
     [replaceRow],
   );
 
-  return { tasks, change, getTask, acceptOccurrence, removeRow, insertRow };
+  return {
+    tasks,
+    change,
+    getTask,
+    acceptOccurrence,
+    removeRow,
+    insertRow,
+    replaceRows,
+  };
 }

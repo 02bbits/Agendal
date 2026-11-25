@@ -104,6 +104,11 @@ Nightly encrypted `pg_dump`, 7 days on the server and in R2 ([backup.sh](backup.
 - `cp deploy/agendal-backup.* ~/.config/systemd/user/ && systemctl --user enable --now agendal-backup.timer`
 - Run once: `systemctl --user start agendal-backup`, then `journalctl --user -u agendal-backup`.
 
+**Monitoring.** Set `TELESCOPE_ALLOWED_EMAILS` in `backend/.env.production` to the developers' sign-in emails;
+they see `https://<domain>/pulse` (errors, failed jobs and scheduled tasks, slow requests and queries) and
+`/telescope` (each fault's detail) once signed in. Nobody is alerted: look at Pulse after each deploy. Everyone
+else gets a plain 403 page. `APP_URL` must be `https://<domain>`, or the dashboard can't load its cards.
+
 **Restore drill** (before the demo, scalability.md): on the machine with the private key,
 
 ```sh

@@ -44,6 +44,8 @@ class TaskResource extends JsonResource
             'reminder' => $this->reminder ?? 'none',
             'due_reminder' => $this->due_reminder ?? 'none',
             'notes' => $this->notes,
+            'project_order' => $this->project_order,
+            'day_order' => $this->day_order,
             'done' => (bool) $this->done,
             'done_at' => $this->formatIso($this->done_at),
             'created_by' => $this->created_by,

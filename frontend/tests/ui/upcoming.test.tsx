@@ -874,11 +874,12 @@ describe("Upcoming screen (Section 8)", () => {
       const { wrap } = setupUpcoming([], undefined, tuesdayClock);
       render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
-      const observer = MockResizeObserver.instances[0];
+      // The bar's own observer: drag and drop (#178) observes elements of its own
+      const stickyBar = document.querySelector(".sticky.top-0")!;
+      const observer = MockResizeObserver.instances.find((o) =>
+        o.elements.has(stickyBar),
+      )!;
       expect(observer).toBeTruthy();
-
-      const stickyBar = Array.from(observer.elements)[0];
-      expect(stickyBar).toBeTruthy();
 
       act(() => {
         observer.trigger([

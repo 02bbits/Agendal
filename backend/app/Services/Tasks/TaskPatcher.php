@@ -79,6 +79,8 @@ class TaskPatcher
             'repeat_rule' => $task->repeat_rule,
             'notes' => $task->notes,
             'project_id' => $task->project_id,
+            'project_order' => $task->project_order,
+            'day_order' => $task->day_order,
         ];
 
         /** @var array<string, string> $fieldUpdatedAt */
@@ -128,6 +130,16 @@ class TaskPatcher
             if (empty($merged['due_date'])) {
                 $merged['reminder'] = 'none';
                 $fieldUpdatedAt['reminder'] = $startDateEffectiveAtIso;
+            }
+        }
+
+        // - A manual place belongs to its day or project (#178): moving the task elsewhere without
+        //   a new place drops the old one, so the rules order it in its new list
+        foreach (['day_order' => ['start_date', 'due_date'], 'project_order' => ['project_id']] as $order => $owners) {
+            $movedBy = array_values(array_filter($owners, fn (string $f) => isset($appliedFields[$f])));
+            if ($movedBy !== [] && ! array_key_exists($order, $patchData) && $merged[$order] !== null) {
+                $merged[$order] = null;
+                $fieldUpdatedAt[$order] = $fieldUpdatedAt[$movedBy[0]];
             }
         }
 
@@ -263,6 +275,8 @@ class TaskPatcher
         $task->repeat_rule = $merged['repeat_rule'];
         $task->notes = $merged['notes'];
         $task->project_id = $merged['project_id'];
+        $task->project_order = $merged['project_order'];
+        $task->day_order = $merged['day_order'];
         $task->repeat_anchor = $repeatAnchor;
         $task->field_updated_at = $fieldUpdatedAt;
 

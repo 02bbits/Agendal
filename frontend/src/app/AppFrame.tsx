@@ -14,6 +14,7 @@ import {
   ToastStack,
   useReminderBadge,
   type Project,
+  TaskDndScope,
 } from "@/ui";
 import { useOffline } from "@/lib/online";
 import { useInstall } from "./useInstall";
@@ -203,68 +204,71 @@ export function AppFrame({ children }: { children: ReactNode }) {
         })}
         onDone={splash.end}
       >
-        <AppShell
-          tab={shownTab}
-          pending={
-            pendingTab ? (
-              <PendingScreen pending={pendingTab} wide={wide} />
-            ) : undefined
-          }
-          banner={
-            offlineBanner || installBanner || reminderBanner ? (
-              <>
-                {offlineBanner}
-                {installBanner}
-                {reminderBanner}
-              </>
-            ) : undefined
-          }
-          navigate={navigate}
-          onOpenSearch={openSearchOrPage}
-          capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
-          sidebar={
-            isAuthPath(pathname)
-              ? undefined
-              : {
-                  accountName: user?.display_name ?? user?.email ?? "",
-                  email: user?.email ?? "",
-                  theme: settings.theme,
-                  onThemeChange: (theme) => changeSettings({ theme }),
-                  onSignOut: () => signOut(),
-                  onSignOutEverywhere: () => signOut(true),
-                  counts: sidebar.tabCounts,
-                  projects:
-                    sidebar.projects.length > 0 ? (
-                      <SidebarProjects
-                        projects={sidebar.projects}
-                        noProjectCount={sidebar.noProjectCount}
-                        currentPath={shownPath}
-                        navigate={navigate}
-                      />
-                    ) : undefined,
-                  onNewProject: () => setCreatingProject(true),
-                  onSearch: openSearchOrPage,
-                  onAccount: openSettings,
-                  onInstall: install,
-                }
-          }
-          toast={<ToastStack toasts={toasts} onDismiss={dismissToast} />}
-        >
-          {children}
-          <AppOverlays
-            pathname={pathname}
-            router={router}
-            overlays={overlays}
-            offline={offline}
-            projects={sidebar.projects}
-            newTask={{ open: newTaskOpen, sheetProps }}
-            creatingProject={creatingProject}
-            onCloseProjectSheet={() => setCreatingProject(false)}
-            onProjectCreated={projectCreated}
-          />
-          {/* Reminders (TK-6): asks for notifications when a reminder is first set */}
-          <PushPrompt signedIn={user !== null} />
-        </AppShell>
+        {/* One drag-and-drop area, so a task can be dropped on a project in the sidebar (#178) */}
+        <TaskDndScope>
+          <AppShell
+            tab={shownTab}
+            pending={
+              pendingTab ? (
+                <PendingScreen pending={pendingTab} wide={wide} />
+              ) : undefined
+            }
+            banner={
+              offlineBanner || installBanner || reminderBanner ? (
+                <>
+                  {offlineBanner}
+                  {installBanner}
+                  {reminderBanner}
+                </>
+              ) : undefined
+            }
+            navigate={navigate}
+            onOpenSearch={openSearchOrPage}
+            capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
+            sidebar={
+              isAuthPath(pathname)
+                ? undefined
+                : {
+                    accountName: user?.display_name ?? user?.email ?? "",
+                    email: user?.email ?? "",
+                    theme: settings.theme,
+                    onThemeChange: (theme) => changeSettings({ theme }),
+                    onSignOut: () => signOut(),
+                    onSignOutEverywhere: () => signOut(true),
+                    counts: sidebar.tabCounts,
+                    projects:
+                      sidebar.projects.length > 0 ? (
+                        <SidebarProjects
+                          projects={sidebar.projects}
+                          noProjectCount={sidebar.noProjectCount}
+                          currentPath={shownPath}
+                          navigate={navigate}
+                        />
+                      ) : undefined,
+                    onNewProject: () => setCreatingProject(true),
+                    onSearch: openSearchOrPage,
+                    onAccount: openSettings,
+                    onInstall: install,
+                  }
+            }
+            toast={<ToastStack toasts={toasts} onDismiss={dismissToast} />}
+          >
+            {children}
+            <AppOverlays
+              pathname={pathname}
+              router={router}
+              overlays={overlays}
+              offline={offline}
+              projects={sidebar.projects}
+              newTask={{ open: newTaskOpen, sheetProps }}
+              creatingProject={creatingProject}
+              onCloseProjectSheet={() => setCreatingProject(false)}
+              onProjectCreated={projectCreated}
+            />
+            {/* Reminders (TK-6): asks for notifications when a reminder is first set */}
+            <PushPrompt signedIn={user !== null} />
+          </AppShell>
+        </TaskDndScope>
       </TabLoading>
     </AppFrameContext.Provider>
   );

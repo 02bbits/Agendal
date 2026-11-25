@@ -2,7 +2,10 @@ import { useState } from "react";
 import { t } from "../../copy";
 import { EmptyState } from "../../components/EmptyState";
 import { BackBar } from "../../components/BackBar";
+import { orderList } from "../../domain/order";
 import { sortCompleted, sortOpenByDue } from "../../domain/projects";
+import { SortMenu } from "../lists/SortMenu";
+import { useSortMode } from "../lists/useSortMode";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { DeleteProjectDialog } from "./DeleteProjectDialog";
 import { ProjectHeaderMenu } from "./ProjectHeaderMenu";
@@ -37,10 +40,18 @@ export function ProjectScreen({
   navigate,
   selectedTaskId,
   liveTask = (task) => task,
+  onMove,
+  onReceiveOpen,
+  onMoveCompleted,
+  onReceiveCompleted,
+  onToProject,
 }: ProjectScreenProps) {
   const [deleting, setDeleting] = useState(false);
 
-  const open = dedupeTasks(sortOpenByDue(openTasks)).map(liveTask);
+  const [sortMode] = useSortMode(`project:${project.id}`);
+  const open = dedupeTasks(
+    orderList(openTasks, sortMode, "project_order", sortOpenByDue),
+  ).map(liveTask);
   const completed = dedupeTasks(sortCompleted(completedTasks)).map(liveTask);
   const totalTasks = openTasks.length + completedTasks.length;
   const progress = explicitProgress ?? {
@@ -58,10 +69,13 @@ export function ProjectScreen({
         onBack={onBack}
         className="-mx-5"
         actions={
-          <ProjectHeaderMenu
-            onRename={onRenameProject}
-            onDelete={onDeleteProject ? () => setDeleting(true) : undefined}
-          />
+          <div className="flex items-center gap-1">
+            <SortMenu list={`project:${project.id}`} listName={project.name} />
+            <ProjectHeaderMenu
+              onRename={onRenameProject}
+              onDelete={onDeleteProject ? () => setDeleting(true) : undefined}
+            />
+          </div>
         }
       />
       <h1
@@ -95,6 +109,9 @@ export function ProjectScreen({
               onToggleTask={onToggleTask}
               isSettling={isSettling}
               navigate={navigate}
+              onMove={onMove}
+              onReceive={onReceiveOpen}
+              onToProject={onToProject}
             />
             {completed.length > 0 && (
               <ProjectCompletedList
@@ -109,6 +126,9 @@ export function ProjectScreen({
                 selectedTaskId={selectedTaskId}
                 onToggleTask={onToggleTask}
                 navigate={navigate}
+                onMove={onMoveCompleted}
+                onReceive={onReceiveCompleted}
+                onToProject={onToProject}
               />
             )}
           </>
