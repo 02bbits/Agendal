@@ -359,11 +359,14 @@ export function TaskStoreProvider({
         while (grew) {
           grew = false;
           for (const candidate of tasks) {
-            if (
-              !seen.has(candidate.id) &&
+            if (seen.has(candidate.id)) continue;
+            const isChild =
               candidate.previous_occurrence_id &&
-              seen.has(candidate.previous_occurrence_id)
-            ) {
+              seen.has(candidate.previous_occurrence_id);
+            const isParent = removedTasks.some(
+              (r) => r.previous_occurrence_id === candidate.id,
+            );
+            if (isChild || isParent) {
               seen.add(candidate.id);
               removedTasks.push(candidate);
               grew = true;

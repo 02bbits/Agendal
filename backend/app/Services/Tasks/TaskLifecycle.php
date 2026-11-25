@@ -200,12 +200,18 @@ final class TaskLifecycle
         });
     }
 
-    /** Soft-deletes $root and any following occurrences linked via `previous_occurrence_id`. */
+    /** Soft-deletes every non-trashed occurrence in $root's repeating series. */
     private function deleteFutureChain(Task $root, ?string $at): bool
     {
-        $deleted = $this->delete($root, $at);
-        $visited = [$root->id => true];
-        $cursor = $root;
+        $first = $this->recurrence->first($root);
+        $cursor = Task::withTrashed()->whereKey($first->id)->lockForUpdate()->first() ?? $root;
+        $deletedRoot = $cursor->id === $root->id ? $this->delete($root, $at) : false;
+
+        if ($cursor->id !== $root->id && ! $cursor->trashed()) {
+            $this->delete($cursor, $at);
+        }
+
+        $visited = [$cursor->id => true];
 
         while (($following = $this->recurrence->following($cursor)) !== null) {
             if (isset($visited[$following->id])) {
@@ -217,12 +223,15 @@ final class TaskLifecycle
                 break;
             }
             if (! $lockedFollowing->trashed()) {
-                $this->delete($lockedFollowing, $at);
+                $ok = $this->delete($lockedFollowing, $at);
+                if ($lockedFollowing->id === $root->id) {
+                    $deletedRoot = $ok;
+                }
             }
             $cursor = $lockedFollowing;
         }
 
-        return $deleted;
+        return $deletedRoot;
     }
 
     /** Undoes a delete. False when a later `deleted` stamp already won. */
