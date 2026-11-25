@@ -1,14 +1,10 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  addDays,
-  countText,
-  entriesOf,
-  t,
-  type Project,
-  type Task,
-} from "@/ui";
+import { countText, t } from "@/ui/copy";
+import { addDays } from "@/ui/domain/dates";
+import { entriesOf } from "@/ui/domain/entries";
+import type { Project, Task } from "@/ui/domain/types";
 import { ApiRequestError, rateLimited } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";

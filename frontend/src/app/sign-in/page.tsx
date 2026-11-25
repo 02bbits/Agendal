@@ -4,13 +4,13 @@ import { useState, useSyncExternalStore } from "react";
 import { api } from "@/lib/api";
 import { now } from "@/lib/clock";
 import { useOffline } from "@/lib/online";
+import { t } from "@/ui/copy";
 import {
-  ROUTES,
   SignInScreen,
-  safeReturnPath,
-  t,
   type SignInResult,
-} from "@/ui";
+} from "@/ui/features/auth/SignInScreen";
+import { safeReturnPath } from "@/ui/features/auth/validation";
+import { ROUTES } from "@/ui/features/shell/routes";
 import { useAppFrame } from "../AppFrame";
 
 // The lockout deadline survives a reload, so the countdown carries on (AA-E3, T-AA-103)

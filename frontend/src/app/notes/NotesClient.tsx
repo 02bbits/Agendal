@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAppFrame } from "../AppFrame";
@@ -21,8 +22,11 @@ import { cx } from "../../ui/components/cx";
 import { PanelHeader } from "../../ui/features/tasks/details/PanelHeader";
 import { t } from "../../ui/copy";
 import type { NoteFilter } from "../../ui/domain/types";
-import NoteResultClient from "./[id]/NoteResultClient";
 import { useDataChanged } from "../useDataChanged";
+
+const NoteResultClient = dynamic(() => import("./[id]/NoteResultClient"), {
+  ssr: false,
+});
 
 // The next page loads once the end of the list is within one screen
 const ONE_SCREEN_AHEAD = "0px 0px 100% 0px";

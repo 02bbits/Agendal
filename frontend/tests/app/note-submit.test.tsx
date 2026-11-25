@@ -70,7 +70,7 @@ async function makeTasks(answer: NoteResult) {
   });
   await userEvent.click(screen.getByRole("button", { name: "open editor" }));
   await userEvent.type(
-    screen.getByRole("textbox", { name: "Your note" }),
+    await screen.findByRole("textbox", { name: "Your note" }),
     "call mum",
   );
   await userEvent.click(screen.getByRole("button", { name: "Make tasks" }));

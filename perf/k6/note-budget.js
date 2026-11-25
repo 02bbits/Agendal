@@ -165,6 +165,18 @@ export function note30ItemsAndUndo(data) {
     console.error(`note30Items failed: status=${res.status} body=${res.body}`);
   }
 
+  if (noteId && noteStatus === "confirm") {
+    const confirmRes = http.post(
+      `${BASE_URL}/api/v1/notes/${noteId}/confirm`,
+      JSON.stringify({ confirm_conflicts: true }),
+      { headers: apiHeaders(BASE_URL), tags: { name: "note_confirm" } },
+    );
+    check(confirmRes, { "note confirm (200)": (r) => r.status === 200 });
+    if (confirmRes.status === 200) {
+      noteStatus = "done";
+    }
+  }
+
   if (noteId && noteStatus === "done") {
     const undoRes = http.post(
       `${BASE_URL}/api/v1/notes/${noteId}/undo`,

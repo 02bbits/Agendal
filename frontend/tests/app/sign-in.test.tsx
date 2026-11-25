@@ -265,7 +265,9 @@ describe("Two-factor authentication (issue #149 C)", () => {
     expect(screen.getByText(/We sent a 6-digit code to/)).toBeTruthy();
     expect(screen.getByText("e******@gmail.com")).toBeTruthy();
 
-    const input = screen.getByRole("textbox", { name: "Verification code" });
+    const input = await screen.findByRole("textbox", {
+      name: "Verification code",
+    });
     for (const d of ["1", "2", "3", "4", "5", "6"]) {
       fireEvent.keyDown(input, { key: d });
     }
@@ -298,7 +300,9 @@ describe("Two-factor authentication (issue #149 C)", () => {
     await signIn(user);
 
     await screen.findByText("Enter your sign-in code");
-    const input = screen.getByRole("textbox", { name: "Verification code" });
+    const input = await screen.findByRole("textbox", {
+      name: "Verification code",
+    });
     for (const d of ["0", "0", "0", "0", "0", "0"]) {
       fireEvent.keyDown(input, { key: d });
     }
@@ -357,7 +361,9 @@ describe("Two-factor authentication (issue #149 C)", () => {
     await signIn(user);
 
     await screen.findByText("Enter your sign-in code");
-    const input = screen.getByRole("textbox", { name: "Verification code" });
+    const input = await screen.findByRole("textbox", {
+      name: "Verification code",
+    });
     for (const d of ["9", "9", "9", "9", "9", "9"]) {
       fireEvent.keyDown(input, { key: d });
     }

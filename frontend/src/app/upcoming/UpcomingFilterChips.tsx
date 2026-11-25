@@ -1,12 +1,9 @@
 "use client";
 
-import {
-  CalendarIcon,
-  ChipGroup,
-  ClockIcon,
-  t,
-  type UpcomingFilter,
-} from "@/ui";
+import { ChipGroup } from "@/ui/components/ChipGroup";
+import { CalendarIcon, ClockIcon } from "@/ui/components/icons";
+import { t } from "@/ui/copy";
+import type { UpcomingFilter } from "@/ui/domain/lists";
 
 /** All, Scheduled (start dates) or Due: the chips over Upcoming. `md` is the desktop size. */
 export function UpcomingFilterChips({

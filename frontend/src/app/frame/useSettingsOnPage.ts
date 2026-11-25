@@ -1,5 +1,6 @@
 import { useEffect, type RefObject } from "react";
-import { applyThemePalette, type AccountSettings } from "@/ui";
+import { applyThemePalette } from "@/ui/domain/theme";
+import type { AccountSettings } from "@/ui/features/settings/types";
 import { writeStoredSetting } from "@/ui/features/shell/routes";
 import { DEFAULT_SETTINGS, PAGE_VIEW_KEY } from "./signedInUser";
 

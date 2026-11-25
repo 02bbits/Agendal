@@ -1,5 +1,10 @@
 import { createContext, useContext } from "react";
-import type { AccountSettings, Navigate, NoteResult, SettingsTab } from "@/ui";
+import type { NoteResult } from "@/ui/domain/types";
+import type {
+  AccountSettings,
+  SettingsTab,
+} from "@/ui/features/settings/types";
+import type { Navigate } from "@/ui/features/shell/routes";
 import type { OpenNewTaskFn } from "../useNewTask";
 import type { SignedInUser } from "./signedInUser";
 import type { ShowToast } from "./useToast";

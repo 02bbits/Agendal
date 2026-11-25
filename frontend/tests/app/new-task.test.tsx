@@ -115,7 +115,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     const plusButton = screen.getByRole("button", { name: "Add a task" });
     await userEvent.click(plusButton);
 
-    const sheet = screen.getByRole("dialog", { name: "New task" });
+    const sheet = await screen.findByRole("dialog", { name: "New task" });
     expect(sheet).toBeTruthy();
 
     const titleInput = within(sheet).getByLabelText("Title");
@@ -140,7 +140,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/notes", NotesPage);
     const plusButton = screen.getByRole("button", { name: "Add a task" });
     await userEvent.click(plusButton);
-    const sheet = screen.getByRole("dialog", { name: "New task" });
+    const sheet = await screen.findByRole("dialog", { name: "New task" });
     expect(
       within(sheet).getByRole("radiogroup", { name: "Start date" }),
     ).toBeTruthy();
@@ -160,7 +160,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
-    const sheet1 = screen.getByRole("dialog", { name: "New task" });
+    const sheet1 = await screen.findByRole("dialog", { name: "New task" });
     const dueGroup1 = within(sheet1).getByRole("radiogroup", {
       name: "Start date",
     });
@@ -187,7 +187,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/upcoming", UpcomingPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
-    const sheet2 = screen.getByRole("dialog", { name: "New task" });
+    const sheet2 = await screen.findByRole("dialog", { name: "New task" });
     const dueGroup2 = within(sheet2).getByRole("radiogroup", {
       name: "Start date",
     });
@@ -213,7 +213,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
-    const sheet = screen.getByRole("dialog", { name: "New task" });
+    const sheet = await screen.findByRole("dialog", { name: "New task" });
     const titleInput = within(sheet).getByLabelText("Title");
     await userEvent.type(titleInput, "Doctor appointment");
 
@@ -303,7 +303,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
-    const sheet = screen.getByRole("dialog", { name: "New task" });
+    const sheet = await screen.findByRole("dialog", { name: "New task" });
     const modal = sheet.closest(".modal");
     expect(modal).not.toBeNull();
 
@@ -328,7 +328,7 @@ describe("AppFrame New Task Wiring (IM-26)", () => {
     renderPage("/", InboxPage);
     await userEvent.click(screen.getByRole("button", { name: "Add a task" }));
 
-    const sheet = screen.getByRole("dialog", { name: "New task" });
+    const sheet = await screen.findByRole("dialog", { name: "New task" });
     const todayRadio = within(sheet).getByRole("radio", { name: "Today" });
     const pickChip = within(sheet).getByRole("radio", { name: "Custom" });
 

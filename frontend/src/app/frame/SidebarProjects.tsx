@@ -1,12 +1,9 @@
 import type { ReactElement } from "react";
-import {
-  Link,
-  ROUTES,
-  sortProjects,
-  t,
-  type Navigate,
-  type ProjectWithCounts,
-} from "@/ui";
+import { t } from "@/ui/copy";
+import { sortProjects } from "@/ui/domain/projects";
+import type { ProjectWithCounts } from "@/ui/features/projects/ProjectsScreen";
+import { Link } from "@/ui/features/shell/Link";
+import { ROUTES, type Navigate } from "@/ui/features/shell/routes";
 import { cx } from "@/ui/components/cx";
 
 function ProjectRow({

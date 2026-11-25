@@ -1,20 +1,26 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { Button } from "@/ui/components/Button";
+import { PlusIcon } from "@/ui/components/icons";
+import { t } from "@/ui/copy";
+import type { UpcomingFilter } from "@/ui/domain/lists";
 import {
-  Button,
-  PlusIcon,
-  ScreenHeader,
-  TaskPanel,
-  TaskStoreProvider,
   UpcomingScreen,
-  UpcomingViewSwitch,
-  t,
-  useTaskPanel,
-  type UpcomingFilter,
   type UpcomingViewMode,
-  RateLimited,
-} from "@/ui";
+} from "@/ui/features/lists/UpcomingScreen";
+import { UpcomingViewSwitch } from "@/ui/features/lists/UpcomingViewSwitch";
+import { RateLimited } from "@/ui/features/shell/RateLimited";
+import { ScreenHeader } from "@/ui/features/shell/ScreenHeader";
+import { TaskStoreProvider } from "@/ui/features/tasks/store";
+import { useTaskPanel } from "@/ui/features/tasks/useTaskPanel";
+
+const TaskPanel = dynamic(
+  () =>
+    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
+  { ssr: false },
+);
 import { LoadError } from "@/ui/components/LoadError";
 import {
   readFilter,

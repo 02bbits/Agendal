@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { localTime, now, timeZone, today } from "@/lib/clock";
-import { formatLongDate } from "@/ui";
+import { formatLongDate } from "@/ui/domain/dates";
 
 // Inbox date overline, e.g. "Thursday, 29 October". Reads the time through the IM-05 clock.
 export function headerDate(zone = timeZone(), at = now()): string {

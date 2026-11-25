@@ -160,6 +160,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: perf-reports
+          include-hidden-files: true
           path: |
             /tmp/k6-note-budget.json
             /tmp/k6-scalability.json

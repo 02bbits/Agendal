@@ -1,6 +1,6 @@
 "use client";
 
-import { t } from "@/ui";
+import { t } from "@/ui/copy";
 import {
   dismissInstall,
   promptInstall,

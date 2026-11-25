@@ -1,12 +1,10 @@
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
-import {
-  DeleteProjectDialog,
-  ProjectSheet,
-  t,
-  type Project,
-  type ProjectWithCounts,
-  type ToastData,
-} from "@/ui";
+import type { ToastData } from "@/ui/components/Toast";
+import { t } from "@/ui/copy";
+import type { Project } from "@/ui/domain/types";
+import { DeleteProjectDialog } from "@/ui/features/projects/DeleteProjectDialog";
+import { ProjectSheet } from "@/ui/features/projects/ProjectSheet";
+import type { ProjectWithCounts } from "@/ui/features/projects/ProjectsScreen";
 import {
   createProject,
   deleteProject,

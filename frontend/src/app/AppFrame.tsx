@@ -2,16 +2,15 @@
 import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import { useWideScreen } from "@/ui/components/useMediaQuery";
 
+import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
-import {
-  AppShell,
-  InstallBanner,
-  OfflineBanner,
-  ROUTES,
-  ToastStack,
-  type Project,
-} from "@/ui";
+import { AppShell } from "@/ui/features/shell/AppShell";
+import { InstallBanner } from "@/ui/features/shell/InstallBanner";
+import { OfflineBanner } from "@/ui/features/shell/OfflineBanner";
+import { ROUTES } from "@/ui/features/shell/routes";
+import { ToastStack } from "@/ui/components/Toast";
+import type { Project } from "@/ui/domain/types";
 import { useOffline } from "@/lib/online";
 import { useInstall } from "./useInstall";
 import { useNewTask } from "./useNewTask";
@@ -20,7 +19,6 @@ import { TabLoading } from "./TabLoading";
 import { AppFrameContext, type AppFrameValue } from "./frame/AppFrameContext";
 import { AppOverlays } from "./frame/AppOverlays";
 import { isAuthPath, TAB_BY_PATH } from "./frame/frameRoutes";
-import { PendingScreen } from "./frame/PendingScreen";
 import { SidebarProjects } from "./frame/SidebarProjects";
 import { useAccountSettings } from "./frame/useAccountSettings";
 import { useOverlays } from "./frame/useOverlays";
@@ -34,6 +32,11 @@ import { useSyncToasts } from "./frame/useSyncToasts";
 import { useTabNavigation } from "./frame/useTabNavigation";
 import { useScreenFocus } from "./frame/useScreenFocus";
 import { useToast } from "./frame/useToast";
+
+const PendingScreen = dynamic(
+  () => import("./frame/PendingScreen").then((m) => m.PendingScreen),
+  { ssr: false },
+);
 
 export { useAppFrame } from "./frame/AppFrameContext";
 export type { SignedInUser } from "./frame/signedInUser";
@@ -167,6 +170,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
   );
   const offlineBanner = tab && offline && <OfflineBanner />;
 
+  const hasOverlay = Boolean(
+    (overlays.settings.settingsTab && pathname !== ROUTES.account) ||
+    overlays.note.editing ||
+    overlays.search.searching ||
+    newTaskOpen ||
+    creatingProject,
+  );
+
   return (
     <AppFrameContext.Provider value={value}>
       {/* The full-screen loading screen: opening, reloading, going in and out (#161) */}
@@ -226,17 +237,19 @@ export function AppFrame({ children }: { children: ReactNode }) {
           toast={<ToastStack toasts={toasts} onDismiss={dismissToast} />}
         >
           {children}
-          <AppOverlays
-            pathname={pathname}
-            router={router}
-            overlays={overlays}
-            offline={offline}
-            projects={sidebar.projects}
-            newTask={{ open: newTaskOpen, sheetProps }}
-            creatingProject={creatingProject}
-            onCloseProjectSheet={() => setCreatingProject(false)}
-            onProjectCreated={projectCreated}
-          />
+          {hasOverlay && (
+            <AppOverlays
+              pathname={pathname}
+              router={router}
+              overlays={overlays}
+              offline={offline}
+              projects={sidebar.projects}
+              newTask={{ open: newTaskOpen, sheetProps }}
+              creatingProject={creatingProject}
+              onCloseProjectSheet={() => setCreatingProject(false)}
+              onProjectCreated={projectCreated}
+            />
+          )}
         </AppShell>
       </TabLoading>
     </AppFrameContext.Provider>

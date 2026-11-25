@@ -3,7 +3,9 @@ import { ApiRequestError, rateLimited } from "@/lib/apiError";
 import { now, timeZone, today } from "@/lib/clock";
 import { readProjects, readTasks } from "@/lib/localStore";
 import { inbox, projects } from "@/lib/taskApi";
-import { buildInbox, countText, t, type Project, type Task } from "@/ui";
+import { countText, t } from "@/ui/copy";
+import { buildInbox } from "@/ui/domain/lists";
+import type { Project, Task } from "@/ui/domain/types";
 import { useDataChanged } from "./useDataChanged";
 
 // Same counts as the server's, from the tasks on the device

@@ -136,9 +136,9 @@ it("desktop opens a note beside the list without scrolling and closes using Back
 
   view.rerender(<NotesClient />);
 
-  expect(screen.getByTestId("result").getAttribute("data-presentation")).toBe(
-    "panel",
-  );
+  expect(
+    (await screen.findByTestId("result")).getAttribute("data-presentation"),
+  ).toBe("panel");
 
   expect(
     screen.getByRole("link", { name: /Call mum/ }).getAttribute("aria-current"),
@@ -162,7 +162,7 @@ it("phone links use the task flow and a selected note changes presentation witho
 
   view.rerender(<NotesClient noteId="n1" />);
 
-  const result = screen.getByTestId("result");
+  const result = await screen.findByTestId("result");
 
   expect(result.getAttribute("data-presentation")).toBe("screen");
 

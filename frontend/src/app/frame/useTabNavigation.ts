@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ROUTES, type Navigate, type TabId } from "@/ui";
+import { ROUTES, type Navigate, type TabId } from "@/ui/features/shell/routes";
 import {
   isAuthPath,
   PROJECT_PATH,

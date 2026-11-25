@@ -5,7 +5,8 @@ import {
   useState,
   type RefObject,
 } from "react";
-import { t, type AccountSettings } from "@/ui";
+import { t } from "@/ui/copy";
+import type { AccountSettings } from "@/ui/features/settings/types";
 import { writeStoredSetting } from "@/ui/features/shell/routes";
 import { api } from "@/lib/api";
 import { setTimeZone } from "@/lib/clock";

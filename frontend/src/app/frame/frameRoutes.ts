@@ -1,4 +1,5 @@
-import { ROUTES, type CopyKey, type TabId } from "@/ui";
+import type { CopyKey } from "@/ui/copy";
+import { ROUTES, type TabId } from "@/ui/features/shell/routes";
 
 // Screens that work signed out. A signed-in user on these goes to Inbox; a reset link still
 // works on a device that is signed in (AA-E5)

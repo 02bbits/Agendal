@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { t } from "@/ui";
+import { t } from "@/ui/copy";
 import type { ToastData } from "@/ui/components/Toast";
 import { activateUpdate, registerServiceWorker } from "@/lib/serviceWorker";
 

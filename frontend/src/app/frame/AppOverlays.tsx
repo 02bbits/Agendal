@@ -1,17 +1,11 @@
 "use client";
+import dynamic from "next/dynamic";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
-
-import {
-  NewTaskSheet,
-  NoteEditor,
-  ProjectSheet,
-  ROUTES,
-  SearchPopup,
-  t,
-  type NewTaskSheetProps,
-  type Project,
-  type ProjectWithCounts,
-} from "@/ui";
+import { t } from "@/ui/copy";
+import type { Project } from "@/ui/domain/types";
+import type { ProjectWithCounts } from "@/ui/features/projects/ProjectsScreen";
+import { ROUTES } from "@/ui/features/shell/routes";
+import type { NewTaskSheetProps } from "@/ui/features/tasks/new/NewTaskSheet";
 import { createProject } from "@/lib/projectApi";
 import {
   notesChanged,
@@ -23,9 +17,31 @@ import {
 import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
-import { AppSettingsScreen } from "./AppSettingsScreen";
 import { hasTaskPanel } from "./frameRoutes";
 import type { Overlays } from "./useOverlays";
+
+const AppSettingsScreen = dynamic(
+  () => import("./AppSettingsScreen").then((m) => m.AppSettingsScreen),
+  { ssr: false },
+);
+const NoteEditor = dynamic(
+  () => import("@/ui/features/notes/NoteEditor").then((m) => m.NoteEditor),
+  { ssr: false },
+);
+const SearchPopup = dynamic(
+  () => import("@/ui/features/lists/SearchPopup").then((m) => m.SearchPopup),
+  { ssr: false },
+);
+const NewTaskSheet = dynamic(
+  () =>
+    import("@/ui/features/tasks/new/NewTaskSheet").then((m) => m.NewTaskSheet),
+  { ssr: false },
+);
+const ProjectSheet = dynamic(
+  () =>
+    import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
+  { ssr: false },
+);
 
 type Router = {
   push: (href: string, options?: { scroll?: boolean }) => void;

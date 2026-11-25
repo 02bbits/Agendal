@@ -1,4 +1,4 @@
-import type { AccountSettings } from "@/ui";
+import type { AccountSettings } from "@/ui/features/settings/types";
 import { readStoredSetting } from "@/ui/features/shell/routes";
 import { setTimeZone } from "@/lib/clock";
 

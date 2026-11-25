@@ -2,17 +2,18 @@
 import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { t } from "@/ui/copy";
+import { formatLongDate } from "@/ui/domain/dates";
+import type { Project } from "@/ui/domain/types";
 import {
   ProjectsScreen,
-  ROUTES,
-  RateLimited,
-  ScreenHeader,
-  formatLongDate,
-  t,
-  type Project,
   type ProjectWithCounts,
-} from "@/ui";
+} from "@/ui/features/projects/ProjectsScreen";
+import { RateLimited } from "@/ui/features/shell/RateLimited";
+import { ScreenHeader } from "@/ui/features/shell/ScreenHeader";
+import { ROUTES } from "@/ui/features/shell/routes";
 import { rateLimited, type ApiRequestError } from "@/lib/apiError";
 import { useAppFrame } from "../AppFrame";
 import { readProjects } from "@/lib/localStore";
@@ -20,8 +21,12 @@ import { useDataChanged } from "../useDataChanged";
 import { listProjects, getProject } from "@/lib/projectApi";
 import { appClock } from "../appClock";
 import { useToday } from "@/ui/features/tasks/useToday";
-import { ProjectsModals } from "./ProjectsModals";
 import { ProjectsSkeleton } from "../skeletons";
+
+const ProjectsModals = dynamic(
+  () => import("./ProjectsModals").then((m) => m.ProjectsModals),
+  { ssr: false },
+);
 
 export function ProjectsClient() {
   const { navigate, user, showToast } = useAppFrame();
@@ -124,18 +129,20 @@ export function ProjectsClient() {
           navigate={navigate}
         />
       )}
-      <ProjectsModals
-        projects={projects}
-        setProjects={setProjects}
-        creating={creating}
-        setCreating={setCreating}
-        editingProject={editingProject}
-        setEditingProject={setEditingProject}
-        deletingProject={deletingProject}
-        setDeletingProject={setDeletingProject}
-        onCreated={handleCreated}
-        showToast={showToast}
-      />
+      {(creating || editingProject || deletingProject) && (
+        <ProjectsModals
+          projects={projects}
+          setProjects={setProjects}
+          creating={creating}
+          setCreating={setCreating}
+          editingProject={editingProject}
+          setEditingProject={setEditingProject}
+          deletingProject={deletingProject}
+          setDeletingProject={setDeletingProject}
+          onCreated={handleCreated}
+          showToast={showToast}
+        />
+      )}
     </>
   );
 }

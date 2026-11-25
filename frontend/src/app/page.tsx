@@ -1,17 +1,21 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Suspense } from "react";
-import {
-  Button,
-  InboxScreen,
-  PlusIcon,
-  RateLimited,
-  ScreenHeader,
-  TaskPanel,
-  TaskStoreProvider,
-  t,
-  useTaskPanel,
-} from "@/ui";
+import { Button } from "@/ui/components/Button";
+import { PlusIcon } from "@/ui/components/icons";
+import { t } from "@/ui/copy";
+import { InboxScreen } from "@/ui/features/lists/InboxScreen";
+import { RateLimited } from "@/ui/features/shell/RateLimited";
+import { ScreenHeader } from "@/ui/features/shell/ScreenHeader";
+import { TaskStoreProvider } from "@/ui/features/tasks/store";
+import { useTaskPanel } from "@/ui/features/tasks/useTaskPanel";
+
+const TaskPanel = dynamic(
+  () =>
+    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
+  { ssr: false },
+);
 import { LoadError } from "@/ui/components/LoadError";
 import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";

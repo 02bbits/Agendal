@@ -2,7 +2,8 @@
 
 import { useSyncExternalStore } from "react";
 import { readViewMode } from "@/ui/features/lists/storage";
-import { ScreenHeader, t } from "@/ui";
+import { t } from "@/ui/copy";
+import { ScreenHeader } from "@/ui/features/shell/ScreenHeader";
 import { useAppFrame } from "./AppFrame";
 import { useHeaderDate } from "./headerDate";
 import { ProjectsSkeleton, UpcomingSkeleton } from "./skeletons";

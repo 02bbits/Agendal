@@ -1,6 +1,8 @@
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Project, ProjectWithCounts, TabId } from "@/ui";
+import type { Project } from "@/ui/domain/types";
+import type { ProjectWithCounts } from "@/ui/features/projects/ProjectsScreen";
+import type { TabId } from "@/ui/features/shell/routes";
 import { sidebarCounts, type SidebarCounts } from "@/lib/countsApi";
 import { listProjects } from "@/lib/projectApi";
 import { useDataChanged } from "../useDataChanged";

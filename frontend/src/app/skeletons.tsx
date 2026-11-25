@@ -1,6 +1,7 @@
 "use client";
 
-import { cx, TASK_COLUMN_CLASS } from "@/ui";
+import { cx } from "@/ui/components/cx";
+import { TASK_COLUMN_CLASS } from "@/ui/features/tasks/layout";
 import { BackBarSkeleton } from "@/ui/components/BackBar";
 
 // The skeleton of each list screen (#161), shared by the screen while its data loads and by the

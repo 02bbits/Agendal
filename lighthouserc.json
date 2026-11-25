@@ -11,7 +11,7 @@
       ],
       "numberOfRuns": 3,
       "settings": {
-        "preset": "perf",
+        "onlyCategories": ["performance", "accessibility"],
         "formFactor": "mobile",
         "screenEmulation": {
           "mobile": true,
@@ -35,8 +35,7 @@
         "first-contentful-paint": ["warn", { "maxNumericValue": 1800 }],
         "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
         "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
-        "categories:accessibility": ["warn", { "minScore": 0.9 }],
-        "categories:pwa": ["warn", { "minScore": 0.7 }]
+        "categories:accessibility": ["warn", { "minScore": 0.9 }]
       }
     },
     "upload": {

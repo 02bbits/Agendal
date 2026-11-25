@@ -2,7 +2,9 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { now } from "@/lib/clock";
-import { LoadingScreen, ScreenHeader, type Navigate } from "@/ui";
+import { LoadingScreen } from "@/ui/components/LoadingScreen";
+import { ScreenHeader } from "@/ui/features/shell/ScreenHeader";
+import type { Navigate } from "@/ui/features/shell/routes";
 
 /** Shortest time the start screen stays up, so it never just flashes. */
 export const LOADING_MIN_MS = 400;

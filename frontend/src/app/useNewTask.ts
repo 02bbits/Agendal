@@ -6,7 +6,9 @@ import {
 
 import { usePathname } from "next/navigation";
 import { useCallback, useState } from "react";
-import { t, type NewTaskSheetProps, type Project } from "@/ui";
+import { t } from "@/ui/copy";
+import type { NewTaskSheetProps } from "@/ui/features/tasks/new/NewTaskSheet";
+import type { Project } from "@/ui/domain/types";
 import { createTask, projects as fetchProjects } from "@/lib/taskApi";
 
 type CreateTaskBody = Parameters<typeof createTask>[0];

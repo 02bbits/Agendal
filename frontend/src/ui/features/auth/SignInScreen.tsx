@@ -1,11 +1,15 @@
-import { useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useRef, useState, type FormEvent } from "react";
 import { Button } from "../../components/Button";
 import { TextField } from "../../components/TextField";
 import { LockIcon, MailIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { Link } from "../shell/Link";
 import { AuthLayout } from "./AuthLayout";
-import { CodeEntry, type CodeCheckResult } from "./CodeEntry";
+import type { CodeCheckResult } from "./CodeEntry";
+
+const CodeEntry = lazy(() =>
+  import("./CodeEntry").then((m) => ({ default: m.CodeEntry })),
+);
 import { PasswordField } from "./PasswordField";
 import { useResetOnLeave } from "./useResetOnLeave";
 import { useSecondsLeft } from "./useSecondsLeft";
@@ -165,12 +169,14 @@ export function SignInScreen({
             </p>
           </div>
 
-          <CodeEntry
-            onCheck={onTwoFactorChallenge}
-            onResend={onTwoFactorResend}
-            onVerified={handleTwoFactorSuccess}
-            onOther={handleTwoFactorOther}
-          />
+          <Suspense fallback={null}>
+            <CodeEntry
+              onCheck={onTwoFactorChallenge}
+              onResend={onTwoFactorResend}
+              onVerified={handleTwoFactorSuccess}
+              onOther={handleTwoFactorOther}
+            />
+          </Suspense>
 
           <div className="mt-2 flex justify-center">
             <button

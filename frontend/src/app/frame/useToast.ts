@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { MAX_TOASTS, type ToastData } from "@/ui";
+import { MAX_TOASTS, type ToastData } from "@/ui/components/Toast";
 
 export type ShowToast = (
   messageOrDraft: string | Omit<ToastData, "id">,

@@ -1,6 +1,8 @@
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 import { useCallback, useState } from "react";
-import { ROUTES, type NoteResult, type SettingsTab } from "@/ui";
+import { ROUTES } from "@/ui/features/shell/routes";
+import type { NoteResult } from "@/ui/domain/types";
+import type { SettingsTab } from "@/ui/features/settings/types";
 
 type Router = {
   push: (href: string) => void;

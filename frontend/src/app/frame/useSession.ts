@@ -6,7 +6,9 @@ import {
   useState,
   type RefObject,
 } from "react";
-import { clearThemePalette, ROUTES, t } from "@/ui";
+import { t } from "@/ui/copy";
+import { clearThemePalette } from "@/ui/domain/theme";
+import { ROUTES } from "@/ui/features/shell/routes";
 import { clearRecent } from "@/ui/domain/recentSearches";
 import { api, EMAIL_UNVERIFIED, SESSION_EXPIRED } from "@/lib/api";
 import { forgetConflicts } from "@/lib/conflicts";

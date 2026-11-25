@@ -1,21 +1,22 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useMemo } from "react";
-import {
-  ProjectScreen,
-  TaskPanel,
-  useFrozenOrder,
-  useTaskPanel,
-  useTaskStore,
-  type Navigate,
-  type Project,
-  type Task,
-  type TimeFormat,
-  type WeekStart,
-} from "@/ui";
+import type { Project, Task, TimeFormat, WeekStart } from "@/ui/domain/types";
+import { ProjectScreen } from "@/ui/features/projects/ProjectScreen";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
+import { useFrozenOrder } from "@/ui/features/lists/useFrozenOrder";
+import type { Navigate } from "@/ui/features/shell/routes";
+import { useTaskStore } from "@/ui/features/tasks/store";
+import { useTaskPanel } from "@/ui/features/tasks/useTaskPanel";
 import { useAppFrame } from "../../AppFrame";
 import { liveProgress } from "./projectProgress";
+
+const TaskPanel = dynamic(
+  () =>
+    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
+  { ssr: false },
+);
 
 const idsOf = (tasks: Task[]) => new Set(tasks.map((t) => t.id));
 

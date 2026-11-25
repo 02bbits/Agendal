@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { t } from "@/ui";
+import { t } from "@/ui/copy";
 import { CONFLICT } from "@/lib/conflicts";
 import { backOnlineText } from "@/lib/noteApi";
 import { NOTES_REPLAYED, startSync, type Replayed } from "@/lib/sync";

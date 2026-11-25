@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { ROUTES } from "@/ui";
+import { ROUTES } from "@/ui/features/shell/routes";
 import { isAuthPath } from "./frameRoutes";
 
 /** Marks <html> while one of these is open, so the page styles can follow. */
