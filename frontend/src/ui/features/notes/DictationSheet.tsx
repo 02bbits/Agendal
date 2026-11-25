@@ -213,6 +213,14 @@ export function DictationSheet({
           <div className="mt-5 flex items-center justify-center gap-3">
             {phase.kind === "heard" ? (
               <>
+                {/* Say it again: records afresh, and the new words replace these */}
+                <IconButton
+                  className="size-11! shrink-0 bg-fill!"
+                  label={t("note.mic")}
+                  icon={<MicIcon size={20} />}
+                  disabled={sending}
+                  onClick={start}
+                />
                 <Button
                   className="flex-1 whitespace-nowrap"
                   disabled={sending}
