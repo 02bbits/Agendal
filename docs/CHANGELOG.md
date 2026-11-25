@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-25
 
+- **Mail notifications run on the queue (Refs #193).** `SignInCode`, `VerifyEmailCode`, `SignUpAttempted` and `PasswordChanged` implement `ShouldQueue` via `QueuedMailNotification` (`$tries = 3`, `[10, 30, 60]` backoff, `afterCommit()`, and redacted `failed()` logging without emails or codes). Documented the `queue:work` worker in [deploy/README.md](../deploy/README.md#5-update).
 - **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
 
 ## 2026-11-24

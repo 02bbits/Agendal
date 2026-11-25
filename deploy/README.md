@@ -81,7 +81,7 @@ and `docker compose -f compose.prod.yml logs queue` shows `reminders.sent` after
 cd /srv/services/agendal && git pull && docker compose -f compose.prod.yml up -d --build
 ```
 
-The api container migrates on start; queue and scheduler wait for it.
+The api container migrates on start; queue and scheduler wait for it. The `queue` service runs `php artisan queue:work` (never `queue:listen` in production) for async mail notifications (3 tries with backoff, `afterCommit`) and push reminders; failed jobs are recorded in `failed_jobs` and surfaced on `/pulse`.
 
 **Since reminders (#186):** `compose.prod.yml` needs `secrets/vapid_private_key`. Make the keys once
 ([Reminder keys](#reminder-keys-tk-6)) before the first `up` after that pull, or compose stops on the

@@ -3,12 +3,21 @@
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Concerns\QueuedMailNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 // ASVS 2.2.3: tell the owner, so a change they didn't make doesn't go unnoticed (T-AA-42)
-class PasswordChanged extends Notification
+class PasswordChanged extends Notification implements ShouldQueue
 {
+    use QueuedMailNotification;
+
+    public function __construct()
+    {
+        $this->afterCommit();
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {
