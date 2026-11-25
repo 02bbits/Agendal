@@ -352,7 +352,28 @@ export function TaskStoreProvider({
 
   const remove = React.useCallback(
     (task: Task, scope?: DeleteScope) => {
-      removeRow(task.id);
+      const removedTasks: Task[] = [task];
+      if (scope === "future" && task.repeat !== "never") {
+        const seen = new Set<string>([task.id]);
+        let grew = true;
+        while (grew) {
+          grew = false;
+          for (const candidate of tasks) {
+            if (
+              !seen.has(candidate.id) &&
+              candidate.previous_occurrence_id &&
+              seen.has(candidate.previous_occurrence_id)
+            ) {
+              seen.add(candidate.id);
+              removedTasks.push(candidate);
+              grew = true;
+            }
+          }
+        }
+      }
+      for (const removed of removedTasks) {
+        removeRow(removed.id);
+      }
       let madeNextId: string | undefined;
       showToast({
         message: t("task.deleted", { title: task.title }),
@@ -360,9 +381,13 @@ export function TaskStoreProvider({
         onAction: () => restore(task, madeNextId),
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("agendal:task-deleted", { detail: { id: task.id } }),
-        );
+        for (const removed of removedTasks) {
+          window.dispatchEvent(
+            new CustomEvent("agendal:task-deleted", {
+              detail: { id: removed.id },
+            }),
+          );
+        }
       }
       api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
         (res) => {
@@ -375,12 +400,14 @@ export function TaskStoreProvider({
           }
         },
         (err) => {
-          insertRow(task);
+          for (const removed of removedTasks) {
+            insertRow(removed);
+          }
           handleSaveError(err, () => removeRef.current(task, scope));
         },
       );
     },
-    [api, handleSaveError, insertRow, removeRow, restore, showToast],
+    [api, handleSaveError, insertRow, removeRow, restore, showToast, tasks],
   );
 
   React.useEffect(() => {

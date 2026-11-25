@@ -188,10 +188,41 @@ final class TaskLifecycle
                 }
             }
 
+            if ($scope === 'future') {
+                $deleted = $this->deleteFutureChain($locked, $at);
+
+                return ['deleted' => $deleted, 'next' => null];
+            }
+
             $deleted = $this->delete($locked, $at);
 
             return ['deleted' => $deleted, 'next' => $next];
         });
+    }
+
+    /** Soft-deletes $root and any following occurrences linked via `previous_occurrence_id`. */
+    private function deleteFutureChain(Task $root, ?string $at): bool
+    {
+        $deleted = $this->delete($root, $at);
+        $visited = [$root->id => true];
+        $cursor = $root;
+
+        while (($following = $this->recurrence->following($cursor)) !== null) {
+            if (isset($visited[$following->id])) {
+                break;
+            }
+            $visited[$following->id] = true;
+            $lockedFollowing = Task::withTrashed()->whereKey($following->id)->lockForUpdate()->first();
+            if ($lockedFollowing === null) {
+                break;
+            }
+            if (! $lockedFollowing->trashed()) {
+                $this->delete($lockedFollowing, $at);
+            }
+            $cursor = $lockedFollowing;
+        }
+
+        return $deleted;
     }
 
     /** Undoes a delete. False when a later `deleted` stamp already won. */

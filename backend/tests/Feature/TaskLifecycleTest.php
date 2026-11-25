@@ -316,6 +316,50 @@ it('DELETE repeating task with scope=future is 204 and no new row', function () 
         ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
 });
 
+it('DELETE repeating task with scope=future deletes all following occurrences in the series', function () {
+    $user = User::factory()->create();
+    $firstId = (string) Str::uuid();
+    $secondId = (string) Str::uuid();
+    $thirdId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $firstId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => true,
+    ]);
+    Task::forceCreate([
+        'id' => $secondId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-11-02',
+        'due_date' => '2026-11-04',
+        'repeat' => 'weekly',
+        'done' => true,
+        'previous_occurrence_id' => $firstId,
+    ]);
+    Task::forceCreate([
+        'id' => $thirdId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-11-09',
+        'due_date' => '2026-11-11',
+        'repeat' => 'weekly',
+        'done' => false,
+        'previous_occurrence_id' => $secondId,
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$firstId}?scope=future")
+        ->assertStatus(204);
+
+    expect(Task::find($firstId))->toBeNull()
+        ->and(Task::find($secondId))->toBeNull()
+        ->and(Task::find($thirdId))->toBeNull();
+});
+
 it('deleting one then restore removes the next and brings back the old', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
