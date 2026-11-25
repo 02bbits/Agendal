@@ -5,7 +5,7 @@ import { handleResponse } from "./apiError";
 
 const RATE = 16000;
 const SILENCE_MS = 8000;
-const MAX_MS = 60000;
+const MAX_MS = 120000;
 // ponytail: a fixed loudness gate for "someone is speaking"; tune it on real phones if quiet voices are cut off
 const SPEECH_RMS = 0.015;
 // A click or a cough isn't speech: the recording is sent only with this much loud sound in it
@@ -36,7 +36,7 @@ export interface Recording {
 /**
  * Starts recording now. Call it inside the tap: iOS only lets audio start in a gesture, so the
  * AudioContext is made before the mic permission is awaited. Stops on stop(), after 8 s of
- * silence, or at 60 s. `onLevel` gets the loudness (RMS, 0–1) of each slice, for the waveform.
+ * silence, or at 2 minutes. `onLevel` gets the loudness (RMS, 0–1) of each slice, for the waveform.
  */
 export function record(onLevel?: (level: number) => void): Recording {
   const Context = audioContext();

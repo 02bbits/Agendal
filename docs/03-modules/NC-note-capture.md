@@ -80,7 +80,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Dictation sheet:** the capture bar's mic opens it, recording at once in that tap (iOS only starts audio inside a tap). It is the app's sheet: a bottom sheet on a phone, a centred dialog up to 560px from 768px ([UX-27](../01-product/ux-standards.md#ux-27)). Its header has × (drops the recording; nothing is sent) and the title `note.mic`, like every sheet.
 - **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, the sheet first shows `note.mic_notice`, with Continue as the header's confirm button and × to cancel; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
 - **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), an empty words card and a round red Stop. `note.listening` is announced.
-- **Stopping:** Stop, 8 s of silence, or 60 s total. `note.reading` shows in the words card while the model writes the words down (a few seconds). The words show then, not while speaking.
+- **Stopping:** Stop, 8 s of silence, or 2 minutes total. `note.reading` shows in the words card while the model writes the words down (a few seconds). The words show then, not while speaking.
 - **The words heard:** `note.heard` above the words. A mic on its own row, where Stop was, records again, and the new words replace these. Then two ways on:
   - **Edit note** (`note.edit`): the note editor opens with the words, after any unsent draft so neither is lost ([NC-E17](#nc-e17)), to check and change before Make tasks.
   - **Make tasks** (`note.make_tasks`): the words are sent as a note at once, as from the editor, and its result opens. Kept offline: queued with its toast. Not made (too long, rate limited): the words go to the editor, where Make tasks says why.
@@ -199,13 +199,13 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `504` | `note.file_failed` (the 10 s sandbox timeout) |
 | `429` | `error.rate_limited` (10/hour, 30/day) |
 
-- `POST /notes/dictation` (multipart `audio`, WAV, ≤ 2 MB):
+- `POST /notes/dictation` (multipart `audio`, WAV, ≤ 4 MB):
 
 | Status | Body |
 |---|---|
 | `200` | `{text}`. Empty when no speech was heard |
 | `422` | `error.invalid` (no audio, not WAV, or too large) |
-| `502` · `503` | `note.dictation_failed` (the model failed or is off, or both 8 s tries stalled: the user waits about 17 s at most) |
+| `502` · `503` | `note.dictation_failed` (the model failed or is off, or both tries stalled; a try waits 8 s plus 2 s per 30 s of audio, so the user waits about 17 s at most for a short note and 33 s for 2 minutes) |
 | `429` | `error.rate_limited` (10/minute, 100/day) |
 
 - `POST /tasks`: [TK module §7](TK-tasks.md#7-api-contract).
@@ -226,7 +226,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|---|
 | Malicious file (parser exploit, zip or XML bomb, polyglot) | [SC-15](../07-architecture/security.md#sc-15) magic bytes, sandbox, 10 s and 50 MB caps | SEC-30–33 |
 | Using extraction as free OCR at scale (Google Cloud Vision is billed per image) | 10/hour, 30/day per user. A monthly Vision quota set in Google Cloud | SEC-10 |
-| Using dictation as free speech-to-text at scale (the model is billed per token) | 10/minute, 100/day per user; 60 s and 2 MB per recording | SEC-10 |
+| Using dictation as free speech-to-text at scale (the model is billed per token) | 10/minute, 100/day per user; 2 minutes and 4 MB per recording | SEC-10 |
 | Files kept with personal data | [SC-16](../07-architecture/security.md#sc-16) deleted in `finally` | SEC-34 |
 | A draft left on a shared device | Wiped on sign-out ([SC-19](../07-architecture/security.md#sc-19)) | SEC-50 |
 

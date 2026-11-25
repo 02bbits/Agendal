@@ -37,7 +37,9 @@ final class NoteTranscriber
         // Gemini usually answers in about 2 s but now and then stalls for 10–20 s or answers 503. A fresh call is
         // usually quick again, so each try is short and a stalled or busy one is tried again: the user waits at most
         // about attempts × timeout.
-        $timeout = (float) config('note_llm.dictation_timeout_seconds');
+        // 16 kHz mono 16-bit WAV is 32,000 bytes a second
+        $seconds = strlen($wav) / 32000;
+        $timeout = (float) config('note_llm.dictation_timeout_seconds') + $seconds / 30 * (float) config('note_llm.dictation_timeout_per_30s');
         $prompt = (string) file_get_contents(resource_path('prompts/'.config('note_llm.dictation_prompt_version').'.txt'));
 
         try {
