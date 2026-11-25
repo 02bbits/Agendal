@@ -1,0 +1,159 @@
+# IM-63: Nightly performance verification (NF-4, NF-5, Scalability).
+# Runs k6 load tests (note processing budget + API SLOs) and Lighthouse CI.
+name: Nightly Performance
+
+on:
+  schedule:
+    # 02:00 UTC daily (09:00 Asia/Ho_Chi_Minh)
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  perf:
+    name: k6 & Lighthouse
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:18
+        env:
+          POSTGRES_DB: agendal_perf
+          POSTGRES_USER: agendal
+          POSTGRES_PASSWORD: agendal
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U agendal -d agendal_perf"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.4"
+          extensions: pdo_pgsql, intl, mbstring
+          coverage: none
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - uses: actions/cache@v6
+        with:
+          path: ~/.composer/cache
+          key: composer-${{ hashFiles('backend/composer.lock') }}
+
+      - name: Install backend & seed perf data
+        working-directory: backend
+        run: |
+          composer install --no-interaction --no-progress
+          cp .env.example .env
+          php artisan key:generate
+          cat >> .env << 'EOF'
+          APP_ENV=local
+          APP_DEBUG=false
+          APP_URL=http://127.0.0.1:8000
+          FRONTEND_URL=http://127.0.0.1:3000
+          SANCTUM_STATEFUL_DOMAINS=127.0.0.1:8000,127.0.0.1:3000,localhost:3000
+          DB_CONNECTION=pgsql
+          DB_HOST=127.0.0.1
+          DB_PORT=5432
+          DB_DATABASE=agendal_perf
+          DB_USERNAME=agendal
+          DB_PASSWORD=agendal
+          NOTE_LLM_ENABLED=false
+          EOF
+          php artisan migrate --force
+          php artisan db:seed --force
+          php artisan tinker --execute='
+            for ($i = 1; $i <= 10; $i++) {
+              \App\Models\User::firstOrCreate(
+                ["email" => "perf{$i}@agendal.test"],
+                [
+                  "display_name" => "perf{$i}",
+                  "password" => "password",
+                  "email_verified_at" => now(),
+                ]
+              );
+            }
+          '
+
+      - name: Start Laravel server
+        working-directory: backend
+        run: |
+          nohup php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:8000/api/v1/health > /dev/null; then
+              echo "Backend is ready"
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8000/api/v1/health
+
+      - name: Install k6
+        run: |
+          sudo gpg -k
+          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          sudo apt-get update && sudo apt-get install -y k6
+
+      - name: Run k6 note processing budget (NF-5 / PERF-02)
+        run: |
+          BASE_URL=http://127.0.0.1:8000 \
+          PERF_USER_COUNT=10 \
+          NOTE_RATE=2 \
+          NOTE_DURATION=30s \
+          RULES_ONLY=true \
+          k6 run --summary-export=/tmp/k6-note-budget.json perf/k6/note-budget.js
+
+      - name: Run k6 scalability & reconnect SLOs (PERF-01, PERF-04)
+        run: |
+          BASE_URL=http://127.0.0.1:8000 \
+          PERF_USER_COUNT=10 \
+          MIXED_RATE=10 \
+          MIXED_DURATION=30s \
+          k6 run --summary-export=/tmp/k6-scalability.json perf/k6/scalability.js
+
+      - name: Build & start Next.js production server
+        working-directory: frontend
+        run: |
+          npm ci
+          API_URL=http://127.0.0.1:8000 npm run build
+          nohup env API_URL=http://127.0.0.1:8000 npm run start -- -H 127.0.0.1 -p 3000 > /tmp/next.log 2>&1 &
+          for i in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:3000/sign-in > /dev/null; then
+              echo "Frontend is ready"
+              break
+            fi
+            sleep 1
+          done
+
+      - name: Run Lighthouse CI (NF-4)
+        run: |
+          npx --yes @lhci/cli@0.14.x autorun --config=./lighthouserc.json
+
+      - name: Upload performance reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-reports
+          path: |
+            /tmp/k6-note-budget.json
+            /tmp/k6-scalability.json
+            .lighthouseci/
+
+      - name: Open issue on nightly failure
+        if: failure() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue create \
+            --title "Nightly performance budget failed ($(date -u +%Y-%m-%d))" \
+            --body "Nightly k6 / Lighthouse run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            --label "phase 6,testing"
