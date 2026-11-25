@@ -535,6 +535,8 @@ export const pending = {
   "task.unit_weeks": "weeks",
   "task.anchor_start": "before start date",
   "task.anchor_due": "before due date",
+  "task.at_start_short": "At start",
+  "task.at_due_short": "At due",
   "task.reminder_value": "Reminder value",
   "task.remove_reminder": "Remove reminder",
   "task.remind_at_preview": "Reminds at {time}",

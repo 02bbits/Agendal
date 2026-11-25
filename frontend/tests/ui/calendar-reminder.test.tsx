@@ -295,4 +295,33 @@ describe("CalendarReminderControl (Google Calendar style)", () => {
     expect((inputs[0] as HTMLInputElement).value).toBe("15");
     expect((inputs[1] as HTMLInputElement).value).toBe("10");
   });
+
+  it("shows 'At start' / 'At due' placeholder when cleared and increments with +", () => {
+    const onSave = vi.fn();
+    render(
+      <CalendarReminderControl
+        task={mockTask({
+          reminder: "0m",
+          due_reminder: "0m",
+          start_date: "2026-11-24",
+          due_date: "2026-11-25",
+        })}
+        onSave={onSave}
+      />,
+    );
+
+    const inputs = screen.getAllByLabelText(
+      t("task.reminder_value"),
+    ) as HTMLInputElement[];
+    expect(inputs[0]!.value).toBe("");
+    expect(inputs[0]!.placeholder).toBe(t("task.at_start_short"));
+    expect(inputs[1]!.value).toBe("");
+    expect(inputs[1]!.placeholder).toBe(t("task.at_due_short"));
+
+    const incButtons = screen.getAllByRole("button", {
+      name: t("common.increase"),
+    });
+    fireEvent.click(incButtons[0]!);
+    expect(onSave).toHaveBeenCalledWith({ reminder: "1m" });
+  });
 });

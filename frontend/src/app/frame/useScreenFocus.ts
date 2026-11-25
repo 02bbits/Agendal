@@ -30,23 +30,50 @@ export function useScreenFocus(pathname: string) {
       document.querySelector<HTMLElement>("h1");
 
     const updateTitle = () => {
-      document.title = formatDocumentTitle();
+      const nextTitle = formatDocumentTitle();
+      if (document.title !== nextTitle) {
+        document.title = nextTitle;
+      }
     };
 
     updateTitle();
 
     const unsubscribe = subscribeReminderAlerts(updateTitle);
+    const onVisibilityOrFocus = () => {
+      if (document.visibilityState === "visible") {
+        updateTitle();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityOrFocus);
+    window.addEventListener("focus", updateTitle);
+
+    const observer =
+      typeof MutationObserver !== "undefined" && document.head
+        ? new MutationObserver(updateTitle)
+        : null;
+    observer?.observe(document.head, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
+
+    const cleanup = () => {
+      unsubscribe();
+      document.removeEventListener("visibilitychange", onVisibilityOrFocus);
+      window.removeEventListener("focus", updateTitle);
+      observer?.disconnect();
+    };
 
     if (firstScreen.current) {
       firstScreen.current = false;
-      return unsubscribe;
+      return cleanup;
     }
     const active = document.activeElement;
     if (!heading || (active && active !== main && main?.contains(active)))
-      return unsubscribe;
+      return cleanup;
     if (!heading.hasAttribute("tabindex")) heading.tabIndex = -1;
     heading.focus({ preventScroll: true });
 
-    return unsubscribe;
+    return cleanup;
   }, [pathname]);
 }

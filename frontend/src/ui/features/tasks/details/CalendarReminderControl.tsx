@@ -191,6 +191,12 @@ function ReminderCard({
           min={0}
           max={999}
           size="sm"
+          placeholder={
+            card.anchor === "due"
+              ? t("task.at_due_short")
+              : t("task.at_start_short")
+          }
+          inputClassName="w-12"
           onChange={handleValChange}
           decreaseLabel={t("common.decrease")}
           increaseLabel={t("common.increase")}

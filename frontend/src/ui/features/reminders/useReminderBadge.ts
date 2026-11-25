@@ -74,6 +74,8 @@ export function useReminderBadge() {
       }
     };
 
+    onAlertChange();
+
     const unsubscribe = subscribeReminderAlerts(onAlertChange);
 
     const onReturn = () => {

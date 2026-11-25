@@ -8,7 +8,10 @@ import {
   getReminderAlerts,
 } from "@/ui/features/reminders/reminderAlertStore";
 import { ReminderReturnBanner } from "@/ui/features/reminders/ReminderReturnBanner";
-import { formatDocumentTitle } from "@/app/frame/useScreenFocus";
+import {
+  formatDocumentTitle,
+  useScreenFocus,
+} from "@/app/frame/useScreenFocus";
 
 describe("Reminder Badge & Return Banner (#186)", () => {
   beforeEach(() => {
@@ -163,5 +166,32 @@ describe("Reminder Badge & Return Banner (#186)", () => {
     expect(reopenedBanner.style.opacity).toBe("");
     const viewButton = screen.getByRole("button", { name: /View/i });
     expect(viewButton.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("keeps (count) Agendal document title on focus, visibilitychange, and <title> resets", async () => {
+    function FocusHarness() {
+      useScreenFocus("/");
+      return null;
+    }
+
+    addReminderAlert({
+      id: "rem-focus-1",
+      title: "Focus check",
+      url: "/tasks/rem-focus-1",
+    });
+
+    render(<FocusHarness />);
+    expect(document.title).toBe("(1) Agendal");
+
+    // Simulate external metadata reset (e.g. Next.js hydration)
+    document.title = "Agendal";
+    await waitFor(() => {
+      expect(document.title).toBe("(1) Agendal");
+    });
+
+    // Simulate tab return
+    document.title = "Agendal";
+    fireEvent(window, new Event("focus"));
+    expect(document.title).toBe("(1) Agendal");
   });
 });

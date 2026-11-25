@@ -13,6 +13,8 @@ export interface NumberStepperProps {
   onChange: (value: number) => void;
   decreaseLabel: string;
   increaseLabel: string;
+  placeholder?: string;
+  inputClassName?: string;
   className?: string;
   size?: "sm" | "md";
 }
@@ -27,6 +29,8 @@ export function NumberStepper({
   onChange,
   decreaseLabel,
   increaseLabel,
+  placeholder,
+  inputClassName,
   className,
   size = "md",
 }: NumberStepperProps): ReactElement {
@@ -76,6 +80,7 @@ export function NumberStepper({
         inputMode="numeric"
         pattern="[0-9]*"
         autoComplete="off"
+        placeholder={placeholder}
         value={value || ""}
         onChange={(event) => {
           const digits = event.target.value.replace(/\D/g, "").slice(0, 4);
@@ -83,8 +88,9 @@ export function NumberStepper({
         }}
         onKeyDown={onKeyDown}
         className={cx(
-          "h-full min-w-0 border-0 bg-transparent text-center font-semibold tabular-nums text-ink outline-none",
+          "h-full min-w-0 border-0 bg-transparent text-center font-semibold tabular-nums text-ink outline-none placeholder:text-[11px] placeholder:font-normal placeholder:text-ink-tertiary focus:placeholder:text-transparent",
           isSm ? "w-9 text-footnote" : "w-11 text-body",
+          inputClassName,
         )}
       />
       <button
