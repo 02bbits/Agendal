@@ -10,6 +10,7 @@ import { CalendarIcon, ClockIcon, PlusIcon } from "../../components/icons";
 import { t } from "../../copy";
 import { ScreenHeader } from "../shell/ScreenHeader";
 import { useTaskStore } from "../tasks/store";
+import { TaskDndScope } from "./dnd/TaskDndScope";
 import { useUpcomingPreferences } from "./storage";
 import type { UpcomingScreenProps, UpcomingViewMode } from "./types";
 import { UpcomingBoard } from "./UpcomingBoard";
@@ -119,86 +120,88 @@ export function UpcomingScreen(props: UpcomingScreenProps): ReactElement {
   const { showHeader = true, showFilter = true } = props;
 
   return (
-    <div className="pb-8">
-      {showHeader && (
-        <ScreenHeader
-          overline=""
-          title={t("nav.upcoming")}
-          accountInitial={props.accountInitial ?? ""}
-          navigate={props.navigate}
-          action={
-            <div className="flex items-center gap-3">
-              <div className="hidden md:block">{filterChips}</div>
-              <UpcomingViewSwitch
-                viewMode={viewMode}
-                onChange={chooseViewMode}
-              />
-              {props.onNewTask && (
-                <Button
-                  variant="primary"
-                  pill
-                  className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
-                  onClick={props.onNewTask}
-                >
-                  <PlusIcon size={16} />
-                  {t("task.new")}
-                </Button>
-              )}
-            </div>
-          }
-        >
-          {props.subtitle && (
-            <p className="m-0 mt-1 text-footnote text-ink-secondary">
-              {props.subtitle}
-            </p>
-          )}
-          <div className="mt-4 md:hidden">{filterChips}</div>
-        </ScreenHeader>
-      )}
-
-      {showFilter && !showHeader && <div className="mb-4">{filterChips}</div>}
-
-      <div
-        ref={barRef}
-        className="sticky top-0 z-20 border-b border-separator bg-paper pb-2"
-      >
-        <UpcomingWeekNav {...navProps} />
-        {!isBoard && (
-          <UpcomingDayStrip
-            week={listWindow.stripWeek}
-            today={store.today}
-            activeDay={listWindow.activeDay}
-            countsByDay={countsByDay}
-            onPickDay={listWindow.scrollToDate}
-          />
-        )}
-      </div>
-
-      {isFilterEmpty ? (
-        <p className="mt-8 text-center text-callout text-ink-secondary">
-          <span>{filterEmptyPrefix}</span>
-          <button
-            type="button"
-            onClick={() => chooseFilter("all")}
-            className="link-swipe cursor-pointer font-medium text-primary"
+    <TaskDndScope>
+      <div className="pb-8">
+        {showHeader && (
+          <ScreenHeader
+            overline=""
+            title={t("nav.upcoming")}
+            accountInitial={props.accountInitial ?? ""}
+            navigate={props.navigate}
+            action={
+              <div className="flex items-center gap-3">
+                <div className="hidden md:block">{filterChips}</div>
+                <UpcomingViewSwitch
+                  viewMode={viewMode}
+                  onChange={chooseViewMode}
+                />
+                {props.onNewTask && (
+                  <Button
+                    variant="primary"
+                    pill
+                    className="hidden h-10 min-h-10 px-5 text-callout font-medium md:inline-flex"
+                    onClick={props.onNewTask}
+                  >
+                    <PlusIcon size={16} />
+                    {t("task.new")}
+                  </Button>
+                )}
+              </div>
+            }
           >
-            {showAllText}
-          </button>
-        </p>
-      ) : (
-        !hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>
-      )}
-
-      <div
-        className="mt-6"
-        style={{ "--upcoming-bar-h": `${barHeight}px` } as CSSProperties}
-      >
-        {isBoard ? (
-          <UpcomingBoard {...viewProps} />
-        ) : (
-          <UpcomingDayList {...viewProps} />
+            {props.subtitle && (
+              <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                {props.subtitle}
+              </p>
+            )}
+            <div className="mt-4 md:hidden">{filterChips}</div>
+          </ScreenHeader>
         )}
+
+        {!showHeader && showFilter && <div className="mb-4">{filterChips}</div>}
+
+        <div
+          ref={barRef}
+          className="sticky top-0 z-20 border-b border-separator bg-paper pb-2"
+        >
+          <UpcomingWeekNav {...navProps} />
+          {!isBoard && (
+            <UpcomingDayStrip
+              week={listWindow.stripWeek}
+              today={store.today}
+              activeDay={listWindow.activeDay}
+              countsByDay={countsByDay}
+              onPickDay={listWindow.scrollToDate}
+            />
+          )}
+        </div>
+
+        {isFilterEmpty ? (
+          <p className="mt-8 text-center text-callout text-ink-secondary">
+            <span>{filterEmptyPrefix}</span>
+            <button
+              type="button"
+              onClick={() => chooseFilter("all")}
+              className="link-swipe cursor-pointer font-medium text-primary"
+            >
+              {showAllText}
+            </button>
+          </p>
+        ) : (
+          !hasTasks && <h2 className="sr-only">{t("list.upcoming_empty")}</h2>
+        )}
+
+        <div
+          className="mt-6"
+          style={{ "--upcoming-bar-h": `${barHeight}px` } as CSSProperties}
+        >
+          {isBoard ? (
+            <UpcomingBoard {...viewProps} />
+          ) : (
+            <UpcomingDayList {...viewProps} />
+          )}
+        </div>
       </div>
-    </div>
+    </TaskDndScope>
   );
 }

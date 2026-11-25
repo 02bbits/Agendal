@@ -56,6 +56,17 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/:path*", destination: `${apiUrl}/api/:path*` },
       { source: "/sanctum/:path*", destination: `${apiUrl}/sanctum/:path*` },
+      // Telescope (#192): allow-listed developers only, checked by the API
+      {
+        source: "/telescope/:path*",
+        destination: `${apiUrl}/telescope/:path*`,
+      },
+      // Pulse (#198) and its Livewire scripts and updates, same allow-list
+      { source: "/pulse", destination: `${apiUrl}/pulse` },
+      {
+        source: "/:lw(livewire-[0-9a-f]+)/:path*",
+        destination: `${apiUrl}/:lw/:path*`,
+      },
     ];
   },
 };

@@ -31,6 +31,8 @@ class Task extends Model
         'repeat_rule',
         'notes',
         'project_id',
+        'project_order',
+        'day_order',
     ];
 
     public const OPEN_LIMIT = 5000;
@@ -51,6 +53,8 @@ class Task extends Model
         'repeat_rule',
         'notes',
         'project_id',
+        'project_order',
+        'day_order',
     ];
 
     /**

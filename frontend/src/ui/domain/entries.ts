@@ -1,4 +1,5 @@
 import { sortWithinDay, type UpcomingFilter } from "./lists";
+import { orderList, type SortMode } from "./order";
 import type { Task } from "./types";
 
 export type EntryKind = "start" | "due";
@@ -17,8 +18,10 @@ export function entriesOf(task: Task): DayEntry[] {
     return [];
   }
   if (hasStart && hasDue) {
+    // A same-day task is one normal card; the dashed due marker is only for
+    // a due-only task or the last day of a span (LV §2.2).
     if (task.start_date === task.due_date) {
-      return [{ task, kind: "due", date: task.due_date! }];
+      return [{ task, kind: "start", date: task.due_date! }];
     }
     return [
       { task, kind: "start", date: task.start_date! },
@@ -41,15 +44,16 @@ export function matchesEntry(entry: DayEntry, filter: UpcomingFilter): boolean {
     ) {
       return true;
     }
-    return (
-      Boolean(entry.task.start_date) &&
-      (entry.kind === "start" || entry.task.start_date === entry.task.due_date)
-    );
+    return Boolean(entry.task.start_date) && entry.kind === "start";
   }
   if (filter === "due") {
-    return entry.kind === "due";
+    return entry.kind === "due" || isSameDay(entry.task);
   }
   return true;
+}
+
+function isSameDay(task: Task): boolean {
+  return Boolean(task.due_date) && task.start_date === task.due_date;
 }
 
 /** Scheduled is about starts, so a same-day task is a normal card there, not a due one. */
@@ -60,14 +64,23 @@ export function entryForFilter(
   return filter === "scheduled" ? { ...entry, kind: "start" } : entry;
 }
 
-function sortEntryList(list: DayEntry[]): DayEntry[] {
+function sortEntryList(list: DayEntry[], mode: SortMode): DayEntry[] {
   if (list.length <= 1) return [...list];
-  const sortedTasks = sortWithinDay(list.map((e) => e.task));
+  const sortedTasks = orderList(
+    list.map((e) => e.task),
+    mode,
+    "day_order",
+    sortWithinDay,
+  );
   const byId = new Map(list.map((e) => [e.task.id, e]));
   return sortedTasks.map((t) => byId.get(t.id)!);
 }
 
-export function sortEntries(entries: DayEntry[]): {
+/** A day's entries: normal ones by the day's mode (#178), due markers always by the rules. */
+export function sortEntries(
+  entries: DayEntry[],
+  mode: SortMode = "smart",
+): {
   normal: DayEntry[];
   due: DayEntry[];
 } {
@@ -75,7 +88,7 @@ export function sortEntries(entries: DayEntry[]): {
   const dueEntries = entries.filter((e) => e.kind === "due");
 
   return {
-    normal: sortEntryList(normalEntries),
-    due: sortEntryList(dueEntries),
+    normal: sortEntryList(normalEntries, mode),
+    due: sortEntryList(dueEntries, "smart"),
   };
 }

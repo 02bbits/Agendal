@@ -197,6 +197,9 @@ class TaskController extends Controller
         $task->repeat_rule = $request->input('repeat_rule');
         $task->notes = $request->input('notes');
         $task->project_id = $projectId;
+        // A task made by dropping it on a place (#178) arrives with its keys
+        $task->project_order = $request->input('project_order');
+        $task->day_order = $request->input('day_order');
         $task->done = false;
         $task->created_by = 'user';
         $task->field_updated_at = $fieldUpdatedAt;

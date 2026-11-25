@@ -1,9 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import { t } from "../../copy";
+import { Button } from "../../components/Button";
 import { TextButton } from "../../components/TextButton";
-import { CheckIcon } from "../../components/icons";
+import { CheckIcon, PlusIcon } from "../../components/icons";
 import { formatLongDate } from "../../domain/dates";
+import { dropIntoSection } from "../../domain/dropPatch";
 import { buildInbox } from "../../domain/lists";
+import { useFrozenOrder } from "./useFrozenOrder";
+import { ShownWhileDragging } from "./dnd/ShownWhileDragging";
+import { SortableTaskList } from "./dnd/SortableTaskList";
+import { TaskDndScope } from "./dnd/TaskDndScope";
+import { SortMenu } from "./SortMenu";
+import { useMoveToProject, useReceiveDrop } from "./useCrossDrop";
+import { useDropReorder } from "./useDropReorder";
+import { type SortMode } from "../../domain/order";
+import { useSortMode } from "./useSortMode";
 import { nextUp } from "../../domain/progress";
 import { Link } from "../shell/Link";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -11,7 +22,7 @@ import { ScreenHeader } from "../shell/ScreenHeader";
 import { TASK_COLUMN_CLASS } from "../tasks/layout";
 import { ProgressSummary } from "../tasks/ProgressSummary";
 import { useTaskStore } from "../tasks/store";
-import { TaskRow } from "../tasks/TaskRow";
+import { TaskRow, type RowDrag } from "../tasks/TaskRow";
 import { Section } from "./Section";
 import { EmptyState } from "../../components/EmptyState";
 import { EmptyStateIllustration } from "../../components/EmptyStateIllustration";
@@ -23,6 +34,8 @@ export interface InboxScreenProps {
   navigate?: Navigate;
   showHeader?: boolean;
   selectedTaskId?: string | null;
+  onNewTask?: () => void;
+  subtitle?: string;
 }
 
 /** Inbox (LV-1): today's progress, Overdue before Today, No date and Completed collapsed. */
@@ -31,6 +44,8 @@ export function InboxScreen({
   navigate,
   showHeader = true,
   selectedTaskId,
+  onNewTask,
+  subtitle,
 }: InboxScreenProps) {
   const store = useTaskStore();
   const [showAllCompleted, setShowAllCompleted] = useState(false);
@@ -98,10 +113,45 @@ export function InboxScreen({
       sessionStorage.setItem("agendal:inbox:open:completed", String(next));
     } catch {}
   };
-  const view = buildInbox(store.tasks, store.today, {
+  const frozen = useFrozenOrder(store.tasks, selectedTaskId);
+  const [todayMode, setTodayMode] = useSortMode("today");
+  const [noDateMode, setNoDateMode] = useSortMode("no_date");
+  const inboxMode: SortMode = todayMode;
+  const setInboxMode = (next: SortMode) => {
+    setTodayMode(next);
+    setNoDateMode(next);
+  };
+  const view = buildInbox(frozen.layout, store.today, {
+    sort: { today: todayMode, noDate: noDateMode },
     completedToday: store.completedToday,
     isSettling: store.isSettling,
   });
+  const moveInToday = useDropReorder("today", "day_order");
+  const moveInNoDate = useDropReorder("no_date", "project_order");
+  const moveInCompleted = useDropReorder("completed", "project_order");
+  // Into another section (Spec 02 §3): the dates change, and a frozen row is let go
+  const receiveInToday = useReceiveDrop(
+    "day_order",
+    dropIntoSection("today", store.today),
+    frozen.release,
+    undefined,
+    "today",
+  );
+  const receiveInNoDate = useReceiveDrop(
+    "project_order",
+    dropIntoSection("no_date", store.today),
+    frozen.release,
+    undefined,
+    "no_date",
+  );
+  const receiveInCompleted = useReceiveDrop(
+    "project_order",
+    dropIntoSection("completed", store.today),
+    frozen.release,
+    undefined,
+    "completed",
+  );
+  const moveToProject = useMoveToProject();
   const openCount = view.overdue.length + view.today.length;
   const allDone = !view.empty && openCount === 0;
   const doneHeading = useRef<HTMLHeadingElement>(null);
@@ -122,12 +172,12 @@ export function InboxScreen({
 
   const row = (
     task: (typeof view.today)[number],
-    opts: { overdue?: boolean } = {},
+    opts: { overdue?: boolean; drag?: RowDrag } = {},
   ) => (
     <TaskRow
       key={task.id}
-      task={task}
-      project={store.projectOf(task)}
+      task={frozen.live(task)}
+      project={store.projectOf(frozen.live(task))}
       today={store.today}
       timeFormat={store.timeFormat}
       onToggle={store.toggle}
@@ -139,128 +189,208 @@ export function InboxScreen({
   );
 
   return (
-    <div className="pb-8">
-      {showHeader && (
-        <ScreenHeader
-          overline={formatLongDate(store.today)}
-          title={t("nav.inbox")}
-          accountInitial={accountInitial}
-          navigate={navigate}
-        />
-      )}
-
-      {view.empty ? (
-        <EmptyState
-          title={t("list.first_run")}
-          icon={<EmptyStateIllustration type="inbox" />}
-        />
-      ) : (
-        <div className="w-full">
-          {!allDone && (
-            <div className={TASK_COLUMN_CLASS}>
-              <ProgressSummary
-                progress={view.progress}
-                next={nextUp(
-                  [...view.today, ...view.overdue].filter((x) => !x.done),
-                  store.today,
+    <TaskDndScope>
+      <div className="pb-8">
+        {showHeader && (
+          <ScreenHeader
+            overline={formatLongDate(store.today)}
+            title={t("nav.inbox")}
+            accountInitial={accountInitial}
+            navigate={navigate}
+            action={
+              <div className="flex items-center gap-2">
+                <SortMenu
+                  mode={inboxMode}
+                  onModeChange={setInboxMode}
+                  listName={t("nav.inbox")}
+                />
+                {onNewTask && (
+                  <Button
+                    variant="primary"
+                    pill
+                    className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+                    onClick={onNewTask}
+                  >
+                    <PlusIcon size={16} />
+                    {t("task.new")}
+                  </Button>
                 )}
-                timeFormat={store.timeFormat}
-              />
-            </div>
-          )}
-          {allDone && (
-            <section className="flex w-full flex-col items-center justify-center gap-2 px-5 py-8 text-center">
-              <span className="text-ink-tertiary" aria-hidden="true">
-                <CheckIcon size={28} />
-              </span>
-              <h2
-                ref={doneHeading}
-                tabIndex={-1}
-                className="m-0 text-dialog font-semibold text-balance focus:outline-none"
-              >
-                {t("list.nothing_left")}
-              </h2>
-              {view.progress.total > 0 && (
-                <p className="m-0 max-w-[300px] text-callout text-ink-secondary">
-                  {t("list.encourage_one")}
-                </p>
+              </div>
+            }
+          >
+            {subtitle && (
+              <p className="m-0 mt-1 text-footnote text-ink-secondary">
+                {subtitle}
+              </p>
+            )}
+          </ScreenHeader>
+        )}
+
+        {view.empty ? (
+          <EmptyState
+            title={t("list.first_run")}
+            icon={<EmptyStateIllustration type="inbox" />}
+          />
+        ) : (
+          <div className="w-full">
+            {!allDone && (
+              <div className={TASK_COLUMN_CLASS}>
+                <ProgressSummary
+                  progress={view.progress}
+                  next={nextUp(
+                    [...view.today, ...view.overdue].filter((x) => !x.done),
+                    store.today,
+                  )}
+                  timeFormat={store.timeFormat}
+                />
+              </div>
+            )}
+            {allDone && (
+              <section className="flex w-full flex-col items-center justify-center gap-2 px-5 py-8 text-center">
+                <span className="text-ink-tertiary" aria-hidden="true">
+                  <CheckIcon size={28} />
+                </span>
+                <h2
+                  ref={doneHeading}
+                  tabIndex={-1}
+                  className="m-0 text-dialog font-semibold text-balance focus:outline-none"
+                >
+                  {t("list.nothing_left")}
+                </h2>
+                {view.progress.total > 0 && (
+                  <p className="m-0 max-w-[300px] text-callout text-ink-secondary">
+                    {t("list.encourage_one")}
+                  </p>
+                )}
+                <Link
+                  href={ROUTES.upcoming}
+                  navigate={navigate}
+                  className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
+                >
+                  <span className="link-swipe">{t("list.see_upcoming")}</span>
+                </Link>
+              </section>
+            )}
+            <div className={TASK_COLUMN_CLASS}>
+              {view.overdue.length > 0 && (
+                <Section
+                  title={t("list.overdue")}
+                  count={view.overdue.length}
+                  tone="danger"
+                  collapsible
+                  open={openOverdue}
+                  onToggle={handleToggleOverdue}
+                >
+                  {/* A source only: Overdue keeps its date order and takes no drops */}
+                  <SortableTaskList
+                    list="overdue"
+                    tasks={view.overdue}
+                    acceptsCrossDrop={false}
+                    onMove={() => {}}
+                    onToProject={moveToProject}
+                  >
+                    {(x, drag) => row(x, { overdue: true, drag })}
+                  </SortableTaskList>
+                </Section>
               )}
-              <Link
-                href={ROUTES.upcoming}
-                navigate={navigate}
-                className="focus-ring min-h-11 cursor-pointer rounded-tile border-0 bg-transparent px-2 text-callout font-semibold text-primary"
-              >
-                <span className="link-swipe">{t("list.see_upcoming")}</span>
-              </Link>
-            </section>
-          )}
-          <div className={TASK_COLUMN_CLASS}>
-            {view.overdue.length > 0 && (
-              <Section
-                title={t("list.overdue")}
-                count={view.overdue.length}
-                tone="danger"
-                collapsible
-                open={openOverdue}
-                onToggle={handleToggleOverdue}
-              >
-                {view.overdue.map((x) => row(x, { overdue: true }))}
-              </Section>
-            )}
-            {view.today.length > 0 && (
-              <Section
-                title={t("list.today")}
-                count={view.today.length}
-                collapsible
-                open={openToday}
-                onToggle={handleToggleToday}
-              >
-                {view.today.map((x) => row(x))}
-              </Section>
-            )}
-            {view.noDate.length > 0 && (
-              <Section
-                title={t("list.no_date")}
-                count={view.noDate.length}
-                collapsible
-                open={openNoDate}
-                onToggle={handleToggleNoDate}
-              >
-                {view.noDate.map((x) => row(x))}
-              </Section>
-            )}
-            {view.completed.length > 0 && (
-              <Section
-                title={t("list.completed")}
-                count={view.completed.length}
-                collapsible
-                open={openCompleted}
-                onToggle={handleToggleCompleted}
-                footer={
-                  hasHiddenCompleted ? (
-                    <TextButton
-                      className="mt-1 w-full"
-                      onClick={() => setShowAllCompleted(true)}
+              <ShownWhileDragging shown={view.today.length > 0}>
+                <Section
+                  title={t("list.today")}
+                  count={view.today.length}
+                  collapsible
+                  open={openToday}
+                  onToggle={handleToggleToday}
+                  expandDropId="section-expand:today"
+                  onDragExpand={() => handleToggleToday(true)}
+                >
+                  <SortableTaskList
+                    list="today"
+                    tasks={view.today}
+                    onMove={(id, to) => {
+                      frozen.release(id);
+                      moveInToday(view.today, id, to);
+                    }}
+                    onReceive={(drop) => receiveInToday(view.today, drop)}
+                    onToProject={moveToProject}
+                  >
+                    {(x, drag) => row(x, { drag })}
+                  </SortableTaskList>
+                </Section>
+              </ShownWhileDragging>
+              <ShownWhileDragging shown={view.noDate.length > 0}>
+                <Section
+                  title={t("list.no_date")}
+                  count={view.noDate.length}
+                  collapsible
+                  open={openNoDate}
+                  onToggle={handleToggleNoDate}
+                  expandDropId="section-expand:no_date"
+                  onDragExpand={() => handleToggleNoDate(true)}
+                >
+                  <SortableTaskList
+                    list="no_date"
+                    tasks={view.noDate}
+                    onMove={(id, to) => {
+                      frozen.release(id);
+                      moveInNoDate(view.noDate, id, to);
+                    }}
+                    onReceive={(drop) => receiveInNoDate(view.noDate, drop)}
+                    onToProject={moveToProject}
+                  >
+                    {(x, drag) => row(x, { drag })}
+                  </SortableTaskList>
+                </Section>
+              </ShownWhileDragging>
+              {view.completed.length > 0 && (
+                <Section
+                  title={t("list.completed")}
+                  count={view.completed.length}
+                  collapsible
+                  open={openCompleted}
+                  onToggle={handleToggleCompleted}
+                  expandDropId="section-expand:completed"
+                  onDragExpand={() => handleToggleCompleted(true)}
+                  footer={
+                    hasHiddenCompleted ? (
+                      <TextButton
+                        className="mt-1 w-full"
+                        onClick={() => setShowAllCompleted(true)}
+                      >
+                        {t("list.show_all")}
+                      </TextButton>
+                    ) : showAllCompleted &&
+                      INBOX_COMPLETED_PAGE < totalCompleted ? (
+                      <TextButton
+                        className="mt-1 w-full"
+                        onClick={() => setShowAllCompleted(false)}
+                      >
+                        {t("list.show_less")}
+                      </TextButton>
+                    ) : null
+                  }
+                >
+                  {visibleCompleted.length > 0 && (
+                    <SortableTaskList
+                      list="completed"
+                      tasks={visibleCompleted}
+                      onMove={(id, to) => {
+                        frozen.release(id);
+                        moveInCompleted(visibleCompleted, id, to);
+                      }}
+                      onReceive={(drop) =>
+                        receiveInCompleted(visibleCompleted, drop)
+                      }
+                      onToProject={moveToProject}
                     >
-                      {t("list.show_all")}
-                    </TextButton>
-                  ) : showAllCompleted &&
-                    INBOX_COMPLETED_PAGE < totalCompleted ? (
-                    <TextButton
-                      className="mt-1 w-full"
-                      onClick={() => setShowAllCompleted(false)}
-                    >
-                      {t("list.show_less")}
-                    </TextButton>
-                  ) : null
-                }
-              >
-                {visibleCompleted.map((x) => row(x))}
-              </Section>
-            )}
+                      {(x, drag) => row(x, { drag })}
+                    </SortableTaskList>
+                  )}
+                </Section>
+              )}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </TaskDndScope>
   );
 }

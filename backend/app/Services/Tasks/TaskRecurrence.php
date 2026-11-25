@@ -90,7 +90,7 @@ final class TaskRecurrence
                 }
             } while ($next->modify("+{$gap} days")->format('Y-m-d') < $today);
         }
-        $copy = $existing ?? $task->replicate(['done_at', 'remind_at', 'deleted_at', 'change_seq']);
+        $copy = $existing ?? $task->replicate(['done_at', 'remind_at', 'deleted_at', 'change_seq', 'day_order']);
         if ($existing !== null) {
             $copy->forceFill($task->only([...Task::PATCHABLE, 'user_id', 'created_by', 'source_note_id']));
         }

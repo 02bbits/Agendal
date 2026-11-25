@@ -3,18 +3,29 @@
 namespace App\Providers;
 
 use App\Exceptions\RateLimited;
+use App\Livewire\Pulse\ServerHealth;
 use App\Models\User;
+use App\Pulse\HostHealth;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
 use App\Support\EmailInput;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Connection;
+use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Pulse\Facades\Pulse;
+use Laravel\Pulse\Recorders\Servers;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -31,6 +42,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // #192 slow-query alert, at error so the alert channel picks it up. SQL only: the bindings
+        // carry note and task text (SC-21). request_id comes from Context, like every log line
+        DB::listen(function (QueryExecuted $query) {
+            if ($query->time >= config('database.slow_query_ms')) {
+                Log::error('Slow query', ['sql' => $query->sql, 'ms' => $query->time]);
+            }
+        });
+        // ponytail: fires once per connection; a long-lived queue worker needs a per-job reset if it matters
+        DB::whenQueryingForLongerThan(config('database.slow_request_ms'), function (Connection $connection) {
+            Log::error('Slow request queries', ['ms' => $connection->totalQueryDuration()]);
+        });
+
+        // #198 /pulse: open locally, elsewhere for Telescope's allow-list. Users show by id only (SC-21)
+        Gate::define('viewPulse', fn (?User $user = null) => $this->app->environment('local')
+            || in_array($user?->email, config('telescope.allowed_emails'), true));
+        Pulse::user(fn (User $user) => ['name' => 'User '.$user->id]);
+        // #199 Server health card; the Servers card draws its CPU from the same reading (the image has no `top`)
+        Livewire::component('pulse.server-health', ServerHealth::class);
+        Servers::detectCpuUsing(fn () => HostHealth::$cpu);
+        // Behind the Next.js rewrite the Host is the API container, so links (Livewire's update URL) use APP_URL
+        URL::forceRootUrl(config('app.url'));
+        URL::forceScheme((string) parse_url(config('app.url'), PHP_URL_SCHEME));
+
         // NF-13 rate limits. Each 429 names the limit it hit, so the app can tell "too fast" from
         // "too many" (UX-43)
         $limiter = fn (string $name, Closure $limits) => RateLimiter::for($name, fn (Request $request) => array_map(

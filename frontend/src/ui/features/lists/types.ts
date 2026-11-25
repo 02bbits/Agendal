@@ -47,6 +47,8 @@ export interface UpcomingDayListProps {
   selectedTaskId?: string | null;
   navigate?: Navigate;
   onAddTask: (date: string) => void;
+  /** A task dragged onto another day: its frozen place is let go (#178). */
+  onPlaced?: (id: string) => void;
 }
 
 export interface UpcomingBoardProps {
@@ -57,6 +59,8 @@ export interface UpcomingBoardProps {
   selectedTaskId?: string | null;
   navigate?: Navigate;
   onAddTask: (date: string) => void;
+  /** A task dragged onto another day: its frozen place is let go (#178). */
+  onPlaced?: (id: string) => void;
 }
 
 export interface UpcomingScreenProps {

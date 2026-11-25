@@ -52,6 +52,9 @@ class StoreTaskRequest extends FormRequest
             'repeat_rule' => ['nullable', 'string', 'max:300'],
             'notes' => ['nullable', 'string', 'max:5000'],
             'project_id' => ['nullable', 'uuid'],
+            // Fractional-index keys for manual order (#178): base-62 digits only
+            'project_order' => ['nullable', 'string', 'max:64', 'regex:/^[0-9A-Za-z]+$/'],
+            'day_order' => ['nullable', 'string', 'max:64', 'regex:/^[0-9A-Za-z]+$/'],
         ];
     }
 

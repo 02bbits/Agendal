@@ -4,6 +4,9 @@ import { t } from "../../copy";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import type { LoadMoreCompletedHandler } from "../../domain/projects";
 import type { Navigate } from "../shell/routes";
+import { SortableTaskList } from "../lists/dnd/SortableTaskList";
+import type { Receive } from "../lists/dnd/TaskDndScope";
+import type { ProjectDropData } from "../lists/dnd/dropTargets";
 import { TaskRow } from "../tasks/TaskRow";
 
 export const COMPLETED_PAGE = 10;
@@ -25,6 +28,9 @@ export interface ProjectCompletedListProps {
   selectedTaskId?: string | null;
   onToggleTask?: (task: Task) => void;
   navigate?: Navigate;
+  onMove?: (shown: Task[], id: string, to: number) => void;
+  onReceive?: (shown: Task[], drop: Receive) => void;
+  onToProject?: (id: string, project: ProjectDropData) => void;
 }
 
 export function ProjectCompletedList({
@@ -39,6 +45,9 @@ export function ProjectCompletedList({
   selectedTaskId,
   onToggleTask,
   navigate,
+  onMove,
+  onReceive,
+  onToProject,
 }: ProjectCompletedListProps) {
   const [shown, setShown] = useState(COMPLETED_PAGE);
   const effectiveShown =
@@ -55,18 +64,31 @@ export function ProjectCompletedList({
       </h2>
       <div className="rounded-2xl border border-separator/50 bg-surface shadow-xs overflow-hidden">
         <ul className="m-0 list-none p-0">
-          {visibleCompleted.map((x) => (
-            <TaskRow
-              key={x.id}
-              task={x}
-              project={project}
-              today={today}
-              timeFormat={timeFormat}
-              selected={x.id === selectedTaskId}
-              onToggle={onToggleTask ?? (() => {})}
-              navigate={navigate}
-            />
-          ))}
+          <SortableTaskList
+            list={`project:${project.id}:completed`}
+            tasks={visibleCompleted}
+            onMove={(id, to) => onMove?.(visibleCompleted, id, to)}
+            onReceive={
+              onReceive
+                ? (drop) => onReceive(visibleCompleted, drop)
+                : undefined
+            }
+            onToProject={onToProject}
+          >
+            {(x, drag) => (
+              <TaskRow
+                key={x.id}
+                drag={drag}
+                task={x}
+                project={project}
+                today={today}
+                timeFormat={timeFormat}
+                selected={x.id === selectedTaskId}
+                onToggle={onToggleTask ?? (() => {})}
+                navigate={navigate}
+              />
+            )}
+          </SortableTaskList>
         </ul>
       </div>
       {hasMore && (

@@ -14,7 +14,9 @@
         "anthropic-ai/sdk": "^1.10",
         "dedoc/scramble": "^0.13",
         "laravel/framework": "^13.17",
+        "laravel/pulse": "^1.11",
         "laravel/sanctum": "^4.0",
+        "laravel/telescope": "^5.29",
         "laravel/tinker": "^3.0",
         "opis/json-schema": "^2.6",
         "rlanvin/php-rrule": "^2.6"

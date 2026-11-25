@@ -83,6 +83,21 @@ Nightly encrypted `pg_dump`, 7 days on the server and in R2 ([backup.sh](backup.
 - `cp deploy/agendal-backup.* ~/.config/systemd/user/ && systemctl --user enable --now agendal-backup.timer`
 - Run once: `systemctl --user start agendal-backup`, then `journalctl --user -u agendal-backup`.
 
+**Monitoring.** Set `TELESCOPE_ALLOWED_EMAILS` in `backend/.env.production` to the developers' sign-in emails;
+they see `https://<domain>/pulse` (errors, failed jobs and scheduled tasks, slow requests and queries) and
+`/telescope` (each fault's detail) once signed in. Nobody is alerted: look at Pulse after each deploy. Everyone
+else gets a plain 403 page. `APP_URL` must be `https://<domain>`, or the dashboard can't load its cards.
+
+**Server monitoring** (#199) is on the same Pulse page. The `pulse` service runs `php artisan pulse:check`
+and every 15 s reads the host (from inside a container `/proc` and `/` are the server's): the Servers card
+charts CPU, memory and disk; the Server health card lists CPU, load, memory, swap, disk, Postgres connections,
+the last backup and whether the API and web app answer. A row turns red at: CPU over 85% for 5 min, memory over
+90%, disk over 80%, the API or web app down for 2 min, no backup in 26 h. "Monitor not running" means the
+`pulse` service stopped (`docker compose -f compose.prod.yml logs pulse`). Nobody is notified. The backup age
+comes from `storage/app/last-backup`, which `backup.sh` writes after the R2 upload. Network traffic: Cloudflare
+dashboard, Analytics for `<domain>` (a container only sees its own network). Per-container CPU and memory:
+`docker stats` on the host.
+
 **Restore drill** (before the demo, scalability.md): on the machine with the private key,
 
 ```sh
