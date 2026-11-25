@@ -51,12 +51,29 @@ cp backend/.env.production.example backend/.env.production && chmod 600 backend/
 # Fill backend/.env.production: domain, DB_PASSWORD (= secrets/db_password), MAIL_PASSWORD, then:
 docker compose -f compose.prod.yml build
 docker compose -f compose.prod.yml run --rm --no-deps api php artisan key:generate --show   # paste into APP_KEY
+# Reminder keys (TK-6, see below), then:
 docker compose -f compose.prod.yml up -d
 docker compose -f compose.prod.yml exec api php artisan db:seed --force                      # demo account, once
 ```
 
 Check: `ss -tlnp` lists only `127.0.0.1:3000` (or `WEB_PORT`) for the app; `curl -I https://<domain>` shows HSTS and CSP;
 sign in as the demo account; ask for a password reset and check the mail shows SPF and DKIM pass.
+
+### Reminder keys (TK-6)
+
+Web Push needs a VAPID key pair. The private key goes straight into a secret file and is never printed;
+the command prints the public key for `VAPID_PUBLIC_KEY` in `backend/.env.production`.
+
+```sh
+touch secrets/vapid_private_key   # compose wants every secret file to exist before any api container runs
+docker compose -f compose.prod.yml run --rm --no-deps --user "$(id -u)" -v "$PWD/secrets:/out" api php artisan push:vapid /out/vapid_new
+mv secrets/vapid_new secrets/vapid_private_key
+sudo chown 10001 secrets/vapid_private_key && chmod 400 secrets/vapid_private_key
+```
+
+Keep the pair: a new one makes every device subscribe again (they do, quietly, next time the app opens).
+Without the keys reminders are simply off. Check: the `scheduler` logs show `reminders:send` each minute,
+and `docker compose -f compose.prod.yml logs queue` shows `reminders.sent` after one is due.
 
 ## 5. Update
 
@@ -65,6 +82,10 @@ cd /srv/services/agendal && git pull && docker compose -f compose.prod.yml up -d
 ```
 
 The api container migrates on start; queue and scheduler wait for it.
+
+**Since reminders (#186):** `compose.prod.yml` needs `secrets/vapid_private_key`. Make the keys once
+([Reminder keys](#reminder-keys-tk-6)) before the first `up` after that pull, or compose stops on the
+missing secret.
 
 ## 6. Backups
 
@@ -87,6 +108,16 @@ Nightly encrypted `pg_dump`, 7 days on the server and in R2 ([backup.sh](backup.
 they see `https://<domain>/pulse` (errors, failed jobs and scheduled tasks, slow requests and queries) and
 `/telescope` (each fault's detail) once signed in. Nobody is alerted: look at Pulse after each deploy. Everyone
 else gets a plain 403 page. `APP_URL` must be `https://<domain>`, or the dashboard can't load its cards.
+
+**Server monitoring** (#199) is on the same Pulse page. The `pulse` service runs `php artisan pulse:check`
+and every 15 s reads the host (from inside a container `/proc` and `/` are the server's): the Servers card
+charts CPU, memory and disk; the Server health card lists CPU, load, memory, swap, disk, Postgres connections,
+the last backup and whether the API and web app answer. A row turns red at: CPU over 85% for 5 min, memory over
+90%, disk over 80%, the API or web app down for 2 min, no backup in 26 h. "Monitor not running" means the
+`pulse` service stopped (`docker compose -f compose.prod.yml logs pulse`). Nobody is notified. The backup age
+comes from `storage/app/last-backup`, which `backup.sh` writes after the R2 upload. Network traffic: Cloudflare
+dashboard, Analytics for `<domain>` (a container only sees its own network). Per-container CPU and memory:
+`docker stats` on the host.
 
 **Restore drill** (before the demo, scalability.md): on the machine with the private key,
 

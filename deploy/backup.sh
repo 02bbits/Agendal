@@ -19,3 +19,5 @@ mv "$file.part" "$file"
 find "$out" -name 'agendal-*.dump.age' -mtime +7 -delete
 # R2 keeps 7 days through a lifecycle rule on the bucket
 rclone copy --s3-no-check-bucket "$file" "r2:$R2_BUCKET/"
+# Pulse's Server health card shows the age of the last backup that reached R2 (#199)
+docker compose -f "$AGENDAL_DIR/compose.prod.yml" exec -T api sh -c 'date -u +%s > storage/app/last-backup'

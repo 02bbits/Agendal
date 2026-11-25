@@ -180,6 +180,12 @@ class TaskController extends Controller
             $remindAt = $reminders->forDates($startDate, $startTimeStr, $dueDate, $dueTimeStr, $reminder, $timezone);
         }
 
+        $dueReminder = $request->input('due_reminder', 'none') ?? 'none';
+        $dueRemindAt = null;
+        if ($dueReminder !== 'none' && ! empty($dueDate)) {
+            $dueRemindAt = $reminders->forDueDate($dueDate, $dueTimeStr, $dueReminder, $timezone);
+        }
+
         $user = $request->user();
         assert($user !== null);
 
@@ -193,6 +199,7 @@ class TaskController extends Controller
         $task->due_time = $dueTime;
         $task->priority = $request->input('priority');
         $task->reminder = $reminder;
+        $task->due_reminder = $dueReminder;
         $task->repeat = $repeat;
         $task->repeat_rule = $request->input('repeat_rule');
         $task->notes = $request->input('notes');
@@ -204,6 +211,7 @@ class TaskController extends Controller
         $task->created_by = 'user';
         $task->field_updated_at = $fieldUpdatedAt;
         $task->remind_at = $remindAt;
+        $task->due_remind_at = $dueRemindAt;
         if ($repeat !== 'never' && (! empty($startDate) || ! empty($dueDate))) {
             $task->repeat_anchor = $startDate ?: $dueDate;
         }

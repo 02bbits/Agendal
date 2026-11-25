@@ -33,7 +33,11 @@ function bootTelescope(): void
     app('router')->getRoutes()->refreshNameLookups();
 }
 
-afterEach(fn () => Telescope::stopRecording());
+// Entries left queued would be stored in the next test
+afterEach(function () {
+    Telescope::stopRecording();
+    Telescope::flushEntries();
+});
 
 it('#192: outside local, /telescope opens only for an allow-listed email', function () {
     config(['telescope.allowed_emails' => ['dev@example.com']]);
@@ -73,6 +77,20 @@ it('#192 SC-21: Telescope entries keep no note text, password, code or email', f
         ->not->toContain('my-secret-pass-1')
         ->not->toContain('864213')
         ->not->toContain('private.person');
+});
+
+it('#192: outside local, Telescope records every request but not each query or cache hit', function () {
+    bootTelescope();
+    Telescope::startRecording();
+    User::factory()->create(['email' => 'someone@example.com']);
+
+    $this->postJson('/api/v1/auth/login', ['email' => 'someone@example.com', 'password' => 'wrong-password-1'])
+        ->assertClientError(); // not a fault
+
+    $types = DB::table('telescope_entries')->pluck('type');
+    expect($types->filter(fn ($type) => $type === 'request'))->toHaveCount(1)
+        ->and($types)->not->toContain('query')
+        ->not->toContain('cache');
 });
 
 it('#192: a query over the threshold logs once, with its SQL and request_id but no bindings', function () {

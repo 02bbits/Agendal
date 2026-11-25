@@ -13,6 +13,7 @@ import {
   removeNote,
   type NoteBody,
 } from "./localStore";
+import { notifyReminderSet } from "../ui/domain/appEvents";
 import { SYNC_REQUEST } from "./offline";
 import { isOffline } from "./online";
 import type { Replayed } from "./sync";
@@ -414,6 +415,13 @@ export async function confirmNote(
       }),
     );
     rememberNote(result);
+    // A note can set reminders too: the same moment to ask about notifications (TK §2.5)
+    if (
+      result.changes?.some(
+        (c) => c.kind !== "deleted" && c.task.reminder !== "none",
+      )
+    )
+      notifyReminderSet();
     return result;
   } catch (error) {
     // The note isn't the one this screen showed: what this session kept of it is stale too

@@ -81,7 +81,8 @@ export function ClockPicker({
     let time = `${pad(hour)}:${pad(minute)}`;
     if (typing) {
       const half = twelve ? (pm ? "pm" : "am") : "";
-      const typed = parseTime(`${typedHour}:${typedMinute || "00"}${half}`);
+      const minDigits = (typedMinute || "00").padStart(2, "0");
+      const typed = parseTime(`${typedHour}:${minDigits}${half}`);
       if (!typed) {
         setError(t("time.invalid"));
         return null;

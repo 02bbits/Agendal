@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Exceptions\RateLimited;
+use App\Livewire\Pulse\ServerHealth;
 use App\Models\User;
+use App\Pulse\HostHealth;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
 use App\Support\EmailInput;
@@ -22,6 +24,8 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pulse\Facades\Pulse;
+use Laravel\Pulse\Recorders\Servers;
+use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -54,6 +58,9 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('viewPulse', fn (?User $user = null) => $this->app->environment('local')
             || in_array($user?->email, config('telescope.allowed_emails'), true));
         Pulse::user(fn (User $user) => ['name' => 'User '.$user->id]);
+        // #199 Server health card; the Servers card draws its CPU from the same reading (the image has no `top`)
+        Livewire::component('pulse.server-health', ServerHealth::class);
+        Servers::detectCpuUsing(fn () => HostHealth::$cpu);
         // Behind the Next.js rewrite the Host is the API container, so links (Livewire's update URL) use APP_URL
         URL::forceRootUrl(config('app.url'));
         URL::forceScheme((string) parse_url(config('app.url'), PHP_URL_SCHEME));
@@ -70,6 +77,8 @@ class AppServiceProvider extends ServiceProvider
 
         // Two-factor toggle: 5 per 2 minutes per user
         $limiter('two-factor-toggle', fn (Request $request) => Limit::perMinutes(2, 5)->by('two-factor-toggle:'.$request->user()?->id));
+        // Settings > Notifications test push (TK-6): enough to try, not enough to flood a device
+        $limiter('push-test', fn (Request $request) => Limit::perMinute(3)->by('push-test:'.$request->user()?->id));
 
         $limiter('forgot-password', fn (Request $request) => [
             Limit::perHour(3)->by('email:'.EmailInput::key($request)),

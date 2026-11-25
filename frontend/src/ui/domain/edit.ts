@@ -78,6 +78,9 @@ export function normalizePatch(
   }
   if ("due_date" in next && !next.due_date) {
     next.due_time = null;
+    if (task.due_reminder && task.due_reminder !== "none") {
+      next.due_reminder = "none";
+    }
     if (!start) {
       next.reminder = "none";
       next.repeat = "never";

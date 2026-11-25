@@ -3,7 +3,9 @@
 namespace App\Models;
 
 use App\Models\Concerns\OwnedByUser;
+use Database\Factories\ProjectFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -11,7 +13,8 @@ use Illuminate\Database\Eloquent\Model;
  */
 class Project extends Model
 {
-    use HasUuids, OwnedByUser;
+    /** @use HasFactory<ProjectFactory> */
+    use HasFactory, HasUuids, OwnedByUser;
 
     /** Fields a sync patch may write (PJ §8). */
     public const PATCHABLE = ['name', 'colour', 'deleted'];

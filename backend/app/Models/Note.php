@@ -5,7 +5,9 @@ namespace App\Models;
 use App\Models\Concerns\OwnedByUser;
 use App\Services\Clock\ClockInterface;
 use Carbon\CarbonImmutable;
+use Database\Factories\NoteFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
@@ -22,7 +24,8 @@ use Illuminate\Support\Collection;
  */
 class Note extends Model
 {
-    use HasUuids, OwnedByUser, SoftDeletes;
+    /** @use HasFactory<NoteFactory> */
+    use HasFactory, HasUuids, OwnedByUser, SoftDeletes;
 
     const UPDATED_AT = null;
 

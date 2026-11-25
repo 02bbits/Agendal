@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- Agendal mark with reminder badge dot (red circle on top right) -->
+  <rect width="512" height="512" fill="#252525"/>
+  <path d="M368 176 208 336l-64-64" fill="none" stroke="#f2f2f2" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Red notification badge dot -->
+  <circle cx="420" cy="92" r="76" fill="#ff3b30" stroke="#252525" stroke-width="20"/>
+</svg>

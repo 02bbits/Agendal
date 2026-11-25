@@ -1,6 +1,6 @@
 "use client";
 import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
-import { useWideScreen } from "@/ui/components/useMediaQuery";
+import { usePanelScreen, useWideScreen } from "@/ui/components/useMediaQuery";
 
 import { usePathname, useRouter } from "next/navigation";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
@@ -8,8 +8,11 @@ import {
   AppShell,
   InstallBanner,
   OfflineBanner,
+  ReminderReturnBanner,
   ROUTES,
+  t,
   ToastStack,
+  useReminderBadge,
   type Project,
   TaskDndScope,
 } from "@/ui";
@@ -19,8 +22,9 @@ import { useNewTask } from "./useNewTask";
 import { useUpdateToast } from "./useUpdateToast";
 import { TabLoading } from "./TabLoading";
 import { AppFrameContext, type AppFrameValue } from "./frame/AppFrameContext";
+import { PushPrompt } from "@/ui/features/tasks/PushPrompt";
 import { AppOverlays } from "./frame/AppOverlays";
-import { isAuthPath, TAB_BY_PATH } from "./frame/frameRoutes";
+import { hasTaskPanel, isAuthPath, TAB_BY_PATH } from "./frame/frameRoutes";
 import { PendingScreen } from "./frame/PendingScreen";
 import { SidebarProjects } from "./frame/SidebarProjects";
 import { useAccountSettings } from "./frame/useAccountSettings";
@@ -52,6 +56,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const wide = useWideScreen();
+  const panelScreen = usePanelScreen();
 
   const { toasts, showToast, dismissToast } = useToast();
   const splash = useSplash();
@@ -72,6 +77,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   useUpdateToast(showToast);
   useScreenFocus(pathname);
   usePageFlags(pathname);
+  const reminderBadge = useReminderBadge();
 
   const { tab, navigate, back, pendingTab, shownTab, shownPath } =
     useTabNavigation(pathname, router, splash.enterApp);
@@ -167,6 +173,37 @@ export function AppFrame({ children }: { children: ReactNode }) {
     />
   );
   const offlineBanner = tab && offline && <OfflineBanner />;
+  const reminderBanner =
+    splash.splash === null && !isAuthPath(pathname) ? (
+      <ReminderReturnBanner
+        alert={reminderBadge.returnAlert}
+        alerts={reminderBadge.alerts}
+        count={reminderBadge.count}
+        onSelectAlert={(alert) => {
+          reminderBadge.dismissAlert(alert.id);
+          if (alert.id === "agendal-test") {
+            showToast(t("settings.push_test_sent"));
+          } else if (alert.url) {
+            const taskMatch = alert.url.match(/^\/tasks\/([^/?#]+)/);
+            if (panelScreen && taskMatch) {
+              const taskId = decodeURIComponent(taskMatch[1]!);
+              const query = `?task=${encodeURIComponent(taskId)}`;
+              if (hasTaskPanel(pathname)) {
+                router.push(`${pathname}${query}`, { scroll: false });
+              } else {
+                router.push(`${ROUTES.inbox}${query}`);
+              }
+            } else {
+              router.push(alert.url);
+            }
+          }
+        }}
+        onDismissAlert={reminderBadge.dismissAlert}
+        onClearAll={reminderBadge.clearAll}
+        onDismiss={reminderBadge.dismissReturnBanner}
+        onAutoDismiss={reminderBadge.autoDismissReturnBanner}
+      />
+    ) : null;
 
   return (
     <AppFrameContext.Provider value={value}>
@@ -190,10 +227,11 @@ export function AppFrame({ children }: { children: ReactNode }) {
               ) : undefined
             }
             banner={
-              offlineBanner || installBanner ? (
+              offlineBanner || installBanner || reminderBanner ? (
                 <>
                   {offlineBanner}
                   {installBanner}
+                  {reminderBanner}
                 </>
               ) : undefined
             }
@@ -240,6 +278,8 @@ export function AppFrame({ children }: { children: ReactNode }) {
               onCloseProjectSheet={() => setCreatingProject(false)}
               onProjectCreated={projectCreated}
             />
+            {/* Reminders (TK-6): asks for notifications when a reminder is first set */}
+            <PushPrompt signedIn={user !== null} />
           </AppShell>
         </TaskDndScope>
       </TabLoading>
