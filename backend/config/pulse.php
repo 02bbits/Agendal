@@ -1,5 +1,6 @@
 <?php
 
+use App\Pulse\HostHealth;
 use Laravel\Pulse\Http\Middleware\Authorize;
 use Laravel\Pulse\Pulse;
 use Laravel\Pulse\Recorders;
@@ -166,6 +167,16 @@ return [
             'sample_rate' => env('PULSE_QUEUES_SAMPLE_RATE', 1),
             'ignore' => [
                 // '/^Package\\\\Jobs\\\\/',
+            ],
+        ],
+
+        // #199 Server health card. Before Servers, whose CPU it reads (Servers' own reader needs `top`)
+        HostHealth::class => [
+            'proc' => env('PULSE_PROC_PATH', '/proc'),
+            'disk' => '/',
+            'urls' => [
+                'API' => env('PULSE_API_HEALTH_URL', 'http://api:8000/api/v1/health'),
+                'Web app' => env('PULSE_WEB_URL', 'http://web:3000/'),
             ],
         ],
 

@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-25
+
+- **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
+
 ## 2026-11-24
 
 - **Pulse error dashboard instead of alerts (Refs #198).** [security.md](07-architecture/security.md#sc-21) SC-21: Pulse at `/pulse`, behind Telescope's allow-list, keeps exception class and line without the message, SQL without values, users by id, no cache keys, 7 days. It shows 5xx errors, failed jobs and scheduled tasks, language-model call failures, slow requests, jobs and queries (500 ms, as #192); nothing is sent to Slack, Discord or mail. Non-API error pages (403, 404, 500, 503) are a plain Graphite page; [NF-16](05-quality/nfr.md#nf-16): the API's CSP allows inline styles for them, still no scripts. Runbook: README Monitoring, deploy/README.md.

@@ -69,6 +69,15 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  # Pulse's server readings (#199): CPU, memory, disk, Postgres, backup age, API and web up, every 15 s
+  pulse:
+    <<: *api
+    command: ["php", "artisan", "pulse:check"]
+    environment: { PULSE_SERVER_NAME: agendal }
+    healthcheck: { disable: true }
+    depends_on:
+      api: { condition: service_healthy }
+
   web:
     <<: *hardening
     build: { context: ., dockerfile: docker/prod/web.Dockerfile }

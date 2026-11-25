@@ -20,13 +20,12 @@ class TelescopeServiceProvider extends TelescopeApplicationServiceProvider
 
         $isLocal = $this->app->environment('local');
 
-        // Outside local, only what points at a fault
+        // Outside local, every request, job and scheduled run, plus what points at a fault;
+        // not every query, cache hit or model event
         Telescope::filter(function (IncomingEntry $entry) use ($isLocal) {
             return $isLocal ||
+                   in_array($entry->type, [EntryType::REQUEST, EntryType::JOB, EntryType::SCHEDULED_TASK], true) ||
                    $entry->isReportableException() ||
-                   $entry->isFailedRequest() ||
-                   $entry->isFailedJob() ||
-                   $entry->isScheduledTask() ||
                    $entry->isSlowQuery() ||
                    $entry->hasMonitoredTag();
         });
