@@ -216,3 +216,10 @@ GitHub Actions runs the same checks on every pull request ([ci.yml](.github/work
 cd backend && ./vendor/bin/pint --test && composer analyse && php artisan test
 cd frontend && npm run format:check && npm run lint && npm run typecheck && npm test
 ```
+
+Run with line coverage (70% minimum, matching CI; backend requires PCOV or Xdebug):
+
+```bash
+cd backend && php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/pest --coverage --min=70
+cd frontend && npm run test:coverage
+```

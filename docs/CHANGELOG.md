@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-25
 
+- **Test coverage measured in CI with a 70% floor (Refs #195).** [ci.yml](../.github/workflows/ci.yml) enables PCOV on the backend (`pest --coverage --min=70 --coverage-clover=coverage.xml`) and `@vitest/coverage-v8` on the frontend (`npm run test:coverage`, 70% line threshold in `vitest.config.ts`), writing line summaries to `$GITHUB_STEP_SUMMARY` and uploading `coverage.xml` / `lcov.info` artifacts. Local coverage commands added to [README.md](../README.md#checks).
 - **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
 
 ## 2026-11-24
