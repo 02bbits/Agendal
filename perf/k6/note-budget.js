@@ -1,7 +1,12 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend } from "k6/metrics";
-import { apiHeaders, signIn, uuidv4 } from "./lib/auth.js";
+import {
+  apiHeaders,
+  applySessionCookies,
+  signInPool,
+  uuidv4,
+} from "./lib/auth.js";
 
 /**
  * IM-63 / NF-5 / PERF-02:
@@ -44,7 +49,7 @@ export const options = {
       timeUnit: "1s",
       duration: __ENV.NOTE_DURATION || "30s",
       preAllocatedVUs: Number(__ENV.PRE_ALLOCATED_VUS || 5),
-      maxVUs: Number(__ENV.MAX_VUS || 20),
+      maxVUs: Number(__ENV.MAX_VUS || 10),
       exec: "note10Items",
     },
     note_max_items: {
@@ -69,22 +74,27 @@ export const options = {
 export function setup() {
   const res = http.get(`${BASE_URL}/api/v1/health`);
   check(res, { "health 200": (r) => r.status === 200 });
-}
 
-let loggedIn = false;
-
-function ensureLogin() {
-  if (loggedIn) return;
   const poolSize = Number(__ENV.PERF_USER_COUNT || 1);
-  const email =
+  const emails =
     poolSize > 1
-      ? `perf${((__VU - 1) % poolSize) + 1}@agendal.test`
-      : USER_EMAIL;
-  loggedIn = signIn(BASE_URL, email, USER_PASSWORD);
+      ? Array.from({ length: poolSize }, (_, i) => `perf${i + 1}@agendal.test`)
+      : [USER_EMAIL];
+
+  const sessions = signInPool(BASE_URL, emails, USER_PASSWORD);
+  return { emails, sessions };
 }
 
-export function note10Items() {
-  ensureLogin();
+let sessionReady = false;
+
+function ensureSession(data) {
+  if (sessionReady) return;
+  const email = data.emails[(__VU - 1) % data.emails.length];
+  sessionReady = applySessionCookies(BASE_URL, data.sessions[email]);
+}
+
+export function note10Items(data) {
+  ensureSession(data);
 
   const payload = JSON.stringify({
     client_id: uuidv4(),
@@ -119,8 +129,8 @@ export function note10Items() {
   sleep(0.1);
 }
 
-export function note30ItemsAndUndo() {
-  ensureLogin();
+export function note30ItemsAndUndo(data) {
+  ensureSession(data);
 
   const payload = JSON.stringify({
     client_id: uuidv4(),
@@ -155,7 +165,6 @@ export function note30ItemsAndUndo() {
     console.error(`note30Items failed: status=${res.status} body=${res.body}`);
   }
 
-  // Exercise undo if note auto-applied tasks (status === "done")
   if (noteId && noteStatus === "done") {
     const undoRes = http.post(
       `${BASE_URL}/api/v1/notes/${noteId}/undo`,

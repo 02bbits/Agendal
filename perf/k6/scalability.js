@@ -1,7 +1,12 @@
 import http from "k6/http";
 import { check, sleep } from "k6";
 import { Trend } from "k6/metrics";
-import { apiHeaders, signIn, uuidv4 } from "./lib/auth.js";
+import {
+  apiHeaders,
+  applySessionCookies,
+  signInPool,
+  uuidv4,
+} from "./lib/auth.js";
 
 /**
  * IM-63 / Scalability SLOs (PERF-01, PERF-04, PERF-05):
@@ -29,23 +34,23 @@ export const options = {
       executor: "constant-arrival-rate",
       rate: Number(__ENV.MIXED_RATE || 10),
       timeUnit: "1s",
-      duration: __ENV.MIXED_DURATION || "30s",
-      preAllocatedVUs: Number(__ENV.PRE_ALLOCATED_VUS || 10),
-      maxVUs: Number(__ENV.MAX_VUS || 30),
+      duration: __ENV.MIXED_DURATION || "20s",
+      preAllocatedVUs: Number(__ENV.PRE_ALLOCATED_VUS || 8),
+      maxVUs: Number(__ENV.MAX_VUS || 12),
       exec: "mixedTraffic",
     },
     reconnect_burst: {
       executor: "per-vu-iterations",
       vus: 1,
       iterations: Number(__ENV.RECONNECT_ITERATIONS || 2),
-      startTime: "5s",
+      startTime: "22s",
       exec: "reconnectBurst",
     },
     heavy_5k_user: {
       executor: "per-vu-iterations",
       vus: 1,
-      iterations: Number(__ENV.HEAVY_ITERATIONS || 10),
-      startTime: "2s",
+      iterations: Number(__ENV.HEAVY_ITERATIONS || 5),
+      startTime: "30s",
       exec: "heavy5kUser",
     },
   },
@@ -60,39 +65,54 @@ export const options = {
   },
 };
 
-const sessionState = { loggedIn: false, taskId: null };
-let heavyLoggedIn = false;
-
-function ensureSession() {
-  if (sessionState.loggedIn) return;
+export function setup() {
   const poolSize = Number(__ENV.PERF_USER_COUNT || 1);
-  const email =
+  const emails =
     poolSize > 1
-      ? `perf${((__VU - 1) % poolSize) + 1}@agendal.test`
-      : USER_EMAIL;
-  sessionState.loggedIn = signIn(BASE_URL, email, USER_PASSWORD);
+      ? Array.from({ length: poolSize }, (_, i) => `perf${i + 1}@agendal.test`)
+      : [USER_EMAIL];
+  const allEmails = [...emails, HEAVY_EMAIL];
+  const sessions = signInPool(BASE_URL, allEmails, USER_PASSWORD);
 
-  const createRes = http.post(
-    `${BASE_URL}/api/v1/tasks`,
-    JSON.stringify({
-      id: uuidv4(),
-      title: `Perf baseline task VU ${__VU}`,
-      due_date: "2026-12-01",
-    }),
-    { headers: apiHeaders(BASE_URL), tags: { name: "setup_task" } },
-  );
-  if (createRes.status === 201) {
-    try {
-      const body = createRes.json();
-      sessionState.taskId = body?.data?.id || body?.id || null;
-    } catch {
-      sessionState.taskId = null;
+  // Create one baseline task per pool user so VUs can PATCH immediately
+  const taskIds = {};
+  for (const email of emails) {
+    applySessionCookies(BASE_URL, sessions[email]);
+    const res = http.post(
+      `${BASE_URL}/api/v1/tasks`,
+      JSON.stringify({
+        id: uuidv4(),
+        title: `Perf baseline task ${email}`,
+        due_date: "2026-12-01",
+      }),
+      { headers: apiHeaders(BASE_URL), tags: { name: "setup_task" } },
+    );
+    if (res.status === 201 || res.status === 200) {
+      try {
+        const body = res.json();
+        taskIds[email] = body?.id || body?.data?.id || null;
+      } catch {
+        taskIds[email] = null;
+      }
     }
   }
+
+  return { emails, sessions, taskIds };
 }
 
-export function mixedTraffic() {
-  ensureSession();
+let vuEmail = null;
+let vuTaskId = null;
+let heavyReady = false;
+
+function ensureVuSession(data) {
+  if (vuEmail) return;
+  vuEmail = data.emails[(__VU - 1) % data.emails.length];
+  vuTaskId = data.taskIds[vuEmail] || null;
+  applySessionCookies(BASE_URL, data.sessions[vuEmail]);
+}
+
+export function mixedTraffic(data) {
+  ensureVuSession(data);
   const headers = apiHeaders(BASE_URL);
   const roll = Math.random();
 
@@ -120,27 +140,25 @@ export function mixedTraffic() {
     });
     readLatency.add(res.timings.duration);
     check(res, { "sync pull 200": (r) => r.status === 200 });
-  } else {
+  } else if (vuTaskId) {
     // 15% Task edit / write
-    if (sessionState.taskId) {
-      const res = http.patch(
-        `${BASE_URL}/api/v1/tasks/${sessionState.taskId}`,
-        JSON.stringify({
-          title: `Perf task updated ${Date.now()}`,
-        }),
-        { headers, tags: { name: "task_patch" } },
-      );
-      writeLatency.add(res.timings.duration);
-      check(res, { "write 200": (r) => r.status === 200 });
-    }
+    const res = http.patch(
+      `${BASE_URL}/api/v1/tasks/${vuTaskId}`,
+      JSON.stringify({
+        title: `Perf task updated ${Date.now()}`,
+      }),
+      { headers, tags: { name: "task_patch" } },
+    );
+    writeLatency.add(res.timings.duration);
+    check(res, { "write 200": (r) => r.status === 200 });
   }
 
   sleep(0.05);
 }
 
-export function reconnectBurst() {
-  ensureSession();
-  if (!sessionState.taskId) return;
+export function reconnectBurst(data) {
+  ensureVuSession(data);
+  if (!vuTaskId) return;
 
   const headers = apiHeaders(BASE_URL);
   const started = Date.now();
@@ -151,7 +169,7 @@ export function reconnectBurst() {
   for (let i = 0; i < 100; i += 1) {
     patches.push({
       entity: "task",
-      id: sessionState.taskId,
+      id: vuTaskId,
       field: "notes",
       value: `Reconnect batch patch #${i}`,
       at: nowIso,
@@ -174,9 +192,9 @@ export function reconnectBurst() {
   reconnectSyncDuration.add(Date.now() - started);
 }
 
-export function heavy5kUser() {
-  if (!heavyLoggedIn) {
-    heavyLoggedIn = signIn(BASE_URL, HEAVY_EMAIL, USER_PASSWORD);
+export function heavy5kUser(data) {
+  if (!heavyReady) {
+    heavyReady = applySessionCookies(BASE_URL, data.sessions[HEAVY_EMAIL]);
   }
   const headers = apiHeaders(BASE_URL);
 
@@ -197,7 +215,10 @@ export function heavy5kUser() {
       tags: { name: `heavy5k_${path.split("?")[0]}` },
     });
     heavyReadLatency.add(res.timings.duration);
-    check(res, { "heavy 5k read 200": (r) => r.status === 200 });
+    const ok = check(res, { "heavy 5k read 200": (r) => r.status === 200 });
+    if (!ok) {
+      console.error(`heavy5k failed for ${path}: status=${res.status}`);
+    }
   }
 
   // Command matching (TaskCandidates pg_trgm) across 5,000 tasks

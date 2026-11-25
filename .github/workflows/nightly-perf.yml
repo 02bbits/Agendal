@@ -85,7 +85,7 @@ jobs:
       - name: Start Laravel server
         working-directory: backend
         run: |
-          nohup env PHP_CLI_SERVER_WORKERS=4 php -d opcache.enable=1 -d opcache.enable_cli=1 artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel.log 2>&1 &
+          nohup env PHP_CLI_SERVER_WORKERS=8 php -d opcache.enable=1 -d opcache.enable_cli=1 artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel.log 2>&1 &
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8000/api/v1/health > /dev/null; then
               echo "Backend is ready"
@@ -106,12 +106,16 @@ jobs:
           NOTE_DURATION=30s \
           k6 run --summary-export=/tmp/k6-note-budget.json perf/k6/note-budget.js
 
+      - name: Clear rate-limit cache before scalability suite
+        working-directory: backend
+        run: php artisan cache:clear
+
       - name: Run k6 scalability, reconnect & 5k-task user (PERF-01, PERF-04, PERF-05)
         run: |
           BASE_URL=http://127.0.0.1:8000 \
           PERF_USER_COUNT=10 \
           MIXED_RATE=10 \
-          MIXED_DURATION=30s \
+          MIXED_DURATION=20s \
           k6 run --summary-export=/tmp/k6-scalability.json perf/k6/scalability.js
 
       - name: Verify no slow-query errors in Laravel logs

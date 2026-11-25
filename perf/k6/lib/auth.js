@@ -53,10 +53,12 @@ export function apiHeaders(baseUrl) {
 }
 
 /**
- * Signs in via Sanctum session cookies so subsequent VU requests carry an authenticated session.
+ * Signs in via Sanctum session cookies and returns the captured cookies map.
  */
 export function signIn(baseUrl, email, password) {
-  // Fetch Sanctum CSRF cookie so XSRF-TOKEN is populated in the VU cookie jar
+  const jar = http.cookieJar();
+  jar.clear(baseUrl);
+
   const csrfRes = http.get(`${baseUrl}/sanctum/csrf-cookie`, {
     headers: {
       Accept: "application/json",
@@ -85,7 +87,40 @@ export function signIn(baseUrl, email, password) {
 
   if (!ok) {
     console.error(`signIn failed for ${email}: status=${res.status} body=${res.body}`);
+    return null;
   }
 
-  return ok;
+  const cookies = jar.cookiesForURL(baseUrl);
+  const saved = {};
+  for (const [k, vals] of Object.entries(cookies)) {
+    if (vals.length > 0) saved[k] = vals[0];
+  }
+  return saved;
+}
+
+/**
+ * Signs in a list of emails once in k6 setup() to avoid per-IP login rate limits
+ * and Argon2id CPU contention during load scenarios.
+ */
+export function signInPool(baseUrl, emails, password) {
+  const sessions = {};
+  for (const email of emails) {
+    const saved = signIn(baseUrl, email, password);
+    if (saved) {
+      sessions[email] = saved;
+    }
+  }
+  return sessions;
+}
+
+/**
+ * Applies pre-authenticated session cookies into the current VU cookie jar.
+ */
+export function applySessionCookies(baseUrl, savedCookies) {
+  if (!savedCookies) return false;
+  const jar = http.cookieJar();
+  for (const [k, v] of Object.entries(savedCookies)) {
+    jar.set(baseUrl, k, v);
+  }
+  return true;
 }
