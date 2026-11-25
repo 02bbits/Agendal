@@ -160,6 +160,8 @@ jobs:
           path: |
             /tmp/k6-note-budget.json
             /tmp/k6-scalability.json
+            /tmp/laravel.log
+            /tmp/next.log
             .lighthouseci/
 
       - name: Open issue on nightly failure

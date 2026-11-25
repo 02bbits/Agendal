@@ -55,10 +55,19 @@ export function apiHeaders(baseUrl) {
  * Signs in via Sanctum session cookies so subsequent VU requests carry an authenticated session.
  */
 export function signIn(baseUrl, email, password) {
-  // Prime session / XSRF cookie first
-  http.get(`${baseUrl}/api/v1/health`, {
-    headers: { Origin: baseUrl, Referer: `${baseUrl}/` },
+  // Fetch Sanctum CSRF cookie so XSRF-TOKEN is populated in the VU cookie jar
+  const csrfRes = http.get(`${baseUrl}/sanctum/csrf-cookie`, {
+    headers: {
+      Accept: "application/json",
+      Origin: baseUrl,
+      Referer: `${baseUrl}/`,
+    },
+    tags: { name: "sanctum_csrf" },
   });
+
+  if (csrfRes.status !== 204 && csrfRes.status !== 200) {
+    console.error(`CSRF cookie failed: ${csrfRes.status} ${csrfRes.body}`);
+  }
 
   const res = http.post(
     `${baseUrl}/api/v1/auth/login`,
@@ -69,9 +78,13 @@ export function signIn(baseUrl, email, password) {
     },
   );
 
-  check(res, {
+  const ok = check(res, {
     "signed in (200)": (r) => r.status === 200,
   });
 
-  return res.status === 200;
+  if (!ok) {
+    console.error(`signIn failed for ${email}: status=${res.status} body=${res.body}`);
+  }
+
+  return ok;
 }
