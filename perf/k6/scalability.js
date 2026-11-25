@@ -23,6 +23,7 @@ const heavyReadLatency = new Trend("heavy_read_latency", true);
 const heavyCommandNoteDuration = new Trend("heavy_command_note_duration", true);
 
 export const options = {
+  noCookiesReset: true,
   scenarios: {
     mixed_traffic: {
       executor: "constant-arrival-rate",
@@ -98,7 +99,8 @@ export function mixedTraffic() {
   if (roll < 0.6) {
     // 60% Lists / Reads (PERF-01)
     const endpoints = [
-      "/api/v1/tasks",
+      "/api/v1/tasks?view=inbox",
+      "/api/v1/tasks?view=upcoming",
       "/api/v1/counts",
       "/api/v1/projects",
       "/api/v1/tasks/search?q=perf",
@@ -180,7 +182,8 @@ export function heavy5kUser() {
 
   // PERF-05: User with 5,000 tasks — tasks list, counts, task search, note search, sync page
   const heavyReadEndpoints = [
-    "/api/v1/tasks",
+    "/api/v1/tasks?view=inbox",
+    "/api/v1/tasks?view=upcoming",
     "/api/v1/counts",
     "/api/v1/tasks/search?q=report",
     "/api/v1/tasks/search?q=bao%20cao&filter=overdue",

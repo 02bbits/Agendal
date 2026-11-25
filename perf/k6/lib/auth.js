@@ -45,6 +45,7 @@ export function apiHeaders(baseUrl) {
   return {
     Accept: "application/json",
     "Content-Type": "application/json",
+    "X-Timezone": "Asia/Ho_Chi_Minh",
     Origin: baseUrl,
     Referer: `${baseUrl}/`,
     ...xsrfHeader(baseUrl),

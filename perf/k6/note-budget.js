@@ -36,6 +36,7 @@ const THIRTY_ITEM_NOTE = Array.from({ length: 30 }, (_, i) =>
 ).join("\n");
 
 export const options = {
+  noCookiesReset: true,
   scenarios: {
     note_budget: {
       executor: "constant-arrival-rate",
@@ -99,17 +100,21 @@ export function note10Items() {
 
   noteProcessingDuration.add(res.timings.duration);
 
-  check(res, {
+  const ok = check(res, {
     "note 10 items processed (201)": (r) => r.status === 201,
     "note has id": (r) => {
       try {
         const body = r.json();
-        return Boolean(body?.data?.id || body?.id);
+        return Boolean(body?.note?.id || body?.data?.id || body?.id);
       } catch {
         return false;
       }
     },
   });
+
+  if (!ok && res.status !== 201) {
+    console.error(`note10Items failed: status=${res.status} body=${res.body}`);
+  }
 
   sleep(0.1);
 }
@@ -135,16 +140,20 @@ export function note30ItemsAndUndo() {
   let noteStatus = null;
   try {
     const body = res.json();
-    noteId = body?.data?.id || body?.id || null;
-    noteStatus = body?.data?.status || body?.status || null;
+    noteId = body?.note?.id || body?.data?.id || body?.id || null;
+    noteStatus = body?.note?.status || body?.data?.status || body?.status || null;
   } catch {
     // handled by check
   }
 
-  check(res, {
+  const ok = check(res, {
     "note 30 items processed (201)": (r) => r.status === 201,
     "30-item note has id": () => Boolean(noteId),
   });
+
+  if (!ok && res.status !== 201) {
+    console.error(`note30Items failed: status=${res.status} body=${res.body}`);
+  }
 
   // Exercise undo if note auto-applied tasks (status === "done")
   if (noteId && noteStatus === "done") {
