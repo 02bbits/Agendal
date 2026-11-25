@@ -218,6 +218,9 @@ class NoteExtractController extends Controller
         }
 
         foreach ($paragraphNodes as $paragraph) {
+            if (! $paragraph instanceof \DOMNode) {
+                continue;
+            }
             $parts = [];
 
             $textNodes = $xpath->query('.//w:t', $paragraph);
