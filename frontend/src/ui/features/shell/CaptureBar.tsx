@@ -12,8 +12,8 @@ export interface CaptureBarProps {
 }
 
 /**
- * Floating "Write a note…" bar above the tabs. The round button beside it dictates (NC-3); the + for a task by
- * hand (IM-26) sits inside the bar then. Where the browser can't record, the round button is the + as before.
+ * Floating "Write a note…" bar above the tabs. The round button beside it dictates (NC-3); where the browser
+ * can't record, it is the + for a task by hand (IM-26) as before.
  */
 export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
   const round = onDictate ?? onAdd;
@@ -33,14 +33,6 @@ export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
             {t("note.placeholder")}
           </span>
         </button>
-        {onDictate && onAdd && (
-          <IconButton
-            className="size-9! min-h-9! bg-primary-tint!"
-            label={t("task.add_by_hand")}
-            icon={<PlusIcon size={18} />}
-            onClick={onAdd}
-          />
-        )}
       </div>
       {round && (
         <IconButton
