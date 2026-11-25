@@ -73,6 +73,7 @@ const cacheable = (url) =>
   url.origin === self.location.origin &&
   !url.pathname.startsWith("/api/") &&
   !url.pathname.startsWith("/sanctum/") &&
+  !url.pathname.startsWith("/app-version") &&
   !url.searchParams.has("_rsc");
 
 self.addEventListener("message", (event) => {

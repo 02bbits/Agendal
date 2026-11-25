@@ -21,7 +21,7 @@ export function useUpdateToast(
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    registerServiceWorker((worker) => {
+    const stopWatching = registerServiceWorker((worker) => {
       const offer = () => {
         // ponytail: polls for an open modal; swap for a modal-state signal if one appears
         if (document.querySelector(MODAL)) {
@@ -36,6 +36,9 @@ export function useUpdateToast(
       };
       offer();
     });
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      stopWatching();
+    };
   }, []);
 }

@@ -82,4 +82,43 @@ describe("update toast", () => {
       precache: expect.arrayContaining([window.location.pathname]),
     });
   });
+
+  it("detects a newer server buildId via /app-version without reloading", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BUILD_ID", "build-1");
+    const newWorker = { postMessage: vi.fn() };
+    const registerMock = vi.fn(async (url: string) => {
+      if (url.includes("build-2")) {
+        return { waiting: newWorker, addEventListener: vi.fn() };
+      }
+      return { waiting: null, addEventListener: vi.fn() };
+    });
+    Object.defineProperty(navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        controller: {},
+        ready: new Promise(() => {}),
+        register: registerMock,
+        addEventListener: vi.fn(),
+      },
+    });
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(JSON.stringify({ buildId: "build-2" }), { status: 200 }),
+      );
+
+    render(<Host />);
+    expect(screen.queryByText("A new version is ready.")).toBeNull();
+
+    await act(async () => {
+      window.dispatchEvent(new Event("focus"));
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(registerMock).toHaveBeenCalledWith("/sw.js?v=build-2");
+    expect(await screen.findByText("A new version is ready.")).toBeTruthy();
+
+    fetchMock.mockRestore();
+  });
 });
