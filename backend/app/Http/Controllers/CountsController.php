@@ -20,11 +20,10 @@ class CountsController extends Controller
     public function __invoke(Request $request, InboxQuery $inbox, UpcomingQuery $upcoming, ProjectCounts $projectCounts): JsonResponse
     {
         $timezone = (string) $request->attributes->get('timezone', 'UTC');
-        $lists = $inbox->for($timezone);
 
         return response()->json([
-            'inbox' => count($lists['overdue']) + count($lists['today']),
-            'upcoming' => $upcoming->for($timezone)['total_count'],
+            'inbox' => $inbox->countFor($timezone),
+            'upcoming' => $upcoming->countFor($timezone),
             'no_project' => $projectCounts->withoutProject()['open'],
             'notes' => Note::statusCounts()->sum(),
         ]);

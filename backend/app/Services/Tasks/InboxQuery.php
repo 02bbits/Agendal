@@ -23,6 +23,13 @@ final class InboxQuery
         private readonly ClockInterface $clock,
     ) {}
 
+    public function countFor(string $timezone): int
+    {
+        $today = $this->clock->today($this->normalizeTimezone($timezone));
+
+        return $this->overdueQuery($today)->count() + $this->todayQuery($today)->count();
+    }
+
     /**
      * @return array{
      *     overdue: array<int, mixed>,
@@ -36,12 +43,8 @@ final class InboxQuery
      */
     public function for(string $timezone): array
     {
-        try {
-            $zone = new DateTimeZone($timezone);
-        } catch (Exception) {
-            $zone = new DateTimeZone('UTC');
-            $timezone = 'UTC';
-        }
+        $timezone = $this->normalizeTimezone($timezone);
+        $zone = new DateTimeZone($timezone);
 
         $today = $this->clock->today($timezone);
 
@@ -61,16 +64,35 @@ final class InboxQuery
         ];
     }
 
+    private function normalizeTimezone(string $timezone): string
+    {
+        try {
+            new DateTimeZone($timezone);
+
+            return $timezone;
+        } catch (Exception) {
+            return 'UTC';
+        }
+    }
+
+    /**
+     * @return Builder<Task>
+     */
+    private function overdueQuery(string $today): Builder
+    {
+        return $this->baseQuery()
+            ->where('done', false)
+            ->whereNotNull('due_date')
+            ->where('due_date', '<', $today);
+    }
+
     /**
      * @return Collection<int, Task>
      */
     private function overdue(string $today): Collection
     {
         /** @var Collection<int, Task> $tasks */
-        $tasks = $this->baseQuery()
-            ->where('done', false)
-            ->whereNotNull('due_date')
-            ->where('due_date', '<', $today)
+        $tasks = $this->overdueQuery($today)
             ->orderBy('due_date', 'asc')
             ->orderBy('created_at', 'asc')
             ->orderBy('id', 'asc')
@@ -80,12 +102,11 @@ final class InboxQuery
     }
 
     /**
-     * @return Collection<int, Task>
+     * @return Builder<Task>
      */
-    private function today(string $today): Collection
+    private function todayQuery(string $today): Builder
     {
-        /** @var Collection<int, Task> $tasks */
-        $tasks = $this->baseQuery()
+        return $this->baseQuery()
             ->where('done', false)
             ->where(function (Builder $query) use ($today) {
                 $query->where('due_date', $today)
@@ -98,7 +119,16 @@ final class InboxQuery
                         $q->where('start_date', '<', $today)
                             ->whereNull('due_date');
                     });
-            })
+            });
+    }
+
+    /**
+     * @return Collection<int, Task>
+     */
+    private function today(string $today): Collection
+    {
+        /** @var Collection<int, Task> $tasks */
+        $tasks = $this->todayQuery($today)
             ->orderByRaw('case when start_time is not null then 0 else 1 end asc')
             ->orderByRaw('start_time asc nulls last')
             ->orderByRaw(self::PRIORITY_ORDER)
