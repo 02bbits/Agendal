@@ -32,9 +32,9 @@ type Phase =
   | { kind: "heard"; text: string }
   | { kind: "message"; key: CopyKey; seconds?: number };
 
-const BARS = 28;
+const BARS = 32;
 // RMS of normal speech is about 0.02–0.2: this gain fills the bar height without clipping most of it
-const LEVEL_GAIN = 8;
+const LEVEL_GAIN = 12;
 
 const nowMs = () => performance.now();
 const silentBars = (): number[] => new Array(BARS).fill(0);
@@ -184,15 +184,15 @@ export function DictationSheet({
           </p>
           <div
             aria-hidden="true"
-            className="mt-3 flex h-10 items-center justify-center gap-[3px]"
+            className="mt-3 flex h-16 items-center justify-center gap-1"
           >
             {levels.map((level, i) => (
               <span
                 key={i}
-                className="w-[3px] rounded-full bg-primary transition-[height] duration-100"
+                className="w-1 rounded-full bg-primary transition-[height] duration-100"
                 style={{
                   // Flat after an error: the last recording's shape would look like it is still listening
-                  height: `${4 + (phase.kind === "message" ? 0 : level) * 36}px`,
+                  height: `${6 + (phase.kind === "message" ? 0 : level) * 58}px`,
                   opacity: listening ? 1 : 0.35,
                 }}
               />
