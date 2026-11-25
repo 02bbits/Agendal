@@ -166,13 +166,13 @@ export function note30ItemsAndUndo(data) {
   }
 
   if (noteId && noteStatus === "confirm") {
-    const confirmRes = http.post(
-      `${BASE_URL}/api/v1/notes/${noteId}/confirm`,
-      JSON.stringify({ confirm_conflicts: true }),
-      { headers: apiHeaders(BASE_URL), tags: { name: "note_confirm" } },
+    const applyRes = http.post(
+      `${BASE_URL}/api/v1/notes/${noteId}/apply`,
+      JSON.stringify({}),
+      { headers: apiHeaders(BASE_URL), tags: { name: "note_apply" } },
     );
-    check(confirmRes, { "note confirm (200)": (r) => r.status === 200 });
-    if (confirmRes.status === 200) {
+    check(applyRes, { "note apply (200)": (r) => r.status === 200 });
+    if (applyRes.status === 200) {
       noteStatus = "done";
     }
   }
