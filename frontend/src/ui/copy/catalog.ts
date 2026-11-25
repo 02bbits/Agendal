@@ -167,7 +167,6 @@ export const catalog = {
   "task.repeat_scope_title": "Delete a repeating task",
   "task.repeat_this": "This task only",
   "task.repeat_future": "This and all future",
-  "task.repeat_delete_all": "Delete all repeating tasks",
   "task.limit":
     "You've reached 5,000 open tasks. Complete or delete some to add more.",
   "task.title_required": "A task needs a title.",
