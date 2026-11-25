@@ -1,5 +1,7 @@
 # IM-63: Nightly performance verification (NF-4, NF-5, Scalability).
-# Runs k6 load tests (note processing budget + API SLOs) and Lighthouse CI.
+# Runs k6 load tests (note processing budget + API SLOs + 5,000-task PERF-05),
+# checks Laravel slow-query logs, runs Lighthouse CI (first load <= 3s),
+# and verifies repeat load from Service Worker cache (<= 1s).
 name: Nightly Performance
 
 on:
@@ -48,7 +50,7 @@ jobs:
           path: ~/.composer/cache
           key: composer-${{ hashFiles('backend/composer.lock') }}
 
-      - name: Install backend & seed perf data
+      - name: Install backend & seed perf data (incl. 5,000-task PERF-05 user)
         working-directory: backend
         run: |
           composer install --no-interaction --no-progress
@@ -67,21 +69,12 @@ jobs:
           DB_USERNAME=agendal
           DB_PASSWORD=agendal
           NOTE_LLM_ENABLED=false
+          DB_SLOW_QUERY_MS=500
+          DB_SLOW_REQUEST_MS=2000
           EOF
           php artisan migrate --force
           php artisan db:seed --force
-          php artisan tinker --execute='
-            for ($i = 1; $i <= 10; $i++) {
-              \App\Models\User::firstOrCreate(
-                ["email" => "perf{$i}@agendal.test"],
-                [
-                  "display_name" => "perf{$i}",
-                  "password" => "password",
-                  "email_verified_at" => now(),
-                ]
-              );
-            }
-          '
+          php artisan db:seed --class=PerfSeeder --force
 
       - name: Start Laravel server
         working-directory: backend
@@ -103,7 +96,7 @@ jobs:
           echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
           sudo apt-get update && sudo apt-get install -y k6
 
-      - name: Run k6 note processing budget (NF-5 / PERF-02)
+      - name: Run k6 note processing budget (NF-5 / PERF-02 / 30-item max)
         run: |
           BASE_URL=http://127.0.0.1:8000 \
           PERF_USER_COUNT=10 \
@@ -112,13 +105,24 @@ jobs:
           RULES_ONLY=true \
           k6 run --summary-export=/tmp/k6-note-budget.json perf/k6/note-budget.js
 
-      - name: Run k6 scalability & reconnect SLOs (PERF-01, PERF-04)
+      - name: Run k6 scalability, reconnect & 5k-task user (PERF-01, PERF-04, PERF-05)
         run: |
           BASE_URL=http://127.0.0.1:8000 \
           PERF_USER_COUNT=10 \
           MIXED_RATE=10 \
           MIXED_DURATION=30s \
           k6 run --summary-export=/tmp/k6-scalability.json perf/k6/scalability.js
+
+      - name: Verify no slow-query errors in Laravel logs
+        working-directory: backend
+        run: |
+          if ls storage/logs/laravel*.log 1> /dev/null 2>&1; then
+            if grep -iE "slow query|slow_request|exceeded" storage/logs/laravel*.log; then
+              echo "::error::Slow query alerts triggered during performance run!"
+              exit 1
+            fi
+          fi
+          echo "No slow-query errors recorded."
 
       - name: Build & start Next.js production server
         working-directory: frontend
@@ -134,9 +138,17 @@ jobs:
             sleep 1
           done
 
-      - name: Run Lighthouse CI (NF-4)
+      - name: Run Lighthouse CI — First load <= 3 s (NF-4)
         run: |
           npx --yes @lhci/cli@0.14.x autorun --config=./lighthouserc.json
+
+      - name: Verify Repeat load <= 1 s via Service Worker cache (NF-4)
+        run: |
+          npm --prefix /tmp/pw install --no-save playwright
+          /tmp/pw/node_modules/.bin/playwright install chromium
+          BASE_URL=http://127.0.0.1:3000 \
+          PLAYWRIGHT_MODULE=/tmp/pw/node_modules/playwright/index.mjs \
+          node perf/repeat-load.mjs
 
       - name: Upload performance reports
         if: always()

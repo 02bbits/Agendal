@@ -3,7 +3,11 @@
     "collect": {
       "url": [
         "http://127.0.0.1:3000/sign-in",
-        "http://127.0.0.1:3000/"
+        "http://127.0.0.1:3000/",
+        "http://127.0.0.1:3000/upcoming",
+        "http://127.0.0.1:3000/projects",
+        "http://127.0.0.1:3000/notes",
+        "http://127.0.0.1:3000/search"
       ],
       "numberOfRuns": 3,
       "settings": {

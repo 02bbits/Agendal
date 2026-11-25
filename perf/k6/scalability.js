@@ -8,15 +8,19 @@ import { apiHeaders, signIn, uuidv4 } from "./lib/auth.js";
  * - Read endpoints latency: p95 <= 300 ms
  * - Write endpoints latency: p95 <= 500 ms
  * - Reconnect sync (100 edits + pull): <= 10 s
+ * - PERF-05 (5,000 tasks user): search, counts, lists, sync <= 300 ms p95
  * - Error rate < 0.1%
  */
 const BASE_URL = __ENV.BASE_URL || "http://127.0.0.1:8000";
 const USER_EMAIL = __ENV.PERF_EMAIL || "example@gmail.com";
 const USER_PASSWORD = __ENV.PERF_PASSWORD || "password";
+const HEAVY_EMAIL = __ENV.HEAVY_EMAIL || "perf-heavy@agendal.test";
 
 const readLatency = new Trend("read_latency", true);
 const writeLatency = new Trend("write_latency", true);
 const reconnectSyncDuration = new Trend("reconnect_sync_duration", true);
+const heavyReadLatency = new Trend("heavy_read_latency", true);
+const heavyCommandNoteDuration = new Trend("heavy_command_note_duration", true);
 
 export const options = {
   scenarios: {
@@ -36,17 +40,27 @@ export const options = {
       startTime: "5s",
       exec: "reconnectBurst",
     },
+    heavy_5k_user: {
+      executor: "per-vu-iterations",
+      vus: 1,
+      iterations: Number(__ENV.HEAVY_ITERATIONS || 10),
+      startTime: "2s",
+      exec: "heavy5kUser",
+    },
   },
   thresholds: {
     read_latency: ["p(95)<300"],
     write_latency: ["p(95)<500"],
     reconnect_sync_duration: ["p(95)<10000"],
+    heavy_read_latency: ["p(95)<300"],
+    heavy_command_note_duration: ["p(90)<2000"],
     http_req_failed: ["rate<0.001"],
     checks: ["rate>0.99"],
   },
 };
 
 const sessionState = { loggedIn: false, taskId: null };
+let heavyLoggedIn = false;
 
 function ensureSession() {
   if (sessionState.loggedIn) return;
@@ -57,7 +71,6 @@ function ensureSession() {
       : USER_EMAIL;
   sessionState.loggedIn = signIn(BASE_URL, email, USER_PASSWORD);
 
-  // Create one task for this VU to patch during edit requests
   const createRes = http.post(
     `${BASE_URL}/api/v1/tasks`,
     JSON.stringify({
@@ -83,7 +96,7 @@ export function mixedTraffic() {
   const roll = Math.random();
 
   if (roll < 0.6) {
-    // 60% Lists / Reads (PERF-01, PERF-05)
+    // 60% Lists / Reads (PERF-01)
     const endpoints = [
       "/api/v1/tasks",
       "/api/v1/counts",
@@ -157,4 +170,46 @@ export function reconnectBurst() {
   check(pullRes, { "reconnect pull 200": (r) => r.status === 200 });
 
   reconnectSyncDuration.add(Date.now() - started);
+}
+
+export function heavy5kUser() {
+  if (!heavyLoggedIn) {
+    heavyLoggedIn = signIn(BASE_URL, HEAVY_EMAIL, USER_PASSWORD);
+  }
+  const headers = apiHeaders(BASE_URL);
+
+  // PERF-05: User with 5,000 tasks — tasks list, counts, task search, note search, sync page
+  const heavyReadEndpoints = [
+    "/api/v1/tasks",
+    "/api/v1/counts",
+    "/api/v1/tasks/search?q=report",
+    "/api/v1/tasks/search?q=bao%20cao&filter=overdue",
+    "/api/v1/notes/search?q=meeting",
+    "/api/v1/sync?full=1&limit=500",
+  ];
+
+  for (const path of heavyReadEndpoints) {
+    const res = http.get(`${BASE_URL}${path}`, {
+      headers,
+      tags: { name: `heavy5k_${path.split("?")[0]}` },
+    });
+    heavyReadLatency.add(res.timings.duration);
+    check(res, { "heavy 5k read 200": (r) => r.status === 200 });
+  }
+
+  // Command matching (TaskCandidates pg_trgm) across 5,000 tasks
+  const cmdRes = http.post(
+    `${BASE_URL}/api/v1/notes`,
+    JSON.stringify({
+      client_id: uuidv4(),
+      text: "Move quarterly report to next Friday and complete groceries task",
+      written_at: new Date().toISOString(),
+      timezone: "Asia/Ho_Chi_Minh",
+    }),
+    { headers, tags: { name: "heavy5k_note_command" } },
+  );
+  heavyCommandNoteDuration.add(cmdRes.timings.duration);
+  check(cmdRes, { "heavy 5k note command (201)": (r) => r.status === 201 });
+
+  sleep(0.1);
 }
