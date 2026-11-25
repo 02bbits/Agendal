@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Mail\Markdown;
@@ -36,7 +37,7 @@ function requestReset(string $email = 'example@gmail.com', string $ip = '10.0.0.
 function sentToken(User $user): string
 {
     $token = null;
-    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $mail) use ($user, &$token) {
+    Notification::assertSentTo($user, ResetPasswordNotification::class, function (ResetPassword $mail) use ($user, &$token) {
         $url = $mail->toMail($user)->actionUrl;
         expect($url)->toStartWith('http://localhost:3000/reset-password#');
         parse_str(parse_url($url, PHP_URL_FRAGMENT), $fragment);
@@ -60,7 +61,7 @@ it('T-AA-30, SEC-08: answers the same for an unknown email and only emails a rea
     Notification::assertNothingSent();
 
     requestReset(' Example@Gmail.com ')->assertStatus(202);
-    Notification::assertSentTo($this->user, ResetPassword::class);
+    Notification::assertSentTo($this->user, ResetPasswordNotification::class);
 });
 
 it('puts the token in the link fragment, never the path or query (AA §2.3)', function () {

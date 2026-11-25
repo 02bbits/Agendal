@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Models\User;
 use App\Notifications\PasswordChanged;
+use App\Notifications\ResetPasswordNotification;
 use App\Notifications\SignInCode;
 use App\Notifications\SignUpAttempted;
 use App\Notifications\VerifyEmailCode;
@@ -19,12 +20,13 @@ use Illuminate\Support\Facades\Queue;
 
 uses(RefreshDatabase::class);
 
-it('marks all four auth mail notifications as ShouldQueue with afterCommit, tries, and backoff', function () {
+it('marks all five auth mail notifications as ShouldQueue with afterCommit, tries, and backoff', function () {
     $notifications = [
         new SignInCode('123456'),
         new VerifyEmailCode('654321'),
         new SignUpAttempted,
         new PasswordChanged,
+        new ResetPasswordNotification('reset-token'),
     ];
 
     foreach ($notifications as $notification) {
@@ -43,9 +45,10 @@ it('queues each mail notification instead of sending inline during the request',
     $user->notify(new SignInCode('111222'));
     $user->notify(new SignUpAttempted);
     $user->notify(new PasswordChanged);
+    $user->sendPasswordResetNotification('reset-token');
     Notification::route('mail', 'pending@example.com')->notify(new VerifyEmailCode('333444'));
 
-    Queue::assertPushed(SendQueuedNotifications::class, 4);
+    Queue::assertPushed(SendQueuedNotifications::class, 5);
 });
 
 it('never queues mail notifications when the surrounding transaction rolls back', function () {
