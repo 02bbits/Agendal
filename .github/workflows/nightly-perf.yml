@@ -145,13 +145,53 @@ jobs:
 
       - name: Run Lighthouse CI — First load <= 3 s (NF-4)
         run: |
-          npx --yes @lhci/cli@0.14.x autorun --config=./lighthouserc.json
+          npx --yes @lhci/cli@0.14.x collect --config=./lighthouserc.json --url=http://127.0.0.1:3000/sign-in
+          node -e '
+            const fs = require("node:fs");
+            (async () => {
+              const base = "http://127.0.0.1:3000";
+              const jar = new Map();
+              const addCookies = (res) => {
+                for (const sc of res.headers.getSetCookie()) {
+                  const [nv] = sc.split(";");
+                  const idx = nv.indexOf("=");
+                  if (idx > 0) jar.set(nv.slice(0, idx), nv.slice(idx + 1));
+                }
+              };
+              const r1 = await fetch(`${base}/sanctum/csrf-cookie`);
+              addCookies(r1);
+              const xsrf = decodeURIComponent(jar.get("XSRF-TOKEN") || "");
+              const cookieStr = () => [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
+              const r2 = await fetch(`${base}/api/v1/auth/login`, {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  Accept: "application/json",
+                  Origin: base,
+                  Referer: `${base}/sign-in`,
+                  "X-XSRF-TOKEN": xsrf,
+                  Cookie: cookieStr(),
+                },
+                body: JSON.stringify({ email: "perf1@agendal.test", password: "password", remember: true }),
+              });
+              if (!r2.ok) throw new Error(`LHCI auth failed: ${r2.status} ${await r2.text()}`);
+              addCookies(r2);
+              const cfg = JSON.parse(fs.readFileSync("./lighthouserc.json", "utf8"));
+              cfg.ci.collect.url = cfg.ci.collect.url.filter((u) => !u.endsWith("/sign-in"));
+              cfg.ci.collect.settings.extraHeaders = { Cookie: cookieStr() };
+              fs.writeFileSync("/tmp/lighthouserc.auth.json", JSON.stringify(cfg, null, 2));
+            })();
+          '
+          npx --yes @lhci/cli@0.14.x collect --config=/tmp/lighthouserc.auth.json --additive
+          npx --yes @lhci/cli@0.14.x assert --config=./lighthouserc.json
 
       - name: Verify Repeat load <= 1 s via Service Worker cache (NF-4)
         run: |
           npm --prefix /tmp/pw install --no-save playwright
           /tmp/pw/node_modules/.bin/playwright install chromium
           BASE_URL=http://127.0.0.1:3000 \
+          PERF_EMAIL=perf1@agendal.test \
+          PERF_PASSWORD=password \
           PLAYWRIGHT_MODULE=/tmp/pw/node_modules/playwright/index.mjs \
           node perf/repeat-load.mjs
 

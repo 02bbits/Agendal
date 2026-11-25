@@ -11,6 +11,8 @@ const { chromium } = await import(
 
 const BASE_URL = process.env.BASE_URL || "http://127.0.0.1:3000";
 const BUDGET_MS = Number(process.env.REPEAT_LOAD_BUDGET_MS || 1000);
+const PERF_EMAIL = process.env.PERF_EMAIL || "";
+const PERF_PASSWORD = process.env.PERF_PASSWORD || "";
 const ROUTES = ["/", "/upcoming", "/projects", "/notes", "/search", "/sign-in"];
 
 async function main() {
@@ -36,6 +38,36 @@ async function main() {
     if (!("serviceWorker" in navigator)) return;
     await navigator.serviceWorker.ready;
   });
+
+  // Sign in if credentials are provided so protected routes warm & measure real views
+  if (PERF_EMAIL && PERF_PASSWORD) {
+    const signedIn = await page.evaluate(
+      async ({ email, password }) => {
+        await fetch("/sanctum/csrf-cookie", { credentials: "same-origin" });
+        const xsrf = document.cookie
+          .split("; ")
+          .find((c) => c.startsWith("XSRF-TOKEN="))
+          ?.split("=")
+          .slice(1)
+          .join("=");
+        const res = await fetch("/api/v1/auth/login", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            ...(xsrf ? { "X-XSRF-TOKEN": decodeURIComponent(xsrf) } : {}),
+          },
+          body: JSON.stringify({ email, password, remember: true }),
+        });
+        return res.ok;
+      },
+      { email: PERF_EMAIL, password: PERF_PASSWORD },
+    );
+    if (!signedIn) {
+      throw new Error(`Failed to sign in ${PERF_EMAIL} for repeat-load check`);
+    }
+  }
 
   // Give SW precache message a moment if needed, then visit every route once to warm cache
   for (const route of ROUTES) {

@@ -14,11 +14,19 @@ export function usePrefetch(
   const key = hrefs.join("|");
   useEffect(() => {
     if (!enabled) return;
-    for (const href of key.split("|")) {
-      if (!href) continue;
-      try {
-        router.prefetch?.(href);
-      } catch {}
+    const run = () => {
+      for (const href of key.split("|")) {
+        if (!href) continue;
+        try {
+          router.prefetch?.(href);
+        } catch {}
+      }
+    };
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(run, { timeout: 2000 });
+      return () => window.cancelIdleCallback(id);
     }
+    const timer = setTimeout(run, 1000);
+    return () => clearTimeout(timer);
   }, [router, key, enabled]);
 }

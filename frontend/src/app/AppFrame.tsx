@@ -19,7 +19,6 @@ import { TabLoading } from "./TabLoading";
 import { AppFrameContext, type AppFrameValue } from "./frame/AppFrameContext";
 import { AppOverlays } from "./frame/AppOverlays";
 import { isAuthPath, TAB_BY_PATH } from "./frame/frameRoutes";
-import { SidebarProjects } from "./frame/SidebarProjects";
 import { useAccountSettings } from "./frame/useAccountSettings";
 import { useOverlays } from "./frame/useOverlays";
 import { usePageFlags } from "./frame/usePageFlags";
@@ -35,6 +34,10 @@ import { useToast } from "./frame/useToast";
 
 const PendingScreen = dynamic(
   () => import("./frame/PendingScreen").then((m) => m.PendingScreen),
+  { ssr: false },
+);
+const SidebarProjects = dynamic(
+  () => import("./frame/SidebarProjects").then((m) => m.SidebarProjects),
   { ssr: false },
 );
 
@@ -220,7 +223,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
                   onSignOutEverywhere: () => signOut(true),
                   counts: sidebar.tabCounts,
                   projects:
-                    sidebar.projects.length > 0 ? (
+                    wide && sidebar.projects.length > 0 ? (
                       <SidebarProjects
                         projects={sidebar.projects}
                         noProjectCount={sidebar.noProjectCount}
