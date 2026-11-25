@@ -4,7 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-25
 
-- **Server monitoring on Pulse (Refs #199).** [overview.md](07-architecture/overview.md#deployment) Processes row: a `pulse:check` container reads the host every 15 s for Pulse's Servers card and a Server health card (CPU, load, memory, swap, disk, Postgres connections, last backup, API and web app up). Rows turn red at CPU over 85% for 5 min, memory over 90%, disk over 80%, the API or web app down 2 min, no backup in 26 h; nobody is notified (as #198). Network traffic stays on the Cloudflare dashboard, per-container use in `docker stats`. Runbook: deploy/README.md.
+- **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
 
 ## 2026-11-24
 
