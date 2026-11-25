@@ -403,6 +403,18 @@ export function TaskStoreProvider({
               notifyTaskCreated(res.next);
             }
           }
+          if (res && "deleted_ids" in res && Array.isArray(res.deleted_ids)) {
+            for (const deletedId of res.deleted_ids) {
+              removeRow(deletedId);
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("agendal:task-deleted", {
+                    detail: { id: deletedId },
+                  }),
+                );
+              }
+            }
+          }
         },
         (err) => {
           for (const removed of removedTasks) {

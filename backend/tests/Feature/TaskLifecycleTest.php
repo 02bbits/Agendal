@@ -352,10 +352,11 @@ it('DELETE repeating task with scope=future deletes all following occurrences in
         'previous_occurrence_id' => $secondId,
     ]);
 
-    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$secondId}?scope=future")
-        ->assertStatus(204);
+    $res = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$secondId}?scope=future")
+        ->assertStatus(200);
 
-    expect(Task::find($firstId))->toBeNull()
+    expect($res->json('deleted_ids'))->toEqualCanonicalizing([$firstId, $secondId, $thirdId])
+        ->and(Task::find($firstId))->toBeNull()
         ->and(Task::find($secondId))->toBeNull()
         ->and(Task::find($thirdId))->toBeNull();
 });

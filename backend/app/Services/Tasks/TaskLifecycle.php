@@ -174,7 +174,7 @@ final class TaskLifecycle
      * Delete with repeating task scope ('one' or 'future').
      * When scope is 'one' on an uncompleted repeating task, creates the next occurrence.
      *
-     * @return array{deleted: bool, next: Task|null}
+     * @return array{deleted: bool, next: Task|null, deleted_ids: list<string>}
      */
     public function deleteScope(Task $task, ?string $scope = null, ?string $at = null): array
     {
@@ -189,26 +189,39 @@ final class TaskLifecycle
             }
 
             if ($scope === 'future') {
-                $deleted = $this->deleteFutureChain($locked, $at);
-
-                return ['deleted' => $deleted, 'next' => null];
+                return $this->deleteFutureChain($locked, $at);
             }
 
             $deleted = $this->delete($locked, $at);
 
-            return ['deleted' => $deleted, 'next' => $next];
+            return [
+                'deleted' => $deleted,
+                'next' => $next,
+                'deleted_ids' => $deleted ? [$locked->id] : [],
+            ];
         });
     }
 
-    /** Soft-deletes every non-trashed occurrence in $root's repeating series. */
-    private function deleteFutureChain(Task $root, ?string $at): bool
+    /**
+     * Soft-deletes every non-trashed occurrence in $root's repeating series.
+     *
+     * @return array{deleted: bool, next: null, deleted_ids: list<string>}
+     */
+    private function deleteFutureChain(Task $root, ?string $at): array
     {
         $first = $this->recurrence->first($root);
         $cursor = Task::withTrashed()->whereKey($first->id)->lockForUpdate()->first() ?? $root;
-        $deletedRoot = $cursor->id === $root->id ? $this->delete($root, $at) : false;
+        $deletedRoot = false;
+        $deletedIds = [];
 
-        if ($cursor->id !== $root->id && ! $cursor->trashed()) {
-            $this->delete($cursor, $at);
+        if (! $cursor->trashed()) {
+            $ok = $this->delete($cursor, $at);
+            if ($ok) {
+                $deletedIds[] = $cursor->id;
+            }
+            if ($cursor->id === $root->id) {
+                $deletedRoot = $ok;
+            }
         }
 
         $visited = [$cursor->id => true];
@@ -224,6 +237,9 @@ final class TaskLifecycle
             }
             if (! $lockedFollowing->trashed()) {
                 $ok = $this->delete($lockedFollowing, $at);
+                if ($ok) {
+                    $deletedIds[] = $lockedFollowing->id;
+                }
                 if ($lockedFollowing->id === $root->id) {
                     $deletedRoot = $ok;
                 }
@@ -231,7 +247,11 @@ final class TaskLifecycle
             $cursor = $lockedFollowing;
         }
 
-        return $deletedRoot;
+        return [
+            'deleted' => $deletedRoot,
+            'next' => null,
+            'deleted_ids' => $deletedIds,
+        ];
     }
 
     /** Undoes a delete. False when a later `deleted` stamp already won. */
