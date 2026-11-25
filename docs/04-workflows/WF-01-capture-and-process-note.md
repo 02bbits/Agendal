@@ -6,7 +6,7 @@
 ## Main flow
 
 1. The full-screen editor opens with the cursor in the text. Examples show while it is empty ([NC-1](../03-modules/NC-note-capture.md#nc-1), [NC-5](../03-modules/NC-note-capture.md#nc-5)).
-2. The user writes a note with several things in it ([NC-2](../03-modules/NC-note-capture.md#nc-2)), or dictates it ([NC-3](../03-modules/NC-note-capture.md#nc-3)) or attaches a file ([NC-4](../03-modules/NC-note-capture.md#nc-4)). Dictated or extracted text lands in the editor to check first.
+2. The user writes a note with several things in it ([NC-2](../03-modules/NC-note-capture.md#nc-2)), or dictates it ([NC-3](../03-modules/NC-note-capture.md#nc-3)) or attaches a file ([NC-4](../03-modules/NC-note-capture.md#nc-4)). Extracted text lands in the editor to check first. Dictated words show in the dictation sheet, where the user picks Edit note (to the editor) or Make tasks (straight to step 4).
 3. The user taps **Make tasks**, which is enabled as soon as there is text.
 4. The assistant splits the note into items ([NU-1](../03-modules/NU-note-understanding.md#nu-1)), extracts each item's fields ([NU-2](../03-modules/NU-note-understanding.md#nu-2)), matches commands to existing tasks ([NU-3](../03-modules/NU-note-understanding.md#nu-3)), and skips non-tasks ([NU-4](../03-modules/NU-note-understanding.md#nu-4)).
 5. A plan with any change goes to Check this first ([WF-02](WF-02-confirm-risky-changes.md)). Once applied, each change is stored with its before values ([NF-11](../05-quality/nfr.md#nf-11)).
@@ -21,4 +21,4 @@
 | 4 | Nothing actionable | [WF-03](WF-03-resolve-unclear-note.md) |
 | 6 | The result is wrong | [WF-04](WF-04-undo-a-note.md) |
 | 2 | File unsupported or over 5 MB | A specific error, e.g. "Attach a file under 5 MB." ([NC-4](../03-modules/NC-note-capture.md#nc-4)) |
-| 2 | Listening | "Listening…" with Stop. Make tasks is disabled while listening ([NC-3](../03-modules/NC-note-capture.md#nc-3)) |
+| 2 | Dictating | The dictation sheet: "Listening…" with Stop, then the words with Edit note and Make tasks ([NC-3](../03-modules/NC-note-capture.md#nc-3)) |
