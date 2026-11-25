@@ -191,7 +191,8 @@ export function DictationSheet({
                 key={i}
                 className="w-[3px] rounded-full bg-primary transition-[height] duration-100"
                 style={{
-                  height: `${4 + level * 36}px`,
+                  // Flat after an error: the last recording's shape would look like it is still listening
+                  height: `${4 + (phase.kind === "message" ? 0 : level) * 36}px`,
                   opacity: listening ? 1 : 0.35,
                 }}
               />

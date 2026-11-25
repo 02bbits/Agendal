@@ -72,4 +72,9 @@ return [
     'dictation_prompt_version' => env('NOTE_DICTATION_PROMPT_VERSION', 'note-dictation-v1'),
     'dictation_max_kb' => (int) env('NOTE_DICTATION_MAX_KB', 2048),
 
+    // Seconds per try and tries per recording: Gemini now and then stalls on a call that a fresh one answers in about
+    // 2 s, so a short try is cut and made again. The user waits at most about their product.
+    'dictation_timeout_seconds' => (float) env('NOTE_DICTATION_TIMEOUT_SECONDS', 8),
+    'dictation_attempts' => (int) env('NOTE_DICTATION_ATTEMPTS', 2),
+
 ];

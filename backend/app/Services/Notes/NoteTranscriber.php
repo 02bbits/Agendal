@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services\Notes;
 
 use App\Exceptions\ApiError;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -33,12 +34,16 @@ final class NoteTranscriber
         if ($route === null || $route['sdk'] || $route['output'] !== 'json_schema') {
             throw new ApiError('note.dictation_failed', 'Dictation is not available.', 503);
         }
-        $timeout = (float) config('note_llm.timeout_seconds');
+        // Gemini usually answers in about 2 s but now and then stalls for 10–20 s or answers 503. A fresh call is
+        // usually quick again, so each try is short and a stalled or busy one is tried again: the user waits at most
+        // about attempts × timeout.
+        $timeout = (float) config('note_llm.dictation_timeout_seconds');
         $prompt = (string) file_get_contents(resource_path('prompts/'.config('note_llm.dictation_prompt_version').'.txt'));
 
         try {
             $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
-                ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
+                ->retry((int) config('note_llm.dictation_attempts'), 200, fn (Throwable $e): bool => $e instanceof ConnectionException
+                    || ($e instanceof RequestException && in_array($e->response->status(), [429, 500, 503], true)))
                 ->post($route['url'], [
                     'model' => $route['model'],
                     'temperature' => 0,
@@ -50,7 +55,9 @@ final class NoteTranscriber
                 ])->throw();
             $answer = json_decode((string) $response->json('choices.0.message.content'), true, 4, JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
-            Log::warning('note_dictation', ['outcome' => 'failed', 'error' => $e::class]);
+            // The provider's status says which: 429 quota, 503 busy, 400 a request it refuses
+            Log::warning('note_dictation', ['outcome' => 'failed', 'error' => $e::class,
+                'status' => $e instanceof RequestException ? $e->response->status() : null]);
             throw new ApiError('note.dictation_failed', 'Dictation stopped.', 502);
         }
 

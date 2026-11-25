@@ -205,7 +205,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 |---|---|
 | `200` | `{text}`. Empty when no speech was heard |
 | `422` | `error.invalid` (no audio, not WAV, or too large) |
-| `502` · `503` | `note.dictation_failed` (the model failed, or is off) |
+| `502` · `503` | `note.dictation_failed` (the model failed or is off, or both 8 s tries stalled: the user waits about 17 s at most) |
 | `429` | `error.rate_limited` (10/minute, 100/day) |
 
 - `POST /tasks`: [TK module §7](TK-tasks.md#7-api-contract).
