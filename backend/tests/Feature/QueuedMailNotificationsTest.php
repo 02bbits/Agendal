@@ -8,6 +8,7 @@ use App\Notifications\SignInCode;
 use App\Notifications\SignUpAttempted;
 use App\Notifications\VerifyEmailCode;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Queue;
+
+uses(RefreshDatabase::class);
 
 it('marks all four auth mail notifications as ShouldQueue with afterCommit, tries, and backoff', function () {
     $notifications = [
