@@ -51,7 +51,7 @@ export const options = {
       executor: "per-vu-iterations",
       vus: 1,
       iterations: Number(__ENV.MAX_NOTE_ITERATIONS || 5),
-      startTime: "5s",
+      startTime: __ENV.MAX_NOTE_START_TIME || "32s",
       exec: "note30ItemsAndUndo",
     },
   },

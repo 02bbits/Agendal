@@ -85,7 +85,7 @@ jobs:
       - name: Start Laravel server
         working-directory: backend
         run: |
-          nohup env PHP_CLI_SERVER_WORKERS=4 php artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel.log 2>&1 &
+          nohup env PHP_CLI_SERVER_WORKERS=4 php -d opcache.enable=1 -d opcache.enable_cli=1 artisan serve --host=127.0.0.1 --port=8000 > /tmp/laravel.log 2>&1 &
           for i in $(seq 1 30); do
             if curl -fsS http://127.0.0.1:8000/api/v1/health > /dev/null; then
               echo "Backend is ready"
@@ -104,7 +104,6 @@ jobs:
           PERF_USER_COUNT=10 \
           NOTE_RATE=2 \
           NOTE_DURATION=30s \
-          RULES_ONLY=true \
           k6 run --summary-export=/tmp/k6-note-budget.json perf/k6/note-budget.js
 
       - name: Run k6 scalability, reconnect & 5k-task user (PERF-01, PERF-04, PERF-05)
