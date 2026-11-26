@@ -185,6 +185,30 @@ export function NoteEditor({
   // that happens inside the gesture, and an effect that waits a frame is too late (NC §2.1)
   useLayoutEffect(() => textRef.current?.focus(), []);
 
+  // The paper grows with the text instead of scrolling inside the field, and the editor scrolls as one
+  // page: a textarea's own scroll doesn't move its ruled background in every browser, so the words
+  // would slide over the lines. Measured again when the text or the width changes.
+  const paperScroll = useRef<HTMLDivElement>(null);
+  const fit = useCallback(() => {
+    const field = textRef.current;
+    if (!field) return;
+    field.style.height = "auto";
+    field.style.height = `${field.scrollHeight}px`;
+    // The field no longer scrolls to its cursor, so writing at the end keeps the end in view
+    const scroller = paperScroll.current;
+    if (
+      scroller &&
+      document.activeElement === field &&
+      field.selectionEnd === field.value.length
+    )
+      scroller.scrollTop = scroller.scrollHeight;
+  }, []);
+  useLayoutEffect(fit, [text, fit]);
+  useEffect(() => {
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [fit]);
+
   // Restore the draft, unless the user has already started typing
   useEffect(() => {
     if (note) return;
@@ -346,8 +370,11 @@ export function NoteEditor({
           </h2>
           <span />
         </div>
-        <div className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide">
-          <div className="flex min-h-[429px] flex-col rounded-box bg-surface p-3.5 pb-[18px]">
+        <div
+          ref={paperScroll}
+          className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide"
+        >
+          <div className="flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-3.5 pb-[18px]">
             <label
               htmlFor={fieldId}
               className="mb-1.5 text-footnote font-medium text-ink-secondary"
@@ -368,7 +395,7 @@ export function NoteEditor({
                   .join(" ") || undefined
               }
               placeholder={t("note.placeholder")}
-              className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+              className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
           </div>
           {stage !== "hidden" && (
