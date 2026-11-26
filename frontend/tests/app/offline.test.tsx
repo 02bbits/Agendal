@@ -307,10 +307,11 @@ describe("Offline notes (NC-6, WF-05)", () => {
     });
     await openNotes();
     const name = new RegExp(t("note.couldnt_process"));
-    const card = await screen.findByRole("button", { name });
+    await screen.findByRole("button", { name });
     await expectAxeCleanInBothThemes();
 
-    await userEvent.setup().click(card);
+    // Found again: the list can reload while axe runs, and a click on the old row does nothing
+    await userEvent.setup().click(await screen.findByRole("button", { name }));
 
     const field = await screen.findByRole("textbox", { name: "Your note" });
     await waitFor(() =>
