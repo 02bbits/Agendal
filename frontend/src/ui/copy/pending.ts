@@ -110,6 +110,9 @@ export const pending = {
   "note.capture_open": "Write a note",
   "note.mic": "Dictate a note",
   "common.continue": "Continue",
+  "note.tools": "Dictate or attach a file",
+  "note.dictation_hint":
+    "Tap stop to add the words to your note and check them before making tasks.",
   "note.text_label": "Your note",
   "note.new_title": "New note",
   "note.editor_hint":

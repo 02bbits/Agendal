@@ -14,17 +14,28 @@ import {
   loadDraft,
   saveDraft,
 } from "../../../lib/draft";
-import { now } from "../../../lib/clock";
+import { now, timeZone } from "../../../lib/clock";
+import { canDictate } from "../../../lib/dictation";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
 import { isCopyKey, t, type CopyKey } from "../../copy";
-import type { NoteResult } from "../../domain/types";
+import { formatDay, formatTime } from "../../domain/dates";
+import { localDateTime } from "../../domain/edit";
+import type { NoteResult, TimeFormat } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
-import { SparklesIcon } from "../../components/icons";
+import { IconButton } from "../../components/IconButton";
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  MicIcon,
+  PaperclipIcon,
+  SparklesIcon,
+} from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
+import { DictationSheet } from "./DictationSheet";
 import { UndoConflictDialog } from "./UndoConflictDialog";
 import { api } from "../../../lib/api";
 import { ApiRequestError, handleResponse } from "../../../lib/apiError";
@@ -62,8 +73,10 @@ export interface NoteEditorProps {
   offline?: boolean;
   /** The note was kept on the device to be sent later (NC-6): the toast to show. The draft is cleared. */
   onQueued?: (toast: CopyKey) => void;
-  /** Words from dictation's Edit (NC §2.3): the editor opens with them, after any unsent draft. */
-  initialText?: string;
+  /** Opened from the capture bar's mic: the dictation sheet opens over the note at once (NC §2.3). */
+  dictate?: boolean;
+  /** The account's clock (AP-5), for the time the note was written. */
+  timeFormat?: TimeFormat;
 }
 
 /** The reading line shows only when the answer takes longer than this (NC §2.2). */
@@ -118,8 +131,9 @@ const lengthOf = (text: string) =>
 const formatCount = (count: number) => count.toLocaleString("en-US");
 
 /**
- * Full-screen note editor (NC-1, NC-2): the ruled note card with the cursor in it, three
- * example chips while it is empty, and Make tasks once there is something to read.
+ * Note editor (NC-1, NC-2): a drawer over the screen with the time it was written, the ruled note
+ * card with the cursor in it, three example chips while it is empty, and Make tasks once there is
+ * something to read. The ^ beside Make tasks opens the tools: dictation and a file.
  */
 export function NoteEditor({
   note,
@@ -129,12 +143,12 @@ export function NoteEditor({
   onSubmitted,
   offline,
   onQueued,
-  initialText,
+  dictate,
+  timeFormat = "24h",
 }: NoteEditorProps) {
-  const [text, setText] = useState(note?.text ?? initialText ?? "");
+  const [text, setText] = useState(note?.text ?? "");
   const latest = useRef(text);
-  // Dictated words are new text: saved as the draft like typing
-  const dirty = useRef(!!initialText);
+  const dirty = useRef(false);
   const clientId = useRef(crypto.randomUUID());
   const sending = useRef(false);
   const [busy, setBusy] = useState(false);
@@ -221,20 +235,12 @@ export function NoteEditor({
     let current = true;
     loadDraft()
       .then((draft) => {
-        if (!current || !draft) return;
-        // Dictated words go after the unsent draft, so neither is lost
-        const dictated = initialText && latest.current === initialText;
-        if (latest.current && !dictated) return;
-        // Already saved as the draft (a remount saves on its way out): nothing older to keep
-        if (dictated && draft.trimEnd().endsWith(initialText.trim())) return;
-        const restored = dictated
-          ? `${draft.trimEnd()}\n${initialText}`
-          : draft;
-        edit(restored, !dictated);
+        if (!current || !draft || latest.current) return;
+        edit(draft, true);
         onDraftRestored?.();
         const field = textRef.current;
         requestAnimationFrame(() =>
-          field?.setSelectionRange(restored.length, restored.length),
+          field?.setSelectionRange(draft.length, draft.length),
         );
       })
       .catch(() => {});
@@ -342,6 +348,41 @@ export function NoteEditor({
       ? t(failure.error, { seconds: wait, count: text.length })
       : null;
 
+  // The ^ tray: dictation and a file (NC §2.3, §2.4)
+  const [tools, setTools] = useState(false);
+  const [dictating, setDictating] = useState(!!dictate);
+  // Where the dictated words go: the selection when the mic was tapped, or the end
+  const dictationAt = useRef<[number, number] | null>(null);
+  const startDictation = () => {
+    const field = textRef.current;
+    dictationAt.current = field
+      ? [field.selectionStart, field.selectionEnd]
+      : null;
+    setTools(false);
+    setDictating(true);
+  };
+  const insertWords = (words: string) => {
+    const end = latest.current.length;
+    const [from, to] = dictationAt.current ?? [end, end];
+    const before = latest.current.slice(0, from);
+    const after = latest.current.slice(to);
+    const lead = before && !/\s$/.test(before) ? " " : "";
+    const tail = after && !/^\s/.test(after) ? " " : "";
+    edit(before + lead + words + tail + after);
+    setDictating(false);
+    const cursor = (before + lead + words).length;
+    const field = textRef.current;
+    requestAnimationFrame(() => {
+      field?.focus();
+      field?.setSelectionRange(cursor, cursor);
+    });
+  };
+  // "Today 15:35": when a new note is written, or when a saved one was
+  const [writtenAt] = useState(() => note?.written_at ?? now().toISOString());
+  const zone = timeZone();
+  const written = localDateTime(writtenAt, zone);
+  const stamp = `${formatDay(written.date, localDateTime(now().toISOString(), zone).date)} ${formatTime(written.time, timeFormat)}`;
+
   const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Allow selecting the same file again after an error
@@ -405,60 +446,147 @@ export function NoteEditor({
 
   return (
     <>
+      {/* A drawer over the screen; a tap on the dimmed screen closes it like Cancel */}
       <div
-        ref={editorRef}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={titleId}
-        className="fixed inset-x-0 top-0 bottom-[var(--keyboard-inset,0px)] z-[70] flex flex-col bg-paper"
+        className="fixed inset-0 z-[70] bg-scrim motion-safe:animate-fade-in"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) requestClose();
+        }}
       >
-        <div className="mx-auto grid w-full max-w-[600px] grid-cols-[1fr_auto_1fr] items-center px-gutter pt-[env(safe-area-inset-top)] md:max-w-[712px] md:px-gutter-wide">
-          <button
-            type="button"
-            className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field px-2 text-body text-primary hover:bg-fill"
-            onClick={requestClose}
-          >
-            {t("common.cancel")}
-          </button>
-          <h2
-            id={titleId}
-            className="m-0 flex items-center gap-1.5 text-heading font-semibold"
-          >
-            <SparklesIcon size={16} />
-            {t(note ? "note.edit" : "note.new_title")}
-          </h2>
-          <span />
-        </div>
         <div
-          ref={paperScroll}
-          className="mx-auto flex min-h-0 w-full max-w-[600px] flex-1 flex-col gap-3.5 overflow-y-auto px-gutter pt-1.5 pb-4 md:max-w-[712px] md:px-gutter-wide"
+          ref={editorRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+24px)] bottom-[var(--keyboard-inset,0px)] mx-auto flex w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:top-10 md:bottom-10 md:max-w-[712px] md:rounded-dialog"
         >
-          <div className="flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-3.5 pb-[18px]">
-            <label
-              htmlFor={fieldId}
-              className="mb-1.5 text-footnote font-medium text-ink-secondary"
+          <div
+            aria-hidden="true"
+            className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-fill-2"
+          />
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide">
+            <button
+              type="button"
+              className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field px-2 text-body text-primary hover:bg-fill"
+              onClick={requestClose}
             >
-              {t("note.text_label")}
-            </label>
-            <textarea
-              id={fieldId}
-              ref={textRef}
-              value={text}
-              onChange={(event) => edit(event.target.value)}
-              onKeyDown={onKeyDown}
-              readOnly={busy || uploading}
-              aria-invalid={message ? true : undefined}
-              aria-describedby={
-                [stage !== "hidden" && counterId, message && errorId]
-                  .filter(Boolean)
-                  .join(" ") || undefined
-              }
-              placeholder={t("note.placeholder")}
-              className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
-            />
+              {t("common.cancel")}
+            </button>
+            <h2
+              id={titleId}
+              className="m-0 flex items-center gap-1.5 text-heading font-semibold"
+            >
+              <SparklesIcon size={16} />
+              {t(note ? "note.edit" : "note.new_title")}
+            </h2>
+            <span />
           </div>
-
-          <div className="flex flex-col gap-2">
+          <p className="m-0 text-center text-overline font-semibold text-ink-secondary uppercase tabular-nums">
+            <time dateTime={writtenAt}>{stamp}</time>
+          </p>
+          <div
+            ref={paperScroll}
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-4 md:px-gutter-wide"
+          >
+            <div className="flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4">
+              <label
+                htmlFor={fieldId}
+                className="mb-2 text-footnote font-medium text-ink-secondary"
+              >
+                {t("note.text_label")}
+              </label>
+              <textarea
+                id={fieldId}
+                ref={textRef}
+                value={text}
+                onChange={(event) => edit(event.target.value)}
+                onKeyDown={onKeyDown}
+                readOnly={busy || uploading}
+                aria-invalid={message ? true : undefined}
+                aria-describedby={
+                  [stage !== "hidden" && counterId, message && errorId]
+                    .filter(Boolean)
+                    .join(" ") || undefined
+                }
+                placeholder={t("note.placeholder")}
+                className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+              />
+            </div>
+            {uploadError && (
+              <p role="alert" className="m-0 text-footnote text-error">
+                {t(uploadError)}
+              </p>
+            )}
+            {stage !== "hidden" && (
+              <p
+                id={counterId}
+                className={cx(
+                  "m-0 text-footnote tabular-nums",
+                  stage === "over" ? "text-error" : "text-ink-secondary",
+                )}
+              >
+                {counter}
+                {stage === "over" && <> · {tooLong}</>}
+              </p>
+            )}
+            <p aria-live="polite" className="sr-only">
+              {announced.text}
+            </p>
+            <p className="m-0 text-footnote text-ink-secondary">
+              {t("note.editor_hint")}
+            </p>
+            {/* Always there, so screen readers hear it when it fills; hidden while empty so it leaves no gap */}
+            <p
+              role="status"
+              className={cx(
+                "m-0 text-footnote text-ink-secondary",
+                !reading && !uploading && "sr-only",
+              )}
+            >
+              {reading ? (
+                <ReadingStatus />
+              ) : uploading ? (
+                t("note.reading_file")
+              ) : (
+                ""
+              )}
+            </p>
+            {message && (
+              <div className="flex items-center justify-between gap-3">
+                <p
+                  id={errorId}
+                  role="alert"
+                  className="m-0 text-footnote text-error"
+                >
+                  {message}
+                </p>
+                {failure?.error === "note.send_failed" && (
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => submit()}
+                  >
+                    {t("common.retry")}
+                  </Button>
+                )}
+              </div>
+            )}
+            {!VISIBLE.test(text) && (
+              <div>
+                <p className="m-0 mb-2 text-overline font-semibold text-ink-secondary uppercase">
+                  {t("note.examples_title")}
+                </p>
+                <ul className="m-0 flex list-none flex-col items-start gap-2 p-0">
+                  {EXAMPLES.map((key) => (
+                    <li key={key}>
+                      <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-separator bg-bar px-gutter pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg md:px-gutter-wide md:pb-4">
             <input
               ref={fileInputRef}
               type="file"
@@ -468,103 +596,72 @@ export function NoteEditor({
               onChange={(event) => void uploadFile(event)}
               disabled={busy || uploading || offline}
             />
-
-            <div className="flex items-center gap-3">
-              <Button
-                variant="secondary"
-                size="sm"
-                disabled={busy || uploading || offline}
-                onClick={() => fileInputRef.current?.click()}
-              >
-                {uploading ? t("note.reading_file") : t("note.upload_file")}
-              </Button>
-
-              <span className="text-footnote text-ink-tertiary">
-                {t("note.upload_formats")}
-              </span>
-            </div>
-
-            {uploadError && (
-              <p role="alert" className="m-0 text-footnote text-error">
-                {t(uploadError)}
-              </p>
+            {tools && (
+              <div className="mb-3 flex flex-col gap-2">
+                <div className="flex gap-3">
+                  {canDictate() && (
+                    <Button
+                      className="flex-1"
+                      disabled={busy || offline}
+                      onClick={startDictation}
+                    >
+                      <MicIcon size={18} />
+                      {t("note.mic")}
+                    </Button>
+                  )}
+                  <Button
+                    className="flex-1"
+                    disabled={busy || uploading || offline}
+                    onClick={() => {
+                      setTools(false);
+                      fileInputRef.current?.click();
+                    }}
+                  >
+                    <PaperclipIcon size={18} />
+                    {t("note.upload_file")}
+                  </Button>
+                </div>
+                <p className="m-0 text-center text-footnote text-ink-tertiary">
+                  {t("note.upload_formats")}
+                </p>
+              </div>
             )}
-          </div>
-
-          {stage !== "hidden" && (
-            <p
-              id={counterId}
-              className={cx(
-                "m-0 text-footnote tabular-nums",
-                stage === "over" ? "text-error" : "text-ink-secondary",
-              )}
-            >
-              {counter}
-              {stage === "over" && <> · {tooLong}</>}
-            </p>
-          )}
-          <p aria-live="polite" className="sr-only">
-            {announced.text}
-          </p>
-          <p className="m-0 text-footnote text-ink-secondary">
-            {t("note.editor_hint")}
-          </p>
-          <p role="status" className="m-0 text-footnote text-ink-secondary">
-            {reading ? <ReadingStatus /> : ""}
-          </p>
-          {message && (
-            <div className="flex items-center justify-between gap-3 pb-2">
-              <p
-                id={errorId}
-                role="alert"
-                className="m-0 text-footnote text-error"
+            <div className="flex items-center gap-3">
+              <IconButton
+                className="size-[50px]! min-h-[50px]! shrink-0 bg-fill!"
+                label={t("note.tools")}
+                aria-expanded={tools}
+                icon={tools ? <ChevronDownIcon /> : <ChevronUpIcon />}
+                onClick={() => setTools((open) => !open)}
+              />
+              <Button
+                variant="primary"
+                size="lg"
+                className="flex-1"
+                busy={busy}
+                disabled={!canSubmit}
+                onClick={() => submit()}
               >
-                {message}
-              </p>
-              {failure?.error === "note.send_failed" && (
-                <Button variant="secondary" size="sm" onClick={() => submit()}>
-                  {t("common.retry")}
-                </Button>
-              )}
+                <SparklesIcon size={18} />
+                {t(
+                  note
+                    ? "note.replan"
+                    : offline
+                      ? "note.save_offline"
+                      : "note.make_tasks",
+                )}
+              </Button>
             </div>
-          )}
-          {!VISIBLE.test(text) && (
-            <div>
-              <p className="m-0 mb-2 text-overline font-semibold text-ink-secondary uppercase">
-                {t("note.examples_title")}
-              </p>
-              <ul className="m-0 flex list-none flex-col items-start gap-2 p-0">
-                {EXAMPLES.map((key) => (
-                  <li key={key}>
-                    <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-        <div className="border-t border-separator bg-bar px-3 pt-2.5 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg">
-          <div className="mx-auto w-full max-w-[600px] md:max-w-[712px]">
-            <Button
-              variant="primary"
-              size="lg"
-              fullWidth
-              busy={busy}
-              disabled={!canSubmit}
-              onClick={() => submit()}
-            >
-              <SparklesIcon size={18} />
-              {t(
-                note
-                  ? "note.replan"
-                  : offline
-                    ? "note.save_offline"
-                    : "note.make_tasks",
-              )}
-            </Button>
           </div>
         </div>
       </div>
+      {dictating && (
+        <DictationSheet
+          offline={offline}
+          onClose={() => setDictating(false)}
+          onWords={insertWords}
+        />
+      )}
       <UndoConflictDialog
         count={conflicts}
         history={false}

@@ -9,9 +9,8 @@ import {
   type Recording,
 } from "../../../lib/dictation";
 import { t, type CopyKey } from "../../copy";
-import { Button } from "../../components/Button";
 import { IconButton } from "../../components/IconButton";
-import { MicIcon, SparklesIcon } from "../../components/icons";
+import { MicIcon } from "../../components/icons";
 import { Sheet } from "../../components/Sheet";
 
 export interface DictationSheetProps {
@@ -19,17 +18,14 @@ export interface DictationSheetProps {
   offline?: boolean;
   /** ×, Escape, Back or a tap on the scrim: the recording, if any, is dropped. */
   onClose(): void;
-  /** Edit note: the words go to the note editor to check first. */
-  onEdit(text: string): void;
-  /** Make tasks: the words are sent as a note at once. Resolves once the caller has moved on. */
-  onMakeTasks(text: string): Promise<void>;
+  /** The words heard, once written down: they go into the note, to check before Make tasks. */
+  onWords(text: string): void;
 }
 
 type Phase =
   | { kind: "notice" }
   | { kind: "listening"; started: number }
   | { kind: "writing" }
-  | { kind: "heard"; text: string }
   | { kind: "message"; key: CopyKey; seconds?: number };
 
 const BARS = 32;
@@ -45,14 +41,13 @@ const clock = (ms: number) => {
 };
 
 /**
- * Dictation (NC-3): a bottom sheet (a dialog on a wide screen) that records, shows the time and a
- * live waveform, then the words heard, with Edit note and Make tasks.
+ * Dictation (NC-3): a sheet over the note (a dialog on a wide screen) that records, shows the time
+ * and a live waveform, and hands the words heard to the note once Stop is tapped.
  */
 export function DictationSheet({
   offline,
   onClose,
-  onEdit,
-  onMakeTasks,
+  onWords,
 }: DictationSheetProps) {
   const [phase, setPhase] = useState<Phase>(() =>
     offline
@@ -63,12 +58,10 @@ export function DictationSheet({
   );
   const [levels, setLevels] = useState(silentBars);
   const [now, setNow] = useState(nowMs);
-  const [sending, setSending] = useState(false);
   const recording = useRef<Recording | null>(null);
 
-  // ×, Escape, Back or the scrim: the recording, if any, is dropped. Not while the note is sent.
+  // ×, Escape, Back or the scrim: the recording, if any, is dropped
   const close = () => {
-    if (sending) return;
     recording.current?.cancel();
     onClose();
   };
@@ -93,11 +86,8 @@ export function DictationSheet({
       })
       .then((words) => {
         if (words === null) return;
-        setPhase(
-          words
-            ? { kind: "heard", text: words }
-            : { kind: "message", key: "note.no_speech" },
-        );
+        if (words) onWords(words);
+        else setPhase({ kind: "message", key: "note.no_speech" });
       })
       .catch((error: DictationError | unknown) =>
         setPhase(
@@ -142,12 +132,6 @@ export function DictationSheet({
     return () => clearInterval(id);
   }, [listening]);
 
-  const makeTasks = async (text: string) => {
-    setSending(true);
-    await onMakeTasks(text);
-    setSending(false);
-  };
-
   return (
     <Sheet
       open
@@ -179,9 +163,7 @@ export function DictationSheet({
             )}
             {listening
               ? `${t("note.listening")} ${clock(Math.max(0, now - phase.started))}`
-              : phase.kind === "heard"
-                ? t("note.heard")
-                : null}
+              : null}
           </p>
           <div
             aria-hidden="true"
@@ -204,8 +186,6 @@ export function DictationSheet({
               <p className="m-0 text-body">
                 <span className="shiny-text">{t("note.reading")}</span>
               </p>
-            ) : phase.kind === "heard" ? (
-              <p className="m-0 text-body whitespace-pre-wrap">{phase.text}</p>
             ) : phase.kind === "message" ? (
               <p role="alert" className="m-0 text-body text-ink-secondary">
                 {t(phase.key, { seconds: phase.seconds ?? 0 })}
@@ -213,36 +193,7 @@ export function DictationSheet({
             ) : null}
           </div>
           <div className="flex items-center justify-center">
-            {phase.kind === "heard" ? (
-              <div className="flex w-full flex-col items-center gap-4">
-                {/* Say it again, where Stop was: records afresh, and the new words replace these */}
-                <IconButton
-                  className="size-[70px]! bg-fill!"
-                  label={t("note.mic")}
-                  icon={<MicIcon size={28} />}
-                  disabled={sending}
-                  onClick={start}
-                />
-                <div className="flex w-full gap-3">
-                  <Button
-                    className="flex-1 whitespace-nowrap"
-                    disabled={sending}
-                    onClick={() => onEdit(phase.text)}
-                  >
-                    {t("note.edit")}
-                  </Button>
-                  <Button
-                    variant="primary"
-                    className="flex-1 whitespace-nowrap"
-                    busy={sending}
-                    onClick={() => void makeTasks(phase.text)}
-                  >
-                    <SparklesIcon size={18} />
-                    {t("note.make_tasks")}
-                  </Button>
-                </div>
-              </div>
-            ) : listening ? (
+            {listening ? (
               <button
                 type="button"
                 aria-label={t("note.stop")}
@@ -261,6 +212,11 @@ export function DictationSheet({
               />
             )}
           </div>
+          {listening && (
+            <p className="m-0 text-center text-footnote text-ink-secondary">
+              {t("note.dictation_hint")}
+            </p>
+          )}
         </div>
       )}
     </Sheet>
