@@ -17,6 +17,7 @@ use App\Http\Controllers\CountsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\NoteController;
 use App\Http\Controllers\NoteDictationController;
+use App\Http\Controllers\NoteExtractController;
 use App\Http\Controllers\NoteSearchController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\PushSubscriptionController;
@@ -95,6 +96,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('notes/{note}', [NoteController::class, 'show']);
         });
         Route::middleware('abilities:notes:write')->group(function () {
+            Route::post('notes/extract', NoteExtractController::class)->middleware('throttle:files');
             Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
             Route::post('notes/dictation', NoteDictationController::class)->middleware('throttle:dictation');
             Route::put('notes/{note}', [NoteController::class, 'update'])->middleware('throttle:notes');

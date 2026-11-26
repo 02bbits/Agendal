@@ -37,7 +37,7 @@ jobs:
       - uses: shivammathur/setup-php@v2
         with:
           php-version: "8.4"
-          extensions: pdo_pgsql, intl, mbstring
+          extensions: pdo_pgsql, intl, mbstring, zip
           coverage: pcov
       - uses: actions/cache@v6
         with:
@@ -49,6 +49,8 @@ jobs:
         run: vendor/bin/pint --test
       - name: Type check (Larastan)
         run: composer analyse
+      - name: Install document extraction tools
+        run: sudo apt-get update && sudo apt-get install -y poppler-utils
       - name: Tests & coverage (Pest, Postgres)
         run: php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/pest --coverage --min=70 --coverage-clover=coverage.xml
       - name: Coverage summary

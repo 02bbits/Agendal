@@ -77,6 +77,14 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 |---|---|---|
 | `note.placeholder` | Write a note… | Capture bar, editor |
 | `note.make_tasks` | Make tasks | Editor primary button |
+
+| `note.upload_file` † | Upload file | Note editor upload button |
+| `note.upload_formats` † | PDF, DOCX, TXT, MD | Supported formats |
+| `note.upload_choose` † | Choose a document | File input accessible label |
+| `note.upload_too_large` † | The file must be smaller than 2 MB. | Upload size error |
+| `note.upload_replace` † | Replace the current note with the uploaded document? | Replace confirmation |
+| `note.upload_too_long` † | The extracted text exceeds the 5,000 character limit. | Extraction length error |
+
 | `note.save_offline` | Save note | Editor primary button while offline |
 | `note.saved_offline` † | Saved. It'll turn into tasks when you're back online. | Toast after Save note (NC) |
 | `note.listening` | Listening… | Mic state ([NC-3](../03-modules/NC-note-capture.md#nc-3)) |

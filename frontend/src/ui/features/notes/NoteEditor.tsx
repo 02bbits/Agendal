@@ -5,6 +5,7 @@ import {
   useLayoutEffect,
   useRef,
   useState,
+  type ChangeEvent,
   type KeyboardEvent,
 } from "react";
 import {
@@ -15,7 +16,7 @@ import {
 } from "../../../lib/draft";
 import { now } from "../../../lib/clock";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
-import { t, type CopyKey } from "../../copy";
+import { isCopyKey, t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
@@ -25,6 +26,8 @@ import { SparklesIcon } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
 import { UndoConflictDialog } from "./UndoConflictDialog";
+import { api } from "../../../lib/api";
+import { ApiRequestError, handleResponse } from "../../../lib/apiError";
 
 const EXAMPLES = [
   "note.example_1",
@@ -136,6 +139,9 @@ export function NoteEditor({
   const sending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<CopyKey | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<NoteSubmitFailure | null>(null);
   // Tasks of the note edited by hand since: how many, while the dialog asks (RV-E16)
   const [conflicts, setConflicts] = useState(0);
@@ -162,7 +168,7 @@ export function NoteEditor({
   // ×, Escape and Back ask first when there is text; the draft only guards against a crash
   const requestClose = () => {
     // Closing mid-request would leave the answer with nowhere to go
-    if (sending.current) return false;
+    if (sending.current || uploading) return false;
     // The conflict dialog (RV-E16) closes first; the edited text stays
     if (conflicts > 0) {
       setConflicts(0);
@@ -294,7 +300,8 @@ export function NoteEditor({
       text: stage === "over" ? tooLong : stage === "hidden" ? "" : counter,
     });
 
-  const canSubmit = VISIBLE.test(text) && stage !== "over" && wait <= 0;
+  const canSubmit =
+    VISIBLE.test(text) && stage !== "over" && wait <= 0 && !uploading;
   const submit = async (confirmConflicts = false) => {
     // The ref, not `busy`: a second tap lands before React has re-rendered
     if (!canSubmit || !onSubmit || sending.current) return;
@@ -334,6 +341,58 @@ export function NoteEditor({
     failure && (failure.error !== "error.rate_limited" || wait > 0)
       ? t(failure.error, { seconds: wait, count: text.length })
       : null;
+
+  const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    // Allow selecting the same file again after an error
+    event.target.value = "";
+    if (!file || uploading || busy) return;
+    setUploadError(null);
+
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    if (![".txt", ".md", ".pdf", ".docx"].includes(extension)) {
+      setUploadError("note.file_type");
+      return;
+    }
+    // The server's 2 MB limit
+    if (file.size > 2 * 1024 * 1024) {
+      setUploadError("note.upload_too_large");
+      return;
+    }
+    // Don't silently replace an existing note or draft
+    if (
+      VISIBLE.test(latest.current) &&
+      !window.confirm(t("note.upload_replace"))
+    ) {
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    setUploading(true);
+    try {
+      // The server checks the text is there and fits a note
+      const { text: extracted } = await handleResponse<{ text: string }>(
+        await api("/notes/extract", { method: "POST", body: formData }),
+      );
+      edit(extracted);
+      textRef.current?.focus();
+    } catch (error) {
+      // The field error is a copy key; anything else (network, 5xx) reads as "couldn't read"
+      const code =
+        error instanceof ApiRequestError
+          ? error.status === 429
+            ? "error.rate_limited_soon"
+            : error.status === 413
+              ? "note.upload_too_large"
+              : (error.fields?.file?.[0] ?? "")
+          : "";
+      setUploadError(isCopyKey(code) ? code : "note.file_failed");
+    } finally {
+      setUploading(false);
+    }
+  };
+
   const fillExample = (example: string) => {
     edit(example);
     const field = textRef.current;
@@ -387,7 +446,7 @@ export function NoteEditor({
               value={text}
               onChange={(event) => edit(event.target.value)}
               onKeyDown={onKeyDown}
-              readOnly={busy}
+              readOnly={busy || uploading}
               aria-invalid={message ? true : undefined}
               aria-describedby={
                 [stage !== "hidden" && counterId, message && errorId]
@@ -398,6 +457,40 @@ export function NoteEditor({
               className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
           </div>
+
+          <div className="flex flex-col gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.md,.pdf,.docx"
+              className="sr-only"
+              aria-label={t("note.upload_choose")}
+              onChange={(event) => void uploadFile(event)}
+              disabled={busy || uploading || offline}
+            />
+
+            <div className="flex items-center gap-3">
+              <Button
+                variant="secondary"
+                size="sm"
+                disabled={busy || uploading || offline}
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {uploading ? t("note.reading_file") : t("note.upload_file")}
+              </Button>
+
+              <span className="text-footnote text-ink-tertiary">
+                {t("note.upload_formats")}
+              </span>
+            </div>
+
+            {uploadError && (
+              <p role="alert" className="m-0 text-footnote text-error">
+                {t(uploadError)}
+              </p>
+            )}
+          </div>
+
           {stage !== "hidden" && (
             <p
               id={counterId}
