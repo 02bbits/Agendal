@@ -108,9 +108,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Offline:** the paperclip is disabled with `note.file_offline`.
 - **Where the text comes from ([Q12](../08-project/open-questions.md#q12)):**
   - Text, Markdown, CSV, Word, and PDFs with a text layer are read on the server, in the sandbox. Nothing leaves the server.
-  - Photos and PDFs without a text layer go to **Google Cloud Vision** (`DOCUMENT_TEXT_DETECTION`, language hints `en` and `vi`), sent inline and never through Cloud Storage. Its API key is read from the file named by `VISION_API_KEY_FILE`, like the LLM key; without it these files answer `note.file_failed` and every other file still works. Only the first 5 pages of a scanned PDF are read (the synchronous API's limit), and `note.file_truncated` says so.
-  - EXIF is stripped before sending, except orientation ([NF-17](../05-quality/nfr.md#nf-17)). Not built yet: the API image has no image library, so photos go to Vision as they are (Vision does not keep them).
-  - The Vision call shares the 10 s timeout. A Vision error or timeout returns `note.file_failed`.
+  - Photos and PDFs without a text layer go to **the app's language model (Gemini)** with the same key, model and kill switch as the fallback ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)), sent inline and not kept. The prompt (`note-ocr-v1`) asks first whether there is any writing, then for the words exactly as written, in their language, untranslated; no writing → `note.file_no_text`. With the model off (or a provider other than Gemini), these files answer `note.file_failed` and every other file still works. Only the first 5 pages of a scanned PDF are read, and `note.file_truncated` says so.
+  - EXIF is stripped before sending, except orientation ([NF-17](../05-quality/nfr.md#nf-17)). Not built yet: the API image has no image library, so photos go to the model as they are.
+  - Each try waits up to 15 s (`NOTE_OCR_TIMEOUT_SECONDS`) and a stalled or busy try is made once more (`NOTE_OCR_ATTEMPTS`). An error or timeout returns `note.file_failed`.
 
 ### 2.5 New task sheet (NC-7)
 
@@ -157,10 +157,10 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e2"></a>NC-E2 | A paste pushes the note over 5,000 characters | Kept in full. Red counter, Make tasks disabled until trimmed | T-NC-102 |
 | <a id="nc-e3"></a>NC-E3 | Microphone permission denied | `note.mic_denied`. The mic stays, so a retry re-asks or explains | T-NC-103 |
 | <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | The capture bar's mic is hidden | T-NC-104 |
-| <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
+| <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to the language model ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
 | <a id="nc-e6"></a>NC-E6 | Password-protected PDF | `note.file_locked` | T-NC-106, SEC-32 |
 | <a id="nc-e7"></a>NC-E7 | Renamed file (an `.exe` saved as `.pdf`) | Magic bytes don't match → `note.file_type` | T-NC-107, SEC-30 |
-| <a id="nc-e8"></a>NC-E8 | HEIC photo from an iPhone | Accepted. Converted to JPEG inside the sandbox, then sent to Google Cloud Vision | T-NC-108 |
+| <a id="nc-e8"></a>NC-E8 | HEIC photo from an iPhone | Accepted. Converted to JPEG inside the sandbox, then sent to the language model | T-NC-108 |
 | <a id="nc-e9"></a>NC-E9 | Extracted text over the space left | Inserted up to 5,000 characters in total, with `note.file_truncated` | T-NC-109 |
 | <a id="nc-e10"></a>NC-E10 | Double tap on Make tasks | The busy button ignores it. A retry carries the same `client_id`, so there is only one note | T-NC-110, SEC-13 |
 | <a id="nc-e11"></a>NC-E11 | Connection drops after the request was sent, before the reply | Queued with the same `client_id`. The replay returns the stored result (`200`). No duplicate | T-NC-111, OFF-02 |
@@ -223,7 +223,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Abuse | Control | Test |
 |---|---|---|
 | Malicious file (parser exploit, zip or XML bomb, polyglot) | [SC-15](../07-architecture/security.md#sc-15) magic bytes, sandbox, 10 s and 50 MB caps | SEC-30–33 |
-| Using extraction as free OCR at scale (Google Cloud Vision is billed per image) | 10/hour, 30/day per user. A monthly Vision quota set in Google Cloud | SEC-10 |
+| Using extraction as free OCR at scale (each photo or scan is a paid model call) | 10/hour, 30/day per user. The calls count against the LLM key's own limits ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) | SEC-10 |
 | Using dictation as free speech-to-text at scale (the model is billed per token) | 10/minute, 100/day per user; 2 minutes and 4 MB per recording | SEC-10 |
 | Files kept with personal data | [SC-16](../07-architecture/security.md#sc-16) deleted in `finally` | SEC-34 |
 | A draft left on a shared device | Wiped on sign-out ([SC-19](../07-architecture/security.md#sc-19)) | SEC-50 |

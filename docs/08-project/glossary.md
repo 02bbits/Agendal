@@ -11,7 +11,7 @@ Technical terms and acronyms. For domain terms (note, plan, change, …), see [t
 | IndexedDB | The browser's on-device database, used for offline data |
 | LWW | Last write wins: on conflict, the newest change is kept (per field here) |
 | Idempotency | Sending the same request twice has the same effect as once |
-| OCR | Reading text from a photo or scanned page (Google Cloud Vision here) |
+| OCR | Reading text from a photo or scanned page (the app's language model here) |
 | LLM | Large language model (Gemini by default, with the team's key), used only as a fallback for notes the rules can't read |
 | Diacritics | Vietnamese accent marks (ă, ê, ơ, ́ …). Vietnamese notes are expected to have them ([business rules](../02-domain/business-rules.md#vietnamese-q3)) |
 | p90 | The 90th percentile: 9 out of 10 cases are at or under the value |
