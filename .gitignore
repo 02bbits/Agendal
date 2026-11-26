@@ -38,6 +38,7 @@ backend/database/database.sqlite
 frontend/.next/
 frontend/next-env.d.ts
 coverage/
+coverage.xml
 
 # AI
 .claude/
