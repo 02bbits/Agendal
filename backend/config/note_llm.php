@@ -79,4 +79,13 @@ return [
     'dictation_timeout_per_30s' => (float) env('NOTE_DICTATION_TIMEOUT_PER_30S', 2),
     'dictation_attempts' => (int) env('NOTE_DICTATION_ATTEMPTS', 2),
 
+    // File to note (NC §2.4, Q12): the model reads photos and scanned PDFs. Its prompt, and seconds per try and
+    // tries, as for dictation. With the model off, those files answer note.file_failed; every other file still works.
+    'ocr_prompt_version' => env('NOTE_OCR_PROMPT_VERSION', 'note-ocr-v1'),
+    'ocr_timeout_seconds' => (float) env('NOTE_OCR_TIMEOUT_SECONDS', 15),
+    'ocr_attempts' => (int) env('NOTE_OCR_ATTEMPTS', 2),
+
+    // Gemini's own API, which takes a photo or a PDF inline (the OpenAI chat format above doesn't take PDFs).
+    'gemini_generate_url' => 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
+
 ];

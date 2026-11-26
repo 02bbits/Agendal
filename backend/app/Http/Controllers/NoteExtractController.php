@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
-use App\Services\Notes\VisionOcr;
+use App\Services\Notes\NoteOcr;
 use DOMDocument;
 use DOMNode;
 use DOMXPath;
@@ -17,7 +17,7 @@ use ZipArchive;
 
 /**
  * Reads the text out of an uploaded file for the note editor (NC §2.4). Text, Markdown, CSV, Word and PDFs
- * with a text layer are read on the server; photos and PDFs without one go to Google Cloud Vision. Nothing is
+ * with a text layer are read on the server; photos and PDFs without one go to the app's language model. Nothing is
  * stored: the upload stays in PHP's temp file and is gone when the request ends. Field errors are copy keys.
  */
 class NoteExtractController extends Controller
@@ -30,7 +30,7 @@ class NoteExtractController extends Controller
     /** Set when a parser's output passed OUTPUT_CAP: what was read is kept and marked truncated. */
     private bool $outputCut = false;
 
-    public function __invoke(Request $request, VisionOcr $vision): JsonResponse
+    public function __invoke(Request $request, NoteOcr $ocr): JsonResponse
     {
         $validated = $request->validate(['file' => ['required', 'file', 'max:'.(int) config('notes.file_max_kb')]], [
             'file.max' => 'note.file_too_big',
@@ -71,13 +71,14 @@ class NoteExtractController extends Controller
             // First 20 pages: enough for a note, and a cap on a PDF built to keep the parser busy
             'pdf' => $this->extractWithCommand(['pdftotext', '-l', '20', '-enc', 'UTF-8', '-nopgbrk', $path, '-']),
             'docx' => $this->extractDocx($path),
-            default => $vision->image((string) file_get_contents($path)) ?? $this->fail('note.file_failed'),
+            default => $ocr->image((string) file_get_contents($path), $extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : 'image/jpeg'))
+                ?? $this->fail('note.file_failed'),
         };
 
-        // A PDF without a text layer is a scan: Vision reads its first pages (NC-E5)
+        // A PDF without a text layer is a scan: the model reads its first pages (NC-E5)
         if ($extension === 'pdf' && trim($text) === '') {
-            $text = $vision->pdf((string) file_get_contents($path)) ?? $this->fail('note.file_failed');
-            $truncated = $pages !== null && $pages > VisionOcr::PDF_PAGES;
+            $text = $ocr->pdf((string) file_get_contents($path)) ?? $this->fail('note.file_failed');
+            $truncated = $pages !== null && $pages > NoteOcr::PDF_PAGES;
         }
 
         if (! is_string($text) || ! mb_check_encoding($text, 'UTF-8')) {

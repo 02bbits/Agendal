@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -328,5 +330,33 @@ class NoteExtractTest extends TestCase
         unlink($path);
 
         return UploadedFile::fake()->createWithContent('test.docx', $bytes);
+    }
+
+    /** A photo read by the model, which answers `$answer`. */
+    private function uploadPhoto(array $answer): TestResponse
+    {
+        $this->authenticate();
+        config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.key_file' => tap(tempnam(sys_get_temp_dir(), 'llm'), fn (string $file) => file_put_contents($file, 'test-only'))]);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['candidates' => [['content' => ['parts' => [['text' => json_encode($answer)]]]]]])]);
+        $file = UploadedFile::fake()->createWithContent('note.png', "\x89PNG\r\n\x1a\n".str_repeat("\0", 16));
+
+        return $this->post(self::ENDPOINT, ['file' => $file], ['Accept' => 'application/json']);
+    }
+
+    public function test_photo_is_read_by_the_model(): void
+    {
+        $this->uploadPhoto(['writing' => true, 'text' => "Mua sữa\nGọi mẹ"])
+            ->assertOk()
+            ->assertJsonPath('text', "Mua sữa\nGọi mẹ")
+            ->assertJsonPath('file_name', 'note.png');
+        Http::assertSent(fn ($request) => str_contains($request->url(), ':generateContent')
+            && $request['contents'][0]['parts'][1]['inline_data']['mime_type'] === 'image/png');
+    }
+
+    public function test_photo_without_writing_is_rejected(): void
+    {
+        $this->uploadPhoto(['writing' => false, 'text' => 'made up'])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.file.0', 'note.file_no_text');
     }
 }
