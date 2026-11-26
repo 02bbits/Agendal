@@ -6,6 +6,7 @@ use App\Http\Middleware\EnsureEmailVerified;
 use App\Http\Middleware\ForgetSessionCookieAfterSignOut;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncTimezone;
+use App\Http\Middleware\TokenAbilities;
 use App\Http\Middleware\TrustCloudflareIp;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authorize;
@@ -65,6 +66,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->appendToGroup('api', SyncTimezone::class);
         $middleware->alias([
             'verified-email' => EnsureEmailVerified::class,
+            // #196: personal access tokens
+            'abilities' => TokenAbilities::class,
+            'session-only' => TokenAbilities::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

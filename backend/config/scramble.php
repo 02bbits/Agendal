@@ -12,6 +12,7 @@ return [
             Agendal's JSON API. Conventions: `docs/07-architecture/api.md`.
 
             - **Auth:** Sanctum cookie session (ADR-007). `GET /sanctum/csrf-cookie`, then `POST /auth/login`. Writes send the `XSRF-TOKEN` cookie's value as `X-XSRF-TOKEN`.
+            - **Tokens:** scripts use a personal access token as `Authorization: Bearer …`. It reaches only the data routes its abilities allow (`tasks:read|write`, `projects:read|write`, `notes:read|write`) and expires after 7, 30 or 90 days. To make one, see `POST /tokens`.
             - **Time zone:** every request sends `X-Timezone` (an IANA zone, ADR-006).
             - **Errors:** one shape, `{"error": {"code", "message", "request_id", "fields"?}}`. `code` is a copy-catalog key. Someone else's resource is a `404`.
             - **Rate limits:** a `429` carries `Retry-After` and names the limit it hit.

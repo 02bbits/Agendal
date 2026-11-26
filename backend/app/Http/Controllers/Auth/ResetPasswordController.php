@@ -62,6 +62,7 @@ class ResetPasswordController extends Controller
         // Every session ends and nobody is signed in: the link proves the inbox, and sign-in still
         // asks for the password and the two-step code (AA §2.3, SC-05)
         DB::table('sessions')->where('user_id', $user->id)->delete();
+        $user->tokens()->delete(); // #196: API tokens too
         if (Auth::guard('web')->id() === $user->id) {
             // This device was signed in as the account: saving its session again would bring it back
             $request->attributes->set('signed_out', true);

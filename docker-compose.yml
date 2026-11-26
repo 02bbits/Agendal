@@ -9,8 +9,8 @@ x-api: &api
   environment:
     DB_HOST: db
     MAIL_HOST: mail
-    # :3001 is the production build (web-prod) for service worker checks
-    SANCTUM_STATEFUL_DOMAINS: localhost:3000,localhost:3001
+    # :3001 is the production build (web-prod) for service worker checks; :8000 the API docs' Try it (#196)
+    SANCTUM_STATEFUL_DOMAINS: localhost:3000,localhost:3001,localhost:8000
 
 services:
   db:
