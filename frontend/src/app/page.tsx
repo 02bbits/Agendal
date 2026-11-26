@@ -1,6 +1,5 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { Suspense } from "react";
 import {
   Button,
@@ -9,18 +8,13 @@ import {
   RateLimited,
   ScreenHeader,
   SortMenu,
+  TaskPanel,
   TaskStoreProvider,
   t,
   useSortMode,
   useTaskPanel,
   type SortMode,
 } from "@/ui";
-
-const TaskPanel = dynamic(
-  () =>
-    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
-  { ssr: false },
-);
 import { LoadError } from "@/ui/components/LoadError";
 import { useHeaderDate } from "./headerDate";
 import { useAppFrame } from "./AppFrame";

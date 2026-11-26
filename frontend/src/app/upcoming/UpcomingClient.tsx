@@ -1,11 +1,11 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
 import {
   Button,
   PlusIcon,
   ScreenHeader,
+  TaskPanel,
   TaskStoreProvider,
   UpcomingScreen,
   UpcomingViewSwitch,
@@ -15,12 +15,6 @@ import {
   type UpcomingViewMode,
   RateLimited,
 } from "@/ui";
-
-const TaskPanel = dynamic(
-  () =>
-    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
-  { ssr: false },
-);
 import { LoadError } from "@/ui/components/LoadError";
 import {
   readFilter,

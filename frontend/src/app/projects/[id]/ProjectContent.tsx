@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useMemo } from "react";
 import {
   ProjectScreen,
+  TaskPanel,
   useFrozenOrder,
   useDropReorder,
   useMoveToProject,
@@ -16,12 +16,6 @@ import {
   type TimeFormat,
   type WeekStart,
 } from "@/ui";
-
-const TaskPanel = dynamic(
-  () =>
-    import("@/ui/features/tasks/details/TaskPanel").then((m) => m.TaskPanel),
-  { ssr: false },
-);
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
 import { useAppFrame } from "../../AppFrame";
 import { liveProgress } from "./projectProgress";

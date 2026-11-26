@@ -3,6 +3,8 @@ import dynamic from "next/dynamic";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
+  NewTaskSheet,
+  NoteEditor,
   ROUTES,
   t,
   type NewTaskSheetProps,
@@ -23,15 +25,6 @@ import { useAppFrame } from "./AppFrameContext";
 import { hasTaskPanel } from "./frameRoutes";
 import type { Overlays } from "./useOverlays";
 
-const NewTaskSheet = dynamic(
-  () =>
-    import("@/ui/features/tasks/new/NewTaskSheet").then((m) => m.NewTaskSheet),
-  { ssr: false },
-);
-const NoteEditor = dynamic(
-  () => import("@/ui/features/notes/NoteEditor").then((m) => m.NoteEditor),
-  { ssr: false },
-);
 const ProjectSheet = dynamic(
   () =>
     import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),

@@ -1,6 +1,13 @@
 import dynamic from "next/dynamic";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import { t, type Project, type ProjectWithCounts, type ToastData } from "@/ui";
+import {
+  createProject,
+  deleteProject,
+  restoreProject,
+  updateProject,
+} from "@/lib/projectApi";
+import { appClock } from "../appClock";
 
 const DeleteProjectDialog = dynamic(
   () =>
@@ -14,13 +21,6 @@ const ProjectSheet = dynamic(
     import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
   { ssr: false },
 );
-import {
-  createProject,
-  deleteProject,
-  restoreProject,
-  updateProject,
-} from "@/lib/projectApi";
-import { appClock } from "../appClock";
 
 export interface ProjectsModalsProps {
   projects: ProjectWithCounts[];
