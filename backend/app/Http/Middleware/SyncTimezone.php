@@ -9,6 +9,7 @@ use App\Services\Clock\UserTimezone;
 use Closure;
 use DateTimeZone;
 use Illuminate\Http\Request;
+use Laravel\Sanctum\PersonalAccessToken;
 use Symfony\Component\HttpFoundation\Response;
 
 class SyncTimezone
@@ -33,7 +34,9 @@ class SyncTimezone
         }
 
         $request->attributes->set('timezone', $timezone);
-        if ($user instanceof User && $user->timezone !== $timezone) {
+        // A personal access token uses its zone for this request only: storing it would move every
+        // reminder, an account change no token may make (#196)
+        if ($user instanceof User && $user->timezone !== $timezone && ! $user->currentAccessToken() instanceof PersonalAccessToken) {
             $this->userTimezone->change($user, $timezone);
         }
 

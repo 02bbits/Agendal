@@ -9,6 +9,7 @@ use App\Http\Requests\RestoreProjectRequest;
 use App\Http\Requests\StoreProjectRequest;
 use App\Http\Requests\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
+use App\Http\Resources\TaskResource;
 use App\Models\Project;
 use App\Services\Clock\ClockInterface;
 use App\Services\Projects\ProjectCounts;
@@ -32,6 +33,7 @@ class ProjectController extends Controller
         private readonly ProjectPatcher $projectPatcher,
     ) {}
 
+    /** @response list<ProjectResource> */
     public function index(): JsonResponse
     {
         $projects = Project::query()
@@ -97,6 +99,7 @@ class ProjectController extends Controller
         });
     }
 
+    /** @response array{project: null, progress: array{done: int, total: int}, open: list<TaskResource>, completed: list<TaskResource>, next_cursor: string|null} */
     public function none(Request $request): JsonResponse
     {
         $cursor = $request->query('cursor');
@@ -108,6 +111,7 @@ class ProjectController extends Controller
         ]);
     }
 
+    /** @response array{project: ProjectResource, progress: array{done: int, total: int}, open: list<TaskResource>, completed: list<TaskResource>, next_cursor: string|null} */
     public function show(Request $request, Project $project): JsonResponse
     {
         $this->ensureNotDeleted($project);
