@@ -64,6 +64,13 @@ export const catalog = {
     "You got this email because of a change to the security of your Agendal account.",
   "note.placeholder": "Write a note…",
   "note.make_tasks": "Make tasks",
+  "note.upload_file": "Upload file",
+  "note.upload_formats": "PDF, DOCX, TXT, MD",
+  "note.upload_choose": "Choose a document",
+  "note.upload_too_large": "The file must be smaller than 2 MB.",
+  "note.upload_replace": "Replace the current note with the uploaded document?",
+  "note.upload_too_long":
+    "The extracted text exceeds the 5,000 character limit.",
   "note.save_offline": "Save note",
   "note.saved_offline": "Saved. It'll turn into tasks when you're back online.",
   "note.listening": "Listening…",
