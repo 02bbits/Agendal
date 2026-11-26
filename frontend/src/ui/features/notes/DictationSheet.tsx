@@ -13,6 +13,7 @@ import { IconButton } from "../../components/IconButton";
 import { MicIcon, XIcon } from "../../components/icons";
 import { Button } from "../../components/Button";
 import { useDrawerDrag } from "../../components/useDrawerDrag";
+import { StatusMark } from "../../components/StatusMark";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
 
@@ -153,7 +154,7 @@ export function DictationSheet({
   return (
     // Over the note's lower part, with the note dimmed behind it; a tap there closes it like ×
     <div
-      className="absolute inset-0 z-10 flex flex-col justify-end rounded-t-sheet bg-scrim motion-safe:animate-fade-in"
+      className="absolute inset-0 z-10 flex flex-col justify-end rounded-t-sheet bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -230,6 +231,7 @@ export function DictationSheet({
               </div>
               {phase.kind === "writing" ? (
                 <p className="m-0 text-center text-body">
+                  <StatusMark />
                   <span className="shiny-text">{t("note.reading")}</span>
                 </p>
               ) : phase.kind === "message" ? (
@@ -262,7 +264,7 @@ export function DictationSheet({
                 )}
               </div>
               {listening && (
-                <p className="m-0 text-center text-footnote text-ink-secondary">
+                <p className="m-0 text-center text-overline text-ink-tertiary">
                   {t("note.dictation_hint")}
                 </p>
               )}

@@ -58,6 +58,31 @@
   }
 }
 
+/* StatusMark: the progress arc stretches and shrinks as the glyph turns (after React Bits' Status Mark) */
+.status-arc {
+  stroke-dasharray: 25 100;
+  animation: status-arc 1.4s ease-in-out infinite;
+}
+@keyframes status-arc {
+  0% {
+    stroke-dasharray: 8 100;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 60 100;
+    stroke-dashoffset: -15;
+  }
+  100% {
+    stroke-dasharray: 8 100;
+    stroke-dashoffset: -100;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-arc {
+    animation: none;
+  }
+}
+
 @keyframes auth-rise {
   from {
     opacity: 0;

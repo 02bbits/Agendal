@@ -30,6 +30,9 @@ export function useOverlays(pathname: string, router: Router) {
     setEditing(false);
     setEditingNote(null);
   }, []);
+  // A result opened over the screen the note was written on (wide, not the Notes screen)
+  const [resultId, setResultId] = useState<string | null>(null);
+  const closeResult = useCallback(() => setResultId(null), []);
 
   // Closing the editor takes its history entry off with history.back(), which is only done a
   // moment later. The result goes on top of where the editor was opened once that has happened,
@@ -42,6 +45,11 @@ export function useOverlays(pathname: string, router: Router) {
         if (done) return;
         done = true;
         window.removeEventListener("popstate", go);
+        // Wide: the result opens over this screen, so the user stays where they wrote the note
+        if (notePanelWide && pathname !== ROUTES.notes) {
+          setResultId(id);
+          return;
+        }
         const target = notePanelWide
           ? `/notes?note=${encodeURIComponent(id)}`
           : ROUTES.note(id);
@@ -54,7 +62,7 @@ export function useOverlays(pathname: string, router: Router) {
       setTimeout(go, EDITOR_CLOSE_WAIT_MS);
       setEditing(false);
     },
-    [router, notePanelWide],
+    [router, notePanelWide, pathname],
   );
 
   const [searching, setSearching] = useState(false);
@@ -80,6 +88,8 @@ export function useOverlays(pathname: string, router: Router) {
       editFollowupNote,
       closeNoteEditor,
       openResult,
+      resultId,
+      closeResult,
     },
     search: { searching, openSearch, closeSearch },
     settings: { settingsTab, openSettings, closeSettings },

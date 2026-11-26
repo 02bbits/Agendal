@@ -21,13 +21,12 @@ import { formatDay, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteResult, TimeFormat } from "../../domain/types";
 import { Button } from "../../components/Button";
-import { Chip } from "../../components/Chip";
 import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
+  ArrowDownIcon,
+  ArrowUpIcon,
   ImageIcon,
   MicIcon,
   PaperclipIcon,
@@ -35,18 +34,14 @@ import {
   XIcon,
 } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
+import { useBackgroundScrollLock } from "../../components/useBackgroundScrollLock";
 import { useModalFocus } from "../../components/useModalFocus";
 import { useDrawerDrag } from "../../components/useDrawerDrag";
+import { StatusMark } from "../../components/StatusMark";
 import { DictationSheet } from "./DictationSheet";
 import { UndoConflictDialog } from "./UndoConflictDialog";
 import { api } from "../../../lib/api";
 import { ApiRequestError, handleResponse } from "../../../lib/apiError";
-
-const EXAMPLES = [
-  "note.example_1",
-  "note.example_2",
-  "note.example_3",
-] as const;
 
 // NU-E15: spaces, line breaks and zero-width characters are not text
 const VISIBLE = /[^\s​-‍⁠﻿]/;
@@ -96,6 +91,7 @@ function ReadingStatus() {
   }, []);
   return (
     <>
+      <StatusMark />
       <span className="shiny-text">{t("note.reading")}</span>
       <span aria-hidden="true" className="tabular-nums">
         {" · "}
@@ -107,6 +103,8 @@ function ReadingStatus() {
 
 // NF-14: the client mirrors the server's notes.max_length; the counter shows from 4,500 (NC §2.1)
 const NOTE_MAX = 5000;
+// How often a new note's time is brought up to date while the editor is open
+const CLOCK_TICK_MS = 10_000;
 const COUNTER_FROM = 4500;
 // "full" is exactly 5,000: announced again, as A11Y-32 asks, but still allowed
 type CounterStage = "hidden" | "near" | "full" | "over";
@@ -244,6 +242,8 @@ export function NoteEditor({
     onClose();
   };
   useModalFocus(editorRef, textRef, true, requestClose);
+  // As for the app's popups: the page behind is dimmed and doesn't scroll
+  useBackgroundScrollLock(editorRef);
   useHistoryEntry(true, requestClose);
   const drawer = useDrawerDrag(requestClose);
 
@@ -410,11 +410,28 @@ export function NoteEditor({
   const [dictating, setDictating] = useState(false);
   // Where the dictated words go: the selection when the mic was tapped, or the end
   const dictationAt = useRef<[number, number] | null>(null);
-  const startDictation = () => {
+  // A file or dictation over a note that already has text asks first: Replace or Add (NC §2.3, §2.4)
+  const [choosing, setChoosing] = useState<((replace: boolean) => void) | null>(
+    null,
+  );
+  const replaceNext = useRef(false);
+  function withMode(run: (replace: boolean) => void) {
+    if (VISIBLE.test(latest.current)) setChoosing(() => run);
+    else run(false);
+  }
+  // In the button's tap, so the recorder and the file picker may still start (iOS needs the tap)
+  function choose(replace: boolean) {
+    const run = choosing;
+    setChoosing(null);
+    run?.(replace);
+  }
+  const startDictation = (replace: boolean) => {
     const field = textRef.current;
-    dictationAt.current = field
-      ? [field.selectionStart, field.selectionEnd]
-      : null;
+    dictationAt.current = replace
+      ? [0, latest.current.length]
+      : field
+        ? [field.selectionStart, field.selectionEnd]
+        : null;
     setTools(false);
     setDictating(true);
   };
@@ -439,8 +456,15 @@ export function NoteEditor({
       field?.setSelectionRange(cursor, cursor);
     });
   };
-  // "Today 15:35": when a new note is written, or when a saved one was
-  const [writtenAt] = useState(() => note?.written_at ?? now().toISOString());
+  // "Today 15:35": a new note shows the time now and keeps up while it is open (it is sent with the
+  // time of Make tasks); a saved one shows when it was written
+  const [clock, setClock] = useState(now);
+  useEffect(() => {
+    if (note) return;
+    const id = setInterval(() => setClock(now()), CLOCK_TICK_MS);
+    return () => clearInterval(id);
+  }, [note]);
+  const writtenAt = note?.written_at ?? clock.toISOString();
   const zone = timeZone();
   const written = localDateTime(writtenAt, zone);
   const stamp = `${formatDay(written.date, localDateTime(now().toISOString(), zone).date)} ${formatTime(written.time, timeFormat)}`;
@@ -449,7 +473,7 @@ export function NoteEditor({
   const [removingFile, setRemovingFile] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
   // From Upload file or a file dropped on the note (NC §2.4); one file per note
-  const uploadFile = async (file: File) => {
+  const uploadFile = async (file: File, replace: boolean) => {
     if (uploading || busy || attachment) return;
     if (offline) return setUploadError("note.file_offline");
     setUploadError(null);
@@ -479,7 +503,7 @@ export function NoteEditor({
         }),
       );
       // Added at the end, after a blank line; text that doesn't fit is refused, nothing is added (NC-E9)
-      const current = latest.current.trimEnd();
+      const current = replace ? "" : latest.current.trimEnd();
       const gap = VISIBLE.test(current) ? "\n\n" : "";
       if ((current + gap + read.text).length > NOTE_MAX)
         return setUploadError("note.file_too_long");
@@ -544,22 +568,13 @@ export function NoteEditor({
     else setRemovingFile(true);
   };
 
-  const fillExample = (example: string) => {
-    edit(example);
-    const field = textRef.current;
-    field?.focus();
-    // The cursor goes to the end, after React has put the example in the field
-    requestAnimationFrame(() =>
-      field?.setSelectionRange(example.length, example.length),
-    );
-  };
-
   return (
     <>
-      {/* A drawer that slides up from the capture bar to about the middle of the screen, over the
-          content column; a tap on the dimmed screen closes it like Cancel */}
+      {/* A drawer that slides up from the capture bar, as tall as the note and its tray (so nothing scrolls
+          and the margins stay even) up to the screen's height, over the content column; a tap on the
+          dimmed screen closes it like Cancel */}
       <div
-        className="fixed inset-0 z-[70] bg-scrim motion-safe:animate-fade-in"
+        className="fixed inset-0 z-[70] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
         onMouseDown={(event) => {
           if (event.target === event.currentTarget) requestClose();
         }}
@@ -578,7 +593,7 @@ export function NoteEditor({
           if (!file) return;
           event.preventDefault();
           setDropping(false);
-          void uploadFile(file);
+          withMode((replace) => void uploadFile(file, replace));
         }}
       >
         <div
@@ -586,7 +601,7 @@ export function NoteEditor({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="absolute inset-x-0 bottom-[var(--keyboard-inset,0px)] mx-auto flex h-[60dvh] max-h-[calc(100dvh-env(safe-area-inset-top)-24px-var(--keyboard-inset,0px))] min-h-[320px] w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:right-[var(--panel-w,0px)] md:left-[var(--sidebar-w,0px)] md:max-w-[712px]"
+          className="absolute inset-x-0 bottom-[var(--keyboard-inset,0px)] mx-auto flex max-h-[calc(100dvh-env(safe-area-inset-top)-24px-var(--keyboard-inset,0px))] min-h-[320px] w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:right-[var(--panel-w,0px)] md:left-[var(--sidebar-w,0px)] md:max-w-[712px]"
           style={drawer.style}
         >
           <div
@@ -618,7 +633,7 @@ export function NoteEditor({
           </p>
           <div
             ref={paperScroll}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-4 md:px-gutter-wide"
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-4 [scrollbar-width:none] md:px-gutter-wide"
           >
             {attachment && (
               <div className="flex shrink-0 items-center gap-3 rounded-box bg-surface p-4">
@@ -681,93 +696,74 @@ export function NoteEditor({
                 className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[linear-gradient(transparent_23px,var(--color-fill-2)_23px)] bg-[length:100%_24px] leading-6 p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
               />
             </div>
-            {uploadError && (
-              <p role="alert" className="m-0 text-footnote text-error">
-                {t(uploadError)}
-              </p>
-            )}
-            {stage !== "hidden" && (
-              <p
-                id={counterId}
-                className={cx(
-                  "m-0 text-footnote tabular-nums",
-                  stage === "over" ? "text-error" : "text-ink-secondary",
-                )}
-              >
-                {counter}
-                {stage === "over" && <> · {tooLong}</>}
-              </p>
-            )}
             <p aria-live="polite" className="sr-only">
               {announced.text}
             </p>
-            <p className="m-0 text-footnote text-ink-secondary">
-              {t(attachment ? "note.file_read_hint" : "note.editor_hint")}
-            </p>
-            {attachment?.truncated && (
-              <p className="m-0 text-footnote text-ink-secondary">
-                {t("note.file_truncated")}
-              </p>
-            )}
-            {/* Always there, so screen readers hear it when it fills; hidden while empty so it leaves no gap */}
-            <p
-              role="status"
-              className={cx(
-                "m-0 text-footnote text-ink-secondary",
-                !reading && !uploading && "sr-only",
+            {/* Status, counter and errors share one place under the paper that keeps room for two lines,
+                so the drawer (as tall as the note) doesn't grow or jump when one shows */}
+            <div className="-mt-2 flex min-h-9 flex-col gap-1">
+              {uploadError && (
+                <p role="alert" className="m-0 text-footnote text-error">
+                  {t(uploadError)}
+                </p>
               )}
-            >
-              {reading ? (
-                <ReadingStatus />
-              ) : uploading ? (
-                <>
-                  {t("note.reading_file")}{" "}
-                  <button
-                    type="button"
-                    className="focus-ring cursor-pointer rounded-field border-0 bg-transparent p-0 text-footnote font-semibold text-primary"
-                    onClick={() => uploadAbort.current?.abort()}
-                  >
-                    {t("common.cancel")}
-                  </button>
-                </>
-              ) : (
-                ""
-              )}
-            </p>
-            {message && (
-              <div className="flex items-center justify-between gap-3">
+              {stage !== "hidden" && (
                 <p
-                  id={errorId}
-                  role="alert"
-                  className="m-0 text-footnote text-error"
+                  id={counterId}
+                  className={cx(
+                    "m-0 text-footnote tabular-nums",
+                    stage === "over" ? "text-error" : "text-ink-secondary",
+                  )}
                 >
-                  {message}
+                  {counter}
+                  {stage === "over" && <> · {tooLong}</>}
                 </p>
-                {failure?.error === "note.send_failed" && (
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => submit()}
-                  >
-                    {t("common.retry")}
-                  </Button>
+              )}
+              {attachment?.truncated && (
+                <p className="m-0 text-footnote text-ink-secondary">
+                  {t("note.file_truncated")}
+                </p>
+              )}
+              {/* Always there, so screen readers hear it when it fills; hidden while empty */}
+              <p
+                role="status"
+                className={cx(
+                  "m-0 text-footnote text-ink-secondary",
+                  !reading && !uploading && "sr-only",
                 )}
-              </div>
-            )}
-            {!VISIBLE.test(text) && (
-              <div>
-                <p className="m-0 mb-2 text-overline font-semibold text-ink-secondary uppercase">
-                  {t("note.examples_title")}
-                </p>
-                <ul className="m-0 flex list-none flex-col items-start gap-2 p-0">
-                  {EXAMPLES.map((key) => (
-                    <li key={key}>
-                      <Chip onClick={() => fillExample(t(key))}>{t(key)}</Chip>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+              >
+                {reading ? (
+                  <ReadingStatus />
+                ) : uploading ? (
+                  <>
+                    <StatusMark />
+                    <span className="shiny-text">{t("note.reading_file")}</span>
+                  </>
+                ) : (
+                  ""
+                )}
+              </p>
+              {message && (
+                <div className="flex items-center justify-between gap-3">
+                  <p
+                    id={errorId}
+                    role="alert"
+                    className="m-0 text-footnote text-error"
+                  >
+                    {message}
+                  </p>
+                  {failure?.error === "note.send_failed" && (
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => submit()}
+                    >
+                      {t("common.retry")}
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
           <div className="border-t border-separator bg-bar px-gutter pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg md:px-gutter-wide md:pb-4">
             <input
@@ -780,7 +776,7 @@ export function NoteEditor({
                 const file = event.target.files?.[0];
                 // Allow selecting the same file again after an error
                 event.target.value = "";
-                if (file) void uploadFile(file);
+                if (file) void uploadFile(file, replaceNext.current);
               }}
               disabled={busy || uploading || offline}
             />
@@ -789,56 +785,73 @@ export function NoteEditor({
                 <div className="flex gap-3">
                   {canDictate() && (
                     <Button
-                      className="flex-1"
+                      size="lg"
+                      className="flex-1 px-3! whitespace-nowrap"
                       disabled={busy || offline}
-                      onClick={startDictation}
+                      onClick={() => withMode(startDictation)}
                     >
                       <MicIcon size={18} />
                       {t("note.mic")}
                     </Button>
                   )}
                   <Button
-                    className="flex-1"
+                    size="lg"
+                    className="flex-1 px-3! whitespace-nowrap"
                     disabled={busy || uploading || offline || !!attachment}
-                    onClick={() => {
-                      setTools(false);
-                      fileInputRef.current?.click();
-                    }}
+                    onClick={() =>
+                      withMode((replace) => {
+                        setTools(false);
+                        replaceNext.current = replace;
+                        fileInputRef.current?.click();
+                      })
+                    }
                   >
                     <PaperclipIcon size={18} />
                     {t("note.upload_file")}
                   </Button>
                 </div>
-                <p className="m-0 text-center text-footnote text-ink-tertiary">
-                  {t(offline ? "note.file_offline" : "note.upload_formats")}
-                </p>
+                {offline && (
+                  <p className="m-0 text-center text-footnote text-ink-tertiary">
+                    {t("note.file_offline")}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex items-center gap-3">
               <IconButton
-                className="size-[50px]! min-h-[50px]! shrink-0 bg-fill!"
+                className="size-11! min-h-11! shrink-0 bg-fill!"
                 label={t("note.tools")}
                 aria-expanded={tools}
-                icon={tools ? <ChevronDownIcon /> : <ChevronUpIcon />}
+                icon={tools ? <ArrowDownIcon /> : <ArrowUpIcon />}
                 onClick={() => setTools((open) => !open)}
               />
-              <Button
-                variant="primary"
-                size="lg"
-                className="flex-1"
-                busy={busy}
-                disabled={!canSubmit}
-                onClick={() => submit()}
-              >
-                <SparklesIcon size={18} />
-                {t(
-                  note
-                    ? "note.replan"
-                    : offline
-                      ? "note.save_offline"
-                      : "note.make_tasks",
-                )}
-              </Button>
+              {uploading ? (
+                <Button
+                  size="lg"
+                  className="flex-1"
+                  onClick={() => uploadAbort.current?.abort()}
+                >
+                  {t("common.cancel")}
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="lg"
+                  className="flex-1"
+                  busy={busy}
+                  disabled={!canSubmit}
+                  onClick={() => submit()}
+                >
+                  <SparklesIcon size={18} />
+                  {t(
+                    note
+                      ? "note.replan"
+                      : offline
+                        ? "note.save_offline"
+                        : "note.make_tasks",
+                  )}
+                </Button>
+              )}
             </div>
           </div>
           {dictating && (
@@ -858,6 +871,23 @@ export function NoteEditor({
           void submit(true);
         }}
         onCancel={() => setConflicts(0)}
+      />
+      <Dialog
+        open={!!choosing}
+        history={false}
+        title={t("note.replace_title")}
+        onClose={() => setChoosing(null)}
+        actionsLayout="row"
+        actions={
+          <>
+            <Button onClick={() => choose(false)}>
+              {t("note.add_action")}
+            </Button>
+            <Button variant="primary" onClick={() => choose(true)}>
+              {t("note.replace_action")}
+            </Button>
+          </>
+        }
       />
       <Dialog
         open={removingFile}

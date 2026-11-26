@@ -53,7 +53,7 @@ Rules:
 | Body / task title | 400 · 15/20 | Rows, fields |
 | Body 2 | 400 · 13/18 `ink2` | Subtitles, excerpts |
 | Small / meta | 400 · 12/16 `ink2` | Task meta line, helper text |
-| Overline | 600 · 11/14 · uppercase · +0.03em `ink2` | Date above titles, "TRY WRITING", group labels |
+| Overline | 600 · 11/14 · uppercase · +0.03em `ink2` | Date above titles, group labels |
 | Tab label | 500 · 10/12 | Tab bar |
 | Button | 600 · 15 (sm 13, xs 12) | Buttons |
 
@@ -91,12 +91,12 @@ Class names refer to `css/agendal.css` in the canvas package.
 | **Tab bar** `.tabbar` | 4 tabs: Inbox, Upcoming, Projects, Notes. 22px icon + 10px label, `ink2`; active = `accent`. |
 | **Nav bar** `.nav` | 44px: back link "‹ Notes/Inbox" (accent) left, title centre (optional sparkle), action right (⋯). |
 | **Buttons** `.btn` | Primary (`accent` / `on-accent`), tint (`accent-tint` / `accent`), ghost (`fill` / `ink`), red (`danger` / `on-danger`), red-tint (`danger-tint` / `danger-text`). Sizes 44 / 34 pill / 28 pill. One primary per screen. |
-| **Chips** `.chip` | 28px pills; default `accent-tint`; `.ghost` = `fill`; selected = `accent` / `on-accent`. Used for filters and "Try writing" examples. |
+| **Chips** `.chip` | 28px pills; default `accent-tint`; `.ghost` = `fill`; selected = `accent` / `on-accent`. Used for filters. |
 | **Segmented** `.seg` | `fill` track, selected segment `card` with small shadow. Priority Low/Medium/High; Upcoming All/Scheduled/Due only (desktop). |
 | **Field** `.field` | 44px, `card` bg, 1px `border`, radius 10, leading icon `ink2`, label above (12/16 500). |
 | **Badges** `.badge` | 18px uppercase 10px/700: CREATED (success tint), CHANGED (accent tint), DELETED (danger tint), NEW. |
 | **Banners** `.banner` | Tinted 12px-radius boxes with icon + bold line + body: info (`accent-tint`), warn, err, ok. |
-| **Note paper** (note editor) | A drawer: grabber, Cancel · "✦ New note", the time written ("TODAY 15:35", overline), then a white card, label "Your note", note text 17/24 on **ruled lines** (1px `fill2` every 24px, aligned under each text line; 24px keeps every line on whole device pixels at 125% and 150% screen scaling, so they all look the same; the card grows with the text so the lines move with it), card min-height 286px. Bottom bar: a round ^ (`fill`) that opens Dictate a note / Upload file, beside Make tasks. Same side margins on every row. |
+| **Note paper** (note editor) | A drawer: grabber, Cancel · "✦ New note", the time written ("TODAY 15:35", overline), then a white card, label "Your note", note text 17/24 on **ruled lines** (1px `fill2` every 24px, aligned under each text line; 24px keeps every line on whole device pixels at 125% and 150% screen scaling, so they all look the same; the card grows with the text so the lines move with it), card min-height 286px. Bottom bar: a round arrow (`fill`, up, down while open) that opens Dictate a note / Upload file, beside Make tasks; every button 44px tall. The drawer is as tall as its content, so it doesn't scroll and the side margins stay even. Same side margins on every row. |
 | **Change row** `.change` | Badge · bold title · meta · pencil edit link. Grouped in a card under an overline "✓ 3 TASKS CREATED". |
 | **Needs-OK box** `.okbox` | 1.5px `warning` border, 14px radius: alert icon + "This needs your OK", consequence line, change rows on `bg`, buttons Cancel (ghost) + "Apply N changes" (red). |
 | **File chip** `.filechip` | 34px tinted file icon, name (600) + "234 KB · 2 pages", remove (×) button. |

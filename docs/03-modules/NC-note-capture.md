@@ -15,11 +15,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 | ID | Requirement | Priority | Acceptance criteria |
 |---|---|---|---|
-| <a id="nc-1"></a>NC-1 | Open the note editor in one tap from any list screen | Must | The capture bar and the Notes tab open a full-screen editor with the cursor in the text; examples show while it is empty |
+| <a id="nc-1"></a>NC-1 | Open the note editor in one tap from any list screen | Must | The capture bar and the Notes tab open the editor with the cursor in the text |
 | <a id="nc-2"></a>NC-2 | Write a free-text note containing several tasks | Must | No fields are required; Make tasks is enabled as soon as there is text |
-| <a id="nc-3"></a>NC-3 | Dictate a note | Should | Dictate a note in the note's ^ tray opens the dictation sheet over the note: "Listening…" with Stop; the words heard go into the note at the cursor, to check before Make tasks |
+| <a id="nc-3"></a>NC-3 | Dictate a note | Should | Dictate a note in the note's tray opens the dictation sheet over the note: "Listening…" with Stop; the words heard go into the note at the cursor, to check before Make tasks |
 | <a id="nc-4"></a>NC-4 | Turn a file into a note | Should | Accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB; extracted text lands in the editor to check; a removable file chip shows; unsupported or oversized files get a specific error; the result shows "From \<file name>" |
-| <a id="nc-5"></a>NC-5 | Start from an example | Could | Tapping an example chip fills the editor |
+| <a id="nc-5"></a>NC-5 | Start from an example | Could | Dropped in #166: the editor shows no examples |
 | <a id="nc-6"></a>NC-6 | Capture while offline | Must | The button reads Save note; the note is stored on the device as "Waiting for connection"; on reconnect it is processed automatically with a toast "Back online. N notes turned into M tasks." |
 | <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Custom; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
 
@@ -41,9 +41,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Editor (NC-1, NC-2, NC-5)
 
-- **Layout:** a drawer that slides up from the capture bar to about the middle of the screen (60% of its height), over the content column, up to 712px wide from 768px; the screen is dimmed behind and a tap on it closes like Cancel. On a phone the grabber sets how far it is open (up to just under the top), and letting it go below a quarter of the screen closes it like Cancel; from 768px its height is fixed. Cancel on the left and "✦ New note" in the centre; under them the time the note was written ("Today 15:35", in the account's clock); the "Your note" card (429px minimum, text on ruled lines that move with the text: the card grows and the drawer scrolls, keeping the last line of text in view); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with a round ^ beside Make tasks. The ^ opens a tray with Dictate a note (§2.3) and Upload file (§2.4). Every row keeps the same side margins (20px, 40px from 768px). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
+- **Layout:** a drawer that slides up from the capture bar, as tall as the note and its tray (so nothing scrolls and the side margins stay even; it scrolls, with no visible scrollbar, only on a screen too short for it), over the content column, up to 712px wide from 768px; the screen is dimmed behind and a tap on it closes like Cancel. On a phone the grabber sets how far it is open (up to just under the top), and letting it go below a quarter of the screen closes it like Cancel; from 768px its height is fixed. Cancel on the left and "✦ New note" in the centre; under them the time ("Today 15:35", in the account's clock: for a new note the time now, kept up to date while it is open; for a saved one when it was written); the "Your note" card (429px minimum, text on ruled lines that move with the text: the card grows and the drawer scrolls, keeping the last line of text in view); under it one place, kept two lines tall so the drawer doesn't jump, for the counter, `note.reading` / `note.reading_file` and errors; then a bottom bar with a round arrow beside Make tasks, every button 44px tall. The arrow (up, down while open) opens a tray with Dictate a note (§2.3) and Upload file (§2.4). Every row keeps the same side margins (20px, 40px from 768px). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
 - **Focus:** the text area is focused inside the tap handler, so iOS opens the keyboard (focusing after an `await` doesn't).
-- **Examples** show while the text is empty: 3 chips ("sql quiz monday 9am, email the group tonight", "done email the group", "move gym to sunday"). A chip replaces the empty text and keeps focus at the end ([NC-5](#nc-5)).
+- **Examples:** none ([NC-5](#nc-5) dropped in #166).
 - **Make tasks** is enabled when the text has a visible character ([NU-E15](NU-note-understanding.md#nu-e15)), and not while listening or reading a file. Ctrl/Cmd+Enter submits ([UX-12](../01-product/ux-standards.md#ux-12)).
 - **Counter:** hidden below 4,500 characters. From 4,500 it shows `4,612 / 5,000`. The note stops at 5,000: nothing more can be typed, pasted or dictated ([NF-14](../05-quality/nfr.md#nf-14)).
 - **Paste:** the text area is plain text, so formatting is dropped by the platform. A paste that would cross 5,000 characters keeps only what fits.
@@ -59,7 +59,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 - **Online:**
   - The client generates `client_id` (UUID v4) and `written_at` (with offset), and reads `timezone` from `Intl`.
-  - It posts to `POST /notes`, shows `note.reading` after 300 ms, then replaces the editor with the RV screen.
+  - It posts to `POST /notes`, shows `note.reading` after 300 ms (with a small progress mark: a ring whose arc turns), then closes the editor and opens the RV screen. From 1280px it opens as the Notes popup (or side panel, by Page view) over the screen the note was written on, which stays as it was: closing or applying returns there. Narrower, it is the note's page, and Back returns to that screen.
   - A network error or `5xx` queues the note ([NU §3](NU-note-understanding.md#3-state-matrix)).
   - `client_id` is made when the editor opens and kept for retries ([NC-E10](#nc-e10), [NC-E11](#nc-e11)). Changing the text after a failed send gives the next try a new `client_id`, because the server answers a known id with its stored result and ignores the body ([ADR-003](../07-architecture/decisions/ADR-003-offline-note-queue-and-idempotency.md)).
   - A network error or `5xx` keeps the note on the device under the same `client_id` (status `pending`), closes the editor and shows `note.processing_failed`; it is sent again on the next sync ([IM-53](../08-project/tasks.md#im-53)). `422` shows its inline error and keeps the text. `429` shows `error.rate_limited` with a countdown from `Retry-After`, and Make tasks stays off until it ends.
@@ -76,9 +76,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Engine ([Q11](../08-project/open-questions.md#q11)):** the device records the audio and the server has the app's language model ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) write it down word for word, in the languages spoken: a note often mixes Vietnamese and English. The browser's own speech service is not used: it is unreliable on iPhone and missing in Firefox. Where the browser can't record audio, the mic button is hidden, not disabled.
 - **Recording:** 16 kHz mono WAV, made on the device and sent inline to `POST /notes/dictation`. A recording with less than 300 ms of loud sound (a click, a cough) is not sent and ends with `note.no_speech`. The audio is never stored or logged.
 - **Writing down:** the model first says whether it heard clear speech, so silence or noise gives no words instead of made-up ones. It writes what was said as a note would be typed: English words inside Vietnamese speech stay in English (call mum, ROI), numbers and times are digits ("5 giờ chiều", "9am"), and a comma goes only between tasks, since the rules split on it ([NU §2.2](NU-note-understanding.md)).
-- **Dictation sheet:** Dictate a note in the note's ^ tray opens it over the note (the capture bar has no mic). Recording starts at once in that tap (iOS only starts audio inside a tap). It is a drawer that slides up inside the note, over its lower part, with the note dimmed behind it; its grabber works as the note's does (adjustable on a phone, fixed from 768px). It has no header: a round × beside the main button drops the recording (nothing is sent), as do Escape, Back and a tap on the dimmed note.
+- **Dictation sheet:** Dictate a note in the note's tray opens it over the note (the capture bar has no mic). When the note already has text it first asks `note.replace_title`: Add puts the words at the cursor, Replace makes them the whole note. Recording starts at once in that tap (iOS only starts audio inside a tap). It is a drawer that slides up inside the note, over its lower part, with the note dimmed behind it; its grabber works as the note's does (adjustable on a phone, fixed from 768px). It has no header: a round × beside the main button drops the recording (nothing is sent), as do Escape, Back and a tap on the dimmed note.
 - **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, the sheet first shows `note.mic_notice`, with × and Continue under it; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
-- **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), × beside a round red Stop, and under them `note.dictation_hint`. `note.listening` is announced.
+- **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), × beside a round red Stop, and under them `note.dictation_hint` as a small note (overline size, `ink3`). `note.listening` is announced.
 - **Stopping:** Stop, 8 s of silence, or 2 minutes total. `note.reading` shows under the waveform while the model writes the words down (a few seconds). The words show then, not while speaking.
 - **The words heard:** the sheet closes and the words go into the note at the cursor (a selection is replaced, [NC-E17](#nc-e17)), with a space either side where needed, and only as many as fit in the note's 5,000 characters; the cursor goes to their end. There is no live transcript: the user checks and changes the words in the note, then taps Make tasks.
 - **Errors:**
@@ -90,15 +90,16 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.4 File to note (NC-4, Should)
 
-- **Picker:** Upload file in the note's ^ tray opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.webp` (HEIC is not read yet: it needs a converter in the sandbox, NC-E8). A file can also be dragged onto the open note: the paper shows a dashed outline while it is over the note, and the drop uploads it the same way (the browser never opens it over the note). One file per note: Upload file is off, and a drop is ignored, while a file is attached; offline a drop shows `note.file_offline`.
+- **Picker:** Upload file in the note's tray opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.webp` (HEIC is not read yet: it needs a converter in the sandbox, NC-E8). A file can also be dragged onto the open note: the paper shows a dashed outline while it is over the note, and the drop uploads it the same way (the browser never opens it over the note). One file per note: Upload file is off, and a drop is ignored, while a file is attached; offline a drop shows `note.file_offline`.
 - **Client checks, before uploading:**
   - Size ≤ 5 MB, else `note.file_too_big`
   - Extension on the list, else `note.file_type`
-- **Upload:** `POST /notes/extract` (multipart). `note.reading_file` shows with a Cancel link, and the request is aborted on Cancel.
+- **Upload:** `POST /notes/extract` (multipart). `note.reading_file` shows (with the progress mark), and Make tasks becomes Cancel, which aborts the request.
+- **A note that already has text:** Upload file and a dropped file first ask `note.replace_title` with Add (the file's text goes at the end, as below) and Replace (it takes the note's place).
 - **Server:** the [NF-17](../05-quality/nfr.md#nf-17) pipeline. Typed errors: `note.file_type` (magic bytes don't match), `note.file_locked`, `note.file_no_text`, `note.file_failed` (timeout or parser error).
 - **On success:**
   - The text is appended at the end, separated by a blank line if the editor already had text.
-  - A card above the note shows a tile for the file's type (a picture for a photo; otherwise its extension, PDF in red, DOCX in blue, CSV in green, MD in amber, TXT in grey), the file name, its size and, for a PDF, its pages ("234 KB · 2 pages"), with a remove (×) button. The note's label reads `note.text_label_from` and the helper line `note.file_read_hint`.
+  - A card above the note shows a tile for the file's type (a picture for a photo; otherwise its extension, PDF in red, DOCX in blue, CSV in green, MD in amber, TXT in grey), the file name, its size and, for a PDF, its pages ("234 KB · 2 pages"), with a remove (×) button. The note's label reads `note.text_label_from`.
   - The cursor moves to the start of the inserted text, so the user checks it.
 - **Too much text:** if the file's text would push the note over 5,000 characters, nothing is added and `note.file_too_long` shows. The server refuses a file with more than 5,000 characters of text the same way. `note.file_truncated` is only for a scanned PDF of more than 5 pages, of which the first 5 are read.
 - **Removing the chip:**
@@ -143,7 +144,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Component | Empty | Busy | Success | Error | Offline | Permission denied |
 |---|---|---|---|---|---|---|
 | Capture bar | Placeholder `note.placeholder` | — | — | — | Same (still opens the editor) | — |
-| Editor | Examples, Make tasks disabled | `note.reading` after 300 ms, read-only | → RV screen, draft cleared | `422`: inline error under the text. `5xx` / network: queued, `note.processing_failed` | `note.save_offline`, paperclip disabled | — |
+| Editor | Make tasks disabled | `note.reading` after 300 ms, read-only | → RV screen, draft cleared | `422`: inline error under the text. `5xx` / network: queued, `note.processing_failed` | `note.save_offline`, paperclip disabled | — |
 | Dictation sheet | First use: `note.mic_notice` | `note.listening` with Stop, then `note.reading` | Closes; the words are in the note | `note.no_speech`, `note.dictation_failed`, `error.rate_limited` | Mic disabled, `note.dictation_offline` | `note.mic_denied` |
 | File | — | `note.reading_file` with Cancel | Chip plus text | Typed file errors (§2.4) | Disabled, `note.file_offline` | — |
 | New task sheet | Add disabled | Busy button ([UX-06](../01-product/ux-standards.md#ux-06)) | Toast `task.added` | `422`: field error. `task.limit` | Works. The task syncs later | — |
@@ -155,7 +156,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e1"></a>NC-E1 | The app is closed mid-note (tab killed, phone locked) | The draft from the last 500 ms debounce or `pagehide` is restored next time | T-NC-101, OFF-01 |
 | <a id="nc-e2"></a>NC-E2 | A paste would push the note over 5,000 characters | Only what fits is pasted; the note stops at 5,000 | T-NC-102 |
 | <a id="nc-e3"></a>NC-E3 | Microphone permission denied | `note.mic_denied`. The mic stays, so a retry re-asks or explains | T-NC-103 |
-| <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | Dictate a note is hidden from the ^ tray | T-NC-104 |
+| <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | Dictate a note is hidden from the tray | T-NC-104 |
 | <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to the language model ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
 | <a id="nc-e6"></a>NC-E6 | Password-protected PDF | `note.file_locked` | T-NC-106, SEC-32 |
 | <a id="nc-e7"></a>NC-E7 | Renamed file (an `.exe` saved as `.pdf`) | Magic bytes don't match → `note.file_type` | T-NC-107, SEC-30 |
@@ -172,7 +173,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.dictation_hint`, `note.tools`, `note.mic_denied`, `note.text_label_from`, `note.file_read_hint`, `note.file_keep_text`, `note.file_remove_text`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.dictation_hint`, `note.tools`, `note.mic_denied`, `note.text_label_from`, `note.file_keep_text`, `note.file_remove_text`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 
@@ -238,14 +239,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | Req | Acceptance criterion | Tests |
 |---|---|---|
 | [NC-1](#nc-1) | The capture bar and the Notes tab open a full-screen editor with the cursor in the text | T-NC-01 (E2E, both entries, focus asserted), T-NC-02 (iOS WebKit keyboard focus) |
-| [NC-1](#nc-1) | Examples show while the text is empty | T-NC-03 |
+| [NC-1](#nc-1) | No examples (NC-5 dropped in #166) | T-NC-03 |
 | [NC-2](#nc-2) | No fields are required. Make tasks is enabled as soon as there is text | T-NC-04, T-NC-115 |
 | [NC-3](#nc-3) | The mic opens the dictation sheet over the note: "Listening…" with Stop; on Stop the words go into the note at the cursor | T-NC-10 (component with a mocked recorder and `POST /notes/dictation`), T-NC-11, T-NC-12 |
 | [NC-4](#nc-4) | Accepts the listed types up to 5 MB, and the text lands in the editor to check | T-NC-20 (one per type), T-NC-21 |
 | [NC-4](#nc-4) | A removable file chip | T-NC-22 (unchanged → text removed), T-NC-23 (edited → dialog) |
 | [NC-4](#nc-4) | Unsupported or oversized files get a specific error | T-NC-24 (client checks), T-NC-25 (server codes) |
 | [NC-4](#nc-4) | The result shows "From \<file name>" | T-RV-01 (RV) |
-| [NC-5](#nc-5) | Tapping an example chip fills the editor | T-NC-30 |
+| [NC-5](#nc-5) | Dropped in #166 | T-NC-30 |
 | [NC-6](#nc-6) | The button reads Save note. Stored on the device as "Waiting for connection" | T-NC-40, OFF-03 |
 | [NC-6](#nc-6) | Processed on reconnect with the toast "Back online. N notes turned into M tasks." | OFF-04 (Playwright `setOffline`), T-NC-41 (toast counts, singular and plural) |
 | [NC-7](#nc-7) | `+` opens New task. Only a title is required | T-NC-50 |

@@ -13,15 +13,12 @@ import {
   type NoteListPage,
 } from "../../lib/noteApi";
 import { useMediaQuery } from "../../ui/components/useMediaQuery";
-import { useModalFocus } from "../../ui/components/useModalFocus";
-import { useBackgroundScrollLock } from "../../ui/components/useBackgroundScrollLock";
 import { NotesScreen } from "../../ui/features/notes/NotesScreen";
 import { TextButton } from "../../ui/components/TextButton";
-import { cx } from "../../ui/components/cx";
-import { PanelHeader } from "../../ui/features/tasks/details/PanelHeader";
 import { t } from "../../ui/copy";
 import type { NoteFilter } from "../../ui/domain/types";
 import NoteResultClient from "./[id]/NoteResultClient";
+import { NoteResultFrame, useNoteModal } from "./NoteResultFrame";
 import { useDataChanged } from "../useDataChanged";
 
 // The next page loads once the end of the list is within one screen
@@ -93,15 +90,6 @@ function NotesContent({ noteId }: { noteId?: string }) {
     };
   }, [filter, requestKey]);
   useDataChanged(() => setRevision((value) => value + 1));
-  useEffect(() => {
-    if (!selected) return;
-    document.documentElement.dataset.noteSelected = "open";
-    if (wide) document.documentElement.dataset.notePanel = "open";
-    return () => {
-      delete document.documentElement.dataset.notePanel;
-      delete document.documentElement.dataset.noteSelected;
-    };
-  }, [wide, selected]);
   const close = useCallback(() => {
     if (pushed.current) {
       pushed.current = false;
@@ -113,22 +101,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const requestClose = useCallback(() => {
     if (closeGuard.current?.() !== false) close();
   }, [close]);
-  useModalFocus(panelRef, panelRef, !!selected && wide, requestClose);
-  useEffect(() => {
-    if (!selected || !wide) return;
-    const background = [
-      ...document.querySelectorAll<HTMLElement>("[data-shell-navigation]"),
-    ];
-    const previous = background.map((element) => element.inert);
-    background.forEach((element) => {
-      element.inert = true;
-    });
-    return () => {
-      background.forEach((element, index) => {
-        element.inert = previous[index]!;
-      });
-    };
-  }, [selected, wide]);
+  useNoteModal(panelRef, !!selected, wide, requestClose);
   const navigate = useCallback(
     (href: string) => {
       const match = href.match(/^\/notes\/([^/?#]+)/);
@@ -215,75 +188,24 @@ function NotesContent({ noteId }: { noteId?: string }) {
         )}
       </div>
       {selected && (
-        <>
-          {/* Wide: a modal like Task details (popup or side panel, by Page view). Narrower: a page in the
-              column, like the task screen. One tree for both, so a resize doesn't remount the note */}
-          {wide && (
-            <div
-              aria-hidden="true"
-              className={cx(
-                "fixed inset-0 z-[54] backdrop-blur-[2px] motion-safe:animate-fade-in",
-                popup ? "bg-scrim/60" : "bg-scrim",
-              )}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={requestClose}
-            />
-          )}
-          <div
-            className={
-              wide && popup
-                ? "pointer-events-none fixed inset-0 z-[55] flex items-center justify-center p-4 sm:p-6 md:p-8"
-                : "contents"
-            }
-          >
-            <aside
-              ref={panelRef}
-              role={wide ? "dialog" : undefined}
-              aria-modal={wide || undefined}
-              tabIndex={-1}
-              data-modal-host={wide || undefined}
-              aria-label={t("nav.notes")}
-              className={cx(
-                "flex flex-col outline-none",
-                wide &&
-                  (popup
-                    ? "pointer-events-auto max-h-[85vh] w-full max-w-[760px] overflow-hidden rounded-2xl border border-separator/60 bg-surface shadow-2xl motion-safe:animate-scale-in"
-                    : "fixed inset-y-0 right-0 z-[55] w-full max-w-[400px] border-l border-separator bg-surface pr-[env(safe-area-inset-right,0px)] shadow-2xl motion-safe:animate-panel-in"),
-              )}
-            >
-              {wide && <NoteScrollLock panelRef={panelRef} />}
-              {wide && (
-                <PanelHeader title={t("nav.notes")} onClose={requestClose} />
-              )}
-              <div
-                className={
-                  wide
-                    ? "relative min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pt-4"
-                    : undefined
-                }
-              >
-                <NoteResultClient
-                  key={selected}
-                  id={selected}
-                  presentation={wide ? "panel" : "screen"}
-                  onClose={close}
-                  closeGuardRef={closeGuard}
-                />
-              </div>
-            </aside>
-          </div>
-        </>
+        // Wide: a modal like Task details (popup or side panel, by Page view). Narrower: a page in the column
+        <NoteResultFrame
+          wide={wide}
+          popup={popup}
+          panelRef={panelRef}
+          onClose={requestClose}
+        >
+          <NoteResultClient
+            key={selected}
+            id={selected}
+            presentation={wide ? "panel" : "screen"}
+            onClose={close}
+            closeGuardRef={closeGuard}
+          />
+        </NoteResultFrame>
       )}
     </div>
   );
-}
-function NoteScrollLock({
-  panelRef,
-}: {
-  panelRef: React.RefObject<HTMLElement | null>;
-}) {
-  useBackgroundScrollLock(panelRef);
-  return null;
 }
 export default function NotesClient({ noteId }: { noteId?: string }) {
   return (

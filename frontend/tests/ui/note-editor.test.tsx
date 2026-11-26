@@ -35,41 +35,6 @@ describe("NoteEditor (IM-41)", () => {
     expect(document.activeElement).toBe(field());
   });
 
-  it("shows three examples while empty and hides them once there is text (T-NC-03)", async () => {
-    render(<NoteEditor onClose={() => {}} />);
-    expect(
-      screen
-        .getAllByRole("button", { pressed: false })
-        .map((b) => b.textContent),
-    ).toEqual([
-      "sql quiz monday 9am, email the group tonight",
-      "done email the group",
-      "move gym to sunday",
-    ]);
-    await userEvent.type(field(), "buy milk");
-    expect(
-      screen.queryByRole("button", { name: "move gym to sunday" }),
-    ).toBeNull();
-    await userEvent.clear(field());
-    expect(
-      screen.getByRole("button", { name: "move gym to sunday" }),
-    ).toBeTruthy();
-    await expectAxeCleanInBothThemes();
-  });
-
-  it("an example fills the editor and keeps focus at the end (NC-5)", async () => {
-    render(<NoteEditor onClose={() => {}} />);
-    await userEvent.click(
-      screen.getByRole("button", { name: "move gym to sunday" }),
-    );
-    const input = field() as HTMLTextAreaElement;
-    expect(input.value).toBe("move gym to sunday");
-    expect(document.activeElement).toBe(input);
-    await vi.waitFor(() =>
-      expect(input.selectionStart).toBe(input.value.length),
-    );
-  });
-
   it("enables Make tasks as soon as there is text, and nothing else is required (T-NC-04)", async () => {
     const onSubmit = vi.fn().mockResolvedValue(made);
     render(<NoteEditor onClose={() => {}} onSubmit={onSubmit} />);
@@ -665,6 +630,45 @@ describe("NoteEditor submit (IM-42)", () => {
           name: "Your note, from todo.txt",
         }),
       ).toHaveProperty("value", "call mom");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("asks Replace or Add before a file goes into a note with text (NC §2.4)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({
+              text: "call mom",
+              truncated: false,
+              file_name: "todo.txt",
+              pages: null,
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    try {
+      render(<NoteEditor onClose={() => {}} />);
+      const input = field() as HTMLTextAreaElement;
+      await userEvent.type(input, "buy milk");
+      const drop = () =>
+        fireEvent.drop(screen.getByRole("dialog"), {
+          dataTransfer: {
+            files: [new File(["call mom"], "todo.txt")],
+            types: ["Files"],
+          },
+        });
+
+      drop();
+      await userEvent.click(
+        await screen.findByRole("button", { name: t("note.replace_action") }),
+      );
+      await screen.findByRole("button", { name: "Remove todo.txt" });
+      expect(input.value).toBe("call mom");
     } finally {
       vi.unstubAllGlobals();
     }

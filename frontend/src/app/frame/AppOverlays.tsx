@@ -24,6 +24,7 @@ import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
 import { AppSettingsScreen } from "./AppSettingsScreen";
+import { NoteResultOverlay } from "./NoteResultOverlay";
 import { hasTaskPanel } from "./frameRoutes";
 import type { Overlays } from "./useOverlays";
 
@@ -108,6 +109,14 @@ export function AppOverlays({
             notesChanged(result.note.id);
             note.openResult(result.note.id);
           }}
+        />
+      )}
+      {wide && note.resultId && (
+        <NoteResultOverlay
+          key={note.resultId}
+          id={note.resultId}
+          popup={settings.pageView !== "full"}
+          onClose={note.closeResult}
         />
       )}
       {searchPopup.searching && (

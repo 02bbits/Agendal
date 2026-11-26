@@ -5,7 +5,7 @@
 
 ## Main flow
 
-1. The editor opens as a drawer with the cursor in the text and the time it was written. Examples show while it is empty ([NC-1](../03-modules/NC-note-capture.md#nc-1), [NC-5](../03-modules/NC-note-capture.md#nc-5)).
+1. The editor opens as a drawer with the cursor in the text and the time ([NC-1](../03-modules/NC-note-capture.md#nc-1)).
 2. The user writes a note with several things in it ([NC-2](../03-modules/NC-note-capture.md#nc-2)), or dictates it ([NC-3](../03-modules/NC-note-capture.md#nc-3)) or attaches a file ([NC-4](../03-modules/NC-note-capture.md#nc-4)). Extracted text lands in the editor to check first. Dictated words go into the note at the cursor when the user taps Stop.
 3. The user taps **Make tasks**, which is enabled as soon as there is text.
 4. The assistant splits the note into items ([NU-1](../03-modules/NU-note-understanding.md#nu-1)), extracts each item's fields ([NU-2](../03-modules/NU-note-understanding.md#nu-2)), matches commands to existing tasks ([NU-3](../03-modules/NU-note-understanding.md#nu-3)), and skips non-tasks ([NU-4](../03-modules/NU-note-understanding.md#nu-4)).
