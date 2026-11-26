@@ -91,15 +91,15 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.4 File to note (NC-4, Should)
 
-- **Picker:** the paperclip opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.heic,.webp`. One file per note.
+- **Picker:** Upload file in the note's ^ tray opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.webp` (HEIC is not read yet: it needs a converter in the sandbox, NC-E8). One file per note: Upload file is off while a file is attached.
 - **Client checks, before uploading:**
   - Size ≤ 5 MB, else `note.file_too_big`
   - Extension on the list, else `note.file_type`
-- **Upload:** `POST /files/extract` (multipart). `note.reading_file` shows with a Cancel link, and the request is aborted on Cancel.
+- **Upload:** `POST /notes/extract` (multipart). `note.reading_file` shows with a Cancel link, and the request is aborted on Cancel.
 - **Server:** the [NF-17](../05-quality/nfr.md#nf-17) pipeline. Typed errors: `note.file_type` (magic bytes don't match), `note.file_locked`, `note.file_no_text`, `note.file_failed` (timeout or parser error).
 - **On success:**
   - The text is appended at the end, separated by a blank line if the editor already had text.
-  - A chip with the file name and a remove (×) button appears above the text.
+  - A card above the note shows the file name, its size and, for a PDF, its pages ("234 KB · 2 pages"), with a remove (×) button. The note's label reads `note.text_label_from` and the helper line `note.file_read_hint`.
   - The cursor moves to the start of the inserted text, so the user checks it.
 - **Too much text:** if extracted text would push the note over 5,000 characters, only what fits is inserted, with `note.file_truncated`.
 - **Removing the chip:**
@@ -108,8 +108,8 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Offline:** the paperclip is disabled with `note.file_offline`.
 - **Where the text comes from ([Q12](../08-project/open-questions.md#q12)):**
   - Text, Markdown, CSV, Word, and PDFs with a text layer are read on the server, in the sandbox. Nothing leaves the server.
-  - Photos and PDFs without a text layer go to **Google Cloud Vision** (`DOCUMENT_TEXT_DETECTION`, language hints `en` and `vi`), sent inline and never through Cloud Storage. Only the first 5 pages of a scanned PDF are read (the synchronous API's limit), and `note.file_truncated` says so.
-  - EXIF is stripped before sending, except orientation ([NF-17](../05-quality/nfr.md#nf-17)).
+  - Photos and PDFs without a text layer go to **Google Cloud Vision** (`DOCUMENT_TEXT_DETECTION`, language hints `en` and `vi`), sent inline and never through Cloud Storage. Its API key is read from the file named by `VISION_API_KEY_FILE`, like the LLM key; without it these files answer `note.file_failed` and every other file still works. Only the first 5 pages of a scanned PDF are read (the synchronous API's limit), and `note.file_truncated` says so.
+  - EXIF is stripped before sending, except orientation ([NF-17](../05-quality/nfr.md#nf-17)). Not built yet: the API image has no image library, so photos go to Vision as they are (Vision does not keep them).
   - The Vision call shares the 10 s timeout. A Vision error or timeout returns `note.file_failed`.
 
 ### 2.5 New task sheet (NC-7)
@@ -173,7 +173,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ## 5. Copy keys
 
-`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.dictation_hint`, `note.tools`, `note.mic_denied`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
+`note.placeholder`, `note.make_tasks`, `note.save_offline`, `note.saved_offline`, `note.reading`, `note.too_long`, `note.draft_restored`, `note.discard_title`, `note.discard_body`, `common.discard_action`, `common.keep_editing`, `note.listening`, `note.stop`, `note.heard`, `note.mic_notice`, `note.dictation_hint`, `note.tools`, `note.mic_denied`, `note.text_label_from`, `note.file_read_hint`, `note.file_keep_text`, `note.file_remove_text`, `note.no_speech`, `note.dictation_failed`, `note.dictation_offline`, `note.reading_file`, `note.file_too_big`, `note.file_type`, `note.file_locked`, `note.file_no_text`, `note.file_failed`, `note.file_truncated`, `note.file_remove_title`, `note.file_offline`, `note.waiting`, `note.back_online_one`, `note.back_online_other`, `task.new`, `task.added`, `task.limit`, `common.discard`, `app.storage_low`.
 
 ## 6. Accessibility
 
@@ -186,11 +186,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 ## 7. API contract
 
 - `POST /notes`: [NU module §7](NU-note-understanding.md#7-api-contract).
-- `POST /files/extract` (multipart `file`):
+- `POST /notes/extract` (multipart `file`):
 
 | Status | Body |
 |---|---|
-| `200` | `{text, truncated: bool, file_name}`. `text` is at most 5,000 characters |
+| `200` | `{text, truncated: bool, file_name, pages}`. `text` is at most 5,000 characters; `pages` is a PDF's page count, else null |
 | `413` | `note.file_too_big` |
 | `415` | `note.file_type` |
 | `422` | `note.file_locked`, `note.file_no_text` |
