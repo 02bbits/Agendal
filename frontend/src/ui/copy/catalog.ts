@@ -68,10 +68,6 @@ export const catalog = {
   "note.upload_formats":
     "Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB.",
   "note.upload_choose": "Choose a document",
-  "note.upload_too_large": "The file must be smaller than 2 MB.",
-  "note.upload_replace": "Replace the current note with the uploaded document?",
-  "note.upload_too_long":
-    "The extracted text exceeds the 5,000 character limit.",
   "note.save_offline": "Save note",
   "note.saved_offline": "Saved. It'll turn into tasks when you're back online.",
   "note.listening": "Listening…",
