@@ -380,10 +380,35 @@ export function TaskStoreProvider({
         removeRow(removed.id);
       }
       let madeNextId: string | undefined;
+      let undone = false;
+      let serverDeletedIds: string[] | undefined;
       showToast({
         message: t("task.deleted", { title: task.title }),
         actionLabel: t("common.undo"),
-        onAction: () => restore(task, madeNextId),
+        onAction: () => {
+          undone = true;
+          if (scope === "future" && task.repeat !== "never") {
+            for (const removed of removedTasks) {
+              insertRow(removed);
+            }
+            const idsToRestore =
+              serverDeletedIds ?? removedTasks.map((r) => r.id);
+            void Promise.all(
+              idsToRestore.map((id) =>
+                api.restore(id).then((saved) => {
+                  insertRow(saved);
+                  if (typeof window !== "undefined") {
+                    notifyTaskCreated(saved);
+                  }
+                }),
+              ),
+            ).catch((err) => {
+              handleSaveError(err, () => restore(task, madeNextId));
+            });
+            return;
+          }
+          restore(task, madeNextId);
+        },
       });
       if (typeof window !== "undefined") {
         for (const removed of removedTasks) {
@@ -396,6 +421,7 @@ export function TaskStoreProvider({
       }
       api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
         (res) => {
+          if (undone) return;
           if (res && "next" in res && res.next) {
             madeNextId = res.next.id;
             insertRow(res.next);
@@ -404,6 +430,7 @@ export function TaskStoreProvider({
             }
           }
           if (res && "deleted_ids" in res && Array.isArray(res.deleted_ids)) {
+            serverDeletedIds = res.deleted_ids;
             for (const deletedId of res.deleted_ids) {
               removeRow(deletedId);
               if (typeof window !== "undefined") {

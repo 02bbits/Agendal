@@ -361,6 +361,64 @@ it('DELETE repeating task with scope=future deletes all following occurrences in
         ->and(Task::find($thirdId))->toBeNull();
 });
 
+it('DELETE repeating task with scope=one keeps done occurrences, restores on undo, and allows completing again', function () {
+    $user = User::factory()->create();
+    $doneOneId = (string) Str::uuid();
+    $doneTwoId = (string) Str::uuid();
+    $openId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $doneOneId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-24',
+        'due_date' => '2026-10-24',
+        'repeat' => 'daily',
+        'done' => true,
+    ]);
+    Task::forceCreate([
+        'id' => $doneTwoId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-25',
+        'repeat' => 'daily',
+        'done' => true,
+        'previous_occurrence_id' => $doneOneId,
+    ]);
+    Task::forceCreate([
+        'id' => $openId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-26',
+        'repeat' => 'daily',
+        'done' => false,
+        'previous_occurrence_id' => $doneTwoId,
+    ]);
+
+    $resDelete = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$openId}?scope=one")
+        ->assertStatus(200);
+    $nextId = $resDelete->json('next.id');
+
+    expect(Task::find($doneOneId))->not->toBeNull()
+        ->and(Task::find($doneTwoId))->not->toBeNull()
+        ->and(Task::find($openId))->toBeNull()
+        ->and(Task::find($nextId))->not->toBeNull();
+
+    $this->actingAs($user)->postJson("/api/v1/tasks/{$openId}/restore")
+        ->assertOk();
+
+    expect(Task::find($openId))->not->toBeNull()
+        ->and(Task::find($nextId))->toBeNull()
+        ->and(Task::find($doneOneId)?->done)->toBeTrue()
+        ->and(Task::find($doneTwoId)?->done)->toBeTrue();
+
+    $this->actingAs($user)->postJson("/api/v1/tasks/{$openId}/complete")
+        ->assertOk()
+        ->assertJsonPath('task.done', true);
+});
+
 it('deleting one then restore removes the next and brings back the old', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();

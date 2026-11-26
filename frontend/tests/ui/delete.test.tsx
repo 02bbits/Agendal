@@ -235,4 +235,50 @@ describe("Delete a task (TK-5)", () => {
       }),
     ).toBeTruthy();
   });
+
+  it("deleting all repeating tasks removes the entire series and Undo restores all of them", async () => {
+    const tDone = task({
+      id: "t-done",
+      title: "Daily done",
+      due_date: "2026-10-24",
+      repeat: "daily",
+      done: true,
+    });
+    const tOpen = task({
+      id: "t-open",
+      title: "Daily open",
+      due_date: "2026-10-25",
+      repeat: "daily",
+      done: false,
+      previous_occurrence_id: "t-done",
+    });
+    const { wrap, memory } = setup([tDone, tOpen]);
+
+    vi.spyOn(memory.api, "remove").mockResolvedValueOnce({
+      deleted_ids: ["t-done", "t-open"],
+    });
+    const restoreSpy = vi
+      .spyOn(memory.api, "restore")
+      .mockImplementation(async (id) => (id === "t-done" ? tDone : tOpen));
+
+    render(wrap(<Screen id={tOpen.id} />));
+    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
+    await userEvent.click(
+      screen.getByRole("checkbox", { name: "Delete all repeating tasks" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+
+    const listAfterDelete = screen.getByRole("heading", { level: 1 });
+    expect(listAfterDelete.textContent).not.toContain("Daily done");
+    expect(listAfterDelete.textContent).not.toContain("Daily open");
+
+    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+    expect(restoreSpy).toHaveBeenCalledWith("t-done");
+    expect(restoreSpy).toHaveBeenCalledWith("t-open");
+    const listHeading = await screen.findByRole("heading", {
+      name: /Daily done/,
+    });
+    expect(listHeading.textContent).toContain("Daily open");
+  });
 });
