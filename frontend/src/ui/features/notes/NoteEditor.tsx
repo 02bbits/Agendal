@@ -155,6 +155,7 @@ export function NoteEditor({
   };
   const editorRef = useRef<HTMLDivElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const paperScroll = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const fieldId = useId();
   const [confirming, setConfirming] = useState(false);
@@ -188,7 +189,6 @@ export function NoteEditor({
   // The paper grows with the text instead of scrolling inside the field, and the editor scrolls as one
   // page: a textarea's own scroll doesn't move its ruled background in every browser, so the words
   // would slide over the lines. Measured again when the text or the width changes.
-  const paperScroll = useRef<HTMLDivElement>(null);
   const fit = useCallback(() => {
     const field = textRef.current;
     if (!field) return;
