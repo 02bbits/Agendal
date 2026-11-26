@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Pulse\HostHealth;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
+use App\Support\ApiDocs;
 use App\Support\EmailInput;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -42,6 +43,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        ApiDocs::register();
+
         // #192 slow-query alert, at error so the alert channel picks it up. SQL only: the bindings
         // carry note and task text (SC-21). request_id comes from Context, like every log line
         DB::listen(function (QueryExecuted $query) {
