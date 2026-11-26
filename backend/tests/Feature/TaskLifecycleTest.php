@@ -271,7 +271,7 @@ it('DELETE a repeating task without scope or with scope=future → 422 on scope,
     expect($respInvalidScope->json('error.fields.scope'))->toContain('Choose This task only or This and all future.');
 });
 
-it('DELETE repeating task with scope=one returns next with shifted dates and deletes the old row', function () {
+it('DELETE repeating task with scope=one deletes only that row without creating next', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -285,14 +285,12 @@ it('DELETE repeating task with scope=one returns next with shifted dates and del
         'done' => false,
     ]);
 
-    $response = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
-        ->assertStatus(200);
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
 
-    expect($response->json('next.start_date'))->toBe('2026-11-02')
-        ->and($response->json('next.due_date'))->toBe('2026-11-04')
-        ->and(Task::find($taskId))->toBeNull()
-        ->and(Task::withTrashed()->find($taskId)->trashed())->toBeTrue();
-    assertTaskSchema($response->json('next'));
+    expect(Task::find($taskId))->toBeNull()
+        ->and(Task::withTrashed()->find($taskId)->trashed())->toBeTrue()
+        ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
 });
 
 it('DELETE repeating task with scope=future is 204 and no new row', function () {
@@ -316,7 +314,108 @@ it('DELETE repeating task with scope=future is 204 and no new row', function () 
         ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
 });
 
-it('deleting one then restore removes the next and brings back the old', function () {
+it('DELETE repeating task with scope=future deletes all following occurrences in the series', function () {
+    $user = User::factory()->create();
+    $firstId = (string) Str::uuid();
+    $secondId = (string) Str::uuid();
+    $thirdId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $firstId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-28',
+        'repeat' => 'weekly',
+        'done' => true,
+    ]);
+    Task::forceCreate([
+        'id' => $secondId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-11-02',
+        'due_date' => '2026-11-04',
+        'repeat' => 'weekly',
+        'done' => true,
+        'previous_occurrence_id' => $firstId,
+    ]);
+    Task::forceCreate([
+        'id' => $thirdId,
+        'user_id' => $user->id,
+        'title' => 'Weekly sync',
+        'start_date' => '2026-11-09',
+        'due_date' => '2026-11-11',
+        'repeat' => 'weekly',
+        'done' => false,
+        'previous_occurrence_id' => $secondId,
+    ]);
+
+    $res = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$secondId}?scope=future")
+        ->assertStatus(200);
+
+    expect($res->json('deleted_ids'))->toEqualCanonicalizing([$firstId, $secondId, $thirdId])
+        ->and(Task::find($firstId))->toBeNull()
+        ->and(Task::find($secondId))->toBeNull()
+        ->and(Task::find($thirdId))->toBeNull();
+});
+
+it('DELETE repeating task with scope=one keeps done occurrences, restores on undo, and allows completing again', function () {
+    $user = User::factory()->create();
+    $doneOneId = (string) Str::uuid();
+    $doneTwoId = (string) Str::uuid();
+    $openId = (string) Str::uuid();
+
+    Task::forceCreate([
+        'id' => $doneOneId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-24',
+        'due_date' => '2026-10-24',
+        'repeat' => 'daily',
+        'done' => true,
+    ]);
+    Task::forceCreate([
+        'id' => $doneTwoId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-25',
+        'due_date' => '2026-10-25',
+        'repeat' => 'daily',
+        'done' => true,
+        'previous_occurrence_id' => $doneOneId,
+    ]);
+    Task::forceCreate([
+        'id' => $openId,
+        'user_id' => $user->id,
+        'title' => 'Daily standup',
+        'start_date' => '2026-10-26',
+        'due_date' => '2026-10-26',
+        'repeat' => 'daily',
+        'done' => false,
+        'previous_occurrence_id' => $doneTwoId,
+    ]);
+
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$openId}?scope=one")
+        ->assertStatus(204);
+
+    expect(Task::find($doneOneId))->not->toBeNull()
+        ->and(Task::find($doneTwoId))->not->toBeNull()
+        ->and(Task::find($openId))->toBeNull()
+        ->and(Task::where('previous_occurrence_id', $openId)->count())->toBe(0);
+
+    $this->actingAs($user)->postJson("/api/v1/tasks/{$openId}/restore")
+        ->assertOk();
+
+    expect(Task::find($openId))->not->toBeNull()
+        ->and(Task::find($doneOneId)?->done)->toBeTrue()
+        ->and(Task::find($doneTwoId)?->done)->toBeTrue();
+
+    $this->actingAs($user)->postJson("/api/v1/tasks/{$openId}/complete")
+        ->assertOk()
+        ->assertJsonPath('task.done', true);
+});
+
+it('deleting one then restore brings back the old', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -330,22 +429,18 @@ it('deleting one then restore removes the next and brings back the old', functio
         'done' => false,
     ]);
 
-    $resDelete = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
-        ->assertStatus(200);
-    $nextId = $resDelete->json('next.id');
-    expect(Task::find($nextId))->not->toBeNull()
-        ->and(Task::find($taskId))->toBeNull();
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
+    expect(Task::find($taskId))->toBeNull();
 
     $resRestore = $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/restore")
         ->assertStatus(200);
 
     expect($resRestore->json('id'))->toBe($taskId)
-        ->and(Task::find($taskId))->not->toBeNull()
-        ->and(Task::find($nextId))->toBeNull()
-        ->and(Task::withTrashed()->find($nextId)->trashed())->toBeTrue();
+        ->and(Task::find($taskId))->not->toBeNull();
 });
 
-it('delete one, restore, delete one again works (unique previous_occurrence_id)', function () {
+it('delete one, restore, delete one again works', function () {
     $user = User::factory()->create();
     $taskId = (string) Str::uuid();
 
@@ -359,20 +454,17 @@ it('delete one, restore, delete one again works (unique previous_occurrence_id)'
         'done' => false,
     ]);
 
-    $res1 = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
-        ->assertStatus(200);
-    $nextId1 = $res1->json('next.id');
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
 
     $this->actingAs($user)->postJson("/api/v1/tasks/{$taskId}/restore")
         ->assertStatus(200);
 
-    $res2 = $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
-        ->assertStatus(200);
-    $nextId2 = $res2->json('next.id');
+    $this->actingAs($user)->deleteJson("/api/v1/tasks/{$taskId}?scope=one")
+        ->assertStatus(204);
 
-    expect($nextId2)->toBe($nextId1)
-        ->and(Task::find($nextId2))->not->toBeNull()
-        ->and(Task::find($taskId))->toBeNull();
+    expect(Task::find($taskId))->toBeNull()
+        ->and(Task::where('previous_occurrence_id', $taskId)->count())->toBe(0);
 });
 
 it('done repeating task with one creates nothing', function () {

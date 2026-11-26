@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { t, type Project, type Task } from "@/ui";
-import { TASK_CREATED } from "@/ui/domain/appEvents";
+import { t, type Project } from "@/ui";
 import {
   getProject,
   listProjects,
   type ProjectDetailResponse,
 } from "@/lib/projectApi";
-import { SYNCED } from "@/lib/sync";
 import { rateLimited, type ApiRequestError } from "@/lib/apiError";
 
 /** No project as a project, so the same screen shows it. */
@@ -22,14 +20,9 @@ function noProject(progress: ProjectDetailResponse["progress"]) {
   } as Project & { open: number; done: number };
 }
 
-const belongsTo = (task: Task, id: string) =>
-  id === "none"
-    ? !task.project_id || task.project_id === "none"
-    : task.project_id === id;
-
 /**
  * One project's page data: the project with its open tasks and the first completed ones (more on
- * request), every project for moving a task, and new tasks made elsewhere or pulled by sync.
+ * request), and every project for moving a task.
  */
 export function useProjectDetail(id: string) {
   const [data, setData] = useState<ProjectDetailResponse | null>(null);
@@ -81,31 +74,6 @@ export function useProjectDetail(id: string) {
     setLoading(true);
     setAttempt((n) => n + 1);
   };
-
-  // A task made elsewhere (New task, sync, IM-52) joins Open once
-  useEffect(() => {
-    const onTask = (e: Event) => {
-      const created = (e as CustomEvent<Task>).detail;
-      if (!created || !belongsTo(created, id)) return;
-      setData((prev) => {
-        if (!prev || prev.open.some((t) => t.id === created.id)) return prev;
-        return {
-          ...prev,
-          open: [...prev.open, created],
-          progress: {
-            done: prev.progress.done,
-            total: prev.progress.total + 1,
-          },
-        };
-      });
-    };
-    window.addEventListener(TASK_CREATED, onTask);
-    window.addEventListener(SYNCED, onTask);
-    return () => {
-      window.removeEventListener(TASK_CREATED, onTask);
-      window.removeEventListener(SYNCED, onTask);
-    };
-  }, [id]);
 
   /** The next page of completed tasks; false when it failed. */
   const loadMoreCompleted = async (): Promise<boolean> => {
