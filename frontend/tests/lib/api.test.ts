@@ -78,4 +78,47 @@ describe("api (IM-10)", () => {
       expect(fetchMock).toHaveBeenCalledTimes(6);
     });
   });
+
+  describe("ETag (#201)", () => {
+    const tagged = (body: string, etag: string) =>
+      new Response(body, { headers: { ETag: etag } });
+
+    it("asks again with If-None-Match and turns a 304 into the kept body", async () => {
+      fetchMock
+        .mockResolvedValueOnce(tagged('{"inbox":3}', 'W/"a"'))
+        .mockResolvedValueOnce(new Response(null, { status: 304 }));
+
+      await api("/counts");
+      const again = await api("/counts");
+
+      expect(headersOf(0).get("If-None-Match")).toBeNull();
+      expect(headersOf(1).get("If-None-Match")).toBe('W/"a"');
+      expect(fetchMock.mock.calls[1][1].cache).toBe("no-store");
+      expect(again.status).toBe(200);
+      expect(await again.json()).toEqual({ inbox: 3 });
+    });
+
+    it("forgets kept answers on sign-in and sign-out", async () => {
+      document.cookie = "XSRF-TOKEN=abc";
+      fetchMock.mockResolvedValueOnce(tagged("{}", 'W/"a"'));
+
+      await api("/counts");
+      await api("/auth/logout", { method: "POST" });
+      await api("/counts");
+
+      expect(headersOf(2).get("If-None-Match")).toBeNull();
+    });
+
+    it("drops the kept answer when the read fails", async () => {
+      fetchMock
+        .mockResolvedValueOnce(tagged("{}", 'W/"a"'))
+        .mockResolvedValueOnce(new Response("{}", { status: 500 }));
+
+      await api("/counts");
+      await api("/counts");
+      await api("/counts");
+
+      expect(headersOf(2).get("If-None-Match")).toBeNull();
+    });
+  });
 });
