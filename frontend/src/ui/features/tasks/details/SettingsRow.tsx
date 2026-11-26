@@ -11,6 +11,8 @@ export interface SettingsRowProps {
   error?: ReactNode;
   errorId?: string;
   helperId?: string;
+  className?: string;
+  labelFor?: string;
 }
 
 export function SettingsRow({
@@ -23,6 +25,8 @@ export function SettingsRow({
   error,
   errorId,
   helperId,
+  className,
+  labelFor,
 }: SettingsRowProps): ReactElement {
   const isScreen = variant === "screen";
 
@@ -57,6 +61,7 @@ export function SettingsRow({
         isScreen
           ? "py-3.5 px-4"
           : "border-b border-separator py-2.5 last:border-b-0",
+        className,
       )}
     >
       {isScreen ? (
@@ -66,9 +71,18 @@ export function SettingsRow({
               <div className="flex size-8 shrink-0 items-center justify-center text-ink-secondary">
                 {icon}
               </div>
-              <span className="whitespace-nowrap text-body font-normal text-ink">
-                {label}
-              </span>
+              {labelFor ? (
+                <label
+                  htmlFor={labelFor}
+                  className="whitespace-nowrap text-body font-normal text-ink cursor-pointer"
+                >
+                  {label}
+                </label>
+              ) : (
+                <span className="whitespace-nowrap text-body font-normal text-ink">
+                  {label}
+                </span>
+              )}
             </div>
             {messages}
           </div>
@@ -84,7 +98,16 @@ export function SettingsRow({
               <span className="flex items-center justify-center text-ink-tertiary">
                 {icon}
               </span>
-              <span className="whitespace-nowrap">{label}</span>
+              {labelFor ? (
+                <label
+                  htmlFor={labelFor}
+                  className="whitespace-nowrap cursor-pointer"
+                >
+                  {label}
+                </label>
+              ) : (
+                <span className="whitespace-nowrap">{label}</span>
+              )}
             </div>
             {messages}
           </div>

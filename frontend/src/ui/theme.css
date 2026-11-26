@@ -380,6 +380,12 @@
   html {
     -webkit-tap-highlight-color: transparent;
   }
+  @media (max-width: 767px) {
+    html,
+    body {
+      overflow-x: clip;
+    }
+  }
   body {
     background: var(--color-base-100);
     color: var(--color-base-content);

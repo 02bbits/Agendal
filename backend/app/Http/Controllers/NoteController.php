@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Services\Notes\NoteConfirm;
 use App\Services\Notes\NoteFollowup;
 use App\Services\Notes\NoteUndo;
+use Dedoc\Scramble\Attributes\BodyParameter;
+use Dedoc\Scramble\Attributes\Response as DocsResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -39,6 +41,15 @@ class NoteController extends Controller
         ]);
     }
 
+    // ProcessNote validates the body, out of Scramble's sight
+    #[BodyParameter('client_id', 'Client-generated UUID v4; a retry with the same one returns the stored note.', required: true, type: 'string', format: 'uuid')]
+    #[BodyParameter('text', required: true, type: 'string')]
+    #[BodyParameter('written_at', 'ISO 8601 with offset; clamped to server time.', required: true, type: 'string', format: 'date-time')]
+    #[BodyParameter('timezone', 'IANA zone.', required: true, type: 'string')]
+    #[BodyParameter('source_file_name', required: false, type: 'string|null')]
+    #[DocsResponse(201, 'The new note and its plan.', type: NoteResultResource::class)]
+    #[DocsResponse(200, 'A replay: the note already stored for this client_id.', type: NoteResultResource::class)]
+    #[DocsResponse(422, 'Invalid body, or the note itself: `note.empty`, `note.too_long`, `note.too_many_items`.')]
     public function store(Request $request, ProcessNote $process): JsonResponse
     {
         $user = $request->user();
@@ -58,6 +69,9 @@ class NoteController extends Controller
         return new NoteResultResource($followup->makeTask($note));
     }
 
+    #[BodyParameter('text', required: true, type: 'string')]
+    #[BodyParameter('timezone', 'IANA zone.', required: true, type: 'string')]
+    #[BodyParameter('confirm_conflicts', required: false, type: 'bool')]
     public function update(Request $request, Note $note, ProcessNote $process): NoteResultResource
     {
         $user = $request->user();

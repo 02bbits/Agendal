@@ -1,6 +1,7 @@
 import type { KeyboardEvent, RefObject } from "react";
 import { t } from "../../copy";
 import { cx } from "../cx";
+import { CheckIcon } from "../icons";
 
 const BOX =
   "h-9 w-9 border-0 bg-transparent p-0 text-center text-body font-semibold tabular-nums text-ink outline-none placeholder:text-ink-tertiary";
@@ -22,6 +23,7 @@ export function TypedTimeField({
   onHour,
   onMinute,
   onTogglePm,
+  onConfirm,
   onKeyDown,
 }: {
   hourRef: RefObject<HTMLInputElement | null>;
@@ -37,6 +39,7 @@ export function TypedTimeField({
   onHour: (raw: string) => void;
   onMinute: (raw: string) => void;
   onTogglePm: () => void;
+  onConfirm: () => void;
   onKeyDown: (
     event: KeyboardEvent<HTMLInputElement>,
     box: "hour" | "minute",
@@ -94,6 +97,17 @@ export function TypedTimeField({
             {t(pm ? "time.pm" : "time.am")}
           </button>
         )}
+        <button
+          type="button"
+          aria-label={t("common.ok")}
+          onClick={onConfirm}
+          className={cx(
+            "focus-ring inline-flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full border-0 bg-primary text-primary-content",
+            !twelve && "ml-auto",
+          )}
+        >
+          <CheckIcon size={15} />
+        </button>
       </div>
       {error && (
         <p

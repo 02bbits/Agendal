@@ -1,5 +1,6 @@
 "use client";
 import {
+  notifyReminderSet,
   notifyTaskCreated,
   notifyProjectsChanged,
 } from "@/ui/domain/appEvents";
@@ -92,6 +93,7 @@ export function useNewTask({
     if (typeof window !== "undefined") {
       notifyTaskCreated(created);
       notifyProjectsChanged();
+      if (created.reminder !== "none") notifyReminderSet();
     }
     return created;
   }, []);

@@ -64,6 +64,14 @@ services:
       api:
         condition: service_healthy
 
+  # routes/console.php every minute: reminders (TK-6) and the nightly purges
+  scheduler:
+    <<: *api
+    command: php artisan schedule:work
+    depends_on:
+      api:
+        condition: service_healthy
+
   web:
     image: node:22
     working_dir: /repo/frontend

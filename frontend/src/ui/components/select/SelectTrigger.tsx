@@ -18,6 +18,8 @@ export function SelectTrigger({
   label,
   icon,
   reducedMotion,
+  size = "md",
+  disabled = false,
   onClick,
   onKeyDown,
 }: {
@@ -27,29 +29,44 @@ export function SelectTrigger({
   label?: string;
   icon?: ReactNode;
   reducedMotion: boolean;
+  size?: "sm" | "md";
+  disabled?: boolean;
   onClick: () => void;
   onKeyDown: (e: KeyboardEvent) => void;
 }) {
+  const isSm = size === "sm";
+
   return (
     <button
       ref={buttonRef}
       type="button"
-      onClick={onClick}
-      onKeyDown={onKeyDown}
+      disabled={disabled}
+      onClick={disabled ? undefined : onClick}
+      onKeyDown={disabled ? undefined : onKeyDown}
       aria-haspopup="listbox"
       aria-expanded={open}
+      aria-disabled={disabled ? true : undefined}
       className={cx(
-        "focus-ring flex h-10 w-full items-center justify-between rounded-lg border border-separator/60 bg-fill/25 px-3.5 text-callout text-ink transition-colors hover:border-separator hover:bg-fill/40 cursor-pointer",
-        open && "border-primary/80 ring-1 ring-primary/40",
+        "focus-ring flex w-full items-center justify-between rounded-lg border transition-colors",
+        disabled
+          ? "border-separator/40 bg-fill/15 text-ink-tertiary cursor-not-allowed opacity-60"
+          : "border-separator/60 bg-fill/25 hover:border-separator hover:bg-fill/40 cursor-pointer text-ink",
+        isSm ? "h-9 px-2.5 text-footnote" : "h-10 px-3.5 text-callout",
+        open && !disabled && "border-primary/80 ring-1 ring-primary/40",
       )}
     >
-      <span className="flex items-center gap-2.5 truncate flex-1 min-w-0">
+      <span className="flex items-center gap-2 truncate flex-1 min-w-0">
         {icon && (
           <span className="shrink-0 text-ink-secondary" aria-hidden="true">
             {icon}
           </span>
         )}
-        <span className="relative flex-1 min-w-0 h-5 overflow-hidden">
+        <span
+          className={cx(
+            "relative flex-1 min-w-0 overflow-hidden",
+            isSm ? "h-4.5" : "h-5",
+          )}
+        >
           <AnimatePresence mode="popLayout" initial={false}>
             <motion.span
               key={valueKey}
@@ -66,12 +83,12 @@ export function SelectTrigger({
       </span>
       <span
         className={cx(
-          "shrink-0 text-ink-tertiary transition-transform duration-200 ml-2",
+          "shrink-0 text-ink-tertiary transition-transform duration-200 ml-1.5",
           open && "rotate-180",
         )}
         aria-hidden="true"
       >
-        <ChevronDownIcon size={16} />
+        <ChevronDownIcon size={isSm ? 14 : 16} />
       </span>
     </button>
   );

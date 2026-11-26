@@ -1,6 +1,6 @@
 # API Design
 
-Draft resource list. Once implemented, generated API docs are the source of truth.
+Draft resource list. Once implemented, generated API docs are the source of truth: [`/docs/api`](http://localhost:8000/docs/api) (OpenAPI at `/docs/api.json`), built by Scramble from the routes, FormRequests and resources.
 
 ## Conventions
 
@@ -10,6 +10,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Rate limits and input limits: [security.md](../05-quality/nfr.md#rate-limits-nf-13). `429` carries `Retry-After`, and its error names the limit it hit: `limit: {max, window}`, `max` requests per `window` seconds; a 1-second window is a burst ([UX-43](../01-product/ux-standards.md#ux-43), [error.schema.json](contracts/schemas/error.schema.json)).
 - Errors use one shape: `{"error": {"code": "note.too_many_items", "message": "…", "fields": {…}}}`. `code` is a [copy-catalog](../01-product/copy-catalog.md) key.
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
+- API docs (IM-08): `/docs/api` is open locally; on the server only to signed-in accounts in `TELESCOPE_ALLOWED_EMAILS`, the allow-list of `/telescope` and `/pulse`. CI exports `api.json` as a build artifact.
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
 - Full request/response contracts live in each module spec, section 7. This table is the index.
 - The response shapes are also JSON Schemas in [contracts/schemas](contracts/schemas/), with example responses in [contracts/fixtures](contracts/fixtures/). A fixture uses the schema its name starts with (`note-result-done.json` → `note-result.schema.json`). The backend test `tests/Unit/ContractsTest.php` checks every fixture.
@@ -20,7 +21,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | Method & path | Purpose | Ref |
 |---|---|---|
 | `GET /sanctum/csrf-cookie` | Sets the XSRF cookie before the first write | [ADR-007](decisions/ADR-007-session-and-auth.md) |
-| `POST /auth/register`, `/auth/login`, `/auth/logout` | Account and session. Login enforces the 3-attempt / 60 s lockout | [AA-1](../03-modules/AA-account-access.md#aa-1)–3, [AA-5](../03-modules/AA-account-access.md#aa-5) |
+| `POST /auth/register`, `/auth/login`, `/auth/logout` | Account and session. Login enforces the 3-attempt / 60 s lockout. Logout takes an optional `push_endpoint`: this device stops getting reminders | [AA-1](../03-modules/AA-account-access.md#aa-1)–3, [AA-5](../03-modules/AA-account-access.md#aa-5) |
 | `POST /auth/forgot-password`, `/auth/reset-password` | Reset. Same response whether or not the email exists | [AA-4](../03-modules/AA-account-access.md#aa-4) |
 | `POST /auth/check-password` | Check the current password while it is typed in Settings | [AA §2.7](../03-modules/AA-account-access.md#27-change-password-149) |
 | `POST /auth/change-password` | Change the password from Settings, ending other sessions | [AA §2.7](../03-modules/AA-account-access.md#27-change-password-149) |
@@ -44,11 +45,12 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /tasks/{id}/restore` | Toast Undo after a delete | [TK-5](../03-modules/TK-tasks.md#tk-5) |
 | `GET/POST /projects`, `GET/PATCH/DELETE /projects/{id}?tasks=move\|delete` | Projects | [PJ-1](../03-modules/PJ-projects.md#pj-1)–4 |
 | `POST /projects/{id}/restore` | Toast Undo after deleting a project | [PJ-4](../03-modules/PJ-projects.md#pj-4) |
-| `POST /push-subscriptions`, `DELETE /push-subscriptions` | Register or remove a device for reminders | [TK-6](../03-modules/TK-tasks.md#tk-6) |
+| `GET /push-subscriptions/key` | The VAPID public key to subscribe with; `null` while reminders are off | [TK-6](../03-modules/TK-tasks.md#tk-6) |
+| `POST /push-subscriptions`, `DELETE /push-subscriptions` | Register (`{endpoint, keys: {p256dh, auth}}`, `201`) or remove (`{endpoint}`, `204`) this device for reminders. The endpoint must be on a known push service ([SC-18](security.md#sc-18)) | [TK-6](../03-modules/TK-tasks.md#tk-6) |
 | `GET /counts` | The sidebar's counts in one call: Inbox, Upcoming, No project, Notes | [AP §7](../03-modules/AP-app-platform.md#7-api-contract) |
 | `GET /sync?cursor=&limit=` | Pull changes since a cursor; a live note comes with its full result. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
-| `POST /auth/logout-everywhere` | End all sessions (Should) | [ADR-007](decisions/ADR-007-session-and-auth.md) |
+| `POST /auth/logout-everywhere` | End all sessions (Should), and remove every reminder subscription of the account | [ADR-007](decisions/ADR-007-session-and-auth.md) |
 
 ## Task fields
 

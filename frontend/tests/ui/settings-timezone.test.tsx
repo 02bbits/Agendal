@@ -38,14 +38,14 @@ describe("SettingsScreen Settings Tabs & Timezone Optimization", () => {
       />,
     );
 
-    // Core 4 tabs (navigation has role="radio")
+    // Core tabs (navigation has role="radio")
     expect(screen.getByRole("radio", { name: /Account/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /General/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Theme/i })).toBeTruthy();
+    expect(screen.getByRole("radio", { name: /Reminders/i })).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Sidebar/i })).toBeTruthy();
 
     // Removed tabs must not exist
-    expect(screen.queryByRole("radio", { name: /Reminders/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Notifications/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Quick add/i })).toBeNull();
     expect(screen.queryByRole("radio", { name: /Productivity/i })).toBeNull();

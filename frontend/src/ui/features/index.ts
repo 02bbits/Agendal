@@ -154,6 +154,23 @@ export type {
 export { useActiveDay, type UseActiveDayOptions } from "./lists/useActiveDay";
 export { useUpcomingListWindow } from "./lists/useUpcomingListWindow";
 export { useFrozenOrder } from "./lists/useFrozenOrder";
+export {
+  addReminderAlert,
+  clearReminderAlerts,
+  dismissReminderAlert,
+  getReminderAlertCount,
+  getReminderAlerts,
+  type ReminderAlert,
+} from "./reminders/reminderAlertStore";
+export { useReminderBadge } from "./reminders/useReminderBadge";
+export {
+  ReminderReturnBanner,
+  type ReminderReturnBannerProps,
+} from "./reminders/ReminderReturnBanner";
+export {
+  CalendarReminderControl,
+  type CalendarReminderControlProps,
+} from "./tasks/details/CalendarReminderControl";
 export { useSortByRules } from "./lists/useSortByRules";
 export { useDropReorder } from "./lists/useDropReorder";
 export { useMoveToProject, useReceiveDrop } from "./lists/useCrossDrop";

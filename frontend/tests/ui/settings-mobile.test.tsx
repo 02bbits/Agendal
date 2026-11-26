@@ -169,12 +169,14 @@ describe("Settings on phones (Part D)", () => {
       }),
     ).toBeNull();
 
-    // Reminders and Notifications tabs are gone
+    // Reminders tab is present (TK-6, #186)
     expect(
-      screen.queryByRole("button", {
+      screen.getByRole("button", {
         name: new RegExp(t("settings.tab_reminders"), "i"),
       }),
-    ).toBeNull();
+    ).toBeTruthy();
+
+    // Legacy Notifications tab is gone
     expect(
       screen.queryByRole("button", {
         name: new RegExp(t("app.tab_notifications"), "i"),

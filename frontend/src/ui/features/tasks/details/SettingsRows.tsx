@@ -1,19 +1,18 @@
 import type { ReactElement } from "react";
 import { cx } from "../../../components/cx";
-import { BellIcon, RepeatIcon } from "../../../components/icons";
-import { Picker } from "../../../components/Picker";
-import { t, type CopyKey } from "../../../copy";
+import { RepeatIcon } from "../../../components/icons";
+import { t } from "../../../copy";
 import type { TaskPatch } from "../../../domain/api";
 import {
-  REMINDERS,
   type Project,
-  type Reminder,
   type Task,
   type TimeFormat,
   type WeekStart,
 } from "../../../domain/types";
 import type { Clock } from "../types";
 import { RepeatPicker } from "../repeat/RepeatPicker";
+import { usePushState } from "../usePushState";
+import { CalendarReminderControl } from "./CalendarReminderControl";
 import { DateTimeFields } from "./DateTimeFields";
 import { ProjectField } from "./ProjectField";
 import { SettingsRow } from "./SettingsRow";
@@ -45,6 +44,7 @@ export function SettingsRows({
   variant = "panel",
 }: SettingsRowsProps): ReactElement {
   const hasDate = Boolean(task.start_date || task.due_date);
+  const blocked = usePushState() === "denied";
 
   // The series starts on the start date, the task's main date (#154)
   const repeatAnchor =
@@ -75,24 +75,13 @@ export function SettingsRows({
         onSave={onSave}
         variant={variant}
       />
-      <SettingsRow
+      <CalendarReminderControl
+        task={task}
+        disabled={!hasDate}
+        blocked={blocked}
+        timeFormat={timeFormat}
+        onSave={onSave}
         variant={variant}
-        icon={<BellIcon size={18} />}
-        label={t("task.reminder")}
-        control={
-          <Picker<Reminder>
-            id="task-reminder"
-            label={t("task.reminder")}
-            value={task.reminder}
-            disabled={!hasDate}
-            options={REMINDERS.map((r) => ({
-              value: r,
-              label: t(`reminder.${r}` as CopyKey),
-            }))}
-            onChange={(reminder) => onSave({ reminder })}
-            variant="row"
-          />
-        }
       />
       <SettingsRow
         variant={variant}
