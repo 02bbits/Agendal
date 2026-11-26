@@ -75,6 +75,7 @@ The service worker registers only in a production build, so all of this is check
 | **Notes offline** | Offline, the note button reads **Save note** and the note waits in the Notes tab as "Waiting for connection". Back online it is sent, and one toast reports "Back online. N notes turned into M tasks" |
 | **Two windows** | Open :3001 in two windows on the same account. A change in one shows in the other within about a minute, or at once when the window is focused. If both edit the same field offline, the losing side shows "Changed on another device" |
 | **Install** | The Inbox shows an **Install** banner (also the install icon in the address bar, or Settings → Install app). Installed, Agendal opens in its own window with its icon. Not now hides the banner on this device |
+| **Reminders** | Needs VAPID keys (`php artisan push:vapid storage/app/vapid_private_key`, then `VAPID_PUBLIC_KEY` in `backend/.env`) and the `scheduler` and `queue` services. Set a reminder on a task due a few minutes from now: the app asks to send notifications; Allow. When it is due, a notification shows the title and `Mon 09:00 · Project`; tapping it opens the task. Notifications need Chrome, Edge or Firefox (Safari: the installed app) |
 | **Update toast** | With the app open, rebuild it with `docker compose restart web-prod`, wait for the build, then return to the tab: "A new version is ready" appears with **Reload** (never while a sheet is open) |
 | **Sign out clears the device** | Sign out: the on-device copy and the offline queue are cleared, so the next account starts clean |
 
@@ -119,7 +120,6 @@ Each area links to its module spec, which has the requirements, the edge cases a
 
 ## Not built yet
 
-- **Reminder notifications:** a reminder is saved with the task, but no push notification is sent yet.
 - **Voice and file notes:** notes are typed only.
 - **Release work:** deploy to the Linux server (IM-65), the end-to-end test suite (IM-61), the security, performance and manual accessibility passes (IM-62 to IM-64), and the retention purge job for old data (IM-55).
 - Out of scope for v1: shared lists, calendar sync, a Vietnamese interface, account deletion and export.
@@ -184,7 +184,15 @@ Run commands inside the containers, for example `docker compose exec api php art
 
 PHP 8.4+ with `pdo_pgsql`, `intl` and `mbstring`, Composer, Node 20+. Start only the services with `docker compose up -d db mail`, set up once with `cd backend && composer setup && php artisan db:seed` and `cd frontend && npm install && cp .env.example .env.local`, then run `composer run dev` in `backend/` and `npm run dev` in `frontend/`.
 
-Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (local only). Use Chrome or Firefox locally: the session cookie is `Secure` with a `__Host-` prefix (ADR-007), and Safari rejects it over plain http.
+Open the app at <http://localhost:3000>, not :8000. Emails such as password resets land in Mailpit at <http://localhost:8025>. API docs are generated from the code at <http://localhost:8000/docs/api> (Scramble; on the server `https://<domain>/docs/api`, behind the `TELESCOPE_ALLOWED_EMAILS` allow-list). CI exports the OpenAPI file as the `api.json` artifact. Use Chrome or Firefox locally: the session cookie is `Secure` with a `__Host-` prefix (ADR-007), and Safari rejects it over plain http.
+
+### Monitoring
+
+Telescope is at <http://localhost:8000/telescope>, open to anyone locally. On the server it records only faults (exceptions, `5xx` requests, failed jobs, scheduled tasks, slow queries) and opens only for the signed-in emails in `TELESCOPE_ALLOWED_EMAILS` (comma-separated); `TELESCOPE_ENABLED=false` turns it off. Entries keep no request or response bodies, query bindings, emails or mail (SC-21), and are pruned after 48 hours.
+
+Pulse is at <http://localhost:8000/pulse> (through Next.js on the server, `https://<domain>/pulse`), behind the same allow-list. It is the error dashboard: exceptions (5xx, failed jobs and scheduled tasks, language-model call failures) by class and line with counts, queue throughput and failures, slow requests, jobs, queries (from 500 ms) and outgoing calls, and the busiest users by id. It keeps no messages, query values, cache keys or emails (SC-21) and trims itself after 7 days. Nothing is pushed: check it after a deploy and when someone reports a problem; each error's log line still has its `request_id`. Links it builds use `APP_URL`, so that must be the public origin. Its Servers and Server health cards (#199) fill only while `php artisan pulse:check` runs (the `pulse` service on the server; locally `docker compose exec api php artisan pulse:check`); see deploy/README.md for the thresholds.
+
+A query over `DB_SLOW_QUERY_MS` (500), or a request whose queries add up to more than `DB_SLOW_REQUEST_MS` (2000), logs at `error` with the SQL and the request ID, never the values.
 
 ### Time
 
@@ -207,4 +215,11 @@ GitHub Actions runs the same checks on every pull request ([ci.yml](.github/work
 ```bash
 cd backend && ./vendor/bin/pint --test && composer analyse && php artisan test
 cd frontend && npm run format:check && npm run lint && npm run typecheck && npm test
+```
+
+Run with line coverage (70% minimum, matching CI; backend requires PCOV or Xdebug):
+
+```bash
+cd backend && php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/pest --coverage --min=70
+cd frontend && npm run test:coverage
 ```

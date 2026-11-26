@@ -45,6 +45,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `auth.signout_everywhere` † | Sign out on all devices | Account sheet (Should) |
 | `auth.offline` † | You're offline. Connect to sign in. | Auth screens while offline |
 | `auth.locked` † | Too many attempts. Try again in {seconds} s. | API error code for `429` on sign-in (the banner uses `auth.locked_title` / `auth.locked_body`) |
+| `auth.token_not_allowed` † | This token isn't allowed to do that. | API error code for `403` when a personal access token lacks the route's ability or calls a session-only route ([api.md](../07-architecture/api.md#personal-access-tokens)); never shown in the app |
+| `auth.token_limit` † | You have 10 tokens. Revoke one to make another. | API error code for `422` on `POST /tokens` at 10 unexpired tokens ([api.md](../07-architecture/api.md#personal-access-tokens)); never shown in the app |
 
 ## Email
 
@@ -245,6 +247,12 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `list.filter_scheduled` | Scheduled | Chip |
 | `list.filter_due` | Due only | Chip |
 | `list.upcoming_empty` † | Nothing coming up. Write a note to plan ahead. | Upcoming empty state |
+| `list.switched_manual` † | Switched to manual order | Toast when drag reordering in Smart list or dropping into Smart list (#178) |
+| `list.sorted_by_rules` † | Sorted by the rules. Drag to fine-tune. | Toast after running Sort by rules (#178) |
+| `list.smart_order` † | Smart order | Sort menu item (#178) |
+| `list.manual_order` † | Manual order | Sort menu item (#178) |
+| `list.sort_rules` † | Sort by rules | Sort menu item (#178) |
+| `task.rescheduled_to` † | Rescheduled to {day} | Toast with Undo when dropping onto an Upcoming day (#178) |
 | `search.placeholder` † | Search tasks and notes | Search field |
 | `search.filter_open` | Open | Chip |
 | `search.filter_completed` | Completed | Chip |

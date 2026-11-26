@@ -117,6 +117,24 @@ export function TimePicker({
     setError(null);
   };
 
+  const closeAndCommit = () => {
+    // Clicking outside after typing a valid time (e.g. 01:07) saves it instead of discarding
+    if (hour !== "" || minute !== "") {
+      const typed = typedTime({
+        hour,
+        minute,
+        pm,
+        twelve,
+        minTime,
+        timeFormat,
+      });
+      if ("time" in typed && typed.time !== value) {
+        onChange(typed.time);
+      }
+    }
+    close();
+  };
+
   const choose = (time: string) => {
     onChange(time);
     close();
@@ -145,6 +163,9 @@ export function TimePicker({
     } else if (event.key === "Enter") {
       event.preventDefault();
       confirm();
+    } else if (event.key === "Escape") {
+      event.stopPropagation();
+      close();
     } else if (box === "minute" && event.key === "Backspace" && minute === "") {
       // Backspace past the start of the minutes goes back to the hour
       event.preventDefault();
@@ -165,7 +186,7 @@ export function TimePicker({
     <div className={cx("inline-flex flex-col", className)}>
       <PopoverOrSheet
         open={open}
-        onClose={close}
+        onClose={isWide ? closeAndCommit : close}
         label={label}
         triggerRef={triggerRef}
         align={isScreen ? "right" : "left"}
@@ -214,6 +235,7 @@ export function TimePicker({
                 setPm((was) => !was);
                 setError(null);
               }}
+              onConfirm={confirm}
               onKeyDown={onFieldKeyDown}
             />
             <TimeOptionList

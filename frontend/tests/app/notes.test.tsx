@@ -470,12 +470,15 @@ it("T-RV-32: loads the next page when the list nears its end", async () => {
 
   await screen.findByText("First page");
 
-  act(() =>
-    notify(
-      [{ isIntersecting: true } as IntersectionObserverEntry],
-      {} as IntersectionObserver,
-    ),
-  );
+  await waitFor(() => {
+    act(() =>
+      notify(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      ),
+    );
+    expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
+  });
 
   await screen.findByText("Second page");
 
@@ -527,10 +530,16 @@ it("T-RV-32: a page still loading for another filter doesn't block the next page
     );
   render(<NotesClient />);
   await screen.findByText("All first");
-  nearEnd();
+  await waitFor(() => {
+    nearEnd();
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
   await userEvent.click(screen.getByRole("button", { name: t("notes.needs") }));
   await screen.findByText("Pending first");
-  nearEnd();
+  await waitFor(() => {
+    nearEnd();
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(4);
+  });
 
   expect(await screen.findByText("Pending second")).toBeTruthy();
   await act(async () => finishAll(respondWith([], null, 2)));

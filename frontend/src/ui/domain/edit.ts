@@ -78,6 +78,9 @@ export function normalizePatch(
   }
   if ("due_date" in next && !next.due_date) {
     next.due_time = null;
+    if (task.due_reminder && task.due_reminder !== "none") {
+      next.due_reminder = "none";
+    }
     if (!start) {
       next.reminder = "none";
       next.repeat = "never";
@@ -101,6 +104,18 @@ export function normalizePatch(
     next.start_date = todayDate;
     start = next.start_date;
   }
+
+  // A manual place belongs to its day or project (#178), as on the server: moving the task
+  // elsewhere without a new place drops the old one
+  const movedDay =
+    ("start_date" in next && next.start_date !== task.start_date) ||
+    ("due_date" in next && next.due_date !== task.due_date);
+  if (movedDay && !("day_order" in next) && task.day_order)
+    next.day_order = null;
+  const movedProject =
+    "project_id" in next && next.project_id !== task.project_id;
+  if (movedProject && !("project_order" in next) && task.project_order)
+    next.project_order = null;
 
   for (const key of Object.keys(next) as Array<keyof TaskPatch>) {
     // null and a missing field both mean "not set" (e.g. repeat_rule on older tasks)

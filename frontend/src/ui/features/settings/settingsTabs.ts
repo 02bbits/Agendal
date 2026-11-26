@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { t } from "../../copy";
 import {
+  BellIcon,
   PaletteIcon,
   SidebarIcon,
   SlidersIcon,
@@ -36,6 +37,12 @@ export function settingsTabs(isDesktop: boolean): SettingsTabItem[] {
       label: t("settings.tab_theme"),
       Icon: PaletteIcon,
       keywords: "theme appearance dark light color",
+    },
+    {
+      id: "reminders",
+      label: t("settings.tab_reminders"),
+      Icon: BellIcon,
+      keywords: "reminders notifications push test alerts",
     },
     {
       id: "sidebar",

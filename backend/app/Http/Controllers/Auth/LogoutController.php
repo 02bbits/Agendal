@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\PushSubscription;
 use App\Models\User;
 use App\Support\Audit;
 use Illuminate\Http\Request;
@@ -17,6 +18,12 @@ class LogoutController extends Controller
     public function __invoke(Request $request): Response
     {
         abort_unless($request->hasSession(), 403);
+        // This device stops getting reminders (TK §2.5): the client sends its push endpoint
+        $endpoint = $request->input('push_endpoint');
+        $user = $request->user();
+        if ($user instanceof User && is_string($endpoint)) {
+            PushSubscription::query()->where('user_id', $user->id)->where('endpoint', $endpoint)->delete();
+        }
         // This device only: logout() would also end Remember me on every other device
         Auth::guard('web')->logoutCurrentDevice();
 
@@ -29,6 +36,9 @@ class LogoutController extends Controller
         /** @var User $user */
         $user = $request->user();
         DB::table('sessions')->where('user_id', $user->id)->delete();
+        $user->tokens()->delete(); // #196: API tokens too
+        // No device of this account gets reminders until it signs in again
+        PushSubscription::query()->where('user_id', $user->id)->delete();
         Auth::guard('web')->logout(); // Also replaces the Remember me token
         Audit::log($request, 'sign_out_everywhere', $user->id);
 

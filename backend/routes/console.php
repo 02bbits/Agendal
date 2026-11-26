@@ -20,7 +20,16 @@ Schedule::command('sync:purge')->daily();
 
 // Retention (scalability.md): expired one-time codes and old reminder sends
 Schedule::command('auth:clear-resets')->daily();
+// #196: personal access tokens a day past expiry
+Schedule::command('sanctum:prune-expired --hours=24')->daily();
 Schedule::call(fn () => DB::table('email_verification_codes')->where('expires_at', '<', now()->subDay())->delete())
     ->daily()->name('purge-email-codes');
 Schedule::call(fn () => DB::table('reminder_deliveries')->where('sent_at', '<', now()->subDays(PurgeTombstones::KEEP_DAYS))->delete())
     ->daily()->name('purge-reminder-deliveries');
+
+// TK-6 reminders: claim what is due and queue the pushes. withoutOverlapping: a slow run never
+// stacks; the claim itself is safe with several workers (FOR UPDATE SKIP LOCKED).
+Schedule::command('reminders:send')->everyMinute()->withoutOverlapping(5);
+
+// #192: Telescope keeps 48 hours
+Schedule::command('telescope:prune --hours=48')->daily();

@@ -7,10 +7,13 @@ import {
   PlusIcon,
   RateLimited,
   ScreenHeader,
+  SortMenu,
   TaskPanel,
   TaskStoreProvider,
   t,
+  useSortMode,
   useTaskPanel,
+  type SortMode,
 } from "@/ui";
 import { LoadError } from "@/ui/components/LoadError";
 import { useHeaderDate } from "./headerDate";
@@ -59,17 +62,7 @@ function InboxContent() {
         title={t("nav.inbox")}
         accountInitial={accountInitial}
         navigate={navigate}
-        action={
-          <Button
-            variant="primary"
-            pill
-            className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
-            onClick={openNewTask}
-          >
-            <PlusIcon size={16} />
-            {t("task.new")}
-          </Button>
-        }
+        action={<InboxHeaderAction openNewTask={openNewTask} />}
       >
         {subtitle && (
           <p className="m-0 mt-1 text-footnote text-ink-secondary">
@@ -98,6 +91,8 @@ function InboxContent() {
             accountInitial={accountInitial}
             navigate={navigate}
             showHeader={false}
+            onNewTask={openNewTask}
+            subtitle={subtitle}
             selectedTaskId={selectedTaskId}
           />
           {isWide && selectedTaskId && (
@@ -112,6 +107,35 @@ function InboxContent() {
             />
           )}
         </TaskStoreProvider>
+      )}
+    </div>
+  );
+}
+
+function InboxHeaderAction({ openNewTask }: { openNewTask?: () => void }) {
+  const [todayMode, setTodayMode] = useSortMode("today");
+  const [, setNoDateMode] = useSortMode("no_date");
+  const setInboxMode = (next: SortMode) => {
+    setTodayMode(next);
+    setNoDateMode(next);
+  };
+  return (
+    <div className="flex items-center gap-2">
+      <SortMenu
+        mode={todayMode}
+        onModeChange={setInboxMode}
+        listName={t("nav.inbox")}
+      />
+      {openNewTask && (
+        <Button
+          variant="primary"
+          pill
+          className="hidden px-5 py-2.5 text-callout font-medium md:inline-flex"
+          onClick={openNewTask}
+        >
+          <PlusIcon size={16} />
+          {t("task.new")}
+        </Button>
       )}
     </div>
   );

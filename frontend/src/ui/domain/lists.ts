@@ -1,5 +1,6 @@
 import { addDays } from "./dates";
 import { entriesOf, matchesEntry } from "./entries";
+import { orderList, type SortMode } from "./order";
 import { inboxProgress, type Progress } from "./progress";
 import type { Task } from "./types";
 
@@ -93,6 +94,17 @@ export interface ListOptions {
   completedToday: (task: Task) => boolean;
   /** A just-ticked task stays in its open section briefly (TK §2.1). */
   isSettling?: (id: string) => boolean;
+  /** Sort mode per section (#178): Today defaults to smart, No date to manual. */
+  sort?: { today?: SortMode; noDate?: SortMode };
+}
+
+/** No date by its rules: priority, then newest first (LV §2.1). */
+export function sortNoDate(tasks: readonly Task[]): Task[] {
+  return [...tasks].sort(
+    (a, b) =>
+      priorityRank(a.priority) - priorityRank(b.priority) ||
+      b.created_at.localeCompare(a.created_at),
+  );
 }
 
 function dedupeTasks(tasks: readonly Task[]): Task[] {
@@ -139,11 +151,17 @@ export function buildInbox(
         a.due_date!.localeCompare(b.due_date!) ||
         a.created_at.localeCompare(b.created_at),
     ),
-    today: sortTodayTasks(todayTasks, today),
-    noDate: [...noDate].sort(
-      (a, b) =>
-        priorityRank(a.priority) - priorityRank(b.priority) ||
-        b.created_at.localeCompare(a.created_at),
+    today: orderList(
+      todayTasks,
+      opts.sort?.today ?? "smart",
+      "day_order",
+      (t) => sortTodayTasks(t, today),
+    ),
+    noDate: orderList(
+      noDate,
+      opts.sort?.noDate ?? "manual",
+      "project_order",
+      sortNoDate,
     ),
     completed: [...completed].sort((a, b) =>
       (b.done_at ?? "").localeCompare(a.done_at ?? ""),

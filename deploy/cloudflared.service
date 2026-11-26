@@ -1,0 +1,18 @@
+# The tunnel as a user unit of the deploy user (IM-65): ~/.config/systemd/user/, started at boot through
+# linger. Reads ~/.cloudflared/config.yml (template: cloudflared.example.yml).
+[Unit]
+Description=Cloudflare Tunnel for Agendal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+ExecStart=/usr/local/bin/cloudflared --no-autoupdate --config %h/.cloudflared/config.yml tunnel run
+# Also covers boot: a user unit can't wait for the network, so it retries until the tunnel connects
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=true
+
+[Install]
+WantedBy=default.target

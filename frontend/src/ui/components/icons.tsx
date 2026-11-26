@@ -69,6 +69,13 @@ export const GripVerticalIcon = icon(
 
 export const XIcon = icon(<path d="M18 6 6 18M6 6l12 12" />);
 export const PlusIcon = icon(<path d="M12 5v14M5 12h14" />);
+export const MinusIcon = icon(<path d="M5 12h14" />);
+export const CornerDownRightIcon = icon(
+  <>
+    <polyline points="15 10 20 15 15 20" />
+    <path d="M4 4v7a4 4 0 0 0 4 4h12" />
+  </>,
+);
 export const CheckIcon = icon(<path d="M20 6 9 17l-5-5" />);
 export const CheckCircleIcon = icon(
   <>
@@ -224,6 +231,10 @@ export const ShareIcon = icon(
   </>,
 );
 export const ArrowDownIcon = icon(<path d="M12 5v14M19 12l-7 7-7-7" />);
+/** Sort order (#178). */
+export const ArrowUpDownIcon = icon(
+  <path d="m21 16-4 4-4-4M17 20V4M3 8l4-4 4 4M7 4v16" />,
+);
 export const ArrowLeftIcon = icon(<path d="m12 19-7-7 7-7M19 12H5" />);
 export const RotateCcwIcon = icon(
   <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8m0-5v5h5" />,

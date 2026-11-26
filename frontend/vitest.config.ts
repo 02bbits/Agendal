@@ -13,5 +13,15 @@ export default defineConfig({
     include: ["tests/**/*.test.{ts,tsx}"],
     setupFiles: ["./tests/ui/setup.ts"],
     css: false,
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "lcov", "json-summary"],
+      reportsDirectory: "./coverage",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/**/*.d.ts", "src/ui/copy/catalog.ts"],
+      thresholds: {
+        lines: 70,
+      },
+    },
   },
 });

@@ -874,11 +874,12 @@ describe("Upcoming screen (Section 8)", () => {
       const { wrap } = setupUpcoming([], undefined, tuesdayClock);
       render(wrap(<UpcomingScreen accountInitial="e" weekStart="mon" />));
 
-      const observer = MockResizeObserver.instances[0];
+      // The bar's own observer: drag and drop (#178) observes elements of its own
+      const stickyBar = document.querySelector(".sticky.top-0")!;
+      const observer = MockResizeObserver.instances.find((o) =>
+        o.elements.has(stickyBar),
+      )!;
       expect(observer).toBeTruthy();
-
-      const stickyBar = Array.from(observer.elements)[0];
-      expect(stickyBar).toBeTruthy();
 
       act(() => {
         observer.trigger([
@@ -1009,7 +1010,7 @@ describe("Upcoming screen (Section 8)", () => {
     expect(dashedBlocksBoard).toHaveLength(2);
   });
 
-  it("a same-day task is a normal card on Scheduled and a due card on Due only", async () => {
+  it("a same-day task is a normal card on every filter, and Due only keeps it", async () => {
     const sameDay = task({
       id: "same",
       title: "Same day",
@@ -1023,7 +1024,7 @@ describe("Upcoming screen (Section 8)", () => {
     const dashed = () =>
       screen.getByText("Same day").closest(".border-dashed") !== null;
 
-    expect(dashed()).toBe(true);
+    expect(dashed()).toBe(false);
     await userEvent.click(
       screen.getAllByRole("radio", { name: /Scheduled/ })[0]!,
     );
@@ -1031,7 +1032,7 @@ describe("Upcoming screen (Section 8)", () => {
     await userEvent.click(
       screen.getAllByRole("radio", { name: /Due only/ })[0]!,
     );
-    expect(dashed()).toBe(true);
+    expect(dashed()).toBe(false);
   });
 
   it("filters entries by all, scheduled, and due", async () => {

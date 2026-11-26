@@ -64,11 +64,35 @@ it('changes the offset with PATCH and recomputes remind_at', function () {
     expect(remindAtOf($id))->toBe('2026-10-23 11:00');
 });
 
-it('rejects an offset that is not in the list', function (string $reminder) {
+it('accepts custom duration offsets', function (string $reminder) {
+    $this->actingAs($this->user)->postJson('/api/v1/tasks', [
+        'id' => (string) Str::uuid(), 'title' => 'Custom', 'start_date' => '2026-10-30', 'reminder' => $reminder,
+    ])->assertCreated()->assertJsonPath('reminder', $reminder);
+})->with(['3h', '45m', '25m', '4w']);
+
+it('rejects an offset that is not valid', function (string $reminder) {
     $this->actingAs($this->user)->postJson('/api/v1/tasks', [
         'id' => (string) Str::uuid(), 'title' => 'Bad', 'start_date' => '2026-10-30', 'reminder' => $reminder,
     ])->assertStatus(422)->assertJsonPath('error.fields.reminder.0', fn ($message) => is_string($message));
-})->with(['3h', '45m', 'soon', '1y']);
+})->with(['soon', '1y', 'invalid', '-5m']);
+
+it('rejects multiple reminders for due date when there is no start date', function () {
+    $id = (string) Str::uuid();
+    $this->actingAs($this->user)->postJson('/api/v1/tasks', [
+        'id' => $id, 'title' => 'No start date', 'due_date' => '2026-10-30', 'due_time' => '14:00',
+        'reminder' => '10m', 'due_reminder' => '15m',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.fields.due_reminder.0', 'Cannot set multiple reminders for the due date.');
+});
+
+it('rejects due reminder when there is no due date', function () {
+    $id = (string) Str::uuid();
+    $this->actingAs($this->user)->postJson('/api/v1/tasks', [
+        'id' => $id, 'title' => 'No due date', 'start_date' => '2026-10-30', 'start_time' => '14:00',
+        'due_reminder' => '15m',
+    ])->assertStatus(422)
+        ->assertJsonPath('error.fields.due_reminder.0', 'Add a due date to set a due reminder.');
+});
 
 it('keeps a new offset on the next occurrence of a repeating task', function () {
     $id = (string) Str::uuid();

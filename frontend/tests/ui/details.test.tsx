@@ -10,7 +10,6 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import {
   PRIORITIES,
-  REMINDERS,
   ProjectScreen,
   TaskDetails,
   TaskPanel,
@@ -361,22 +360,21 @@ describe("Task details fields (T-TK-10)", () => {
     expect(document.activeElement).toBe(clearBtn);
   });
 
-  it.each(REMINDERS)("saves reminder %s", async (reminder) => {
+  it("saves reminder via calendar reminder control", async () => {
     const { patchSpy } = open(
       task({
         title: "Task",
         due_date: TODAY,
-        reminder: reminder === "none" ? "15m" : "none",
+        reminder: "none",
       }),
     );
-    const trigger = screen.getByRole("button", { name: t("task.reminder") });
-    await userEvent.click(trigger);
-    const optionLabel = t(`reminder.${reminder}` as CopyKey);
-    await userEvent.click(screen.getByRole("option", { name: optionLabel }));
+    await userEvent.click(
+      screen.getByRole("button", { name: /\+ Add notification/i }),
+    );
     await waitFor(() =>
       expect(patchSpy).toHaveBeenCalledWith(
         expect.any(String),
-        { reminder },
+        { reminder: "10m" },
         expect.any(String),
       ),
     );
@@ -849,11 +847,10 @@ describe("Field edge cases and accessibility", () => {
 
   it("disables reminder on an undated task without showing a hint", () => {
     open(task({ title: "No Date", due_date: null }));
-    const trigger = screen.getByRole("button", {
-      name: t("task.reminder"),
-    }) as HTMLButtonElement;
-    expect(trigger.disabled).toBe(true);
-    expect(screen.queryByText(t("task.reminder_needs_date"))).toBeNull();
+    expect(screen.getByText(t("task.reminder_needs_date"))).toBeDefined();
+    expect(
+      screen.queryByRole("button", { name: /\+ Add notification/i }),
+    ).toBeNull();
   });
 
   it("T-TK-104 (TK-E4): a reminder time already passed is kept, with no helper under it", () => {
@@ -870,8 +867,8 @@ describe("Field edge cases and accessibility", () => {
       screen.queryByText("This reminder time has already passed."),
     ).toBeNull();
     expect(
-      screen.getByRole("button", { name: t("task.reminder") }).textContent,
-    ).toContain("15");
+      (screen.getByLabelText("Reminder value") as HTMLInputElement).value,
+    ).toBe("15");
   });
 
   it("shows assistant footnote as text (A11Y-43)", () => {

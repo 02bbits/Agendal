@@ -74,3 +74,26 @@ move buy milk and eggs to friday => reschedule → "Buy milk and eggs" {"due_dat
 task: Call mom
 push report by 1 day and gym by 2 days => "Report" {"due_date":"2026-10-27"} label "Due Tue 27 Oct" was "Mon 26 Oct" + "Gym" {"due_date":"2026-10-30"}
 done buy milk and eggs and call mom => "Buy milk and eggs" {"done":true} label "Completed" + "Call mom" {"done":true}
+
+---
+# "and" before a task of its own splits it (#156). After a command, a name that finds no open task is that new task.
+task: Email group | 2026-10-26
+task: Report | 2026-10-26
+done email group and call mum => complete → "Email group" {"done":true} label "Completed" + new task "Call mum" no date
+move report to friday and buy milk => + new task "Buy milk" no date
+delete email group and pay rent => + new task "Pay rent" no date
+done email group and report => + "Report" {"done":true}
+done email group and move report to friday => complete → "Email group" {"done":true} label "Completed" | reschedule → "Report"
+clean room and do laundry tomorrow => task "Clean room" 2026-10-24 | task "Do laundry" 2026-10-24
+call mum tomorrow and email boss friday => task "Call mum" 2026-10-24 | task "Email boss" 2026-10-30
+gym every day for 3 weeks and buy milk => | task "Buy milk" no date
+
+---
+# A clause that changes what the rest means stays whole for the fallback, with no guessed date (#156).
+task: Report | 2026-10-26
+call mum but not today => task "Call mum but not today" no date
+gọi mẹ nhưng không phải hôm nay => no date
+gym tomorrow unless it rains => task "Gym tomorrow unless it rains" no date
+call mum if she is free => no date
+check if the server is up tomorrow => task "Check if the server is up" 2026-10-24
+call mum tomorrow but email boss today => task "Call mum" 2026-10-24 | task "Email boss" 2026-10-23

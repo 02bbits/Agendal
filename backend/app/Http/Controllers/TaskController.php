@@ -21,6 +21,7 @@ use App\Services\Tasks\TaskLifecycle;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\UpcomingQuery;
 use App\Support\Stamp;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,6 +30,11 @@ use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
+    /** @response array{overdue: list<TaskResource>, today: list<TaskResource>, no_date: list<TaskResource>, completed_today: list<TaskResource>, progress: array{done: int, total: int}, no_date_count: int, completed_count: int}|array{days: list<array{date: string, tasks: list<TaskResource>}>, next_from: string|null, total_count: int} */
+    #[QueryParameter('view', required: true, type: '"inbox"|"upcoming"')]
+    #[QueryParameter('from', 'Upcoming: first day, `YYYY-MM-DD`. Default tomorrow.', type: 'string', format: 'date')]
+    #[QueryParameter('days', 'Upcoming: days per page.', type: 'int', default: 14)]
+    #[QueryParameter('filter', 'Upcoming only.', type: '"all"|"scheduled"|"due"', default: 'all')]
     public function index(
         Request $request,
         InboxQuery $inboxQuery,
@@ -58,6 +64,7 @@ class TaskController extends Controller
         return response()->json($upcomingQuery->for($timezone, $from, $days, $filter));
     }
 
+    /** @response array{items: list<TaskResource>, counts: array{all: int, open: int, completed: int}, next_cursor: string|null} */
     public function search(
         SearchTasksRequest $request,
         SearchQuery $searchQuery,
@@ -180,6 +187,12 @@ class TaskController extends Controller
             $remindAt = $reminders->forDates($startDate, $startTimeStr, $dueDate, $dueTimeStr, $reminder, $timezone);
         }
 
+        $dueReminder = $request->input('due_reminder', 'none') ?? 'none';
+        $dueRemindAt = null;
+        if ($dueReminder !== 'none' && ! empty($dueDate)) {
+            $dueRemindAt = $reminders->forDueDate($dueDate, $dueTimeStr, $dueReminder, $timezone);
+        }
+
         $user = $request->user();
         assert($user !== null);
 
@@ -193,14 +206,19 @@ class TaskController extends Controller
         $task->due_time = $dueTime;
         $task->priority = $request->input('priority');
         $task->reminder = $reminder;
+        $task->due_reminder = $dueReminder;
         $task->repeat = $repeat;
         $task->repeat_rule = $request->input('repeat_rule');
         $task->notes = $request->input('notes');
         $task->project_id = $projectId;
+        // A task made by dropping it on a place (#178) arrives with its keys
+        $task->project_order = $request->input('project_order');
+        $task->day_order = $request->input('day_order');
         $task->done = false;
         $task->created_by = 'user';
         $task->field_updated_at = $fieldUpdatedAt;
         $task->remind_at = $remindAt;
+        $task->due_remind_at = $dueRemindAt;
         if ($repeat !== 'never' && (! empty($startDate) || ! empty($dueDate))) {
             $task->repeat_anchor = $startDate ?: $dueDate;
         }

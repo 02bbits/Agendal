@@ -73,6 +73,22 @@ it('records before values without clearing unchanged task fields', function () {
     expect($log[0]['before']['done'])->toBeFalse()->and($log[0]['before']['start_time'])->toBe('09:00:00');
 });
 
+it('completes or moves an open task when the app sends its device id, applied or previewed', function (string $text, int $toConfirm, string $status) {
+    config(['notes.changes_to_confirm' => $toConfirm]);
+    $task = new Task;
+    $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Email group'])->save();
+
+    // The web app sends X-Device-Id on every call, so a note's stamps read "…Z~<device>"
+    $this->actingAs($this->noteUser)->withHeader('X-Device-Id', (string) Str::uuid())
+        ->postJson('/api/v1/notes', notePayload($text))->assertCreated()->assertJsonPath('note.status', $status);
+    expect($task->fresh()->done || $task->fresh()->due_date !== null)->toBe($status === 'done');
+})->with([
+    'complete, applied' => ['done email group', 5, 'done'],
+    'complete, previewed' => ['done email group', 1, 'confirm'],
+    'move, applied' => ['move email group to friday', 5, 'done'],
+    'move, previewed' => ['move email group to friday', 1, 'confirm'],
+]);
+
 it('persists confirm plans with a preview, without changing tasks (T-NU-42)', function (string $text, int $changes) {
     $task = new Task;
     $task->forceFill(['user_id' => $this->noteUser->id, 'title' => 'Old reading list'])->save();

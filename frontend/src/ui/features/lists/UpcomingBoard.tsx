@@ -1,11 +1,96 @@
+import { useDndContext, useDroppable } from "@dnd-kit/core";
 import { type ReactElement, useEffect, useRef, useState } from "react";
 import { cx } from "../../components/cx";
 import { PlusIcon } from "../../components/icons";
 import { countText, t } from "../../copy";
+import type { DayEntry } from "../../domain/entries";
 import { dayHeading, dayHeadingShort } from "../../domain/week";
+import type { Navigate } from "../shell/routes";
 import { EntryBlocks } from "./EntryBlocks";
 import type { UpcomingBoardProps } from "./types";
 import { UpcomingOverdue } from "./UpcomingOverdue";
+
+function BoardDayColumn({
+  date,
+  dayEntries,
+  today,
+  selectedTaskId,
+  navigate,
+  onAddTask,
+  onPlaced,
+}: {
+  date: string;
+  dayEntries: DayEntry[];
+  today: string;
+  selectedTaskId?: string | null;
+  navigate?: Navigate;
+  onAddTask: (day: string) => void;
+  onPlaced?: (id: string) => void;
+}) {
+  const { active } = useDndContext();
+  const { setNodeRef } = useDroppable({
+    id: `day:${date}:empty`,
+    disabled: !active,
+  });
+  const isToday = date === today;
+  const shortHeading = dayHeadingShort(date, today);
+  const fullHeading = dayHeading(date, today);
+  const count = dayEntries.length;
+
+  return (
+    <section
+      ref={setNodeRef}
+      aria-label={fullHeading}
+      className={cx(
+        "flex w-[272px] shrink-0 snap-start flex-col rounded-2xl transition-colors",
+        isToday &&
+          "bg-surface/30 p-2.5 -m-2.5 border border-primary/25 shadow-xs",
+      )}
+    >
+      <div className="flex items-baseline justify-between gap-1.5 pb-2">
+        <h2
+          id={"day-" + date}
+          className={cx(
+            "m-0 scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] text-callout font-semibold",
+            isToday ? "text-ink font-bold" : "text-ink-secondary",
+          )}
+        >
+          {shortHeading}
+        </h2>
+        <span
+          className={cx(
+            "text-footnote font-normal",
+            isToday ? "font-semibold text-ink" : "text-ink-tertiary",
+          )}
+        >
+          {countText(count)}
+        </span>
+      </div>
+
+      <EntryBlocks
+        entries={dayEntries}
+        day={date}
+        variant="board"
+        today={today}
+        selectedTaskId={selectedTaskId ?? undefined}
+        navigate={navigate}
+        onPlaced={onPlaced}
+      />
+
+      <button
+        type="button"
+        onClick={() => onAddTask(date)}
+        aria-label={t("list.add_task_on", { day: fullHeading })}
+        className="focus-ring mt-2 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-callout text-ink-tertiary row-hover hover:text-ink"
+      >
+        <span className="text-primary">
+          <PlusIcon size={16} />
+        </span>
+        <span>{t("list.add_task")}</span>
+      </button>
+    </section>
+  );
+}
 
 export function UpcomingBoard({
   days,
@@ -15,6 +100,7 @@ export function UpcomingBoard({
   selectedTaskId,
   navigate,
   onAddTask,
+  onPlaced,
 }: UpcomingBoardProps): ReactElement {
   const containerRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -27,7 +113,9 @@ export function UpcomingBoard({
   const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
-    if (target.closest("button, a, input, textarea, select, [role='button']")) {
+    if (
+      target.closest("button, a, input, textarea, select, [role='button'], li")
+    ) {
       return;
     }
 
@@ -87,67 +175,18 @@ export function UpcomingBoard({
           navigate={navigate}
         />
       )}
-      {days.map((date) => {
-        const isToday = date === today;
-        const shortHeading = dayHeadingShort(date, today);
-        const fullHeading = dayHeading(date, today);
-        const dayEntries = entriesByDay[date] ?? [];
-        const count = dayEntries.length;
-
-        return (
-          <section
-            key={date}
-            aria-label={fullHeading}
-            className={cx(
-              "flex w-[272px] shrink-0 snap-start flex-col rounded-2xl transition-colors",
-              isToday &&
-                "bg-surface/30 p-2.5 -m-2.5 border border-primary/25 shadow-xs",
-            )}
-          >
-            <div className="flex items-baseline justify-between gap-1.5 pb-2">
-              <h2
-                id={"day-" + date}
-                className={cx(
-                  "m-0 scroll-mt-[calc(var(--upcoming-bar-h,120px)+8px)] text-callout font-semibold",
-                  isToday ? "text-ink font-bold" : "text-ink-secondary",
-                )}
-              >
-                {shortHeading}
-              </h2>
-              <span
-                className={cx(
-                  "text-footnote font-normal",
-                  isToday ? "font-semibold text-ink" : "text-ink-tertiary",
-                )}
-              >
-                {countText(count)}
-              </span>
-            </div>
-
-            {dayEntries.length > 0 && (
-              <EntryBlocks
-                entries={dayEntries}
-                variant="board"
-                today={today}
-                selectedTaskId={selectedTaskId ?? undefined}
-                navigate={navigate}
-              />
-            )}
-
-            <button
-              type="button"
-              onClick={() => onAddTask(date)}
-              aria-label={t("list.add_task_on", { day: fullHeading })}
-              className="focus-ring mt-2 flex min-h-11 w-full cursor-pointer items-center gap-2 rounded-xl border-0 bg-transparent px-3 py-2 text-callout text-ink-tertiary row-hover hover:text-ink"
-            >
-              <span className="text-primary">
-                <PlusIcon size={16} />
-              </span>
-              <span>{t("list.add_task")}</span>
-            </button>
-          </section>
-        );
-      })}
+      {days.map((date) => (
+        <BoardDayColumn
+          key={date}
+          date={date}
+          dayEntries={entriesByDay[date] ?? []}
+          today={today}
+          selectedTaskId={selectedTaskId}
+          navigate={navigate}
+          onAddTask={onAddTask}
+          onPlaced={onPlaced}
+        />
+      ))}
     </div>
   );
 }

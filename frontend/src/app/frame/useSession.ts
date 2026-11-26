@@ -1,3 +1,4 @@
+import { forgetPush, pushEndpoint } from "@/lib/push";
 import {
   useCallback,
   useEffect,
@@ -185,7 +186,15 @@ export function useSession({
       // The loading screen covers the wipe until Sign in is there
       showSplash("leave");
       const path = everywhere ? "/auth/logout-everywhere" : "/auth/logout";
-      const response = await api(path, { method: "POST" }).catch(() => null);
+      // This device stops getting reminders: the server forgets its endpoint (TK §2.5)
+      const endpoint = everywhere ? null : await pushEndpoint();
+      const response = await api(path, {
+        method: "POST",
+        ...(endpoint && {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ push_endpoint: endpoint }),
+        }),
+      }).catch(() => null);
       // Offline, this device is still wiped at once; the server session ends when it expires
       // (AA §2.4). Other devices can only be signed out from the server, so that waits for a
       // connection.
@@ -203,6 +212,7 @@ export function useSession({
           );
         }
       }
+      await forgetPush();
       await wipeDevice();
       clearThemePalette();
       document.documentElement.setAttribute("data-page-view", "flat");

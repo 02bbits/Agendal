@@ -8,7 +8,8 @@ COPY backend/ ./
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
 FROM dunglas/frankenphp:1-php8.4
-RUN install-php-extensions pdo_pgsql intl pcntl zip
+# bcmath: faster VAPID signing and payload encryption for reminders (TK-6)
+RUN install-php-extensions pdo_pgsql intl pcntl bcmath zip
 # pdftotext for note file upload (NoteExtractController)
 RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/zz-agendal.ini
@@ -18,6 +19,8 @@ RUN useradd --uid 10001 --no-create-home agendal \
     && chown -R agendal:agendal /config/caddy /data/caddy
 WORKDIR /app
 COPY --from=vendor --chown=agendal:agendal /app /app
+# PlanValidator checks every note plan against the contract schemas (config/notes.php schema_path, ../docs from /app)
+COPY docs/07-architecture/contracts/schemas /docs/07-architecture/contracts/schemas
 RUN php artisan package:discover --ansi
 COPY docker/prod/api-start.sh /usr/local/bin/api-start
 USER agendal

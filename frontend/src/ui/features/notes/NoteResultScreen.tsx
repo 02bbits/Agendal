@@ -7,7 +7,7 @@ import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
 import { BackBar } from "../../components/BackBar";
 import { PencilIcon, TrashIcon } from "../../components/icons";
-import { t, tc } from "../../copy";
+import { isCopyKey, t, tc, type CopyKey } from "../../copy";
 import {
   addDays,
   formatDay,
@@ -604,7 +604,10 @@ function ChangeRow({
         task.priority &&
           task.priority !== "low" &&
           t(`priority.${task.priority}`),
-        task.reminder !== "none" && t(`reminder.${task.reminder}`),
+        task.reminder !== "none" &&
+          (isCopyKey(`reminder.${task.reminder}`)
+            ? t(`reminder.${task.reminder}` as CopyKey)
+            : `${task.reminder} before`),
         // The whole schedule, its end included ("Every week on Tue · until 30 Nov"), as on the task row
         repeatLabel(task),
       ]
