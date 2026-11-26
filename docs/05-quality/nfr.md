@@ -55,7 +55,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 
 | Field | Limit | When exceeded |
 |---|---|---|
-| Note text | 5,000 characters | Editor counter shows from 4,500; the field stops at 5,000 |
+| Note text | 5,000 characters, 50 lines | Editor counter shows from 4,500; the field stops at 5,000 characters and 50 lines |
 | Items per note | 30 | Rejected before processing (`note.too_many_items`) |
 | Task title | 200 characters | Notes: cut at a word boundary, the rest moves to task notes. Manual: field stops at 200 |
 | Task notes | 5,000 characters | Field stops at the limit |

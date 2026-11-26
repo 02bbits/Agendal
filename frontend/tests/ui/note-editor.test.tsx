@@ -673,4 +673,16 @@ describe("NoteEditor submit (IM-42)", () => {
       vi.unstubAllGlobals();
     }
   });
+
+  it("stops the note at 50 lines, typed or pasted (NF-14)", async () => {
+    render(<NoteEditor onClose={() => {}} />);
+    const input = field() as HTMLTextAreaElement;
+    await userEvent.click(input);
+    await userEvent.paste(
+      Array.from({ length: 60 }, (_, i) => `t${i}`).join("\n"),
+    );
+    expect(input.value.split("\n")).toHaveLength(50);
+    await userEvent.type(input, "{Enter}x");
+    expect(input.value.split("\n")).toHaveLength(50);
+  });
 });

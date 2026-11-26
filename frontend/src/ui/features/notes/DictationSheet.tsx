@@ -169,7 +169,7 @@ export function DictationSheet({
       >
         <div
           aria-hidden="true"
-          className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-3 md:cursor-auto"
+          className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-3 md:hidden"
           {...drawer.grabber}
         >
           <span className="h-1 w-9 rounded-full bg-fill-2" />
@@ -177,7 +177,7 @@ export function DictationSheet({
         <h2 ref={titleRef} id={titleId} tabIndex={-1} className="sr-only">
           {t("note.mic")}
         </h2>
-        <div className="min-h-0 flex-1 overflow-y-auto px-gutter pb-[calc(20px+env(safe-area-inset-bottom))] md:px-gutter-wide md:pb-5">
+        <div className="min-h-0 flex-1 overflow-y-auto px-gutter pb-[calc(20px+env(safe-area-inset-bottom))] md:px-gutter-wide md:pt-5 md:pb-5">
           {phase.kind === "notice" ? (
             <div className="flex flex-col gap-4 pt-2">
               <p className="m-0 text-center text-body text-ink-secondary">

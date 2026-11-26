@@ -25,7 +25,6 @@ import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
 import {
-  ArrowDownIcon,
   ArrowUpIcon,
   ImageIcon,
   MicIcon,
@@ -103,6 +102,8 @@ function ReadingStatus() {
 
 // NF-14: the client mirrors the server's notes.max_length; the counter shows from 4,500 (NC §2.1)
 const NOTE_MAX = 5000;
+// The most lines a note takes, a little above the 30 items a note can hold (NF-14)
+const NOTE_MAX_LINES = 50;
 // How often a new note's time is brought up to date while the editor is open
 const CLOCK_TICK_MS = 10_000;
 const COUNTER_FROM = 4500;
@@ -397,7 +398,11 @@ export function NoteEditor({
     if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
       event.preventDefault();
       void submit();
-    }
+    } else if (
+      event.key === "Enter" &&
+      latest.current.split("\n").length >= NOTE_MAX_LINES
+    )
+      event.preventDefault();
   };
   // A finished countdown clears itself; every other failure stays until the next try or edit
   const message =
@@ -606,12 +611,12 @@ export function NoteEditor({
         >
           <div
             aria-hidden="true"
-            className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-1 md:cursor-auto"
+            className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-1 md:hidden"
             {...drawer.grabber}
           >
             <span className="h-1 w-9 rounded-full bg-fill-2" />
           </div>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide md:pt-4">
             <button
               type="button"
               className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field px-2 text-body text-primary hover:bg-fill"
@@ -628,12 +633,12 @@ export function NoteEditor({
             </h2>
             <span />
           </div>
-          <p className="m-0 text-center text-overline font-semibold text-ink-secondary uppercase tabular-nums">
+          <p className="m-0 pb-3 text-center text-overline font-semibold text-ink-secondary uppercase tabular-nums">
             <time dateTime={writtenAt}>{stamp}</time>
           </p>
           <div
             ref={paperScroll}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-4 [scrollbar-width:none] md:px-gutter-wide"
+            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-separator px-gutter pt-4 pb-4 [scrollbar-width:none] md:px-gutter-wide"
           >
             {attachment && (
               <div className="flex shrink-0 items-center gap-3 rounded-box bg-surface p-4">
@@ -681,7 +686,14 @@ export function NoteEditor({
                 id={fieldId}
                 ref={textRef}
                 value={text}
-                onChange={(event) => edit(event.target.value)}
+                onChange={(event) => {
+                  const lines = event.target.value.split("\n");
+                  edit(
+                    lines.length > NOTE_MAX_LINES
+                      ? lines.slice(0, NOTE_MAX_LINES).join("\n")
+                      : event.target.value,
+                  );
+                }}
                 // NF-14: the note stops at 5,000; a paste keeps only what fits
                 maxLength={NOTE_MAX}
                 onKeyDown={onKeyDown}
@@ -780,8 +792,14 @@ export function NoteEditor({
               }}
               disabled={busy || uploading || offline}
             />
-            {tools && (
-              <div className="mb-3 flex flex-col gap-2">
+            <div
+              inert={!tools}
+              className={cx(
+                "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
+                tools ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+              )}
+            >
+              <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
                 <div className="flex gap-3">
                   {canDictate() && (
                     <Button
@@ -815,14 +833,22 @@ export function NoteEditor({
                     {t("note.file_offline")}
                   </p>
                 )}
+                <span aria-hidden="true" className="h-1" />
               </div>
-            )}
+            </div>
             <div className="flex items-center gap-3">
               <IconButton
                 className="size-11! min-h-11! shrink-0 bg-fill!"
                 label={t("note.tools")}
                 aria-expanded={tools}
-                icon={tools ? <ArrowDownIcon /> : <ArrowUpIcon />}
+                icon={
+                  <ArrowUpIcon
+                    className={cx(
+                      "transition-transform duration-200 motion-reduce:transition-none",
+                      tools && "rotate-180",
+                    )}
+                  />
+                }
                 onClick={() => setTools((open) => !open)}
               />
               {uploading ? (
