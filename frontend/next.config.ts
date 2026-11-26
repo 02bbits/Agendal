@@ -12,6 +12,7 @@ const repoRoot = path.join(__dirname, "..");
 const nextConfig: NextConfig = {
   turbopack: { root: repoRoot },
   outputFileTracingRoot: repoRoot,
+  images: { formats: ["image/avif", "image/webp"] },
   // The service worker URL carries this, so each build is a new worker (IM-50, UX-42)
   env: { NEXT_PUBLIC_BUILD_ID: String(Date.now()) },
   cacheComponents: true,

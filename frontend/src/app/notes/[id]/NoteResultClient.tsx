@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   useCallback,
   useEffect,
@@ -35,7 +36,6 @@ import { useOffline } from "../../../lib/online";
 import { getTask, httpTaskApi, orDevice, projects } from "../../../lib/taskApi";
 import {
   NoteResultScreen,
-  TaskPanel,
   TaskStoreProvider,
   t,
   useTaskStore,
@@ -43,6 +43,14 @@ import {
   type Project,
   type Task,
 } from "../../../ui";
+
+const TaskPanel = dynamic(
+  () =>
+    import("../../../ui/features/tasks/details/TaskPanel").then(
+      (m) => m.TaskPanel,
+    ),
+  { ssr: false },
+);
 import {
   changeSummary,
   nameOf,

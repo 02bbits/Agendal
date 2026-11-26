@@ -1,12 +1,19 @@
+import dynamic from "next/dynamic";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
-import {
-  DeleteProjectDialog,
-  ProjectSheet,
-  t,
-  type Project,
-  type ProjectWithCounts,
-  type ToastData,
-} from "@/ui";
+import { t, type Project, type ProjectWithCounts, type ToastData } from "@/ui";
+
+const DeleteProjectDialog = dynamic(
+  () =>
+    import("@/ui/features/projects/DeleteProjectDialog").then(
+      (m) => m.DeleteProjectDialog,
+    ),
+  { ssr: false },
+);
+const ProjectSheet = dynamic(
+  () =>
+    import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
+  { ssr: false },
+);
 import {
   createProject,
   deleteProject,

@@ -1,7 +1,14 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { useState } from "react";
-import { ProjectSheet, ROUTES, RateLimited, TaskStoreProvider, t } from "@/ui";
+import { ROUTES, RateLimited, TaskStoreProvider, t } from "@/ui";
+
+const ProjectSheet = dynamic(
+  () =>
+    import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
+  { ssr: false },
+);
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
 import { useToday } from "@/ui/features/tasks/useToday";
