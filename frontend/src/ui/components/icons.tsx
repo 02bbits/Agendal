@@ -186,6 +186,13 @@ export const NotesIcon = icon(
     <path d="M14 3v6h6M8 13h8M8 17h5" />
   </>,
 );
+export const ImageIcon = icon(
+  <>
+    <rect x="3" y="3" width="18" height="18" rx="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-5-5L5 21" />
+  </>,
+);
 export const TrashIcon = icon(
   <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6" />,
 );

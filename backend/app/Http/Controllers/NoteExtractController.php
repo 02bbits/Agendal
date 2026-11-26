@@ -27,9 +27,6 @@ class NoteExtractController extends Controller
 
     private const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
-    /** Set when a parser's output passed OUTPUT_CAP: what was read is kept and marked truncated. */
-    private bool $outputCut = false;
-
     public function __invoke(Request $request, NoteOcr $ocr): JsonResponse
     {
         $validated = $request->validate(['file' => ['required', 'file', 'max:'.(int) config('notes.file_max_kb')]], [
@@ -91,16 +88,14 @@ class NoteExtractController extends Controller
             $this->fail('note.file_no_text');
         }
 
-        // More than a note holds: the start is kept and marked, the editor says so (NC-E9)
-        $max = (int) config('notes.max_length', 5000);
-        if (mb_strlen($text) > $max) {
-            $text = rtrim(mb_substr($text, 0, $max));
-            $truncated = true;
+        // More than a note holds: refused, nothing is added (NC-E9)
+        if (mb_strlen($text) > (int) config('notes.max_length', 5000)) {
+            $this->fail('note.file_too_long');
         }
 
         return response()->json([
             'text' => $text,
-            'truncated' => $truncated || $this->outputCut,
+            'truncated' => $truncated,
             'file_name' => basename($file->getClientOriginalName()),
             'pages' => $pages,
         ]);
@@ -136,11 +131,9 @@ class NoteExtractController extends Controller
             $this->fail('note.file_failed');
         }
 
-        // Stopped at the cap: keep what was read, marked truncated (NC-E9)
+        // Stopped at the cap: far more than a note holds (NC-E9)
         if ($tooLong) {
-            $this->outputCut = true;
-
-            return $process->getOutput();
+            $this->fail('note.file_too_long');
         }
 
         if (! $process->isSuccessful()) {

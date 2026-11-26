@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -89,7 +89,7 @@ describe("NoteEditor (IM-41)", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("counts from 4,500, keeps a paste over 5,000 in full and holds Make tasks until trimmed (T-NC-102, A11Y-32)", async () => {
+  it("counts from 4,500 and stops the note at 5,000 (T-NC-102, A11Y-32)", async () => {
     render(<NoteEditor onClose={() => {}} onSubmit={vi.fn()} />);
     const input = field() as HTMLTextAreaElement;
     const live = () => document.querySelector("[aria-live='polite']");
@@ -115,15 +115,10 @@ describe("NoteEditor (IM-41)", () => {
     expect(live()?.textContent).toBe("5,000 / 5,000");
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
 
+    // Past 5,000 nothing more goes in, typed or pasted (NF-14)
     await userEvent.paste("b");
-    const tooLong = t("note.too_long", { count: "5,001" });
-    expect(input.value).toHaveLength(5001);
-    expect(counter()?.textContent).toBe(`5,001 / 5,000 · ${tooLong}`);
-    expect(counter()?.className).toContain("text-error");
-    expect(live()?.textContent).toBe(tooLong);
-    expect((makeTasks() as HTMLButtonElement).disabled).toBe(true);
-
-    await userEvent.type(input, "{Backspace}");
+    await userEvent.type(input, "c");
+    expect(input.value).toHaveLength(5000);
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -639,6 +634,37 @@ describe("NoteEditor submit (IM-42)", () => {
         screen.getByRole("button", { name: "Remove scan.pdf" }),
       ).toBeTruthy();
       expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("uploads a file dropped on the note (NC §2.4)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            text: "call mom",
+            truncated: false,
+            file_name: "todo.txt",
+            pages: null,
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    try {
+      render(<NoteEditor onClose={() => {}} />);
+      const files = [new File(["call mom"], "todo.txt")];
+      fireEvent.drop(screen.getByRole("dialog"), {
+        dataTransfer: { files, types: ["Files"] },
+      });
+      expect(
+        await screen.findByRole("textbox", {
+          name: "Your note, from todo.txt",
+        }),
+      ).toHaveProperty("value", "call mom");
     } finally {
       vi.unstubAllGlobals();
     }

@@ -1,5 +1,15 @@
 @import "../ui/theme.css";
 
+/* A skeleton waits before it shows, so a list that answers quickly never flashes one (UX-03) */
+@keyframes skeleton-wait {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(24px);

@@ -133,12 +133,15 @@ export function NotesScreen({
         ))}
       </div>
       {status === "loading" && (
-        <div
-          role="status"
-          aria-busy="true"
-          aria-label={t("nav.notes")}
-          className="h-80 w-full animate-pulse rounded-box bg-surface"
-        />
+        // UX-03: shown only after 300 ms; the device's notes usually come sooner, and the skeleton would flash
+        <div className="[animation:skeleton-wait_0s_300ms_both]">
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={t("nav.notes")}
+            className="h-80 w-full animate-pulse rounded-box bg-surface"
+          />
+        </div>
       )}
       {status === "error" &&
         (limited ? (

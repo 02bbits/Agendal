@@ -111,7 +111,7 @@ class NoteExtractTest extends TestCase
             ->assertJsonPath('error.fields.file.0', 'note.file_no_text');
     }
 
-    public function test_too_long_document_keeps_what_fits(): void
+    public function test_too_long_document_is_rejected(): void
     {
         $this->authenticate();
 
@@ -120,14 +120,12 @@ class NoteExtractTest extends TestCase
             str_repeat('A', 5001)
         );
 
-        // NC-E9: the start of the text, marked truncated
+        // NC-E9: more than a note holds is refused, nothing is added
         $this->post(self::ENDPOINT, ['file' => $file], [
             'Accept' => 'application/json',
         ])
-            ->assertOk()
-            ->assertJsonPath('text', str_repeat('A', 5000))
-            ->assertJsonPath('truncated', true)
-            ->assertJsonPath('file_name', 'long.txt');
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.file.0', 'note.file_too_long');
     }
 
     public function test_invalid_pdf_signature_is_rejected(): void
@@ -285,7 +283,7 @@ class NoteExtractTest extends TestCase
             ->assertJsonPath('text', "Tab\tseparated\nLine\nbreak\nAnchor\nBox text");
     }
 
-    public function test_pdf_text_past_the_output_cap_is_cut(): void
+    public function test_pdf_text_past_the_output_cap_is_rejected(): void
     {
         $this->authenticate();
 
@@ -311,11 +309,10 @@ class NoteExtractTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('bomb.pdf', $pdf);
 
-        // The parser is stopped at the cap; what it read is kept, marked truncated (NC-E9)
+        // The parser is stopped at the cap: far more than a note holds (NC-E9)
         $this->post(self::ENDPOINT, ['file' => $file], ['Accept' => 'application/json'])
-            ->assertOk()
-            ->assertJsonPath('truncated', true)
-            ->assertJsonPath('pages', 20);
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.file.0', 'note.file_too_long');
     }
 
     private function docx(string $documentXml): UploadedFile

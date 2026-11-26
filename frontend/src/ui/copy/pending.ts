@@ -114,6 +114,7 @@ export const pending = {
   "note.file_read_hint":
     "Agendal read this from the file. Fix anything before making tasks.",
   "note.file_remove": "Remove {name}",
+  "note.file_too_long": "This file has more text than fits in a note.",
   "note.file_remove_text": "Remove text",
   "note.file_keep_text": "Keep text",
   "note.file_size_kb": "{size} KB",

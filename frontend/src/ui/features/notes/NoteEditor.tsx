@@ -5,7 +5,6 @@ import {
   useLayoutEffect,
   useRef,
   useState,
-  type ChangeEvent,
   type KeyboardEvent,
 } from "react";
 import {
@@ -29,14 +28,15 @@ import { IconButton } from "../../components/IconButton";
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  ImageIcon,
   MicIcon,
-  NotesIcon,
   PaperclipIcon,
-  XIcon,
   SparklesIcon,
+  XIcon,
 } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
+import { useDrawerDrag } from "../../components/useDrawerDrag";
 import { DictationSheet } from "./DictationSheet";
 import { UndoConflictDialog } from "./UndoConflictDialog";
 import { api } from "../../../lib/api";
@@ -143,6 +143,17 @@ const FILE_TYPES = [
   ".webp",
 ];
 const FILE_MAX_BYTES = 5 * 1024 * 1024;
+// The file card's tile (NC §2.4): a photo shows a picture, any other file its type, each in its own colour
+const PHOTO_TYPES = ["jpg", "jpeg", "png", "webp"];
+const FILE_TILES: { [extension: string]: string } = {
+  pdf: "bg-danger-tint text-error",
+  docx: "bg-due-tint text-due-ink",
+  csv: "bg-success-tint text-success",
+  md: "bg-warning-tint text-warning",
+};
+function extensionOf(name: string): string {
+  return name.slice(name.lastIndexOf(".") + 1).toLowerCase();
+}
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024)
     return t("note.file_size_kb", {
@@ -186,6 +197,8 @@ export function NoteEditor({
   const [reading, setReading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<CopyKey | null>(null);
+  // A file is being dragged over the note: the paper shows where it will go
+  const [dropping, setDropping] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<NoteSubmitFailure | null>(null);
   // Tasks of the note edited by hand since: how many, while the dialog asks (RV-E16)
@@ -232,6 +245,7 @@ export function NoteEditor({
   };
   useModalFocus(editorRef, textRef, true, requestClose);
   useHistoryEntry(true, requestClose);
+  const drawer = useDrawerDrag(requestClose);
 
   // Focus runs in the opener's tap, before paint: iOS only opens the keyboard for focus
   // that happens inside the gesture, and an effect that waits a frame is too late (NC §2.1)
@@ -244,15 +258,27 @@ export function NoteEditor({
     const field = textRef.current;
     if (!field) return;
     field.style.height = "auto";
+    // The text's own height, without the empty ruled lines the field's min height adds
+    field.style.minHeight = "0";
+    const textHeight = field.scrollHeight;
+    field.style.minHeight = "";
     field.style.height = `${field.scrollHeight}px`;
-    // The field no longer scrolls to its cursor, so writing at the end keeps the end in view
+    // The field no longer scrolls to its cursor, so writing at the end keeps the end of the text in
+    // view (not the end of the paper, whose empty lines run on below it)
     const scroller = paperScroll.current;
     if (
       scroller &&
       document.activeElement === field &&
       field.selectionEnd === field.value.length
-    )
-      scroller.scrollTop = scroller.scrollHeight;
+    ) {
+      const end =
+        field.getBoundingClientRect().top +
+        textHeight -
+        scroller.getBoundingClientRect().top +
+        scroller.scrollTop;
+      if (end > scroller.scrollTop + scroller.clientHeight)
+        scroller.scrollTop = end - scroller.clientHeight;
+    }
   }, []);
   useLayoutEffect(fit, [text, fit]);
   useEffect(() => {
@@ -399,9 +425,14 @@ export function NoteEditor({
     const after = latest.current.slice(to);
     const lead = before && !/\s$/.test(before) ? " " : "";
     const tail = after && !/^\s/.test(after) ? " " : "";
-    edit(before + lead + words + tail + after);
+    // Only the words that fit in the note's 5,000 (NF-14)
+    const fitting = words.slice(
+      0,
+      Math.max(0, NOTE_MAX - (before + lead + tail + after).length),
+    );
+    edit(before + lead + fitting + tail + after);
     setDictating(false);
-    const cursor = (before + lead + words).length;
+    const cursor = (before + lead + fitting).length;
     const field = textRef.current;
     requestAnimationFrame(() => {
       field?.focus();
@@ -417,11 +448,10 @@ export function NoteEditor({
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [removingFile, setRemovingFile] = useState(false);
   const uploadAbort = useRef<AbortController | null>(null);
-  const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    // Allow selecting the same file again after an error
-    event.target.value = "";
-    if (!file || uploading || busy) return;
+  // From Upload file or a file dropped on the note (NC §2.4); one file per note
+  const uploadFile = async (file: File) => {
+    if (uploading || busy || attachment) return;
+    if (offline) return setUploadError("note.file_offline");
     setUploadError(null);
 
     // Checked here before uploading, and again on the server (NC §2.4)
@@ -448,11 +478,12 @@ export function NoteEditor({
           signal: abort.signal,
         }),
       );
-      // Added at the end, after a blank line; only what fits in the note (NC-E9)
+      // Added at the end, after a blank line; text that doesn't fit is refused, nothing is added (NC-E9)
       const current = latest.current.trimEnd();
       const gap = VISIBLE.test(current) ? "\n\n" : "";
-      const room = Math.max(0, NOTE_MAX - lengthOf(current) - gap.length);
-      const block = read.text.slice(0, room).trimEnd();
+      if ((current + gap + read.text).length > NOTE_MAX)
+        return setUploadError("note.file_too_long");
+      const block = read.text;
       const start = current.length + gap.length;
       edit(current + gap + block);
       setAttachment({
@@ -461,7 +492,7 @@ export function NoteEditor({
         pages: read.pages,
         block,
         before: current + gap,
-        truncated: read.truncated || block.length < read.text.length,
+        truncated: read.truncated,
       });
       // The cursor goes to the start of the file's text, to check it
       const field = textRef.current;
@@ -525,11 +556,29 @@ export function NoteEditor({
 
   return (
     <>
-      {/* A drawer over the screen; a tap on the dimmed screen closes it like Cancel */}
+      {/* A drawer that slides up from the capture bar to about the middle of the screen, over the
+          content column; a tap on the dimmed screen closes it like Cancel */}
       <div
         className="fixed inset-0 z-[70] bg-scrim motion-safe:animate-fade-in"
         onMouseDown={(event) => {
           if (event.target === event.currentTarget) requestClose();
+        }}
+        // A file dropped anywhere over the note is uploaded, never opened by the browser over the note
+        onDragOver={(event) => {
+          if (!event.dataTransfer.types.includes("Files")) return;
+          event.preventDefault();
+          setDropping(true);
+        }}
+        onDragLeave={(event) => {
+          if (!event.currentTarget.contains(event.relatedTarget as Node))
+            setDropping(false);
+        }}
+        onDrop={(event) => {
+          const file = event.dataTransfer.files[0];
+          if (!file) return;
+          event.preventDefault();
+          setDropping(false);
+          void uploadFile(file);
         }}
       >
         <div
@@ -537,12 +586,16 @@ export function NoteEditor({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+24px)] bottom-[var(--keyboard-inset,0px)] mx-auto flex w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:top-10 md:max-w-[712px]"
+          className="absolute inset-x-0 bottom-[var(--keyboard-inset,0px)] mx-auto flex h-[60dvh] max-h-[calc(100dvh-env(safe-area-inset-top)-24px-var(--keyboard-inset,0px))] min-h-[320px] w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:right-[var(--panel-w,0px)] md:left-[var(--sidebar-w,0px)] md:max-w-[712px]"
+          style={drawer.style}
         >
           <div
             aria-hidden="true"
-            className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-fill-2"
-          />
+            className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-1 md:cursor-auto"
+            {...drawer.grabber}
+          >
+            <span className="h-1 w-9 rounded-full bg-fill-2" />
+          </div>
           <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide">
             <button
               type="button"
@@ -571,9 +624,13 @@ export function NoteEditor({
               <div className="flex shrink-0 items-center gap-3 rounded-box bg-surface p-4">
                 <span
                   aria-hidden="true"
-                  className="grid size-10 shrink-0 place-items-center rounded-tile bg-danger-tint text-error"
+                  className={`grid size-10 shrink-0 place-items-center rounded-tile text-[11px] font-bold uppercase ${FILE_TILES[extensionOf(attachment.name)] ?? "bg-primary-tint text-ink-secondary"}`}
                 >
-                  <NotesIcon size={20} />
+                  {PHOTO_TYPES.includes(extensionOf(attachment.name)) ? (
+                    <ImageIcon size={20} />
+                  ) : (
+                    extensionOf(attachment.name)
+                  )}
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="m-0 truncate text-body font-semibold">
@@ -594,7 +651,9 @@ export function NoteEditor({
                 />
               </div>
             )}
-            <div className="flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4">
+            <div
+              className={`flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4 ${dropping ? "outline-2 outline-primary outline-dashed" : ""}`}
+            >
               <label
                 htmlFor={fieldId}
                 className="mb-2 truncate text-footnote font-medium text-ink-secondary"
@@ -608,6 +667,8 @@ export function NoteEditor({
                 ref={textRef}
                 value={text}
                 onChange={(event) => edit(event.target.value)}
+                // NF-14: the note stops at 5,000; a paste keeps only what fits
+                maxLength={NOTE_MAX}
                 onKeyDown={onKeyDown}
                 readOnly={busy || uploading}
                 aria-invalid={message ? true : undefined}
@@ -617,7 +678,7 @@ export function NoteEditor({
                     .join(" ") || undefined
                 }
                 placeholder={t("note.placeholder")}
-                className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+                className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[linear-gradient(transparent_23px,var(--color-fill-2)_23px)] bg-[length:100%_24px] leading-6 p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
               />
             </div>
             {uploadError && (
@@ -715,7 +776,12 @@ export function NoteEditor({
               accept={FILE_TYPES.join(",")}
               className="sr-only"
               aria-label={t("note.upload_choose")}
-              onChange={(event) => void uploadFile(event)}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                // Allow selecting the same file again after an error
+                event.target.value = "";
+                if (file) void uploadFile(file);
+              }}
               disabled={busy || uploading || offline}
             />
             {tools && (
@@ -775,15 +841,15 @@ export function NoteEditor({
               </Button>
             </div>
           </div>
+          {dictating && (
+            <DictationSheet
+              offline={offline}
+              onClose={() => setDictating(false)}
+              onWords={insertWords}
+            />
+          )}
         </div>
       </div>
-      {dictating && (
-        <DictationSheet
-          offline={offline}
-          onClose={() => setDictating(false)}
-          onWords={insertWords}
-        />
-      )}
       <UndoConflictDialog
         count={conflicts}
         history={false}

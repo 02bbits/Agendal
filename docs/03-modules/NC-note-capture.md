@@ -41,12 +41,12 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.1 Editor (NC-1, NC-2, NC-5)
 
-- **Layout:** a drawer over the screen (a grabber on top, the screen dimmed behind; a tap on it closes like Cancel), on every screen: up to 712px wide and centred from 768px, still docked to the bottom. Cancel on the left and "✦ New note" in the centre; under them the time the note was written ("Today 15:35", in the account's clock); the "Your note" card (429px minimum, text on ruled lines that move with the text: the card grows and the drawer scrolls); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with a round ^ beside Make tasks. The ^ opens a tray with Dictate a note (§2.3) and Upload file (§2.4). Every row keeps the same side margins (20px, 40px from 768px). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
+- **Layout:** a drawer that slides up from the capture bar to about the middle of the screen (60% of its height), over the content column, up to 712px wide from 768px; the screen is dimmed behind and a tap on it closes like Cancel. On a phone the grabber sets how far it is open (up to just under the top), and letting it go below a quarter of the screen closes it like Cancel; from 768px its height is fixed. Cancel on the left and "✦ New note" in the centre; under them the time the note was written ("Today 15:35", in the account's clock); the "Your note" card (429px minimum, text on ruled lines that move with the text: the card grows and the drawer scrolls, keeping the last line of text in view); a helper line; "Try writing" examples, one per line, while the text is empty; then a bottom bar with a round ^ beside Make tasks. The ^ opens a tray with Dictate a note (§2.3) and Upload file (§2.4). Every row keeps the same side margins (20px, 40px from 768px). The bar sits above the keyboard ([UX-20](../01-product/ux-standards.md#ux-20)).
 - **Focus:** the text area is focused inside the tap handler, so iOS opens the keyboard (focusing after an `await` doesn't).
 - **Examples** show while the text is empty: 3 chips ("sql quiz monday 9am, email the group tonight", "done email the group", "move gym to sunday"). A chip replaces the empty text and keeps focus at the end ([NC-5](#nc-5)).
 - **Make tasks** is enabled when the text has a visible character ([NU-E15](NU-note-understanding.md#nu-e15)), and not while listening or reading a file. Ctrl/Cmd+Enter submits ([UX-12](../01-product/ux-standards.md#ux-12)).
-- **Counter:** hidden below 4,500 characters. From 4,500 it shows `4,612 / 5,000`. Above 5,000 it turns red with `note.too_long`, and Make tasks is disabled ([NF-14](../05-quality/nfr.md#nf-14)).
-- **Paste:** the text area is plain text, so formatting is dropped by the platform. A paste that crosses 5,000 characters is kept in full and shows the counter error, so nothing the user pasted is lost silently.
+- **Counter:** hidden below 4,500 characters. From 4,500 it shows `4,612 / 5,000`. The note stops at 5,000: nothing more can be typed, pasted or dictated ([NF-14](../05-quality/nfr.md#nf-14)).
+- **Paste:** the text area is plain text, so formatting is dropped by the platform. A paste that would cross 5,000 characters keeps only what fits.
 - **Draft ([UX-13](../01-product/ux-standards.md#ux-13)):**
   - The text is saved to IndexedDB 500 ms after the last keystroke, and on `pagehide` / `visibilitychange`.
   - A browser aborts an IndexedDB write still running as the page unloads, so on `pagehide` / `visibilitychange` the text is also copied to `localStorage`, which writes at once. The next open moves that copy back to IndexedDB and removes it ([NC-E1](#nc-e1)).
@@ -76,11 +76,11 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Engine ([Q11](../08-project/open-questions.md#q11)):** the device records the audio and the server has the app's language model ([ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)) write it down word for word, in the languages spoken: a note often mixes Vietnamese and English. The browser's own speech service is not used: it is unreliable on iPhone and missing in Firefox. Where the browser can't record audio, the mic button is hidden, not disabled.
 - **Recording:** 16 kHz mono WAV, made on the device and sent inline to `POST /notes/dictation`. A recording with less than 300 ms of loud sound (a click, a cough) is not sent and ends with `note.no_speech`. The audio is never stored or logged.
 - **Writing down:** the model first says whether it heard clear speech, so silence or noise gives no words instead of made-up ones. It writes what was said as a note would be typed: English words inside Vietnamese speech stay in English (call mum, ROI), numbers and times are digits ("5 giờ chiều", "9am"), and a comma goes only between tasks, since the rules split on it ([NU §2.2](NU-note-understanding.md)).
-- **Dictation sheet:** Dictate a note in the note's ^ tray opens it over the note (the capture bar has no mic). Recording starts at once in that tap (iOS only starts audio inside a tap). It is the app's sheet, docked to the bottom on every screen (up to 560px wide from 768px, [UX-27](../01-product/ux-standards.md#ux-27)), like the note it opens over. Its header has × (drops the recording; nothing is sent) and the title `note.mic`, like every sheet.
-- **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, the sheet first shows `note.mic_notice`, with Continue as the header's confirm button and × to cancel; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
-- **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), an empty words card and a round red Stop, and under it `note.dictation_hint`. `note.listening` is announced.
-- **Stopping:** Stop, 8 s of silence, or 2 minutes total. `note.reading` shows in the words card while the model writes the words down (a few seconds). The words show then, not while speaking.
-- **The words heard:** the sheet closes and the words go into the note at the cursor (a selection is replaced, [NC-E17](#nc-e17)), with a space either side where needed; the cursor goes to their end. There is no live transcript: the user checks and changes the words in the note, then taps Make tasks.
+- **Dictation sheet:** Dictate a note in the note's ^ tray opens it over the note (the capture bar has no mic). Recording starts at once in that tap (iOS only starts audio inside a tap). It is a drawer that slides up inside the note, over its lower part, with the note dimmed behind it; its grabber works as the note's does (adjustable on a phone, fixed from 768px). It has no header: a round × beside the main button drops the recording (nothing is sent), as do Escape, Back and a tap on the dimmed note.
+- **Disclosure ([Q20](../08-project/open-questions.md#q20)):** the recording goes to the app's language model. The first time the mic is used on a device, the sheet first shows `note.mic_notice`, with × and Continue under it; Continue starts the recording. This keeps [NF-9](../05-quality/nfr.md#nf-9) honest.
+- **While listening:** a red dot with `note.listening` and the time (0:04), a waveform that follows the voice (`accent`), × beside a round red Stop, and under them `note.dictation_hint`. `note.listening` is announced.
+- **Stopping:** Stop, 8 s of silence, or 2 minutes total. `note.reading` shows under the waveform while the model writes the words down (a few seconds). The words show then, not while speaking.
+- **The words heard:** the sheet closes and the words go into the note at the cursor (a selection is replaced, [NC-E17](#nc-e17)), with a space either side where needed, and only as many as fit in the note's 5,000 characters; the cursor goes to their end. There is no live transcript: the user checks and changes the words in the note, then taps Make tasks.
 - **Errors:**
   - Permission denied → `note.mic_denied`, and the sheet's mic stays so the user can retry.
   - No speech → `note.no_speech`.
@@ -90,7 +90,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 ### 2.4 File to note (NC-4, Should)
 
-- **Picker:** Upload file in the note's ^ tray opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.webp` (HEIC is not read yet: it needs a converter in the sandbox, NC-E8). One file per note: Upload file is off while a file is attached.
+- **Picker:** Upload file in the note's ^ tray opens the file picker with `accept` set to `.txt,.md,.csv,.pdf,.docx,.jpg,.jpeg,.png,.webp` (HEIC is not read yet: it needs a converter in the sandbox, NC-E8). A file can also be dragged onto the open note: the paper shows a dashed outline while it is over the note, and the drop uploads it the same way (the browser never opens it over the note). One file per note: Upload file is off, and a drop is ignored, while a file is attached; offline a drop shows `note.file_offline`.
 - **Client checks, before uploading:**
   - Size ≤ 5 MB, else `note.file_too_big`
   - Extension on the list, else `note.file_type`
@@ -98,9 +98,9 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 - **Server:** the [NF-17](../05-quality/nfr.md#nf-17) pipeline. Typed errors: `note.file_type` (magic bytes don't match), `note.file_locked`, `note.file_no_text`, `note.file_failed` (timeout or parser error).
 - **On success:**
   - The text is appended at the end, separated by a blank line if the editor already had text.
-  - A card above the note shows the file name, its size and, for a PDF, its pages ("234 KB · 2 pages"), with a remove (×) button. The note's label reads `note.text_label_from` and the helper line `note.file_read_hint`.
+  - A card above the note shows a tile for the file's type (a picture for a photo; otherwise its extension, PDF in red, DOCX in blue, CSV in green, MD in amber, TXT in grey), the file name, its size and, for a PDF, its pages ("234 KB · 2 pages"), with a remove (×) button. The note's label reads `note.text_label_from` and the helper line `note.file_read_hint`.
   - The cursor moves to the start of the inserted text, so the user checks it.
-- **Too much text:** if extracted text would push the note over 5,000 characters, only what fits is inserted, with `note.file_truncated`.
+- **Too much text:** if the file's text would push the note over 5,000 characters, nothing is added and `note.file_too_long` shows. The server refuses a file with more than 5,000 characters of text the same way. `note.file_truncated` is only for a scanned PDF of more than 5 pages, of which the first 5 are read.
 - **Removing the chip:**
   - If the inserted block is unchanged, it is removed too.
   - If it was edited, a dialog asks `note.file_remove_title` with Remove text / Keep text. Keep text drops only the "From" attribution.
@@ -153,14 +153,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | ID | Situation | Decision | Test |
 |---|---|---|---|
 | <a id="nc-e1"></a>NC-E1 | The app is closed mid-note (tab killed, phone locked) | The draft from the last 500 ms debounce or `pagehide` is restored next time | T-NC-101, OFF-01 |
-| <a id="nc-e2"></a>NC-E2 | A paste pushes the note over 5,000 characters | Kept in full. Red counter, Make tasks disabled until trimmed | T-NC-102 |
+| <a id="nc-e2"></a>NC-E2 | A paste would push the note over 5,000 characters | Only what fits is pasted; the note stops at 5,000 | T-NC-102 |
 | <a id="nc-e3"></a>NC-E3 | Microphone permission denied | `note.mic_denied`. The mic stays, so a retry re-asks or explains | T-NC-103 |
 | <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | Dictate a note is hidden from the ^ tray | T-NC-104 |
 | <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to the language model ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
 | <a id="nc-e6"></a>NC-E6 | Password-protected PDF | `note.file_locked` | T-NC-106, SEC-32 |
 | <a id="nc-e7"></a>NC-E7 | Renamed file (an `.exe` saved as `.pdf`) | Magic bytes don't match → `note.file_type` | T-NC-107, SEC-30 |
 | <a id="nc-e8"></a>NC-E8 | HEIC photo from an iPhone | Accepted. Converted to JPEG inside the sandbox, then sent to the language model | T-NC-108 |
-| <a id="nc-e9"></a>NC-E9 | Extracted text over the space left | Inserted up to 5,000 characters in total, with `note.file_truncated` | T-NC-109 |
+| <a id="nc-e9"></a>NC-E9 | Extracted text over the space left | Nothing is added; `note.file_too_long` | T-NC-109 |
 | <a id="nc-e10"></a>NC-E10 | Double tap on Make tasks | The busy button ignores it. A retry carries the same `client_id`, so there is only one note | T-NC-110, SEC-13 |
 | <a id="nc-e11"></a>NC-E11 | Connection drops after the request was sent, before the reply | Queued with the same `client_id`. The replay returns the stored result (`200`). No duplicate | T-NC-111, OFF-02 |
 | <a id="nc-e12"></a>NC-E12 | Device storage full while offline | Save note fails, the text stays in the editor, and `app.storage_low` shows | T-NC-112 |
@@ -192,7 +192,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | `200` | `{text, truncated: bool, file_name, pages}`. `text` is at most 5,000 characters; `pages` is a PDF's page count, else null |
 | `413` | `note.file_too_big` |
 | `415` | `note.file_type` |
-| `422` | `note.file_locked`, `note.file_no_text` |
+| `422` | `note.file_locked`, `note.file_no_text`, `note.file_too_long` (more than 5,000 characters of text) |
 | `504` | `note.file_failed` (the 10 s sandbox timeout) |
 | `429` | `error.rate_limited` (10/hour, 30/day) |
 
