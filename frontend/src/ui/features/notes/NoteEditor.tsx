@@ -16,7 +16,7 @@ import {
 } from "../../../lib/draft";
 import { now } from "../../../lib/clock";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
-import { t, type CopyKey } from "../../copy";
+import { isCopyKey, t, type CopyKey } from "../../copy";
 import type { NoteResult } from "../../domain/types";
 import { Button } from "../../components/Button";
 import { Chip } from "../../components/Chip";
@@ -27,6 +27,7 @@ import { useHistoryEntry } from "../../components/useHistoryEntry";
 import { useModalFocus } from "../../components/useModalFocus";
 import { UndoConflictDialog } from "./UndoConflictDialog";
 import { api } from "../../../lib/api";
+import { ApiRequestError, handleResponse } from "../../../lib/apiError";
 
 const EXAMPLES = [
   "note.example_1",
@@ -135,7 +136,7 @@ export function NoteEditor({
   const [busy, setBusy] = useState(false);
   const [reading, setReading] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<CopyKey | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [failure, setFailure] = useState<NoteSubmitFailure | null>(null);
   // Tasks of the note edited by hand since: how many, while the dialog asks (RV-E16)
@@ -307,29 +308,22 @@ export function NoteEditor({
 
   const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
-    // Allow selecting the same file again after an error.
+    // Allow selecting the same file again after an error
     event.target.value = "";
-
     if (!file || uploading || busy) return;
-
     setUploadError(null);
 
-    const allowedExtensions = [".txt", ".md", ".pdf", ".doc", ".docx"];
     const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-
-    if (!allowedExtensions.includes(extension)) {
-      setUploadError(t("note.upload_unsupported"));
+    if (![".txt", ".md", ".pdf", ".docx"].includes(extension)) {
+      setUploadError("note.file_type");
       return;
     }
-
-    // Match the backend's 2 MB upload limit.
+    // The server's 2 MB limit
     if (file.size > 2 * 1024 * 1024) {
-      setUploadError(t("note.upload_too_large"));
+      setUploadError("note.upload_too_large");
       return;
     }
-
-    // Don't silently replace an existing note or draft.
+    // Don't silently replace an existing note or draft
     if (
       VISIBLE.test(latest.current) &&
       !window.confirm(t("note.upload_replace"))
@@ -339,47 +333,25 @@ export function NoteEditor({
 
     const formData = new FormData();
     formData.append("file", file);
-
     setUploading(true);
-
     try {
-      const response = await api("/notes/extract", {
-        method: "POST",
-        body: formData,
-      });
-
-      const result: {
-        text?: unknown;
-        error?: {
-          code?: string;
-          fields?: { file?: string[] };
-        };
-      } = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          result.error?.fields?.file?.[0] ??
-            (response.status === 413
-              ? t("note.upload_too_large")
-              : t("note.upload_failed")),
-        );
-      }
-
-      if (typeof result.text !== "string" || !VISIBLE.test(result.text)) {
-        throw new Error(t("note.upload_no_text"));
-      }
-
-      if (lengthOf(result.text) > NOTE_MAX) {
-        throw new Error(t("note.upload_too_long"));
-      }
-
-      // Use the existing edit function to update the draft correctly.
-      edit(result.text);
+      // The server checks the text is there and fits a note
+      const { text: extracted } = await handleResponse<{ text: string }>(
+        await api("/notes/extract", { method: "POST", body: formData }),
+      );
+      edit(extracted);
       textRef.current?.focus();
     } catch (error) {
-      setUploadError(
-        error instanceof Error ? error.message : t("note.upload_failed"),
-      );
+      // The field error is a copy key; anything else (network, 5xx) reads as "couldn't read"
+      const code =
+        error instanceof ApiRequestError
+          ? error.status === 429
+            ? "error.rate_limited_soon"
+            : error.status === 413
+              ? "note.upload_too_large"
+              : (error.fields?.file?.[0] ?? "")
+          : "";
+      setUploadError(isCopyKey(code) ? code : "note.file_failed");
     } finally {
       setUploading(false);
     }
@@ -451,7 +423,7 @@ export function NoteEditor({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.pdf,.doc,.docx"
+              accept=".txt,.md,.pdf,.docx"
               className="sr-only"
               aria-label={t("note.upload_choose")}
               onChange={(event) => void uploadFile(event)}
@@ -465,7 +437,7 @@ export function NoteEditor({
                 disabled={busy || uploading || offline}
                 onClick={() => fileInputRef.current?.click()}
               >
-                {uploading ? t("note.uploading") : t("note.upload_file")}
+                {uploading ? t("note.reading_file") : t("note.upload_file")}
               </Button>
 
               <span className="text-footnote text-ink-tertiary">
@@ -475,7 +447,7 @@ export function NoteEditor({
 
             {uploadError && (
               <p role="alert" className="m-0 text-footnote text-error">
-                {uploadError}
+                {t(uploadError)}
               </p>
             )}
           </div>

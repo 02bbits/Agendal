@@ -8,7 +8,9 @@ COPY backend/ ./
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
 FROM dunglas/frankenphp:1-php8.4
-RUN install-php-extensions pdo_pgsql intl pcntl
+RUN install-php-extensions pdo_pgsql intl pcntl zip
+# pdftotext for note file upload (NoteExtractController)
+RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/zz-agendal.ini
 # Non-root (no port below 1024 needed): the fixed uid lets the host chown the LLM key secret to it
 RUN useradd --uid 10001 --no-create-home agendal \

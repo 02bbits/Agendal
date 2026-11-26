@@ -589,4 +589,43 @@ describe("NoteEditor submit (IM-42)", () => {
     expect(alert()).not.toBeNull();
     await expectAxeCleanInBothThemes();
   });
+
+  it("fills the editor from an uploaded file, and shows the server's copy key when it can't", async () => {
+    document.cookie = "XSRF-TOKEN=test-token";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            error: {
+              code: "error.invalid",
+              fields: { file: ["note.file_no_text"] },
+            },
+          }),
+          { status: 422 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(JSON.stringify({ text: "buy milk" }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    try {
+      render(<NoteEditor onClose={() => {}} />);
+      const input = screen.getByLabelText("Choose a document");
+      const file = () => new File(["x"], "scan.pdf");
+
+      await userEvent.upload(input, file());
+      expect((await screen.findByRole("alert")).textContent).toBe(
+        t("note.file_no_text"),
+      );
+
+      await userEvent.upload(input, file());
+      await vi.waitFor(() =>
+        expect(field()).toHaveProperty("value", "buy milk"),
+      );
+      expect(screen.queryByRole("alert")).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
 });

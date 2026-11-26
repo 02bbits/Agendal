@@ -1,10 +1,9 @@
-
-# DEV image for the Laravel API; the code is bind-mounted, not copied.
+# Dev image for the Laravel API; the code is bind-mounted, not copied.
 FROM php:8.4-cli
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git unzip libpq-dev libicu-dev libzip-dev libxml2-dev \
-    poppler-utils antiword \
+    poppler-utils \
     && docker-php-ext-install pdo_pgsql intl pcntl zip dom \
     && rm -rf /var/lib/apt/lists/*
 

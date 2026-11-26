@@ -45,7 +45,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('auth/change-password', ChangePasswordController::class);
         Route::post('auth/check-password', CheckPasswordController::class);
         Route::get('counts', CountsController::class);
-        Route::post('notes/extract', NoteExtractController::class)->middleware('throttle:notes');
+        Route::post('notes/extract', NoteExtractController::class)->middleware('throttle:files');
         Route::post('notes', [NoteController::class, 'store'])->middleware('throttle:notes');
         Route::get('notes', [NoteController::class, 'index']);
         Route::get('notes/search', NoteSearchController::class)->middleware('throttle:search-notes');
