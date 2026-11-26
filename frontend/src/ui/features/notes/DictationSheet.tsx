@@ -135,6 +135,7 @@ export function DictationSheet({
   return (
     <Sheet
       open
+      docked
       title={t("note.mic")}
       closeLabel={t("common.cancel")}
       onClose={close}

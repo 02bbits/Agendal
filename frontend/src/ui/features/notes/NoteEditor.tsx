@@ -537,7 +537,7 @@ export function NoteEditor({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+24px)] bottom-[var(--keyboard-inset,0px)] mx-auto flex w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:top-10 md:bottom-10 md:max-w-[712px] md:rounded-dialog"
+          className="absolute inset-x-0 top-[calc(env(safe-area-inset-top)+24px)] bottom-[var(--keyboard-inset,0px)] mx-auto flex w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:top-10 md:max-w-[712px]"
         >
           <div
             aria-hidden="true"
