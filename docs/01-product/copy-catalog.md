@@ -89,7 +89,7 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.saved_offline` † | Saved. It'll turn into tasks when you're back online. | Toast after Save note (NC) |
 | `note.listening` | Listening… | Mic state ([NC-3](../03-modules/NC-note-capture.md#nc-3)) |
 | `note.stop` | Stop | Mic state |
-| `note.heard` | Here's what I heard. | Dictation sheet, above the words heard |
+| `note.heard` | Here's what I heard. | Not shown: dictated words go straight into the note |
 | `note.mic_denied` † | Microphone access is off. Turn it on in your browser settings to dictate. | Mic permission denied |
 | `note.mic_notice` † | Your recording is sent to Agendal's language model to turn it into text. It isn't kept. | Dictation sheet on first mic use: Continue in the header, × to cancel (NC) |
 | `note.no_speech` † | I didn't hear anything. Try again. | Dictation ended with no words |
