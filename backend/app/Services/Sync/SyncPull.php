@@ -40,6 +40,20 @@ final class SyncPull
         return $cursor > 0 && $cursor < (int) DB::table('sync_horizon')->max('purged_seq');
     }
 
+    /**
+     * The user's data version for ETags (#201): every write to their tasks, projects and notes takes
+     * a new `change_seq`. Purging a tombstone can lower it, but purged rows are 30 days old and every
+     * tag also names the local date, so an old tag can't match again.
+     */
+    public static function version(): int
+    {
+        return max(
+            (int) Task::withTrashed()->max('change_seq'),
+            (int) Project::query()->max('change_seq'),
+            (int) Note::withTrashed()->max('change_seq'),
+        );
+    }
+
     /** @return array{changes: array<string, list<array<string, mixed>>>, next_cursor: int, has_more: bool} */
     public function pull(int $cursor, int $limit, bool $full): array
     {
