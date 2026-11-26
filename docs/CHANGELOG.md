@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-26
 
+- **ETag and 304 on sync and counts (Refs #201).** [api.md](07-architecture/api.md#conventions) Conventions: responses stay `no-store, private` (SC-19, SEC-51); `GET sync` and `GET counts` carry a weak ETag from the user's highest `change_seq`, the local date and the query, and answer `304` to a matching `If-None-Match`; a sync page is tagged only when caught up; the client keeps the body in memory and forgets it on sign-in and sign-out. [scalability.md](05-quality/scalability.md#design-rules-that-keep-it-scaling) Design rules: polled reads revalidate, no server-side data cache. Tested in `CacheValidationTest`.
 - **Personal access tokens (Refs #196).** [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md#addendum-personal-access-tokens-196) addendum: tokens for scripts only, six abilities, 7/30/90-day expiry, revoked with the session. [api.md](07-architecture/api.md#personal-access-tokens): `/tokens` endpoints and the ability-to-route table. [security.md](07-architecture/security.md#sc-26) SC-26 and authorization matrix rows. [copy-catalog.md](01-product/copy-catalog.md): `auth.token_not_allowed`, `auth.token_limit`. Threat review: 10-token cap, a token never stores `X-Timezone`, every signed-in route must name a token rule.
 
 ## 2026-11-25
