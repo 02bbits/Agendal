@@ -43,12 +43,13 @@ Browser (untrusted) → API (trusted) → database. API → email, Web Push, Goo
 | LLM provider | **I** Data retained or used for training | <a id="sc-20"></a>SC-20 minimum context: low-confidence items only, no identifiers or task notes. One team key, kept only in a server secret file (never in `.env`), never returned or logged ([ADR-008](decisions/ADR-008-llm-fallback.md)) | SEC-43 (the request holds only allowed fields) |
 | Google Cloud Vision | **I** Photo or scan retained | <a id="sc-25"></a>SC-25 inline requests only (no Cloud Storage), EXIF stripped ([NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) | SEC-35 |
 | Logs | **I** Note text leaks | <a id="sc-21"></a>SC-21 metadata-only logging: counts, durations and IDs, never free text. Failed and slow queries log the SQL without its values. Outside local, Telescope records every request, job and scheduled run but, of the rest, only exceptions and slow queries; it keeps no request or response bodies, session, query bindings, cache values, emails or mail, opens outside local only for allow-listed emails, and prunes after 48 hours. Pulse (same allow-list) keeps exception class and line without the message, SQL without values, users by id only, no cache keys, and trims after 7 days | SEC-44, SEC-61 |
+| Personal access tokens | **S** A leaked or over-broad script token | <a id="sc-26"></a>SC-26 tokens (#196) are for scripts, never the app: stored as a SHA-256 hash, the secret shown once with an `agendal_` prefix for secret scanners; each carries only the abilities chosen ([api.md](api.md#personal-access-tokens)) and expires after 7, 30 or 90 days. A token reaches data routes only; account, device and token routes answer `403`. Every signed-in route is either session only or names its abilities, checked by a test, so a new route never takes tokens by default. A token's `X-Timezone` applies to its request only, never to the account (that would move reminders). At most 10 unexpired tokens per account. Password change, password reset and Sign out on all devices revoke every token; expired ones are pruned a day later. The general rate limit counts per token; note, search and sync limits stay per account. Telescope hides the `Authorization` header and response bodies, so neither the header nor the one-time secret is stored. Making a token needs the session and passes CSRF (the XSRF header, or the browser's `Sec-Fetch-Site: same-origin`) | SEC-12 |
 | Dependencies | **T** Vulnerable or compromised package | <a id="sc-22"></a>SC-22 audit and lockfile in CI ([NF-21](../05-quality/nfr.md#nf-21)) | SEC-70 |
 | Everything | **R** Can't investigate an account takeover | <a id="sc-23"></a>SC-23 audit log ([NF-20](../05-quality/nfr.md#nf-20)) | SEC-60 |
 
 ## Authorization matrix
 
-Expected status for each endpoint. "Owner" = the resource belongs to the session user. "Other" = it belongs to someone else. Each cell becomes one automated test (SEC-12).
+Expected status for each endpoint. "Owner" = the resource belongs to the session user. "Other" = it belongs to someone else. Each cell becomes one automated test (SEC-12). A personal access token gets the same answers on the routes its abilities allow, and `403 auth.token_not_allowed` everywhere else ([SC-26](#sc-26)).
 
 | Endpoint | Guest | Owner | Other user |
 |---|---|---|---|
@@ -66,6 +67,8 @@ Expected status for each endpoint. "Owner" = the resource belongs to the session
 | `GET/PATCH/DELETE /projects/{id}`, `POST /projects/{id}/restore` | 401 | 200 / 204 | **404** |
 | `GET /sync`, `POST /sync/patches` | 401 | 200 | patches to other users' rows: **rejected per row** |
 | `POST/DELETE /push-subscriptions` | 401 | 201 / 204 | — |
+| `GET/POST /tokens` | 401 | 200 / 201 | — |
+| `DELETE /tokens/{id}` | 401 | 204 | **404** |
 | `GET /sanctum/csrf-cookie` | 204 | 204 | — |
 
 ## Residual risks

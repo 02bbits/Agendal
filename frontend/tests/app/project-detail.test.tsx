@@ -627,4 +627,259 @@ describe("Project detail page /projects/[id]", () => {
     expect(progressbar.getAttribute("aria-valuenow")).toBe("44");
     expect(progressbar.getAttribute("aria-valuemax")).toBe("52");
   });
+
+  it("keeps completed repeating occurrences, does not duplicate on scope=one delete + Undo, and lets the restored task be ticked", async () => {
+    const done1 = task({
+      id: "rep-done-1",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: true,
+      done_at: "2027-01-01T17:00:00Z",
+      start_date: "2027-01-01",
+      due_date: "2027-01-02",
+      repeat: "weekly",
+    });
+    const done2 = task({
+      id: "rep-done-2",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: true,
+      done_at: "2027-01-08T17:00:00Z",
+      start_date: "2027-01-08",
+      due_date: "2027-01-09",
+      repeat: "weekly",
+      previous_occurrence_id: "rep-done-1",
+    });
+    const open1 = task({
+      id: "rep-open-1",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: false,
+      start_date: "2027-01-15",
+      due_date: "2027-01-16",
+      repeat: "weekly",
+      previous_occurrence_id: "rep-done-2",
+    });
+    const openNext = task({
+      id: "rep-open-2",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: false,
+      start_date: "2027-01-22",
+      due_date: "2027-01-23",
+      repeat: "weekly",
+      previous_occurrence_id: "rep-open-1",
+    });
+
+    const completeCalls: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-1")
+        return json(200, {
+          project: {
+            id: "p-1",
+            name: "Personal",
+            colour: "purple",
+            open: 1,
+            done: 2,
+          },
+          progress: { done: 2, total: 3 },
+          open: [open1],
+          completed: [done2, done1],
+          next_cursor: null,
+        });
+      if (url === "/api/v1/projects")
+        return json(200, [{ id: "p-1", name: "Personal", colour: "purple" }]);
+      if (url === "/api/v1/tasks/rep-open-1?scope=one" && method === "DELETE")
+        return new Response(null, { status: 204 });
+      if (url === "/api/v1/tasks/rep-open-1/restore" && method === "POST")
+        return json(200, open1);
+      if (url === "/api/v1/tasks/rep-open-1/complete" && method === "POST") {
+        completeCalls.push(url);
+        return json(200, {
+          task: { ...open1, done: true, done_at: "2027-01-15T17:00:00Z" },
+          next: openNext,
+        });
+      }
+      return json(200, []);
+    });
+
+    searchParams = new URLSearchParams("task=rep-open-1");
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await screen.findByText("2 of 3 tasks completed");
+    const panel = screen.getByRole("complementary", {
+      name: t("task.heading"),
+    });
+
+    // Delete only this occurrence (checkbox unchecked -> scope=one)
+    await userEvent.click(
+      within(panel).getByRole("button", { name: t("common.delete") }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.repeat_scope_title"),
+    });
+    const checkbox = within(dialog).getByRole("checkbox", {
+      name: t("task.repeat_delete_all"),
+    });
+    expect(checkbox.getAttribute("aria-checked")).toBe("false");
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("common.delete") }),
+    );
+
+    // Deleted task is gone without creating a next occurrence; done occurrences stay in Completed
+    const main = screen.getByRole("main");
+    await within(main).findByText("2 of 2 tasks completed");
+    expect(
+      within(main).queryByRole("link", { name: /Fri 15 Jan 2027/ }),
+    ).toBeNull();
+    expect(
+      within(main).queryByRole("link", { name: /Fri 22 Jan 2027/ }),
+    ).toBeNull();
+    expect(
+      within(main).getByRole("link", { name: /Fri 8 Jan 2027/ }),
+    ).toBeTruthy();
+    expect(
+      within(main).getByRole("link", { name: /Fri 1 Jan 2027/ }),
+    ).toBeTruthy();
+
+    // Undo restores Fri 15 Jan 2027 with zero duplicates
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.undo") }),
+    );
+    await within(main).findByRole("link", { name: /Fri 15 Jan 2027/ });
+    expect(
+      within(main).queryByRole("link", { name: /Fri 22 Jan 2027/ }),
+    ).toBeNull();
+    expect(
+      within(main).getAllByRole("link", { name: /Weekly review/ }),
+    ).toHaveLength(3);
+    expect(within(main).getByText("2 of 3 tasks completed")).toBeTruthy();
+
+    // Ticking the restored task saves cleanly without error
+    const checkboxes = within(main).getAllByRole("checkbox", {
+      name: /Complete Weekly review/,
+    });
+    expect(checkboxes).toHaveLength(2);
+    await userEvent.click(checkboxes[0]!);
+    expect(completeCalls).toEqual(["/api/v1/tasks/rep-open-1/complete"]);
+    expect(screen.queryByText(t("error.save_failed"))).toBeNull();
+  });
+
+  it("deletes the entire repeating series on scope=future and restores all occurrences on Undo", async () => {
+    const done1 = task({
+      id: "rep-done-1",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: true,
+      done_at: "2027-01-01T17:00:00Z",
+      start_date: "2027-01-01",
+      due_date: "2027-01-02",
+      repeat: "weekly",
+    });
+    const open1 = task({
+      id: "rep-open-1",
+      title: "Weekly review",
+      project_id: "p-1",
+      done: false,
+      start_date: "2027-01-15",
+      due_date: "2027-01-16",
+      repeat: "weekly",
+      previous_occurrence_id: "rep-done-1",
+    });
+
+    const restoredIds: string[] = [];
+    fetchMock.mockImplementation(async (url: string, init?: RequestInit) => {
+      const method = init?.method ?? "GET";
+      if (url === "/api/v1/me")
+        return json(200, { id: 1, email: "u@test.com" });
+      if (url === "/api/v1/projects/p-1")
+        return json(200, {
+          project: {
+            id: "p-1",
+            name: "Personal",
+            colour: "purple",
+            open: 1,
+            done: 1,
+          },
+          progress: { done: 1, total: 2 },
+          open: [open1],
+          completed: [done1],
+          next_cursor: null,
+        });
+      if (url === "/api/v1/projects")
+        return json(200, [{ id: "p-1", name: "Personal", colour: "purple" }]);
+      if (
+        url === "/api/v1/tasks/rep-open-1?scope=future" &&
+        method === "DELETE"
+      )
+        return json(200, { deleted_ids: ["rep-done-1", "rep-open-1"] });
+      if (url === "/api/v1/tasks/rep-done-1/restore" && method === "POST") {
+        restoredIds.push("rep-done-1");
+        return json(200, done1);
+      }
+      if (url === "/api/v1/tasks/rep-open-1/restore" && method === "POST") {
+        restoredIds.push("rep-open-1");
+        return json(200, open1);
+      }
+      return json(200, []);
+    });
+
+    searchParams = new URLSearchParams("task=rep-open-1");
+    await act(async () => {
+      render(
+        <AppFrame>
+          <Suspense>
+            <ProjectPage params={Promise.resolve({ id: "p-1" })} />
+          </Suspense>
+        </AppFrame>,
+      );
+    });
+
+    await screen.findByText("1 of 2 tasks completed");
+    const panel = screen.getByRole("complementary", {
+      name: t("task.heading"),
+    });
+
+    await userEvent.click(
+      within(panel).getByRole("button", { name: t("common.delete") }),
+    );
+    const dialog = screen.getByRole("alertdialog", {
+      name: t("task.repeat_scope_title"),
+    });
+    await userEvent.click(
+      within(dialog).getByRole("checkbox", {
+        name: t("task.repeat_delete_all"),
+      }),
+    );
+    await userEvent.click(
+      within(dialog).getByRole("button", { name: t("common.delete") }),
+    );
+
+    const main = screen.getByRole("main");
+    await within(main).findByText(t("project.empty"));
+    expect(
+      within(main).queryByRole("link", { name: /Weekly review/ }),
+    ).toBeNull();
+
+    await userEvent.click(
+      screen.getByRole("button", { name: t("common.undo") }),
+    );
+    await within(main).findByRole("link", { name: /Fri 15 Jan 2027/ });
+    expect(
+      within(main).getByRole("link", { name: /Fri 1 Jan 2027/ }),
+    ).toBeTruthy();
+    expect(within(main).getByText("1 of 2 tasks completed")).toBeTruthy();
+    expect(restoredIds).toEqual(["rep-done-1", "rep-open-1"]);
+  });
 });

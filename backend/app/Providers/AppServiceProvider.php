@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Pulse\Facades\Pulse;
 use Laravel\Pulse\Recorders\Servers;
+use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
@@ -94,9 +95,16 @@ class AppServiceProvider extends ServiceProvider
             Limit::perHour(20)->by('ip-hour:'.$request->ip()),
         ]);
 
-        // Everything else: 150/min plus a 20/s burst cap, per user, or per IP for guests
+        // Everything else: 150/min plus a 20/s burst cap, per user, per personal access token (#196),
+        // or per IP for guests
         $limiter('api', function (Request $request) {
-            $key = ($user = $request->user('sanctum')) ? 'user:'.$user->getAuthIdentifier() : 'ip:'.$request->ip();
+            $user = $request->user('sanctum');
+            $token = $user instanceof User ? $user->currentAccessToken() : null;
+            $key = match (true) {
+                $token instanceof PersonalAccessToken => 'token:'.$token->getKey(),
+                $user !== null => 'user:'.$user->getAuthIdentifier(),
+                default => 'ip:'.$request->ip(),
+            };
 
             return [
                 Limit::perMinute(150)->by('api-min:'.$key),

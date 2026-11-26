@@ -38,7 +38,7 @@ jobs:
         with:
           php-version: "8.4"
           extensions: pdo_pgsql, intl, mbstring
-          coverage: none
+          coverage: pcov
       - uses: actions/cache@v6
         with:
           path: ~/.composer/cache
@@ -49,8 +49,27 @@ jobs:
         run: vendor/bin/pint --test
       - name: Type check (Larastan)
         run: composer analyse
-      - name: Tests (Pest, Postgres)
-        run: vendor/bin/pest
+      - name: Tests & coverage (Pest, Postgres)
+        run: php -d pcov.enabled=1 -d pcov.directory=app vendor/bin/pest --coverage --min=70 --coverage-clover=coverage.xml
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage.xml ]; then
+            php -r '
+              $xml = simplexml_load_file("coverage.xml");
+              $m = $xml->project->metrics;
+              $total = (int) $m["statements"];
+              $covered = (int) $m["coveredstatements"];
+              $pct = $total > 0 ? round($covered * 100 / $total, 2) : 0;
+              file_put_contents(getenv("GITHUB_STEP_SUMMARY"), "### Backend Coverage\n- Lines: **{$pct}%** ({$covered}/{$total})\n", FILE_APPEND);
+            '
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: backend-coverage
+          path: backend/coverage.xml
+          if-no-files-found: ignore
       # IM-08: the docs generate from the code; Scramble reads column types, so the tables must exist
       - name: API docs (Scramble)
         env:
@@ -83,8 +102,24 @@ jobs:
         run: npm run lint
       - name: Type check (tsc)
         run: npm run typecheck
-      - name: Tests (Vitest)
-        run: npm test
+      - name: Tests & coverage (Vitest)
+        run: npm run test:coverage
+      - name: Coverage summary
+        if: always()
+        run: |
+          if [ -f coverage/coverage-summary.json ]; then
+            node -e '
+              const fs = require("node:fs");
+              const s = JSON.parse(fs.readFileSync("coverage/coverage-summary.json", "utf8")).total;
+              fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Frontend Coverage\n- Lines: **${s.lines.pct}%** (${s.lines.covered}/${s.lines.total})\n- Branches: ${s.branches.pct}%\n- Functions: ${s.functions.pct}%\n`);
+            '
+          fi
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-coverage
+          path: frontend/coverage/lcov.info
+          if-no-files-found: ignore
       - name: Build
         run: npm run build
       - name: Dependency audit

@@ -67,7 +67,10 @@ export interface TaskApi {
   /** Manual-order keys (#178), sent together as one `POST /sync/patches` batch. */
   reorder?(rows: OrderRow[], at: string): Promise<void>;
   /** `DELETE /tasks/{id}?scope=one|future` (soft delete). */
-  remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void>;
+  remove(
+    id: string,
+    scope?: DeleteScope,
+  ): Promise<{ next?: Task; deleted_ids?: string[] } | void>;
   /** `POST /tasks/{id}/restore`: the toast's Undo after a delete. */
   restore(id: string): Promise<Task>;
   /** `GET /tasks/{id}`: a task that isn't in the list on screen, e.g. opened from Search. */

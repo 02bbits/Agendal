@@ -11,6 +11,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Errors use one shape: `{"error": {"code": "note.too_many_items", "message": "…", "fields": {…}}}`. `code` is a [copy-catalog](../01-product/copy-catalog.md) key.
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
 - API docs (IM-08): `/docs/api` is open locally; on the server only to signed-in accounts in `TELESCOPE_ALLOWED_EMAILS`, the allow-list of `/telescope` and `/pulse`. CI exports `api.json` as a build artifact.
+- Scripts may use a personal access token instead of the session: `Authorization: Bearer …`, no CSRF header ([Personal access tokens](#personal-access-tokens)).
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
 - Full request/response contracts live in each module spec, section 7. This table is the index.
 - The response shapes are also JSON Schemas in [contracts/schemas](contracts/schemas/), with example responses in [contracts/fixtures](contracts/fixtures/). A fixture uses the schema its name starts with (`note-result-done.json` → `note-result.schema.json`). The backend test `tests/Unit/ContractsTest.php` checks every fixture.
@@ -51,6 +52,33 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `GET /sync?cursor=&limit=` | Pull changes since a cursor; a live note comes with its full result. `410` → full resync | [NF-6](../05-quality/nfr.md#nf-6), [ADR-005](decisions/ADR-005-sync-protocol.md) |
 | `POST /sync/patches` | Push queued per-field edits `[{entity, id, field, value, at}]` | [NF-6](../05-quality/nfr.md#nf-6), [ADR-004](decisions/ADR-004-offline-sync-field-level-lww.md) |
 | `POST /auth/logout-everywhere` | End all sessions (Should), and remove every reminder subscription of the account | [ADR-007](decisions/ADR-007-session-and-auth.md) |
+
+## Personal access tokens
+
+For scripts and the API docs' Try it, never the app (#196, [ADR-007](decisions/ADR-007-session-and-auth.md#addendum-personal-access-tokens-196), [SC-26](security.md#sc-26)).
+
+| Endpoint | |
+|---|---|
+| `GET /tokens` | The session user's tokens: `[{id, name, abilities, last_used_at, expires_at, created_at}]`, newest first, never the secret |
+| `POST /tokens` | `{name (1–100), abilities (one or more, no repeats), expires_in_days?: 7 \| 30 \| 90 (30)}` → `201 {token, plain_text_token}`. The secret is shown only here. At 10 unexpired tokens: `422 auth.token_limit` |
+| `DELETE /tokens/{id}` | Revoke → `204`. Someone else's id → `404` |
+
+All three are session only. Abilities and the routes they open (a session has every ability):
+
+| Ability | Routes |
+|---|---|
+| `tasks:read` | `GET /tasks`, `/tasks/search`, `/tasks/{id}`, `/counts` |
+| `tasks:write` | `POST /tasks`, `PATCH/DELETE /tasks/{id}`, `POST /tasks/{id}/complete\|reopen\|restore` |
+| `projects:read` | `GET /projects`, `/projects/none`, `/projects/{id}` |
+| `projects:write` | `POST /projects`, `PATCH/DELETE /projects/{id}`, `POST /projects/{id}/restore` |
+| `notes:read` | `GET /notes`, `/notes/search`, `/notes/{id}` |
+| `notes:write` | `POST /notes`, `PUT/PATCH/DELETE /notes/{id}`, `POST /notes/{id}/restore` |
+| `notes:write` + `tasks:write` | `POST /notes/{id}/apply\|undo\|redo\|make-task` (they change tasks) |
+| all three `:read` | `GET /sync` |
+| `tasks:write` + `projects:write` | `POST /sync/patches` |
+| any token | `GET /me` |
+
+Everything else (`PATCH /me`, `auth/*`, `/push-subscriptions`, `/tokens`) is session only. A token's `X-Timezone` sets the zone for that request only; it never changes the account's zone. A missing ability or a session-only route answers `403 auth.token_not_allowed`; an expired or revoked token `401`.
 
 ## Task fields
 

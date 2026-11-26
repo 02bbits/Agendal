@@ -45,6 +45,8 @@ Every user-facing string, keyed. Code, specs and API error `code`s use these key
 | `auth.signout_everywhere` † | Sign out on all devices | Account sheet (Should) |
 | `auth.offline` † | You're offline. Connect to sign in. | Auth screens while offline |
 | `auth.locked` † | Too many attempts. Try again in {seconds} s. | API error code for `429` on sign-in (the banner uses `auth.locked_title` / `auth.locked_body`) |
+| `auth.token_not_allowed` † | This token isn't allowed to do that. | API error code for `403` when a personal access token lacks the route's ability or calls a session-only route ([api.md](../07-architecture/api.md#personal-access-tokens)); never shown in the app |
+| `auth.token_limit` † | You have 10 tokens. Revoke one to make another. | API error code for `422` on `POST /tokens` at 10 unexpired tokens ([api.md](../07-architecture/api.md#personal-access-tokens)); never shown in the app |
 
 ## Email
 

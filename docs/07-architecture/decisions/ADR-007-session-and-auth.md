@@ -24,3 +24,10 @@
 - XSS can't steal a session token. CSRF is blocked by SameSite plus the XSRF header.
 - An attacker can't lock a victim out from another IP.
 - Shared devices keep no data after sign-out.
+
+## Addendum: personal access tokens (#196)
+- **Scripts only.** The app keeps the cookie session; tokens never reach it or JavaScript-readable storage. A token is made from a signed-in session (`POST /tokens`, also from the API docs' Try it) and is a Bearer credential with no CSRF.
+- **Abilities** `tasks:read|write`, `projects:read|write`, `notes:read|write`, chosen per token; a session has all of them. Account, device and token routes stay session only.
+- **Expiry** 7, 30 or 90 days (default 30), never unlimited. Pruned a day after expiry. At most 10 unexpired tokens per account.
+- **Revocation** with the session: a password change, a password reset and Sign out on all devices delete every token. Signing out one device does not.
+- Details: [api.md](../api.md#personal-access-tokens), [SC-26](../security.md#sc-26).

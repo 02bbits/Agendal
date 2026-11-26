@@ -36,17 +36,21 @@ it('opens the docs only to allow-listed accounts outside local', function () {
     $this->actingAs(User::factory()->create(['email' => 'docs@example.com']))->get('/docs/api')->assertOk();
 });
 
-it('documents the session, the CSRF header and the one error shape', function () {
+it('documents the session, the CSRF header, tokens and the one error shape', function () {
     $docs = apiDocs();
     $error = ['$ref' => '#/components/schemas/ApiError'];
 
-    expect(array_keys($docs['components']['securitySchemes']))->toBe(['session', 'csrf'])
+    // Relative, so Try it stays on the page's origin (:3000 through Next.js, or :8000)
+    expect($docs['servers'])->toBe([['url' => '/api/v1']]);
+    expect(array_keys($docs['components']['securitySchemes']))->toBe(['session', 'csrf', 'token'])
         ->and($docs['components']['schemas']['ApiError']['required'])->toBe(['error'])
         // Public write: CSRF only. Signed-in read: the session only. Public read: nothing
         ->and($docs['paths']['/auth/login']['post']['security'])->toBe([['csrf' => []]])
         ->and($docs['paths']['/me']['get']['security'])->toBe([['session' => []]])
         ->and($docs['paths']['/health']['get']['security'])->toBe([])
-        ->and($docs['paths']['/tasks']['post']['security'])->toBe([['session' => [], 'csrf' => []]])
+        // A data route also takes a personal access token (#196); account routes don't
+        ->and($docs['paths']['/tasks']['post']['security'])->toBe([['session' => [], 'csrf' => []], ['token' => []]])
+        ->and($docs['paths']['/tokens']['post']['security'])->toBe([['session' => [], 'csrf' => []]])
         ->and($docs['paths']['/tasks']['post']['responses']['422']['content']['application/json']['schema'])->toBe($error)
         ->and($docs['paths']['/tasks/{task}']['get']['responses']['404']['content']['application/json']['schema'])->toBe($error)
         ->and($docs['paths']['/me']['get']['responses']['401']['content']['application/json']['schema'])->toBe($error)
