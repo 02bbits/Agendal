@@ -78,6 +78,9 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.placeholder` | Write a note… | Capture bar, editor |
 | `note.make_tasks` | Make tasks | Editor primary button |
 
+| `note.upload_file` † | Upload file | Note editor upload button |
+| `note.upload_formats` † | Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB. | Supported formats |
+| `note.upload_choose` † | Choose a document | File input accessible label |
 
 | `note.save_offline` | Save note | Editor primary button while offline |
 | `note.saved_offline` † | Saved. It'll turn into tasks when you're back online. | Toast after Save note (NC) |
@@ -90,8 +93,6 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.dictation_failed` † | Dictation stopped. Check your connection and try again. | Dictation failed: no connection, or the model failed or is off |
 | `note.dictation_offline` † | Dictation needs a connection. | Mic disabled while offline |
 | `note.reading_file` | Reading file… | Attach ([NC-4](../03-modules/NC-note-capture.md#nc-4)) |
-| `note.file_upload` † | Upload file | Item in the note's ^ tray, and the file input's label |
-| `note.file_formats` † | Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB. | Under the tray items |
 | `note.file_too_big` | Attach a file under 5 MB. | File error |
 | `note.file_type` † | This file type isn't supported. Try text, PDF, Word or a photo. | File error |
 | `note.file_locked` † | This PDF is password-protected. Remove the password and try again. | File error |

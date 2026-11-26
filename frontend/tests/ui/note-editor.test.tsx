@@ -619,7 +619,7 @@ describe("NoteEditor submit (IM-42)", () => {
     vi.stubGlobal("fetch", fetchMock);
     try {
       render(<NoteEditor onClose={() => {}} />);
-      const input = screen.getByLabelText("Upload file");
+      const input = screen.getByLabelText("Choose a document");
       const file = () => new File(["x"], "scan.pdf");
 
       await userEvent.upload(input, file());

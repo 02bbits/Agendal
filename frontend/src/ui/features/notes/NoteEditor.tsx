@@ -717,7 +717,7 @@ export function NoteEditor({
               type="file"
               accept={FILE_TYPES.join(",")}
               className="sr-only"
-              aria-label={t("note.file_upload")}
+              aria-label={t("note.upload_choose")}
               onChange={(event) => void uploadFile(event)}
               disabled={busy || uploading || offline}
             />
@@ -743,11 +743,11 @@ export function NoteEditor({
                     }}
                   >
                     <PaperclipIcon size={18} />
-                    {t("note.file_upload")}
+                    {t("note.upload_file")}
                   </Button>
                 </div>
                 <p className="m-0 text-center text-footnote text-ink-tertiary">
-                  {t(offline ? "note.file_offline" : "note.file_formats")}
+                  {t(offline ? "note.file_offline" : "note.upload_formats")}
                 </p>
               </div>
             )}
