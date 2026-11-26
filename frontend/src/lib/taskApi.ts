@@ -278,7 +278,10 @@ export const httpTaskApi: TaskApi = {
     );
   },
 
-  remove(id: string, scope?: DeleteScope): Promise<{ next?: Task } | void> {
+  remove(
+    id: string,
+    scope?: DeleteScope,
+  ): Promise<{ next?: Task; deleted_ids?: string[] } | void> {
     return deleteTask(id, scope);
   },
 

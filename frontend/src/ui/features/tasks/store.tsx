@@ -334,7 +334,16 @@ export function TaskStoreProvider({
 
   const restore = React.useCallback(
     (task: Task, madeNextId?: string) => {
-      if (madeNextId) removeRow(madeNextId);
+      if (madeNextId) {
+        removeRow(madeNextId);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("agendal:task-deleted", {
+              detail: { id: madeNextId },
+            }),
+          );
+        }
+      }
       insertRow(task);
       api.restore(task.id).then(
         (saved) => {
@@ -354,20 +363,74 @@ export function TaskStoreProvider({
 
   const remove = React.useCallback(
     (task: Task, scope?: DeleteScope) => {
-      removeRow(task.id);
+      const removedTasks: Task[] = [task];
+      if (scope === "future" && task.repeat !== "never") {
+        const seen = new Set<string>([task.id]);
+        let grew = true;
+        while (grew) {
+          grew = false;
+          for (const candidate of tasks) {
+            if (seen.has(candidate.id)) continue;
+            const isChild =
+              candidate.previous_occurrence_id &&
+              seen.has(candidate.previous_occurrence_id);
+            const isParent = removedTasks.some(
+              (r) => r.previous_occurrence_id === candidate.id,
+            );
+            if (isChild || isParent) {
+              seen.add(candidate.id);
+              removedTasks.push(candidate);
+              grew = true;
+            }
+          }
+        }
+      }
+      for (const removed of removedTasks) {
+        removeRow(removed.id);
+      }
       let madeNextId: string | undefined;
+      let undone = false;
+      let serverDeletedIds: string[] | undefined;
       showToast({
         message: t("task.deleted", { title: task.title }),
         actionLabel: t("common.undo"),
-        onAction: () => restore(task, madeNextId),
+        onAction: () => {
+          undone = true;
+          if (scope === "future" && task.repeat !== "never") {
+            for (const removed of removedTasks) {
+              insertRow(removed);
+            }
+            const idsToRestore =
+              serverDeletedIds ?? removedTasks.map((r) => r.id);
+            void Promise.all(
+              idsToRestore.map((id) =>
+                api.restore(id).then((saved) => {
+                  insertRow(saved);
+                  if (typeof window !== "undefined") {
+                    notifyTaskCreated(saved);
+                  }
+                }),
+              ),
+            ).catch((err) => {
+              handleSaveError(err, () => restore(task, madeNextId));
+            });
+            return;
+          }
+          restore(task, madeNextId);
+        },
       });
       if (typeof window !== "undefined") {
-        window.dispatchEvent(
-          new CustomEvent("agendal:task-deleted", { detail: { id: task.id } }),
-        );
+        for (const removed of removedTasks) {
+          window.dispatchEvent(
+            new CustomEvent("agendal:task-deleted", {
+              detail: { id: removed.id },
+            }),
+          );
+        }
       }
       api.remove(task.id, task.repeat === "never" ? undefined : scope).then(
         (res) => {
+          if (undone) return;
           if (res && "next" in res && res.next) {
             madeNextId = res.next.id;
             insertRow(res.next);
@@ -375,14 +438,29 @@ export function TaskStoreProvider({
               notifyTaskCreated(res.next);
             }
           }
+          if (res && "deleted_ids" in res && Array.isArray(res.deleted_ids)) {
+            serverDeletedIds = res.deleted_ids;
+            for (const deletedId of res.deleted_ids) {
+              removeRow(deletedId);
+              if (typeof window !== "undefined") {
+                window.dispatchEvent(
+                  new CustomEvent("agendal:task-deleted", {
+                    detail: { id: deletedId },
+                  }),
+                );
+              }
+            }
+          }
         },
         (err) => {
-          insertRow(task);
+          for (const removed of removedTasks) {
+            insertRow(removed);
+          }
           handleSaveError(err, () => removeRef.current(task, scope));
         },
       );
     },
-    [api, handleSaveError, insertRow, removeRow, restore, showToast],
+    [api, handleSaveError, insertRow, removeRow, restore, showToast, tasks],
   );
 
   React.useEffect(() => {

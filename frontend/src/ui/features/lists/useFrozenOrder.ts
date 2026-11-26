@@ -1,4 +1,10 @@
-import { useCallback, useLayoutEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react";
 import { freezeLayout, type FrozenLayout } from "../../domain/frozen";
 import type { Task } from "../../domain/types";
 
@@ -38,6 +44,17 @@ export function useFrozenOrder(
       }),
     [],
   );
+
+  // Deleted tasks are never held in freeze sort (#168/delete)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onDeleted = (event: Event) => {
+      const id = (event as CustomEvent<{ id?: string }>).detail?.id;
+      if (id) release(id);
+    };
+    window.addEventListener("agendal:task-deleted", onDeleted);
+    return () => window.removeEventListener("agendal:task-deleted", onDeleted);
+  }, [release]);
 
   const frozen = useMemo(
     () => freezeLayout(tasks, snapshots),

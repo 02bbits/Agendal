@@ -303,6 +303,10 @@ class TaskController extends Controller
             return response()->json(['next' => new TaskResource($result['next'])], 200);
         }
 
+        if (count($result['deleted_ids']) > 1) {
+            return response()->json(['deleted_ids' => $result['deleted_ids']], 200);
+        }
+
         return response()->noContent();
     }
 
