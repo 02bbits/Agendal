@@ -3,14 +3,7 @@ import { afterHistoryEntryCloses } from "@/ui/components/useHistoryEntry";
 import { usePanelScreen, useWideScreen } from "@/ui/components/useMediaQuery";
 
 import { usePathname, useRouter } from "next/navigation";
-import {
-  useCallback,
-  useMemo,
-  useState,
-  useSyncExternalStore,
-  type ReactNode,
-} from "react";
-import { canDictate } from "@/lib/dictation";
+import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   AppShell,
   InstallBanner,
@@ -90,7 +83,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
     useTabNavigation(pathname, router, splash.enterApp);
   const overlays = useOverlays(pathname, router);
   // Known only in the browser: the server render has no mic
-  const dictation = useSyncExternalStore(noSubscribe, canDictate, () => false);
   const {
     open: newTaskOpen,
     openNewTask,
@@ -248,7 +240,6 @@ export function AppFrame({ children }: { children: ReactNode }) {
             onOpenSearch={openSearchOrPage}
             capture={{
               onWrite: openNoteEditor,
-              onDictate: dictation ? overlays.note.openDictation : undefined,
               onAdd: openNewTask,
             }}
             sidebar={
@@ -299,5 +290,3 @@ export function AppFrame({ children }: { children: ReactNode }) {
     </AppFrameContext.Provider>
   );
 }
-
-const noSubscribe = () => () => {};

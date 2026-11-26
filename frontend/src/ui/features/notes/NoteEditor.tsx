@@ -75,8 +75,6 @@ export interface NoteEditorProps {
   offline?: boolean;
   /** The note was kept on the device to be sent later (NC-6): the toast to show. The draft is cleared. */
   onQueued?: (toast: CopyKey) => void;
-  /** Opened from the capture bar's mic: the dictation sheet opens over the note at once (NC §2.3). */
-  dictate?: boolean;
   /** The account's clock (AP-5), for the time the note was written. */
   timeFormat?: TimeFormat;
 }
@@ -177,7 +175,6 @@ export function NoteEditor({
   onSubmitted,
   offline,
   onQueued,
-  dictate,
   timeFormat = "24h",
 }: NoteEditorProps) {
   const [text, setText] = useState(note?.text ?? "");
@@ -384,7 +381,7 @@ export function NoteEditor({
 
   // The ^ tray: dictation and a file (NC §2.3, §2.4)
   const [tools, setTools] = useState(false);
-  const [dictating, setDictating] = useState(!!dictate);
+  const [dictating, setDictating] = useState(false);
   // Where the dictated words go: the selection when the mic was tapped, or the end
   const dictationAt = useRef<[number, number] | null>(null);
   const startDictation = () => {
