@@ -74,6 +74,7 @@ class ChangePasswordController extends Controller
             ->where('user_id', $user->id)
             ->where('id', '!=', $currentSessionId)
             ->delete();
+        $user->tokens()->delete(); // #196: API tokens too
 
         $request->session()->regenerate();
         $user->notify(new PasswordChanged);

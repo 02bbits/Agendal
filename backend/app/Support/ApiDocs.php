@@ -11,6 +11,7 @@ use Dedoc\Scramble\Support\Generator\Response;
 use Dedoc\Scramble\Support\Generator\Schema;
 use Dedoc\Scramble\Support\Generator\SecurityRequirement;
 use Dedoc\Scramble\Support\Generator\SecurityScheme;
+use Dedoc\Scramble\Support\Generator\Server;
 use Dedoc\Scramble\Support\Generator\Types\ArrayType;
 use Dedoc\Scramble\Support\Generator\Types\IntegerType;
 use Dedoc\Scramble\Support\Generator\Types\ObjectType;
@@ -19,7 +20,7 @@ use Dedoc\Scramble\Support\RouteInfo;
 use Illuminate\Support\Facades\Gate;
 
 // IM-08: the generated API docs (/docs/api). Scramble infers routes, requests and resources; this
-// adds what it can't see: the cookie session with its CSRF header, and the one error shape
+// adds what it can't see: the cookie session with its CSRF header, Bearer tokens, and the one error shape
 class ApiDocs
 {
     public static function register(): void
@@ -36,6 +37,13 @@ class ApiDocs
                     in_array($operation->method, ['get', 'head'], true) ? [] : ['csrf' => []],
                 );
                 $operation->security = $schemes === [] ? [] : [new SecurityRequirement($schemes)];
+                // Data routes also take a personal access token with the route's abilities (#196)
+                $abilities = collect($route->route->gatherMiddleware())->first(fn ($m) => is_string($m) && str_starts_with($m, 'abilities:'));
+                if (is_string($abilities)) {
+                    $operation->security[] = new SecurityRequirement(['token' => []]);
+                    $needs = str_replace(',', '`, `', substr($abilities, strlen('abilities:')));
+                    $operation->description = trim("Token abilities: `{$needs}`.\n\n".$operation->description);
+                }
 
                 // Scramble documents Laravel's own error body; bootstrap/app.php renders ours
                 $error = Schema::fromType(Reference::fromUri('#/components/schemas/ApiError'));
@@ -49,12 +57,17 @@ class ApiDocs
                 $operation->addResponse(Response::make(429)->setDescription('Rate limited. `Retry-After` header; `error.limit` names the limit.')->setContent('application/json', $error));
             })
             ->withDocumentTransformers(function (OpenApi $openApi): void {
+                // Relative, so Try it calls the origin the page was opened on (:3000 through Next.js, or
+                // :8000) and keeps its session cookie; an absolute APP_URL would be cross-origin
+                $openApi->servers = [Server::make('/api/v1')];
                 // Only the exception responses replaced above lived here
                 $openApi->components->responses = [];
                 $openApi->components->addSecurityScheme('session', SecurityScheme::apiKey('cookie', (string) config('session.cookie'))
                     ->setDescription('Sanctum cookie session (ADR-007): `GET /sanctum/csrf-cookie`, then `POST /auth/login`.'));
                 $openApi->components->addSecurityScheme('csrf', SecurityScheme::apiKey('header', 'X-XSRF-TOKEN')
-                    ->setDescription('The `XSRF-TOKEN` cookie\'s value, on every write.'));
+                    ->setDescription('The `XSRF-TOKEN` cookie\'s value, on every write. A browser request from the same origin may leave it out: Laravel accepts its `Sec-Fetch-Site: same-origin`.'));
+                $openApi->components->addSecurityScheme('token', SecurityScheme::http('bearer')
+                    ->setDescription('A personal access token from `POST /tokens` (#196), for scripts. Reaches the data routes its abilities allow. On this page a signed-in session is sent too and wins, so test a token with curl.'));
                 $openApi->components->addSchema('ApiError', Schema::fromType(self::errorType()));
             });
     }
