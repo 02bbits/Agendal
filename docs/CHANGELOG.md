@@ -2,9 +2,14 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-26
+
+- **Personal access tokens (Refs #196).** [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md#addendum-personal-access-tokens-196) addendum: tokens for scripts only, six abilities, 7/30/90-day expiry, revoked with the session. [api.md](07-architecture/api.md#personal-access-tokens): `/tokens` endpoints and the ability-to-route table. [security.md](07-architecture/security.md#sc-26) SC-26 and authorization matrix rows. [copy-catalog.md](01-product/copy-catalog.md): `auth.token_not_allowed`, `auth.token_limit`. Threat review: 10-token cap, a token never stores `X-Timezone`, every signed-in route must name a token rule.
+
 ## 2026-11-25
 
 - **Test coverage measured in CI with a 70% floor (Refs #195).** [ci.yml](../.github/workflows/ci.yml) enables PCOV on the backend (`pest --coverage --min=70 --coverage-clover=coverage.xml`) and `@vitest/coverage-v8` on the frontend (`npm run test:coverage`, 70% line threshold in `vitest.config.ts`), writing line summaries to `$GITHUB_STEP_SUMMARY` and uploading `coverage.xml` / `lcov.info` artifacts. Local coverage commands added to [README.md](../README.md#checks).
+- **Generated API docs (IM-08, Refs #197).** [api.md](07-architecture/api.md#conventions): docs at `/docs/api` (Scramble), open locally, on the server behind Telescope's allow-list (`TELESCOPE_ALLOWED_EMAILS`); CI exports `api.json`. [overview.md](07-architecture/overview.md) Processes: Next.js also forwards `/docs/api`, `/telescope`, `/pulse`.
 - **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
 
 ## 2026-11-24

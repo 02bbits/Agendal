@@ -56,6 +56,9 @@ const nextConfig: NextConfig = {
     return [
       { source: "/api/:path*", destination: `${apiUrl}/api/:path*` },
       { source: "/sanctum/:path*", destination: `${apiUrl}/sanctum/:path*` },
+      // API docs (IM-08), same allow-list
+      { source: "/docs/api", destination: `${apiUrl}/docs/api` },
+      { source: "/docs/api.json", destination: `${apiUrl}/docs/api.json` },
       // Telescope (#192): allow-listed developers only, checked by the API
       {
         source: "/telescope/:path*",

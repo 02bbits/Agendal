@@ -38,6 +38,8 @@ export const catalog = {
   "auth.signout_everywhere": "Sign out on all devices",
   "auth.offline": "You're offline. Connect to sign in.",
   "auth.locked": "Too many attempts. Try again in {seconds} s.",
+  "auth.token_not_allowed": "This token isn't allowed to do that.",
+  "auth.token_limit": "You have 10 tokens. Revoke one to make another.",
   "email.greeting": "Hi {name},",
   "email.greeting_plain": "Hi,",
   "email.reset_subject": "Reset your Agendal password",

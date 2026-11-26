@@ -70,6 +70,15 @@ jobs:
           name: backend-coverage
           path: backend/coverage.xml
           if-no-files-found: ignore
+      # IM-08: the docs generate from the code; Scramble reads column types, so the tables must exist
+      - name: API docs (Scramble)
+        env:
+          DB_DATABASE: agendal_test
+        run: php artisan migrate --force && php artisan scramble:analyze && php artisan scramble:export
+      - uses: actions/upload-artifact@v4
+        with:
+          name: api.json
+          path: backend/api.json
       - name: Dependency audit
         run: composer audit
 
