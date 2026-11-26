@@ -368,7 +368,7 @@ export function NoteEditor({
                   .join(" ") || undefined
               }
               placeholder={t("note.placeholder")}
-              className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[linear-gradient(transparent_24px,var(--color-fill-2)_24px)] bg-[length:100%_25px] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+              className="focus:outline-none min-h-[368px] w-full flex-1 resize-none border-0 bg-transparent bg-[repeating-linear-gradient(transparent_0_24px,var(--color-fill-2)_24px_25px)] p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
             />
           </div>
           {stage !== "hidden" && (
