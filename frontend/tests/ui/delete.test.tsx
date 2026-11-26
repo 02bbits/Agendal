@@ -141,16 +141,16 @@ describe("Delete a task (TK-5)", () => {
     expect(
       screen.getByRole("alertdialog", { name: "Delete a repeating task" }),
     ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "This task only" })).toBeTruthy();
     expect(
-      screen.getByRole("checkbox", { name: "Delete all repeating tasks" }),
+      screen.getByRole("button", { name: "This and all future" }),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Delete" })).toBeTruthy();
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Cancel" }),
     );
   });
 
-  it("deleting repeating task with checkbox unchecked calls api with scope 'one', and checked calls 'future'", async () => {
+  it("deleting repeating task with scope 'one' calls api with scope", async () => {
     const t0 = task({
       title: "Weekly sync",
       due_date: "2026-10-25",
@@ -160,24 +160,11 @@ describe("Delete a task (TK-5)", () => {
     const removeSpy = vi.spyOn(memory.api, "remove");
     render(wrap(<Screen id={t0.id} />));
     await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "This task only" }),
+    );
     expect(removeSpy).toHaveBeenCalledWith(t0.id, "one");
     await waitFor(() => expect(memory.db.tasks).toHaveLength(0));
-
-    const t1 = task({
-      title: "Daily sync",
-      due_date: "2026-10-25",
-      repeat: "daily",
-    });
-    const { wrap: wrap2, memory: memory2 } = setup([t1]);
-    const removeSpy2 = vi.spyOn(memory2.api, "remove");
-    render(wrap2(<Screen id={t1.id} />));
-    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: "Delete all repeating tasks" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-    expect(removeSpy2).toHaveBeenCalledWith(t1.id, "future");
   });
 
   it("A11Y-42: the repeat scope dialog is an alertdialog with focus on Cancel", async () => {
@@ -219,7 +206,9 @@ describe("Delete a task (TK-5)", () => {
 
     render(wrap(<Screen id={t0.id} />));
     await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: "This task only" }),
+    );
 
     expect(
       await screen.findByRole("heading", {
@@ -234,51 +223,5 @@ describe("Delete a task (TK-5)", () => {
         name: "List: Weekly standup",
       }),
     ).toBeTruthy();
-  });
-
-  it("deleting all repeating tasks removes the entire series and Undo restores all of them", async () => {
-    const tDone = task({
-      id: "t-done",
-      title: "Daily done",
-      due_date: "2026-10-24",
-      repeat: "daily",
-      done: true,
-    });
-    const tOpen = task({
-      id: "t-open",
-      title: "Daily open",
-      due_date: "2026-10-25",
-      repeat: "daily",
-      done: false,
-      previous_occurrence_id: "t-done",
-    });
-    const { wrap, memory } = setup([tDone, tOpen]);
-
-    vi.spyOn(memory.api, "remove").mockResolvedValueOnce({
-      deleted_ids: ["t-done", "t-open"],
-    });
-    const restoreSpy = vi
-      .spyOn(memory.api, "restore")
-      .mockImplementation(async (id) => (id === "t-done" ? tDone : tOpen));
-
-    render(wrap(<Screen id={tOpen.id} />));
-    await userEvent.click(screen.getByRole("button", { name: "Delete task" }));
-    await userEvent.click(
-      screen.getByRole("checkbox", { name: "Delete all repeating tasks" }),
-    );
-    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
-
-    const listAfterDelete = screen.getByRole("heading", { level: 1 });
-    expect(listAfterDelete.textContent).not.toContain("Daily done");
-    expect(listAfterDelete.textContent).not.toContain("Daily open");
-
-    await userEvent.click(screen.getByRole("button", { name: "Undo" }));
-
-    expect(restoreSpy).toHaveBeenCalledWith("t-done");
-    expect(restoreSpy).toHaveBeenCalledWith("t-open");
-    const listHeading = await screen.findByRole("heading", {
-      name: /Daily done/,
-    });
-    expect(listHeading.textContent).toContain("Daily open");
   });
 });

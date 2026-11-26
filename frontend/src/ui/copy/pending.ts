@@ -540,7 +540,6 @@ export const pending = {
   "task.reminder_value": "Reminder value",
   "task.remove_reminder": "Remove reminder",
   "task.remind_at_preview": "Reminds at {time}",
-  "task.repeat_delete_all": "Delete all repeating tasks",
 } as const;
 
 export type PendingKey = keyof typeof pending;
