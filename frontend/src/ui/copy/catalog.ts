@@ -65,7 +65,8 @@ export const catalog = {
   "note.placeholder": "Write a note…",
   "note.make_tasks": "Make tasks",
   "note.upload_file": "Upload file",
-  "note.upload_formats": "PDF, DOCX, TXT, MD",
+  "note.upload_formats":
+    "Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB.",
   "note.upload_choose": "Choose a document",
   "note.upload_too_large": "The file must be smaller than 2 MB.",
   "note.upload_replace": "Replace the current note with the uploaded document?",

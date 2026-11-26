@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Services\Notes\VisionOcr;
 use DOMDocument;
 use DOMNode;
 use DOMXPath;
@@ -15,8 +16,9 @@ use Symfony\Component\Process\Process;
 use ZipArchive;
 
 /**
- * Reads the text out of an uploaded document for the note editor. Nothing is stored: the
- * upload stays in PHP's temp file and is gone when the request ends. Field errors are copy keys.
+ * Reads the text out of an uploaded file for the note editor (NC §2.4). Text, Markdown, CSV, Word and PDFs
+ * with a text layer are read on the server; photos and PDFs without one go to Google Cloud Vision. Nothing is
+ * stored: the upload stays in PHP's temp file and is gone when the request ends. Field errors are copy keys.
  */
 class NoteExtractController extends Controller
 {
@@ -25,10 +27,13 @@ class NoteExtractController extends Controller
 
     private const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main';
 
-    public function __invoke(Request $request): JsonResponse
+    /** Set when a parser's output passed OUTPUT_CAP: what was read is kept and marked truncated. */
+    private bool $outputCut = false;
+
+    public function __invoke(Request $request, VisionOcr $vision): JsonResponse
     {
-        $validated = $request->validate(['file' => ['required', 'file', 'max:2048']], [
-            'file.max' => 'note.upload_too_large',
+        $validated = $request->validate(['file' => ['required', 'file', 'max:'.(int) config('notes.file_max_kb')]], [
+            'file.max' => 'note.file_too_big',
             'file.required' => 'note.file_failed',
             'file.file' => 'note.file_failed',
         ]);
@@ -37,17 +42,21 @@ class NoteExtractController extends Controller
         $extension = strtolower($file->getClientOriginalExtension());
         $path = $file->getRealPath();
 
-        if (! in_array($extension, ['txt', 'md', 'pdf', 'docx'], true)) {
+        if (! in_array($extension, ['txt', 'md', 'csv', 'pdf', 'docx', 'jpg', 'jpeg', 'png', 'webp'], true)) {
             $this->fail('note.file_type');
         }
 
-        if ($path === false || ($signature = file_get_contents($path, length: 5)) === false) {
+        if ($path === false || ($signature = file_get_contents($path, length: 12)) === false) {
             $this->fail('note.file_failed');
         }
 
+        // Magic bytes must match the extension (NC-E7)
         $validSignature = match ($extension) {
             'pdf' => str_starts_with($signature, '%PDF-'),
             'docx' => str_starts_with($signature, 'PK'),
+            'jpg', 'jpeg' => str_starts_with($signature, "\xFF\xD8\xFF"),
+            'png' => str_starts_with($signature, "\x89PNG"),
+            'webp' => str_starts_with($signature, 'RIFF') && substr($signature, 8, 4) === 'WEBP',
             default => true,
         };
 
@@ -55,12 +64,21 @@ class NoteExtractController extends Controller
             $this->fail('note.file_type');
         }
 
+        $pages = $extension === 'pdf' ? $this->pdfPages($path) : null;
+        $truncated = false;
         $text = match ($extension) {
-            'txt', 'md' => file_get_contents($path),
+            'txt', 'md', 'csv' => file_get_contents($path),
             // First 20 pages: enough for a note, and a cap on a PDF built to keep the parser busy
             'pdf' => $this->extractWithCommand(['pdftotext', '-l', '20', '-enc', 'UTF-8', '-nopgbrk', $path, '-']),
             'docx' => $this->extractDocx($path),
+            default => $vision->image((string) file_get_contents($path)) ?? $this->fail('note.file_failed'),
         };
+
+        // A PDF without a text layer is a scan: Vision reads its first pages (NC-E5)
+        if ($extension === 'pdf' && trim($text) === '') {
+            $text = $vision->pdf((string) file_get_contents($path)) ?? $this->fail('note.file_failed');
+            $truncated = $pages !== null && $pages > VisionOcr::PDF_PAGES;
+        }
 
         if (! is_string($text) || ! mb_check_encoding($text, 'UTF-8')) {
             $this->fail('note.file_failed');
@@ -72,11 +90,19 @@ class NoteExtractController extends Controller
             $this->fail('note.file_no_text');
         }
 
-        if (mb_strlen($text) > (int) config('notes.max_length', 5000)) {
-            $this->fail('note.upload_too_long');
+        // More than a note holds: the start is kept and marked, the editor says so (NC-E9)
+        $max = (int) config('notes.max_length', 5000);
+        if (mb_strlen($text) > $max) {
+            $text = rtrim(mb_substr($text, 0, $max));
+            $truncated = true;
         }
 
-        return response()->json(['text' => $text]);
+        return response()->json([
+            'text' => $text,
+            'truncated' => $truncated || $this->outputCut,
+            'file_name' => basename($file->getClientOriginalName()),
+            'pages' => $pages,
+        ]);
     }
 
     private function fail(string $code): never
@@ -109,8 +135,11 @@ class NoteExtractController extends Controller
             $this->fail('note.file_failed');
         }
 
+        // Stopped at the cap: keep what was read, marked truncated (NC-E9)
         if ($tooLong) {
-            $this->fail('note.upload_too_long');
+            $this->outputCut = true;
+
+            return $process->getOutput();
         }
 
         if (! $process->isSuccessful()) {
@@ -118,6 +147,20 @@ class NoteExtractController extends Controller
         }
 
         return $process->getOutput();
+    }
+
+    /** Pages of a PDF from pdfinfo, for the file card; null when it can't tell. */
+    private function pdfPages(string $path): ?int
+    {
+        $process = new Process(['env', '-i', 'PATH=/usr/bin:/bin', 'prlimit', '--as=536870912', '--', 'pdfinfo', $path]);
+        $process->setTimeout(10);
+        try {
+            $process->run();
+        } catch (ProcessTimedOutException) {
+            return null;
+        }
+
+        return preg_match('/^Pages:\s+(\d+)/m', $process->getOutput(), $match) === 1 ? (int) $match[1] : null;
     }
 
     private function extractDocx(string $path): string

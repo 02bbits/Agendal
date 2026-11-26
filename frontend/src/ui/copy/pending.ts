@@ -110,6 +110,16 @@ export const pending = {
   "note.capture_open": "Write a note",
   "note.mic": "Dictate a note",
   "common.continue": "Continue",
+  "note.text_label_from": "Your note, from {name}",
+  "note.file_read_hint":
+    "Agendal read this from the file. Fix anything before making tasks.",
+  "note.file_remove": "Remove {name}",
+  "note.file_remove_text": "Remove text",
+  "note.file_keep_text": "Keep text",
+  "note.file_size_kb": "{size} KB",
+  "note.file_size_mb": "{size} MB",
+  "note.file_pages_one": "{count} page",
+  "note.file_pages_other": "{count} pages",
   "note.tools": "Dictate or attach a file",
   "note.dictation_hint":
     "Tap stop to add the words to your note and check them before making tasks.",

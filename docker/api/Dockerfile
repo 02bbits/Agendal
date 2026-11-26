@@ -8,8 +8,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-# Dictation sends up to 2 minutes of WAV (about 3.8 MB, NC §2.3); PHP's default is 2M
-RUN printf 'upload_max_filesize = 5M\npost_max_size = 8M\n' > /usr/local/etc/php/conf.d/zz-agendal-uploads.ini
+# Dictation sends up to 2 minutes of WAV (about 3.8 MB, NC §2.3) and File to note up to 5 MB (NC §2.4);
+# PHP's default is 2M
+RUN printf 'upload_max_filesize = 6M\npost_max_size = 8M\n' > /usr/local/etc/php/conf.d/zz-agendal-uploads.ini
 ENV COMPOSER_HOME=/tmp/composer
 
 WORKDIR /repo/backend

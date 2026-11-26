@@ -590,7 +590,7 @@ describe("NoteEditor submit (IM-42)", () => {
     await expectAxeCleanInBothThemes();
   });
 
-  it("fills the editor from an uploaded file, and shows the server's copy key when it can't", async () => {
+  it("adds an uploaded file's text under a file card, and shows the server's copy key when it can't", async () => {
     document.cookie = "XSRF-TOKEN=test-token";
     const fetchMock = vi
       .fn()
@@ -606,7 +606,15 @@ describe("NoteEditor submit (IM-42)", () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ text: "buy milk" }), { status: 200 }),
+        new Response(
+          JSON.stringify({
+            text: "buy milk",
+            truncated: false,
+            file_name: "scan.pdf",
+            pages: 2,
+          }),
+          { status: 200 },
+        ),
       );
     vi.stubGlobal("fetch", fetchMock);
     try {
@@ -620,9 +628,16 @@ describe("NoteEditor submit (IM-42)", () => {
       );
 
       await userEvent.upload(input, file());
-      await vi.waitFor(() =>
-        expect(field()).toHaveProperty("value", "buy milk"),
-      );
+      // NC §2.4: the file card, and the note's label names the file
+      const fromFile = await screen.findByRole("textbox", {
+        name: "Your note, from scan.pdf",
+      });
+      expect(fromFile).toHaveProperty("value", "buy milk");
+      expect(screen.getByText("scan.pdf")).toBeTruthy();
+      expect(screen.getByText(/2 pages/)).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Remove scan.pdf" }),
+      ).toBeTruthy();
       expect(screen.queryByRole("alert")).toBeNull();
     } finally {
       vi.unstubAllGlobals();

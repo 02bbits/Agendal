@@ -17,7 +17,7 @@ import {
 import { now, timeZone } from "../../../lib/clock";
 import { canDictate } from "../../../lib/dictation";
 import type { NoteReplan, NoteSubmitFailure } from "../../../lib/noteApi";
-import { isCopyKey, t, type CopyKey } from "../../copy";
+import { isCopyKey, t, tc, type CopyKey } from "../../copy";
 import { formatDay, formatTime } from "../../domain/dates";
 import { localDateTime } from "../../domain/edit";
 import type { NoteResult, TimeFormat } from "../../domain/types";
@@ -30,7 +30,9 @@ import {
   ChevronDownIcon,
   ChevronUpIcon,
   MicIcon,
+  NotesIcon,
   PaperclipIcon,
+  XIcon,
   SparklesIcon,
 } from "../../components/icons";
 import { useHistoryEntry } from "../../components/useHistoryEntry";
@@ -129,6 +131,38 @@ const lengthOf = (text: string) =>
       .trim(),
   ].length;
 const formatCount = (count: number) => count.toLocaleString("en-US");
+
+// File to note (NC §2.4): what the picker offers and the server reads, and the size it accepts
+const FILE_TYPES = [
+  ".txt",
+  ".md",
+  ".csv",
+  ".pdf",
+  ".docx",
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+];
+const FILE_MAX_BYTES = 5 * 1024 * 1024;
+function formatSize(bytes: number): string {
+  if (bytes < 1024 * 1024)
+    return t("note.file_size_kb", {
+      size: Math.max(1, Math.round(bytes / 1024)),
+    });
+  return t("note.file_size_mb", { size: (bytes / 1024 / 1024).toFixed(1) });
+}
+
+/** The attached file (one per note) and the text it put in the note, to take back out on × (NC §2.4). */
+interface Attachment {
+  name: string;
+  size: number;
+  pages: number | null;
+  block: string;
+  /** The note before the file's text, which was added at the end: an edited block is found after it. */
+  before: string;
+  truncated: boolean;
+}
 
 /**
  * Note editor (NC-1, NC-2): a drawer over the screen with the time it was written, the ruled note
@@ -383,6 +417,9 @@ export function NoteEditor({
   const written = localDateTime(writtenAt, zone);
   const stamp = `${formatDay(written.date, localDateTime(now().toISOString(), zone).date)} ${formatTime(written.time, timeFormat)}`;
 
+  const [attachment, setAttachment] = useState<Attachment | null>(null);
+  const [removingFile, setRemovingFile] = useState(false);
+  const uploadAbort = useRef<AbortController | null>(null);
   const uploadFile = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     // Allow selecting the same file again after an error
@@ -390,48 +427,93 @@ export function NoteEditor({
     if (!file || uploading || busy) return;
     setUploadError(null);
 
+    // Checked here before uploading, and again on the server (NC §2.4)
     const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
-    if (![".txt", ".md", ".pdf", ".docx"].includes(extension)) {
-      setUploadError("note.file_type");
-      return;
-    }
-    // The server's 2 MB limit
-    if (file.size > 2 * 1024 * 1024) {
-      setUploadError("note.upload_too_large");
-      return;
-    }
-    // Don't silently replace an existing note or draft
-    if (
-      VISIBLE.test(latest.current) &&
-      !window.confirm(t("note.upload_replace"))
-    ) {
-      return;
-    }
+    if (!FILE_TYPES.includes(extension))
+      return setUploadError("note.file_type");
+    if (file.size > FILE_MAX_BYTES) return setUploadError("note.file_too_big");
 
     const formData = new FormData();
     formData.append("file", file);
+    const abort = new AbortController();
+    uploadAbort.current = abort;
     setUploading(true);
     try {
-      // The server checks the text is there and fits a note
-      const { text: extracted } = await handleResponse<{ text: string }>(
-        await api("/notes/extract", { method: "POST", body: formData }),
+      const read = await handleResponse<{
+        text: string;
+        truncated: boolean;
+        file_name: string;
+        pages: number | null;
+      }>(
+        await api("/notes/extract", {
+          method: "POST",
+          body: formData,
+          signal: abort.signal,
+        }),
       );
-      edit(extracted);
-      textRef.current?.focus();
+      // Added at the end, after a blank line; only what fits in the note (NC-E9)
+      const current = latest.current.trimEnd();
+      const gap = VISIBLE.test(current) ? "\n\n" : "";
+      const room = Math.max(0, NOTE_MAX - lengthOf(current) - gap.length);
+      const block = read.text.slice(0, room).trimEnd();
+      const start = current.length + gap.length;
+      edit(current + gap + block);
+      setAttachment({
+        name: read.file_name,
+        size: file.size,
+        pages: read.pages,
+        block,
+        before: current + gap,
+        truncated: read.truncated || block.length < read.text.length,
+      });
+      // The cursor goes to the start of the file's text, to check it
+      const field = textRef.current;
+      requestAnimationFrame(() => {
+        field?.focus();
+        field?.setSelectionRange(start, start);
+      });
     } catch (error) {
+      if (abort.signal.aborted) return;
       // The field error is a copy key; anything else (network, 5xx) reads as "couldn't read"
       const code =
         error instanceof ApiRequestError
           ? error.status === 429
             ? "error.rate_limited_soon"
             : error.status === 413
-              ? "note.upload_too_large"
+              ? "note.file_too_big"
               : (error.fields?.file?.[0] ?? "")
           : "";
       setUploadError(isCopyKey(code) ? code : "note.file_failed");
     } finally {
+      uploadAbort.current = null;
       setUploading(false);
     }
+  };
+  // × on the file card: its text goes too while unchanged; once edited, the user picks (NC §2.4)
+  const removeFile = (withText: boolean) => {
+    setRemovingFile(false);
+    if (withText && attachment) {
+      const text = latest.current;
+      const at = text.lastIndexOf(attachment.block);
+      if (at >= 0)
+        edit(
+          (
+            text.slice(0, at).trimEnd() +
+            "\n" +
+            text.slice(at + attachment.block.length).trimStart()
+          ).trim(),
+        );
+      // Edited: the file's text was added at the end, so it is what follows the earlier note.
+      // ponytail: words typed after the file's text go with it; track the block's range if that matters
+      else if (text.startsWith(attachment.before))
+        edit(text.slice(0, attachment.before.length).trimEnd());
+    }
+    setAttachment(null);
+  };
+  const askRemoveFile = () => {
+    if (!attachment) return;
+    if (latest.current.includes(attachment.block)) removeFile(true);
+    else setRemovingFile(true);
   };
 
   const fillExample = (example: string) => {
@@ -488,12 +570,41 @@ export function NoteEditor({
             ref={paperScroll}
             className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-4 md:px-gutter-wide"
           >
+            {attachment && (
+              <div className="flex shrink-0 items-center gap-3 rounded-box bg-surface p-4">
+                <span
+                  aria-hidden="true"
+                  className="grid size-10 shrink-0 place-items-center rounded-tile bg-danger-tint text-error"
+                >
+                  <NotesIcon size={20} />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="m-0 truncate text-body font-semibold">
+                    {attachment.name}
+                  </p>
+                  <p className="m-0 text-footnote text-ink-secondary tabular-nums">
+                    {formatSize(attachment.size)}
+                    {attachment.pages !== null &&
+                      ` · ${tc("note.file_pages", attachment.pages)}`}
+                  </p>
+                </div>
+                <IconButton
+                  className="shrink-0 bg-fill!"
+                  label={t("note.file_remove", { name: attachment.name })}
+                  icon={<XIcon size={18} />}
+                  disabled={busy}
+                  onClick={askRemoveFile}
+                />
+              </div>
+            )}
             <div className="flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4">
               <label
                 htmlFor={fieldId}
-                className="mb-2 text-footnote font-medium text-ink-secondary"
+                className="mb-2 truncate text-footnote font-medium text-ink-secondary"
               >
-                {t("note.text_label")}
+                {attachment
+                  ? t("note.text_label_from", { name: attachment.name })
+                  : t("note.text_label")}
               </label>
               <textarea
                 id={fieldId}
@@ -533,8 +644,13 @@ export function NoteEditor({
               {announced.text}
             </p>
             <p className="m-0 text-footnote text-ink-secondary">
-              {t("note.editor_hint")}
+              {t(attachment ? "note.file_read_hint" : "note.editor_hint")}
             </p>
+            {attachment?.truncated && (
+              <p className="m-0 text-footnote text-ink-secondary">
+                {t("note.file_truncated")}
+              </p>
+            )}
             {/* Always there, so screen readers hear it when it fills; hidden while empty so it leaves no gap */}
             <p
               role="status"
@@ -546,7 +662,16 @@ export function NoteEditor({
               {reading ? (
                 <ReadingStatus />
               ) : uploading ? (
-                t("note.reading_file")
+                <>
+                  {t("note.reading_file")}{" "}
+                  <button
+                    type="button"
+                    className="focus-ring cursor-pointer rounded-field border-0 bg-transparent p-0 text-footnote font-semibold text-primary"
+                    onClick={() => uploadAbort.current?.abort()}
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </>
               ) : (
                 ""
               )}
@@ -590,7 +715,7 @@ export function NoteEditor({
             <input
               ref={fileInputRef}
               type="file"
-              accept=".txt,.md,.pdf,.docx"
+              accept={FILE_TYPES.join(",")}
               className="sr-only"
               aria-label={t("note.upload_choose")}
               onChange={(event) => void uploadFile(event)}
@@ -611,7 +736,7 @@ export function NoteEditor({
                   )}
                   <Button
                     className="flex-1"
-                    disabled={busy || uploading || offline}
+                    disabled={busy || uploading || offline || !!attachment}
                     onClick={() => {
                       setTools(false);
                       fileInputRef.current?.click();
@@ -622,7 +747,7 @@ export function NoteEditor({
                   </Button>
                 </div>
                 <p className="m-0 text-center text-footnote text-ink-tertiary">
-                  {t("note.upload_formats")}
+                  {t(offline ? "note.file_offline" : "note.upload_formats")}
                 </p>
               </div>
             )}
@@ -670,6 +795,23 @@ export function NoteEditor({
           void submit(true);
         }}
         onCancel={() => setConflicts(0)}
+      />
+      <Dialog
+        open={removingFile}
+        history={false}
+        title={t("note.file_remove_title")}
+        onClose={() => setRemovingFile(false)}
+        actionsLayout="row"
+        actions={
+          <>
+            <Button onClick={() => removeFile(false)}>
+              {t("note.file_keep_text")}
+            </Button>
+            <Button variant="destructive" onClick={() => removeFile(true)}>
+              {t("note.file_remove_text")}
+            </Button>
+          </>
+        }
       />
       <Dialog
         open={confirming}
