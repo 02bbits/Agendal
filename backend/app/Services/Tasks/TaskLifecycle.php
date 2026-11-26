@@ -172,7 +172,6 @@ final class TaskLifecycle
 
     /**
      * Delete with repeating task scope ('one' or 'future').
-     * When scope is 'one' on an uncompleted repeating task, creates the next occurrence.
      *
      * @return array{deleted: bool, next: Task|null, deleted_ids: list<string>}
      */
@@ -180,13 +179,6 @@ final class TaskLifecycle
     {
         return DB::transaction(function () use ($task, $scope, $at): array {
             $locked = Task::query()->whereKey($task->id)->lockForUpdate()->firstOrFail();
-            $next = null;
-            if ($scope === 'one' && ! $locked->done) {
-                $next = $this->recurrence->next($locked, restoreDeleted: true);
-                if ($next?->trashed()) {
-                    $next = null;
-                }
-            }
 
             if ($scope === 'future') {
                 return $this->deleteFutureChain($locked, $at);
@@ -196,7 +188,7 @@ final class TaskLifecycle
 
             return [
                 'deleted' => $deleted,
-                'next' => $next,
+                'next' => null,
                 'deleted_ids' => $deleted ? [$locked->id] : [],
             ];
         });

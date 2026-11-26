@@ -693,7 +693,7 @@ describe("Project detail page /projects/[id]", () => {
       if (url === "/api/v1/projects")
         return json(200, [{ id: "p-1", name: "Personal", colour: "purple" }]);
       if (url === "/api/v1/tasks/rep-open-1?scope=one" && method === "DELETE")
-        return json(200, { next: openNext });
+        return new Response(null, { status: 204 });
       if (url === "/api/v1/tasks/rep-open-1/restore" && method === "POST")
         return json(200, open1);
       if (url === "/api/v1/tasks/rep-open-1/complete" && method === "POST") {
@@ -737,11 +737,14 @@ describe("Project detail page /projects/[id]", () => {
       within(dialog).getByRole("button", { name: t("common.delete") }),
     );
 
-    // Next occurrence appears, done occurrences stay in Completed
+    // Deleted task is gone without creating a next occurrence; done occurrences stay in Completed
     const main = screen.getByRole("main");
-    await within(main).findByRole("link", { name: /Fri 22 Jan 2027/ });
+    await within(main).findByText("2 of 2 tasks completed");
     expect(
       within(main).queryByRole("link", { name: /Fri 15 Jan 2027/ }),
+    ).toBeNull();
+    expect(
+      within(main).queryByRole("link", { name: /Fri 22 Jan 2027/ }),
     ).toBeNull();
     expect(
       within(main).getByRole("link", { name: /Fri 8 Jan 2027/ }),
@@ -749,9 +752,8 @@ describe("Project detail page /projects/[id]", () => {
     expect(
       within(main).getByRole("link", { name: /Fri 1 Jan 2027/ }),
     ).toBeTruthy();
-    expect(within(main).getByText("2 of 3 tasks completed")).toBeTruthy();
 
-    // Undo restores Fri 15 Jan 2027 and removes Fri 22 Jan 2027 with zero duplicates
+    // Undo restores Fri 15 Jan 2027 with zero duplicates
     await userEvent.click(
       screen.getByRole("button", { name: t("common.undo") }),
     );
