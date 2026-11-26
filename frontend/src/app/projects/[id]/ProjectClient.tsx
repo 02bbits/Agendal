@@ -83,7 +83,7 @@ export function ProjectClient({ id }: { id: string }) {
   return (
     <>
       <TaskStoreProvider
-        key={`${data.project.id}-${detail.loadSeq}-${data.open.length}`}
+        key={`${data.project.id}-${detail.loadSeq}`}
         api={httpTaskApi}
         clock={appClock}
         initialTasks={[...data.open, ...data.completed]}

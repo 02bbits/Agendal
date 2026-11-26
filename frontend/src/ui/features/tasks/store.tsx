@@ -334,7 +334,16 @@ export function TaskStoreProvider({
 
   const restore = React.useCallback(
     (task: Task, madeNextId?: string) => {
-      if (madeNextId) removeRow(madeNextId);
+      if (madeNextId) {
+        removeRow(madeNextId);
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(
+            new CustomEvent("agendal:task-deleted", {
+              detail: { id: madeNextId },
+            }),
+          );
+        }
+      }
       insertRow(task);
       api.restore(task.id).then(
         (saved) => {
