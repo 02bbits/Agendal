@@ -23,6 +23,12 @@ class ApiError extends Exception
         parent::__construct($message);
     }
 
+    // #196: a personal access token without the route's ability, or on a session-only route
+    public static function tokenNotAllowed(): self
+    {
+        return new self('auth.token_not_allowed', "This token isn't allowed to do that.", 403);
+    }
+
     public function render(): JsonResponse
     {
         $error = ['code' => $this->errorCode, 'message' => $this->getMessage(), 'request_id' => Context::get('request_id')];

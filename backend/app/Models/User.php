@@ -9,13 +9,27 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Sanctum\PersonalAccessToken;
+use Laravel\Sanctum\TransientToken;
 
 #[Fillable(['email', 'display_name', 'password', 'timezone', 'timezone_auto', 'remember_device', 'theme', 'week_start', 'time_format', 'install_prompt_shown', 'theme_palette', 'page_view'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, Notifiable;
+
+    /**
+     * Sanctum types this as a PersonalAccessToken, but a request on the app's session carries a
+     * TransientToken (every ability), and outside a request there is none (#196).
+     *
+     * @return PersonalAccessToken|TransientToken|null
+     */
+    public function currentAccessToken()
+    {
+        return $this->accessToken;
+    }
 
     /**
      * Get the attributes that should be cast.

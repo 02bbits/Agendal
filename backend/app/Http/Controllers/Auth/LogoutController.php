@@ -36,6 +36,7 @@ class LogoutController extends Controller
         /** @var User $user */
         $user = $request->user();
         DB::table('sessions')->where('user_id', $user->id)->delete();
+        $user->tokens()->delete(); // #196: API tokens too
         // No device of this account gets reminders until it signs in again
         PushSubscription::query()->where('user_id', $user->id)->delete();
         Auth::guard('web')->logout(); // Also replaces the Remember me token
