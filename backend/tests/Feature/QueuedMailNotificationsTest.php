@@ -11,6 +11,7 @@ use App\Notifications\VerifyEmailCode;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Notifications\SendQueuedNotifications;
+use Illuminate\Queue\WorkerOptions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -52,8 +53,16 @@ it('queues each mail notification instead of sending inline during the request',
 });
 
 it('never queues mail notifications when the surrounding transaction rolls back', function () {
-    config(['queue.default' => 'database']);
-    DB::table('jobs')->delete();
+    config([
+        'queue.default' => 'database',
+        'database.connections.queue_isolated' => [
+            'driver' => 'sqlite',
+            'database' => ':memory:',
+        ],
+        'queue.connections.database.connection' => 'queue_isolated',
+    ]);
+
+    DB::connection('queue_isolated')->statement('CREATE TABLE jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, queue TEXT, payload TEXT, attempts INTEGER, reserved_at INTEGER, available_at INTEGER, created_at INTEGER)');
 
     $user = User::factory()->create();
 
@@ -61,6 +70,7 @@ it('never queues mail notifications when the surrounding transaction rolls back'
         DB::transaction(function () use ($user): void {
             $user->notify(new SignInCode('999888'));
             $user->notify(new PasswordChanged);
+            $user->sendPasswordResetNotification('reset-token');
             Notification::route('mail', 'rollback@example.com')->notify(new VerifyEmailCode('777666'));
 
             throw new RuntimeException('Simulated rollback');
@@ -69,10 +79,11 @@ it('never queues mail notifications when the surrounding transaction rolls back'
         // Expected
     }
 
-    expect(DB::table('jobs')->count())->toBe(0);
+    // Separate connection is untouched by pgsql rollback: 0 rows proves afterCommit() prevented queueing
+    expect(DB::connection('queue_isolated')->table('jobs')->count())->toBe(0);
 });
 
-it('does not fail register, sign-in, or password change when SMTP throws during queue processing, and logs redacted failure', function () {
+it('does not fail register, sign-in, or password change when SMTP throws during queue processing', function () {
     config(['session.driver' => 'database']);
     newRequest();
     Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response('0000000000000000000000000000000000A:3')]);
@@ -114,19 +125,51 @@ it('does not fail register, sign-in, or password change when SMTP throws during 
         ])->assertOk();
 
     Queue::assertPushed(SendQueuedNotifications::class, 3);
+});
 
-    // failed() logs only notification and exception class without emails or codes
+it('retries queued mail notifications up to 3 times on SMTP failure and logs redacted failure automatically', function () {
+    config(['queue.default' => 'database']);
+    DB::table('jobs')->delete();
+    DB::table('failed_jobs')->delete();
+
+    $job = new SendQueuedNotifications(
+        Notification::route('mail', 'retry@example.com'),
+        new VerifyEmailCode('482910'),
+        ['mail'],
+    );
+    Queue::connection('database')->push($job);
+    expect(DB::table('jobs')->count())->toBe(1);
+
+    Mail::shouldReceive('mailer')
+        ->times(3)
+        ->andThrow(new RuntimeException('SMTP connection refused for retry@example.com'));
+
     Log::spy();
-    (new VerifyEmailCode('482910'))->failed(new RuntimeException('SMTP connection refused for '.$user->email));
 
-    Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context) use ($user): bool {
+    $worker = app('queue.worker');
+    $options = new WorkerOptions(maxTries: 1, timeout: 60);
+
+    $worker->runNextJob('database', 'default', $options);
+    expect(DB::table('jobs')->count())->toBe(1)
+        ->and(DB::table('failed_jobs')->count())->toBe(0);
+
+    $this->travel(15)->seconds();
+    $worker->runNextJob('database', 'default', $options);
+    expect(DB::table('jobs')->count())->toBe(1)
+        ->and(DB::table('failed_jobs')->count())->toBe(0);
+
+    $this->travel(35)->seconds();
+    $worker->runNextJob('database', 'default', $options);
+    expect(DB::table('jobs')->count())->toBe(0);
+
+    Log::shouldHaveReceived('warning')->once()->withArgs(function (string $message, array $context): bool {
         $serialized = json_encode($context);
 
         return $message === 'Queued mail notification failed.'
             && ($context['notification'] ?? null) === VerifyEmailCode::class
             && ($context['exception'] ?? null) === RuntimeException::class
             && is_string($serialized)
-            && ! str_contains($serialized, $user->email)
+            && ! str_contains($serialized, 'retry@example.com')
             && ! str_contains($serialized, '482910');
     });
 });

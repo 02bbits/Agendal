@@ -31,3 +31,8 @@
 - **Expiry** 7, 30 or 90 days (default 30), never unlimited. Pruned a day after expiry. At most 10 unexpired tokens per account.
 - **Revocation** with the session: a password change, a password reset and Sign out on all devices delete every token. Signing out one device does not.
 - Details: [api.md](../api.md#personal-access-tokens), [SC-26](../security.md#sc-26).
+
+## Addendum: Queued auth mail notifications (#193)
+
+- **Decision:** All five auth mail notifications (`SignInCode`, `VerifyEmailCode`, `SignUpAttempted`, `PasswordChanged`, `ResetPasswordNotification`) run on the queue via `QueuedMailNotification` (`ShouldQueue`, `afterCommit()`, `$tries = 3`, `[10, 30, 60]` backoff), including sign-in and verification codes. The dedicated `queue:work` container keeps delivery sub-second while preventing SMTP timeouts or transient failures from blocking auth HTTP requests.
+- **Note on `failed_jobs`:** `failed_jobs` retains the serialized notification payload (which may contain short-lived codes/reset tokens and the recipient address), whereas Telescope already blanks job payloads in `TelescopeServiceProvider`. Redacted `failed()` logging records only the notification and exception class.
