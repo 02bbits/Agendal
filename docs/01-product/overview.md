@@ -27,7 +27,7 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 |---|---|---|
 | Busy user (primary) | Get things out of their head in seconds. See what is due today. Never miss a deadline | Notes in, tasks out. Inbox shows today and overdue. Reminders before exams and timed tasks |
 | Team member | Turn meeting notes into dated tasks | Paste or attach the notes. Agendal makes one task per action item |
-| Planner | Full control over each task | New task (the header button, or the round + on a phone that can't dictate) opens a manual New task sheet. Every field is editable afterwards |
+| Planner | Full control over each task | The + button opens a manual New task sheet. Every field is editable afterwards |
 | Low-vision or keyboard user | Readable contrast, labelled controls, visible focus | WCAG 2.2 AA colours, 44px targets, labelled icon buttons, focus rings |
 
 | Role | Can do |

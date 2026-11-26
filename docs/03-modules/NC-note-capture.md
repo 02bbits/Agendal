@@ -21,14 +21,14 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-4"></a>NC-4 | Turn a file into a note | Should | Accepts text, Markdown, CSV, PDF, Word and photos up to 5 MB; extracted text lands in the editor to check; a removable file chip shows; unsupported or oversized files get a specific error; the result shows "From \<file name>" |
 | <a id="nc-5"></a>NC-5 | Start from an example | Could | Tapping an example chip fills the editor |
 | <a id="nc-6"></a>NC-6 | Capture while offline | Must | The button reads Save note; the note is stored on the device as "Waiting for connection"; on reconnect it is processed automatically with a toast "Back online. N notes turned into M tasks." |
-| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | New task (the header button on a wide screen; on a phone, the capture bar's round + where the browser can't record) opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Custom; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
+| <a id="nc-7"></a>NC-7 | Add a task by hand | Must | The + button opens New task: only a title is required; start date chips Today, Tomorrow, Next week, No date, Custom; an optional due date; repeat; priority; project; a toast confirms "Added “…”" |
 
 ## 1. Entry points and user stories
 
 | Entry | Opens |
 |---|---|
 | Capture bar "Write a note…" (every list screen) | Editor, cursor in the text |
-| Capture bar's round mic button | Dictation sheet, recording already started ([§2.3](#23-dictation-nc-3-should)) |
+| Capture bar mic | Dictation sheet, recording already started ([§2.3](#23-dictation-nc-3-should)) |
 | Notes tab, Write a note (empty state) | Editor |
 | `+` button (every list screen) | New task sheet |
 
@@ -145,7 +145,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 
 | Component | Empty | Busy | Success | Error | Offline | Permission denied |
 |---|---|---|---|---|---|---|
-| Capture bar | Placeholder `note.placeholder` | — | — | — | Same (still opens the editor) | Round button is the + if the browser can't record |
+| Capture bar | Placeholder `note.placeholder` | — | — | — | Same (still opens the editor) | Mic hidden if unsupported |
 | Editor | Examples, Make tasks disabled | `note.reading` after 300 ms, read-only | → RV screen, draft cleared | `422`: inline error under the text. `5xx` / network: queued, `note.processing_failed` | `note.save_offline`, paperclip disabled | — |
 | Dictation sheet | First use: `note.mic_notice` | `note.listening` with Stop, then `note.reading` | `note.heard` with Edit note and Make tasks | `note.no_speech`, `note.dictation_failed`, `error.rate_limited` | Mic disabled, `note.dictation_offline` | `note.mic_denied` |
 | File | — | `note.reading_file` with Cancel | Chip plus text | Typed file errors (§2.4) | Disabled, `note.file_offline` | — |
@@ -158,7 +158,7 @@ Priority: **Must** = needed for v1 · **Should** = v1 if time allows, otherwise 
 | <a id="nc-e1"></a>NC-E1 | The app is closed mid-note (tab killed, phone locked) | The draft from the last 500 ms debounce or `pagehide` is restored next time | T-NC-101, OFF-01 |
 | <a id="nc-e2"></a>NC-E2 | A paste pushes the note over 5,000 characters | Kept in full. Red counter, Make tasks disabled until trimmed | T-NC-102 |
 | <a id="nc-e3"></a>NC-E3 | Microphone permission denied | `note.mic_denied`. The mic stays, so a retry re-asks or explains | T-NC-103 |
-| <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | The capture bar's round button is the + for a task by hand instead of the mic | T-NC-104 |
+| <a id="nc-e4"></a>NC-E4 | The browser can't record audio (no `getUserMedia` or Web Audio) | The capture bar's mic is hidden | T-NC-104 |
 | <a id="nc-e5"></a>NC-E5 | Scanned PDF with no text layer | Its first 5 pages go to Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)). Still nothing → `note.file_no_text` | T-NC-105 |
 | <a id="nc-e6"></a>NC-E6 | Password-protected PDF | `note.file_locked` | T-NC-106, SEC-32 |
 | <a id="nc-e7"></a>NC-E7 | Renamed file (an `.exe` saved as `.pdf`) | Magic bytes don't match → `note.file_type` | T-NC-107, SEC-30 |

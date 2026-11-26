@@ -1,6 +1,6 @@
 # Screens and Navigation
 
-Four tabs sit at the bottom: **Inbox, Upcoming, Projects and Notes**. A floating "Write a note…" bar sits above the tabs on every list screen, next to a round mic button that opens dictation; where the browser can't record, the round button is a + for manual tasks instead. Search and Account are at the top right of each tab screen. Pushed screens have a back button top-left, and the browser's Back does the same ([AP-4](../03-modules/AP-app-platform.md#ap-4)).
+Four tabs sit at the bottom: **Inbox, Upcoming, Projects and Notes**. A floating "Write a note…" bar with a mic sits above the tabs on every list screen, next to a round + button for manual tasks. Search and Account are at the top right of each tab screen. Pushed screens have a back button top-left, and the browser's Back does the same ([AP-4](../03-modules/AP-app-platform.md#ap-4)).
 
 | Screen | Reached from | Purpose | Key contents | Requirements |
 |---|---|---|---|---|
