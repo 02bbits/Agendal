@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\Auth\EmailVerification;
 use App\Services\Clock\ClockInterface;
 use App\Support\Audit;
+use Dedoc\Scramble\Attributes\Response as DocsResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -24,6 +25,8 @@ class LoginController extends Controller
         private readonly ClockInterface $clock,
     ) {}
 
+    #[DocsResponse(200, 'Signed in.', type: 'array{user: User}')]
+    #[DocsResponse(422, '`auth.invalid`: email or password is incorrect.')]
     public function __invoke(Request $request): JsonResponse
     {
         // Sessions exist only for requests from the app's own origin (Sanctum stateful domains, ADR-007)

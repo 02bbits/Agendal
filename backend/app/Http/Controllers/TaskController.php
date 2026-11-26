@@ -21,6 +21,7 @@ use App\Services\Tasks\TaskLifecycle;
 use App\Services\Tasks\TaskPatcher;
 use App\Services\Tasks\UpcomingQuery;
 use App\Support\Stamp;
+use Dedoc\Scramble\Attributes\QueryParameter;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -29,6 +30,11 @@ use Illuminate\Validation\ValidationException;
 
 class TaskController extends Controller
 {
+    /** @response array{overdue: list<TaskResource>, today: list<TaskResource>, no_date: list<TaskResource>, completed_today: list<TaskResource>, progress: array{done: int, total: int}, no_date_count: int, completed_count: int}|array{days: list<array{date: string, tasks: list<TaskResource>}>, next_from: string|null, total_count: int} */
+    #[QueryParameter('view', required: true, type: '"inbox"|"upcoming"')]
+    #[QueryParameter('from', 'Upcoming: first day, `YYYY-MM-DD`. Default tomorrow.', type: 'string', format: 'date')]
+    #[QueryParameter('days', 'Upcoming: days per page.', type: 'int', default: 14)]
+    #[QueryParameter('filter', 'Upcoming only.', type: '"all"|"scheduled"|"due"', default: 'all')]
     public function index(
         Request $request,
         InboxQuery $inboxQuery,
@@ -58,6 +64,7 @@ class TaskController extends Controller
         return response()->json($upcomingQuery->for($timezone, $from, $days, $filter));
     }
 
+    /** @response array{items: list<TaskResource>, counts: array{all: int, open: int, completed: int}, next_cursor: string|null} */
     public function search(
         SearchTasksRequest $request,
         SearchQuery $searchQuery,

@@ -1,6 +1,6 @@
 # API Design
 
-Draft resource list. Once implemented, generated API docs are the source of truth.
+Draft resource list. Once implemented, generated API docs are the source of truth: [`/docs/api`](http://localhost:8000/docs/api) (OpenAPI at `/docs/api.json`), built by Scramble from the routes, FormRequests and resources.
 
 ## Conventions
 
@@ -10,6 +10,7 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 - Rate limits and input limits: [security.md](../05-quality/nfr.md#rate-limits-nf-13). `429` carries `Retry-After`, and its error names the limit it hit: `limit: {max, window}`, `max` requests per `window` seconds; a 1-second window is a burst ([UX-43](../01-product/ux-standards.md#ux-43), [error.schema.json](contracts/schemas/error.schema.json)).
 - Errors use one shape: `{"error": {"code": "note.too_many_items", "message": "…", "fields": {…}}}`. `code` is a [copy-catalog](../01-product/copy-catalog.md) key.
 - Every request sends `X-Timezone` ([ADR-006](decisions/ADR-006-time-zones.md)). Writes send `X-XSRF-TOKEN` ([ADR-007](decisions/ADR-007-session-and-auth.md)).
+- API docs (IM-08): `/docs/api` is open locally; on the server only to signed-in accounts in `TELESCOPE_ALLOWED_EMAILS`, the allow-list of `/telescope` and `/pulse`. CI exports `api.json` as a build artifact.
 - Tasks and projects have **client-generated UUID v7 ids**, so they can be created offline and a create replay returns `200` with the stored row ([TK module](../03-modules/TK-tasks.md#7-api-contract)).
 - Full request/response contracts live in each module spec, section 7. This table is the index.
 - The response shapes are also JSON Schemas in [contracts/schemas](contracts/schemas/), with example responses in [contracts/fixtures](contracts/fixtures/). A fixture uses the schema its name starts with (`note-result-done.json` → `note-result.schema.json`). The backend test `tests/Unit/ContractsTest.php` checks every fixture.

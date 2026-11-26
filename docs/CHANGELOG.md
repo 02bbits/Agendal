@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-25
 
+- **Generated API docs (IM-08, Refs #197).** [api.md](07-architecture/api.md#conventions): docs at `/docs/api` (Scramble), open locally, on the server behind Telescope's allow-list (`TELESCOPE_ALLOWED_EMAILS`); CI exports `api.json`. [overview.md](07-architecture/overview.md) Processes: Next.js also forwards `/docs/api`, `/telescope`, `/pulse`.
 - **Telescope records every request (Refs #192).** [security.md](07-architecture/security.md#sc-21) SC-21: outside local, Telescope records every request, job and scheduled run, not only faults; of the rest, only exceptions and slow queries.
 
 ## 2026-11-24
