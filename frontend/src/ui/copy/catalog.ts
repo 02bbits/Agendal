@@ -64,10 +64,6 @@ export const catalog = {
     "You got this email because of a change to the security of your Agendal account.",
   "note.placeholder": "Write a note…",
   "note.make_tasks": "Make tasks",
-  "note.upload_file": "Upload file",
-  "note.upload_formats":
-    "Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB.",
-  "note.upload_choose": "Choose a document",
   "note.save_offline": "Save note",
   "note.saved_offline": "Saved. It'll turn into tasks when you're back online.",
   "note.listening": "Listening…",
@@ -82,6 +78,9 @@ export const catalog = {
     "Dictation stopped. Check your connection and try again.",
   "note.dictation_offline": "Dictation needs a connection.",
   "note.reading_file": "Reading file…",
+  "note.file_upload": "Upload file",
+  "note.file_formats":
+    "Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB.",
   "note.file_too_big": "Attach a file under 5 MB.",
   "note.file_type":
     "This file type isn't supported. Try text, PDF, Word or a photo.",
