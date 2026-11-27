@@ -1,6 +1,12 @@
 "use client";
 
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { now } from "@/lib/clock";
 import { LoadingScreen, ScreenHeader, type Navigate } from "@/ui";
 
@@ -47,7 +53,20 @@ export function TabLoading({
     if (show) setPhase("visible");
     else if (phase === "visible") setPhase("hiding");
   }
+  // Something new to wait for while it fades (signed in as the start screen goes): it comes back,
+  // or the fade's end would call onDone and drop the screen going into the app
+  const [wasReady, setWasReady] = useState(ready);
+  if (ready !== wasReady) {
+    setWasReady(ready);
+    if (show && !ready && phase === "hiding") setPhase("visible");
+  }
   const shownAt = useRef(0);
+  // `ready` as last committed: a minimum-time timer can fire after it turned false and before
+  // the effect below clears that timer
+  const readyNow = useRef(ready);
+  useLayoutEffect(() => {
+    readyNow.current = ready;
+  });
 
   useEffect(() => {
     if (phase !== "visible") {
@@ -57,7 +76,14 @@ export function TabLoading({
     if (!shownAt.current) shownAt.current = now().getTime();
     const elapsed = now().getTime() - shownAt.current;
     const wait = (ready ? LOADING_MIN_MS : LOADING_MAX_MS) - elapsed;
-    const timer = setTimeout(() => setPhase("hiding"), Math.max(0, wait));
+    const timer = setTimeout(
+      () => {
+        // Set for the minimum, but there is something to wait for now: the maximum's timer follows
+        if (ready && !readyNow.current) return;
+        setPhase("hiding");
+      },
+      Math.max(0, wait),
+    );
     return () => clearTimeout(timer);
   }, [phase, ready]);
 

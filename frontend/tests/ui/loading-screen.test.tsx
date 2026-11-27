@@ -114,6 +114,28 @@ describe("TabLoading: full screen only as the app starts (#161)", () => {
     expect(onDone).toHaveBeenCalledTimes(1);
   });
 
+  it("comes back when signing in while the start screen fades out", async () => {
+    const onDone = vi.fn();
+    // On Sign in, the session checked: the start screen begins to fade
+    const { rerender } = render(
+      <Frame tab="start" ready={true} onDone={onDone} />,
+    );
+    await advance(LOADING_MIN_MS + 10);
+    expect(loading()?.dataset.state).toBe("hiding");
+    // Signed in mid-fade: going into the app, which isn't there yet
+    rerender(<Frame tab="enter" ready={false} onDone={onDone} />);
+    await advance(FADE + 10);
+    expect(loading()?.dataset.state).toBe("visible");
+    expect(onDone).not.toHaveBeenCalled();
+    // Inbox is there
+    rerender(<Frame tab="enter" ready={true} onDone={onDone} />);
+    await advance(LOADING_MIN_MS);
+    expect(loading()?.dataset.state).toBe("hiding");
+    await advance(FADE + 10);
+    expect(loading()).toBeNull();
+    expect(onDone).toHaveBeenCalledTimes(1);
+  });
+
   it("doesn't show when the app starts off the tabs (sign in)", async () => {
     render(<Frame tab={null} ready={false} />);
     await advance(10);
