@@ -8,15 +8,22 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 ## Contents
 
+- [Demo & screenshots](#demo--screenshots)
 - [Run it for a review](#run-it-for-a-review)
 - [Tour 1: the app (dev server, :3000)](#tour-1-the-app-dev-server-3000)
 - [Tour 2: PWA, offline and sync (production build, :3001)](#tour-2-pwa-offline-and-sync-production-build-3001)
 - [Everything that is built](#everything-that-is-built)
 - [Not built yet](#not-built-yet)
 - [How it works](#how-it-works)
+- [Data model (ERD)](#data-model-erd)
 - [Quality](#quality)
 - [Team](#team)
 - [For developers](#for-developers)
+
+## Demo & screenshots
+
+- **Demo video:** _[Add demo video link here]_ (covers note capture with Gemini fallback, *Check this first* review, and Web Push reminders)
+- **Screenshots:** _[Add screenshots of Inbox, Notes review, Search, Settings, and PWA install / Web Push here]_
 
 ## Run it for a review
 
@@ -138,6 +145,79 @@ The build plan, issue by issue, is in [docs/08-project/tasks.md](docs/08-project
 A note becomes tasks on the server in one request: normalise, split into items, classify each one (task, command on an existing task, or skip), extract its fields with rules, send unsure items to the language model when it is on, match commands to open tasks, validate, apply the safety rules, and name the note. The result is a **plan** the user reviews before it is applied, and each applied note keeps an undo log for 30 days ([ADR-001](docs/07-architecture/decisions/ADR-001-note-plan-contract.md), [ADR-002](docs/07-architecture/decisions/ADR-002-undo-change-log.md)). The same text, time and tasks always give the same plan.
 
 To turn the language model on, save a Gemini API key in a file, set `NOTE_LLM_ENABLED=true` and `GEMINI_API_KEY_FILE=<path to that file>` in `backend/.env`, and restart `api` ([ADR-008](docs/07-architecture/decisions/ADR-008-llm-fallback.md)). The key itself never goes in `.env`.
+
+### Asset & image optimisation note (6b)
+
+- **On-demand loading:** Heavy overlays (`SearchPopup`, `SettingsScreen`, `NoteResultOverlay`) load lazily via `React.lazy` in `frontend/src/app/frame/lazyOverlays.tsx` once idle and are cached by the service worker for offline use.
+- **Why raster image optimisation (`next/image` / WebP / `srcset`) is not used:** All in-app illustrations (`frontend/public/illustrations/*.svg`) and UI icons are **SVG** (which `next/image` does not optimise and which are already resolution-independent). The only raster images in the repository are the two **PNG** icons (`frontend/public/icons/icon-192.png` and `icon-512.png`), which must remain PNG for the PWA Web App Manifest. See [scalability.md](docs/05-quality/scalability.md#on-demand-overlays).
+
+## Data model (ERD)
+
+Physical schema on PostgreSQL 18 (see [data-model.md](docs/07-architecture/data-model.md) for full columns, constraints, and indexes):
+
+```mermaid
+erDiagram
+    USERS ||--o{ PROJECTS : owns
+    USERS ||--o{ TASKS : owns
+    USERS ||--o{ NOTES : writes
+    USERS ||--o{ EMAIL_VERIFICATION_CODES : has
+    USERS ||--o{ PUSH_SUBSCRIPTIONS : registers
+    USERS ||--o{ PERSONAL_ACCESS_TOKENS : issues
+    USERS ||--o{ AUDIT_EVENTS : logs
+    PROJECTS ||--o{ TASKS : groups
+    NOTES ||--o{ TASKS : creates_from_note
+    TASKS ||--o{ TASKS : previous_occurrence
+    TASKS ||--o{ REMINDER_DELIVERIES : schedules
+
+    USERS {
+        bigint id PK
+        string email UK
+        string display_name
+        string timezone
+        string theme
+        string theme_palette
+        boolean two_factor_enabled
+    }
+    PROJECTS {
+        uuid id PK
+        bigint user_id FK
+        string name
+        string colour
+        bigint change_seq
+        timestamp deleted_at
+    }
+    TASKS {
+        uuid id PK
+        bigint user_id FK
+        uuid project_id FK
+        uuid source_note_id FK
+        uuid previous_occurrence_id FK
+        string title
+        date start_date
+        date due_date
+        string priority
+        string reminder
+        string repeat
+        boolean done
+        bigint change_seq
+        timestamp deleted_at
+    }
+    NOTES {
+        uuid id PK
+        bigint user_id FK
+        uuid client_id
+        text text
+        string name
+        string status
+        jsonb plan
+        jsonb applied
+        jsonb undo_log
+        string engine
+        int plan_version
+        bigint change_seq
+        timestamp deleted_at
+    }
+```
 
 | Read more | |
 |---|---|
