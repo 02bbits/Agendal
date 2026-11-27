@@ -64,15 +64,15 @@ export function SearchField({
     );
 
   return (
-    <div className="flex items-center gap-2 px-4 pb-2">
-      <div className="flex h-[52px] flex-1 items-center gap-2 rounded-field border border-control bg-surface px-4 field-ring">
+    <div className="flex items-center gap-2.5 px-gutter pt-2 pb-2">
+      <div className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-field border border-control bg-surface px-3.5 field-ring">
         {field}
       </div>
       {onCancel && (
         <button
           type="button"
           onClick={onCancel}
-          className="focus-ring shrink-0 link-swipe text-callout font-medium text-ink-secondary hover:text-ink px-1"
+          className="focus-ring inline-flex min-h-11 shrink-0 items-center px-1.5 link-swipe text-callout font-medium text-ink-secondary hover:text-ink"
         >
           {t("common.cancel")}
         </button>

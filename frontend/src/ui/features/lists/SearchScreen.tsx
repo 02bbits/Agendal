@@ -37,7 +37,7 @@ export function SearchScreen({
   searchNotes = async () => ({ items: [] }),
 }: SearchScreenProps) {
   return (
-    <div className="min-h-dvh pt-[calc(env(safe-area-inset-top,0px)+40px)] pb-2">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[800px] flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-[calc(16px+env(safe-area-inset-bottom,0px))]">
       <SearchPanel
         variant="screen"
         projects={projects}

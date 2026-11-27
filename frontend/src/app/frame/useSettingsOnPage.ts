@@ -41,9 +41,10 @@ export function useSettingsOnPage(
     const dark =
       settings.theme === "dark" ||
       (settings.theme === "system" && prefersDark());
-    document
-      .querySelector('meta[name="theme-color"]')
-      ?.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
+    document.querySelectorAll('meta[name="theme-color"]').forEach((meta) => {
+      meta.removeAttribute("media");
+      meta.setAttribute("content", PAGE_COLOR[dark ? "dark" : "light"]);
+    });
     // Private mode: the theme just flashes on the next load
     writeStoredSetting(THEME_KEY, settings.theme);
   }, [settings, signedIn, edits]);
