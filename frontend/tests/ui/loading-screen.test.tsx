@@ -13,6 +13,7 @@ import { t } from "../../src/ui/copy";
 
 const FADE = 150;
 
+/** `tab` stands for the splash's reason (null: none). */
 function Frame({
   tab,
   ready,
@@ -20,10 +21,10 @@ function Frame({
 }: {
   tab: string | null;
   ready: boolean;
-  onDone?: () => void;
+  onDone?: (faded: string | null) => void;
 }) {
   return (
-    <TabLoading show={tab !== null} ready={ready} onDone={onDone}>
+    <TabLoading reason={tab} ready={ready} onDone={onDone}>
       <p>Page</p>
     </TabLoading>
   );
@@ -85,11 +86,16 @@ describe("TabLoading: full screen only as the app starts (#161)", () => {
   });
 
   it("doesn't come back on a tab switch: the tab shows its skeleton instead", async () => {
-    const { rerender } = render(<Frame tab="inbox" ready={true} />);
+    const onDone = vi.fn();
+    const { rerender } = render(
+      <Frame tab="start" ready={true} onDone={onDone} />,
+    );
     await advance(LOADING_MIN_MS + 10);
     await advance(FADE + 10);
     expect(loading()).toBeNull();
-    rerender(<Frame tab="upcoming" ready={true} />);
+    expect(onDone).toHaveBeenCalledWith("start");
+    // The app ends the splash; a tab switch asks for none
+    rerender(<Frame tab={null} ready={true} onDone={onDone} />);
     await advance(10);
     expect(loading()).toBeNull();
   });
