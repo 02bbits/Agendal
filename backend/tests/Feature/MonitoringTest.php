@@ -165,6 +165,88 @@ it('#225: without the webhook file, or when Discord fails, the request still suc
     'webhook down' => fn () => tap(tempnam(sys_get_temp_dir(), 'webhook'), fn ($f) => file_put_contents($f, 'https://discord.test/x')),
 ]);
 
+// #228: critical errors to the admins' Discord
+function discordWebhookFile(): string
+{
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, 'https://discord.test/x');
+    config(['logging.discord_alert.webhook_file' => $file]);
+
+    return $file;
+}
+
+/** @return list<array<string, string>> each posted embed's fields, by name */
+function discordFieldsSent(): array
+{
+    return Http::recorded()->map(fn ($pair) => collect($pair[0]['embeds'][0]['fields'])->pluck('value', 'name')->all())->values()->all();
+}
+
+it('#228: a 500 posts its class and line once per window, never its message', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_boom/{id}', fn () => throw new RuntimeException('my private plan'));
+
+    $first = $this->getJson('/api/v1/_boom/1')->assertStatus(500);
+    $this->getJson('/api/v1/_boom/2')->assertStatus(500);
+
+    $sent = discordFieldsSent();
+    expect($sent)->toHaveCount(1)
+        ->and($sent[0]['Lỗi'])->toBe('`RuntimeException`')
+        ->and($sent[0]['Vị trí'])->toBe('`GET /api/v1/_boom/{id}`')
+        ->and($sent[0]['Mã request'])->toBe('`'.$first->headers->get('X-Request-Id').'`')
+        ->and($sent[0]['Vị trí mã nguồn'])->toStartWith('`tests/Feature/MonitoringTest.php:')
+        ->and(json_encode(Http::recorded()->all()))->not->toContain('my private plan');
+});
+
+it('#228: with the database cache down, the alert still posts, throttled in the file cache', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    config(['cache.default' => 'database', 'cache.stores.database.connection' => 'down']);
+    config(['database.connections.down' => ['driver' => 'pgsql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'x']]);
+    Cache::store('file')->flush();
+    Route::middleware('api')->get('api/v1/_boom', fn () => throw new RuntimeException('outage'));
+
+    $this->getJson('/api/v1/_boom')->assertStatus(500);
+    $this->getJson('/api/v1/_boom')->assertStatus(500);
+
+    Http::assertSentCount(1);
+});
+
+it('#228: a 4xx posts nothing', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_missing', fn () => abort(404));
+    Route::middleware('api')->get('api/v1/_invalid', fn () => request()->validate(['name' => 'required']));
+
+    $this->getJson('/api/v1/_missing')->assertNotFound();
+    $this->getJson('/api/v1/_invalid')->assertUnprocessable();
+
+    Http::assertNothingSent();
+});
+
+it('#228: a failed queued job and a failed scheduled task each post their name', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    config(['queue.default' => 'database']);
+
+    dispatch(new MonitoringFailingJob);
+    $this->artisan('queue:work', ['--once' => true, '--tries' => 1]);
+    ScheduleFacade::call(fn () => throw new LogicException('purge broke'))->everyMinute()->name('test-purge');
+    $this->artisan('schedule:run');
+
+    $sent = discordFieldsSent();
+    expect($sent)->toHaveCount(2)
+        ->and($sent[0]['Job'])->toBe('`MonitoringFailingJob`')
+        ->and($sent[0]['Lỗi'])->toBe('`RuntimeException`')
+        ->and($sent[1]['Lệnh'])->toBe('`test-purge`')
+        ->and($sent[1]['Lỗi'])->toBe('`LogicException`')
+        ->and(json_encode(Http::recorded()->all()))->not->toContain('broke');
+});
+
 it('#192: Telescope entries are pruned daily after 48 hours', function () {
     $prune = collect(app(Schedule::class)->events())
         ->first(fn ($event) => str_contains($event->command, 'telescope:prune --hours=48'));

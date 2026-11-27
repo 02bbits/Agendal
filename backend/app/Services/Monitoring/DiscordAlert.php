@@ -42,7 +42,10 @@ final class DiscordAlert
     {
         $url = $this->webhookUrl();
         $minutes = (int) config('logging.discord_alert.throttle_minutes');
-        if ($url === '' || ! Cache::add('discord-alert:'.sha1($key), true, now()->addMinutes($minutes))) {
+        // The cache may be the database that just failed (an outage is the alert that matters most): then
+        // throttle in this container's file cache, and never throw while reporting
+        $add = fn (?string $store) => Cache::store($store)->add('discord-alert:'.sha1($key), true, now()->addMinutes($minutes));
+        if ($url === '' || ! (rescue(fn () => $add(null), null, false) ?? rescue(fn () => $add('file'), false, false))) {
             return;
         }
 

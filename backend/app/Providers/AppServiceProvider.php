@@ -8,20 +8,24 @@ use App\Models\User;
 use App\Pulse\HostHealth;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
+use App\Services\Monitoring\CriticalErrorAlert;
 use App\Services\Monitoring\SlowQueryAlert;
 use App\Support\ApiDocs;
 use App\Support\EmailInput;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Queue;
@@ -65,6 +69,9 @@ class AppServiceProvider extends ServiceProvider
         });
         // The alert names the job it came from; hidden, so log lines stay as they were
         Queue::before(fn (JobProcessing $event) => Context::addHidden('job', 'job '.class_basename($event->job->resolveName())));
+        // #228: a job out of attempts, or a failed scheduled task, is posted to the admins' Discord
+        Queue::failing(fn (JobFailed $event) => $this->app->make(CriticalErrorAlert::class)->jobFailed($event));
+        Event::listen(fn (ScheduledTaskFailed $event) => $this->app->make(CriticalErrorAlert::class)->scheduledTaskFailed($event));
 
         // #198 /pulse: open locally, elsewhere for Telescope's allow-list. Users show by id only (SC-21)
         Gate::define('viewPulse', fn (?User $user = null) => $this->app->environment('local')
