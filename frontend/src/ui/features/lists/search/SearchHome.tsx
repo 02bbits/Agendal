@@ -70,12 +70,13 @@ export function SearchHome({
     <div className="flex flex-col gap-4 py-2">
       <div>
         <SearchHeading>{t("search.quick_filters")}</SearchHeading>
-        <div className="flex flex-wrap gap-2 px-3 pb-2">
+        <div className="grid grid-cols-2 gap-2 px-3 pb-2 md:flex md:flex-wrap">
           {QUICK_FILTERS.map(({ filter, Icon }) => (
             <Chip
               key={filter}
               icon={Icon && <Icon size={16} />}
               onClick={() => onFilter(filter)}
+              className="w-full justify-start md:w-auto"
             >
               {t(FILTER_LABEL[filter])}
             </Chip>

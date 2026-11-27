@@ -134,7 +134,7 @@ export function SearchResults({
   return (
     <div className="flex flex-col gap-2">
       <div
-        role="tablist"
+        role={filterLabel ? undefined : "tablist"}
         className="flex flex-wrap items-center gap-1.5 px-1 py-1"
       >
         {filterLabel && (
@@ -142,21 +142,19 @@ export function SearchResults({
             {filterLabel}
           </Chip>
         )}
-        {(filterLabel
-          ? TABS.filter(({ tab: each }) => each === "all" || each === "tasks")
-          : TABS
-        ).map(({ tab: each, label }) => (
-          <Chip
-            key={each}
-            role="tab"
-            aria-selected={tab === each}
-            selected={tab === each}
-            onClick={() => onTab(each)}
-          >
-            {t(label)}
-            {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
-          </Chip>
-        ))}
+        {!filterLabel &&
+          TABS.map(({ tab: each, label }) => (
+            <Chip
+              key={each}
+              role="tab"
+              aria-selected={tab === each}
+              selected={tab === each}
+              onClick={() => onTab(each)}
+            >
+              {t(label)}
+              {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
+            </Chip>
+          ))}
         {variant === "popup" && (
           <div className="ml-auto shrink-0">
             <Picker
