@@ -58,7 +58,9 @@ services:
   # Mail, reminder pushes and other queued jobs. Scale with --scale queue=N
   queue:
     <<: *api
-    command: ["php", "artisan", "queue:work", "--tries=1", "--max-time=3600"]
+    # --sleep=1: an idle worker looks for jobs every second (default 3 s), so a sign-in or
+    # verification code goes out within about a second (ADR-007 addendum, #193)
+    command: ["php", "artisan", "queue:work", "--sleep=1", "--tries=1", "--max-time=3600"]
     healthcheck: { disable: true } # the image's check probes the web server, which this doesn't run
     depends_on:
       api: { condition: service_healthy }

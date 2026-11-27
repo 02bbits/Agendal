@@ -5,13 +5,22 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Concerns\QueuedMailNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 // An existing user is told when someone tries to create an account with their email (SC-04).
 // No IP or time: the mail only says the account exists and where to sign in.
-class SignUpAttempted extends Notification
+class SignUpAttempted extends Notification implements ShouldQueue
 {
+    use QueuedMailNotification;
+
+    public function __construct()
+    {
+        $this->afterCommit();
+    }
+
     /** @return list<string> */
     public function via(object $notifiable): array
     {
