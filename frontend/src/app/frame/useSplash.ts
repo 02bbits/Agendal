@@ -10,7 +10,12 @@ export function useSplash() {
   const [splash, setSplash] = useState<Splash | null>("start");
   const show = useCallback((next: Splash | null) => setSplash(next), []);
   const enterApp = useCallback(() => setSplash("enter"), []);
-  const end = useCallback(() => setSplash(null), []);
+  // Ends the splash that faded; one asked for meanwhile (signed in as the start screen went) stays
+  const end = useCallback(
+    (faded: string | null) =>
+      setSplash((current) => (current === faded ? null : current)),
+    [],
+  );
   return { splash, show, enterApp, end };
 }
 
