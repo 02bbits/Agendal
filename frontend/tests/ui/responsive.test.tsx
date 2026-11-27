@@ -2,15 +2,8 @@ import { act, render, screen } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  SettingsScreen,
-  AppShell,
-  Dialog,
-  ScreenHeader,
-  Sheet,
-  t,
-  Toast,
-} from "../../src/ui";
+import { AppShell, Dialog, ScreenHeader, Sheet, t, Toast } from "../../src/ui";
+import { SettingsScreen } from "../../src/ui/features/settings/SettingsScreen";
 
 const theme = readFileSync(join(process.cwd(), "src/ui/theme.css"), "utf8");
 

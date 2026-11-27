@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-27
+
+- **Overlays load on demand (NF-4, Refs #58).** [scalability.md](05-quality/scalability.md#on-demand-overlays) Design rules: the search popup and Settings are lazy chunks kept out of the `@/ui` barrel and fetched once the page is idle so they still open offline; the note editor stays in the first load so its focus stays inside the tap (iOS keyboard, NC §2.1); images are SVG, `theme.js` stays `beforeInteractive`. Measured: `/` first load 380.1 → 377.3 KB gzip.
+
 ## 2026-11-26
 
 - **Mail notifications run on the queue (Refs #193).** `SignInCode`, `VerifyEmailCode`, `SignUpAttempted`, `PasswordChanged` and `ResetPasswordNotification` implement `ShouldQueue` via `QueuedMailNotification` (`$tries = 3`, `[10, 30, 60]` backoff, `afterCommit()`, and redacted `failed()` logging without emails or codes). Decision and `failed_jobs` payload note recorded in [ADR-007](07-architecture/decisions/ADR-007-session-and-auth.md#addendum-queued-auth-mail-notifications-193), including that the worker polls every second (`--sleep=1`), so a code goes out within about a second rather than "sub-second"; `queue:work` documented in [deploy/README.md](../deploy/README.md#5-update).

@@ -1,6 +1,7 @@
 "use client";
 
-import { SettingsScreen, type SettingsTab } from "@/ui";
+import type { SettingsTab } from "@/ui";
+import { SettingsScreen } from "@/ui/features/settings/SettingsScreen";
 import { api } from "@/lib/api";
 import { useInstall } from "../useInstall";
 import { useAppFrame } from "./AppFrameContext";
