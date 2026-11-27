@@ -90,6 +90,24 @@ describe("Sign in (AA-2)", () => {
     expect(screen.getByTestId("loading-screen")).toBeTruthy();
   });
 
+  it("#161: signed in while the start screen fades, the loading screen comes back", async () => {
+    reply = () =>
+      json(200, {
+        user: { id: 1, email: "example@gmail.com", email_verified_at: "x" },
+      });
+    const { email, password, submit } = renderPage();
+    fireEvent.input(email, { target: { value: "example@gmail.com" } });
+    fireEvent.input(password, { target: { value: "quiet river 42" } });
+    await waitFor(() =>
+      expect(screen.getByTestId("loading-screen").dataset.state).toBe("hiding"),
+    );
+    fireEvent.click(submit);
+    await waitFor(() => expect(router.replace).toHaveBeenCalledWith("/"));
+    // Past the fade the start screen was in
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(screen.getByTestId("loading-screen").dataset.state).toBe("visible");
+  });
+
   it("T-AA-112: enables Sign in once both fields have text, including from autofill's input events", async () => {
     const { email, password, submit } = renderPage();
 
