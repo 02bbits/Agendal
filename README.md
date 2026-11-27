@@ -22,7 +22,14 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 ## Demo & screenshots
 
-- **Demo video:** _[Add demo video link here]_ (covers note capture with Gemini fallback, *Check this first* review, and Web Push reminders)
+<a href="demo/agendal-trailer.mp4"><img src="docs/screenshots/00-demo-trailer.jpg" alt="Agendal demo trailer on the live site: a note typed on a phone, about to become tasks" width="720"></a>
+
+**[▶ Demo trailer](demo/agendal-trailer.mp4)** (2 min 35 s, 1080p), recorded on the live site <https://agendal.kkqqq.uk>. It shows:
+- one sentence becoming several dated tasks, and repeating tasks;
+- changing plans by writing them ("Move SQL quiz to Monday");
+- a file dropped into a note, with the `/api/v1/notes/extract` response;
+- a Web Push reminder arriving on a real phone;
+- the themes in Settings.
 
 Screenshots from the production build running locally (`compose.prod.yml`, 27 Nov 2026), signed in as the demo account.
 
@@ -154,7 +161,7 @@ Each area links to its module spec, which has the requirements, the edge cases a
 | Part | What |
 |---|---|
 | `frontend/` | Next.js 16 and React 19, TypeScript strict, Tailwind CSS and daisyUI. Forwards `/api/*` and `/sanctum/*` to the backend, so the browser sees one site |
-| `backend/` | Laravel 13 JSON API at `/api/v1`, Sanctum cookie sessions and personal access tokens, a queue worker for emails and reminders, a scheduler |
+| `backend/` | Laravel 13 JSON API at `/api/v1`, Sanctum cookie sessions and personal access tokens, a queue worker for emails and reminders, a scheduler, alerts to the admins' Discord |
 | Database | PostgreSQL 18 |
 | `docker-compose.yml` | The whole stack: PostgreSQL, Mailpit, the API, the queue worker, the scheduler, the dev server and the opt-in production build (`web-prod`) |
 
@@ -244,13 +251,31 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 
 - **Logs and errors:** every request gets a `request_id` ([AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php)), which is on each log line and in each error response. Logs are daily files kept 14 days ([logging.php](backend/config/logging.php)). Error pages are the app's own ([errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php)), and the API answers errors in JSON.
 - **Telescope** is at `/telescope` ([TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php)). It opens only for the emails in `TELESCOPE_ALLOWED_EMAILS` outside local, hides cookies, tokens and CSRF headers, and is pruned after 48 hours.
-- **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
+- **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)) ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
 - **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card shows CPU, load, memory, swap, disk, Postgres connections and whether the API and the web app are up. It turns red past CPU 85% for 5 minutes, memory 90% or disk 80% ([ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
 
 | | |
 |---|---|
 | <img src="docs/screenshots/16-pulse-server-health.jpg" alt="Pulse with the Server health card" width="400"> | <img src="docs/screenshots/18-telescope-requests.jpg" alt="Telescope requests list" width="400"> |
 | **Pulse:** Server health, exceptions, queues | **Telescope:** requests with status and duration |
+
+<a id="admin-alerts"></a>**Alerts to the admins on Discord.** The server posts to the admins' Discord channel by itself, as one embed per alert: red for critical, amber for a warning, green when a problem is over. The text is in Vietnamese (`DISCORD_ALERT_LOCALE=vi`, [lang/vi/monitoring.php](backend/lang/vi/monitoring.php)).
+
+| What happens | Alert | Code |
+|---|---|---|
+| A query over 500 ms, or over 2 s of queries in one request | Slow database query, with the SQL without values, the duration, the route and the `request_id` | [SlowQueryAlert.php](backend/app/Services/Monitoring/SlowQueryAlert.php) |
+| A request ends in a 5xx error, a queued job fails, or a scheduled task fails | Critical error, with the exception class and source line, the job or command, and the `request_id` | [CriticalErrorAlert.php](backend/app/Services/Monitoring/CriticalErrorAlert.php) |
+| CPU, memory, disk, last backup, API or web app crosses its Server health threshold, and again when it is back | Over the threshold / Back to normal, with the current value and the threshold | [ServerHealthAlert.php](backend/app/Services/Monitoring/ServerHealthAlert.php) |
+| The server monitor stops sending readings for over a minute, and again when it is back | Server monitor stopped / running again | [routes/console.php](backend/routes/console.php) |
+
+How it is built ([DiscordAlert.php](backend/app/Services/Monitoring/DiscordAlert.php)):
+- The webhook URL is a Docker secret (`discord_webhook_url`), read from its file on each alert and never stored in `.env`.
+- Each alert is sent once per 5 minutes however often the fault repeats.
+- A request posts after its response is sent, and a failed post is logged without ever failing the request.
+- Alerts carry no user content (SC-21).
+- [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php) checks each alert, and the test suite never posts.
+
+<img src="docs/screenshots/30-discord-admin-alerts.png" alt="Discord channel with API back to normal, memory over the threshold and memory back to normal alerts" width="420">
 
 ### Background work
 
@@ -452,7 +477,7 @@ Telescope is at <http://localhost:8000/telescope>, open to anyone locally. On th
 
 Pulse is at <http://localhost:8000/pulse> (through Next.js on the server, `https://<domain>/pulse`), behind the same allow-list. It is the error dashboard: exceptions (5xx, failed jobs and scheduled tasks, language-model call failures) by class and line with counts, queue throughput and failures, slow requests, jobs, queries (from 500 ms) and outgoing calls, and the busiest users by id. It keeps no messages, query values, cache keys or emails (SC-21) and trims itself after 7 days. Each error on it links back to its log line through the `request_id`. Links it builds use `APP_URL`, so that must be the public origin. Its Servers and Server health cards (#199) fill only while `php artisan pulse:check` runs (the `pulse` service on the server; locally `docker compose exec api php artisan pulse:check`); see deploy/README.md for the thresholds.
 
-A query over `DB_SLOW_QUERY_MS` (500), or a request whose queries add up to more than `DB_SLOW_REQUEST_MS` (2000), logs at `error` with the SQL and the request ID, never the values.
+A query over `DB_SLOW_QUERY_MS` (500), or a request whose queries add up to more than `DB_SLOW_REQUEST_MS` (2000), logs at `error` with the SQL and the request ID, never the values. To post alerts to Discord, put the channel's webhook URL in a file and set `DISCORD_ALERT_WEBHOOK_FILE` to its path in `backend/.env`; on the server it is the `discord_webhook_url` secret ([compose.prod.yml](compose.prod.yml)).
 
 ### Time
 
