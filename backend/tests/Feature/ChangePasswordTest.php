@@ -168,6 +168,9 @@ it('checks current password returning 204 when correct and 422 when wrong or inv
 
 // Replaces the old "throttles attempts after 5 per 15 minutes" test (old "6th attempt is 429" test).
 it('throttles after 5 wrong tries across check and change, then returns 429 even with correct password with Retry-After set', function () {
+    // The lock and its retry_after read the same clock: frozen, so a second ticking over between
+    // the fifth try and the sixth can't turn 60 into 59 (as LoginTest does)
+    $this->freezeTime();
     $device = signInDevice();
 
     // 3 wrong check-password tries
