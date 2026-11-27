@@ -5,16 +5,22 @@ declare(strict_types=1);
 namespace App\Notifications;
 
 use App\Models\User;
+use App\Notifications\Concerns\QueuedMailNotification;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
 
-class VerifyEmailCode extends Notification
+class VerifyEmailCode extends Notification implements ShouldQueue
 {
+    use QueuedMailNotification;
+
     public function __construct(
         public readonly string $code,
-    ) {}
+    ) {
+        $this->afterCommit();
+    }
 
     /** @return list<string> */
     public function via(object $notifiable): array
