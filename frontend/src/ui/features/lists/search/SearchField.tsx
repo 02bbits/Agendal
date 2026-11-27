@@ -64,7 +64,7 @@ export function SearchField({
 
   if (popup)
     return (
-      <div className="flex h-14 w-full items-center gap-2.5 border-b border-separator px-4">
+      <div className="flex h-14 w-full shrink-0 items-center gap-2.5 border-b border-separator px-4">
         {field}
       </div>
     );

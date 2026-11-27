@@ -19,8 +19,8 @@ const TABS: ReadonlyArray<{ tab: SearchTab; label: CopyKey }> = [
   { tab: "projects", label: "search.tab_projects" },
   { tab: "notes", label: "search.tab_notes" },
 ];
-/** Widths of the three loading rows, so they don't look like one block. */
-const SKELETON_WIDTHS = ["50%", "70%", "40%"];
+/** Widths of the loading rows, so they don't look like one block. */
+const SKELETON_WIDTHS = ["50%", "70%", "40%", "60%", "45%", "65%"];
 
 /** "Nothing matches this filter." without Upcoming's "Show all": the filter chip's × clears it here. */
 const filterEmptyPrefix = () =>
@@ -32,9 +32,12 @@ const shows = (tab: SearchTab, section: SearchTab) =>
 function ResultsSkeleton() {
   return (
     <div className="flex flex-col gap-2 p-2" role="status" aria-busy="true">
-      {SKELETON_WIDTHS.map((width) => (
+      <div className="px-2 pt-1 pb-0.5">
+        <div className="h-3 w-16 rounded bg-fill/70 animate-pulse" />
+      </div>
+      {SKELETON_WIDTHS.map((width, index) => (
         <div
-          key={width}
+          key={`${width}-${index}`}
           className="flex h-12 items-center gap-3 rounded-tile border border-separator/40 bg-surface px-4 py-3"
         >
           <div className="size-5 shrink-0 rounded-full bg-fill/80 animate-pulse" />
@@ -132,7 +135,7 @@ export function SearchResults({
   const projectStart = noteStart + noteRows.length;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-full flex-col gap-2">
       <div
         role={filterLabel ? undefined : "tablist"}
         className="flex flex-wrap items-center gap-1.5 px-1 py-1"
@@ -190,10 +193,14 @@ export function SearchResults({
           </Button>
         </div>
       ) : noResults && query.trim() ? (
-        <EmptyState title={t("search.no_match", { query: query.trim() })} />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState title={t("search.no_match", { query: query.trim() })} />
+        </div>
       ) : noResults ? (
         // Only a filter or a project picked, nothing typed: no text to name, so the filter's own message
-        <EmptyState title={filterEmptyPrefix()} />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState title={filterEmptyPrefix()} />
+        </div>
       ) : (
         <div id={listboxId} role="listbox" className="flex flex-col gap-3">
           {taskRows.length > 0 && (
