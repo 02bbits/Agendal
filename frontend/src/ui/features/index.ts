@@ -6,15 +6,12 @@ export { CaptureBar, type CaptureBarProps } from "./shell/CaptureBar";
 export { ScreenHeader, type ScreenHeaderProps } from "./shell/ScreenHeader";
 export { OfflineBanner } from "./shell/OfflineBanner";
 export { InstallBanner, type InstallBannerProps } from "./shell/InstallBanner";
-export {
-  SettingsScreen,
-  type SettingsScreenProps,
-} from "./settings/SettingsScreen";
 export type {
   AccountSettings,
   SettingsTab,
   ThemeSetting,
 } from "./settings/types";
+// SettingsScreen and SearchPopup load on demand (app/frame/lazyOverlays.tsx): import them from their files
 export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
   DictationSheet,
@@ -129,7 +126,6 @@ export {
 } from "./lists/UpcomingScreen";
 export { SearchScreen, type SearchScreenProps } from "./lists/SearchScreen";
 export { SearchPanel, type SearchPanelProps } from "./lists/SearchPanel";
-export { SearchPopup, type SearchPopupProps } from "./lists/SearchPopup";
 export {
   useSearch,
   SEARCH_DEBOUNCE_MS,

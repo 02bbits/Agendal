@@ -21,6 +21,7 @@ export function EmptyStateIllustration({
           alt=""
           width={224}
           height={180}
+          decoding="async"
           className={`empty-illustration-${theme} h-45 w-56 max-w-full`}
         />
       ))}

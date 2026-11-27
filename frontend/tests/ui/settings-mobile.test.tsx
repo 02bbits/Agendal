@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { SettingsScreen, type AccountSettings } from "../../src/ui";
+import type { AccountSettings } from "../../src/ui";
+import { SettingsScreen } from "../../src/ui/features/settings/SettingsScreen";
 import { t } from "../../src/ui/copy";
 
 const defaultSettings: AccountSettings = {

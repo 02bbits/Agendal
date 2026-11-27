@@ -5,12 +5,12 @@ import {
   highlightParts,
   normalize,
   SearchPanel,
-  SearchPopup,
   searchProjects,
   searchTasks,
   SEARCH_DEBOUNCE_MS,
   SEARCH_SETTLE_MS,
 } from "../../src/ui";
+import { SearchPopup } from "../../src/ui/features/lists/SearchPopup";
 import { clearRecent, readRecent } from "../../src/ui/domain/recentSearches";
 import type { Project, Task } from "../../src/ui/domain/types";
 import { task } from "./fixtures";

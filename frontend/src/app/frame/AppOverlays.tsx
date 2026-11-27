@@ -1,4 +1,5 @@
 "use client";
+import { useEffect } from "react";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
@@ -6,7 +7,6 @@ import {
   NoteEditor,
   ProjectSheet,
   ROUTES,
-  SearchPopup,
   t,
   type NewTaskSheetProps,
   type Project,
@@ -23,9 +23,13 @@ import {
 import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
-import { AppSettingsScreen } from "./AppSettingsScreen";
-import { NoteResultOverlay } from "./NoteResultOverlay";
 import { hasTaskPanel } from "./frameRoutes";
+import {
+  AppSettingsScreen,
+  NoteResultOverlay,
+  SearchPopup,
+  warmOverlays,
+} from "./lazyOverlays";
 import type { Overlays } from "./useOverlays";
 
 type Router = {
@@ -58,6 +62,7 @@ export function AppOverlays({
   const wide = usePanelScreen();
   const { note, search: searchPopup, settings: settingsPopup } = overlays;
   const { editingNote } = note;
+  useEffect(warmOverlays, []);
 
   // A task from search opens beside the list on a wide screen, or on its own page
   const openTask = (id: string) => {
