@@ -576,9 +576,9 @@ export function NoteEditor({
 
   return (
     <>
-      {/* A drawer that slides up from the capture bar, as tall as the note and its tray (so nothing scrolls
-          and the margins stay even) up to the screen's height, over the content column; a tap on the
-          dimmed screen closes it like Cancel */}
+      {/* A drawer that slides up from the capture bar, as tall as the note (so nothing scrolls and the
+          margins stay even) up to the screen's height, over the content column; the tray floats over the
+          note's bottom, so opening it never moves the drawer. A tap on the dimmed screen closes it like Cancel */}
       <div
         className="fixed inset-0 z-[70] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
         onMouseDown={(event) => {
@@ -676,10 +676,7 @@ export function NoteEditor({
             <div
               className={`flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4 ${dropping ? "outline-2 outline-primary outline-dashed" : ""}`}
             >
-              <label
-                htmlFor={fieldId}
-                className="mb-2 truncate text-footnote font-medium text-ink-secondary"
-              >
+              <label htmlFor={fieldId} className="sr-only">
                 {attachment
                   ? t("note.text_label_from", { name: attachment.name })
                   : t("note.text_label")}
@@ -779,7 +776,7 @@ export function NoteEditor({
               )}
             </div>
           </div>
-          <div className="border-t border-separator bg-bar px-gutter pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg md:px-gutter-wide md:pb-4">
+          <div className="relative border-t border-separator bg-bar px-gutter pt-3 pb-[calc(12px+env(safe-area-inset-bottom))] backdrop-blur-lg md:px-gutter-wide md:pb-4">
             <input
               ref={fileInputRef}
               type="file"
@@ -797,11 +794,13 @@ export function NoteEditor({
             <div
               inert={!tools}
               className={cx(
-                "grid transition-[grid-template-rows] duration-200 ease-out motion-reduce:transition-none",
-                tools ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+                "absolute inset-x-0 bottom-full border-t border-separator bg-bar px-gutter py-3 backdrop-blur-lg transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none md:px-gutter-wide",
+                tools
+                  ? "translate-y-0 opacity-100"
+                  : "pointer-events-none translate-y-2 opacity-0",
               )}
             >
-              <div className="flex min-h-0 flex-col gap-2 overflow-hidden">
+              <div className="flex flex-col gap-2">
                 <div className="flex gap-3">
                   {canDictate() && (
                     <Button
@@ -835,7 +834,6 @@ export function NoteEditor({
                     {t("note.file_offline")}
                   </p>
                 )}
-                <span aria-hidden="true" className="h-1" />
               </div>
             </div>
             <div className="flex items-center gap-3">
