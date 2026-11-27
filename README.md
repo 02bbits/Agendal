@@ -23,7 +23,34 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 ## Demo & screenshots
 
 - **Demo video:** _[Add demo video link here]_ (covers note capture with Gemini fallback, *Check this first* review, and Web Push reminders)
-- **Screenshots:** _[Add screenshots of Inbox, Notes review, Search, Settings, and PWA install / Web Push here]_
+
+Screenshots from the production build running locally (`compose.prod.yml`, 27 Nov 2026), signed in as the demo account.
+
+| | |
+|---|---|
+| <img src="docs/screenshots/02-inbox.jpg" alt="Inbox with Overdue and the progress summary" width="400"> | <img src="docs/screenshots/03-upcoming.jpg" alt="Upcoming list with the week bar and filters" width="400"> |
+| **Inbox:** Overdue first, the progress summary, the note bar | **Upcoming:** week bar, All / Scheduled / Due only |
+| <img src="docs/screenshots/06-note-editor.jpg" alt="Note editor with Dictate a note and Upload file" width="400"> | <img src="docs/screenshots/07-check-this-first.jpg" alt="Check this first review of three new tasks" width="400"> |
+| **Note editor:** typed, dictated or from a file | **Check this first:** every change before it is applied |
+| <img src="docs/screenshots/08-applied-with-undo.jpg" alt="Notes tab after applying, with the Undo toast" width="400"> | <img src="docs/screenshots/09-search.jpg" alt="Search popup with tasks and notes for sql" width="400"> |
+| **Applied:** the Notes tab and the Undo toast | **Search** (`Ctrl+K`): tasks, projects and notes |
+| <img src="docs/screenshots/10-task-details.jpg" alt="Task details with priority, dates and reminders" width="400"> | <img src="docs/screenshots/04-projects.jpg" alt="Projects with progress bars" width="400"> |
+| **Task details:** priority, project, start, due, reminders | **Projects** with progress |
+| <img src="docs/screenshots/11-settings-general.jpg" alt="Settings, General tab" width="400"> | <img src="docs/screenshots/12-settings-theme.jpg" alt="Settings, Theme tab with 8 palettes" width="400"> |
+| **Settings:** General | **Settings:** Theme, light / dark / system and 8 palettes |
+| <img src="docs/screenshots/13-upcoming-board-light.jpg" alt="Upcoming board view in the light theme" width="400"> | <img src="docs/screenshots/01-sign-in.jpg" alt="Sign-in screen" width="400"> |
+| **Upcoming board**, light theme | **Sign in** |
+| <img src="docs/screenshots/14-phone-inbox.jpg" alt="Inbox on a phone with the tab bar" width="250"> | <img src="docs/screenshots/15-phone-new-task.jpg" alt="New task sheet on a phone" width="250"> |
+| **Phone:** a tab bar replaces the sidebar | **Phone:** the New task sheet |
+
+Behind the app:
+
+| | |
+|---|---|
+| <img src="docs/screenshots/16-pulse-server-health.jpg" alt="Pulse with the Server health card" width="400"> | <img src="docs/screenshots/18-telescope-requests.jpg" alt="Telescope requests list" width="400"> |
+| **Pulse** (`/pulse`): CPU, memory, disk, Postgres connections, API and web status, with thresholds | **Telescope** (`/telescope`): requests, jobs, queries |
+| <img src="docs/screenshots/17-api-docs.jpg" alt="Generated API docs" width="400"> | |
+| **API docs** (`/docs/api`), generated from the code by Scramble | |
 
 ## Run it for a review
 
@@ -66,7 +93,7 @@ The first start takes a few minutes: it installs packages, creates `backend/.env
 | **Repeating tasks** | Tick one and the next occurrence appears; untick it and it rolls back |
 | **Projects** | Create, rename, pick a colour, delete (keep or delete its tasks, with Undo); each project has a progress bar |
 | **Search** | `Ctrl+K` on desktop or the Search tab: tasks, notes and projects, with or without Vietnamese accents, quick filters (Overdue, Due this week, High priority…) and recent searches |
-| **Settings** | Account (name, password, two-step), General (week start, 12/24-hour time, time zone, page view), Appearance (light / dark / system with a circular reveal, 8 colour palettes), Sidebar (reorder by drag or keyboard, hide tabs), Reminders, Notifications. Sign out, or sign out on all devices |
+| **Settings** | Account (name, password, two-step), General (time zone, 12/24-hour time, date format, week start, page view), Theme (light / dark / system with a circular reveal, 8 colour palettes), Reminders (on for this device, send a test notification), Sidebar (reorder by drag or keyboard, hide tabs). Sign out, or sign out on all devices |
 | **Security** | Three wrong passwords lock sign-in for 60 s (20 in an hour: 15 minutes). Forgot password sends a reset link to Mailpit. With two-step on, sign-in asks for an emailed code |
 | **Phone layout** | Narrow the window or use DevTools device mode: a tab bar replaces the sidebar, and details and settings open full screen with a Back bar |
 | **Toasts** | Do several things quickly (tick three tasks): up to three toasts stack, each with its own Undo |
@@ -124,7 +151,7 @@ Each area links to its module spec, which has the requirements, the edge cases a
 - PWA: web manifest and icons, an install banner with guidance for Chromium, iOS and Firefox Android, a service worker and an update toast.
 - Offline: an IndexedDB copy of tasks, projects, settings and the last 100 notes; a queue for offline edits and notes; sync with field-level last-write-wins, a pull cursor, conflict notices, and one sync per browser at a time.
 - Responsive from phone to desktop: a tab bar or a sidebar, a task panel or full-screen details, flat or full-width page view.
-- Settings with 6 tabs, light / dark / system themes, 8 palettes, a customisable sidebar, a loading screen on start, stacked toasts, Back navigation, WCAG 2.2 AA (axe checks in both themes).
+- Settings with 5 tabs, light / dark / system themes, 8 palettes, a customisable sidebar, a loading screen on start, stacked toasts, Back navigation, WCAG 2.2 AA (axe checks in both themes).
 - Time zones: dates and times are floating local values, and "today" follows the device ([ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md)).
 - Reminders as Web Push notifications, sent by a queued job every minute ([TK §2.5](docs/03-modules/TK-tasks.md#25-reminders-tk-6-should)).
 - `GET sync` and `GET counts` answer `304 Not Modified` to a matching ETag, so an idle device's polling skips the list queries.
