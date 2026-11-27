@@ -1,3 +1,5 @@
+import { BackBar } from "../../components/BackBar";
+import { t } from "../../copy";
 import type { NoteHit, SearchFilter } from "../../domain/search";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -37,7 +39,8 @@ export function SearchScreen({
   searchNotes = async () => ({ items: [] }),
 }: SearchScreenProps) {
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[800px] flex-col pt-[calc(env(safe-area-inset-top,0px)+16px)] pb-[calc(16px+env(safe-area-inset-bottom,0px))]">
+    <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-[800px] flex-col bg-paper pt-[env(safe-area-inset-top,0px)]">
+      <BackBar label={t("common.back")} onBack={onBack} />
       <SearchPanel
         variant="screen"
         projects={projects}
@@ -45,7 +48,6 @@ export function SearchScreen({
         timeFormat={timeFormat}
         searchTasks={searchTasks}
         searchNotes={searchNotes}
-        onCancel={onBack}
         onOpenTask={(id) => {
           navigate?.(ROUTES.task(id));
         }}

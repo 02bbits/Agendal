@@ -218,7 +218,13 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
           onCancel={onCancel}
         />
 
-        <div className="flex-1 overflow-y-auto overscroll-contain p-2">
+        <div
+          className={
+            variant === "screen"
+              ? "flex-1 overflow-y-auto overscroll-contain px-4 pt-3 pb-[calc(2rem+env(safe-area-inset-bottom))]"
+              : "flex-1 overflow-y-auto overscroll-contain p-2"
+          }
+        >
           {search.hasCriteria ? (
             <SearchResults
               variant={variant}

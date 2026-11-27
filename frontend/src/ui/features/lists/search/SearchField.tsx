@@ -32,7 +32,13 @@ export function SearchField({
   const popup = variant === "popup";
   const field = (
     <>
-      <SearchIcon size={18} className="shrink-0 text-ink-secondary" />
+      <SearchIcon
+        size={popup ? 18 : 16}
+        className={cx(
+          "shrink-0 pointer-events-none",
+          popup ? "text-ink-secondary" : "text-ink-tertiary",
+        )}
+      />
       <input
         ref={inputRef}
         role="combobox"
@@ -64,19 +70,24 @@ export function SearchField({
     );
 
   return (
-    <div className="flex items-center gap-2.5 px-gutter pt-2 pb-2">
-      <div className="flex h-12 min-w-0 flex-1 items-center gap-2.5 rounded-field border border-control bg-surface px-3.5 field-ring">
-        {field}
+    <div className="px-4">
+      <h1 className="mt-3 px-1 text-[30px] leading-[36px] font-bold tracking-[-0.02em] text-ink">
+        {t("nav.search")}
+      </h1>
+      <div className="mt-3 flex items-center gap-2">
+        <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-field bg-fill px-3 field-ring">
+          {field}
+        </div>
+        {onCancel && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="focus-ring inline-flex min-h-10 shrink-0 items-center px-1.5 link-swipe text-callout font-medium text-ink-secondary hover:text-ink"
+          >
+            {t("common.cancel")}
+          </button>
+        )}
       </div>
-      {onCancel && (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="focus-ring inline-flex min-h-11 shrink-0 items-center px-1.5 link-swipe text-callout font-medium text-ink-secondary hover:text-ink"
-        >
-          {t("common.cancel")}
-        </button>
-      )}
     </div>
   );
 }
