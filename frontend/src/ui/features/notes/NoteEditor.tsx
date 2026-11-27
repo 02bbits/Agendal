@@ -102,8 +102,9 @@ function ReadingStatus() {
 
 // NF-14: the client mirrors the server's notes.max_length; the counter shows from 4,500 (NC §2.1)
 const NOTE_MAX = 5000;
-// The most lines a note takes, a little above the 30 items a note can hold (NF-14)
-const NOTE_MAX_LINES = 50;
+// The most lines a note takes: well above the 30 items a note can hold, so blank lines and wrapped
+// thoughts never hit it (NF-14)
+const NOTE_MAX_LINES = 200;
 // How often a new note's time is brought up to date while the editor is open
 const CLOCK_TICK_MS = 10_000;
 const COUNTER_FROM = 4500;
@@ -619,10 +620,11 @@ export function NoteEditor({
           <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide md:pt-4">
             <button
               type="button"
-              className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field px-2 text-body text-primary hover:bg-fill"
+              className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field border-0 bg-transparent px-2 text-body text-primary"
               onClick={requestClose}
             >
-              {t("common.cancel")}
+              {/* The underline swipes in on hover and focus, like every way back in the app */}
+              <span className="link-swipe">{t("common.cancel")}</span>
             </button>
             <h2
               id={titleId}
