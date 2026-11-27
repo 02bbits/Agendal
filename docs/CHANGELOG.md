@@ -4,7 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-27
 
-- **Overlays load on demand (NF-4, Refs #58).** [scalability.md](05-quality/scalability.md#on-demand-overlays) Design rules: the note editor, search popup and Settings are lazy chunks kept out of the `@/ui` barrel and fetched once the page is idle so they still open offline; images are SVG, `theme.js` stays `beforeInteractive`. Measured: `/` first load 380.1 → 375.4 KB gzip.
+- **Overlays load on demand (NF-4, Refs #58).** [scalability.md](05-quality/scalability.md#on-demand-overlays) Design rules: the search popup and Settings are lazy chunks kept out of the `@/ui` barrel and fetched once the page is idle so they still open offline; the note editor stays in the first load so its focus stays inside the tap (iOS keyboard, NC §2.1); images are SVG, `theme.js` stays `beforeInteractive`. Measured: `/` first load 380.1 → 377.3 KB gzip.
 
 ## 2026-11-26
 
