@@ -209,8 +209,8 @@ export default function TaskDetailsClient({
   if (loading) {
     if (!showSkeleton) return null;
     return (
-      <div role="status" aria-busy="true" className="animate-pulse pb-8">
-        <BackBarSkeleton className="-mx-5" />
+      <div role="status" aria-busy="true" className="-mx-5 animate-pulse pb-8">
+        <BackBarSkeleton />
         {/* The page's own spacing under the Back row (TaskHeader) */}
         <div className="flex flex-col gap-5 px-4 pt-4">
           <div className="flex items-start gap-3">
