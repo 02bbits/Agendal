@@ -17,12 +17,29 @@ final class SlowQueryAlert
     // An embed field holds at most 1024 characters, code fence included
     private const MAX_SQL_CHARS = 990;
 
+    /** Inside an alert: its own queries (the database cache's throttle) are not alerted on again */
+    private bool $alerting = false;
+
     public function __construct(private readonly DiscordAlert $discord) {}
 
     public function __invoke(string $sql, ?float $ms): void
     {
         Log::error('Slow query', ['sql' => $sql, 'ms' => $ms]);
+        // With CACHE_STORE=database the throttle is a query too: were it slow, it would alert, throttle
+        // with the same query and alert again, forever
+        if ($this->alerting) {
+            return;
+        }
+        $this->alerting = true;
+        try {
+            $this->post($sql, $ms);
+        } finally {
+            $this->alerting = false;
+        }
+    }
 
+    private function post(string $sql, ?float $ms): void
+    {
         $t = $this->discord->trans(...);
         $fields = [
             [$t('fields.duration'), number_format((float) $ms).' ms'],

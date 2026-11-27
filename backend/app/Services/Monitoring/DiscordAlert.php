@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Monitoring;
 
+use Illuminate\Contracts\Cache\Repository;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -20,8 +21,11 @@ final class DiscordAlert
 
     public const CRITICAL = 'critical';
 
-    // Warning amber, critical red
-    private const COLORS = [self::WARNING => 0xE67E22, self::CRITICAL => 0xC0392B];
+    /** A problem posted earlier is over (#229) */
+    public const RESOLVED = 'resolved';
+
+    // Warning amber, critical red, resolved green
+    private const COLORS = [self::WARNING => 0xE67E22, self::CRITICAL => 0xC0392B, self::RESOLVED => 0x27AE60];
 
     /**
      * Text in the admins' language, apart from the app's (lang/<locale>/monitoring.php)
@@ -42,10 +46,8 @@ final class DiscordAlert
     {
         $url = $this->webhookUrl();
         $minutes = (int) config('logging.discord_alert.throttle_minutes');
-        // The cache may be the database that just failed (an outage is the alert that matters most): then
-        // throttle in this container's file cache, and never throw while reporting
-        $add = fn (?string $store) => Cache::store($store)->add('discord-alert:'.sha1($key), true, now()->addMinutes($minutes));
-        if ($url === '' || ! (rescue(fn () => $add(null), null, false) ?? rescue(fn () => $add('file'), false, false))) {
+        // Never throws while reporting. The throttle is not in the database (see self::cache())
+        if ($url === '' || ! rescue(fn () => self::cache()->add('discord-alert:'.sha1($key), true, now()->addMinutes($minutes)), false, false)) {
             return;
         }
 
@@ -61,18 +63,42 @@ final class DiscordAlert
             ],
         ];
 
-        // After the response, and a failed post never fails the request
-        defer(fn () => rescue(
+        // A failed post logs a warning and never fails the caller
+        $post = fn () => rescue(
             fn () => Http::timeout(5)->post($url, ['embeds' => [$embed]])->throw(),
             fn (Throwable $e) => Log::warning('Discord alert not sent', ['error' => class_basename($e)]),
             report: false,
-        ));
+        );
+        // A request posts after its response, even an error response (`always`: Laravel otherwise drops
+        // deferred work on a 4xx/5xx). queue:work, schedule:work and pulse:check never end, and Laravel
+        // drops deferred work after a failed job or a failed schedule:run, so the console posts now
+        app()->runningInConsole() ? $post() : defer($post)->always();
+    }
+
+    /**
+     * The alerts' own state (throttle, last server health). Not the app's database cache: in an outage,
+     * the alert that matters most, each try to reach the database takes seconds and the request hits
+     * PHP's 30 s limit before the alert is posted. In production the file cache sits on the api-storage
+     * volume that api, queue, scheduler and pulse share.
+     */
+    public static function cache(): Repository
+    {
+        return Cache::store((string) config('logging.discord_alert.cache_store'));
     }
 
     private function webhookUrl(): string
     {
         $file = (string) config('logging.discord_alert.webhook_file');
+        if ($file === '') {
+            return '';
+        }
+        // Configured but unreadable (missing secret, wrong owner): say so, or alerts stop without a trace
+        if (! is_file($file) || ! is_readable($file)) {
+            Log::warning('Discord alert webhook file unreadable', ['file' => $file]);
 
-        return $file !== '' && is_file($file) && is_readable($file) ? trim((string) file_get_contents($file)) : '';
+            return '';
+        }
+
+        return trim((string) file_get_contents($file));
     }
 }

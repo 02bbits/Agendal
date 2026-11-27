@@ -19,7 +19,32 @@ return [
         'title' => 'Critical: scheduled task failed',
         'summary' => 'A task in the schedule failed.',
     ],
-    'severity' => ['warning' => 'Warning', 'critical' => 'Critical'],
+    // #229
+    'host_over' => [
+        'title' => ':metric over the threshold',
+        'summary' => 'The server :metric is over the allowed threshold.',
+    ],
+    'host_normal' => [
+        'title' => ':metric back to normal',
+        'summary' => 'The server :metric is back within the allowed threshold.',
+    ],
+    'monitor_down' => [
+        'title' => 'Server monitor stopped',
+        'summary' => 'No new server reading for over :minutes minutes; the server state is unknown.',
+    ],
+    'monitor_up' => [
+        'title' => 'Server monitor running again',
+        'summary' => 'New server readings are in.',
+    ],
+    'metrics' => [
+        'cpu' => 'CPU',
+        'memory' => 'Memory',
+        'disk' => 'Disk',
+        'last_backup' => 'Last backup',
+        'api' => 'API',
+        'web_app' => 'Web app',
+    ],
+    'severity' => ['warning' => 'Warning', 'critical' => 'Critical', 'resolved' => 'Resolved'],
     'fields' => [
         'severity' => 'Severity',
         'environment' => 'Environment',
@@ -34,5 +59,8 @@ return [
         'attempts' => 'Attempts',
         'command' => 'Command',
         'exit_code' => 'Exit code',
+        'metric' => 'Metric',
+        'value' => 'Current value',
+        'last_reading' => 'Last reading',
     ],
 ];

@@ -19,7 +19,32 @@ return [
         'title' => 'Nghiêm trọng: tác vụ định kỳ thất bại',
         'summary' => 'Một tác vụ trong lịch chạy định kỳ đã thất bại.',
     ],
-    'severity' => ['warning' => 'Cảnh báo', 'critical' => 'Nghiêm trọng'],
+    // #229
+    'host_over' => [
+        'title' => ':metric vượt ngưỡng',
+        'summary' => 'Chỉ số :metric của máy chủ đã vượt ngưỡng cho phép.',
+    ],
+    'host_normal' => [
+        'title' => ':metric đã trở lại bình thường',
+        'summary' => 'Chỉ số :metric của máy chủ đã trở lại trong ngưỡng cho phép.',
+    ],
+    'monitor_down' => [
+        'title' => 'Giám sát máy chủ ngừng hoạt động',
+        'summary' => 'Không có số đo mới của máy chủ trong hơn :minutes phút; không xác định được tình trạng máy chủ.',
+    ],
+    'monitor_up' => [
+        'title' => 'Giám sát máy chủ hoạt động trở lại',
+        'summary' => 'Đã có số đo mới của máy chủ.',
+    ],
+    'metrics' => [
+        'cpu' => 'CPU',
+        'memory' => 'Bộ nhớ',
+        'disk' => 'Ổ đĩa',
+        'last_backup' => 'Sao lưu gần nhất',
+        'api' => 'API',
+        'web_app' => 'Web app',
+    ],
+    'severity' => ['warning' => 'Cảnh báo', 'critical' => 'Nghiêm trọng', 'resolved' => 'Đã khôi phục'],
     'fields' => [
         'severity' => 'Mức độ',
         'environment' => 'Môi trường',
@@ -34,5 +59,8 @@ return [
         'attempts' => 'Số lần thử',
         'command' => 'Lệnh',
         'exit_code' => 'Mã thoát',
+        'metric' => 'Chỉ số',
+        'value' => 'Giá trị hiện tại',
+        'last_reading' => 'Số đo gần nhất',
     ],
 ];

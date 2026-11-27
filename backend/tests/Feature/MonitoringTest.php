@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Providers\AppServiceProvider;
+use App\Services\Monitoring\ServerHealthAlert;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -140,6 +141,17 @@ it('#225: a slow query posts once per window to the Discord webhook, SQL without
     unlink($file);
 });
 
+it('#225: with the database cache, a slow throttle query does not alert on itself forever', function () {
+    discordWebhookFile();
+    Http::fake();
+    config(['cache.default' => 'database', 'database.slow_query_ms' => 0]);
+
+    DB::select('select 1');
+
+    // The select alerts; the cache's own queries while alerting do not
+    Http::assertSentCount(1);
+});
+
 it('#225: a slow query in a queued job names the job', function () {
     $file = tempnam(sys_get_temp_dir(), 'webhook');
     file_put_contents($file, 'https://discord.test/x');
@@ -199,19 +211,19 @@ it('#228: a 500 posts its class and line once per window, never its message', fu
         ->and(json_encode(Http::recorded()->all()))->not->toContain('my private plan');
 });
 
-it('#228: with the database cache down, the alert still posts, throttled in the file cache', function () {
+it('#228: in a database outage the alert still posts: its throttle never touches the database', function () {
     discordWebhookFile();
     Http::fake();
     $this->withoutDefer();
     config(['cache.default' => 'database', 'cache.stores.database.connection' => 'down']);
     config(['database.connections.down' => ['driver' => 'pgsql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'x']]);
-    Cache::store('file')->flush();
     Route::middleware('api')->get('api/v1/_boom', fn () => throw new RuntimeException('outage'));
 
     $this->getJson('/api/v1/_boom')->assertStatus(500);
     $this->getJson('/api/v1/_boom')->assertStatus(500);
 
     Http::assertSentCount(1);
+    expect(config('logging.discord_alert.cache_store'))->not->toBe('database');
 });
 
 it('#228: a 4xx posts nothing', function () {
@@ -245,6 +257,53 @@ it('#228: a failed queued job and a failed scheduled task each post their name',
         ->and($sent[1]['Lệnh'])->toBe('`test-purge`')
         ->and($sent[1]['Lỗi'])->toBe('`LogicException`')
         ->and(json_encode(Http::recorded()->all()))->not->toContain('broke');
+});
+
+// #229: server thresholds to the admins' Discord
+it('#229: a row turning red posts once, and back to normal posts once', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    $alert = app(ServerHealthAlert::class);
+    $cpu = fn (bool $over) => [['CPU', $over ? '93%' : '12%', '85% for 5 min', $over], ['Load (1 min)', '0.4 on 4 cores', '', false]];
+
+    $alert->rows($cpu(false));
+    $alert->rows($cpu(true));
+    $alert->rows($cpu(true));
+    $alert->rows($cpu(false));
+
+    $embeds = Http::recorded()->map(fn ($pair) => $pair[0]['embeds'][0])->values();
+    expect($embeds)->toHaveCount(2)
+        ->and($embeds[0]['title'])->toBe('CPU vượt ngưỡng')
+        ->and(collect($embeds[0]['fields'])->pluck('value', 'name')->all())->toMatchArray(
+            ['Mức độ' => 'Nghiêm trọng', 'Chỉ số' => 'CPU', 'Giá trị hiện tại' => '93%', 'Ngưỡng' => '85% for 5 min'])
+        ->and($embeds[1]['title'])->toBe('CPU đã trở lại bình thường')
+        ->and(collect($embeds[1]['fields'])->firstWhere('name', 'Mức độ')['value'])->toBe('Đã khôi phục');
+});
+
+it('#229: a full disk is a warning', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+
+    app(ServerHealthAlert::class)->rows([['Disk', '84% of 120 GB', '80%', true]]);
+
+    expect(discordFieldsSent()[0]['Mức độ'])->toBe('Cảnh báo');
+});
+
+it('#229: no Server health reading for over a minute posts that the monitor stopped', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    $alert = app(ServerHealthAlert::class);
+
+    DB::table('pulse_values')->insert(['timestamp' => now()->subMinutes(3)->getTimestamp(), 'type' => 'host_health', 'key' => 'server', 'value' => '[]']);
+    $alert->checkMonitor();
+    DB::table('pulse_values')->update(['timestamp' => now()->getTimestamp()]);
+    $alert->checkMonitor();
+
+    $titles = Http::recorded()->map(fn ($pair) => $pair[0]['embeds'][0]['title'])->values()->all();
+    expect($titles)->toBe(['Giám sát máy chủ ngừng hoạt động', 'Giám sát máy chủ hoạt động trở lại']);
 });
 
 it('#192: Telescope entries are pruned daily after 48 hours', function () {

@@ -2,6 +2,7 @@
 
 namespace App\Pulse;
 
+use App\Services\Monitoring\ServerHealthAlert;
 use Carbon\CarbonImmutable;
 use Illuminate\Contracts\Config\Repository;
 use Illuminate\Support\Facades\DB;
@@ -14,7 +15,7 @@ use Throwable;
 /**
  * #199: the server's health for the Pulse "Server health" card, read every 15 s by `pulse:check` (the pulse
  * service). From inside a container /proc/stat, /proc/meminfo and /proc/loadavg describe the whole host and / is
- * the host's disk. A threshold only turns its row red; nobody is notified (#198).
+ * the host's disk. A threshold turns its row red, and a change is posted to the admins' Discord (#229).
  */
 class HostHealth
 {
@@ -45,7 +46,7 @@ class HostHealth
     /** @var array<string, CarbonImmutable|null> since when each URL has failed */
     private array $downSince = [];
 
-    public function __construct(private Pulse $pulse, private Repository $config) {}
+    public function __construct(private Pulse $pulse, private Repository $config, private ServerHealthAlert $alert) {}
 
     public function record(SharedBeat $event): void
     {
@@ -87,6 +88,7 @@ class HostHealth
             }
 
             $this->pulse->set('host_health', 'server', json_encode($rows, JSON_THROW_ON_ERROR), $now);
+            $this->alert->rows($rows);
         });
     }
 
