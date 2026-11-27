@@ -4,10 +4,10 @@ import { cacheLoadedAssets } from "@/lib/serviceWorker";
 
 // NF-4: overlays opened only on demand, reached from nowhere else in the frame, load in their
 // own chunk. ProjectSheet and NewTaskSheet stay static: TaskPanel already pulls them in.
+// NoteEditor stays static too: it focuses in the opener's tap so iOS opens the keyboard, and
+// a lazy component always mounts a tick later on its first render, even once loaded (NC §2.1).
 // React.lazy, not next/dynamic: next/dynamic still put these chunks in the page's first load.
 const loaders = {
-  noteEditor: () =>
-    import("@/ui/features/notes/NoteEditor").then((m) => m.NoteEditor),
   searchPopup: () =>
     import("@/ui/features/lists/SearchPopup").then((m) => m.SearchPopup),
   settings: () =>
@@ -26,13 +26,12 @@ function onDemand<P extends object>(load: () => Promise<ComponentType<P>>) {
   };
 }
 
-export const NoteEditor = onDemand(loaders.noteEditor);
 export const SearchPopup = onDemand(loaders.searchPopup);
 export const AppSettingsScreen = onDemand(loaders.settings);
 
 /**
  * Fetches the overlay chunks once the page is idle, then has the service worker cache them,
- * so they still open offline (note editor, search and Settings all work offline).
+ * so they still open offline (search and Settings both work offline).
  */
 export function warmOverlays(): () => void {
   const idle =

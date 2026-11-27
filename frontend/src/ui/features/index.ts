@@ -11,7 +11,8 @@ export type {
   SettingsTab,
   ThemeSetting,
 } from "./settings/types";
-// SettingsScreen, NoteEditor and SearchPopup load on demand (app/frame/lazyOverlays.tsx): import them from their files
+// SettingsScreen and SearchPopup load on demand (app/frame/lazyOverlays.tsx): import them from their files
+export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
   NoteResultScreen,
   type NoteResultScreenProps,

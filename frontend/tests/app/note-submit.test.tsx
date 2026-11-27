@@ -70,8 +70,7 @@ async function makeTasks(answer: NoteResult) {
   });
   await userEvent.click(screen.getByRole("button", { name: "open editor" }));
   await userEvent.type(
-    // The editor loads on demand (NF-4), so wait for it
-    await screen.findByRole("textbox", { name: "Your note" }),
+    screen.getByRole("textbox", { name: "Your note" }),
     "call mum",
   );
   await userEvent.click(screen.getByRole("button", { name: "Make tasks" }));

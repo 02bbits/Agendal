@@ -105,8 +105,7 @@ describe("Routes (IM-07): every route renders with an empty state", () => {
     await userEvent.click(
       within(bar).getByRole("button", { name: "Write a note" }),
     );
-    // The editor loads on demand (NF-4), so wait for it
-    const editor = await screen.findByRole("dialog", { name: "New note" });
+    const editor = screen.getByRole("dialog", { name: "New note" });
     expect(within(editor).getByRole("textbox", { name: "Your note" })).toBe(
       document.activeElement,
     );

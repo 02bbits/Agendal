@@ -4,6 +4,7 @@ import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
   NewTaskSheet,
+  NoteEditor,
   ProjectSheet,
   ROUTES,
   t,
@@ -23,12 +24,7 @@ import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
 import { hasTaskPanel } from "./frameRoutes";
-import {
-  AppSettingsScreen,
-  NoteEditor,
-  SearchPopup,
-  warmOverlays,
-} from "./lazyOverlays";
+import { AppSettingsScreen, SearchPopup, warmOverlays } from "./lazyOverlays";
 import type { Overlays } from "./useOverlays";
 
 type Router = {
