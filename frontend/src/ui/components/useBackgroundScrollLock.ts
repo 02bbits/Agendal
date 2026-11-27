@@ -61,10 +61,10 @@ export function useBackgroundScrollLock(
     };
     let touchY = 0;
     const onTouchStart = (e: TouchEvent) => {
-      touchY = e.touches[0]?.clientY ?? 0;
+      touchY = e.touches?.[0]?.clientY ?? 0;
     };
     const onTouchMove = (e: TouchEvent) => {
-      const y = e.touches[0]?.clientY ?? touchY;
+      const y = e.touches?.[0]?.clientY ?? touchY;
       const dy = touchY - y;
       touchY = y;
       if (!isAllowed(e.target, dy)) e.preventDefault();
