@@ -9,7 +9,30 @@ export const offlineUnavailable = () => unavailable;
 export function registerServiceWorker(
   onWaiting: (worker: ServiceWorker) => void,
 ) {
-  if (process.env.NODE_ENV !== "production") return;
+  if (process.env.NODE_ENV !== "production") {
+    // Switching from local production (`next start`) back to `next dev` leaves the production SW
+    // controlling localhost; unregister it and drop its shell caches so Ctrl+R never serves stale dev chunks.
+    if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+      const hadController = Boolean(navigator.serviceWorker.controller);
+      void navigator.serviceWorker
+        .getRegistrations()
+        .then(async (regs) => {
+          if (regs.length === 0) return;
+          await Promise.all(regs.map((r) => r.unregister()));
+          if ("caches" in window) {
+            const keys = await caches.keys();
+            await Promise.all(
+              keys
+                .filter((k) => k.startsWith("agendal-shell-"))
+                .map((k) => caches.delete(k)),
+            );
+          }
+          if (hadController) window.location.reload();
+        })
+        .catch(() => {});
+    }
+    return;
+  }
   if (!("serviceWorker" in navigator)) {
     unavailable = true;
     return;
