@@ -142,7 +142,10 @@ export function SearchResults({
             {filterLabel}
           </Chip>
         )}
-        {TABS.map(({ tab: each, label }) => (
+        {(filterLabel
+          ? TABS.filter(({ tab: each }) => each === "all" || each === "tasks")
+          : TABS
+        ).map(({ tab: each, label }) => (
           <Chip
             key={each}
             role="tab"
