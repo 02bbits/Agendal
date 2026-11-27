@@ -2,6 +2,10 @@
 
 What changed in the docs, newest first. Each entry names the files and IDs touched; the full text is in git history.
 
+## 2026-11-27
+
+- **Overlays load on demand (NF-4, Refs #58).** [scalability.md](05-quality/scalability.md#on-demand-overlays) Design rules: the note editor, search popup and Settings are lazy chunks kept out of the `@/ui` barrel and fetched once the page is idle so they still open offline; images are SVG, `theme.js` stays `beforeInteractive`. Measured: `/` first load 380.1 → 375.4 KB gzip.
+
 ## 2026-11-26
 
 - **ETag and 304 on sync and counts (Refs #201).** [api.md](07-architecture/api.md#conventions) Conventions: responses stay `no-store, private` (SC-19, SEC-51); `GET sync` and `GET counts` carry a weak ETag from the user's highest `change_seq`, the local date and the query, and answer `304` to a matching `If-None-Match`; a sync page is tagged only when caught up; the client keeps the body in memory and forgets it on sign-in and sign-out. [scalability.md](05-quality/scalability.md#design-rules-that-keep-it-scaling) Design rules: polled reads revalidate, no server-side data cache. Tested in `CacheValidationTest`.
