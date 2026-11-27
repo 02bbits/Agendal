@@ -83,7 +83,7 @@ it('never queues mail notifications when the surrounding transaction rolls back'
     expect(DB::connection('queue_isolated')->table('jobs')->count())->toBe(0);
 });
 
-it('does not fail register, sign-in, or password change when SMTP throws during queue processing', function () {
+it('register, sign-in and password change queue their mail instead of sending it inline', function () {
     config(['session.driver' => 'database']);
     newRequest();
     Http::fake(['api.pwnedpasswords.com/*' => fn () => Http::response('0000000000000000000000000000000000A:3')]);
@@ -93,9 +93,7 @@ it('does not fail register, sign-in, or password change when SMTP throws during 
         'two_factor_enabled' => true,
     ]);
 
-    Mail::shouldReceive('mailer')->andThrow(new RuntimeException('SMTP connection refused'));
-
-    // Requests succeed and queue the notification rather than failing inline
+    // No job runs: the requests only queue their mail (the retry test covers SMTP failing)
     Queue::fake();
 
     $csrf = $this->withHeader('Referer', (string) config('app.frontend_url'))->get('/sanctum/csrf-cookie');
