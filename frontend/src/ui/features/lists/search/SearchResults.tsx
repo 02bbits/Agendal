@@ -19,8 +19,16 @@ const TABS: ReadonlyArray<{ tab: SearchTab; label: CopyKey }> = [
   { tab: "projects", label: "search.tab_projects" },
   { tab: "notes", label: "search.tab_notes" },
 ];
-/** Widths of the loading rows, so they don't look like one block. */
-const SKELETON_WIDTHS = ["50%", "70%", "40%", "60%", "45%", "65%"];
+/** Widths of the loading rows (title + subtitle), matching TaskHit cards. */
+const SKELETON_ROWS: ReadonlyArray<{ title: string; meta: string }> = [
+  { title: "52%", meta: "96px" },
+  { title: "68%", meta: "120px" },
+  { title: "44%", meta: "84px" },
+  { title: "60%", meta: "110px" },
+  { title: "48%", meta: "92px" },
+  { title: "64%", meta: "104px" },
+  { title: "54%", meta: "88px" },
+];
 
 /** "Nothing matches this filter." without Upcoming's "Show all": the filter chip's × clears it here. */
 const filterEmptyPrefix = () =>
@@ -31,23 +39,33 @@ const shows = (tab: SearchTab, section: SearchTab) =>
 
 function ResultsSkeleton() {
   return (
-    <div className="flex flex-col gap-2 p-2" role="status" aria-busy="true">
-      <div className="px-2 pt-1 pb-0.5">
-        <div className="h-3 w-16 rounded bg-fill/70 animate-pulse" />
+    <div className="flex flex-col" role="status" aria-busy="true">
+      <div className="px-3 pt-2.5 pb-1">
+        <div className="h-3 w-12 rounded bg-fill/70 animate-pulse" />
       </div>
-      {SKELETON_WIDTHS.map((width, index) => (
-        <div
-          key={`${width}-${index}`}
-          className="flex h-12 items-center gap-3 rounded-tile border border-separator/40 bg-surface px-4 py-3"
-        >
-          <div className="size-5 shrink-0 rounded-full bg-fill/80 animate-pulse" />
+      <div className="flex flex-col gap-2">
+        {SKELETON_ROWS.map((row, index) => (
           <div
-            className="h-4 rounded-xl bg-fill/80 animate-pulse"
-            style={{ width }}
-          />
-          <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60 animate-pulse" />
-        </div>
-      ))}
+            key={`${row.title}-${index}`}
+            className="flex items-center gap-3 rounded-2xl border border-separator bg-surface px-4 py-3 shadow-xs"
+          >
+            <div className="size-[22px] shrink-0 rounded-full bg-fill/80 animate-pulse" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div
+                className="h-4 rounded-lg bg-fill/80 animate-pulse"
+                style={{ width: row.title }}
+              />
+              <div className="flex items-center gap-1.5">
+                <div className="size-2 shrink-0 rounded-full bg-fill/70 animate-pulse" />
+                <div
+                  className="h-3 rounded-md bg-fill/60 animate-pulse"
+                  style={{ width: row.meta }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
