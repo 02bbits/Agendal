@@ -8,9 +8,10 @@ COPY backend/ ./
 RUN composer dump-autoload --no-dev --optimize --classmap-authoritative
 
 FROM dunglas/frankenphp:1-php8.4
-# bcmath: faster VAPID signing and payload encryption for reminders (TK-6)
-RUN install-php-extensions pdo_pgsql intl pcntl bcmath zip
-# pdftotext for note file upload (NoteExtractController)
+# bcmath: faster VAPID signing and payload encryption for reminders (TK-6); gd and exif re-encode a photo
+# upright without its metadata before the model reads it (NoteOcr, SC-25)
+RUN install-php-extensions pdo_pgsql intl pcntl bcmath zip gd exif
+# pdftotext, pdfinfo, pdfseparate and pdfunite for note file upload (NoteExtractController)
 RUN apt-get update && apt-get install -y --no-install-recommends poppler-utils && rm -rf /var/lib/apt/lists/*
 COPY docker/prod/php.ini /usr/local/etc/php/conf.d/zz-agendal.ini
 # Non-root (no port below 1024 needed): the fixed uid lets the host chown the LLM key secret to it

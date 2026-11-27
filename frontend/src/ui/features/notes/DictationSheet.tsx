@@ -63,13 +63,16 @@ export function DictationSheet({
   const [levels, setLevels] = useState(silentBars);
   const [now, setNow] = useState(nowMs);
   const recording = useRef<Recording | null>(null);
+  // The upload of the current recording, dropped when the sheet closes
+  const upload = useRef<AbortController | null>(null);
   const sheetRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleId = useId();
 
-  // ×, Escape, Back or the scrim: the recording, if any, is dropped
+  // ×, Escape, Back or the scrim: the recording, if any, is dropped, and so is its upload
   const close = () => {
     recording.current?.cancel();
+    upload.current?.abort();
     onClose();
   };
   useModalFocus(sheetRef, titleRef, true, close);
@@ -86,20 +89,24 @@ export function DictationSheet({
       ]),
     );
     recording.current = current;
+    const abort = new AbortController();
+    upload.current = abort;
     setPhase({ kind: "listening", started: performance.now() });
     current.done
       .then((audio) => {
         if (recording.current !== current) return null;
         if (!audio) return "";
         setPhase({ kind: "writing" });
-        return transcribe(audio);
+        return transcribe(audio, abort.signal);
       })
       .then((words) => {
-        if (words === null) return;
+        if (words === null || abort.signal.aborted) return;
         if (words) onWords(words);
         else setPhase({ kind: "message", key: "note.no_speech" });
       })
-      .catch((error: DictationError | unknown) =>
+      .catch((error: DictationError | unknown) => {
+        // Closed while it was being written down: nothing to show
+        if (abort.signal.aborted) return;
         setPhase(
           error instanceof ApiRequestError && error.status === 429
             ? {
@@ -114,8 +121,8 @@ export function DictationSheet({
                     ? "note.mic_denied"
                     : "note.dictation_failed",
               },
-        ),
-      )
+        );
+      })
       .finally(() => {
         if (recording.current === current) recording.current = null;
       });
@@ -129,6 +136,7 @@ export function DictationSheet({
       // Forgotten as well as dropped, so a remount (React's dev double run) records afresh
       recording.current?.cancel();
       recording.current = null;
+      upload.current?.abort();
     };
     // Once, when the sheet opens
     // eslint-disable-next-line react-hooks/exhaustive-deps

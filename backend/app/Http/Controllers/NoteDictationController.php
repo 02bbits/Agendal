@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\Notes\NoteTranscriber;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,9 @@ class NoteDictationController extends Controller
         $request->validate(['audio' => ['required', 'file', 'mimetypes:audio/wav,audio/x-wav,audio/wave', 'max:'.config('note_llm.dictation_max_kb')]]);
         $audio = $request->file('audio');
         assert($audio instanceof UploadedFile);
+        $user = $request->user();
+        assert($user instanceof User);
 
-        return response()->json(['text' => $transcriber->transcribe((string) $audio->get())]);
+        return response()->json(['text' => $transcriber->transcribe((string) $audio->get(), $user->id)]);
     }
 }

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\Notes\NoteOcr;
 use DOMDocument;
 use DOMNode;
@@ -36,6 +37,8 @@ class NoteExtractController extends Controller
         ]);
 
         $file = $validated['file'];
+        $user = $request->user();
+        assert($user instanceof User);
         $extension = strtolower($file->getClientOriginalExtension());
         $path = $file->getRealPath();
 
@@ -68,14 +71,15 @@ class NoteExtractController extends Controller
             // First 20 pages: enough for a note, and a cap on a PDF built to keep the parser busy
             'pdf' => $this->extractWithCommand(['pdftotext', '-l', '20', '-enc', 'UTF-8', '-nopgbrk', $path, '-']),
             'docx' => $this->extractDocx($path),
-            default => $ocr->image((string) file_get_contents($path), $extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : 'image/jpeg'))
+            default => $ocr->image((string) file_get_contents($path), $extension === 'png' ? 'image/png' : ($extension === 'webp' ? 'image/webp' : 'image/jpeg'), $user->id)
                 ?? $this->fail('note.file_failed'),
         };
 
-        // A PDF without a text layer is a scan: the model reads its first pages (NC-E5)
+        // A PDF without a text layer is a scan: the model is sent only its first pages (NC-E5)
         if ($extension === 'pdf' && trim($text) === '') {
-            $text = $ocr->pdf((string) file_get_contents($path)) ?? $this->fail('note.file_failed');
             $truncated = $pages !== null && $pages > NoteOcr::PDF_PAGES;
+            $scan = $truncated ? $this->firstPages($path, NoteOcr::PDF_PAGES) : (string) file_get_contents($path);
+            $text = $ocr->pdf($scan, $pages ?? NoteOcr::PDF_PAGES, $user->id) ?? $this->fail('note.file_failed');
         }
 
         if (! is_string($text) || ! mb_check_encoding($text, 'UTF-8')) {
@@ -141,6 +145,22 @@ class NoteExtractController extends Controller
         }
 
         return $process->getOutput();
+    }
+
+    /** The first `$count` pages of a PDF as a new PDF, cut with the same sandbox as the parsers. */
+    private function firstPages(string $path, int $count): string
+    {
+        $dir = sys_get_temp_dir().'/agendal-scan-'.bin2hex(random_bytes(8));
+        mkdir($dir, 0700);
+        try {
+            $this->extractWithCommand(['pdfseparate', '-f', '1', '-l', (string) $count, $path, $dir.'/%d.pdf']);
+            $this->extractWithCommand(['pdfunite', ...array_map(fn (int $page): string => "$dir/$page.pdf", range(1, $count)), $dir.'/first.pdf']);
+
+            return (string) file_get_contents($dir.'/first.pdf');
+        } finally {
+            array_map(unlink(...), glob($dir.'/*') ?: []);
+            rmdir($dir);
+        }
     }
 
     /** Pages of a PDF from pdfinfo, for the file card; null when it can't tell. */

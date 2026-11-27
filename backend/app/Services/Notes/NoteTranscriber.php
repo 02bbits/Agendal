@@ -9,11 +9,14 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use SensitiveParameter;
 use Throwable;
 
 /**
  * Dictation (NC-3): the app's language model writes down a short WAV recording, word for word. The audio is sent
  * inline and never stored. Only a provider with audio input (Gemini, in the OpenAI chat format) can do it.
+ *
+ * @phpstan-import-type Route from NoteLlmFallback
  */
 final class NoteTranscriber
 {
@@ -25,10 +28,16 @@ final class NoteTranscriber
         'additionalProperties' => false,
     ];
 
-    public function __construct(private NoteLlmFallback $llm) {}
+    // ponytail: Gemini's published rate, 32 tokens a second of audio; revisit if the provider changes. The answer
+    // is a note, so at most 5,000 characters. The budget settles to what the provider reports.
+    private const AUDIO_TOKENS_PER_SECOND = 32;
+
+    private const ANSWER_TOKENS = 5000;
+
+    public function __construct(private NoteLlmFallback $llm, private LlmBudget $budget) {}
 
     /** The words heard; empty when there was no speech. */
-    public function transcribe(string $wav): string
+    public function transcribe(string $wav, int $userId): string
     {
         $route = $this->llm->route();
         if ($route === null || $route['sdk'] || $route['output'] !== 'json_schema') {
@@ -41,10 +50,22 @@ final class NoteTranscriber
         $seconds = strlen($wav) / 32000;
         $timeout = (float) config('note_llm.dictation_timeout_seconds') + $seconds / 30 * (float) config('note_llm.dictation_timeout_per_30s');
         $prompt = (string) file_get_contents(resource_path('prompts/'.config('note_llm.dictation_prompt_version').'.txt'));
+        $attempts = (int) config('note_llm.dictation_attempts');
+        $tokens = (int) ceil($seconds * self::AUDIO_TOKENS_PER_SECOND) + strlen($prompt) + self::ANSWER_TOKENS;
 
+        return $this->budget->spend($userId, $tokens, (int) ceil($attempts * $timeout) + 5,
+            fn (): array => $this->send($wav, $prompt, $timeout, $attempts, $route));
+    }
+
+    /**
+     * @param  Route  $route
+     * @return array{string, ?int}
+     */
+    private function send(string $wav, string $prompt, float $timeout, int $attempts, #[SensitiveParameter] array $route): array
+    {
         try {
             $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
-                ->retry((int) config('note_llm.dictation_attempts'), 200, fn (Throwable $e): bool => $e instanceof ConnectionException
+                ->retry($attempts, 200, fn (Throwable $e): bool => $e instanceof ConnectionException
                     || ($e instanceof RequestException && in_array($e->response->status(), [429, 500, 503], true)))
                 ->post($route['url'], [
                     'model' => $route['model'],
@@ -62,7 +83,11 @@ final class NoteTranscriber
                 'status' => $e instanceof RequestException ? $e->response->status() : null]);
             throw new ApiError('note.dictation_failed', 'Dictation stopped.', 502);
         }
+        $used = $response->json('usage.total_tokens');
 
-        return is_array($answer) && ($answer['speech'] ?? false) === true ? trim((string) ($answer['text'] ?? '')) : '';
+        return [
+            is_array($answer) && ($answer['speech'] ?? false) === true ? trim((string) ($answer['text'] ?? '')) : '',
+            is_numeric($used) ? (int) $used : null,
+        ];
     }
 }

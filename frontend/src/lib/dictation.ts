@@ -62,6 +62,8 @@ export function record(onLevel?: (level: number) => void): Recording {
         const source = context.createMediaStreamSource(stream);
         // ScriptProcessor, not an AudioWorklet: it needs no module file and runs everywhere
         const processor = context.createScriptProcessor(4096, 1, 1);
+        // Brought down to 16 kHz as it arrives, so 2 minutes stay about 8 MB instead of 3 copies of 23 MB
+        const resample = downsampler(context.sampleRate);
         const chunks: Float32Array[] = [];
         const started = performance.now();
         let lastSound = started;
@@ -73,17 +75,12 @@ export function record(onLevel?: (level: number) => void): Recording {
           processor.disconnect();
           source.disconnect();
           stream.getTracks().forEach((track) => track.stop());
-          const rate = context.sampleRate;
           void context.close();
-          resolve(
-            !cancelled && loudMs >= SPEECH_MIN_MS
-              ? wav(downsample(chunks, rate))
-              : null,
-          );
+          resolve(!cancelled && loudMs >= SPEECH_MIN_MS ? wav(chunks) : null);
         };
         processor.onaudioprocess = (event) => {
           const input = event.inputBuffer.getChannelData(0);
-          chunks.push(new Float32Array(input));
+          chunks.push(resample(input));
           let sum = 0;
           for (const sample of input) sum += sample * sample;
           const time = performance.now();
@@ -121,44 +118,60 @@ export function record(onLevel?: (level: number) => void): Recording {
   };
 }
 
-/** `POST /notes/dictation`: the words heard, empty when the model heard none. */
-export async function transcribe(audio: Blob): Promise<string> {
+/**
+ * `POST /notes/dictation`: the words heard, empty when the model heard none. `signal` drops the
+ * request when the sheet closes.
+ */
+export async function transcribe(
+  audio: Blob,
+  signal?: AbortSignal,
+): Promise<string> {
   const body = new FormData();
   body.append("audio", audio, "dictation.wav");
   const { text } = await handleResponse<{ text: string }>(
-    await api("/notes/dictation", { method: "POST", body }),
+    await api("/notes/dictation", { method: "POST", body, signal }),
   );
   return text;
 }
 
-function downsample(chunks: Float32Array[], rate: number): Float32Array {
-  const length = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
-  const all = new Float32Array(length);
-  let offset = 0;
-  for (const chunk of chunks) {
-    all.set(chunk, offset);
-    offset += chunk.length;
-  }
+/**
+ * Brings slices at the device's `rate` down to 16 kHz, one at a time. Each output sample is the
+ * average of its window (a crude low-pass, enough for speech); a window may span two slices.
+ */
+export function downsampler(
+  rate: number,
+): (input: Float32Array) => Float32Array {
   const ratio = rate / RATE;
-  const out = new Float32Array(Math.floor(length / ratio));
-  // Averaging each window is a crude low-pass, enough for speech
-  for (let i = 0; i < out.length; i++) {
-    const from = Math.floor(i * ratio);
-    const to = Math.max(from + 1, Math.floor((i + 1) * ratio));
-    let sum = 0;
-    for (let j = from; j < to; j++) sum += all[j];
-    out[i] = sum / (to - from);
-  }
-  return out;
+  let position = 0; // input samples seen so far
+  let next = ratio; // where the current output sample's window ends
+  let sum = 0;
+  let count = 0;
+  return (input) => {
+    const out = new Float32Array(Math.ceil(input.length / ratio) + 1);
+    let written = 0;
+    for (const sample of input) {
+      sum += sample;
+      count++;
+      position++;
+      if (position >= next) {
+        out[written++] = sum / count;
+        sum = 0;
+        count = 0;
+        next += ratio;
+      }
+    }
+    return out.subarray(0, written);
+  };
 }
 
-/** 16-bit mono PCM WAV. */
-function wav(samples: Float32Array): Blob {
-  const view = new DataView(new ArrayBuffer(44 + samples.length * 2));
+/** 16-bit mono PCM WAV from 16 kHz slices. */
+function wav(chunks: Float32Array[]): Blob {
+  const length = chunks.reduce((total, chunk) => total + chunk.length, 0);
+  const view = new DataView(new ArrayBuffer(44 + length * 2));
   const text = (at: number, value: string) =>
     [...value].forEach((char, i) => view.setUint8(at + i, char.charCodeAt(0)));
   text(0, "RIFF");
-  view.setUint32(4, 36 + samples.length * 2, true);
+  view.setUint32(4, 36 + length * 2, true);
   text(8, "WAVE");
   text(12, "fmt ");
   view.setUint32(16, 16, true);
@@ -169,15 +182,18 @@ function wav(samples: Float32Array): Blob {
   view.setUint16(32, 2, true);
   view.setUint16(34, 16, true);
   text(36, "data");
-  view.setUint32(40, samples.length * 2, true);
-  samples.forEach((sample, i) => {
-    const clamped = Math.max(-1, Math.min(1, sample));
-    view.setInt16(
-      44 + i * 2,
-      clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff,
-      true,
-    );
-  });
+  view.setUint32(40, length * 2, true);
+  let at = 44;
+  for (const chunk of chunks)
+    for (const sample of chunk) {
+      const clamped = Math.max(-1, Math.min(1, sample));
+      view.setInt16(
+        at,
+        clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff,
+        true,
+      );
+      at += 2;
+    }
   return new Blob([view], { type: "audio/wav" });
 }
 
