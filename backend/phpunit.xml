@@ -36,5 +36,8 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!-- #225: a developer's .env may name the Discord webhook; tests never post -->
+        <env name="DISCORD_ALERT_WEBHOOK_FILE" value="" force="true"/>
+        <env name="DISCORD_ALERT_CACHE_STORE" value="array"/>
     </php>
 </phpunit>

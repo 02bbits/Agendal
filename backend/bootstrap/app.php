@@ -8,6 +8,7 @@ use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\SyncTimezone;
 use App\Http\Middleware\TokenAbilities;
 use App\Http\Middleware\TrustCloudflareIp;
+use App\Services\Monitoring\CriticalErrorAlert;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Auth\Middleware\Authorize;
 use Illuminate\Contracts\Auth\Middleware\AuthenticatesRequests;
@@ -72,6 +73,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // #228: a 5xx during a request is posted to the admins' Discord. First, since the callback below stops the chain
+        $exceptions->report(fn (Throwable $e) => app(CriticalErrorAlert::class)->exception($e));
+
         // SC-21: the database message repeats the row's values (note and task text), so log the SQL only
         $exceptions->report(function (QueryException $e) {
             Log::error('Query failed', ['sql' => $e->getSql(), 'sqlstate' => $e->getCode()]);
