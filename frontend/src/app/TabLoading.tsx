@@ -27,74 +27,73 @@ export type Splash =
 
 /**
  * The full-screen loading screen (#161), as Instagram does: when the app starts, when you go
- * into it from the sign-in screens, and when you sign out. It stays until `ready` (the session
- * check has answered, or the screen it was going to is there), at least LOADING_MIN_MS so it
- * never just flashes and at most LOADING_MAX_MS, then fades out and calls `onDone`. In between,
- * the header, tab bar and sidebar stay, and each tab shows its skeleton the first time it loads.
+ * into it from the sign-in screens, and when you sign out. `reason` says why it is up (null: it
+ * isn't). It stays until `ready` (the session check has answered, or the screen it was going to
+ * is there), at least LOADING_MIN_MS so it never just flashes and at most LOADING_MAX_MS, then
+ * fades out and calls `onDone` with the reason that faded. In between, the header, tab bar and
+ * sidebar stay, and each tab shows its skeleton the first time it loads.
  */
 export function TabLoading({
-  show,
+  reason,
   ready,
   onDone,
   children,
 }: {
-  show: boolean;
+  reason: string | null;
   ready: boolean;
-  onDone?: () => void;
+  onDone?: (faded: string | null) => void;
   children: ReactNode;
 }) {
   const [phase, setPhase] = useState<"hidden" | "visible" | "hiding">(
-    show ? "visible" : "hidden",
+    reason !== null ? "visible" : "hidden",
   );
-  const [shown, setShown] = useState(show);
-  if (show !== shown) {
-    setShown(show);
-    // Called off (e.g. sign out held back offline): it fades out at once
-    if (show) setPhase("visible");
+  const [shownFor, setShownFor] = useState(reason);
+  if (reason !== shownFor) {
+    setShownFor(reason);
+    // A new reason, even mid-fade (signed in as the start screen goes): up again. Called off
+    // (e.g. sign out held back offline): it fades out at once
+    if (reason !== null) setPhase("visible");
     else if (phase === "visible") setPhase("hiding");
   }
-  // Something new to wait for while it fades (signed in as the start screen goes): it comes back,
-  // or the fade's end would call onDone and drop the screen going into the app
-  const [wasReady, setWasReady] = useState(ready);
-  if (ready !== wasReady) {
-    setWasReady(ready);
-    if (show && !ready && phase === "hiding") setPhase("visible");
-  }
-  const shownAt = useRef(0);
-  // `ready` as last committed: a minimum-time timer can fire after it turned false and before
-  // the effect below clears that timer
-  const readyNow = useRef(ready);
+  // What was last committed: a timer can fire after the reason or `ready` changed and before
+  // the effect that set it clears it, and must not hide the screen for the new reason
+  const latest = useRef({ reason, ready });
   useLayoutEffect(() => {
-    readyNow.current = ready;
+    latest.current = { reason, ready };
   });
+  const shownAt = useRef({ reason: null as string | null, at: 0 });
 
   useEffect(() => {
     if (phase !== "visible") {
-      shownAt.current = 0;
+      shownAt.current = { reason: null, at: 0 };
       return;
     }
-    if (!shownAt.current) shownAt.current = now().getTime();
-    const elapsed = now().getTime() - shownAt.current;
+    // Each reason gets its own minimum and maximum
+    if (!shownAt.current.at || shownAt.current.reason !== reason)
+      shownAt.current = { reason, at: now().getTime() };
+    const elapsed = now().getTime() - shownAt.current.at;
     const wait = (ready ? LOADING_MIN_MS : LOADING_MAX_MS) - elapsed;
     const timer = setTimeout(
       () => {
-        // Set for the minimum, but there is something to wait for now: the maximum's timer follows
-        if (ready && !readyNow.current) return;
+        if (latest.current.reason !== reason || latest.current.ready !== ready)
+          return;
         setPhase("hiding");
       },
       Math.max(0, wait),
     );
     return () => clearTimeout(timer);
-  }, [phase, ready]);
+  }, [phase, ready, reason]);
 
   useEffect(() => {
     if (phase !== "hiding") return;
     const timer = setTimeout(() => {
+      if (latest.current.reason !== reason) return;
       setPhase("hidden");
-      onDone?.();
+      // Only the reason that faded ends: one that came after it stays up
+      onDone?.(reason);
     }, FADE_MS);
     return () => clearTimeout(timer);
-  }, [phase, onDone]);
+  }, [phase, reason, onDone]);
 
   return (
     <>

@@ -210,7 +210,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <AppFrameContext.Provider value={value}>
       {/* The full-screen loading screen: opening, reloading, going in and out (#161) */}
       <TabLoading
-        show={splash.splash !== null}
+        reason={splash.splash}
         ready={splashReady(splash.splash, {
           sessionChecked,
           signedIn: user !== null,
