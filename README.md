@@ -8,6 +8,7 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 ## Contents
 
+- [Course rubric map](#course-rubric-map)
 - [Demo & screenshots](#demo--screenshots)
 - [Run it for a review](#run-it-for-a-review)
 - [Tour 1: the app (dev server, :3000)](#tour-1-the-app-dev-server-3000)
@@ -19,6 +20,77 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 - [Quality](#quality)
 - [Team](#team)
 - [For developers](#for-developers)
+
+## Course rubric map
+
+For the CSB35050 final project review: where each rubric item lives on `main`, how it was done, and the proof. Numbers are from the [CI run on `main`](https://github.com/02bbits/Agendal/actions/runs/45982270498) for ada7789 (27 Nov 2026). The app runs at <https://agendal.kkqqq.uk>. Items still open are marked **Partly** and say what is missing.
+
+### Task 1: source control and workflow
+
+| Item | How | Evidence |
+|---|---|---|
+| 1(a) Code on GitHub | Public repo with description and topics | [02bbits/Agendal](https://github.com/02bbits/Agendal) |
+| 1(b) Commit messages | Conventional Commits (`feat:`, `fix:`, `perf:`, `test:`, `docs:`, `chore:`), one change per commit, issue referenced (`Refs #201`) | `git log --oneline`, e.g. `eece9af perf: ETag and 304 on sync and counts (Refs #201)` |
+| 1(c) GitHub Issues | Every piece of work is an issue with scope and "Done when", labels, assignee and milestone | e.g. [#192](https://github.com/02bbits/Agendal/issues/192), [#196](https://github.com/02bbits/Agendal/issues/196); plan in [docs/08-project/tasks.md](docs/08-project/tasks.md) |
+| 1(d) GitHub workflow | Topic branch → pull request that `Closes #n` → code-owner review → required CI (Backend, Frontend, Secret scan) → merge | [Pull requests](https://github.com/02bbits/Agendal/pulls?q=is%3Apr), [ci.yml](.github/workflows/ci.yml) |
+
+### Task 2: database
+
+| Item | How | Evidence |
+|---|---|---|
+| 2(a) Schema and migrations | PostgreSQL 18, normalised, foreign keys, `CHECK` constraints, composite, partial and trigram indexes, Laravel migrations | [migrations](backend/database/migrations), [ERD](#data-model-erd), [data-model.md](docs/07-architecture/data-model.md) |
+| 2(b) Seeding | Factories for User, Project, Task, Note (`HasFactory`); `DatabaseSeeder` makes the demo account and its data; a test checks the seed | [factories](backend/database/factories), [DatabaseSeeder.php](backend/database/seeders/DatabaseSeeder.php), [DemoSeedTest.php](backend/tests/Feature/DemoSeedTest.php) |
+
+### Task 3: interface and features
+
+| Item | How | Evidence |
+|---|---|---|
+| 3(a) Next.js and Tailwind | Next.js 16 front end on the Laravel API, Tailwind CSS and daisyUI utility classes, `sm:`/`md:` breakpoints for phone and desktop, reusable components; React escapes output and the code has no `dangerouslySetInnerHTML` | [frontend/src/ui/components](frontend/src/ui/components), [screenshots](#demo--screenshots) |
+| 3(b) Sign up, sign in, profile | Sign-up with an emailed 6-digit code, passwords hashed (`hashed` cast, Argon2id in production), sign-in lock after 3 wrong tries, two-step sign-in, Settings › Account | [Auth controllers](backend/app/Http/Controllers/Auth), [RegisterTest.php](backend/tests/Feature/RegisterTest.php), [LoginTest.php](backend/tests/Feature/LoginTest.php) |
+| 3(c) CSRF and server validation | Sanctum's `XSRF-TOKEN` cookie, sent back as `X-XSRF-TOKEN` on every write; `FormRequest` classes validate on the server; errors come back per field and show under the field | [Requests](backend/app/Http/Requests), [frontend/src/lib/api.ts](frontend/src/lib/api.ts) |
+| 3(e) Queries and filters | Eloquent filters by keyword (accent-insensitive), status, quick filters (overdue, this week, high priority) and project; Notes All / Accepted / Pending; Upcoming All / Scheduled / Due only; keyset paging | [SearchQuery.php](backend/app/Services/Tasks/SearchQuery.php), [UpcomingQuery.php](backend/app/Services/Tasks/UpcomingQuery.php), [SearchApiTest.php](backend/tests/Feature/SearchApiTest.php) |
+| 3(f) External APIs | **Gemini** reads the note items the rules are unsure about: key from a secret file, 20 s timeout, quota, bad-schema and connection errors handled and logged. **Web Push** (VAPID) sends reminders to the browser push services on an allow-list. **Partly:** Web Push is shown working for real (screenshots and log below); a real Gemini call is not recorded in the repo yet and will be in the demo video | [NoteLlmFallback.php](backend/app/Services/Notes/NoteLlmFallback.php), [note_llm.php](backend/config/note_llm.php), [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php); [PushClient.php](backend/app/Services/Push/PushClient.php), [push.php](backend/config/push.php), [ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php); [real reminder](#real-web-push) |
+| 3(g) Web tests | 1,376 Vitest tests in 116 files (screens, offline, sync, the service worker, axe accessibility checks in both themes). Coverage is measured in CI with a 70% floor: **90.55% lines and statements**, 87.59% branches, 84.41% functions | [vitest.config.ts](frontend/vitest.config.ts), [frontend/tests](frontend/tests), [CI run](https://github.com/02bbits/Agendal/actions/runs/45982270498) |
+
+### Task 4: REST API
+
+| Item | How | Evidence |
+|---|---|---|
+| 4(a) Resource controllers | `/api/v1` CRUD for tasks, projects and notes (`index`, `store`, `show`, `update`, `destroy`), Eloquent with API Resources, `FormRequest` validation, status codes 201 / 204 / 404 / 422 / 429, one JSON error shape with a `request_id` | [routes/api.php](backend/routes/api.php), [Resources](backend/app/Http/Resources), [TaskApiTest.php](backend/tests/Feature/TaskApiTest.php), [ApiBaseTest.php](backend/tests/Feature/ApiBaseTest.php) |
+| 4(b) Sanctum tokens | The SPA uses Sanctum's cookie session. Scripts use personal access tokens: `createToken` with six abilities (`tasks:read\|write`, `projects:read\|write`, `notes:read\|write`), 7, 30 or 90-day expiry, and each data route names the abilities it needs (`abilities:` middleware) | [TokenController.php](backend/app/Http/Controllers/TokenController.php), [TokenAbilities.php](backend/app/Http/Middleware/TokenAbilities.php), [ApiTokenTest.php](backend/tests/Feature/ApiTokenTest.php) (PR [#216](https://github.com/02bbits/Agendal/pull/216)) |
+| 4(c) Scramble | API docs generated from the code at `/docs/api`, with the cookie and CSRF security scheme; a test checks every `/api/v1` route is documented; CI exports `api.json` | [scramble.php](backend/config/scramble.php), [ApiDocsTest.php](backend/tests/Feature/ApiDocsTest.php), [screenshot](docs/screenshots/17-api-docs.jpg) |
+| 4(d) API tests | 1,757 Pest tests on a real PostgreSQL database (1 skipped). Coverage is measured in CI with `--min=70`: **95.2% lines** | [backend/tests](backend/tests), [CI run](https://github.com/02bbits/Agendal/actions/runs/45982270498) (PR [#213](https://github.com/02bbits/Agendal/pull/213)) |
+
+### Task 5: logging and monitoring
+
+| Item | How | Evidence |
+|---|---|---|
+| 5(a) Telescope | Allow-listed by email outside local, hides sensitive headers and data, records requests, jobs, errors and slow queries, pruned after 48 hours | [TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php), [screenshot](docs/screenshots/18-telescope-requests.jpg) |
+| 5(b) Errors and logging | Custom error pages for every framework error, friendly JSON errors with a `request_id`, daily log files where every line has the `request_id`. **Partly:** nothing is pushed to an admin yet ([#225](https://github.com/02bbits/Agendal/issues/225)) | [errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php), [AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php), [logging.php](backend/config/logging.php) |
+| 5(c) Slow query alert | `DB::listen` logs any query over 500 ms, and `whenQueryingForLongerThan` any request over 2 s of queries, at `error` with the SQL and `request_id`, never the values; Pulse lists slow queries. **Partly:** the alert is not sent to an admin yet (#225) | [AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php) |
+| 5(d) Server monitoring | Laravel Pulse with the Servers card and our Server health card: CPU, load, memory, swap, disk, Postgres connections, API and web status, red past set thresholds (CPU 85% for 5 min, memory 90%, disk 80%). **Partly:** no network metric and no alert sent (#225) | [ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php), [screenshot](docs/screenshots/16-pulse-server-health.jpg) |
+
+### Task 6: performance and scale
+
+| Item | How | Evidence |
+|---|---|---|
+| 6(a) Async work | Reminders: `reminders:send` runs every minute and queues `SendReminderPushes` (`ShouldQueue`; temporary push failures are tried again for the failed devices only, and devices the push service reports gone are removed). All five auth emails implement `ShouldQueue` (PR [#212](https://github.com/02bbits/Agendal/pull/212)). The front end queues offline edits and syncs them later | [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php), [QueuedMailNotification.php](backend/app/Notifications/Concerns/QueuedMailNotification.php), [QueuedMailNotificationsTest.php](backend/tests/Feature/QueuedMailNotificationsTest.php) |
+| 6(b) Loading resources | Minified and route-split build, tab prefetching, prerendered static parts (`cacheComponents`), fonts through `next/font`. Search, Settings and the note result overlay are `React.lazy` chunks fetched when the page is idle (PR [#219](https://github.com/02bbits/Agendal/pull/219)). Raster image optimisation doesn't apply: every image in the UI is SVG ([why](#asset--image-optimisation-note-6b)) | [lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx), [scalability.md](docs/05-quality/scalability.md#on-demand-overlays) |
+| 6(c) Caching | What is cached and what isn't: app shell and hashed files in the service worker, versioned by build; API answers `no-store, private`. `GET sync` and `GET counts` send an ETag and answer `304 Not Modified` (PR [#217](https://github.com/02bbits/Agendal/pull/217)). No `Cache::remember` data cache, on purpose: the ETag check is three index lookups, and a data cache would have to be cleared on every write from every device | [CacheValidationTest.php](backend/tests/Feature/CacheValidationTest.php), [SecurityHeaders.php](backend/app/Http/Middleware/SecurityHeaders.php), [scalability.md](docs/05-quality/scalability.md#design-rules-that-keep-it-scaling) |
+| 6(d) Antipatterns | Capacity analysis and rules in the docs; project task lists in one grouped query instead of N+1; every index leads with `user_id`; partial indexes; keyset paging; Telescope and Pulse watch slow requests and queries | [scalability.md](docs/05-quality/scalability.md), [ProjectTaskLists.php](backend/app/Services/Projects/ProjectTaskLists.php) |
+
+### Review notes from the trial grading
+
+| Note | Status on `main` |
+|---|---|
+| Auth emails sent inside the request | Fixed: queued (PR #212) |
+| README without ERD, screenshots or demo link | Fixed here: [ERD](#data-model-erd), [screenshots](#demo--screenshots); the demo video link is added when it is recorded |
+| Gemini called inside `DB::transaction` | Open |
+| `tasks_search_trgm` index expression doesn't match the search query | Open |
+| Upcoming loads every task from `from` and pages in PHP; Inbox overdue/today have no limit | Open |
+| Upcoming `from` checked by regex, not `date_format` | Open |
+| Session, cache, queue and Telescope share one PostgreSQL | Open, noted in [scalability.md](docs/05-quality/scalability.md) |
+| Service worker could cache `/telescope`, `/pulse`, `/docs` | Open |
 
 ## Demo & screenshots
 
@@ -43,7 +115,7 @@ Screenshots from the production build running locally (`compose.prod.yml`, 27 No
 | <img src="docs/screenshots/14-phone-inbox.jpg" alt="Inbox on a phone with the tab bar" width="250"> | <img src="docs/screenshots/15-phone-new-task.jpg" alt="New task sheet on a phone" width="250"> |
 | **Phone:** a tab bar replaces the sidebar | **Phone:** the New task sheet |
 
-Web Push reminders, sent for real through Microsoft's push service (`notify.windows.com`) to Edge on Windows, on 27 Nov 2026. A task starting at 17:39 with a 5-minute reminder; at 17:34:02 the scheduler's `reminders:send` queued `SendReminderPushes`, which logged `reminders.sent {"sent":4,"gone":0}`, and the notification arrived:
+<a id="real-web-push"></a>Web Push reminders, sent for real through Microsoft's push service (`notify.windows.com`) to Edge on Windows, on 27 Nov 2026. A task starting at 17:39 with a 5-minute reminder; at 17:34:02 the scheduler's `reminders:send` queued `SendReminderPushes`, which logged `reminders.sent {"sent":4,"gone":0}`, and the notification arrived:
 
 | | |
 |---|---|
@@ -63,7 +135,7 @@ Behind the app:
 
 ## Run it for a review
 
-The app runs on the team's Linux server (IM-65, set up as in [deploy/README.md](deploy/README.md)). To review it on your own machine you need only [Docker](https://www.docker.com/).
+The app runs on the team's Linux server at <https://agendal.kkqqq.uk> (IM-65, set up as in [deploy/README.md](deploy/README.md)). To review it on your own machine you need only [Docker](https://www.docker.com/).
 
 ```bash
 git clone https://github.com/02bbits/Agendal.git
@@ -316,15 +388,15 @@ erDiagram
 
 ## Quality
 
-- **Tests:** 1,741 Pest tests on a real PostgreSQL database for the API and the note engine, with a golden note corpus, and 1,366 Vitest tests in 114 files for the frontend (screens, offline, sync, the service worker), with axe accessibility checks in light and dark.
+- **Tests:** 1,757 Pest tests on a real PostgreSQL database for the API and the note engine, with a golden note corpus, and 1,376 Vitest tests in 116 files for the frontend (screens, offline, sync, the service worker), with axe accessibility checks in light and dark.
 - **Coverage**, measured in CI with a 70% floor that fails the build:
 
   | Part | Lines | Statements | Branches | Functions |
   |---|---|---|---|---|
-  | Backend (Pest, PCOV) | **95.4%** | | | |
-  | Frontend (Vitest, V8) | **91.36%** | **91.36%** | 87.97% | 85.78% |
+  | Backend (Pest, PCOV) | **95.2%** | | | |
+  | Frontend (Vitest, V8) | **90.55%** | **90.55%** | 87.59% | 84.41% |
 
-  From the [CI run on `main`](https://github.com/02bbits/Agendal/actions/runs/45942859790) for 3a374c1 (27 Nov 2026); each run's summary shows its numbers, and `coverage.xml` and `lcov.info` are uploaded as artifacts.
+  From the [CI run on `main`](https://github.com/02bbits/Agendal/actions/runs/45982270498) for ada7789 (27 Nov 2026); each run's summary shows its numbers, and `coverage.xml` and `lcov.info` are uploaded as artifacts.
 - **CI:** GitHub Actions runs Pint, Larastan, Pest with coverage, the API docs export, Prettier, ESLint, the type check, Vitest with coverage, the production build, dependency audits and a secret scan (gitleaks) on every pull request and on `main` ([ci.yml](.github/workflows/ci.yml)).
 - **Way of working:** every change goes through a GitHub issue and a reviewed pull request; the docs have a dated [changelog](docs/CHANGELOG.md).
 
