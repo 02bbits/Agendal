@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { Chip } from "../../../components/Chip";
 import {
+  AlertCircleIcon,
   CalendarIcon,
   CheckIcon,
   ClockIcon,
@@ -31,7 +32,7 @@ const QUICK_FILTERS: ReadonlyArray<{
   filter: QuickFilter;
   Icon?: ComponentType<{ size?: number }>;
 }> = [
-  { filter: "overdue" },
+  { filter: "overdue", Icon: AlertCircleIcon },
   { filter: "due_week", Icon: CalendarIcon },
   { filter: "starts_today", Icon: ClockIcon },
   { filter: "high_priority", Icon: FlagIcon },

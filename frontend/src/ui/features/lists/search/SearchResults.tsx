@@ -155,7 +155,7 @@ export function SearchResults({
               {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
             </Chip>
           ))}
-        {variant === "popup" && (
+        {(variant === "popup" || projects.length > 0) && (
           <div className="ml-auto shrink-0">
             <Picker
               label={t("search.any_project")}
