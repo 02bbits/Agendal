@@ -158,7 +158,7 @@ Answers [Q1](../08-project/open-questions.md#q1): editing a saved note re-plans 
 | Result | — | Skeleton after 300 ms (deep link only. Arriving from the editor, the data is already there) | Rows and buttons | Some rows `note.gone_since`. Skipped section shown | `404` → `error.not_found` with Back. `5xx` → `error.generic` with Retry | Cached result shown. Undo all disabled with `note.needs_connection` |
 | Check this first | — | Same | Rows with checkboxes | Ties shown as radio groups | Apply fails: rows kept, a toast says why | Apply and Edit note disabled with `note.needs_connection` |
 | Follow-up | — | Same | Question and two buttons (Keep it as task, Edit the note) | — | Same as result | Buttons disabled with `note.needs_connection` |
-| Notes tab | `note.list_empty` | Skeleton cards after 300 ms | Cards | Pending cards mixed in | Load-more failure: inline Retry at the end of the list | Cached notes plus pending ones. Older pages: `app.offline_body` at the end of the list |
+| Notes tab | `note.list_empty` | Skeleton after 300 ms, the same as Inbox's (section title, card, rows), also from the tap on the tab; another filter keeps the last list, faded, until it comes | Cards | Pending cards mixed in | Load-more failure: inline Retry at the end of the list | Cached notes plus pending ones. Older pages: `app.offline_body` at the end of the list |
 
 ## 4. Edge cases
 

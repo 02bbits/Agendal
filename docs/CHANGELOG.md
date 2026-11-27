@@ -4,6 +4,7 @@ What changed in the docs, newest first. Each entry names the files and IDs touch
 
 ## 2026-11-27
 
+- **Dictation and photo reading share the model budget; photos lose their EXIF (Refs #166, #167).** [ADR-008](07-architecture/decisions/ADR-008-llm-fallback.md) Cost controls and [security.md](07-architecture/security.md#sc-12) SC-12: dictation and reading a photo or scan are each one of the user's 20 model calls a day and count toward the global token budget, then answer `429`; one is read at a time per user. [NC](03-modules/NC-note-capture.md) §2.4: a photo is turned upright and encoded again so no EXIF reaches the model (SC-25 now holds), one over 30 megapixels is refused; NC-E5: a scan is cut to its first 5 pages before sending; abuse row: the shared budget and the one-at-a-time rule. [api.md](07-architecture/api.md) `POST /notes/dictation` and `POST /notes/extract`: the `429`.
 - **Overlays load on demand (NF-4, Refs #58).** [scalability.md](05-quality/scalability.md#on-demand-overlays) Design rules: the search popup and Settings are lazy chunks kept out of the `@/ui` barrel and fetched once the page is idle so they still open offline; the note editor stays in the first load so its focus stays inside the tap (iOS keyboard, NC §2.1); images are SVG, `theme.js` stays `beforeInteractive`. Measured: `/` first load 380.1 → 377.3 KB gzip.
 
 ## 2026-11-26

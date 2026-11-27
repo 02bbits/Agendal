@@ -12,6 +12,9 @@ const loaders = {
     import("@/ui/features/lists/SearchPopup").then((m) => m.SearchPopup),
   settings: () =>
     import("./AppSettingsScreen").then((m) => m.AppSettingsScreen),
+  // A note's result over the screen it was written on (wide, after Make tasks)
+  noteResult: () =>
+    import("./NoteResultOverlay").then((m) => m.NoteResultOverlay),
 };
 
 /** A component that loads on its first render and shows nothing while it loads. */
@@ -28,6 +31,7 @@ function onDemand<P extends object>(load: () => Promise<ComponentType<P>>) {
 
 export const SearchPopup = onDemand(loaders.searchPopup);
 export const AppSettingsScreen = onDemand(loaders.settings);
+export const NoteResultOverlay = onDemand(loaders.noteResult);
 
 /**
  * Fetches the overlay chunks once the page is idle, then has the service worker cache them,

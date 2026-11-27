@@ -1,4 +1,6 @@
 import { Button } from "../../components/Button";
+import { cx } from "../../components/cx";
+import { NotesRowsSkeleton } from "./NotesSkeleton";
 import { Chip } from "../../components/Chip";
 import { LoadError } from "../../components/LoadError";
 import type { ApiRequestError } from "../../../lib/apiError";
@@ -53,6 +55,7 @@ const ROW = "flex min-h-16 items-center gap-3 px-4 py-3 text-ink";
  */
 export function NotesScreen({
   status,
+  stale,
   onRetry,
   limited,
   notes,
@@ -70,6 +73,8 @@ export function NotesScreen({
   navigate,
 }: {
   status: "loading" | "error" | "ready";
+  /** The list shown is the last one while another filter's loads. */
+  stale?: boolean;
   onRetry: () => void;
   /** The list's load got a 429: the rate-limited page in its place (UX-43). */
   limited?: ApiRequestError | null;
@@ -133,12 +138,10 @@ export function NotesScreen({
         ))}
       </div>
       {status === "loading" && (
-        <div
-          role="status"
-          aria-busy="true"
-          aria-label={t("nav.notes")}
-          className="h-80 w-full animate-pulse rounded-box bg-surface"
-        />
+        // UX-03: shown only after 300 ms; the device's notes usually come sooner, and the skeleton would flash
+        <div className="[animation:skeleton-wait_0s_300ms_both]">
+          <NotesRowsSkeleton />
+        </div>
       )}
       {status === "error" &&
         (limited ? (
@@ -159,89 +162,101 @@ export function NotesScreen({
           }
         />
       )}
-      {status === "ready" &&
-        [...days].map(([day, rows]) => (
-          <section key={day} className="mb-5">
-            <h2 className="mb-3 text-heading font-semibold">
-              {formatDay(day, today)}{" "}
-              <span className="text-ink-secondary">{rows.length}</span>
-            </h2>
-            <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
-              {rows.map((note) => {
-                const Icon = note.source_file_name
-                  ? PaperclipIcon
-                  : note.status === "done"
-                    ? SparklesIcon
-                    : NotesIcon;
-                const row = (
-                  <>
-                    <Icon size={19} className="text-ink-secondary" />
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate font-semibold">
-                        {note.name ?? note.excerpt.slice(0, 60)}
-                        {note.edited_at && (
-                          <span className="font-normal text-ink-secondary">
-                            {" · "}
-                            {t("note.edited_label")}
-                          </span>
+      {status === "ready" && (
+        // Another filter's list stays, faded, until this one comes, instead of the list going blank
+        <div
+          aria-busy={stale || undefined}
+          className={cx(
+            "transition-opacity duration-150 motion-reduce:transition-none",
+            stale && "opacity-50",
+          )}
+        >
+          {[...days].map(([day, rows]) => (
+            <section key={day} className="mb-5">
+              <h2 className="mb-3 text-heading font-semibold">
+                {formatDay(day, today)}{" "}
+                <span className="text-ink-secondary">{rows.length}</span>
+              </h2>
+              <ul className="m-0 list-none divide-y divide-separator overflow-hidden rounded-box bg-surface p-0">
+                {rows.map((note) => {
+                  const Icon = note.source_file_name
+                    ? PaperclipIcon
+                    : note.status === "done"
+                      ? SparklesIcon
+                      : NotesIcon;
+                  const row = (
+                    <>
+                      <Icon size={19} className="text-ink-secondary" />
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-semibold">
+                          {note.name ?? note.excerpt.slice(0, 60)}
+                          {note.edited_at && (
+                            <span className="font-normal text-ink-secondary">
+                              {" · "}
+                              {t("note.edited_label")}
+                            </span>
+                          )}
+                        </span>
+                        <span
+                          className={`line-clamp-2 text-footnote ${note.failed ? "text-warning" : "text-ink-secondary"}`}
+                        >
+                          {note.failed
+                            ? t("note.couldnt_process")
+                            : note.source_file_name
+                              ? t("note.from_file", {
+                                  file_name: note.source_file_name,
+                                })
+                              : note.excerpt}
+                        </span>
+                      </span>
+                      <span className="shrink-0 text-footnote whitespace-nowrap">
+                        <StatusLine note={note} />
+                      </span>
+                      <time
+                        dateTime={note.written_at}
+                        className="shrink-0 text-footnote text-ink-secondary"
+                      >
+                        {formatTime(
+                          localDateTime(note.written_at, timeZone).time,
+                          timeFormat,
                         )}
-                      </span>
-                      <span
-                        className={`line-clamp-2 text-footnote ${note.failed ? "text-warning" : "text-ink-secondary"}`}
-                      >
-                        {note.failed
-                          ? t("note.couldnt_process")
-                          : note.source_file_name
-                            ? t("note.from_file", {
-                                file_name: note.source_file_name,
-                              })
-                            : note.excerpt}
-                      </span>
-                    </span>
-                    <span className="shrink-0 text-footnote whitespace-nowrap">
-                      <StatusLine note={note} />
-                    </span>
-                    <time
-                      dateTime={note.written_at}
-                      className="shrink-0 text-footnote text-ink-secondary"
-                    >
-                      {formatTime(
-                        localDateTime(note.written_at, timeZone).time,
-                        timeFormat,
+                      </time>
+                    </>
+                  );
+                  return (
+                    <li key={note.id}>
+                      {note.failed ? (
+                        // Refused by the server: tap puts its text back in the editor (NU §3)
+                        <button
+                          type="button"
+                          onClick={() => onReviveNote(note.id)}
+                          className={`${ROW} focus-ring row-hover w-full cursor-pointer border-0 bg-transparent text-left`}
+                        >
+                          {row}
+                        </button>
+                      ) : note.status === "pending" ? (
+                        // Nothing on the server to open yet (NC-6)
+                        <div className={ROW}>{row}</div>
+                      ) : (
+                        <Link
+                          href={ROUTES.note(note.id)}
+                          navigate={navigate}
+                          aria-current={
+                            selected === note.id ? "true" : undefined
+                          }
+                          className={`${ROW} focus-ring no-underline row-hover ${selected === note.id ? "bg-surface-hover/60" : ""}`}
+                        >
+                          {row}
+                        </Link>
                       )}
-                    </time>
-                  </>
-                );
-                return (
-                  <li key={note.id}>
-                    {note.failed ? (
-                      // Refused by the server: tap puts its text back in the editor (NU §3)
-                      <button
-                        type="button"
-                        onClick={() => onReviveNote(note.id)}
-                        className={`${ROW} focus-ring row-hover w-full cursor-pointer border-0 bg-transparent text-left`}
-                      >
-                        {row}
-                      </button>
-                    ) : note.status === "pending" ? (
-                      // Nothing on the server to open yet (NC-6)
-                      <div className={ROW}>{row}</div>
-                    ) : (
-                      <Link
-                        href={ROUTES.note(note.id)}
-                        navigate={navigate}
-                        aria-current={selected === note.id ? "true" : undefined}
-                        className={`${ROW} focus-ring no-underline row-hover ${selected === note.id ? "bg-surface-hover/60" : ""}`}
-                      >
-                        {row}
-                      </Link>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </section>
-        ))}
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          ))}
+        </div>
+      )}
     </>
   );
 }

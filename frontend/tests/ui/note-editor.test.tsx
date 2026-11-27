@@ -1,4 +1,4 @@
-import { act, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
@@ -35,41 +35,6 @@ describe("NoteEditor (IM-41)", () => {
     expect(document.activeElement).toBe(field());
   });
 
-  it("shows three examples while empty and hides them once there is text (T-NC-03)", async () => {
-    render(<NoteEditor onClose={() => {}} />);
-    expect(
-      screen
-        .getAllByRole("button", { pressed: false })
-        .map((b) => b.textContent),
-    ).toEqual([
-      "sql quiz monday 9am, email the group tonight",
-      "done email the group",
-      "move gym to sunday",
-    ]);
-    await userEvent.type(field(), "buy milk");
-    expect(
-      screen.queryByRole("button", { name: "move gym to sunday" }),
-    ).toBeNull();
-    await userEvent.clear(field());
-    expect(
-      screen.getByRole("button", { name: "move gym to sunday" }),
-    ).toBeTruthy();
-    await expectAxeCleanInBothThemes();
-  });
-
-  it("an example fills the editor and keeps focus at the end (NC-5)", async () => {
-    render(<NoteEditor onClose={() => {}} />);
-    await userEvent.click(
-      screen.getByRole("button", { name: "move gym to sunday" }),
-    );
-    const input = field() as HTMLTextAreaElement;
-    expect(input.value).toBe("move gym to sunday");
-    expect(document.activeElement).toBe(input);
-    await vi.waitFor(() =>
-      expect(input.selectionStart).toBe(input.value.length),
-    );
-  });
-
   it("enables Make tasks as soon as there is text, and nothing else is required (T-NC-04)", async () => {
     const onSubmit = vi.fn().mockResolvedValue(made);
     render(<NoteEditor onClose={() => {}} onSubmit={onSubmit} />);
@@ -89,7 +54,7 @@ describe("NoteEditor (IM-41)", () => {
     expect(onSubmit).not.toHaveBeenCalled();
   });
 
-  it("counts from 4,500, keeps a paste over 5,000 in full and holds Make tasks until trimmed (T-NC-102, A11Y-32)", async () => {
+  it("counts from 4,500 and stops the note at 5,000 (T-NC-102, A11Y-32)", async () => {
     render(<NoteEditor onClose={() => {}} onSubmit={vi.fn()} />);
     const input = field() as HTMLTextAreaElement;
     const live = () => document.querySelector("[aria-live='polite']");
@@ -115,15 +80,10 @@ describe("NoteEditor (IM-41)", () => {
     expect(live()?.textContent).toBe("5,000 / 5,000");
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
 
+    // Past 5,000 nothing more goes in, typed or pasted (NF-14)
     await userEvent.paste("b");
-    const tooLong = t("note.too_long", { count: "5,001" });
-    expect(input.value).toHaveLength(5001);
-    expect(counter()?.textContent).toBe(`5,001 / 5,000 · ${tooLong}`);
-    expect(counter()?.className).toContain("text-error");
-    expect(live()?.textContent).toBe(tooLong);
-    expect((makeTasks() as HTMLButtonElement).disabled).toBe(true);
-
-    await userEvent.type(input, "{Backspace}");
+    await userEvent.type(input, "c");
+    expect(input.value).toHaveLength(5000);
     expect((makeTasks() as HTMLButtonElement).disabled).toBe(false);
   });
 
@@ -307,7 +267,9 @@ describe("NoteEditor submit (IM-42)", () => {
     await u.type(field(), "sql quiz monday 9am");
     await u.click(makeTasks());
 
-    expect(makeTasks().getAttribute("aria-busy")).toBe("true");
+    // While it is read, Make tasks becomes Cancel (the header keeps its own Cancel)
+    expect(screen.queryByRole("button", { name: "Make tasks" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(2);
     expect((field() as HTMLTextAreaElement).readOnly).toBe(true);
     expect(screen.queryByText(t("note.reading"))).toBeNull();
     await advance(300);
@@ -320,8 +282,7 @@ describe("NoteEditor submit (IM-42)", () => {
       t("note.reading_seconds", { seconds: 1 }),
     );
 
-    // A second tap and Ctrl+Enter while busy send nothing (NC-E10)
-    await u.click(makeTasks());
+    // Ctrl+Enter while busy sends nothing (NC-E10)
     await u.keyboard("{Control>}{Enter}{/Control}");
     expect(onSubmit).toHaveBeenCalledTimes(1);
 
@@ -573,11 +534,36 @@ describe("NoteEditor submit (IM-42)", () => {
     );
     await u.type(field(), "call mum");
     await u.click(makeTasks());
-    await u.click(screen.getByRole("button", { name: "Cancel" }));
+    // The header's Cancel (the first); the bar's Cancel stops the reading instead
+    await u.click(screen.getAllByRole("button", { name: "Cancel" })[0]!);
     await u.keyboard("{Escape}");
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("Cancel while the note is read sets its answer aside and keeps the note to edit", async () => {
+    let answer: (r: NoteResult) => void = () => {};
+    const onSubmitted = vi.fn();
+    const u = user();
+    render(
+      <NoteEditor
+        onClose={() => {}}
+        onSubmit={() =>
+          new Promise<NoteResult>((resolve) => (answer = resolve))
+        }
+        onSubmitted={onSubmitted}
+      />,
+    );
+    await u.type(field(), "call mum");
+    await u.click(makeTasks());
+    await u.click(screen.getAllByRole("button", { name: "Cancel" })[1]!);
+
+    expect(makeTasks()).toBeTruthy();
+    expect((field() as HTMLTextAreaElement).readOnly).toBe(false);
+    await act(async () => answer(made));
+    expect(onSubmitted).not.toHaveBeenCalled();
+    expect((field() as HTMLTextAreaElement).value).toBe("call mum");
   });
 
   it("is axe clean while reading and after an error, in both themes", async () => {
@@ -590,7 +576,7 @@ describe("NoteEditor submit (IM-42)", () => {
     await expectAxeCleanInBothThemes();
   });
 
-  it("fills the editor from an uploaded file, and shows the server's copy key when it can't", async () => {
+  it("adds an uploaded file's text under a file card, and shows the server's copy key when it can't", async () => {
     document.cookie = "XSRF-TOKEN=test-token";
     const fetchMock = vi
       .fn()
@@ -606,7 +592,15 @@ describe("NoteEditor submit (IM-42)", () => {
         ),
       )
       .mockResolvedValueOnce(
-        new Response(JSON.stringify({ text: "buy milk" }), { status: 200 }),
+        new Response(
+          JSON.stringify({
+            text: "buy milk",
+            truncated: false,
+            file_name: "scan.pdf",
+            pages: 2,
+          }),
+          { status: 200 },
+        ),
       );
     vi.stubGlobal("fetch", fetchMock);
     try {
@@ -620,12 +614,101 @@ describe("NoteEditor submit (IM-42)", () => {
       );
 
       await userEvent.upload(input, file());
-      await vi.waitFor(() =>
-        expect(field()).toHaveProperty("value", "buy milk"),
-      );
+      // NC §2.4: the file card, and the note's label names the file
+      const fromFile = await screen.findByRole("textbox", {
+        name: "Your note, from scan.pdf",
+      });
+      expect(fromFile).toHaveProperty("value", "buy milk");
+      expect(screen.getByText("scan.pdf")).toBeTruthy();
+      expect(screen.getByText(/2 pages/)).toBeTruthy();
+      expect(
+        screen.getByRole("button", { name: "Remove scan.pdf" }),
+      ).toBeTruthy();
       expect(screen.queryByRole("alert")).toBeNull();
     } finally {
       vi.unstubAllGlobals();
     }
+  });
+
+  it("uploads a file dropped on the note (NC §2.4)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            text: "call mom",
+            truncated: false,
+            file_name: "todo.txt",
+            pages: null,
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    try {
+      render(<NoteEditor onClose={() => {}} />);
+      const files = [new File(["call mom"], "todo.txt")];
+      fireEvent.drop(screen.getByRole("dialog"), {
+        dataTransfer: { files, types: ["Files"] },
+      });
+      expect(
+        await screen.findByRole("textbox", {
+          name: "Your note, from todo.txt",
+        }),
+      ).toHaveProperty("value", "call mom");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("asks Replace or Add before a file goes into a note with text (NC §2.4)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockImplementation(
+        async () =>
+          new Response(
+            JSON.stringify({
+              text: "call mom",
+              truncated: false,
+              file_name: "todo.txt",
+              pages: null,
+            }),
+            { status: 200 },
+          ),
+      ),
+    );
+    try {
+      render(<NoteEditor onClose={() => {}} />);
+      const input = field() as HTMLTextAreaElement;
+      await userEvent.type(input, "buy milk");
+      const drop = () =>
+        fireEvent.drop(screen.getByRole("dialog"), {
+          dataTransfer: {
+            files: [new File(["call mom"], "todo.txt")],
+            types: ["Files"],
+          },
+        });
+
+      drop();
+      await userEvent.click(
+        await screen.findByRole("button", { name: t("note.replace_action") }),
+      );
+      await screen.findByRole("button", { name: "Remove todo.txt" });
+      expect(input.value).toBe("call mom");
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("stops the note at 200 lines, typed or pasted (NF-14)", async () => {
+    render(<NoteEditor onClose={() => {}} />);
+    const input = field() as HTMLTextAreaElement;
+    await userEvent.click(input);
+    await userEvent.paste(
+      Array.from({ length: 210 }, (_, i) => `t${i}`).join("\n"),
+    );
+    expect(input.value.split("\n")).toHaveLength(200);
+    await userEvent.type(input, "{Enter}x");
+    expect(input.value.split("\n")).toHaveLength(200);
   });
 });

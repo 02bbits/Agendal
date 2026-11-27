@@ -24,7 +24,12 @@ import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
 import { hasTaskPanel } from "./frameRoutes";
-import { AppSettingsScreen, SearchPopup, warmOverlays } from "./lazyOverlays";
+import {
+  AppSettingsScreen,
+  NoteResultOverlay,
+  SearchPopup,
+  warmOverlays,
+} from "./lazyOverlays";
 import type { Overlays } from "./useOverlays";
 
 type Router = {
@@ -89,6 +94,7 @@ export function AppOverlays({
       {note.editing && (
         <NoteEditor
           note={editingNote ?? undefined}
+          timeFormat={settings.timeFormat}
           onClose={note.closeNoteEditor}
           onDraftRestored={() => showToast(t("note.draft_restored"))}
           offline={offline}
@@ -108,6 +114,14 @@ export function AppOverlays({
             notesChanged(result.note.id);
             note.openResult(result.note.id);
           }}
+        />
+      )}
+      {wide && note.resultId && (
+        <NoteResultOverlay
+          key={note.resultId}
+          id={note.resultId}
+          popup={settings.pageView !== "full"}
+          onClose={note.closeResult}
         />
       )}
       {searchPopup.searching && (

@@ -67,4 +67,25 @@ return [
     // The versioned prompt in resources/prompts, recorded on each note that used it.
     'prompt_version' => env('NOTE_LLM_PROMPT_VERSION', 'note-plan-v9'),
 
+    // Dictation (NC-3): the model writes down a recording. Its prompt, and the largest WAV accepted (2 minutes at
+    // 16 kHz mono is about 3.8 MB; PHP's upload_max_filesize must allow it, see docker/*/php.ini).
+    'dictation_prompt_version' => env('NOTE_DICTATION_PROMPT_VERSION', 'note-dictation-v1'),
+    'dictation_max_kb' => (int) env('NOTE_DICTATION_MAX_KB', 4096),
+
+    // Seconds per try and tries per recording: Gemini now and then stalls on a call that a fresh one answers in about
+    // 2 s, so a short try is cut and made again. A try waits the base plus a little per 30 s of audio, since longer
+    // audio takes longer: about 8 s for a short note, 16 s for 2 minutes. The user waits at most about tries × that.
+    'dictation_timeout_seconds' => (float) env('NOTE_DICTATION_TIMEOUT_SECONDS', 8),
+    'dictation_timeout_per_30s' => (float) env('NOTE_DICTATION_TIMEOUT_PER_30S', 2),
+    'dictation_attempts' => (int) env('NOTE_DICTATION_ATTEMPTS', 2),
+
+    // File to note (NC §2.4, Q12): the model reads photos and scanned PDFs. Its prompt, and seconds per try and
+    // tries, as for dictation. With the model off, those files answer note.file_failed; every other file still works.
+    'ocr_prompt_version' => env('NOTE_OCR_PROMPT_VERSION', 'note-ocr-v1'),
+    'ocr_timeout_seconds' => (float) env('NOTE_OCR_TIMEOUT_SECONDS', 15),
+    'ocr_attempts' => (int) env('NOTE_OCR_ATTEMPTS', 2),
+
+    // Gemini's own API, which takes a photo or a PDF inline (the OpenAI chat format above doesn't take PDFs).
+    'gemini_generate_url' => 'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
+
 ];

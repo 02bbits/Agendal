@@ -53,7 +53,7 @@ Rules:
 | Body / task title | 400 · 15/20 | Rows, fields |
 | Body 2 | 400 · 13/18 `ink2` | Subtitles, excerpts |
 | Small / meta | 400 · 12/16 `ink2` | Task meta line, helper text |
-| Overline | 600 · 11/14 · uppercase · +0.03em `ink2` | Date above titles, "TRY WRITING", group labels |
+| Overline | 600 · 11/14 · uppercase · +0.03em `ink2` | Date above titles, group labels |
 | Tab label | 500 · 10/12 | Tab bar |
 | Button | 600 · 15 (sm 13, xs 12) | Buttons |
 
@@ -87,20 +87,20 @@ Class names refer to `css/agendal.css` in the canvas package.
 | **Section header** `.sec` | Title + count. Overdue uses `danger-text`. |
 | **List card** `.card.list` | Rows directly in a 12px-radius white card, 1px `sep` hairlines between rows. |
 | **Task row** `.row` | 22px round checkbox (ring `ink3`; overdue ring `danger`; done = `ink` fill with check in `card` colour) · title 15/20 (done: `ink3` + strikethrough) · meta line: project dot · project · time · bell/repeat icons · optional "✦ From a note" · trailing priority flag (High `danger`, Medium `warning`). Highlighted/selected row uses `accent-tint` background. |
-| **Capture bar** `.composer` | 44px pill on `raised` with `sep` border + shadow: sparkle icon, placeholder "Write a note — I'll make the tasks" (ellipsis when tight), round mic button (`accent-tint`). Sits above the tab bar with a 44px round **+ FAB** (`accent`) to its right for manual tasks. **Layout must be `grid-template-columns: minmax(0,1fr) 44px`** so the FAB never overflows. On Upcoming the placeholder is an example ("e.g. move Friday's tasks to Monday"). |
+| **Capture bar** `.composer` | 44px pill on `raised` with `sep` border + shadow: sparkle icon, placeholder "Write a note — I'll make the tasks" (ellipsis when tight). No mic: dictation is in the note's ^ tray. Sits above the tab bar with a 44px round **+ FAB** (`accent`) to its right for manual tasks. **Layout must be `grid-template-columns: minmax(0,1fr) 44px`** so the FAB never overflows. On Upcoming the placeholder is an example ("e.g. move Friday's tasks to Monday"). |
 | **Tab bar** `.tabbar` | 4 tabs: Inbox, Upcoming, Projects, Notes. 22px icon + 10px label, `ink2`; active = `accent`. |
 | **Nav bar** `.nav` | 44px: back link "‹ Notes/Inbox" (accent) left, title centre (optional sparkle), action right (⋯). |
 | **Buttons** `.btn` | Primary (`accent` / `on-accent`), tint (`accent-tint` / `accent`), ghost (`fill` / `ink`), red (`danger` / `on-danger`), red-tint (`danger-tint` / `danger-text`). Sizes 44 / 34 pill / 28 pill. One primary per screen. |
-| **Chips** `.chip` | 28px pills; default `accent-tint`; `.ghost` = `fill`; selected = `accent` / `on-accent`. Used for filters and "Try writing" examples. |
+| **Chips** `.chip` | 28px pills; default `accent-tint`; `.ghost` = `fill`; selected = `accent` / `on-accent`. Used for filters. |
 | **Segmented** `.seg` | `fill` track, selected segment `card` with small shadow. Priority Low/Medium/High; Upcoming All/Scheduled/Due only (desktop). |
 | **Field** `.field` | 44px, `card` bg, 1px `border`, radius 10, leading icon `ink2`, label above (12/16 500). |
 | **Badges** `.badge` | 18px uppercase 10px/700: CREATED (success tint), CHANGED (accent tint), DELETED (danger tint), NEW. |
 | **Banners** `.banner` | Tinted 12px-radius boxes with icon + bold line + body: info (`accent-tint`), warn, err, ok. |
-| **Note paper** (note editor) | White card, label "Your note", note text 17/25 on **ruled lines** (1px `fill2` every 25px, aligned under each text line), card min-height 286px. |
+| **Note paper** (note editor) | Phone: a drawer with a grabber, Cancel · "New note". From 768px: a centred popup like Task details (16px corners, `sep` border, the popup header: title left, × right, a line under it). Then the time written ("TODAY 15:35", overline), and a white card (its label "Your note" for screen readers only), 429px tall, the text scrolling inside it, note text 17/24 on **ruled lines** (1px `fill2` every 24px, filling the card and aligned under each text line; 24px keeps every line on whole device pixels at 125% and 150% screen scaling, so they all look the same). Bottom bar: a round caret (`fill`, turns while open) that opens a small rounded menu above it (Dictate a note / Upload file, round `fill` icons, labels that underline on hover), beside Make tasks; every button 44px tall. Make tasks and Cancel show a light band running over them while busy. The drawer is as tall as its content, so it doesn't scroll and the side margins stay even. Same side margins on every row. |
 | **Change row** `.change` | Badge · bold title · meta · pencil edit link. Grouped in a card under an overline "✓ 3 TASKS CREATED". |
 | **Needs-OK box** `.okbox` | 1.5px `warning` border, 14px radius: alert icon + "This needs your OK", consequence line, change rows on `bg`, buttons Cancel (ghost) + "Apply N changes" (red). |
 | **File chip** `.filechip` | 34px tinted file icon, name (600) + "234 KB · 2 pages", remove (×) button. |
-| **Voice sheet** | Bottom sheet over a scrim: "● Listening… 0:04", waveform bars (`accent`), "Live transcript" card, × (discard) and red stop button with a soft ring. |
+| **Voice sheet** | The app's sheet (× and the title "Dictate a note" in its header) over the note: "● Listening… 0:04", a 64px waveform of 4px bars (`accent`), a card for "Reading your note…" and errors, a 70px red stop button with a soft ring, and "Tap stop to add the words to your note…" under it. On Stop it closes and the words go into the note. Rows sit 16px apart, with the sheet's 20px margins. |
 | **Sidebar** (desktop) `.side` | Logo mark (links to Inbox) + "Agendal", search button with Ctrl+K, dynamic `sortedTabs` with counts (Inbox, Upcoming, Projects, Notes; active = `bg-primary/15! text-primary! font-semibold` matching active Theme Palette), "PROJECTS" list with dots and counts, user row (avatar, name, email, settings) pinned bottom. Custom order, tab toggles and count badges configured in Settings > Sidebar. |
 | **Settings modal** `.settings` | 2-pane Todoist-style dialog (`surface`, `rounded-2xl`, max 960px): left sub-navigation rail with category icons and search filtering, right content pane, custom select dropdowns, backdrop blur (`bg-scrim/60 backdrop-blur-[2px]`), and body scroll lock (`useBackgroundScrollLock`). |
 | **Page View modes** | `Flat view` (default, 800px centred column on wide screens, 1 project per row, task details in a centred popup modal `variant="popup"`) vs `Full width` (fluid multi-column grid, task details in right side panel `variant="panel"`). Configured in Settings > General. |

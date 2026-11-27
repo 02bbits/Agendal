@@ -35,7 +35,7 @@ People get tasks in bursts: a meeting sets a deadline, a group chat agrees on a 
 | Guest | Create an account, sign in, reset a password ([AA-1](../03-modules/AA-account-access.md#aa-1)–4) |
 | Account holder | Everything, on **their own** notes, tasks and projects only ([NF-9](../05-quality/nfr.md#nf-9)). There is no admin role |
 
-**System actors:** the assistant (reads a note and builds a plan, within the [safety rules](../02-domain/business-rules.md#safety-rules)), the device's service worker (offline data and sync, [NF-6](../05-quality/nfr.md#nf-6)), an email service (reset links, [AA-4](../03-modules/AA-account-access.md#aa-4)), Web Push (reminders, [TK-6](../03-modules/TK-tasks.md#tk-6)), Google Cloud Vision (OCR for photos and scanned PDFs, [NC-4](../03-modules/NC-note-capture.md#nc-4)) and the LLM provider (the language-model fallback, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md)).
+**System actors:** the assistant (reads a note and builds a plan, within the [safety rules](../02-domain/business-rules.md#safety-rules)), the device's service worker (offline data and sync, [NF-6](../05-quality/nfr.md#nf-6)), an email service (reset links, [AA-4](../03-modules/AA-account-access.md#aa-4)), Web Push (reminders, [TK-6](../03-modules/TK-tasks.md#tk-6)) and the LLM provider (the language-model fallback, dictation, and reading photos and scanned PDFs, [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md), [NC-4](../03-modules/NC-note-capture.md#nc-4)).
 
 ## Goals
 

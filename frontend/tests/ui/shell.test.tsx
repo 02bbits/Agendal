@@ -15,7 +15,7 @@ import {
 import { SettingsScreen } from "../../src/ui/features/settings/SettingsScreen";
 import { expectAxeCleanInBothThemes } from "./axe";
 
-const capture = { onWrite: () => {}, onAdd: () => {}, onDictate: () => {} };
+const capture = { onWrite: () => {}, onAdd: () => {} };
 
 describe("AppShell", () => {
   it("shows four labelled tabs with the active one marked (IM-07)", async () => {

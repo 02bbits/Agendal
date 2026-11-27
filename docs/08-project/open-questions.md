@@ -22,8 +22,8 @@ Decisions the docs depend on. A closed question keeps its row, so links to it st
 | <a id="q8"></a>Q8 | Confirm the metric targets | **Dropped.** Agendal is a demo project, so it has no success metrics or product analytics |
 | <a id="q9"></a>Q9 | Undo all after a task from the note was edited by hand | Restore only fields that still hold the note's value. Edited created tasks → confirm, then remove ([RV §2.4](../03-modules/RV-review-control.md#24-undo-all-rv-2-answers-to-q9-and-q10-q20)) |
 | <a id="q10"></a>Q10 | How long can a note be undone? | 30 days, matching the tombstone purge |
-| <a id="q11"></a>Q11 | Dictation: Web Speech API or a server service? | Web Speech API, with a one-time privacy notice ([NC §2.3](../03-modules/NC-note-capture.md#23-dictation-nc-3-should)) |
-| <a id="q12"></a>Q12 | Which text-extraction / OCR service? | **Google Cloud Vision** for photos and scanned PDFs. Text PDFs and Word files are read on the server ([NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) |
+| <a id="q11"></a>Q11 | Dictation: Web Speech API or a server service? | A server service: the device records and the app's language model writes it down, with a one-time privacy notice ([NC §2.3](../03-modules/NC-note-capture.md#23-dictation-nc-3-should)). Changed from the Web Speech API in #166: it was unreliable on iPhone and missing in Firefox, and notes mix Vietnamese and English |
+| <a id="q12"></a>Q12 | Which text-extraction / OCR service? | **The app's language model (Gemini)** for photos and scanned PDFs, with the existing key; changed from Google Cloud Vision in #166, so no second Google key is needed. Text PDFs and Word files are read on the server ([NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) |
 | <a id="q13"></a>Q13 | Tech stack | **Next.js + Laravel**, as the docs assumed ([architecture](../07-architecture/overview.md)) |
 | <a id="q14"></a>Q14 | Which database and hosting? | **PostgreSQL on one Linux server** ([deployment](../07-architecture/overview.md#deployment)) |
 | <a id="q15"></a>Q15 | Badge for a changed task: UPDATED or CHANGED? | **UPDATED** |

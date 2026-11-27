@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Notes;
 
+use App\Exceptions\ApiError;
 use App\Services\Clock\ClockInterface;
 use DateTimeImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -34,6 +35,36 @@ final class LlmBudget
 
             return true;
         }) === true ? $day : false;
+    }
+
+    /**
+     * A model call that reads a recording or a file (NC §2.3, §2.4): one of the user's daily calls like any other
+     * (SC-12), and one at a time per user, since each holds a PHP thread while the model answers. `$call` returns
+     * the result and the tokens the provider reported. Another call still running, or a spent budget, answers 429.
+     *
+     * @template T
+     *
+     * @param  callable(): array{T, ?int}  $call
+     * @return T
+     */
+    public function spend(int $userId, int $tokens, int $seconds, callable $call): mixed
+    {
+        $lock = Cache::lock('note-llm:media:'.$userId, $seconds);
+        if (! $lock->get()) {
+            throw new ApiError('error.rate_limited', 'Another recording or file is still being read.', 429, extra: ['retry_after' => 5]);
+        }
+        try {
+            $day = $this->reserve($userId, $tokens);
+            if ($day === false) {
+                throw new ApiError('error.rate_limited', "Today's model calls are used up.", 429, extra: ['retry_after' => $this->untilTomorrow()]);
+            }
+            [$result, $used] = $call();
+            $this->settle($tokens, $used ?? $tokens, $day);
+
+            return $result;
+        } finally {
+            $lock->release();
+        }
     }
 
     /** Replace a reservation with the tokens the provider reported, never more than reserved. */

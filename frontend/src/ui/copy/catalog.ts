@@ -65,12 +65,9 @@ export const catalog = {
   "note.placeholder": "Write a note…",
   "note.make_tasks": "Make tasks",
   "note.upload_file": "Upload file",
-  "note.upload_formats": "PDF, DOCX, TXT, MD",
+  "note.upload_formats":
+    "Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB.",
   "note.upload_choose": "Choose a document",
-  "note.upload_too_large": "The file must be smaller than 2 MB.",
-  "note.upload_replace": "Replace the current note with the uploaded document?",
-  "note.upload_too_long":
-    "The extracted text exceeds the 5,000 character limit.",
   "note.save_offline": "Save note",
   "note.saved_offline": "Saved. It'll turn into tasks when you're back online.",
   "note.listening": "Listening…",
@@ -79,7 +76,7 @@ export const catalog = {
   "note.mic_denied":
     "Microphone access is off. Turn it on in your browser settings to dictate.",
   "note.mic_notice":
-    "Your browser turns speech into text using its own online service.",
+    "Your recording is sent to Agendal's language model to turn it into text. It isn't kept.",
   "note.no_speech": "I didn't hear anything. Try again.",
   "note.dictation_failed":
     "Dictation stopped. Check your connection and try again.",

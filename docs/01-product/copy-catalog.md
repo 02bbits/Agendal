@@ -79,21 +79,18 @@ The two account emails ([AA-4](../03-modules/AA-account-access.md#aa-4)). The ba
 | `note.make_tasks` | Make tasks | Editor primary button |
 
 | `note.upload_file` † | Upload file | Note editor upload button |
-| `note.upload_formats` † | PDF, DOCX, TXT, MD | Supported formats |
+| `note.upload_formats` † | Text, Markdown, CSV, PDF, Word and photos of notes, up to 5 MB. | Supported formats |
 | `note.upload_choose` † | Choose a document | File input accessible label |
-| `note.upload_too_large` † | The file must be smaller than 2 MB. | Upload size error |
-| `note.upload_replace` † | Replace the current note with the uploaded document? | Replace confirmation |
-| `note.upload_too_long` † | The extracted text exceeds the 5,000 character limit. | Extraction length error |
 
 | `note.save_offline` | Save note | Editor primary button while offline |
 | `note.saved_offline` † | Saved. It'll turn into tasks when you're back online. | Toast after Save note (NC) |
 | `note.listening` | Listening… | Mic state ([NC-3](../03-modules/NC-note-capture.md#nc-3)) |
 | `note.stop` | Stop | Mic state |
-| `note.heard` | Here's what I heard. | After dictation |
+| `note.heard` | Here's what I heard. | Not shown: dictated words go straight into the note |
 | `note.mic_denied` † | Microphone access is off. Turn it on in your browser settings to dictate. | Mic permission denied |
-| `note.mic_notice` † | Your browser turns speech into text using its own online service. | First mic use, Continue / Cancel (NC) |
+| `note.mic_notice` † | Your recording is sent to Agendal's language model to turn it into text. It isn't kept. | Dictation sheet on first mic use: Continue in the header, × to cancel (NC) |
 | `note.no_speech` † | I didn't hear anything. Try again. | Dictation ended with no words |
-| `note.dictation_failed` † | Dictation stopped. Check your connection and try again. | Dictation network error |
+| `note.dictation_failed` † | Dictation stopped. Check your connection and try again. | Dictation failed: no connection, or the model failed or is off |
 | `note.dictation_offline` † | Dictation needs a connection. | Mic disabled while offline |
 | `note.reading_file` | Reading file… | Attach ([NC-4](../03-modules/NC-note-capture.md#nc-4)) |
 | `note.file_too_big` | Attach a file under 5 MB. | File error |

@@ -10,24 +10,22 @@ flowchart LR
     A[Agendal]
     M[(Email service)]
     P[(Web Push service)]
-    X[(Google Cloud Vision<br/>OCR for photos and scanned PDFs)]
-    L[(LLM provider<br/>low-confidence items only)]
+    L[(LLM provider<br/>low-confidence items, dictation, photos and scans)]
 
     U -- "notes, task edits" --> A
     A -- "plans, results, lists" --> U
     A -- "password-reset links" --> M
     A -- "reminders (TK-6)" --> P --> U
-    A -- "image or scanned PDF (not kept)" --> X
+    A -- "image or scanned PDF (not kept)" --> L
     A -. "low-confidence items (ADR-008)" .-> L
+    A -. "dictation audio (not kept)" .-> L
 ```
 
 | External system | Needed for | Failure impact |
 |---|---|---|
 | Email service (Resend, SMTP) | [AA-4](../03-modules/AA-account-access.md#aa-4) | Reset delayed. Sign-in otherwise unaffected |
 | Web Push | [TK-6](../03-modules/TK-tasks.md#tk-6) (Should) | No push reminders. Inbox still shows what is due |
-| Google Cloud Vision ([Q12](../08-project/open-questions.md#q12)) | [NC-4](../03-modules/NC-note-capture.md#nc-4) (Should): photos and PDFs without a text layer. Text PDFs and Word files are read on the server, with no outside call | Photos and scanned PDFs can't be read. Typing still works |
-| LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)) | Rules handle notes alone |
-| Browser speech service | [NC-3](../03-modules/NC-note-capture.md#nc-3) (Should), through the Web Speech API | Dictation unavailable. Typing still works |
+| LLM provider: Gemini, with the team's key (DeepSeek and Claude off for now) ([Q19](../08-project/open-questions.md#q19)) | The language-model fallback ([ADR-008](decisions/ADR-008-llm-fallback.md)), dictation ([NC-3](../03-modules/NC-note-capture.md#nc-3), Should), and photos and PDFs without a text layer ([NC-4](../03-modules/NC-note-capture.md#nc-4), Should, [Q12](../08-project/open-questions.md#q12)); text PDFs and Word files are read on the server | Rules handle notes alone. Dictation, photos and scans unavailable; typing still works |
 
 ## Containers
 
@@ -87,4 +85,4 @@ One Linux server ([Q14](../08-project/open-questions.md#q14)). It's a demo, so t
 | Email | Resend over SMTP (`smtp.resend.com`, TLS), from `no-reply@` the app's domain, with SPF, DKIM and DMARC records in Cloudflare DNS |
 | Backups | Nightly `pg_dump` from a systemd user timer of the deploy user, which also holds the repo, secrets and dumps (nothing under `/etc` or `/var`), encrypted with `age` (the private key is off the server), kept 7 days on the server and in a Cloudflare R2 bucket ([scalability](../05-quality/scalability.md#data-protection-and-operations)) |
 | CI | Lint, type-check and tests on every pull request (GitHub Actions). The note corpus runs on any change to the rules |
-| Secrets | Server-only files: `backend/.env.production` (mode 600: app key, database password, Resend key) and Docker secrets for the database password and the LLM provider key (`GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key`, readable only by the API's user). CI secrets for CI only. Later: push keys and the Google Cloud service-account key |
+| Secrets | Server-only files: `backend/.env.production` (mode 600: app key, database password, Resend key) and Docker secrets for the database password and the LLM provider key (`GEMINI_API_KEY_FILE=/run/secrets/gemini_api_key`, readable only by the API's user). CI secrets for CI only. Later: push keys |

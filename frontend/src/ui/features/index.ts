@@ -14,6 +14,10 @@ export type {
 // SettingsScreen and SearchPopup load on demand (app/frame/lazyOverlays.tsx): import them from their files
 export { NoteEditor, type NoteEditorProps } from "./notes/NoteEditor";
 export {
+  DictationSheet,
+  type DictationSheetProps,
+} from "./notes/DictationSheet";
+export {
   NoteResultScreen,
   type NoteResultScreenProps,
 } from "./notes/NoteResultScreen";

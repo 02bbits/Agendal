@@ -118,6 +118,11 @@ class AppServiceProvider extends ServiceProvider
             Limit::perMinute(30)->by('notes-min:'.$perUser($request)),
             Limit::perDay(300)->by('notes-day:'.$perUser($request)),
         ]);
+        // Each recording is one model call
+        $limiter('dictation', fn (Request $request) => [
+            Limit::perMinute(10)->by('dictation-min:'.$perUser($request)),
+            Limit::perDay(100)->by('dictation-day:'.$perUser($request)),
+        ]);
         $limiter('files', fn (Request $request) => [
             Limit::perHour(10)->by('files-hour:'.$perUser($request)),
             Limit::perDay(30)->by('files-day:'.$perUser($request)),

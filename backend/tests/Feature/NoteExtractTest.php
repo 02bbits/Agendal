@@ -7,6 +7,8 @@ namespace Tests\Feature;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Testing\TestResponse;
 use Tests\TestCase;
 use ZipArchive;
 
@@ -118,12 +120,12 @@ class NoteExtractTest extends TestCase
             str_repeat('A', 5001)
         );
 
+        // NC-E9: more than a note holds is refused, nothing is added
         $this->post(self::ENDPOINT, ['file' => $file], [
             'Accept' => 'application/json',
         ])
             ->assertUnprocessable()
-            ->assertJsonPath('error.code', 'error.invalid')
-            ->assertJsonPath('error.fields.file.0', 'note.upload_too_long');
+            ->assertJsonPath('error.fields.file.0', 'note.file_too_long');
     }
 
     public function test_invalid_pdf_signature_is_rejected(): void
@@ -307,9 +309,10 @@ class NoteExtractTest extends TestCase
 
         $file = UploadedFile::fake()->createWithContent('bomb.pdf', $pdf);
 
+        // The parser is stopped at the cap: far more than a note holds (NC-E9)
         $this->post(self::ENDPOINT, ['file' => $file], ['Accept' => 'application/json'])
             ->assertUnprocessable()
-            ->assertJsonPath('error.fields.file.0', 'note.upload_too_long');
+            ->assertJsonPath('error.fields.file.0', 'note.file_too_long');
     }
 
     private function docx(string $documentXml): UploadedFile
@@ -324,5 +327,132 @@ class NoteExtractTest extends TestCase
         unlink($path);
 
         return UploadedFile::fake()->createWithContent('test.docx', $bytes);
+    }
+
+    /** The model on, answering `$answer`. */
+    private function modelReads(array $answer): void
+    {
+        $this->authenticate();
+        config(['note_llm.enabled' => true, 'note_llm.provider' => 'gemini', 'note_llm.daily_user_calls' => 20,
+            'note_llm.key_file' => tap(tempnam(sys_get_temp_dir(), 'llm'), fn (string $file) => file_put_contents($file, 'test-only'))]);
+        Http::fake(['generativelanguage.googleapis.com/*' => Http::response(['candidates' => [['content' => ['parts' => [['text' => json_encode($answer)]]]]]])]);
+    }
+
+    /** A photo read by the model, which answers `$answer`. */
+    private function uploadPhoto(array $answer, ?string $bytes = null, string $name = 'note.png'): TestResponse
+    {
+        $this->modelReads($answer);
+        $file = UploadedFile::fake()->createWithContent($name, $bytes ?? $this->png(4, 4));
+
+        return $this->post(self::ENDPOINT, ['file' => $file], ['Accept' => 'application/json']);
+    }
+
+    private function png(int $width, int $height): string
+    {
+        $image = imagecreatetruecolor($width, $height);
+        ob_start();
+        imagepng($image);
+
+        return (string) ob_get_clean();
+    }
+
+    /** The bytes of the file the model was sent. */
+    private function sentFile(): string
+    {
+        $sent = Http::recorded()[0][0];
+
+        return (string) base64_decode($sent['contents'][0]['parts'][1]['inline_data']['data'], true);
+    }
+
+    /** A PDF of `$count` pages with no text layer, as a scanner makes it. */
+    private function scan(int $count): string
+    {
+        $objects = [
+            '<</Type/Catalog/Pages 2 0 R>>',
+            '<</Type/Pages/Count '.$count.'/Kids['.implode(' ', array_map(fn (int $n): string => "$n 0 R", range(3, $count + 2))).']>>',
+            ...array_fill(0, $count, '<</Type/Page/Parent 2 0 R/MediaBox[0 0 612 792]>>'),
+        ];
+        $pdf = "%PDF-1.4\n";
+        $offsets = [];
+        foreach ($objects as $index => $object) {
+            $offsets[] = strlen($pdf);
+            $pdf .= ($index + 1)." 0 obj\n$object\nendobj\n";
+        }
+        $xref = strlen($pdf);
+
+        return $pdf."xref\n0 ".(count($objects) + 1)."\n0000000000 65535 f \n"
+            .implode('', array_map(fn (int $offset): string => sprintf("%010d 00000 n \n", $offset), $offsets))
+            ."trailer\n<</Size ".(count($objects) + 1)."/Root 1 0 R>>\nstartxref\n$xref\n%EOF\n";
+    }
+
+    public function test_photo_is_read_by_the_model(): void
+    {
+        $this->uploadPhoto(['writing' => true, 'text' => "Mua sữa\nGọi mẹ"])
+            ->assertOk()
+            ->assertJsonPath('text', "Mua sữa\nGọi mẹ")
+            ->assertJsonPath('file_name', 'note.png');
+        Http::assertSent(fn ($request) => str_contains($request->url(), ':generateContent')
+            && $request['contents'][0]['parts'][1]['inline_data']['mime_type'] === 'image/png');
+    }
+
+    public function test_photo_without_writing_is_rejected(): void
+    {
+        $this->uploadPhoto(['writing' => false, 'text' => 'made up'])
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.file.0', 'note.file_no_text');
+    }
+
+    public function test_photo_reaches_the_model_upright_and_without_its_exif(): void
+    {
+        // A wide JPEG whose EXIF says "turn 90° clockwise" and carries a place
+        $image = imagecreatetruecolor(40, 20);
+        ob_start();
+        imagejpeg($image);
+        $jpeg = (string) ob_get_clean();
+        $tiff = 'II*'."\0".pack('V', 8).pack('v', 1).pack('vvVvv', 0x0112, 3, 1, 6, 0).pack('V', 0).'GPS 10.7769 N 106.7009 E';
+        $exif = "Exif\0\0".$tiff;
+        $jpeg = substr($jpeg, 0, 2)."\xFF\xE1".pack('n', strlen($exif) + 2).$exif.substr($jpeg, 2);
+
+        $this->uploadPhoto(['writing' => true, 'text' => 'Gọi mẹ'], $jpeg, 'note.jpg')->assertOk();
+
+        $sent = $this->sentFile();
+        $this->assertStringNotContainsString('GPS 10.7769', $sent);
+        $this->assertStringNotContainsString('Exif', $sent);
+        $this->assertSame([20, 40], array_slice((array) getimagesizefromstring($sent), 0, 2));
+    }
+
+    public function test_photo_too_large_to_decode_is_refused_before_the_model(): void
+    {
+        // A few bytes claiming 10,000 × 10,000 pixels: decoding it would need about 400 MB
+        $header = pack('NN', 10000, 10000)."\x08\x02\0\0\0";
+        $png = "\x89PNG\r\n\x1a\n".pack('N', 13).'IHDR'.$header.pack('N', crc32('IHDR'.$header));
+
+        $this->uploadPhoto(['writing' => true, 'text' => 'never read'], $png)
+            ->assertUnprocessable()
+            ->assertJsonPath('error.fields.file.0', 'note.file_failed');
+        Http::assertNothingSent();
+    }
+
+    public function test_scan_is_cut_to_its_first_five_pages_before_the_model(): void
+    {
+        $this->modelReads(['writing' => true, 'text' => 'Nộp báo cáo']);
+
+        $this->post(self::ENDPOINT, ['file' => UploadedFile::fake()->createWithContent('scan.pdf', $this->scan(7))], ['Accept' => 'application/json'])
+            ->assertOk()
+            ->assertJsonPath('pages', 7)
+            ->assertJsonPath('truncated', true);
+
+        $this->assertSame(5, preg_match_all('#/Type\s*/Page(?!s)#', $this->sentFile()));
+    }
+
+    public function test_photo_answers_429_once_the_days_model_calls_are_spent(): void
+    {
+        $this->modelReads(['writing' => true, 'text' => 'Gọi mẹ']);
+        config(['note_llm.daily_user_calls' => 0]);
+
+        $this->post(self::ENDPOINT, ['file' => UploadedFile::fake()->createWithContent('note.png', $this->png(4, 4))], ['Accept' => 'application/json'])
+            ->assertStatus(429)
+            ->assertJsonPath('error.code', 'error.rate_limited');
+        Http::assertNothingSent();
     }
 }

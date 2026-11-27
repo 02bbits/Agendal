@@ -12,7 +12,7 @@ Quality targets. [NF-1](#nf-1)–12 come from the PRD; [NF-13](#nf-13)–21 were
 | <a id="nf-6"></a>NF-6 | Offline | All lists, task edits and note capture work offline; changes queue and sync on reconnect without loss; conflicts resolve last-write-wins per field |
 | <a id="nf-7"></a>NF-7 | Platform | Installable PWA (manifest, service worker, icons); supports the last two versions of Chrome, Safari (iOS 16.4+), Samsung Internet, Firefox and Edge |
 | <a id="nf-8"></a>NF-8 | Layout | Mobile first and responsive: fluid from 320px (360px reference), a centred column up to 600px below 768px, the sidebar layout from 768px with a content column up to 712px, and an optional 400px side panel from 1280px ([UX-24](../01-product/ux-standards.md#ux-24), [UX-27](../01-product/ux-standards.md#ux-27), [UX-28](../01-product/ux-standards.md#ux-28)); `100dvh` height, safe-area insets respected; no native status bar or keyboard drawn |
-| <a id="nf-9"></a>NF-9 | Privacy | Notes, attached files and tasks belong to the account holder only; files are used to extract text and are not kept after extraction; no note or task text in logs; outside services get only what [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md) (the LLM provider) and [NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should) (Google Cloud Vision) allow |
+| <a id="nf-9"></a>NF-9 | Privacy | Notes, attached files and tasks belong to the account holder only; files are used to extract text and are not kept after extraction; no note or task text in logs; outside services get only what [ADR-008](../07-architecture/decisions/ADR-008-llm-fallback.md) (the LLM provider, also for dictation audio, [NC §2.3](../03-modules/NC-note-capture.md#23-dictation-nc-3-should), and photos and scans, [NC §2.4](../03-modules/NC-note-capture.md#24-file-to-note-nc-4-should)) allows |
 | <a id="nf-10"></a>NF-10 | Security | Passwords hashed (never stored or logged in plain text); HTTPS only; sign-in lockout per [AA-3](../03-modules/AA-account-access.md#aa-3); reset links single-use and expire in 60 minutes |
 | <a id="nf-11"></a>NF-11 | Reliability | No task change is lost: every applied note is stored with enough to undo it (before/after values) |
 | <a id="nf-12"></a>NF-12 | Content | Follows the [theme guide](../01-product/theme-guide.md)'s voice: sentence case, 24-hour times by default (12-hour is a setting, [AP-5](../03-modules/AP-app-platform.md#ap-5)), short dates, no emoji |
@@ -55,7 +55,7 @@ Added in the docs (not in the PRD) to make [NF-9](#nf-9) and [NF-10](#nf-10) tes
 
 | Field | Limit | When exceeded |
 |---|---|---|
-| Note text | 5,000 characters | Editor counter turns red at 4,500. Make tasks is disabled above 5,000 (`note.too_long`) |
+| Note text | 5,000 characters, 200 lines | Editor counter shows from 4,500; the field stops at 5,000 characters and 200 lines |
 | Items per note | 30 | Rejected before processing (`note.too_many_items`) |
 | Task title | 200 characters | Notes: cut at a word boundary, the rest moves to task notes. Manual: field stops at 200 |
 | Task notes | 5,000 characters | Field stops at the limit |

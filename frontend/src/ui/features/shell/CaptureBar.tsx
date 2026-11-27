@@ -1,18 +1,16 @@
 import { t } from "../../copy";
 import { IconButton } from "../../components/IconButton";
-import { MicIcon, PlusIcon, SparklesIcon } from "../../components/icons";
+import { PlusIcon, SparklesIcon } from "../../components/icons";
 
 export interface CaptureBarProps {
   /** Opens the note editor (NC, another owner's screen). */
   onWrite: () => void;
-  /** Opens the editor with dictation; hidden when the browser can't dictate. */
-  onDictate?: () => void;
   /** Opens the New task sheet; the + is hidden until there is one (IM-26). */
   onAdd?: () => void;
 }
 
 /** Floating "Write a note…" bar above the tabs, with the round + beside it. */
-export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
+export function CaptureBar({ onWrite, onAdd }: CaptureBarProps) {
   return (
     <div
       className={`grid items-center gap-2 px-gutter py-2 mb-1 md:px-gutter-wide ${onAdd ? "grid-cols-[minmax(0,1fr)_50px]" : "grid-cols-[minmax(0,1fr)]"}`}
@@ -29,14 +27,6 @@ export function CaptureBar({ onWrite, onDictate, onAdd }: CaptureBarProps) {
             {t("note.placeholder")}
           </span>
         </button>
-        {onDictate && (
-          <IconButton
-            className="size-9! min-h-9! bg-primary-tint!"
-            label={t("note.mic")}
-            icon={<MicIcon size={18} />}
-            onClick={onDictate}
-          />
-        )}
       </div>
       {onAdd && (
         <IconButton

@@ -9,6 +9,9 @@ return [
     // Characters allowed after normalising (NU §2.1, note.too_long).
     'max_length' => (int) env('NOTE_MAX_LENGTH', 5000),
 
+    // File to note (NC §2.4): the largest file accepted, in KB. PHP's upload_max_filesize must allow it.
+    'file_max_kb' => (int) env('NOTE_FILE_MAX_KB', 5120),
+
     // Items allowed after merging comma lists (NU-E14, note.too_many_items).
     'max_items' => (int) env('NOTE_MAX_ITEMS', 30),
 

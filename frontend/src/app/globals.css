@@ -1,5 +1,15 @@
 @import "../ui/theme.css";
 
+/* A skeleton waits before it shows, so a list that answers quickly never flashes one (UX-03) */
+@keyframes skeleton-wait {
+  from {
+    visibility: hidden;
+  }
+  to {
+    visibility: visible;
+  }
+}
+
 @keyframes slide-in-right {
   from {
     transform: translateX(24px);
@@ -45,6 +55,31 @@
     animation: none;
     background: none;
     color: inherit;
+  }
+}
+
+/* StatusMark: the progress arc stretches and shrinks as the glyph turns (after React Bits' Status Mark) */
+.status-arc {
+  stroke-dasharray: 25 100;
+  animation: status-arc 1.4s ease-in-out infinite;
+}
+@keyframes status-arc {
+  0% {
+    stroke-dasharray: 8 100;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 60 100;
+    stroke-dashoffset: -15;
+  }
+  100% {
+    stroke-dasharray: 8 100;
+    stroke-dashoffset: -100;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .status-arc {
+    animation: none;
   }
 }
 
@@ -487,5 +522,36 @@
   .animate-bell-ring {
     animation: none;
     transform: none;
+  }
+}
+
+/* A light band running over a button while its work is under way (Make tasks, Cancel on a file) */
+.bar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.bar-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    color-mix(in srgb, currentColor 18%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: bar-sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes bar-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-sweep::after {
+    animation: none;
+    display: none;
   }
 }

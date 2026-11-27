@@ -82,6 +82,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const { tab, navigate, back, pendingTab, shownTab, shownPath } =
     useTabNavigation(pathname, router, splash.enterApp);
   const overlays = useOverlays(pathname, router);
+  // Known only in the browser: the server render has no mic
   const {
     open: newTaskOpen,
     openNewTask,
@@ -237,7 +238,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
             }
             navigate={navigate}
             onOpenSearch={openSearchOrPage}
-            capture={{ onWrite: openNoteEditor, onAdd: openNewTask }}
+            capture={{
+              onWrite: openNoteEditor,
+              onAdd: openNewTask,
+            }}
             sidebar={
               isAuthPath(pathname)
                 ? undefined
