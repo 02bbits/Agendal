@@ -39,7 +39,7 @@ export function SearchScreen({
   searchNotes = async () => ({ items: [] }),
 }: SearchScreenProps) {
   return (
-    <div className="mx-auto flex h-dvh max-h-dvh w-full max-w-[800px] flex-col bg-paper pt-[env(safe-area-inset-top,0px)]">
+    <div className="-mx-5 flex h-dvh max-h-dvh flex-col bg-paper pt-[env(safe-area-inset-top,0px)]">
       <BackBar label={t("common.back")} onBack={onBack} />
       <SearchPanel
         variant="screen"
