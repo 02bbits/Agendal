@@ -37,8 +37,8 @@ Draft resource list. Once implemented, generated API docs are the source of trut
 | `POST /notes/{id}/make-task` | Keep a `followup` as a task (Edit the note uses `PUT /notes/{id}`) | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `PUT /notes/{id}` | Re-plan a `followup` in place with `{text, timezone}`; uses the server's edit time and the notes rate limiter. Editing applied notes is IM-47 | [RV-3](../03-modules/RV-review-control.md#rv-3) |
 | `POST /notes/{id}/undo` · `/redo` | Undo all, and the toast's redo within 10 s | [RV-2](../03-modules/RV-review-control.md#rv-2), [RV module](../03-modules/RV-review-control.md#7-api-contract) |
-| `POST /notes/dictation` | WAV recording (≤ 4 MB, 2 minutes) → `{text}` from the language model. The audio is discarded | [NC-3](../03-modules/NC-note-capture.md#nc-3), [NF-9](../05-quality/nfr.md#nf-9) |
-| `POST /notes/extract` | File (≤ 5 MB) → `{text, truncated, file_name, pages}`. Photos and scans are read by the language model. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
+| `POST /notes/dictation` | WAV recording (≤ 4 MB, 2 minutes) → `{text}` from the language model. The audio is discarded. `429` once the user's model calls are spent or while another of their recordings or files is read ([SC-12](security.md#sc-12)) | [NC-3](../03-modules/NC-note-capture.md#nc-3), [NF-9](../05-quality/nfr.md#nf-9) |
+| `POST /notes/extract` | File (≤ 5 MB) → `{text, truncated, file_name, pages}`. Photos and scans are read by the language model, a photo without its EXIF and a scan cut to 5 pages; `429` as for dictation. The file is discarded | [NC-4](../03-modules/NC-note-capture.md#nc-4), [NF-9](../05-quality/nfr.md#nf-9) |
 | `GET /tasks?view=inbox\|upcoming&filter=` | Lists | [LV-1](../03-modules/LV-lists-search.md#lv-1), [LV-2](../03-modules/LV-lists-search.md#lv-2) |
 | `GET /tasks/search?q=&status=all\|open\|completed&filter=&project_id=` | Search with counts | [LV-3](../03-modules/LV-lists-search.md#lv-3) |
 | `GET /notes/search?q=` | Notes in Search: short snippets, at most 20 | [LV-3](../03-modules/LV-lists-search.md#lv-3) |
