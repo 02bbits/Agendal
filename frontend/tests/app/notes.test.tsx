@@ -199,12 +199,13 @@ it("#168: a filter's list loading or failing keeps the header and the filter chi
   render(<NotesClient />);
   await screen.findByRole("button", { name: t("notes.needs") });
 
-  // The next list never comes back: still the same header and chips, a list placeholder below
+  // The next list never comes back: still the same header and chips, and the last list stays,
+  // faded and busy, instead of going blank
   fetchMock.mockImplementationOnce(() => new Promise(() => {}));
   await userEvent.click(screen.getByRole("button", { name: t("notes.made") }));
   expect(screen.getByRole("heading", { name: t("nav.notes") })).toBeTruthy();
   expect(screen.getByRole("button", { name: t("notes.all") })).toBeTruthy();
-  expect(screen.getByRole("status", { name: t("nav.notes") })).toBeTruthy();
+  expect(document.querySelector('[aria-busy="true"]')).toBeTruthy();
 
   // A failed list says so under the header and chips, with Retry, like Inbox and Upcoming
   fetchMock.mockImplementationOnce(

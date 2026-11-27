@@ -52,6 +52,9 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const [loadingMore, setLoadingMore] = useState<string | null>(null);
   const busy = loadingMore === requestKey;
   const data = loaded?.key === requestKey ? loaded.page : null;
+  // Another filter (or a refresh) loading: the last list stays, faded, rather than a skeleton
+  const shown = data ?? loaded?.page ?? null;
+  const stale = !data && shown !== null;
   const error = loaded?.key === requestKey && loaded.error;
   // The summary stays from the last list while another filter loads
   const summary = loaded?.page;
@@ -101,7 +104,7 @@ function NotesContent({ noteId }: { noteId?: string }) {
   const requestClose = useCallback(() => {
     if (closeGuard.current?.() !== false) close();
   }, [close]);
-  useNoteModal(panelRef, !!selected, wide, requestClose);
+  useNoteModal(panelRef, !!selected, wide, popup, requestClose);
   const navigate = useCallback(
     (href: string) => {
       const match = href.match(/^\/notes\/([^/?#]+)/);
@@ -163,10 +166,11 @@ function NotesContent({ noteId }: { noteId?: string }) {
     <div>
       <div hidden={!!selected && !wide} inert={!!selected}>
         <NotesScreen
-          status={data ? "ready" : error ? "error" : "loading"}
+          status={shown && !error ? "ready" : error ? "error" : "loading"}
+          stale={stale}
           onRetry={retry}
           limited={limited}
-          notes={data?.items ?? []}
+          notes={shown?.items ?? []}
           total={summary?.total}
           needs={summary?.needs_count}
           filter={filter}

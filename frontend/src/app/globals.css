@@ -524,3 +524,34 @@
     transform: none;
   }
 }
+
+/* A light band running over a button while its work is under way (Make tasks, Cancel on a file) */
+.bar-sweep {
+  position: relative;
+  overflow: hidden;
+}
+.bar-sweep::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 30%,
+    color-mix(in srgb, currentColor 18%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: bar-sweep 1.4s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes bar-sweep {
+  to {
+    transform: translateX(100%);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-sweep::after {
+    animation: none;
+    display: none;
+  }
+}

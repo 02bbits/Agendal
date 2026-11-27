@@ -154,7 +154,7 @@ export function DictationSheet({
   return (
     // Over the note's lower part, with the note dimmed behind it; a tap there closes it like ×
     <div
-      className="absolute inset-0 z-10 flex flex-col justify-end rounded-t-sheet bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
+      className="absolute inset-0 z-10 flex flex-col justify-end rounded-t-sheet bg-scrim md:rounded-2xl backdrop-blur-[2px] motion-safe:animate-fade-in"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -169,7 +169,7 @@ export function DictationSheet({
       >
         <div
           aria-hidden="true"
-          className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-3 md:hidden"
+          className="flex shrink-0 cursor-grab touch-none justify-center select-none pt-2 pb-3 md:hidden"
           {...drawer.grabber}
         >
           <span className="h-1 w-9 rounded-full bg-fill-2" />

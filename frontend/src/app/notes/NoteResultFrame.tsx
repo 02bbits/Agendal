@@ -15,18 +15,21 @@ export function useNoteModal(
   panelRef: RefObject<HTMLElement | null>,
   open: boolean,
   wide: boolean,
+  popup: boolean,
   requestClose: () => void,
 ): void {
   useModalFocus(panelRef, panelRef, open && wide, requestClose);
   useEffect(() => {
     if (!open) return;
     document.documentElement.dataset.noteSelected = "open";
-    if (wide) document.documentElement.dataset.notePanel = "open";
+    // Only a side panel takes room from the column (like data-task-panel=aside); a popup sits over
+    // it, so the capture bar and banners stay where they are
+    if (wide && !popup) document.documentElement.dataset.notePanel = "open";
     return () => {
       delete document.documentElement.dataset.notePanel;
       delete document.documentElement.dataset.noteSelected;
     };
-  }, [wide, open]);
+  }, [wide, popup, open]);
   useEffect(() => {
     if (!open || !wide) return;
     const background = [

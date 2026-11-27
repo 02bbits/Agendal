@@ -267,7 +267,9 @@ describe("NoteEditor submit (IM-42)", () => {
     await u.type(field(), "sql quiz monday 9am");
     await u.click(makeTasks());
 
-    expect(makeTasks().getAttribute("aria-busy")).toBe("true");
+    // While it is read, Make tasks becomes Cancel (the header keeps its own Cancel)
+    expect(screen.queryByRole("button", { name: "Make tasks" })).toBeNull();
+    expect(screen.getAllByRole("button", { name: "Cancel" })).toHaveLength(2);
     expect((field() as HTMLTextAreaElement).readOnly).toBe(true);
     expect(screen.queryByText(t("note.reading"))).toBeNull();
     await advance(300);
@@ -280,8 +282,7 @@ describe("NoteEditor submit (IM-42)", () => {
       t("note.reading_seconds", { seconds: 1 }),
     );
 
-    // A second tap and Ctrl+Enter while busy send nothing (NC-E10)
-    await u.click(makeTasks());
+    // Ctrl+Enter while busy sends nothing (NC-E10)
     await u.keyboard("{Control>}{Enter}{/Control}");
     expect(onSubmit).toHaveBeenCalledTimes(1);
 
@@ -533,11 +534,36 @@ describe("NoteEditor submit (IM-42)", () => {
     );
     await u.type(field(), "call mum");
     await u.click(makeTasks());
-    await u.click(screen.getByRole("button", { name: "Cancel" }));
+    // The header's Cancel (the first); the bar's Cancel stops the reading instead
+    await u.click(screen.getAllByRole("button", { name: "Cancel" })[0]!);
     await u.keyboard("{Escape}");
 
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.queryByRole("alertdialog")).toBeNull();
+  });
+
+  it("Cancel while the note is read sets its answer aside and keeps the note to edit", async () => {
+    let answer: (r: NoteResult) => void = () => {};
+    const onSubmitted = vi.fn();
+    const u = user();
+    render(
+      <NoteEditor
+        onClose={() => {}}
+        onSubmit={() =>
+          new Promise<NoteResult>((resolve) => (answer = resolve))
+        }
+        onSubmitted={onSubmitted}
+      />,
+    );
+    await u.type(field(), "call mum");
+    await u.click(makeTasks());
+    await u.click(screen.getAllByRole("button", { name: "Cancel" })[1]!);
+
+    expect(makeTasks()).toBeTruthy();
+    expect((field() as HTMLTextAreaElement).readOnly).toBe(false);
+    await act(async () => answer(made));
+    expect(onSubmitted).not.toHaveBeenCalled();
+    expect((field() as HTMLTextAreaElement).value).toBe("call mum");
   });
 
   it("is axe clean while reading and after an error, in both themes", async () => {

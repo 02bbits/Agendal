@@ -6,7 +6,9 @@ import {
   useRef,
   useState,
   type KeyboardEvent,
+  type ReactNode,
 } from "react";
+import { PanelHeader } from "../tasks/details/PanelHeader";
 import {
   clearDraft,
   keepDraftOnHide,
@@ -25,7 +27,7 @@ import { cx } from "../../components/cx";
 import { Dialog } from "../../components/Dialog";
 import { IconButton } from "../../components/IconButton";
 import {
-  ArrowUpIcon,
+  ChevronUpIcon,
   ImageIcon,
   MicIcon,
   PaperclipIcon,
@@ -78,6 +80,36 @@ const READING_AFTER_MS = 300;
 
 /** "Reading your note…" with a shine passing over it, and the seconds since Make tasks (the rules and, for
  * a low-confidence note, the language model). Only the words are announced, not each second. */
+/** A row of the tray menu: a round icon and a label that underlines on hover, like the app's links. */
+function TrayItem({
+  icon,
+  label,
+  disabled,
+  onClick,
+}: {
+  icon: ReactNode;
+  label: string;
+  disabled?: boolean;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className="focus-ring flex w-full cursor-pointer items-center gap-3 rounded-2xl border-0 bg-transparent px-3 py-2 text-left text-body text-ink disabled:cursor-default disabled:opacity-40"
+    >
+      <span
+        aria-hidden="true"
+        className="grid size-9 shrink-0 place-items-center rounded-full bg-fill text-ink-secondary"
+      >
+        {icon}
+      </span>
+      <span className="link-swipe">{label}</span>
+    </button>
+  );
+}
+
 function ReadingStatus() {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
@@ -367,19 +399,35 @@ export function NoteEditor({
 
   const canSubmit =
     VISIBLE.test(text) && stage !== "over" && wait <= 0 && !uploading;
+  // Cancel while the note is read: its answer is set aside and the note stays to edit. The request
+  // isn't aborted (that would read as no connection and queue the note); the same client id makes a
+  // later Make tasks the same note on the server, not a second one (ADR-003)
+  const submitRun = useRef(0);
+  const readingTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  function cancelSubmit() {
+    submitRun.current++;
+    clearTimeout(readingTimer.current);
+    sending.current = false;
+    setBusy(false);
+    setReading(false);
+  }
   const submit = async (confirmConflicts = false) => {
     // The ref, not `busy`: a second tap lands before React has re-rendered
     if (!canSubmit || !onSubmit || sending.current) return;
     sending.current = true;
     setBusy(true);
     setFailure(null);
-    const timer = setTimeout(() => setReading(true), READING_AFTER_MS);
+    const run = ++submitRun.current;
+    readingTimer.current = setTimeout(() => setReading(true), READING_AFTER_MS);
     const result = await onSubmit(
       latest.current,
       clientId.current,
       confirmConflicts,
     );
-    clearTimeout(timer);
+    if (run !== submitRun.current) return;
+    clearTimeout(readingTimer.current);
     sending.current = false;
     setBusy(false);
     setReading(false);
@@ -421,6 +469,15 @@ export function NoteEditor({
     null,
   );
   const replaceNext = useRef(false);
+  useEffect(() => {
+    if (!tools) return;
+    function closeOutside(event: PointerEvent) {
+      if (!(event.target as Element).closest("[data-note-tray]"))
+        setTools(false);
+    }
+    document.addEventListener("pointerdown", closeOutside);
+    return () => document.removeEventListener("pointerdown", closeOutside);
+  }, [tools]);
   function withMode(run: (replace: boolean) => void) {
     if (VISIBLE.test(latest.current)) setChoosing(() => run);
     else run(false);
@@ -576,11 +633,12 @@ export function NoteEditor({
 
   return (
     <>
-      {/* A drawer that slides up from the capture bar, as tall as the note (so nothing scrolls and the
+      {/* A phone: a drawer that slides up from the capture bar; from 768px a popup in the middle of the
+          screen, like Task details. Either is as tall as the note (so nothing scrolls and the
           margins stay even) up to the screen's height, over the content column; the tray floats over the
           note's bottom, so opening it never moves the drawer. A tap on the dimmed screen closes it like Cancel */}
       <div
-        className="fixed inset-0 z-[70] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in"
+        className="fixed inset-0 z-[70] bg-scrim backdrop-blur-[2px] motion-safe:animate-fade-in md:flex md:items-center md:justify-center md:p-8"
         onMouseDown={(event) => {
           if (event.target === event.currentTarget) requestClose();
         }}
@@ -607,17 +665,24 @@ export function NoteEditor({
           role="dialog"
           aria-modal="true"
           aria-labelledby={titleId}
-          className="absolute inset-x-0 bottom-[var(--keyboard-inset,0px)] mx-auto flex max-h-[calc(100dvh-env(safe-area-inset-top)-24px-var(--keyboard-inset,0px))] min-h-[320px] w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:right-[var(--panel-w,0px)] md:left-[var(--sidebar-w,0px)] md:max-w-[712px]"
+          className="absolute inset-x-0 bottom-[var(--keyboard-inset,0px)] mx-auto flex max-h-[calc(100dvh-env(safe-area-inset-top)-24px-var(--keyboard-inset,0px))] min-h-[200px] w-full max-w-[600px] flex-col rounded-t-sheet bg-paper shadow-lg motion-safe:animate-slide-up md:relative md:inset-auto md:mx-0 md:max-h-[calc(100dvh-64px)] md:max-w-[712px] md:overflow-hidden md:rounded-2xl md:border md:border-separator/60 md:shadow-2xl md:motion-safe:animate-scale-in"
           style={drawer.style}
         >
           <div
             aria-hidden="true"
-            className="flex shrink-0 cursor-grab touch-none justify-center pt-2 pb-1 md:hidden"
+            className="flex shrink-0 cursor-grab touch-none justify-center select-none pt-2 pb-1 md:hidden"
             {...drawer.grabber}
           >
             <span className="h-1 w-9 rounded-full bg-fill-2" />
           </div>
-          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:px-gutter-wide md:pt-4">
+          {/* From 768px the header of the app's popups (Task details): the title on the left, × on the right */}
+          <div className="hidden md:block">
+            <PanelHeader
+              title={t(note ? "note.edit" : "note.new_title")}
+              onClose={requestClose}
+            />
+          </div>
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center px-gutter pt-1 md:hidden">
             <button
               type="button"
               className="focus-ring -ml-2 min-h-11 cursor-pointer justify-self-start rounded-field border-0 bg-transparent px-2 text-body text-primary"
@@ -626,22 +691,15 @@ export function NoteEditor({
               {/* The underline swipes in on hover and focus, like every way back in the app */}
               <span className="link-swipe">{t("common.cancel")}</span>
             </button>
-            <h2
-              id={titleId}
-              className="m-0 flex items-center gap-1.5 text-heading font-semibold"
-            >
-              <SparklesIcon size={16} />
+            <h2 id={titleId} className="m-0 text-heading font-semibold">
               {t(note ? "note.edit" : "note.new_title")}
             </h2>
             <span />
           </div>
-          <p className="m-0 pb-3 text-center text-overline font-semibold text-ink-secondary uppercase tabular-nums">
+          <p className="m-0 text-center text-overline font-semibold text-ink-secondary uppercase tabular-nums md:pt-4">
             <time dateTime={writtenAt}>{stamp}</time>
           </p>
-          <div
-            ref={paperScroll}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto border-t border-separator px-gutter pt-4 pb-4 [scrollbar-width:none] md:px-gutter-wide"
-          >
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-gutter pt-4 pb-3 [scrollbar-width:none] md:px-gutter-wide">
             {attachment && (
               <div className="flex shrink-0 items-center gap-3 rounded-box bg-surface p-4">
                 <span
@@ -674,7 +732,14 @@ export function NoteEditor({
               </div>
             )}
             <div
-              className={`flex min-h-[429px] shrink-0 flex-col rounded-box bg-surface p-4 ${dropping ? "outline-2 outline-primary outline-dashed" : ""}`}
+              ref={paperScroll}
+              // The paper keeps its size and the text scrolls inside it, however much is written;
+              // dragged smaller on a phone, it shrinks with the drawer
+              className={cx(
+                "flex min-h-0 flex-col overflow-y-auto rounded-box bg-surface p-4 [scrollbar-width:none]",
+                drawer.dragged ? "flex-1" : "shrink grow-0 basis-[429px]",
+                dropping && "outline-2 outline-primary outline-dashed",
+              )}
             >
               <label htmlFor={fieldId} className="sr-only">
                 {attachment
@@ -704,15 +769,15 @@ export function NoteEditor({
                     .join(" ") || undefined
                 }
                 placeholder={t("note.placeholder")}
-                className="focus:outline-none min-h-[368px] w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[linear-gradient(transparent_23px,var(--color-fill-2)_23px)] bg-[length:100%_24px] leading-6 p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
+                className="focus:outline-none min-h-full w-full shrink-0 resize-none overflow-hidden border-0 bg-transparent bg-[linear-gradient(transparent_23px,var(--color-fill-2)_23px)] bg-[length:100%_24px] leading-6 p-0 pt-0.5 text-note text-ink [background-attachment:local] placeholder:text-ink-tertiary"
               />
             </div>
             <p aria-live="polite" className="sr-only">
               {announced.text}
             </p>
-            {/* Status, counter and errors share one place under the paper that keeps room for two lines,
+            {/* Status, counter and errors share one place under the paper that keeps room for a line,
                 so the drawer (as tall as the note) doesn't grow or jump when one shows */}
-            <div className="-mt-2 flex min-h-9 flex-col gap-1">
+            <div className="-mt-2 flex min-h-5 flex-col gap-1">
               {uploadError && (
                 <p role="alert" className="m-0 text-footnote text-error">
                   {t(uploadError)}
@@ -791,58 +856,51 @@ export function NoteEditor({
               }}
               disabled={busy || uploading || offline}
             />
-            <div
-              inert={!tools}
-              className={cx(
-                "absolute inset-x-0 bottom-full border-t border-separator bg-bar px-gutter py-3 backdrop-blur-lg transition-[opacity,translate] duration-200 ease-out motion-reduce:transition-none md:px-gutter-wide",
-                tools
-                  ? "translate-y-0 opacity-100"
-                  : "pointer-events-none translate-y-2 opacity-0",
-              )}
-            >
-              <div className="flex flex-col gap-2">
-                <div className="flex gap-3">
-                  {canDictate() && (
-                    <Button
-                      size="lg"
-                      className="flex-1 px-3! whitespace-nowrap"
-                      disabled={busy || offline}
-                      onClick={() => withMode(startDictation)}
-                    >
-                      <MicIcon size={18} />
-                      {t("note.mic")}
-                    </Button>
-                  )}
-                  <Button
-                    size="lg"
-                    className="flex-1 px-3! whitespace-nowrap"
-                    disabled={busy || uploading || offline || !!attachment}
-                    onClick={() =>
-                      withMode((replace) => {
-                        setTools(false);
-                        replaceNext.current = replace;
-                        fileInputRef.current?.click();
-                      })
-                    }
-                  >
-                    <PaperclipIcon size={18} />
-                    {t("note.upload_file")}
-                  </Button>
-                </div>
+            <div className="relative flex items-center gap-3">
+              {/* The tray: a small menu above the arrow, so opening it never moves or covers the note */}
+              <div
+                data-note-tray
+                inert={!tools}
+                className={cx(
+                  "absolute bottom-full left-0 mb-3 w-max min-w-64 origin-bottom-left rounded-3xl border border-separator bg-surface-elevated p-2 shadow-lg transition-[opacity,scale,translate] duration-150 ease-out motion-reduce:transition-none",
+                  tools
+                    ? "translate-y-0 scale-100 opacity-100"
+                    : "pointer-events-none translate-y-1 scale-95 opacity-0",
+                )}
+              >
+                {canDictate() && (
+                  <TrayItem
+                    icon={<MicIcon size={18} />}
+                    label={t("note.mic")}
+                    disabled={busy || offline}
+                    onClick={() => withMode(startDictation)}
+                  />
+                )}
+                <TrayItem
+                  icon={<PaperclipIcon size={18} />}
+                  label={t("note.upload_file")}
+                  disabled={busy || uploading || offline || !!attachment}
+                  onClick={() =>
+                    withMode((replace) => {
+                      setTools(false);
+                      replaceNext.current = replace;
+                      fileInputRef.current?.click();
+                    })
+                  }
+                />
                 {offline && (
-                  <p className="m-0 text-center text-footnote text-ink-tertiary">
+                  <p className="m-0 px-2 pt-1 pb-1.5 text-footnote text-ink-tertiary">
                     {t("note.file_offline")}
                   </p>
                 )}
               </div>
-            </div>
-            <div className="flex items-center gap-3">
               <IconButton
+                data-note-tray
                 className="size-11! min-h-11! shrink-0 bg-fill!"
                 label={t("note.tools")}
                 aria-expanded={tools}
                 icon={
-                  <ArrowUpIcon
+                  <ChevronUpIcon
                     className={cx(
                       "transition-transform duration-200 motion-reduce:transition-none",
                       tools && "rotate-180",
@@ -851,19 +909,21 @@ export function NoteEditor({
                 }
                 onClick={() => setTools((open) => !open)}
               />
-              {uploading ? (
+              {uploading || busy ? (
                 <Button
                   size="lg"
-                  className="flex-1"
-                  onClick={() => uploadAbort.current?.abort()}
+                  className="bar-sweep flex-1"
+                  onClick={() =>
+                    uploading ? uploadAbort.current?.abort() : cancelSubmit()
+                  }
                 >
-                  {t("common.cancel")}
+                  <span className="link-swipe">{t("common.cancel")}</span>
                 </Button>
               ) : (
                 <Button
                   variant="primary"
                   size="lg"
-                  className="flex-1"
+                  className={cx("flex-1", busy && "bar-sweep")}
                   busy={busy}
                   disabled={!canSubmit}
                   onClick={() => submit()}

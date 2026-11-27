@@ -26,7 +26,7 @@ export function NoteResultOverlay({
     onClose();
     return true;
   }
-  useNoteModal(panelRef, true, true, requestClose);
+  useNoteModal(panelRef, true, true, popup, requestClose);
   useHistoryEntry(true, requestClose);
 
   return (

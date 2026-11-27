@@ -1,5 +1,6 @@
 import { LoadingScreen, t } from "@/ui";
 import { readViewMode } from "@/ui/features/lists/storage";
+import { NotesSkeleton } from "@/ui/features/notes/NotesSkeleton";
 import {
   InboxSkeleton,
   ProjectSkeleton,
@@ -24,8 +25,8 @@ function pendingBody(pending: PendingTab, logo: boolean) {
     case "upcoming":
       return <UpcomingSkeleton board={readViewMode() === "board"} />;
     default:
-      // Notes keeps its own screen: a plain list skeleton until it is there
-      return <InboxSkeleton />;
+      // Notes: its chips and rows, the same skeleton the screen shows while its list loads
+      return <NotesSkeleton />;
   }
 }
 

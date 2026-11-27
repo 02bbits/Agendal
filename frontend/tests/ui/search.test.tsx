@@ -900,6 +900,30 @@ describe("SearchPanel & SearchPopup", () => {
     expect(screen.queryByText(/⌘K/)).toBeNull();
   });
 
+  it("doesn't hand a scroll on to the page from a part of the popup that can't scroll", () => {
+    render(
+      <SearchPopup
+        clock={{ now: () => new Date("2026-10-23T03:00:00Z"), timeZone: "UTC" }}
+        onClose={() => {}}
+        projects={mockProjects}
+        timeFormat="24h"
+        searchTasks={vi.fn()}
+        searchNotes={vi.fn()}
+        onOpenTask={() => {}}
+        onOpenProject={() => {}}
+        onOpenNote={() => {}}
+      />,
+    );
+    // Nothing inside has more to show, so a downward wheel there would scroll the page behind
+    const down = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 120,
+    });
+    screen.getByRole("dialog").dispatchEvent(down);
+    expect(down.defaultPrevented).toBe(true);
+  });
+
   it("locks the page behind the popup but keeps typing and scrolling inside it", () => {
     render(
       <SearchPopup
