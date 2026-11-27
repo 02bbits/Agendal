@@ -2,6 +2,7 @@
 
 use App\Models\User;
 use App\Providers\AppServiceProvider;
+use App\Services\Monitoring\ServerHealthAlert;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -113,6 +114,198 @@ it('#192: a query over the threshold logs once, with its SQL and request_id but 
         ->and($requestId)->toBe($response->headers->get('X-Request-Id'));
 });
 
+it('#225: a slow query posts once per window to the Discord webhook, SQL without bindings', function () {
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, " https://discord.test/api/webhooks/1/x \n");
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_slow', fn () => DB::select('select pg_sleep(0.05), ?::text as t', ['my private plan']));
+
+    $first = $this->getJson('/api/v1/_slow')->assertOk();
+    $this->getJson('/api/v1/_slow')->assertOk();
+
+    Http::assertSentCount(1);
+    Http::assertSent(function ($request) use ($first) {
+        $embed = $request['embeds'][0];
+        $fields = collect($embed['fields'])->pluck('value', 'name');
+
+        return $request->url() === 'https://discord.test/api/webhooks/1/x'
+            && $embed['title'] === 'Cảnh báo: truy vấn cơ sở dữ liệu chậm'
+            && $fields['Ngưỡng'] === '40 ms'
+            && $fields['Vị trí'] === '`GET /api/v1/_slow`'
+            && $fields['Mã request'] === '`'.$first->headers->get('X-Request-Id').'`'
+            && str_contains($fields['Câu truy vấn (không kèm giá trị)'], 'pg_sleep')
+            && ! str_contains(json_encode($request->data()), 'my private plan');
+    });
+    unlink($file);
+});
+
+it('#225: with the database cache, a slow throttle query does not alert on itself forever', function () {
+    discordWebhookFile();
+    Http::fake();
+    config(['cache.default' => 'database', 'database.slow_query_ms' => 0]);
+
+    DB::select('select 1');
+
+    // The select alerts; the cache's own queries while alerting do not
+    Http::assertSentCount(1);
+});
+
+it('#225: a slow query in a queued job names the job', function () {
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, 'https://discord.test/x');
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake();
+    $this->withoutDefer();
+
+    dispatch(new MonitoringSlowJob);
+
+    Http::assertSent(fn ($request) => collect($request['embeds'][0]['fields'])->contains('value', '`job MonitoringSlowJob`'));
+    unlink($file);
+});
+
+it('#225: without the webhook file, or when Discord fails, the request still succeeds', function (string $file) {
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake(fn () => throw new RuntimeException('down'));
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_slow', fn () => DB::select('select pg_sleep(0.05)'));
+
+    $this->getJson('/api/v1/_slow')->assertOk();
+})->with([
+    'no file' => '',
+    'webhook down' => fn () => tap(tempnam(sys_get_temp_dir(), 'webhook'), fn ($f) => file_put_contents($f, 'https://discord.test/x')),
+]);
+
+// #228: critical errors to the admins' Discord
+function discordWebhookFile(): string
+{
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, 'https://discord.test/x');
+    config(['logging.discord_alert.webhook_file' => $file]);
+
+    return $file;
+}
+
+/** @return list<array<string, string>> each posted embed's fields, by name */
+function discordFieldsSent(): array
+{
+    return Http::recorded()->map(fn ($pair) => collect($pair[0]['embeds'][0]['fields'])->pluck('value', 'name')->all())->values()->all();
+}
+
+it('#228: a 500 posts its class and line once per window, never its message', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_boom/{id}', fn () => throw new RuntimeException('my private plan'));
+
+    $first = $this->getJson('/api/v1/_boom/1')->assertStatus(500);
+    $this->getJson('/api/v1/_boom/2')->assertStatus(500);
+
+    $sent = discordFieldsSent();
+    expect($sent)->toHaveCount(1)
+        ->and($sent[0]['Lỗi'])->toBe('`RuntimeException`')
+        ->and($sent[0]['Vị trí'])->toBe('`GET /api/v1/_boom/{id}`')
+        ->and($sent[0]['Mã request'])->toBe('`'.$first->headers->get('X-Request-Id').'`')
+        ->and($sent[0]['Vị trí mã nguồn'])->toStartWith('`tests/Feature/MonitoringTest.php:')
+        ->and(json_encode(Http::recorded()->all()))->not->toContain('my private plan');
+});
+
+it('#228: in a database outage the alert still posts: its throttle never touches the database', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    config(['cache.default' => 'database', 'cache.stores.database.connection' => 'down']);
+    config(['database.connections.down' => ['driver' => 'pgsql', 'host' => '127.0.0.1', 'port' => 1, 'database' => 'x']]);
+    Route::middleware('api')->get('api/v1/_boom', fn () => throw new RuntimeException('outage'));
+
+    $this->getJson('/api/v1/_boom')->assertStatus(500);
+    $this->getJson('/api/v1/_boom')->assertStatus(500);
+
+    Http::assertSentCount(1);
+    expect(config('logging.discord_alert.cache_store'))->not->toBe('database');
+});
+
+it('#228: a 4xx posts nothing', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_missing', fn () => abort(404));
+    Route::middleware('api')->get('api/v1/_invalid', fn () => request()->validate(['name' => 'required']));
+
+    $this->getJson('/api/v1/_missing')->assertNotFound();
+    $this->getJson('/api/v1/_invalid')->assertUnprocessable();
+
+    Http::assertNothingSent();
+});
+
+it('#228: a failed queued job and a failed scheduled task each post their name', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    config(['queue.default' => 'database']);
+
+    dispatch(new MonitoringFailingJob);
+    $this->artisan('queue:work', ['--once' => true, '--tries' => 1]);
+    ScheduleFacade::call(fn () => throw new LogicException('purge broke'))->everyMinute()->name('test-purge');
+    $this->artisan('schedule:run');
+
+    $sent = discordFieldsSent();
+    expect($sent)->toHaveCount(2)
+        ->and($sent[0]['Job'])->toBe('`MonitoringFailingJob`')
+        ->and($sent[0]['Lỗi'])->toBe('`RuntimeException`')
+        ->and($sent[1]['Lệnh'])->toBe('`test-purge`')
+        ->and($sent[1]['Lỗi'])->toBe('`LogicException`')
+        ->and(json_encode(Http::recorded()->all()))->not->toContain('broke');
+});
+
+// #229: server thresholds to the admins' Discord
+it('#229: a row turning red posts once, and back to normal posts once', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    $alert = app(ServerHealthAlert::class);
+    $cpu = fn (bool $over) => [['CPU', $over ? '93%' : '12%', '85% for 5 min', $over], ['Load (1 min)', '0.4 on 4 cores', '', false]];
+
+    $alert->rows($cpu(false));
+    $alert->rows($cpu(true));
+    $alert->rows($cpu(true));
+    $alert->rows($cpu(false));
+
+    $embeds = Http::recorded()->map(fn ($pair) => $pair[0]['embeds'][0])->values();
+    expect($embeds)->toHaveCount(2)
+        ->and($embeds[0]['title'])->toBe('CPU vượt ngưỡng')
+        ->and(collect($embeds[0]['fields'])->pluck('value', 'name')->all())->toMatchArray(
+            ['Mức độ' => 'Nghiêm trọng', 'Chỉ số' => 'CPU', 'Giá trị hiện tại' => '93%', 'Ngưỡng' => '85% for 5 min'])
+        ->and($embeds[1]['title'])->toBe('CPU đã trở lại bình thường')
+        ->and(collect($embeds[1]['fields'])->firstWhere('name', 'Mức độ')['value'])->toBe('Đã khôi phục');
+});
+
+it('#229: a full disk is a warning', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+
+    app(ServerHealthAlert::class)->rows([['Disk', '84% of 120 GB', '80%', true]]);
+
+    expect(discordFieldsSent()[0]['Mức độ'])->toBe('Cảnh báo');
+});
+
+it('#229: no Server health reading for over a minute posts that the monitor stopped', function () {
+    discordWebhookFile();
+    Http::fake();
+    $this->withoutDefer();
+    $alert = app(ServerHealthAlert::class);
+
+    DB::table('pulse_values')->insert(['timestamp' => now()->subMinutes(3)->getTimestamp(), 'type' => 'host_health', 'key' => 'server', 'value' => '[]']);
+    $alert->checkMonitor();
+    DB::table('pulse_values')->update(['timestamp' => now()->getTimestamp()]);
+    $alert->checkMonitor();
+
+    $titles = Http::recorded()->map(fn ($pair) => $pair[0]['embeds'][0]['title'])->values()->all();
+    expect($titles)->toBe(['Giám sát máy chủ ngừng hoạt động', 'Giám sát máy chủ hoạt động trở lại']);
+});
+
 it('#192: Telescope entries are pruned daily after 48 hours', function () {
     $prune = collect(app(Schedule::class)->events())
         ->first(fn ($event) => str_contains($event->command, 'telescope:prune --hours=48'));
@@ -127,6 +320,16 @@ class MonitoringFailingJob implements ShouldQueue
     public function handle(): void
     {
         throw new RuntimeException('job broke');
+    }
+}
+
+class MonitoringSlowJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function handle(): void
+    {
+        DB::select('select pg_sleep(0.05)');
     }
 }
 

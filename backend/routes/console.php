@@ -1,6 +1,7 @@
 <?php
 
 use App\Console\Commands\PurgeTombstones;
+use App\Services\Monitoring\ServerHealthAlert;
 use App\Support\Audit;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -33,3 +34,7 @@ Schedule::command('reminders:send')->everyMinute()->withoutOverlapping(5);
 
 // #192: Telescope keeps 48 hours
 Schedule::command('telescope:prune --hours=48')->daily();
+
+// #229: the Server health monitor itself stopping (no reading) is posted to the admins' Discord
+Schedule::call(fn () => app(ServerHealthAlert::class)->checkMonitor())->everyMinute()->name('check-server-monitor')
+    ->when(fn () => (bool) config('pulse.enabled'));

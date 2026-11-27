@@ -50,6 +50,16 @@ return [
     |
     */
 
+    // #225: alerts posted to the admins' Discord. The webhook URL lives only in this file, never in .env
+    'discord_alert' => [
+        'webhook_file' => env('DISCORD_ALERT_WEBHOOK_FILE'),
+        'throttle_minutes' => (int) env('DISCORD_ALERT_THROTTLE_MINUTES', 5),
+        // Never the database store: an outage must still alert (DiscordAlert::cache())
+        'cache_store' => env('DISCORD_ALERT_CACHE_STORE', 'file'),
+        // The admins' language, apart from the app's (lang/<locale>/monitoring.php)
+        'locale' => env('DISCORD_ALERT_LOCALE', 'vi'),
+    ],
+
     'channels' => [
 
         'stack' => [

@@ -8,19 +8,27 @@ use App\Models\User;
 use App\Pulse\HostHealth;
 use App\Services\Clock\ClockInterface;
 use App\Services\Clock\SystemClock;
+use App\Services\Monitoring\CriticalErrorAlert;
+use App\Services\Monitoring\SlowQueryAlert;
 use App\Support\ApiDocs;
 use App\Support\EmailInput;
 use Closure;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Console\Events\ScheduledTaskFailed;
 use Illuminate\Database\Connection;
 use Illuminate\Database\Events\QueryExecuted;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Messages\MailMessage;
+use Illuminate\Queue\Events\JobFailed;
+use Illuminate\Queue\Events\JobProcessing;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Context;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
@@ -46,17 +54,24 @@ class AppServiceProvider extends ServiceProvider
     {
         ApiDocs::register();
 
-        // #192 slow-query alert, at error so the alert channel picks it up. SQL only: the bindings
-        // carry note and task text (SC-21). request_id comes from Context, like every log line
-        DB::listen(function (QueryExecuted $query) {
+        // #192 slow-query alert, logged at error and posted to the admins' Discord (#225). SQL only: the
+        // bindings carry note and task text (SC-21). request_id comes from Context, like every log line
+        $alert = $this->app->make(SlowQueryAlert::class);
+        DB::listen(function (QueryExecuted $query) use ($alert) {
             if ($query->time >= config('database.slow_query_ms')) {
-                Log::error('Slow query', ['sql' => $query->sql, 'ms' => $query->time]);
+                $alert($query->sql, $query->time);
             }
         });
+        // A request's queries over slow_request_ms: logged only, Discord is for single slow queries (#225).
         // ponytail: fires once per connection; a long-lived queue worker needs a per-job reset if it matters
         DB::whenQueryingForLongerThan(config('database.slow_request_ms'), function (Connection $connection) {
             Log::error('Slow request queries', ['ms' => $connection->totalQueryDuration()]);
         });
+        // The alert names the job it came from; hidden, so log lines stay as they were
+        Queue::before(fn (JobProcessing $event) => Context::addHidden('job', 'job '.class_basename($event->job->resolveName())));
+        // #228: a job out of attempts, or a failed scheduled task, is posted to the admins' Discord
+        Queue::failing(fn (JobFailed $event) => $this->app->make(CriticalErrorAlert::class)->jobFailed($event));
+        Event::listen(fn (ScheduledTaskFailed $event) => $this->app->make(CriticalErrorAlert::class)->scheduledTaskFailed($event));
 
         // #198 /pulse: open locally, elsewhere for Telescope's allow-list. Users show by id only (SC-21)
         Gate::define('viewPulse', fn (?User $user = null) => $this->app->environment('local')
