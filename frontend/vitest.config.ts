@@ -21,6 +21,7 @@ export default defineConfig({
       exclude: ["src/**/*.d.ts", "src/ui/copy/catalog.ts"],
       thresholds: {
         lines: 70,
+        statements: 70
       },
     },
   },
