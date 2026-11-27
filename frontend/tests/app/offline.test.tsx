@@ -249,7 +249,11 @@ describe("Offline notes (NC-6, WF-05)", () => {
   const writeNote = async (text: string) => {
     const u = userEvent.setup();
     await u.click(screen.getByRole("button", { name: t("note.capture_open") }));
-    await u.type(screen.getByRole("textbox", { name: "Your note" }), text);
+    // The editor loads on demand (NF-4), so wait for it
+    await u.type(
+      await screen.findByRole("textbox", { name: "Your note" }),
+      text,
+    );
     await u.click(screen.getByRole("button", { name: t("note.save_offline") }));
   };
   const openNotes = async () => {

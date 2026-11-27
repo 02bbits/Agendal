@@ -7,7 +7,8 @@ import {
   loadDraft,
   saveDraft,
 } from "../../src/lib/draft";
-import { NoteEditor, t, type NoteResult } from "../../src/ui";
+import { t, type NoteResult } from "../../src/ui";
+import { NoteEditor } from "../../src/ui/features/notes/NoteEditor";
 import done from "../../../docs/07-architecture/contracts/fixtures/note-result-done.json";
 import { expectAxeCleanInBothThemes } from "./axe";
 

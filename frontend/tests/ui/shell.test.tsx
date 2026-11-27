@@ -5,7 +5,6 @@ import { join } from "node:path";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
 import {
-  SettingsScreen,
   AppShell,
   RouteEmptyState,
   ScreenHeader,
@@ -13,6 +12,7 @@ import {
   type AccountSettings,
   type TabId,
 } from "../../src/ui";
+import { SettingsScreen } from "../../src/ui/features/settings/SettingsScreen";
 import { expectAxeCleanInBothThemes } from "./axe";
 
 const capture = { onWrite: () => {}, onAdd: () => {}, onDictate: () => {} };

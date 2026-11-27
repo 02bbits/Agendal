@@ -1,6 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import { SettingsScreen } from "../../src/ui";
+import { SettingsScreen } from "../../src/ui/features/settings/SettingsScreen";
 
 const defaultSettings = {
   theme: "system" as const,
