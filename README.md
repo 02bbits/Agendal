@@ -27,7 +27,7 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 ## Run it for a review
 
-The app is not deployed yet (IM-65), so it runs locally. You need only [Docker](https://www.docker.com/).
+The app runs on the team's Linux server (IM-65, set up as in [deploy/README.md](deploy/README.md)). To review it on your own machine you need only [Docker](https://www.docker.com/).
 
 ```bash
 git clone https://github.com/02bbits/Agendal.git
@@ -57,6 +57,7 @@ The first start takes a few minutes: it installs packages, creates `backend/.env
 | **Notes → tasks** | Write `sql quiz monday 9am, email the group tonight, buy printer ink tomorrow`. *Check this first* lists every change; edit a task, untick one, then **Apply**. The toast's **Undo all** reverses the whole note, and Redo brings it back within 10 s |
 | **Vietnamese** | `mai 9h họp nhóm, nộp báo cáo HCI thứ 2`, then `dời họp nhóm sang thứ 3` |
 | **Commands on tasks** | After the first note: `move sql quiz to friday`, `done buy printer ink`, `delete email the group` (a delete always asks first) |
+| **Dictation and files** | In the note's tray: **Dictate a note** (the words go into the note to check first), or **Upload file** (`.txt`, `.md`, `.csv`, `.pdf`, `.docx`, `.jpg`, `.png`, `.webp`, up to 5 MB): the text lands in the editor before Make tasks. Dictation and photos are read by the language model, so they need it on ([NC](docs/03-modules/NC-note-capture.md) §2.3, §2.4) |
 | **Unclear and skipped items** | `idea: dark mode for portfolio site` or `ok thanks` make no task; an undated task such as `Call mum` offers *When?* date chips |
 | **Notes tab** | Every saved note with its status (All / Accepted / Pending) and infinite scroll. Open one to see what it did, rename it, **Edit note** to re-plan it, or delete it (its tasks stay) |
 | **Inbox** | Overdue (red, with a count) before Today, a progress summary, *No date* and *Completed* (5, then Show all). Tick a task: it settles, moves down, and the toast offers Undo |
@@ -66,7 +67,7 @@ The first start takes a few minutes: it installs packages, creates `backend/.env
 | **Projects** | Create, rename, pick a colour, delete (keep or delete its tasks, with Undo); each project has a progress bar |
 | **Search** | `Ctrl+K` on desktop or the Search tab: tasks, notes and projects, with or without Vietnamese accents, quick filters (Overdue, Due this week, High priority…) and recent searches |
 | **Settings** | Account (name, password, two-step), General (week start, 12/24-hour time, time zone, page view), Appearance (light / dark / system with a circular reveal, 8 colour palettes), Sidebar (reorder by drag or keyboard, hide tabs), Reminders, Notifications. Sign out, or sign out on all devices |
-| **Security** | Three wrong passwords lock sign-in for 60 s. Forgot password sends a reset link to Mailpit. With two-step on, sign-in asks for an emailed code |
+| **Security** | Three wrong passwords lock sign-in for 60 s (20 in an hour: 15 minutes). Forgot password sends a reset link to Mailpit. With two-step on, sign-in asks for an emailed code |
 | **Phone layout** | Narrow the window or use DevTools device mode: a tab bar replaces the sidebar, and details and settings open full screen with a Back bar |
 | **Toasts** | Do several things quickly (tick three tasks): up to three toasts stack, each with its own Undo |
 
@@ -96,10 +97,11 @@ Each area links to its module spec, which has the requirements, the edge cases a
 - Create account with a 6-digit email code; the account is created only once the code is right. The same answer for an email already in use (no account enumeration). A password strength meter; weak passwords are refused.
 - Setup after sign-up: name, week start, time format, time zone, two-step sign-in.
 - Sign in with lockout (3 failures → 60 s per email and IP), optional two-step sign-in by emailed code, forgot and reset password, sign out and sign out everywhere.
-- Sanctum cookie session (`__Host-`, `Secure`), CSRF on writes, rate limits, an audit log for security events, branded emails.
+- Sanctum cookie session (`__Host-`, `Secure`), CSRF on writes, rate limits, an audit log for security events, branded emails sent from the queue.
+- Personal access tokens for scripts: six abilities (`tasks:read`, `tasks:write`, `projects:read`, `projects:write`, `notes:read`, `notes:write`) checked on every data route, 7/30/90-day expiry ([api.md](docs/07-architecture/api.md#personal-access-tokens)).
 
 **Notes** ([NC](docs/03-modules/NC-note-capture.md), [NU](docs/03-modules/NU-note-understanding.md), [RV](docs/03-modules/RV-review-control.md))
-- Note editor with a draft kept on the device; up to 5,000 characters and 30 items.
+- Note editor with a draft kept on the device; up to 5,000 characters and 30 items. Dictate a note, or turn a text, Markdown, CSV, PDF, Word file or photo into one (photos lose their EXIF before the model sees them).
 - Note understanding on the server with deterministic rules in English and Vietnamese: splitting, dates and times ("monday 9am", "mai 9h", "end of the month", "in 3 days"), repeats ("every monday 7am"), priority, projects and reminders. Ideas, FYIs and chatter are skipped.
 - Commands on existing tasks (done, move, delete), matched to open tasks; ties ask, and a delete always confirms.
 - A language-model fallback (Gemini) for the items the rules are unsure about: off by default, 20 calls per user per day ([ADR-008](docs/07-architecture/decisions/ADR-008-llm-fallback.md)).
@@ -124,11 +126,13 @@ Each area links to its module spec, which has the requirements, the edge cases a
 - Responsive from phone to desktop: a tab bar or a sidebar, a task panel or full-screen details, flat or full-width page view.
 - Settings with 6 tabs, light / dark / system themes, 8 palettes, a customisable sidebar, a loading screen on start, stacked toasts, Back navigation, WCAG 2.2 AA (axe checks in both themes).
 - Time zones: dates and times are floating local values, and "today" follows the device ([ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md)).
+- Reminders as Web Push notifications, sent by a queued job every minute ([TK §2.5](docs/03-modules/TK-tasks.md#25-reminders-tk-6-should)).
+- `GET sync` and `GET counts` answer `304 Not Modified` to a matching ETag, so an idle device's polling skips the list queries.
 
 ## Not built yet
 
-- **Voice and file notes:** notes are typed only.
-- **Release work:** deploy to the Linux server (IM-65), the end-to-end test suite (IM-61), the security, performance and manual accessibility passes (IM-62 to IM-64), and the retention purge job for old data (IM-55).
+- **Release work:** the traceability script (IM-60), the end-to-end test suite (IM-61), and the security, performance (Lighthouse) and manual accessibility passes (IM-62 to IM-64).
+- **Alerts to people:** errors, slow queries and server thresholds show on Pulse and in the logs, but nothing is sent to an admin yet (#225).
 - Out of scope for v1: shared lists, calendar sync, a Vietnamese interface, account deletion and export.
 
 The build plan, issue by issue, is in [docs/08-project/tasks.md](docs/08-project/tasks.md).
@@ -138,9 +142,9 @@ The build plan, issue by issue, is in [docs/08-project/tasks.md](docs/08-project
 | Part | What |
 |---|---|
 | `frontend/` | Next.js 16 and React 19, TypeScript strict, Tailwind CSS and daisyUI. Forwards `/api/*` and `/sanctum/*` to the backend, so the browser sees one site |
-| `backend/` | Laravel 13 JSON API at `/api/v1`, Sanctum cookie sessions, a queue worker for emails |
+| `backend/` | Laravel 13 JSON API at `/api/v1`, Sanctum cookie sessions and personal access tokens, a queue worker for emails and reminders, a scheduler |
 | Database | PostgreSQL 18 |
-| `docker-compose.yml` | The whole stack: PostgreSQL, Mailpit, the API, the queue worker, the dev server and the opt-in production build (`web-prod`) |
+| `docker-compose.yml` | The whole stack: PostgreSQL, Mailpit, the API, the queue worker, the scheduler, the dev server and the opt-in production build (`web-prod`) |
 
 A note becomes tasks on the server in one request: normalise, split into items, classify each one (task, command on an existing task, or skip), extract its fields with rules, send unsure items to the language model when it is on, match commands to open tasks, validate, apply the safety rules, and name the note. The result is a **plan** the user reviews before it is applied, and each applied note keeps an undo log for 30 days ([ADR-001](docs/07-architecture/decisions/ADR-001-note-plan-contract.md), [ADR-002](docs/07-architecture/decisions/ADR-002-undo-change-log.md)). The same text, time and tasks always give the same plan.
 
@@ -148,43 +152,47 @@ To turn the language model on, save a Gemini API key in a file, set `NOTE_LLM_EN
 
 ### Asset & image optimisation note (6b)
 
-- **On-demand loading:** Heavy overlays (`SearchPopup`, `SettingsScreen`, `NoteResultOverlay`) load lazily via `React.lazy` in `frontend/src/app/frame/lazyOverlays.tsx` once idle and are cached by the service worker for offline use.
+- **On-demand loading:** the search popup, Settings and the note result overlay are `React.lazy` chunks ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)), so they are not in the first load. Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
 - **Why raster image optimisation (`next/image` / WebP / `srcset`) is not used:** All in-app illustrations (`frontend/public/illustrations/*.svg`) and UI icons are **SVG** (which `next/image` does not optimise and which are already resolution-independent). The only raster images in the repository are the two **PNG** icons (`frontend/public/icons/icon-192.png` and `icon-512.png`), which must remain PNG for the PWA Web App Manifest. See [scalability.md](docs/05-quality/scalability.md#on-demand-overlays).
 
 ## Data model (ERD)
 
-Physical schema on PostgreSQL 18 (see [data-model.md](docs/07-architecture/data-model.md) for full columns, constraints, and indexes):
+The main tables on PostgreSQL 18, from the migrations in [backend/database/migrations](backend/database/migrations). Projects, tasks and notes are soft-deleted and carry a `change_seq` for sync ([ADR-005](docs/07-architecture/decisions/ADR-005-sync-protocol.md)). Laravel's own tables (sessions, cache, jobs, password resets) and Telescope and Pulse are left out. Every column, constraint and index is in [data-model.md](docs/07-architecture/data-model.md).
 
 ```mermaid
 erDiagram
     USERS ||--o{ PROJECTS : owns
     USERS ||--o{ TASKS : owns
     USERS ||--o{ NOTES : writes
-    USERS ||--o{ EMAIL_VERIFICATION_CODES : has
-    USERS ||--o{ PUSH_SUBSCRIPTIONS : registers
-    USERS ||--o{ PERSONAL_ACCESS_TOKENS : issues
-    USERS ||--o{ AUDIT_EVENTS : logs
-    PROJECTS ||--o{ TASKS : groups
-    NOTES ||--o{ TASKS : creates_from_note
-    TASKS ||--o{ TASKS : previous_occurrence
-    TASKS ||--o{ REMINDER_DELIVERIES : schedules
+    USERS ||--o{ EMAIL_VERIFICATION_CODES : "sign-up and sign-in codes"
+    USERS ||--o{ PUSH_SUBSCRIPTIONS : "devices for reminders"
+    USERS ||--o{ PERSONAL_ACCESS_TOKENS : "API tokens"
+    USERS |o--o{ AUDIT_EVENTS : "security events"
+    PROJECTS |o--o{ TASKS : groups
+    NOTES |o--o{ TASKS : "made from"
+    TASKS |o--o| TASKS : "next occurrence of"
+    TASKS ||--o{ REMINDER_DELIVERIES : "reminders sent"
 
     USERS {
         bigint id PK
         string email UK
+        string password
         string display_name
         string timezone
+        string week_start
+        string time_format
         string theme
         string theme_palette
         boolean two_factor_enabled
+        timestamptz email_verified_at
     }
     PROJECTS {
         uuid id PK
         bigint user_id FK
-        string name
+        string name "unique per user, case-insensitive"
         string colour
         bigint change_seq
-        timestamp deleted_at
+        timestamptz deleted_at
     }
     TASKS {
         uuid id PK
@@ -194,28 +202,70 @@ erDiagram
         uuid previous_occurrence_id FK
         string title
         date start_date
+        time start_time
         date due_date
+        time due_time
         string priority
         string reminder
+        string due_reminder
+        timestamptz remind_at
         string repeat
+        string repeat_rule
+        string project_order
+        string day_order
         boolean done
+        jsonb field_updated_at
         bigint change_seq
-        timestamp deleted_at
+        timestamptz deleted_at
     }
     NOTES {
         uuid id PK
         bigint user_id FK
-        uuid client_id
-        text text
+        uuid client_id "unique per user"
+        string text
         string name
+        string source_file_name
         string status
         jsonb plan
         jsonb applied
         jsonb undo_log
         string engine
         int plan_version
+        timestamptz written_at
         bigint change_seq
-        timestamp deleted_at
+        timestamptz deleted_at
+    }
+    EMAIL_VERIFICATION_CODES {
+        bigint user_id PK, FK
+        string purpose PK
+        string code_hash
+        timestamptz expires_at
+        smallint attempts
+    }
+    PUSH_SUBSCRIPTIONS {
+        bigint id PK
+        bigint user_id FK
+        text endpoint UK
+        jsonb keys
+    }
+    PERSONAL_ACCESS_TOKENS {
+        bigint id PK
+        bigint tokenable_id FK
+        string token UK
+        text abilities
+        timestamptz expires_at
+    }
+    REMINDER_DELIVERIES {
+        uuid task_id PK, FK
+        timestamptz remind_at PK
+        timestamptz sent_at
+    }
+    AUDIT_EVENTS {
+        bigint id PK
+        bigint user_id FK
+        string event
+        inet ip
+        timestamptz created_at
     }
 ```
 
@@ -230,8 +280,16 @@ erDiagram
 
 ## Quality
 
-- **Tests:** Pest tests on a real PostgreSQL database for the API and the note engine, a golden note corpus checked in CI, and about 1,200 Vitest tests for the frontend (screens, offline, sync, the service worker), with axe accessibility checks in light and dark.
-- **CI:** GitHub Actions runs Pint, PHPStan, Pest, Prettier, ESLint, the type check, Vitest, the production build and dependency audits on every pull request ([ci.yml](.github/workflows/ci.yml)).
+- **Tests:** 1,741 Pest tests on a real PostgreSQL database for the API and the note engine, with a golden note corpus, and 1,366 Vitest tests in 114 files for the frontend (screens, offline, sync, the service worker), with axe accessibility checks in light and dark.
+- **Coverage**, measured in CI with a 70% floor that fails the build:
+
+  | Part | Lines | Statements | Branches | Functions |
+  |---|---|---|---|---|
+  | Backend (Pest, PCOV) | **95.4%** | | | |
+  | Frontend (Vitest, V8) | **91.36%** | **91.36%** | 87.97% | 85.78% |
+
+  From the [CI run on `main`](https://github.com/02bbits/Agendal/actions/runs/45942859790) for 3a374c1 (27 Nov 2026); each run's summary shows its numbers, and `coverage.xml` and `lcov.info` are uploaded as artifacts.
+- **CI:** GitHub Actions runs Pint, Larastan, Pest with coverage, the API docs export, Prettier, ESLint, the type check, Vitest with coverage, the production build, dependency audits and a secret scan (gitleaks) on every pull request and on `main` ([ci.yml](.github/workflows/ci.yml)).
 - **Way of working:** every change goes through a GitHub issue and a reviewed pull request; the docs have a dated [changelog](docs/CHANGELOG.md).
 
 ## Team
@@ -268,7 +326,7 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 
 ### Monitoring
 
-Telescope is at <http://localhost:8000/telescope>, open to anyone locally. On the server it records only faults (exceptions, `5xx` requests, failed jobs, scheduled tasks, slow queries) and opens only for the signed-in emails in `TELESCOPE_ALLOWED_EMAILS` (comma-separated); `TELESCOPE_ENABLED=false` turns it off. Entries keep no request or response bodies, query bindings, emails or mail (SC-21), and are pruned after 48 hours.
+Telescope is at <http://localhost:8000/telescope>, open to anyone locally. On the server it records every request, job and scheduled run, but of the rest only exceptions and slow queries, and opens only for the signed-in emails in `TELESCOPE_ALLOWED_EMAILS` (comma-separated); `TELESCOPE_ENABLED=false` turns it off. Entries keep no request or response bodies, query bindings, emails or mail (SC-21), and are pruned after 48 hours.
 
 Pulse is at <http://localhost:8000/pulse> (through Next.js on the server, `https://<domain>/pulse`), behind the same allow-list. It is the error dashboard: exceptions (5xx, failed jobs and scheduled tasks, language-model call failures) by class and line with counts, queue throughput and failures, slow requests, jobs, queries (from 500 ms) and outgoing calls, and the busiest users by id. It keeps no messages, query values, cache keys or emails (SC-21) and trims itself after 7 days. Nothing is pushed: check it after a deploy and when someone reports a problem; each error's log line still has its `request_id`. Links it builds use `APP_URL`, so that must be the public origin. Its Servers and Server health cards (#199) fill only while `php artisan pulse:check` runs (the `pulse` service on the server; locally `docker compose exec api php artisan pulse:check`); see deploy/README.md for the thresholds.
 
