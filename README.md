@@ -43,6 +43,15 @@ Screenshots from the production build running locally (`compose.prod.yml`, 27 No
 | <img src="docs/screenshots/14-phone-inbox.jpg" alt="Inbox on a phone with the tab bar" width="250"> | <img src="docs/screenshots/15-phone-new-task.jpg" alt="New task sheet on a phone" width="250"> |
 | **Phone:** a tab bar replaces the sidebar | **Phone:** the New task sheet |
 
+Web Push reminders, sent for real through Microsoft's push service (`notify.windows.com`) to Edge on Windows, on 27 Nov 2026. A task starting at 17:39 with a 5-minute reminder; at 17:34:02 the scheduler's `reminders:send` queued `SendReminderPushes`, which logged `reminders.sent {"sent":4,"gone":0}`, and the notification arrived:
+
+| | |
+|---|---|
+| <img src="docs/screenshots/21-real-task-with-reminder.jpg" alt="Task starting at 5:39 pm with a reminder 5 minutes before" width="400"> | <img src="docs/screenshots/22-real-reminder-windows.png" alt="Windows notification from localhost:3100 for the task" width="400"> |
+| **The task:** reminder 5 minutes before the start | **The notification** from the browser, at 5:34 pm |
+| <img src="docs/screenshots/23-real-reminder-in-app.jpg" alt="In-app Reminders banner with the task" width="400"> | <img src="docs/screenshots/20-test-push-windows.png" alt="Windows notification for the Settings test" width="400"> |
+| **In the app:** the Reminders banner with View | **Settings → Reminders → Send a test notification** |
+
 Behind the app:
 
 | | |
