@@ -24,6 +24,8 @@ x-api: &api
       target: gemini_api_key
     - source: vapid_private_key
       target: vapid_private_key
+    - source: discord_webhook_url
+      target: discord_webhook_url
   networks: [internal, egress]
 
 services:
@@ -102,6 +104,7 @@ secrets:
   db_password: { file: ./secrets/db_password }
   gemini_api_key: { file: ./secrets/gemini_api_key }
   vapid_private_key: { file: ./secrets/vapid_private_key }
+  discord_webhook_url: { file: ./secrets/discord_webhook_url }
 
 volumes:
   db-data:

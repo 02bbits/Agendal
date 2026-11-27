@@ -113,6 +113,58 @@ it('#192: a query over the threshold logs once, with its SQL and request_id but 
         ->and($requestId)->toBe($response->headers->get('X-Request-Id'));
 });
 
+it('#225: a slow query posts once per window to the Discord webhook, SQL without bindings', function () {
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, " https://discord.test/api/webhooks/1/x \n");
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake();
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_slow', fn () => DB::select('select pg_sleep(0.05), ?::text as t', ['my private plan']));
+
+    $first = $this->getJson('/api/v1/_slow')->assertOk();
+    $this->getJson('/api/v1/_slow')->assertOk();
+
+    Http::assertSentCount(1);
+    Http::assertSent(function ($request) use ($first) {
+        $embed = $request['embeds'][0];
+        $fields = collect($embed['fields'])->pluck('value', 'name');
+
+        return $request->url() === 'https://discord.test/api/webhooks/1/x'
+            && $embed['title'] === 'Cảnh báo: truy vấn cơ sở dữ liệu chậm'
+            && $fields['Ngưỡng'] === '40 ms'
+            && $fields['Vị trí'] === '`GET /api/v1/_slow`'
+            && $fields['Mã request'] === '`'.$first->headers->get('X-Request-Id').'`'
+            && str_contains($fields['Câu truy vấn (không kèm giá trị)'], 'pg_sleep')
+            && ! str_contains(json_encode($request->data()), 'my private plan');
+    });
+    unlink($file);
+});
+
+it('#225: a slow query in a queued job names the job', function () {
+    $file = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($file, 'https://discord.test/x');
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake();
+    $this->withoutDefer();
+
+    dispatch(new MonitoringSlowJob);
+
+    Http::assertSent(fn ($request) => collect($request['embeds'][0]['fields'])->contains('value', '`job MonitoringSlowJob`'));
+    unlink($file);
+});
+
+it('#225: without the webhook file, or when Discord fails, the request still succeeds', function (string $file) {
+    config(['database.slow_query_ms' => 40, 'logging.discord_alert.webhook_file' => $file]);
+    Http::fake(fn () => throw new RuntimeException('down'));
+    $this->withoutDefer();
+    Route::middleware('api')->get('api/v1/_slow', fn () => DB::select('select pg_sleep(0.05)'));
+
+    $this->getJson('/api/v1/_slow')->assertOk();
+})->with([
+    'no file' => '',
+    'webhook down' => fn () => tap(tempnam(sys_get_temp_dir(), 'webhook'), fn ($f) => file_put_contents($f, 'https://discord.test/x')),
+]);
+
 it('#192: Telescope entries are pruned daily after 48 hours', function () {
     $prune = collect(app(Schedule::class)->events())
         ->first(fn ($event) => str_contains($event->command, 'telescope:prune --hours=48'));
@@ -127,6 +179,16 @@ class MonitoringFailingJob implements ShouldQueue
     public function handle(): void
     {
         throw new RuntimeException('job broke');
+    }
+}
+
+class MonitoringSlowJob implements ShouldQueue
+{
+    use Queueable;
+
+    public function handle(): void
+    {
+        DB::select('select pg_sleep(0.05)');
     }
 }
 
