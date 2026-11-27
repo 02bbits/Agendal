@@ -10,8 +10,9 @@ import {
 } from "../../../components/icons";
 import { ProjectDot } from "../../../components/ProjectDot";
 import { t, type CopyKey } from "../../../copy";
-import type { SearchFilter } from "../../../domain/search";
+import type { NoteHit, SearchFilter } from "../../../domain/search";
 import type { Project } from "../../../domain/types";
+import { NoteHitRow } from "./SearchHits";
 import { SearchHeading } from "./SearchSection";
 
 /** A quick filter: one of the search filters, or Completed. */
@@ -45,17 +46,23 @@ const QUICK_FILTERS: ReadonlyArray<{
 export function SearchHome({
   projects,
   recent,
+  recentNotes = [],
+  today = "",
   onFilter,
   onProject,
   onRecent,
+  onOpenNote,
   onRemoveRecent,
   onClearRecent,
 }: {
   projects: Project[];
   recent: string[];
+  recentNotes?: NoteHit[];
+  today?: string;
   onFilter: (filter: QuickFilter) => void;
   onProject: (id: string) => void;
   onRecent: (query: string) => void;
+  onOpenNote?: (id: string) => void;
   onRemoveRecent: (query: string) => void;
   onClearRecent: () => void;
 }) {
@@ -128,9 +135,24 @@ export function SearchHome({
 
       <div>
         <SearchHeading>{t("search.tab_notes")}</SearchHeading>
-        <p className="m-0 px-3 pt-1 pb-2 text-footnote text-ink-tertiary">
-          {t("search.no_notes")}
-        </p>
+        {recentNotes.length > 0 ? (
+          <div className="flex flex-col gap-1 px-1">
+            {recentNotes.map((note) => (
+              <button
+                key={note.id}
+                type="button"
+                onClick={() => onOpenNote?.(note.id)}
+                className="focus-ring flex w-full cursor-pointer items-start gap-3 rounded-tile border-0 bg-transparent px-3 py-2 text-left transition-colors hover:bg-fill"
+              >
+                <NoteHitRow note={note} query="" today={today} />
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="m-0 px-3 pt-1 pb-2 text-footnote text-ink-tertiary">
+            {t("search.no_notes")}
+          </p>
+        )}
       </div>
 
       {projects.length > 0 && (

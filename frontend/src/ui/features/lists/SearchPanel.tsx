@@ -30,6 +30,7 @@ import { useSearch } from "./useSearch";
 export interface SearchPanelProps {
   variant: "popup" | "screen";
   projects: Project[];
+  recentNotes?: NoteHit[];
   today: string;
   timeFormat: TimeFormat;
   searchTasks(params: {
@@ -85,6 +86,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
     {
       variant,
       projects,
+      recentNotes,
       today,
       timeFormat,
       searchTasks,
@@ -180,10 +182,14 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
       if (input.trim()) addRecent(input);
       onOpenProject(id);
     };
+    const openNote = (id: string) => {
+      if (input.trim()) addRecent(input);
+      onOpenNote(id);
+    };
     const openRow = (row: ResultRow) => {
       if (row.type === "task") openTask(row.id);
       else if (row.type === "project") openProject(row.id);
-      else onOpenNote(row.id);
+      else openNote(row.id);
     };
 
     const keyboard = useSearchKeyboard({
@@ -252,7 +258,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
               listboxId={listboxId}
               activeIndex={keyboard.activeIndex}
               onOpenTask={openTask}
-              onOpenNote={onOpenNote}
+              onOpenNote={openNote}
               onOpenProject={openProject}
               today={today}
               timeFormat={timeFormat}
@@ -261,6 +267,8 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
             <SearchHome
               projects={projects}
               recent={recent}
+              recentNotes={recentNotes}
+              today={today}
               onFilter={chooseQuickFilter}
               onProject={(id) => constrain({ projectId: id })}
               onRecent={(query) => {
@@ -270,6 +278,7 @@ export const SearchPanel = forwardRef<HTMLInputElement, SearchPanelProps>(
                 setRecent(readRecent());
                 search.runNow();
               }}
+              onOpenNote={openNote}
               onRemoveRecent={(query) => setRecent(removeRecent(query))}
               onClearRecent={() => {
                 clearRecent();

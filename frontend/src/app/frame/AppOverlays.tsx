@@ -1,5 +1,5 @@
 "use client";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
@@ -9,11 +9,14 @@ import {
   ROUTES,
   t,
   type NewTaskSheetProps,
+  type NoteHit,
   type Project,
   type ProjectWithCounts,
 } from "@/ui";
 import { createProject } from "@/lib/projectApi";
 import {
+  listNotes,
+  noteEntriesToHits,
   notesChanged,
   rememberNote,
   replanNote,
@@ -62,7 +65,23 @@ export function AppOverlays({
   const wide = usePanelScreen();
   const { note, search: searchPopup, settings: settingsPopup } = overlays;
   const { editingNote } = note;
+  const [recentNotes, setRecentNotes] = useState<NoteHit[]>([]);
   useEffect(warmOverlays, []);
+
+  useEffect(() => {
+    if (!searchPopup.searching) return;
+    let active = true;
+    listNotes("all")
+      .then((res) => {
+        if (active) {
+          setRecentNotes(noteEntriesToHits((res?.items ?? []).slice(0, 5)));
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [searchPopup.searching]);
 
   // A task from search opens beside the list on a wide screen, or on its own page
   const openTask = (id: string) => {
@@ -129,13 +148,16 @@ export function AppOverlays({
           clock={appClock}
           onClose={searchPopup.closeSearch}
           projects={projects}
+          recentNotes={recentNotes}
           timeFormat={settings.timeFormat}
           searchTasks={search}
           searchNotes={searchNotes}
           onOpenTask={openTask}
           onOpenProject={openProject}
-          onOpenNote={() => {
-            // TODO: open the note here once the Notes screen is done.
+          onOpenNote={(id) => {
+            searchPopup.closeSearch();
+            if (wide) note.openResult(id);
+            else navigate(ROUTES.note(id));
           }}
         />
       )}

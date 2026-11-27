@@ -391,6 +391,17 @@ export async function searchNotes(q: string): Promise<{ items: NoteHit[] }> {
   return handleResponse<{ items: NoteHit[] }>(response);
 }
 
+/** Map recent `NoteListEntry` rows to `NoteHit`s for Search home. */
+export function noteEntriesToHits(entries: NoteListEntry[]): NoteHit[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    title: entry.name?.trim() || entry.excerpt,
+    snippet: entry.name?.trim() ? entry.excerpt : "",
+    status: entry.status,
+    written_at: entry.written_at,
+  }));
+}
+
 /**
  * Apply changes and Edit note on Check this first: `POST /notes/{id}/apply` (RV §7). The
  * note as it is now, or the copy saying why not. A network failure reads as "needs a connection".

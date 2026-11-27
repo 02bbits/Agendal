@@ -9,6 +9,7 @@ export interface SearchScreenProps {
   onBack(): void;
   navigate?: Navigate;
   projects?: Project[];
+  recentNotes?: NoteHit[];
   today?: string;
   timeFormat?: TimeFormat;
   searchTasks?(params: {
@@ -29,6 +30,7 @@ export function SearchScreen({
   onBack,
   navigate,
   projects = [],
+  recentNotes = [],
   today = "",
   timeFormat = "24h",
   searchTasks = async () => ({
@@ -44,6 +46,7 @@ export function SearchScreen({
       <SearchPanel
         variant="screen"
         projects={projects}
+        recentNotes={recentNotes}
         today={today}
         timeFormat={timeFormat}
         searchTasks={searchTasks}
@@ -54,8 +57,8 @@ export function SearchScreen({
         onOpenProject={(id) => {
           navigate?.(ROUTES.project(id));
         }}
-        onOpenNote={() => {
-          // TODO: open the note here once the Notes screen is done.
+        onOpenNote={(id) => {
+          navigate?.(ROUTES.note(id));
         }}
       />
     </div>

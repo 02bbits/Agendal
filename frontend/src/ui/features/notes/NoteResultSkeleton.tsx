@@ -1,4 +1,5 @@
 import { BackBarSkeleton } from "../../components/BackBar";
+import { cx } from "../../components/cx";
 
 const ROWS = ["45%"];
 
@@ -12,9 +13,12 @@ export function NoteResultSkeleton({ page }: { page: boolean }) {
       role="status"
       aria-busy="true"
       data-testid="note-result-loading"
-      className="flex animate-pulse flex-col gap-4 pb-8"
+      className={cx(
+        "flex animate-pulse flex-col gap-4 pb-8",
+        page && "-mx-5 px-4",
+      )}
     >
-      {page && <BackBarSkeleton />}
+      {page && <BackBarSkeleton className="-mx-4" />}
       {/* "TODAY 12:06 · 1 TASK MADE", then the title with Rename and Delete */}
       <div className="flex flex-col gap-2 pt-1">
         <div className="h-3 w-40 rounded-md bg-fill/60" />

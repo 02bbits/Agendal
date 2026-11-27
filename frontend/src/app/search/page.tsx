@@ -4,8 +4,8 @@ import { useWideScreen } from "@/ui/components/useMediaQuery";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { projects as fetchProjects, search as apiSearch } from "@/lib/taskApi";
-import { searchNotes } from "@/lib/noteApi";
-import { SearchScreen, useToday, type Project } from "@/ui";
+import { listNotes, noteEntriesToHits, searchNotes } from "@/lib/noteApi";
+import { SearchScreen, useToday, type NoteHit, type Project } from "@/ui";
 import { useAppFrame } from "../AppFrame";
 import { appClock } from "../appClock";
 
@@ -14,6 +14,7 @@ function SearchContent() {
   const { back, navigate, settings, openSearch } = useAppFrame();
   const isWide = useWideScreen();
   const [projectList, setProjectList] = useState<Project[]>([]);
+  const [recentNotes, setRecentNotes] = useState<NoteHit[]>([]);
   const today = useToday(appClock);
 
   useEffect(() => {
@@ -28,6 +29,11 @@ function SearchContent() {
       fetchProjects()
         .then((res) => setProjectList(res ?? []))
         .catch(() => {});
+      listNotes("all")
+        .then((res) =>
+          setRecentNotes(noteEntriesToHits((res?.items ?? []).slice(0, 5))),
+        )
+        .catch(() => {});
     }
   }, [isWide]);
 
@@ -40,6 +46,7 @@ function SearchContent() {
       onBack={back}
       navigate={navigate}
       projects={projectList}
+      recentNotes={recentNotes}
       today={today}
       timeFormat={settings.timeFormat}
       searchTasks={apiSearch}

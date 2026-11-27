@@ -209,7 +209,12 @@ export function NoteResultScreen({
   );
   if (note.status === "followup")
     return (
-      <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
+      <div
+        className={cx(
+          "flex flex-col",
+          presentation === "screen" && "-mx-5 px-4",
+        )}
+      >
         {presentation === "screen" && <NoteBackBar onBack={onDone} />}
         <div className="mt-1 flex items-start gap-2">
           <Heading
@@ -273,7 +278,9 @@ export function NoteResultScreen({
     note.text.length > LONG_QUOTE || note.text.split("\n").length > 4;
 
   return (
-    <div className={cx("flex flex-col", presentation === "screen" && "px-4")}>
+    <div
+      className={cx("flex flex-col", presentation === "screen" && "-mx-5 px-4")}
+    >
       {presentation === "screen" && <NoteBackBar onBack={onDone} />}
 
       <p
