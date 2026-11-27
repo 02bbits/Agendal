@@ -13,7 +13,6 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 - [Tour 1: the app (dev server, :3000)](#tour-1-the-app-dev-server-3000)
 - [Tour 2: PWA, offline and sync (production build, :3001)](#tour-2-pwa-offline-and-sync-production-build-3001)
 - [Everything that is built](#everything-that-is-built)
-- [Not built yet](#not-built-yet)
 - [How it works](#how-it-works)
 - [Under the hood](#under-the-hood)
 - [Data model (ERD)](#data-model-erd)
@@ -149,14 +148,6 @@ Each area links to its module spec, which has the requirements, the edge cases a
 - Time zones: dates and times are floating local values, and "today" follows the device ([ADR-006](docs/07-architecture/decisions/ADR-006-time-zones.md)).
 - Reminders as Web Push notifications, sent by a queued job every minute ([TK §2.5](docs/03-modules/TK-tasks.md#25-reminders-tk-6-should)).
 - `GET sync` and `GET counts` answer `304 Not Modified` to a matching ETag, so an idle device's polling skips the list queries.
-
-## Not built yet
-
-- **Release work:** the traceability script (IM-60), the end-to-end test suite (IM-61), and the security, performance (Lighthouse) and manual accessibility passes (IM-62 to IM-64).
-- **Alerts to people:** errors, slow queries and server thresholds show on Pulse and in the logs, but nothing is sent to an admin yet (#225).
-- Out of scope for v1: shared lists, calendar sync, a Vietnamese interface, account deletion and export.
-
-The build plan, issue by issue, is in [docs/08-project/tasks.md](docs/08-project/tasks.md).
 
 ## How it works
 
