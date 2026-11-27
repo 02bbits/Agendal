@@ -8,7 +8,6 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 ## Contents
 
-- [Course rubric map](#course-rubric-map)
 - [Demo & screenshots](#demo--screenshots)
 - [Run it for a review](#run-it-for-a-review)
 - [Tour 1: the app (dev server, :3000)](#tour-1-the-app-dev-server-3000)
@@ -16,81 +15,11 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 - [Everything that is built](#everything-that-is-built)
 - [Not built yet](#not-built-yet)
 - [How it works](#how-it-works)
+- [Under the hood](#under-the-hood)
 - [Data model (ERD)](#data-model-erd)
 - [Quality](#quality)
 - [Team](#team)
 - [For developers](#for-developers)
-
-## Course rubric map
-
-For the CSB35050 final project review: where each rubric item lives on `main`, how it was done, and the proof. Numbers are from the [CI run on `main`](https://github.com/02bbits/Agendal/actions/runs/45982270498) for ada7789 (27 Nov 2026). The app runs at <https://agendal.kkqqq.uk>. Items still open are marked **Partly** and say what is missing.
-
-### Task 1: source control and workflow
-
-| Item | How | Evidence |
-|---|---|---|
-| 1(a) Code on GitHub | Public repo with description and topics | [02bbits/Agendal](https://github.com/02bbits/Agendal) |
-| 1(b) Commit messages | Conventional Commits (`feat:`, `fix:`, `perf:`, `test:`, `docs:`, `chore:`), one change per commit, issue referenced (`Refs #201`) | `git log --oneline`, e.g. `eece9af perf: ETag and 304 on sync and counts (Refs #201)` |
-| 1(c) GitHub Issues | Every piece of work is an issue with scope and "Done when", labels, assignee and milestone | e.g. [#192](https://github.com/02bbits/Agendal/issues/192), [#196](https://github.com/02bbits/Agendal/issues/196); plan in [docs/08-project/tasks.md](docs/08-project/tasks.md) |
-| 1(d) GitHub workflow | Topic branch → pull request that `Closes #n` → code-owner review → required CI (Backend, Frontend, Secret scan) → merge | [Pull requests](https://github.com/02bbits/Agendal/pulls?q=is%3Apr), [ci.yml](.github/workflows/ci.yml) |
-
-### Task 2: database
-
-| Item | How | Evidence |
-|---|---|---|
-| 2(a) Schema and migrations | PostgreSQL 18, normalised, foreign keys, `CHECK` constraints, composite, partial and trigram indexes, Laravel migrations | [migrations](backend/database/migrations), [ERD](#data-model-erd), [data-model.md](docs/07-architecture/data-model.md) |
-| 2(b) Seeding | Factories for User, Project, Task, Note (`HasFactory`); `DatabaseSeeder` makes the demo account and its data; a test checks the seed | [factories](backend/database/factories), [DatabaseSeeder.php](backend/database/seeders/DatabaseSeeder.php), [DemoSeedTest.php](backend/tests/Feature/DemoSeedTest.php) |
-
-### Task 3: interface and features
-
-| Item | How | Evidence |
-|---|---|---|
-| 3(a) Next.js and Tailwind | Next.js 16 front end on the Laravel API, Tailwind CSS and daisyUI utility classes, `sm:`/`md:` breakpoints for phone and desktop, reusable components; React escapes output and the code has no `dangerouslySetInnerHTML` | [frontend/src/ui/components](frontend/src/ui/components), [screenshots](#demo--screenshots) |
-| 3(b) Sign up, sign in, profile | Sign-up with an emailed 6-digit code, passwords hashed (`hashed` cast, Argon2id in production), sign-in lock after 3 wrong tries, two-step sign-in, Settings › Account | [Auth controllers](backend/app/Http/Controllers/Auth), [RegisterTest.php](backend/tests/Feature/RegisterTest.php), [LoginTest.php](backend/tests/Feature/LoginTest.php) |
-| 3(c) CSRF and server validation | Sanctum's `XSRF-TOKEN` cookie, sent back as `X-XSRF-TOKEN` on every write; `FormRequest` classes validate on the server; errors come back per field and show under the field | [Requests](backend/app/Http/Requests), [frontend/src/lib/api.ts](frontend/src/lib/api.ts) |
-| 3(e) Queries and filters | Eloquent filters by keyword (accent-insensitive), status, quick filters (overdue, this week, high priority) and project; Notes All / Accepted / Pending; Upcoming All / Scheduled / Due only; keyset paging | [SearchQuery.php](backend/app/Services/Tasks/SearchQuery.php), [UpcomingQuery.php](backend/app/Services/Tasks/UpcomingQuery.php), [SearchApiTest.php](backend/tests/Feature/SearchApiTest.php) |
-| 3(f) External APIs | **Gemini** reads the note items the rules are unsure about: key from a secret file, 20 s timeout, quota, bad-schema and connection errors handled and logged. **Web Push** (VAPID) sends reminders to the browser push services on an allow-list. **Partly:** Web Push is shown working for real (screenshots and log below); a real Gemini call is not recorded in the repo yet and will be in the demo video | [NoteLlmFallback.php](backend/app/Services/Notes/NoteLlmFallback.php), [note_llm.php](backend/config/note_llm.php), [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php); [PushClient.php](backend/app/Services/Push/PushClient.php), [push.php](backend/config/push.php), [ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php); [real reminder](#real-web-push) |
-| 3(g) Web tests | 1,376 Vitest tests in 116 files (screens, offline, sync, the service worker, axe accessibility checks in both themes). Coverage is measured in CI with a 70% floor: **90.55% lines and statements**, 87.59% branches, 84.41% functions | [vitest.config.ts](frontend/vitest.config.ts), [frontend/tests](frontend/tests), [CI run](https://github.com/02bbits/Agendal/actions/runs/45982270498) |
-
-### Task 4: REST API
-
-| Item | How | Evidence |
-|---|---|---|
-| 4(a) Resource controllers | `/api/v1` CRUD for tasks, projects and notes (`index`, `store`, `show`, `update`, `destroy`), Eloquent with API Resources, `FormRequest` validation, status codes 201 / 204 / 404 / 422 / 429, one JSON error shape with a `request_id` | [routes/api.php](backend/routes/api.php), [Resources](backend/app/Http/Resources), [TaskApiTest.php](backend/tests/Feature/TaskApiTest.php), [ApiBaseTest.php](backend/tests/Feature/ApiBaseTest.php) |
-| 4(b) Sanctum tokens | The SPA uses Sanctum's cookie session. Scripts use personal access tokens: `createToken` with six abilities (`tasks:read\|write`, `projects:read\|write`, `notes:read\|write`), 7, 30 or 90-day expiry, and each data route names the abilities it needs (`abilities:` middleware) | [TokenController.php](backend/app/Http/Controllers/TokenController.php), [TokenAbilities.php](backend/app/Http/Middleware/TokenAbilities.php), [ApiTokenTest.php](backend/tests/Feature/ApiTokenTest.php) (PR [#216](https://github.com/02bbits/Agendal/pull/216)) |
-| 4(c) Scramble | API docs generated from the code at `/docs/api`, with the cookie and CSRF security scheme; a test checks every `/api/v1` route is documented; CI exports `api.json` | [scramble.php](backend/config/scramble.php), [ApiDocsTest.php](backend/tests/Feature/ApiDocsTest.php), [screenshot](docs/screenshots/17-api-docs.jpg) |
-| 4(d) API tests | 1,757 Pest tests on a real PostgreSQL database (1 skipped). Coverage is measured in CI with `--min=70`: **95.2% lines** | [backend/tests](backend/tests), [CI run](https://github.com/02bbits/Agendal/actions/runs/45982270498) (PR [#213](https://github.com/02bbits/Agendal/pull/213)) |
-
-### Task 5: logging and monitoring
-
-| Item | How | Evidence |
-|---|---|---|
-| 5(a) Telescope | Allow-listed by email outside local, hides sensitive headers and data, records requests, jobs, errors and slow queries, pruned after 48 hours | [TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php), [screenshot](docs/screenshots/18-telescope-requests.jpg) |
-| 5(b) Errors and logging | Custom error pages for every framework error, friendly JSON errors with a `request_id`, daily log files where every line has the `request_id`. **Partly:** nothing is pushed to an admin yet ([#225](https://github.com/02bbits/Agendal/issues/225)) | [errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php), [AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php), [logging.php](backend/config/logging.php) |
-| 5(c) Slow query alert | `DB::listen` logs any query over 500 ms, and `whenQueryingForLongerThan` any request over 2 s of queries, at `error` with the SQL and `request_id`, never the values; Pulse lists slow queries. **Partly:** the alert is not sent to an admin yet (#225) | [AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php) |
-| 5(d) Server monitoring | Laravel Pulse with the Servers card and our Server health card: CPU, load, memory, swap, disk, Postgres connections, API and web status, red past set thresholds (CPU 85% for 5 min, memory 90%, disk 80%). **Partly:** no network metric and no alert sent (#225) | [ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php), [screenshot](docs/screenshots/16-pulse-server-health.jpg) |
-
-### Task 6: performance and scale
-
-| Item | How | Evidence |
-|---|---|---|
-| 6(a) Async work | Reminders: `reminders:send` runs every minute and queues `SendReminderPushes` (`ShouldQueue`; temporary push failures are tried again for the failed devices only, and devices the push service reports gone are removed). All five auth emails implement `ShouldQueue` (PR [#212](https://github.com/02bbits/Agendal/pull/212)). The front end queues offline edits and syncs them later | [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php), [QueuedMailNotification.php](backend/app/Notifications/Concerns/QueuedMailNotification.php), [QueuedMailNotificationsTest.php](backend/tests/Feature/QueuedMailNotificationsTest.php) |
-| 6(b) Loading resources | Minified and route-split build, tab prefetching, prerendered static parts (`cacheComponents`), fonts through `next/font`. Search, Settings and the note result overlay are `React.lazy` chunks fetched when the page is idle (PR [#219](https://github.com/02bbits/Agendal/pull/219)). Raster image optimisation doesn't apply: every image in the UI is SVG ([why](#asset--image-optimisation-note-6b)) | [lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx), [scalability.md](docs/05-quality/scalability.md#on-demand-overlays) |
-| 6(c) Caching | What is cached and what isn't: app shell and hashed files in the service worker, versioned by build; API answers `no-store, private`. `GET sync` and `GET counts` send an ETag and answer `304 Not Modified` (PR [#217](https://github.com/02bbits/Agendal/pull/217)). No `Cache::remember` data cache, on purpose: the ETag check is three index lookups, and a data cache would have to be cleared on every write from every device | [CacheValidationTest.php](backend/tests/Feature/CacheValidationTest.php), [SecurityHeaders.php](backend/app/Http/Middleware/SecurityHeaders.php), [scalability.md](docs/05-quality/scalability.md#design-rules-that-keep-it-scaling) |
-| 6(d) Antipatterns | Capacity analysis and rules in the docs; project task lists in one grouped query instead of N+1; every index leads with `user_id`; partial indexes; keyset paging; Telescope and Pulse watch slow requests and queries | [scalability.md](docs/05-quality/scalability.md), [ProjectTaskLists.php](backend/app/Services/Projects/ProjectTaskLists.php) |
-
-### Review notes from the trial grading
-
-| Note | Status on `main` |
-|---|---|
-| Auth emails sent inside the request | Fixed: queued (PR #212) |
-| README without ERD, screenshots or demo link | Fixed here: [ERD](#data-model-erd), [screenshots](#demo--screenshots); the demo video link is added when it is recorded |
-| Gemini called inside `DB::transaction` | Open |
-| `tasks_search_trgm` index expression doesn't match the search query | Open |
-| Upcoming loads every task from `from` and pages in PHP; Inbox overdue/today have no limit | Open |
-| Upcoming `from` checked by regex, not `date_format` | Open |
-| Session, cache, queue and Telescope share one PostgreSQL | Open, noted in [scalability.md](docs/05-quality/scalability.md) |
-| Service worker could cache `/telescope`, `/pulse`, `/docs` | Open |
 
 ## Demo & screenshots
 
@@ -115,23 +44,7 @@ Screenshots from the production build running locally (`compose.prod.yml`, 27 No
 | <img src="docs/screenshots/14-phone-inbox.jpg" alt="Inbox on a phone with the tab bar" width="250"> | <img src="docs/screenshots/15-phone-new-task.jpg" alt="New task sheet on a phone" width="250"> |
 | **Phone:** a tab bar replaces the sidebar | **Phone:** the New task sheet |
 
-<a id="real-web-push"></a>Web Push reminders, sent for real through Microsoft's push service (`notify.windows.com`) to Edge on Windows, on 27 Nov 2026. A task starting at 17:39 with a 5-minute reminder; at 17:34:02 the scheduler's `reminders:send` queued `SendReminderPushes`, which logged `reminders.sent {"sent":4,"gone":0}`, and the notification arrived:
-
-| | |
-|---|---|
-| <img src="docs/screenshots/21-real-task-with-reminder.jpg" alt="Task starting at 5:39 pm with a reminder 5 minutes before" width="400"> | <img src="docs/screenshots/22-real-reminder-windows.png" alt="Windows notification from localhost:3100 for the task" width="400"> |
-| **The task:** reminder 5 minutes before the start | **The notification** from the browser, at 5:34 pm |
-| <img src="docs/screenshots/23-real-reminder-in-app.jpg" alt="In-app Reminders banner with the task" width="400"> | <img src="docs/screenshots/20-test-push-windows.png" alt="Windows notification for the Settings test" width="400"> |
-| **In the app:** the Reminders banner with View | **Settings → Reminders → Send a test notification** |
-
-Behind the app:
-
-| | |
-|---|---|
-| <img src="docs/screenshots/16-pulse-server-health.jpg" alt="Pulse with the Server health card" width="400"> | <img src="docs/screenshots/18-telescope-requests.jpg" alt="Telescope requests list" width="400"> |
-| **Pulse** (`/pulse`): CPU, memory, disk, Postgres connections, API and web status, with thresholds | **Telescope** (`/telescope`): requests, jobs, queries |
-| <img src="docs/screenshots/17-api-docs.jpg" alt="Generated API docs" width="400"> | |
-| **API docs** (`/docs/api`), generated from the code by Scramble | |
+More screenshots, of sign-up, the emails, real Web Push reminders, the API docs, Pulse and Telescope, are in [Under the hood](#under-the-hood).
 
 ## Run it for a review
 
@@ -258,10 +171,116 @@ A note becomes tasks on the server in one request: normalise, split into items, 
 
 To turn the language model on, save a Gemini API key in a file, set `NOTE_LLM_ENABLED=true` and `GEMINI_API_KEY_FILE=<path to that file>` in `backend/.env`, and restart `api` ([ADR-008](docs/07-architecture/decisions/ADR-008-llm-fallback.md)). The key itself never goes in `.env`.
 
-### Asset & image optimisation note (6b)
+## Under the hood
 
-- **On-demand loading:** the search popup, Settings and the note result overlay are `React.lazy` chunks ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)), so they are not in the first load. Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
-- **Why raster image optimisation (`next/image` / WebP / `srcset`) is not used:** All in-app illustrations (`frontend/public/illustrations/*.svg`) and UI icons are **SVG** (which `next/image` does not optimise and which are already resolution-independent). The only raster files are app icons, loaded by the browser or the OS at fixed sizes rather than rendered in a page: the two manifest icons (`frontend/public/icons/icon-192.png` and `icon-512.png`, which the PWA manifest needs as PNG), the iOS home-screen icon (`frontend/src/app/apple-icon.png`) and the favicons (`favicon.ico`). See [scalability.md](docs/05-quality/scalability.md#on-demand-overlays).
+How each part is built, with the code, the tests and screenshots of it running. The screenshots come from the production build (`compose.prod.yml`) run locally on 27 Nov 2026, with mail going to Mailpit.
+
+### Way of working
+
+- Every change starts as a GitHub issue with its scope and a "Done when" list, labels, an assignee and a milestone (for example [#192](https://github.com/02bbits/Agendal/issues/192), [#196](https://github.com/02bbits/Agendal/issues/196)). The build plan is [docs/08-project/tasks.md](docs/08-project/tasks.md).
+- Work happens on a topic branch and lands through a [pull request](https://github.com/02bbits/Agendal/pulls?q=is%3Apr) that `Closes #n`. A code owner reviews it, and the Backend, Frontend and Secret scan checks must pass ([ci.yml](.github/workflows/ci.yml)).
+- Commits follow Conventional Commits (`feat:`, `fix:`, `perf:`, `test:`, `docs:`, `chore:`), one change each, naming the issue: `eece9af perf: ETag and 304 on sync and counts (Refs #201)`. Docs changes are listed in the [docs changelog](docs/CHANGELOG.md).
+
+### Database
+
+- PostgreSQL 18 through Laravel [migrations](backend/database/migrations): foreign keys, `CHECK` constraints on every enum-like column, composite indexes that lead with `user_id`, partial indexes (open reminders, live project names) and a trigram index for search. A trigger stamps `change_seq` on every write for sync. See the [ERD](#data-model-erd) and [data-model.md](docs/07-architecture/data-model.md).
+- [Factories](backend/database/factories) for User, Project, Task and Note (`HasFactory`). [DatabaseSeeder.php](backend/database/seeders/DatabaseSeeder.php) creates the demo account with its projects, tasks and notes, and [DemoSeedTest.php](backend/tests/Feature/DemoSeedTest.php) checks the seed in CI.
+
+### Interface
+
+- Next.js 16 and React 19 with Tailwind CSS and daisyUI utility classes. `sm:` and `md:` breakpoints switch between the phone layout (tab bar, full-screen details) and the desktop one (sidebar, task panel). Shared components live in [frontend/src/ui/components](frontend/src/ui/components).
+- React escapes everything it renders, and the code has no `dangerouslySetInnerHTML`. Laravel serves only the JSON API, the error pages and the admin tools.
+
+### Accounts and forms
+
+- **Create account:** email and password, with a strength meter; weak or breached passwords are refused. A 6-digit code is emailed, and the account exists only once the code is right. Then a three-step Setup: name, dates and times, security.
+- **Passwords** are hashed (`hashed` cast; Argon2id in production, [.env.production.example](backend/.env.production.example)). Sign-in locks for 60 s after 3 wrong tries per email and IP, and for 15 minutes after 20 in an hour ([LoginController.php](backend/app/Http/Controllers/Auth/LoginController.php)). Two-step sign-in sends a code by email; Forgot password sends a one-time link.
+- **Forms:** every write carries Sanctum's CSRF token. The `XSRF-TOKEN` cookie goes back as the `X-XSRF-TOKEN` header ([api.ts](frontend/src/lib/api.ts)). The server validates with `FormRequest` classes ([Requests](backend/app/Http/Requests)), and errors come back per field and show under the field.
+- Tests: [RegisterTest.php](backend/tests/Feature/RegisterTest.php), [LoginTest.php](backend/tests/Feature/LoginTest.php), [ChangePasswordTest.php](backend/tests/Feature/ChangePasswordTest.php).
+
+| | |
+|---|---|
+| <img src="docs/screenshots/25-create-account.jpg" alt="Create account with the password strength meter" width="400"> | <img src="docs/screenshots/26-verify-code.jpg" alt="Check your email, six code boxes" width="400"> |
+| **Create account**, with the strength meter | **Check your email:** the 6-digit code |
+| <img src="docs/screenshots/29-setup.jpg" alt="Set up Agendal, step 1 of 3" width="400"> | <img src="docs/screenshots/24-reset-link-sent.jpg" alt="Reset password, link sent" width="400"> |
+| **Setup** after the code | **Forgot password:** the link is sent |
+
+### Email
+
+All five account emails (sign-up code, sign-in code, password reset, password changed, sign-up attempt on an existing email) are `ShouldQueue` notifications ([QueuedMailNotification.php](backend/app/Notifications/Concerns/QueuedMailNotification.php)). They are sent after the database commit by the queue worker, tried 3 times with 10, 30 and 60 s waits, and logged without addresses or codes when they fail ([QueuedMailNotificationsTest.php](backend/tests/Feature/QueuedMailNotificationsTest.php)). The worker checks the queue every second. The queue worker's log for the two emails below:
+
+```
+2026-11-27 11:04:56 App\Notifications\ResetPasswordNotification .... RUNNING
+2026-11-27 11:04:57 App\Notifications\ResetPasswordNotification 727.40ms DONE
+2026-11-27 11:05:30 App\Notifications\VerifyEmailCode .............. RUNNING
+2026-11-27 11:05:30 App\Notifications\VerifyEmailCode ......... 34.12ms DONE
+```
+
+| | |
+|---|---|
+| <img src="docs/screenshots/27-email-verification-code.jpg" alt="Verification code email in Mailpit" width="400"> | <img src="docs/screenshots/28-email-reset-password.jpg" alt="Password reset email in Mailpit" width="400"> |
+| **Sign-up code** email | **Password reset** email |
+
+### Outside services
+
+- **Gemini** reads the note items the rules are unsure about, and it also handles dictation and photos ([NoteLlmFallback.php](backend/app/Services/Notes/NoteLlmFallback.php), [ADR-008](docs/07-architecture/decisions/ADR-008-llm-fallback.md)).
+  - The key is read from a secret file, never `.env` ([note_llm.php](backend/config/note_llm.php)).
+  - Each call times out after 20 s. Each user gets 20 calls a day, inside a global token budget ([LlmBudget.php](backend/app/Services/Notes/LlmBudget.php)).
+  - Quota errors, connection errors and answers that don't match the schema fall back to the rules and are logged.
+  - [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php) checks the request, including its auth header.
+- **Web Push** sends reminders through the browser's push service, signed with VAPID ([PushClient.php](backend/app/Services/Push/PushClient.php)). Only known push services are allowed ([push.php](backend/config/push.php)): Google, Mozilla, Apple and Windows.
+  - `reminders:send` runs every minute and queues [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php) ([ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php)).
+
+<a id="real-web-push"></a>A real reminder, delivered through Microsoft's push service (`notify.windows.com`) to Edge on Windows. The task starts at 17:39 with a reminder 5 minutes before. At 17:34:02 `reminders:send` queued `SendReminderPushes`, which logged `reminders.sent {"sent":4,"gone":0}`, and the notification arrived:
+
+| | |
+|---|---|
+| <img src="docs/screenshots/21-real-task-with-reminder.jpg" alt="Task starting at 5:39 pm with a reminder 5 minutes before" width="400"> | <img src="docs/screenshots/22-real-reminder-windows.png" alt="Windows notification from localhost:3100 for the task" width="400"> |
+| **The task:** reminder 5 minutes before the start | **The notification** from the browser, at 5:34 pm |
+| <img src="docs/screenshots/23-real-reminder-in-app.jpg" alt="In-app Reminders banner with the task" width="400"> | <img src="docs/screenshots/20-test-push-windows.png" alt="Windows notification for the Settings test" width="400"> |
+| **In the app:** the Reminders banner with View | **Settings → Reminders → Send a test notification** |
+
+### REST API
+
+- **Resources:** `/api/v1` has `index`, `store`, `show`, `update` and `destroy` for tasks, projects and notes ([routes/api.php](backend/routes/api.php)), using Eloquent models, [API Resources](backend/app/Http/Resources) and `FormRequest` validation. Responses use 201, 204, 404, 422 and 429; a 429 carries `Retry-After`. Every error has one JSON shape: `code`, `message`, `fields` and the `request_id`.
+- **Authentication:** the web app uses Sanctum's cookie session. Scripts use personal access tokens ([TokenController.php](backend/app/Http/Controllers/TokenController.php)). `createToken` takes any of six abilities (`tasks:read`, `tasks:write`, `projects:read`, `projects:write`, `notes:read`, `notes:write`) and an expiry of 7, 30 or 90 days. Each data route names the abilities it needs ([TokenAbilities.php](backend/app/Http/Middleware/TokenAbilities.php)).
+- **Docs:** Scramble generates the API docs from the code at `/docs/api`, including the cookie and CSRF security scheme ([scramble.php](backend/config/scramble.php)). [ApiDocsTest.php](backend/tests/Feature/ApiDocsTest.php) checks that every `/api/v1` route is in them, and CI exports `api.json`.
+- **Tests:** [TaskApiTest.php](backend/tests/Feature/TaskApiTest.php), [ApiBaseTest.php](backend/tests/Feature/ApiBaseTest.php), [ApiTokenTest.php](backend/tests/Feature/ApiTokenTest.php), and the rest of [backend/tests](backend/tests).
+
+<img src="docs/screenshots/17-api-docs.jpg" alt="Generated API docs at /docs/api" width="600">
+
+### Logs, errors and monitoring
+
+- **Logs and errors:** every request gets a `request_id` ([AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php)), which is on each log line and in each error response. Logs are daily files kept 14 days ([logging.php](backend/config/logging.php)). Error pages are the app's own ([errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php)), and the API answers errors in JSON.
+- **Telescope** is at `/telescope` ([TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php)). It opens only for the emails in `TELESCOPE_ALLOWED_EMAILS` outside local, hides cookies, tokens and CSRF headers, and is pruned after 48 hours.
+- **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
+- **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card shows CPU, load, memory, swap, disk, Postgres connections and whether the API and the web app are up. It turns red past CPU 85% for 5 minutes, memory 90% or disk 80% ([ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
+
+| | |
+|---|---|
+| <img src="docs/screenshots/16-pulse-server-health.jpg" alt="Pulse with the Server health card" width="400"> | <img src="docs/screenshots/18-telescope-requests.jpg" alt="Telescope requests list" width="400"> |
+| **Pulse:** Server health, exceptions, queues | **Telescope:** requests with status and duration |
+
+### Background work
+
+- **Server:** reminders and every account email run on the queue (above). The queue worker and the scheduler are their own containers in [compose.prod.yml](compose.prod.yml).
+- **Client:** offline edits and notes wait in an IndexedDB queue and are sent with `async`/`await` once the device is back online, one sync per browser at a time ([ADR-005](docs/07-architecture/decisions/ADR-005-sync-protocol.md)).
+
+### Loading speed and caching
+
+- **First load:** the production build is minified and split by route, tabs are prefetched, static parts are prerendered (`cacheComponents`), and fonts load through `next/font`.
+- **On demand:** the search popup, Settings and the note result overlay are `React.lazy` chunks, so they are not in the first load ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)). Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
+- **Images:** every image in the interface is SVG (`frontend/public/illustrations/*.svg` and the icons). SVG already scales to any screen, and `next/image` doesn't optimise it. The only raster files are app icons that the browser or the OS loads at fixed sizes: the manifest PNGs (`icon-192.png`, `icon-512.png`), the iOS home-screen icon (`apple-icon.png`) and the favicons.
+- **Caching:**
+  - The service worker caches the app shell and the hashed files, versioned by build, and deletes old versions on update.
+  - API responses are `no-store, private` ([SecurityHeaders.php](backend/app/Http/Middleware/SecurityHeaders.php)), because they are per user and change from other devices.
+  - `GET sync` and `GET counts` carry a weak ETag from the user's last change and answer `304 Not Modified` while nothing changed ([CacheValidationTest.php](backend/tests/Feature/CacheValidationTest.php)). An idle device's polling then skips the list queries.
+  - There is no server-side data cache: the ETag check costs three index lookups, and a data cache would have to be cleared on every write from every device.
+- **Scaling rules** ([scalability.md](docs/05-quality/scalability.md)):
+  - Every query is scoped by `user_id`, and every index leads with it.
+  - Project task lists come from one grouped query instead of one per project ([ProjectTaskLists.php](backend/app/Services/Projects/ProjectTaskLists.php)).
+  - Lists and search use keyset paging, and sync is incremental by `change_seq`.
+  - Telescope and Pulse show slow requests and queries.
 
 ## Data model (ERD)
 
