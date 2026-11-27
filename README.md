@@ -153,7 +153,7 @@ To turn the language model on, save a Gemini API key in a file, set `NOTE_LLM_EN
 ### Asset & image optimisation note (6b)
 
 - **On-demand loading:** the search popup, Settings and the note result overlay are `React.lazy` chunks ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)), so they are not in the first load. Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
-- **Why raster image optimisation (`next/image` / WebP / `srcset`) is not used:** All in-app illustrations (`frontend/public/illustrations/*.svg`) and UI icons are **SVG** (which `next/image` does not optimise and which are already resolution-independent). The only raster images in the repository are the two **PNG** icons (`frontend/public/icons/icon-192.png` and `icon-512.png`), which must remain PNG for the PWA Web App Manifest. See [scalability.md](docs/05-quality/scalability.md#on-demand-overlays).
+- **Why raster image optimisation (`next/image` / WebP / `srcset`) is not used:** All in-app illustrations (`frontend/public/illustrations/*.svg`) and UI icons are **SVG** (which `next/image` does not optimise and which are already resolution-independent). The only raster files are app icons, loaded by the browser or the OS at fixed sizes rather than rendered in a page: the two manifest icons (`frontend/public/icons/icon-192.png` and `icon-512.png`, which the PWA manifest needs as PNG), the iOS home-screen icon (`frontend/src/app/apple-icon.png`) and the favicons (`favicon.ico`). See [scalability.md](docs/05-quality/scalability.md#on-demand-overlays).
 
 ## Data model (ERD)
 
