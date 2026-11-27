@@ -1,8 +1,7 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useState } from "react";
-import { ROUTES, RateLimited, TaskStoreProvider, t } from "@/ui";
+import { ProjectSheet, ROUTES, RateLimited, TaskStoreProvider, t } from "@/ui";
 import { notifyProjectsChanged } from "@/ui/domain/appEvents";
 import type { ProjectTaskAction } from "@/ui/features/projects/DeleteProjectDialog";
 import { useToday } from "@/ui/features/tasks/useToday";
@@ -14,12 +13,6 @@ import { PageMessage } from "../../PageMessage";
 import { ProjectSkeleton } from "../../skeletons";
 import { ProjectContent } from "./ProjectContent";
 import { useProjectDetail } from "./useProjectDetail";
-
-const ProjectSheet = dynamic(
-  () =>
-    import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
-  { ssr: false },
-);
 
 /** A project's page (PJ), or No project's: its tasks, rename, delete with Undo. */
 export function ProjectClient({ id }: { id: string }) {

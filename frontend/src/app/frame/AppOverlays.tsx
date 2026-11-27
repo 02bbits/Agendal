@@ -1,11 +1,12 @@
 "use client";
-import dynamic from "next/dynamic";
 import { usePanelScreen } from "@/ui/components/useMediaQuery";
 
 import {
   NewTaskSheet,
   NoteEditor,
+  ProjectSheet,
   ROUTES,
+  SearchPopup,
   t,
   type NewTaskSheetProps,
   type Project,
@@ -22,22 +23,9 @@ import {
 import { search } from "@/lib/taskApi";
 import { appClock } from "../appClock";
 import { useAppFrame } from "./AppFrameContext";
+import { AppSettingsScreen } from "./AppSettingsScreen";
 import { hasTaskPanel } from "./frameRoutes";
 import type { Overlays } from "./useOverlays";
-
-const ProjectSheet = dynamic(
-  () =>
-    import("@/ui/features/projects/ProjectSheet").then((m) => m.ProjectSheet),
-  { ssr: false },
-);
-const SearchPopup = dynamic(
-  () => import("@/ui/features/lists/SearchPopup").then((m) => m.SearchPopup),
-  { ssr: false },
-);
-const AppSettingsScreen = dynamic(
-  () => import("./AppSettingsScreen").then((m) => m.AppSettingsScreen),
-  { ssr: false },
-);
 
 type Router = {
   push: (href: string, options?: { scroll?: boolean }) => void;
