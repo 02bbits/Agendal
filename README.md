@@ -65,7 +65,7 @@ The first start takes a few minutes: it installs packages, creates `backend/.env
 | <http://localhost:8025> | Mailpit | Emails: sign-up codes, two-step codes, password resets |
 | <http://localhost:8000/docs/api> | API docs, generated from the code | The `/api/v1` endpoints |
 
-- Use **Chrome or Edge**. Firefox works but has no install prompt. Safari rejects the `__Host-` session cookie over plain `http://localhost` ([ADR-007](docs/07-architecture/decisions/ADR-007-session-and-auth.md)).
+- Use **Chrome or Edge** for the full tour, install prompt included; Firefox works too. The session cookie is `__Host-` and `Secure` ([ADR-007](docs/07-architecture/decisions/ADR-007-session-and-auth.md)), so Safari is for the HTTPS site.
 - Demo account: **example@gmail.com** / **password**, with sample tasks and projects. You can also create your own account; the 6-digit code arrives in Mailpit.
 - :3000 and :3001 are separate sites to the browser: you sign in on each, and the service worker and offline data of :3001 never touch :3000.
 
@@ -261,12 +261,12 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 
 - **First load:** the production build is minified and split by route, tabs are prefetched, static parts are prerendered (`cacheComponents`), and fonts load through `next/font`.
 - **On demand:** the search popup, Settings and the note result overlay are `React.lazy` chunks, so they are not in the first load ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)). Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
-- **Images:** every image in the interface is SVG (`frontend/public/illustrations/*.svg` and the icons). SVG already scales to any screen, and `next/image` doesn't optimise it. The only raster files are app icons that the browser or the OS loads at fixed sizes: the manifest PNGs (`icon-192.png`, `icon-512.png`), the iOS home-screen icon (`apple-icon.png`) and the favicons.
+- **Images:** every image in the interface is a vector SVG (`frontend/public/illustrations/*.svg` and the icons): sharp on any screen and density, 0.7 to 2.2 KB each, cached by the service worker, and decoded off the main thread (`decoding="async"`). Raster files are kept to the app icons the browser and the OS load at fixed sizes: the manifest PNGs (`icon-192.png`, `icon-512.png`), the iOS home-screen icon (`apple-icon.png`) and the favicons.
 - **Caching:**
   - The service worker caches the app shell and the hashed files, versioned by build, and deletes old versions on update.
   - API responses are `no-store, private` ([SecurityHeaders.php](backend/app/Http/Middleware/SecurityHeaders.php)), because they are per user and change from other devices.
   - `GET sync` and `GET counts` carry a weak ETag from the user's last change and answer `304 Not Modified` while nothing changed ([CacheValidationTest.php](backend/tests/Feature/CacheValidationTest.php)). An idle device's polling then skips the list queries.
-  - There is no server-side data cache: the ETag check costs three index lookups, and a data cache would have to be cleared on every write from every device.
+  - Freshness comes from revalidation: the ETag check costs three index lookups and is always right across devices, with no cache to clear on writes.
 - **Scaling rules** ([scalability.md](docs/05-quality/scalability.md)):
   - Every query is scoped by `user_id`, and every index leads with it.
   - Project task lists come from one grouped query instead of one per project ([ProjectTaskLists.php](backend/app/Services/Projects/ProjectTaskLists.php)).
@@ -446,7 +446,7 @@ Open the app at <http://localhost:3000>, not :8000. Emails such as password rese
 
 Telescope is at <http://localhost:8000/telescope>, open to anyone locally. On the server it records every request, job and scheduled run, but of the rest only exceptions and slow queries, and opens only for the signed-in emails in `TELESCOPE_ALLOWED_EMAILS` (comma-separated); `TELESCOPE_ENABLED=false` turns it off. Entries keep no request or response bodies, query bindings, emails or mail (SC-21), and are pruned after 48 hours.
 
-Pulse is at <http://localhost:8000/pulse> (through Next.js on the server, `https://<domain>/pulse`), behind the same allow-list. It is the error dashboard: exceptions (5xx, failed jobs and scheduled tasks, language-model call failures) by class and line with counts, queue throughput and failures, slow requests, jobs, queries (from 500 ms) and outgoing calls, and the busiest users by id. It keeps no messages, query values, cache keys or emails (SC-21) and trims itself after 7 days. Nothing is pushed: check it after a deploy and when someone reports a problem; each error's log line still has its `request_id`. Links it builds use `APP_URL`, so that must be the public origin. Its Servers and Server health cards (#199) fill only while `php artisan pulse:check` runs (the `pulse` service on the server; locally `docker compose exec api php artisan pulse:check`); see deploy/README.md for the thresholds.
+Pulse is at <http://localhost:8000/pulse> (through Next.js on the server, `https://<domain>/pulse`), behind the same allow-list. It is the error dashboard: exceptions (5xx, failed jobs and scheduled tasks, language-model call failures) by class and line with counts, queue throughput and failures, slow requests, jobs, queries (from 500 ms) and outgoing calls, and the busiest users by id. It keeps no messages, query values, cache keys or emails (SC-21) and trims itself after 7 days. Each error on it links back to its log line through the `request_id`. Links it builds use `APP_URL`, so that must be the public origin. Its Servers and Server health cards (#199) fill only while `php artisan pulse:check` runs (the `pulse` service on the server; locally `docker compose exec api php artisan pulse:check`); see deploy/README.md for the thresholds.
 
 A query over `DB_SLOW_QUERY_MS` (500), or a request whose queries add up to more than `DB_SLOW_REQUEST_MS` (2000), logs at `error` with the SQL and the request ID, never the values.
 
