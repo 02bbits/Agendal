@@ -275,7 +275,18 @@ How it is built ([DiscordAlert.php](backend/app/Services/Monitoring/DiscordAlert
 - Alerts carry no user content (SC-21).
 - [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php) checks each alert, and the test suite never posts.
 
-<img src="docs/screenshots/30-discord-admin-alerts.png" alt="Discord channel with API back to normal, memory over the threshold and memory back to normal alerts" width="420">
+The alerts as they arrived in the admins' channel on 27 Nov 2026:
+
+| | |
+|---|---|
+| <img src="docs/screenshots/31-alert-slow-query.png" alt="Slow database query alert with duration, threshold, route, request ID and the SQL without values" width="400"> | <img src="docs/screenshots/32-alert-scheduled-task.png" alt="Critical alert: scheduled task reminders:send failed, with exit code and source line" width="400"> |
+| **Slow query:** duration, threshold, route, `request_id` and the SQL without values | **Scheduled task failed:** the command, its exit code, the error and the source line |
+| <img src="docs/screenshots/33-alert-last-backup.png" alt="Last backup over the threshold alert" width="400"> | <img src="docs/screenshots/34-alert-web-app.png" alt="Web app over the threshold alert, down for 2 minutes" width="400"> |
+| **Last backup** older than 26 h | **Web app** down for 2 minutes |
+| <img src="docs/screenshots/35-alert-api-down.png" alt="API over the threshold alert, down for 2 minutes" width="400"> | <img src="docs/screenshots/36-alert-api-back.png" alt="API back to normal alert" width="400"> |
+| **API** down for 2 minutes | **API back to normal** |
+| <img src="docs/screenshots/37-alert-memory-over.png" alt="Memory over the threshold alert at 93 percent of 7.4 GB" width="400"> | <img src="docs/screenshots/38-alert-memory-back.png" alt="Memory back to normal alert at 15 percent of 7.4 GB" width="400"> |
+| **Memory** at 93% of 7.4 GB, over 90% | **Memory back to normal** at 15% |
 
 ### Background work
 
