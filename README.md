@@ -24,7 +24,7 @@ Notes can be in English or Vietnamese (with diacritics); the interface is in Eng
 
 <a href="demo/agendal-trailer.mp4"><img src="docs/screenshots/00-demo-trailer.jpg" alt="Agendal demo trailer on the live site: a note typed on a phone, about to become tasks" width="720"></a>
 
-**[▶ Demo trailer](demo/agendal-trailer.mp4)** (2 min 35 s, 1080p), recorded on the live site <https://agendal.kkqqq.uk>. It shows:
+**[Demo trailer](demo/agendal-trailer.mp4)** (2 min 35 s, 1080p), recorded on the live site <https://agendal.kkqqq.uk>. It shows:
 - one sentence becoming several dated tasks, and repeating tasks;
 - changing plans by writing them ("Move SQL quiz to Monday");
 - a file dropped into a note, with the `/api/v1/notes/extract` response;
