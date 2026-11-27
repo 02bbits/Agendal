@@ -51,6 +51,7 @@ import { ROUTES, type Navigate } from "../../../ui/features/shell/routes";
 import { RateLimited } from "../../../ui/features/shell/RateLimited";
 import { useMediaQuery } from "../../../ui/components/useMediaQuery";
 import { NoteTaskEditor } from "../../../ui/features/notes/NoteTaskEditor";
+import { NoteResultSkeleton } from "../../../ui/features/notes/NoteResultSkeleton";
 import { useHistoryEntry } from "../../../ui/components/useHistoryEntry";
 import { TaskDetails } from "../../../ui/features/tasks/details/TaskDetails";
 import { DeleteTask } from "../../../ui/features/tasks/DeleteTask";
@@ -602,18 +603,7 @@ export default function NoteResultClient({
     );
   if (!loaded) {
     if (!showSkeleton) return null;
-    return (
-      <div
-        role="status"
-        aria-busy="true"
-        className="flex animate-pulse flex-col gap-6 pb-8"
-      >
-        <div className="h-10 w-24 rounded bg-surface" />
-        <div className="h-14 w-full rounded bg-surface" />
-        <div className="h-32 w-full rounded bg-surface" />
-        <div className="h-32 w-full rounded bg-surface" />
-      </div>
-    );
+    return <NoteResultSkeleton page={presentation === "screen"} />;
   }
 
   return (
