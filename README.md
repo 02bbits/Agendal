@@ -259,8 +259,12 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 
 ### Loading speed and caching
 
-- **First load:** the production build is minified and split by route, tabs are prefetched, static parts are prerendered (`cacheComponents`), and fonts load through `next/font`.
-- **On demand:** the search popup, Settings and the note result overlay are `React.lazy` chunks, so they are not in the first load ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx)). Once the page is idle their chunks are fetched and cached by the service worker, so they still open offline.
+- **Build:** `next build` minifies and compresses the JavaScript and CSS and splits them by route, so each screen loads only its own code.
+- **Prerendering:** `cacheComponents: true` prerenders the static shell of every screen ([next.config.ts](frontend/next.config.ts)), served from the cache at once (`x-nextjs-prerender`).
+- **Prefetching:** `partialPrefetching: true` and [usePrefetch.ts](frontend/src/app/frame/usePrefetch.ts) prefetch the other tabs, so switching tabs is instant. The router keeps visited screens for 5 minutes (`staleTimes.dynamic: 300`).
+- **Fonts:** Inter through `next/font` ([layout.tsx](frontend/src/app/layout.tsx)): self-hosted and preloaded, only the Latin, Latin Extended and Vietnamese subsets, and `display: swap`, so text shows at once.
+- **Scripts:** the one script that runs before paint is the tiny `theme.js` (`beforeInteractive`), so the saved theme never flashes; everything else loads with the page's own chunks.
+- **Lazy loading:** the search popup, Settings and the note result overlay are `React.lazy` components, each in its own chunk outside the first load ([lazyOverlays.tsx](frontend/src/app/frame/lazyOverlays.tsx), PR [#219](https://github.com/02bbits/Agendal/pull/219)). Once the page is idle (`requestIdleCallback`) their chunks are fetched in the background and cached by the service worker, so they open at once, offline too.
 - **Images:** every image in the interface is a vector SVG (`frontend/public/illustrations/*.svg` and the icons): sharp on any screen and density, 0.7 to 2.2 KB each, cached by the service worker, and decoded off the main thread (`decoding="async"`). Raster files are kept to the app icons the browser and the OS load at fixed sizes: the manifest PNGs (`icon-192.png`, `icon-512.png`), the iOS home-screen icon (`apple-icon.png`) and the favicons.
 - **Caching:**
   - The service worker caches the app shell and the hashed files, versioned by build, and deletes old versions on update.
