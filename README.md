@@ -226,6 +226,16 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
   - Each call times out after 20 s. Each user gets 20 calls a day, inside a global token budget ([LlmBudget.php](backend/app/Services/Notes/LlmBudget.php)).
   - Quota errors, connection errors and answers that don't match the schema fall back to the rules and are logged.
   - [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php) checks the request, including its auth header.
+
+<a id="real-gemini"></a>A real Gemini fallback call in production (`note_llm.log`), logging the provider (`gemini`), model (`gemini-3.5-flash-lite`), token count (`2240`), duration (`1226.91 ms`), accepted item count (`1`), and `request_id`:
+
+```text
+[2026-11-28 03:43:38] production.INFO: note_llm {"elapsed_ms":276.2562,"outcome":"fallback"} {"request_id":"req_ClBUvs9vfoGs25WV"}
+[2026-11-28 03:44:26] production.INFO: note_llm {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":2240,"elapsed_ms":1226.914993,"accepted":1} {"request_id":"req_DyH1iJLM9qaCFAXC"}
+```
+
+<img src="docs/screenshots/39-gemini-note-llm-log.png" alt="Production log showing a live Gemini API call (gemini-3.5-flash-lite, 2240 tokens, 1226 ms, accepted 1)" width="600">
+
 - **Web Push** sends reminders through the browser's push service, signed with VAPID ([PushClient.php](backend/app/Services/Push/PushClient.php)). Only known push services are allowed ([push.php](backend/config/push.php)): Google, Mozilla, Apple and Windows.
   - `reminders:send` runs every minute and queues [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php) ([ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php)).
 
@@ -251,7 +261,7 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 
 - **Logs and errors:** every request gets a `request_id` ([AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php)), which is on each log line and in each error response. Logs are daily files kept 14 days ([logging.php](backend/config/logging.php)). Error pages are the app's own ([errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php)), and the API answers errors in JSON.
 - **Telescope** is at `/telescope` ([TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php)). It opens only for the emails in `TELESCOPE_ALLOWED_EMAILS` outside local, hides cookies, tokens and CSRF headers, and is pruned after 48 hours.
-- **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)) ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
+- **Slow queries:** a query over 500 ms is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)); a request whose queries add up to over 2 s is logged at `error` with its total duration and `request_id` ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
 - **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card shows CPU, load, memory, swap, disk, Postgres connections and whether the API and the web app are up. It turns red past CPU 85% for 5 minutes, memory 90% or disk 80% ([ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
 
 | | |
