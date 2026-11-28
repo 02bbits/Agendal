@@ -43,6 +43,7 @@ return [
         'last_backup' => 'Last backup',
         'api' => 'API',
         'web_app' => 'Web app',
+        'network' => 'Network',
     ],
     'severity' => ['warning' => 'Warning', 'critical' => 'Critical', 'resolved' => 'Resolved'],
     'fields' => [

@@ -252,7 +252,7 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 - **Logs and errors:** every request gets a `request_id` ([AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php)), which is on each log line and in each error response. Logs are daily files kept 14 days ([logging.php](backend/config/logging.php)). Error pages are the app's own ([errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php)), and the API answers errors in JSON.
 - **Telescope** is at `/telescope` ([TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php)). It opens only for the emails in `TELESCOPE_ALLOWED_EMAILS` outside local, hides cookies, tokens and CSRF headers, and is pruned after 48 hours.
 - **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)) ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
-- **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card shows CPU, load, memory, swap, disk, Postgres connections and whether the API and the web app are up. It turns red past CPU 85% for 5 minutes, memory 90% or disk 80% ([ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
+- **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card (`HostHealth.php`) samples every 15 s and shows CPU, load, memory, swap, disk, **network traffic** (`in / out Mbit/s` on the host's default-route interface, read from `/proc/1/net/route` and `/proc/1/net/dev` mounted at `/host/net` in [compose.prod.yml](compose.prod.yml)), Postgres connections, last backup, and whether the API and web app answer. A row turns red and posts a Discord alert (and a recovery notice when it drops back) past CPU 85% for 5 minutes, memory 90%, disk 80%, or **network** `PULSE_NETWORK_MBPS` (default `100 Mbit/s` in [pulse.php](backend/config/pulse.php)) for 5 minutes ([HostHealth.php](backend/app/Pulse/HostHealth.php), [ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
 
 | | |
 |---|---|
@@ -265,7 +265,7 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 |---|---|---|
 | A query over 500 ms, or over 2 s of queries in one request | Slow database query, with the SQL without values, the duration, the route and the `request_id` | [SlowQueryAlert.php](backend/app/Services/Monitoring/SlowQueryAlert.php) |
 | A request ends in a 5xx error, a queued job fails, or a scheduled task fails | Critical error, with the exception class and source line, the job or command, and the `request_id` | [CriticalErrorAlert.php](backend/app/Services/Monitoring/CriticalErrorAlert.php) |
-| CPU, memory, disk, last backup, API or web app crosses its Server health threshold, and again when it is back | Over the threshold / Back to normal, with the current value and the threshold | [ServerHealthAlert.php](backend/app/Services/Monitoring/ServerHealthAlert.php) |
+| CPU, memory, disk, network, last backup, API or web app crosses its Server health threshold, and again when it is back | Over the threshold / Back to normal, with the current value (`in / out Mbit/s` for network) and the threshold | [ServerHealthAlert.php](backend/app/Services/Monitoring/ServerHealthAlert.php) |
 | The server monitor stops sending readings for over a minute, and again when it is back | Server monitor stopped / running again | [routes/console.php](backend/routes/console.php) |
 
 How it is built ([DiscordAlert.php](backend/app/Services/Monitoring/DiscordAlert.php)):
@@ -287,6 +287,8 @@ The alerts as they arrived in the admins' channel on 27 Nov 2026:
 | **API** down for 2 minutes | **API back to normal** |
 | <img src="docs/screenshots/37-alert-memory-over.png" alt="Memory over the threshold alert at 93 percent of 7.4 GB" width="400"> | <img src="docs/screenshots/38-alert-memory-back.png" alt="Memory back to normal alert at 15 percent of 7.4 GB" width="400"> |
 | **Memory** at 93% of 7.4 GB, over 90% | **Memory back to normal** at 15% |
+| <img src="docs/screenshots/43-alert-network-over.jpg" alt="Network traffic over the threshold alert at in 3.8 / out 0.2 Mbit/s" width="400"> | <img src="docs/screenshots/44-alert-network-back.jpg" alt="Network traffic back to normal alert at in 0 / out 0.2 Mbit/s" width="400"> |
+| **Network** over threshold (`in 3.8 / out 0.2 Mbit/s`, `1 Mbit/s for 5 min` test) | **Network back to normal** (`in 0 / out 0.2 Mbit/s`) |
 
 ### Background work
 

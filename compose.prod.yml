@@ -80,6 +80,10 @@ services:
     <<: *api
     command: ["php", "artisan", "pulse:check"]
     environment: { PULSE_SERVER_NAME: agendal }
+    volumes:
+      - api-storage:/app/storage
+      # #233: the host's network counters; the container's own /proc/net shows only its own interface
+      - /proc/1/net:/host/net:ro
     healthcheck: { disable: true }
     depends_on:
       api: { condition: service_healthy }

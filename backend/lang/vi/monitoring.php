@@ -43,6 +43,7 @@ return [
         'last_backup' => 'Sao lưu gần nhất',
         'api' => 'API',
         'web_app' => 'Web app',
+        'network' => 'Mạng',
     ],
     'severity' => ['warning' => 'Cảnh báo', 'critical' => 'Nghiêm trọng', 'resolved' => 'Đã khôi phục'],
     'fields' => [
