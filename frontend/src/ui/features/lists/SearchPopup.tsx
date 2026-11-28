@@ -47,7 +47,7 @@ export function SearchPopup({
         role="dialog"
         aria-modal="true"
         aria-label={t("search.dialog")}
-        className="absolute top-1/2 left-1/2 flex max-h-[min(780px,calc(100dvh-64px))] w-[840px] max-w-[calc(100%-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden overscroll-contain rounded-[14px] bg-surface-elevated shadow-2xl motion-safe:animate-scale-in"
+        className="absolute top-1/2 left-1/2 flex h-[min(640px,calc(100dvh-64px))] w-[840px] max-w-[calc(100%-48px)] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden overscroll-contain rounded-[14px] bg-surface-elevated shadow-2xl motion-safe:animate-scale-in"
       >
         <SearchPanel
           {...panelProps}

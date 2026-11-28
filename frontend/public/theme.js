@@ -33,9 +33,18 @@
         PALETTES[palette] + "22",
       );
     }
-    var meta = document.createElement("meta");
-    meta.name = "theme-color";
-    meta.content = dark ? "#1a1a1a" : "#f2f2f2";
-    document.head.appendChild(meta);
+    var metas = document.querySelectorAll('meta[name="theme-color"]');
+    var color = dark ? "#1a1a1a" : "#f2f2f2";
+    if (metas.length > 0) {
+      for (var i = 0; i < metas.length; i++) {
+        metas[i].removeAttribute("media");
+        metas[i].setAttribute("content", color);
+      }
+    } else {
+      var meta = document.createElement("meta");
+      meta.name = "theme-color";
+      meta.content = color;
+      document.head.appendChild(meta);
+    }
   } catch {}
 })();

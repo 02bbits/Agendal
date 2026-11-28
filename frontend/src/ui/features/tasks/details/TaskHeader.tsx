@@ -58,11 +58,7 @@ export function TaskHeader({
   return (
     <div>
       {isScreen ? (
-        <BackBar
-          label={backLabel ?? t("common.back")}
-          onBack={onBack}
-          className="-mx-5"
-        />
+        <BackBar label={backLabel ?? t("common.back")} onBack={onBack} />
       ) : (
         <PanelHeader onClose={onClose ?? onBack} />
       )}

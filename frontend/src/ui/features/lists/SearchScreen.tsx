@@ -1,3 +1,5 @@
+import { BackBar } from "../../components/BackBar";
+import { t } from "../../copy";
 import type { NoteHit, SearchFilter } from "../../domain/search";
 import type { Project, Task, TimeFormat } from "../../domain/types";
 import { ROUTES, type Navigate } from "../shell/routes";
@@ -7,6 +9,7 @@ export interface SearchScreenProps {
   onBack(): void;
   navigate?: Navigate;
   projects?: Project[];
+  recentNotes?: NoteHit[];
   today?: string;
   timeFormat?: TimeFormat;
   searchTasks?(params: {
@@ -27,6 +30,7 @@ export function SearchScreen({
   onBack,
   navigate,
   projects = [],
+  recentNotes = [],
   today = "",
   timeFormat = "24h",
   searchTasks = async () => ({
@@ -37,23 +41,24 @@ export function SearchScreen({
   searchNotes = async () => ({ items: [] }),
 }: SearchScreenProps) {
   return (
-    <div className="min-h-dvh pt-[calc(env(safe-area-inset-top,0px)+40px)] pb-2">
+    <div className="-mx-5 flex h-dvh max-h-dvh flex-col bg-paper pt-[env(safe-area-inset-top,0px)]">
+      <BackBar label={t("common.back")} onBack={onBack} />
       <SearchPanel
         variant="screen"
         projects={projects}
+        recentNotes={recentNotes}
         today={today}
         timeFormat={timeFormat}
         searchTasks={searchTasks}
         searchNotes={searchNotes}
-        onCancel={onBack}
         onOpenTask={(id) => {
           navigate?.(ROUTES.task(id));
         }}
         onOpenProject={(id) => {
           navigate?.(ROUTES.project(id));
         }}
-        onOpenNote={() => {
-          // TODO: open the note here once the Notes screen is done.
+        onOpenNote={(id) => {
+          navigate?.(ROUTES.note(id));
         }}
       />
     </div>

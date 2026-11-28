@@ -64,7 +64,7 @@ export function TaskDetails({
     <div
       className={cx(
         "flex flex-col text-ink",
-        isScreen ? "min-h-screen bg-paper pb-8" : "h-full bg-surface",
+        isScreen ? "-mx-5 min-h-screen bg-paper pb-8" : "h-full bg-surface",
       )}
     >
       <TaskHeader

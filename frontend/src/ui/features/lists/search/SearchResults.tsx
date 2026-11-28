@@ -19,8 +19,16 @@ const TABS: ReadonlyArray<{ tab: SearchTab; label: CopyKey }> = [
   { tab: "projects", label: "search.tab_projects" },
   { tab: "notes", label: "search.tab_notes" },
 ];
-/** Widths of the three loading rows, so they don't look like one block. */
-const SKELETON_WIDTHS = ["50%", "70%", "40%"];
+/** Widths of the loading rows (title + subtitle), matching TaskHit cards. */
+const SKELETON_ROWS: ReadonlyArray<{ title: string; meta: string }> = [
+  { title: "52%", meta: "96px" },
+  { title: "68%", meta: "120px" },
+  { title: "44%", meta: "84px" },
+  { title: "60%", meta: "110px" },
+  { title: "48%", meta: "92px" },
+  { title: "64%", meta: "104px" },
+  { title: "54%", meta: "88px" },
+];
 
 /** "Nothing matches this filter." without Upcoming's "Show all": the filter chip's × clears it here. */
 const filterEmptyPrefix = () =>
@@ -31,20 +39,33 @@ const shows = (tab: SearchTab, section: SearchTab) =>
 
 function ResultsSkeleton() {
   return (
-    <div className="flex flex-col gap-2 p-2" role="status" aria-busy="true">
-      {SKELETON_WIDTHS.map((width) => (
-        <div
-          key={width}
-          className="flex h-12 items-center gap-3 rounded-tile border border-separator/40 bg-surface px-4 py-3"
-        >
-          <div className="size-5 shrink-0 rounded-full bg-fill/80 animate-pulse" />
+    <div className="flex flex-col" role="status" aria-busy="true">
+      <div className="px-3 pt-2.5 pb-1">
+        <div className="h-3 w-12 rounded bg-fill/70 animate-pulse" />
+      </div>
+      <div className="flex flex-col gap-2">
+        {SKELETON_ROWS.map((row, index) => (
           <div
-            className="h-4 rounded-xl bg-fill/80 animate-pulse"
-            style={{ width }}
-          />
-          <div className="ml-auto h-4 w-16 shrink-0 rounded-full bg-fill/60 animate-pulse" />
-        </div>
-      ))}
+            key={`${row.title}-${index}`}
+            className="flex items-center gap-3 rounded-2xl border border-separator bg-surface px-4 py-3 shadow-xs"
+          >
+            <div className="size-[22px] shrink-0 rounded-full bg-fill/80 animate-pulse" />
+            <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+              <div
+                className="h-4 rounded-lg bg-fill/80 animate-pulse"
+                style={{ width: row.title }}
+              />
+              <div className="flex items-center gap-1.5">
+                <div className="size-2 shrink-0 rounded-full bg-fill/70 animate-pulse" />
+                <div
+                  className="h-3 rounded-md bg-fill/60 animate-pulse"
+                  style={{ width: row.meta }}
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -132,9 +153,9 @@ export function SearchResults({
   const projectStart = noteStart + noteRows.length;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex min-h-full flex-col gap-2">
       <div
-        role="tablist"
+        role={filterLabel ? undefined : "tablist"}
         className="flex flex-wrap items-center gap-1.5 px-1 py-1"
       >
         {filterLabel && (
@@ -142,18 +163,19 @@ export function SearchResults({
             {filterLabel}
           </Chip>
         )}
-        {TABS.map(({ tab: each, label }) => (
-          <Chip
-            key={each}
-            role="tab"
-            aria-selected={tab === each}
-            selected={tab === each}
-            onClick={() => onTab(each)}
-          >
-            {t(label)}
-            {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
-          </Chip>
-        ))}
+        {!filterLabel &&
+          TABS.map(({ tab: each, label }) => (
+            <Chip
+              key={each}
+              role="tab"
+              aria-selected={tab === each}
+              selected={tab === each}
+              onClick={() => onTab(each)}
+            >
+              {t(label)}
+              {!pending && countOf[each] > 0 && ` ${countOf[each]}`}
+            </Chip>
+          ))}
         {variant === "popup" && (
           <div className="ml-auto shrink-0">
             <Picker
@@ -189,10 +211,14 @@ export function SearchResults({
           </Button>
         </div>
       ) : noResults && query.trim() ? (
-        <EmptyState title={t("search.no_match", { query: query.trim() })} />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState title={t("search.no_match", { query: query.trim() })} />
+        </div>
       ) : noResults ? (
         // Only a filter or a project picked, nothing typed: no text to name, so the filter's own message
-        <EmptyState title={filterEmptyPrefix()} />
+        <div className="flex flex-1 items-center justify-center">
+          <EmptyState title={filterEmptyPrefix()} />
+        </div>
       ) : (
         <div id={listboxId} role="listbox" className="flex flex-col gap-3">
           {taskRows.length > 0 && (
