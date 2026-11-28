@@ -227,14 +227,21 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
   - Quota errors, connection errors and answers that don't match the schema fall back to the rules and are logged.
   - [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php) checks the request, including its auth header.
 
-<a id="real-gemini"></a>A real Gemini fallback call in production (`note_llm.log`), logging the provider (`gemini`), model (`gemini-3.5-flash-lite`), token count (`2240`), duration (`1226.91 ms`), accepted item count (`1`), and `request_id`:
+<a id="real-gemini"></a>Production calls to Gemini (`note_llm` fallback, `note_ocr` photo/file extraction, and `note_dictation` voice transcription) are written to Laravel's daily application log (`storage/logs/laravel-2026-11-28.log`, `daily` channel in [logging.php](backend/config/logging.php)). Below are the Gemini lines extracted from that system log (each tagged with `provider: "gemini"`, model, token usage, and `request_id`), alongside screenshots of photo OCR and voice dictation running:
 
 ```text
 [2026-11-28 03:43:38] production.INFO: note_llm {"elapsed_ms":276.2562,"outcome":"fallback"} {"request_id":"req_ClBUvs9vfoGs25WV"}
 [2026-11-28 03:44:26] production.INFO: note_llm {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":2240,"elapsed_ms":1226.914993,"accepted":1} {"request_id":"req_DyH1iJLM9qaCFAXC"}
+[2026-11-28 08:23:23] production.INFO: note_ocr {"provider":"gemini","model":"gemini-3.5-flash-lite","mime":"image/png","tokens":1298} {"request_id":"req_2eLmhxsM1eV0WslE"}
+[2026-11-28 08:30:36] production.INFO: note_dictation {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":576,"seconds":8.9} {"request_id":"req_IBe85xPZ8GbnjRP1"}
 ```
 
-<img src="docs/screenshots/39-gemini-note-llm-log.png" alt="Production log showing a live Gemini API call (gemini-3.5-flash-lite, 2240 tokens, 1226 ms, accepted 1)" width="600">
+<img src="docs/screenshots/39-gemini-calls-log.jpg" alt="Gemini API calls (note_llm, note_ocr, note_dictation) extracted from Laravel's production daily log" width="600">
+
+| | |
+|---|---|
+| <img src="docs/screenshots/40-note-file-ocr.png" alt="Note editor with attached handwritten PNG image extracted into Vietnamese note lines" width="400"> | <img src="docs/screenshots/41-note-voice-dictation.png" alt="Voice dictation sheet recording audio on phone before inserting text into the note" width="250"> |
+| **Photo / file upload (`note_ocr`):** `ghi-chu-viet-tay.png` extracted into note text | **Voice dictation (`note_dictation`):** live audio recording sheet |
 
 - **Web Push** sends reminders through the browser's push service, signed with VAPID ([PushClient.php](backend/app/Services/Push/PushClient.php)). Only known push services are allowed ([push.php](backend/config/push.php)): Google, Mozilla, Apple and Windows.
   - `reminders:send` runs every minute and queues [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php) ([ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php)).
