@@ -173,6 +173,9 @@ return [
         // #199 Server health card. Before Servers, whose CPU it reads (Servers' own reader needs `top`)
         HostHealth::class => [
             'proc' => env('PULSE_PROC_PATH', '/proc'),
+            // #233: the host's /proc/1/net, mounted into the pulse service; the threshold depends on the link
+            'net' => env('PULSE_HOST_NET_PATH', '/host/net'),
+            'network_mbps' => (int) env('PULSE_NETWORK_MBPS', 100),
             'disk' => '/',
             'urls' => [
                 'API' => env('PULSE_API_HEALTH_URL', 'http://api:8000/api/v1/health'),
