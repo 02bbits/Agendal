@@ -15,6 +15,7 @@ use BackedEnum;
 use DateTimeImmutable;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -355,14 +356,15 @@ final class NoteLlmFallback
         $timeout = (float) config('note_llm.timeout_seconds');
         if ($route['sdk']) {
             // The same prompt, note items and bounds-free schema, as a Claude Messages request.
-            return $this->claude->plan($route['key'], $route['model'], (string) $body['messages'][0]['content'],
-                (string) $body['messages'][1]['content'], $body['response_format']['json_schema']['schema'], $timeout);
+            return LlmCallLog::run('note', $route['model'], fn (): array => $this->claude->plan($route['key'], $route['model'],
+                (string) $body['messages'][0]['content'], (string) $body['messages'][1]['content'],
+                $body['response_format']['json_schema']['schema'], $timeout), fn (array $answer): int => $answer['tokens']);
         }
 
         // One retry when the provider is busy (429, 503); anything else falls back to the rules at once
-        $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
+        $response = LlmCallLog::run('note', $route['model'], fn (): Response => Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
             ->retry(2, 500, fn (Throwable $e): bool => $e instanceof RequestException && in_array($e->response->status(), [429, 503], true))
-            ->post($route['url'], $body)->throw();
+            ->post($route['url'], $body)->throw(), fn (Response $r): mixed => $r->json('usage.total_tokens'));
         $tokens = $response->json('usage.total_tokens');
 
         return ['content' => (string) $response->json('choices.0.message.content'), 'tokens' => is_numeric($tokens) ? (int) $tokens : null];

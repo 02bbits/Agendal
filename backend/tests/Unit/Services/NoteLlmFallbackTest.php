@@ -101,6 +101,23 @@ it('falls back on provider failure or invalid output (T-NU-127)', function (stri
     expectRulesKept($result, $rules);
 })->with(['timeout', 'down', 'invalid-json', 'invalid-schema']);
 
+it('#235: logs each model call: kind, provider, model, outcome, time and tokens, never the note', function (int $status, string $outcome, ?int $tokens) {
+    Log::spy();
+    Http::fake(['generativelanguage.googleapis.com/*' => Http::response($status === 200 ? recordedNoteResponse() : [], $status)]);
+    $rules = app(NoteEngine::class)->build('toi can mua sua', $this->context);
+
+    app(NoteLlmFallback::class)->improve($rules, 'toi can mua sua', $this->context, [], 1);
+
+    Log::shouldHaveReceived('info')->withArgs(fn (string $message, array $context): bool => $message === 'llm_call'
+        && array_keys($context) === ['kind', 'provider', 'model', 'outcome', 'ms', 'tokens']
+        && $context['kind'] === 'note' && $context['provider'] === 'gemini' && $context['model'] === 'gemini-3.5-flash-lite'
+        && $context['outcome'] === $outcome && is_int($context['ms']) && $context['tokens'] === $tokens
+        && ! str_contains(json_encode($context, JSON_THROW_ON_ERROR), 'mua sua'))->once();
+})->with([
+    'answered' => [200, 'ok', 200],
+    'refused after its retry' => [503, 'http_503', null],
+]);
+
 it('asks once more when the answer breaks the schema, and logs only the failed check', function (bool $secondValid, string $engine) {
     Log::spy();
     $invalid = ['choices' => [['message' => ['content' => '{"items":[{"ref":"i1"}]}']]]];

@@ -7,6 +7,7 @@ namespace App\Services\Notes;
 use App\Exceptions\ApiError;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use SensitiveParameter;
@@ -64,7 +65,7 @@ final class NoteTranscriber
     private function send(string $wav, string $prompt, float $timeout, int $attempts, #[SensitiveParameter] array $route): array
     {
         try {
-            $response = Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
+            $response = LlmCallLog::run('dictation', $route['model'], fn (): Response => Http::withToken($route['key'])->connectTimeout($timeout)->timeout($timeout)
                 ->retry($attempts, 200, fn (Throwable $e): bool => $e instanceof ConnectionException
                     || ($e instanceof RequestException && in_array($e->response->status(), [429, 500, 503], true)))
                 ->post($route['url'], [
@@ -75,7 +76,7 @@ final class NoteTranscriber
                         ['type' => 'text', 'text' => $prompt],
                         ['type' => 'input_audio', 'input_audio' => ['data' => base64_encode($wav), 'format' => 'wav']],
                     ]]],
-                ])->throw();
+                ])->throw(), fn (Response $r): mixed => $r->json('usage.total_tokens'));
             $answer = json_decode((string) $response->json('choices.0.message.content'), true, 4, JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
             // The provider's status says which: 429 quota, 503 busy, 400 a request it refuses

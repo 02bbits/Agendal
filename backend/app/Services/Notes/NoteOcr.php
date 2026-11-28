@@ -7,6 +7,7 @@ namespace App\Services\Notes;
 use GdImage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\RequestException;
+use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use SensitiveParameter;
@@ -88,7 +89,7 @@ final class NoteOcr
     {
         try {
             // Gemini now and then stalls on a call that a fresh one answers quickly, so a stalled or busy try is made again
-            $response = Http::withHeaders(['X-Goog-Api-Key' => $route['key']])->connectTimeout($timeout)->timeout($timeout)
+            $response = LlmCallLog::run('ocr', $route['model'], fn (): Response => Http::withHeaders(['X-Goog-Api-Key' => $route['key']])->connectTimeout($timeout)->timeout($timeout)
                 ->retry($attempts, 200, fn (Throwable $e): bool => $e instanceof ConnectionException
                     || ($e instanceof RequestException && in_array($e->response->status(), [429, 500, 503], true)))
                 ->post(sprintf((string) config('note_llm.gemini_generate_url'), $route['model']), [
@@ -101,7 +102,7 @@ final class NoteOcr
                         'responseMimeType' => 'application/json',
                         'responseSchema' => self::SCHEMA,
                     ],
-                ])->throw();
+                ])->throw(), fn (Response $r): mixed => $r->json('usageMetadata.totalTokenCount'));
             $answer = json_decode((string) $response->json('candidates.0.content.parts.0.text'), true, 4, JSON_THROW_ON_ERROR);
         } catch (Throwable $e) {
             Log::warning('note_ocr', ['outcome' => 'failed', 'error' => $e::class,
