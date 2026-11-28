@@ -226,6 +226,23 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
   - Each call times out after 20 s. Each user gets 20 calls a day, inside a global token budget ([LlmBudget.php](backend/app/Services/Notes/LlmBudget.php)).
   - Quota errors, connection errors and answers that don't match the schema fall back to the rules and are logged.
   - [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php) checks the request, including its auth header.
+
+<a id="real-gemini"></a>Production calls to Gemini (`note_llm` fallback, `note_ocr` photo/file extraction, and `note_dictation` voice transcription) are written to Laravel's daily application log (`storage/logs/laravel-2026-11-28.log`, `daily` channel in [logging.php](backend/config/logging.php)). Because the full daily log also contains unrelated system output (such as rendered mail bodies), we extracted the Gemini entries below for readability, alongside screenshots of both the full system log and the extracted Gemini lines, plus photo OCR and voice dictation running:
+
+```text
+[2026-11-28 03:43:38] production.INFO: note_llm {"elapsed_ms":276.2562,"outcome":"fallback"} {"request_id":"req_ClBUvs9vfoGs25WV"}
+[2026-11-28 03:44:26] production.INFO: note_llm {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":2240,"elapsed_ms":1226.914993,"accepted":1} {"request_id":"req_DyH1iJLM9qaCFAXC"}
+[2026-11-28 08:23:23] production.INFO: note_ocr {"provider":"gemini","model":"gemini-3.5-flash-lite","mime":"image/png","tokens":1298} {"request_id":"req_2eLmhxsM1eV0WslE"}
+[2026-11-28 08:30:36] production.INFO: note_dictation {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":576,"seconds":8.9} {"request_id":"req_IBe85xPZ8GbnjRP1"}
+```
+
+| | |
+|---|---|
+| <img src="docs/screenshots/42-gemini-full-system-log.jpg" alt="Full Laravel production daily log (llmcheck-laravel-2026-11-28.log) showing note_llm, note_ocr, and note_dictation entries" width="400"> | <img src="docs/screenshots/39-gemini-calls-log.jpg" alt="Extracted Gemini API calls (note_llm, note_ocr, note_dictation) from the production daily log" width="400"> |
+| **Full system daily log** (`laravel-2026-11-28.log`) | **Extracted Gemini entries** for readability |
+| <img src="docs/screenshots/40-note-file-ocr.png" alt="Note editor with attached handwritten PNG image extracted into Vietnamese note lines" width="400"> | <img src="docs/screenshots/41-note-voice-dictation.png" alt="Voice dictation sheet recording audio on phone before inserting text into the note" width="250"> |
+| **Photo / file upload (`note_ocr`):** `ghi-chu-viet-tay.png` extracted into note text | **Voice dictation (`note_dictation`):** live audio recording sheet |
+
 - **Web Push** sends reminders through the browser's push service, signed with VAPID ([PushClient.php](backend/app/Services/Push/PushClient.php)). Only known push services are allowed ([push.php](backend/config/push.php)): Google, Mozilla, Apple and Windows.
   - `reminders:send` runs every minute and queues [SendReminderPushes.php](backend/app/Jobs/SendReminderPushes.php) ([ReminderSendTest.php](backend/tests/Feature/ReminderSendTest.php)).
 
@@ -251,7 +268,7 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 
 - **Logs and errors:** every request gets a `request_id` ([AssignRequestId.php](backend/app/Http/Middleware/AssignRequestId.php)), which is on each log line and in each error response. Logs are daily files kept 14 days ([logging.php](backend/config/logging.php)). Error pages are the app's own ([errors/minimal.blade.php](backend/resources/views/errors/minimal.blade.php)), and the API answers errors in JSON.
 - **Telescope** is at `/telescope` ([TelescopeServiceProvider.php](backend/app/Providers/TelescopeServiceProvider.php)). It opens only for the emails in `TELESCOPE_ALLOWED_EMAILS` outside local, hides cookies, tokens and CSRF headers, and is pruned after 48 hours.
-- **Slow queries:** a query over 500 ms, or a request whose queries add up to over 2 s, is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)) ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
+- **Slow queries:** a query over 500 ms is logged at `error` with the SQL and the `request_id`, never the values, and posted to the admins' Discord ([below](#admin-alerts)); a request whose queries add up to over 2 s is logged at `error` with its total duration and `request_id` ([AppServiceProvider.php](backend/app/Providers/AppServiceProvider.php), [MonitoringTest.php](backend/tests/Feature/MonitoringTest.php)).
 - **Pulse** is at `/pulse`, behind the same allow-list. It shows exceptions, slow requests, jobs and queries, and the queue. Its Server health card (`HostHealth.php`) samples every 15 s and shows CPU, load, memory, swap, disk, **network traffic** (`in / out Mbit/s` on the host's default-route interface, read from `/proc/1/net/route` and `/proc/1/net/dev` mounted at `/host/net` in [compose.prod.yml](compose.prod.yml)), Postgres connections, last backup, and whether the API and web app answer. A row turns red and posts a Discord alert (and a recovery notice when it drops back) past CPU 85% for 5 minutes, memory 90%, disk 80%, or **network** `PULSE_NETWORK_MBPS` (default `100 Mbit/s` in [pulse.php](backend/config/pulse.php)) for 5 minutes ([HostHealth.php](backend/app/Pulse/HostHealth.php), [ServerHealth.php](backend/app/Livewire/Pulse/ServerHealth.php), [ServerHealthTest.php](backend/tests/Feature/ServerHealthTest.php)).
 
 | | |
