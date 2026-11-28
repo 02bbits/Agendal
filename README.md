@@ -287,8 +287,8 @@ The alerts as they arrived in the admins' channel on 27 Nov 2026:
 | **API** down for 2 minutes | **API back to normal** |
 | <img src="docs/screenshots/37-alert-memory-over.png" alt="Memory over the threshold alert at 93 percent of 7.4 GB" width="400"> | <img src="docs/screenshots/38-alert-memory-back.png" alt="Memory back to normal alert at 15 percent of 7.4 GB" width="400"> |
 | **Memory** at 93% of 7.4 GB, over 90% | **Memory back to normal** at 15% |
-| <img src="docs/screenshots/43-alert-network.jpg" alt="Network traffic over the threshold (in 3.8 / out 0.2 Mbit/s) and back to normal (in 0 / out 0.2 Mbit/s) alerts in Discord" width="400"> | |
-| **Network** over threshold (`in 3.8 / out 0.2 Mbit/s`, threshold `1 Mbit/s for 5 min` during test) and **back to normal** (`in 0 / out 0.2 Mbit/s`) | |
+| <img src="docs/screenshots/43-alert-network-over.jpg" alt="Network traffic over the threshold alert at in 3.8 / out 0.2 Mbit/s" width="400"> | <img src="docs/screenshots/44-alert-network-back.jpg" alt="Network traffic back to normal alert at in 0 / out 0.2 Mbit/s" width="400"> |
+| **Network** over threshold (`in 3.8 / out 0.2 Mbit/s`, `1 Mbit/s for 5 min` test) | **Network back to normal** (`in 0 / out 0.2 Mbit/s`) |
 
 ### Background work
 
