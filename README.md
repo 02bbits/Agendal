@@ -227,7 +227,7 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
   - Quota errors, connection errors and answers that don't match the schema fall back to the rules and are logged.
   - [NoteLlmFallbackTest.php](backend/tests/Unit/Services/NoteLlmFallbackTest.php) checks the request, including its auth header.
 
-<a id="real-gemini"></a>Production calls to Gemini (`note_llm` fallback, `note_ocr` photo/file extraction, and `note_dictation` voice transcription) are written to Laravel's daily application log (`storage/logs/laravel-2026-11-28.log`, `daily` channel in [logging.php](backend/config/logging.php)). Below are the Gemini lines extracted from that system log (each tagged with `provider: "gemini"`, model, token usage, and `request_id`), alongside screenshots of photo OCR and voice dictation running:
+<a id="real-gemini"></a>Production calls to Gemini (`note_llm` fallback, `note_ocr` photo/file extraction, and `note_dictation` voice transcription) are written to Laravel's daily application log (`storage/logs/laravel-2026-11-28.log`, `daily` channel in [logging.php](backend/config/logging.php)). Because the full daily log also contains unrelated system output (such as rendered mail bodies), we extracted the Gemini entries below for readability, alongside screenshots of both the full system log and the extracted Gemini lines, plus photo OCR and voice dictation running:
 
 ```text
 [2026-11-28 03:43:38] production.INFO: note_llm {"elapsed_ms":276.2562,"outcome":"fallback"} {"request_id":"req_ClBUvs9vfoGs25WV"}
@@ -236,10 +236,10 @@ All five account emails (sign-up code, sign-in code, password reset, password ch
 [2026-11-28 08:30:36] production.INFO: note_dictation {"provider":"gemini","model":"gemini-3.5-flash-lite","tokens":576,"seconds":8.9} {"request_id":"req_IBe85xPZ8GbnjRP1"}
 ```
 
-<img src="docs/screenshots/39-gemini-calls-log.jpg" alt="Gemini API calls (note_llm, note_ocr, note_dictation) extracted from Laravel's production daily log" width="600">
-
 | | |
 |---|---|
+| <img src="docs/screenshots/42-gemini-full-system-log.jpg" alt="Full Laravel production daily log (llmcheck-laravel-2026-11-28.log) showing note_llm, note_ocr, and note_dictation entries" width="400"> | <img src="docs/screenshots/39-gemini-calls-log.jpg" alt="Extracted Gemini API calls (note_llm, note_ocr, note_dictation) from the production daily log" width="400"> |
+| **Full system daily log** (`laravel-2026-11-28.log`) | **Extracted Gemini entries** for readability |
 | <img src="docs/screenshots/40-note-file-ocr.png" alt="Note editor with attached handwritten PNG image extracted into Vietnamese note lines" width="400"> | <img src="docs/screenshots/41-note-voice-dictation.png" alt="Voice dictation sheet recording audio on phone before inserting text into the note" width="250"> |
 | **Photo / file upload (`note_ocr`):** `ghi-chu-viet-tay.png` extracted into note text | **Voice dictation (`note_dictation`):** live audio recording sheet |
 
