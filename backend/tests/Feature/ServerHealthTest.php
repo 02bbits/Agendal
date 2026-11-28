@@ -121,6 +121,63 @@ it('#199: the card shows the checks, red past a threshold, and says when pulse:c
     Livewire::withoutLazyLoading()->test(ServerHealth::class)->assertSeeInOrder(['Monitor', 'not running']);
 });
 
+/** The host's /proc/1/net: eth0 carries the default route; docker0 is busier but is not it */
+function netFiles(string $dir, int $rx, int $tx): void
+{
+    @mkdir($dir);
+    file_put_contents("$dir/route", "Iface\tDestination\tGateway \tFlags\tRefCnt\tUse\tMetric\tMask\t\tMTU\tWindow\tIRTT\n"
+        ."docker0\t000011AC\t00000000\t0001\t0\t0\t0\t0000FFFF\t0\t0\t0\neth0\t00000000\t0101A8C0\t0003\t0\t0\t0\t00000000\t0\t0\t0\n");
+    file_put_contents("$dir/dev", "Inter-|   Receive |  Transmit\n face |bytes packets|bytes packets\n"
+        ."docker0: 999999999 1 0 0 0 0 0 0 999999999 1 0 0 0 0 0 0\n  eth0: $rx 10 0 0 0 0 0 0 $tx 10 0 0 0 0 0 0\n");
+}
+
+// 15 s at 12 Mbit/s in and 3 Mbit/s out
+const NET_RX_PER_BEAT = 22_500_000;
+const NET_TX_PER_BEAT = 5_625_000;
+
+it('#233: Network reads the default route\'s traffic between two readings', function () {
+    $net = $this->proc.'/net';
+    config(['pulse.recorders.'.HostHealth::class.'.proc' => $this->proc, 'pulse.recorders.'.HostHealth::class.'.net' => $net]);
+    netFiles($net, rx: 1_000, tx: 1_000);
+    $first = beat($this->recorder)['Network'];
+    netFiles($net, rx: 1_000 + NET_RX_PER_BEAT, tx: 1_000 + NET_TX_PER_BEAT);
+
+    expect($first)->toBe(['in 0 / out 0 Mbit/s', false])
+        ->and(beat($this->recorder)['Network'])->toBe(['in 12 / out 3 Mbit/s', false]);
+
+    netFiles($net, rx: 0, tx: 0); // the counters went back (reboot): nothing moved, never negative
+    expect(beat($this->recorder)['Network'])->toBe(['in 0 / out 0 Mbit/s', false]);
+});
+
+it('#233: without the host\'s network mounted, Network is "not available" with no threshold', function () {
+    config(['pulse.recorders.'.HostHealth::class.'.proc' => $this->proc, 'pulse.recorders.'.HostHealth::class.'.net' => $this->proc.'/none']);
+
+    expect(beat($this->recorder)['Network'])->toBe(['not available', false]);
+});
+
+it('#233: Network over its threshold for 5 minutes turns red and posts once, then back to normal once', function () {
+    $net = $this->proc.'/net';
+    $webhook = tempnam(sys_get_temp_dir(), 'webhook');
+    file_put_contents($webhook, 'https://discord.test/x');
+    config([
+        'pulse.recorders.'.HostHealth::class.'.proc' => $this->proc,
+        'pulse.recorders.'.HostHealth::class.'.net' => $net,
+        'pulse.recorders.'.HostHealth::class.'.network_mbps' => 10,
+        'logging.discord_alert.webhook_file' => $webhook,
+    ]);
+    $red = [];
+    foreach (range(0, 21) as $n) { // 12 Mbit/s from the 2nd beat (the 1st has nothing to compare): 5 min at the 22nd
+        netFiles($net, rx: NET_RX_PER_BEAT * $n, tx: 0);
+        $red[] = beat($this->recorder)['Network'][1];
+    }
+    beat($this->recorder); // nothing moved since: back to normal
+
+    $titles = collect(Http::recorded())->filter(fn ($pair) => $pair[0]->url() === 'https://discord.test/x')
+        ->map(fn ($pair) => $pair[0]['embeds'][0]['title'])->filter(fn ($t) => str_starts_with($t, 'Mạng'))->values()->all();
+    expect(array_slice($red, 0, 21))->each->toBeFalse()->and($red[21])->toBeTrue()
+        ->and($titles)->toBe(['Mạng vượt ngưỡng', 'Mạng đã trở lại bình thường']);
+});
+
 it('#199: the Servers card takes its CPU from HostHealth, not `top`', function () {
     HostHealth::$cpu = 42;
 
